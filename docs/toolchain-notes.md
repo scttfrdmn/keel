@@ -19,6 +19,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | Only 15 of 32 vector registers are allocatable; no `231` FMA form exists | [T10](#t10) | filed: [golang/go#80828](https://github.com/golang/go/issues/80828), [#80829](https://github.com/golang/go/issues/80829) (#18) |
 | 2026-08-11 | go1.26.5 | `GOSSAFUNC` is not in the build cache key: on a cache hit it writes no `ssa.html` but still prints `dumped SSA … to ./ssa.html` | [T11](#t11) | candidate |
 | 2026-08-11 | go1.26.5 | The assembler encodes `vfmadd231ps mem{1to16}` and the intrinsic layer cannot reach it: no 231 SSA op, the load-merge rule folds memory into the addend, and nothing emits `.BCST` | [T12](#t12) | filed: [golang/go#80829](https://github.com/golang/go/issues/80829) (#20) |
+| 2026-08-11 | go1.26.5 | `import "C"` in a `_test.go` file is rejected outright — a benchmark cannot call C directly, so a reference harness needs a package file | [T13](#t13) | none — long-standing, not simd |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -846,3 +847,62 @@ and which is overwritten. A vector intrinsic API that lowers each call in
 isolation has no way to express those choices, and the peephole layer that would
 normally recover them (the `canMergeLoad` rules) is present but pointed at the
 addend. That framing is the upstream report; #20 carries it.
+
+---
+
+## T13 — `import "C"` in a `_test.go` file is rejected, so a C reference benchmark needs a package file
+
+**Observation.** P3's gate compares keel against OpenBLAS (DESIGN.md §4/P3,
+">= 60% of OpenBLAS at 2048³"). The obvious shape for that is one build-tagged
+test file holding both the cgo binding and the benchmark, so nothing keel ships
+can link a BLAS. `go test` refuses to build it:
+
+```
+$ cat p_test.go
+package p
+
+/*
+int seven(void) { return 7; }
+*/
+import "C"
+
+import "testing"
+
+func TestSeven(t *testing.T) {
+	if got := int(C.seven()); got != 7 {
+		t.Fatal(got)
+	}
+}
+
+$ CGO_ENABLED=1 go test ./...
+# cgoprobe
+use of cgo in test /tmp/cgotest/p_test.go not supported
+FAIL	cgoprobe [setup failed]
+```
+
+The rule is explicit in `cmd/go/internal/modindex/read.go:589`: any file whose
+imports include `"C"` and whose name ends in `_test.go` is marked a bad Go file.
+Note the failure mode — `[setup failed]`, not a compile error inside the file, so
+in a script it can read as a missing library or a bad tag rather than a rejected
+file layout.
+
+**Not a simd note, and not new.** This restriction long predates
+`GOEXPERIMENT=simd`; it is recorded here because it shaped a file layout in this
+repo, and because the phrasing "not supported" invites the assumption that cgo in
+tests works with some flag. It does not.
+
+**Workaround (the layout `bench/` now uses).** The binding goes in a *package*
+file under the same build tag, exporting plain-Go wrappers; the benchmark stays in
+a `_test.go` file and calls them.
+
+```
+bench/openblas.go       //go:build openblas   — import "C", cblas_sgemm wrappers
+bench/openblas_test.go  //go:build openblas   — BenchmarkOpenBLAS, no import "C"
+```
+
+One consequence worth stating, because it is the reverse of the usual direction:
+a package file cannot see identifiers declared in `_test.go` files. So the tagged
+package file cannot touch `openblasProvenance` (declared in `bench_test.go`); the
+tagged *test* file's `init` sets it from the wrappers instead. Verified building
+and running against Homebrew OpenBLAS 0.3.34 on the dev host — see docs/hosts.md
+for why a number from that host is not the P3 criterion.

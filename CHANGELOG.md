@@ -215,6 +215,87 @@ While the major version is 0, minor versions may contain breaking changes.
   `spill-audit` now gives each dump a private `GOCACHE`, which is in the lookup —
   0.63 s and 18 MB per function, discarded after.
 
+- **`Sgemm`: the full Level-3 routine, row-major, all four transpose
+  combinations, general alpha and beta.** `internal/pack` produces packed panels
+  and `internal/block` drives the Goto/BLIS loop nest NC→KC→MC→NR→MR (`KC=384`,
+  `MC=144`, `NC=4096`, exported vars, clamped to the problem and rounded down to
+  whole tiles). Panels are k-major — `a[p*MR+i]`, `b[p*NR+j]` — so the P2-audited
+  kernels read contiguously along the depth loop and nothing in the K-loop
+  computes an address from a stride.
+  - **alpha is folded into the packed A** (BLIS convention): O(mc·kc) multiplies
+    instead of O(mc·nc·kc), it stays out of the audited K-loop entirely, and the
+    extra rounding is covered by `oracle.Tolerance` — the float64 oracle folds it
+    the same way, so the sweep tests the arithmetic keel actually performs.
+  - **beta is applied outside the kernel**, once per C block before the first
+    KC panel, in three variants selected by value (`beta == 1` returns,
+    `beta == 0` clears, otherwise scales). No branch on beta inside any loop, and
+    no separate kernel per variant.
+  - **Edges are zero-padded panels plus a temp tile**, decided from the read API
+    rather than from habit (issue #4, numbers deferred to issue #22). Masking is
+    genuinely available in go1.26.5 — mask types, `Masked`/`Merge`,
+    `LoadMasked`/`StoreMasked`, `LoadFloat32x16SlicePart`/`StoreSlicePart` — but a
+    masked C update means a second kernel family, doubling what has to stay
+    zero-spill under P2's audit that the P3 gate re-runs. So fringe tiles run the
+    same kernel over zeros into an MR×NR scratch buffer and the valid
+    sub-rectangle is copied back: one K-loop, byte-identical for interior and edge
+    tiles. The padding is written, never assumed, because the buffers are reused
+    across blocks. It also discards the `0·Inf = NaN` a padding lane can produce,
+    which `TestSgemmNonFinite` pins.
+  - **Packing is `copy` in the contiguous direction and a scalar loop in the
+    transposing one**, also from the read API: `grep -l -i 'gather\|scatter'`
+    over `$GOROOT/src/simd/archsimd/*.go` returns nothing at any width, so a
+    strided store is not expressible. A 16×16 in-register transpose is
+    constructible from `Permute`/`ConcatPermute`, which do exist; that is a
+    permutation network to write, test and audit for a routine whose cost is
+    O(mc·kc), so it waits for a measurement (issue #21).
+  - Argument errors panic, as everywhere else in keel; `ld >= max(1, cols)` is
+    checked even for an empty matrix, matching reference SGEMM's `LDA >= MAX(1,…)`.
+    `k == 0` is the empty product (`C = beta*C`), `alpha == 0` never reads A or B
+    so a NaN there cannot reach C, and `beta == 0` never reads C so an
+    uninitialized destination is legal.
+- **`Sgemm` differential suite against the float64 oracle** (`gemm_test.go`,
+  `internal/oracle/gemm.go`): sizes 1–17, 63, 64, 65, 500, 1000, 2048 × {NN, NT,
+  TN, TT} × alpha {0, 1, −0.75} × beta {0, 1, 0.5}. The full 36-combination
+  lattice runs at every size where a fringe tile can occur (≤65) and one rotating
+  combination at 500/1000/2048, because 36 combinations at 2048³ is 620 GFLOP per
+  runner and what the large sizes exercise is the loop nest, not the flag
+  handling. Every element is checked at or below 65; above it, four corners plus
+  256 seeded samples. Each kernel shape in `kern.Kernels()` is run as its own
+  runner alongside the public path, so a tile cannot ship untested. Plus leading-
+  dimension padding with poison in the gaps (checked untouched afterwards),
+  zero dimensions, 14 argument-panic cases, and the non-finite cases above.
+- `internal/pack` differential test against a straightforward reference packer,
+  420 combinations over both source geometries — it lives in the root package so
+  its coverage marker comes from the same binary the gate ships to each host.
+- `bench.BenchmarkSgemm` at n = 256/512/1024/2048, and an OpenBLAS reference
+  (`BenchmarkOpenBLAS`, build tag `openblas`) making the identical call. The tag
+  keeps it out of the module graph: nothing keel ships links a BLAS. It prints the
+  library's own report of itself — version and build flags, `DYNAMIC_ARCH`-selected
+  kernel family, thread count, and the CPU count that thread count restricts — so
+  the denominator is identified rather than merely named. Compile- and run-verified
+  against Homebrew OpenBLAS 0.3.34 on the dev host; the criterion itself needs each
+  amd64 gate host to have both a Go toolchain and the library, which is still an
+  open provisioning decision (`docs/hosts.md`, issue #23).
+- `scripts/provision-openblas.sh`: installs the same-host OpenBLAS reference and a
+  `GOEXPERIMENT=simd`-capable toolchain on each gate host, then *verifies* by
+  building the `openblas`-tagged harness there and printing the marker the gate
+  will check — version, `OPENBLAS_NUM_THREADS=1` read back from the library, and
+  the selected kernel family against the gate's own allowlist. Separate from the
+  gate on purpose: it needs interactive `sudo`, which the gate's `BatchMode=yes`
+  connection cannot answer and should not try to. It handles no credentials, and
+  it reports a non-`performance` governor rather than changing a machine's power
+  policy. The Go tarball's digest is enforced against `$KEEL_GO_SHA256` when set
+  and otherwise against `go.dev/dl?mode=json`, and it says which of the two it
+  did, since only the first is provenance.
+- `docs/toolchain-notes.md` T13: `import "C"` in a `_test.go` file is rejected
+  outright (`use of cgo in test … not supported`,
+  `cmd/go/internal/modindex/read.go:589`), and it fails as `[setup failed]` — which
+  in a script reads like a missing library rather than a rejected file layout. Not
+  a simd note and not new, recorded because it shaped `bench/`'s file split: the
+  cgo binding is a package file, the benchmark a test file, and since package files
+  cannot see `_test.go` identifiers the provenance variable is set from the tagged
+  test file's `init`.
+
 ### Changed
 - **DESIGN.md's 32×6 microkernel tile is not implementable on go1.26.5, and P2
   ships two smaller shapes instead** (`docs/toolchain-notes.md` T10, issue #18,
@@ -275,11 +356,34 @@ While the major version is 0, minor versions may contain breaking changes.
     the dev machine", the ≥60% criterion is vacuous here: this dev host is
     `darwin/arm64`, so the ratio would compare OpenBLAS-on-arm64 against keel's
     scalar fallback. The gate instead keeps the *comparison* dev-only — behind the
-    `openblas` build tag, out of the module's dependency graph — and runs it on an
-    amd64 host in one invocation, from a native build of `git archive HEAD`, with
-    single-thread verified from the harness's own report on both sides. No
-    reference host means the gate FAILS and prints the exact provisioning
-    commands; percent-of-peak is not accepted as a substitute.
+    `openblas` build tag, out of the module's dependency graph — and runs it on the
+    amd64 hosts in one invocation each, from a native build of `git archive HEAD`,
+    with single-thread verified from the harness's own report on both sides. A host
+    with no reference FAILS and gets the exact provisioning commands for its own
+    distribution; percent-of-peak is not accepted as a substitute.
+  - **The reference is same-host, on every gate host** (ruling on issue #23).
+    There is no reference-host list and no golden machine: the only
+    apples-to-apples ratio is same silicon, same thread count, same run, so each
+    host is divided by its own OpenBLAS and the version and selected target are
+    recorded beside every ratio. The `DYNAMIC_ARCH`-chosen kernel family
+    (`openblas_get_corename()`) is *checked*, not just printed, against an
+    AVX2-or-better allowlist, because that is the one part of the reference's
+    configuration whose failure mode is in keel's favour — a generic kernel on an
+    AVX-512 host reads low and inflates the ratio while the version, the thread
+    count and the config string all still look right. An unrecognized name fails
+    too. On an **issue-bound** host the denominator becomes
+    `min(same-host OpenBLAS, roofline × measured peak)` (same ruling, citing
+    #17/#18): OpenBLAS there is hand assembly folding accumulation and an embedded
+    broadcast into single FMAs, which the intrinsic layer provably cannot emit
+    (T12), so 60% of it is a demand on the decode stage rather than on the kernel.
+    The decision is the pure function `p3_denominator`, unit-tested by nine new
+    fixtures in `scripts/roofline-test.sh`: it can only ever *lower* a denominator,
+    it applies only where P2's classifier independently says issue-bound, it
+    carries P2's anti-vacuity shape guard against the shape `Sgemm` actually ran
+    (which as this ships refuses the dispatched 4×32 — issue #24), and it retires
+    itself with no expiry clause as the lowering improves. vesta and antares
+    classify FMA-bound and face the unmodified criterion. Both ratios are printed
+    on every host: §7 rule 7 applies to the gate's own arithmetic too.
   It also carries P2 forward: the spill/call/bounds-check audit re-runs on every
   gate from here on, because packing and edge handling are exactly what would
   break those properties, and P2's throughput floor is re-checked on a sentinel

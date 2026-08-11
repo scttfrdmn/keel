@@ -6,6 +6,7 @@ package keel
 import (
 	"os"
 
+	"github.com/scttfrdmn/keel/internal/kern"
 	"github.com/scttfrdmn/keel/internal/l1"
 )
 
@@ -59,3 +60,62 @@ func ActiveL1Backend() string { return activeL1.Name }
 // AvailableL1Backends reports every Level-1 backend runnable here, widest
 // first. Same audience as ActiveL1Backend.
 func AvailableL1Backends() []string { return l1.Names() }
+
+// activeKern is the SGEMM microkernel every Level-3 routine blocks around. One
+// indirect call per MR×NR tile, which is thousands of FMAs at the sizes that
+// matter and is why the shape can be a runtime value at all.
+var activeKern = selectKern()
+
+// selectKern picks the microkernel, honouring KEEL_FORCE with one documented
+// asymmetry against selectL1: the kernel table is sparser than the Level-1
+// table.
+//
+// P2 shipped AVX-512 tiles and a scalar reference; there is no AVX2 microkernel
+// (internal/kern's package doc explains why the shapes are what they are). So
+// KEEL_FORCE=avx2 asks for a Level-3 backend that does not exist. Panicking
+// would make a legitimate Level-1 test configuration unable to call Sgemm at
+// all, so instead KEEL_FORCE acts as a *ceiling* here and Level 3 runs scalar —
+// and ActiveKernBackend reports "scalar", so no benchmark or gate marker can
+// believe it measured an AVX2 SGEMM. That is the property the no-silent-downgrade
+// rule is protecting; the panic is only the usual way of getting it.
+//
+// A name that is not a backend at all still panics, in selectL1 above: it is
+// declared first, so it initializes first.
+func selectKern() kern.Kernel {
+	avail := kern.Kernels() // widest tile first, scalar references last
+	want, forced := os.LookupEnv(envForce)
+	if !forced || want == "" {
+		return avail[0]
+	}
+	for _, k := range avail {
+		if k.Name == want {
+			return k
+		}
+	}
+	for _, k := range avail {
+		if k.Name == kern.Scalar {
+			return k
+		}
+	}
+	panic("keel: no microkernel available, not even scalar (internal/kern.Kernels is empty)")
+}
+
+// ActiveKernBackend reports which SGEMM microkernel backend is dispatched to,
+// and ActiveKernTile its shape. Same audience as ActiveL1Backend: the benchmark
+// harness and the gate's coverage markers.
+func ActiveKernBackend() string { return activeKern.Name }
+
+// ActiveKernTile reports the active microkernel's tile as it appears in gate
+// markers and benchmark names, e.g. "4x32".
+func ActiveKernTile() string { return activeKern.Tile() }
+
+// AvailableKernels reports every microkernel runnable here, widest tile first,
+// as shape/backend identifiers.
+func AvailableKernels() []string {
+	ks := kern.Kernels()
+	out := make([]string, len(ks))
+	for i, k := range ks {
+		out[i] = k.ID()
+	}
+	return out
+}

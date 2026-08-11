@@ -128,6 +128,100 @@ check "shape 4.7000 insns/FMA (+5.9%) is refused"          issue refuse \
       0.437 4.7000   0.352:6.250 "$PEAK"
 
 echo
+echo "-- P3's denominator (#23): min(same-host OpenBLAS, roofline x measured peak) --"
+echo "   (the amendment may only ever LOWER a denominator, only on an issue-bound"
+echo "    host, and only for a shape inside the guard)"
+
+# checkd NAME EXPECT_SOURCE EXPECT_WHY EXPECT_DENOM class pmax i_active ob peak
+checkd() {
+  local name="$1" xsrc="$2" xwhy="$3" xdenom="$4"; shift 4
+  local class="$1" pmax="$2" iact="$3" ob="$4" peak="$5"
+  local out; out="$(p3_denominator "$class" "$pmax" "$iact" "$SB" "$SL" "$ob" "$peak")"
+  local denom src roof why
+  read -r denom src roof why <<<"$out"
+  # Denominators are GFLOP/s, so 0.05 is far tighter than any measurement.
+  if [[ "$src" == "$xsrc" && "$why" == "$xwhy" ]] &&
+     awk -v a="$denom" -v b="$xdenom" 'BEGIN{exit !(a-b < 0.05 && b-a < 0.05)}'; then
+    printf '  ok    %-53s %-8s denom=%7.2f roof=%5.1f%% why=%s\n' \
+      "$name" "$src" "$denom" "$(awk -v r="$roof" 'BEGIN{print r*100}')" "$why"
+  else
+    printf '  FAIL  %-53s got %s/%s denom=%s, want %s/%s denom=%s\n' \
+      "$name" "$src" "$why" "$denom" "$xsrc" "$xwhy" "$xdenom"
+    FAILED=1
+  fi
+}
+
+# 10. An FMA-bound host is untouched, whatever its shape or its peak. This is the
+#     property that keeps vesta and antares measuring the comparison unassisted.
+checkd "vesta (FMA-bound): plain OpenBLAS, no roofline"    openblas fma-bound 165.00 \
+       fma 0 6.250 165.00 165.10
+checkd "FMA-bound host with a guard-clean shape: still plain" openblas fma-bound 175.00 \
+       fma 0 4.625 175.00 216.90
+
+# 11. janus as it ships today: issue-bound, but Sgemm dispatches to 4x32 at 6.250
+#     insns/FMA, 41% above the sweep best, so the guard refuses it a roofline and
+#     the host faces plain OpenBLAS. This is issue #24's arithmetic.
+checkd "janus, Sgemm on 4x32 (6.250): guard refuses"       openblas shape 175.00 \
+       issue 2.25 6.250 175.00 216.90
+
+# 12. The same host if Sgemm ran the guard-clean 2x32: roofline 2.250/4.625 =
+#     48.65% of a 216.9 peak = 105.52, well under OpenBLAS, so the cap binds.
+checkd "janus, Sgemm on 2x32 (4.625): roofline caps"       roofline issue-capped 105.52 \
+       issue 2.25 4.625 175.00 216.90
+
+# 13. Self-retirement, both halves. Post-T12-fix I = 2.875 lifts the roofline to
+#     78.26%; against a 175 GFLOP/s reference the cap is still (just) the binding
+#     one, and against a 150 GFLOP/s reference the min() picks OpenBLAS and the
+#     amendment is simply gone. No expiry clause is involved in either.
+checkd "post-fix I=2.875 vs strong reference: cap still binds" roofline issue-capped 169.75 \
+       issue 2.25 2.875 175.00 216.90
+checkd "post-fix I=2.875 vs weaker reference: retires itself" openblas reference 150.00 \
+       issue 2.25 2.875 150.00 216.90
+
+# 14. The amendment is one-sided: a roofline above the reference cannot raise the
+#     bar. Same host, an absurdly high peak, and the denominator stays OpenBLAS.
+checkd "roofline above the reference never raises the bar"  openblas reference 100.00 \
+       issue 2.25 4.625 100.00 900.00
+
+# 15. Missing inputs fail closed onto the unmodified criterion rather than onto a
+#     zero denominator, which would divide keel's rate into infinity.
+checkd "no peak measured: no cap, plain OpenBLAS"          openblas nopeak 175.00 \
+       issue 2.25 4.625 175.00 0
+checkd "no audited insns/FMA: no cap, plain OpenBLAS"      openblas nopeak 175.00 \
+       issue 2.25 0 175.00 216.90
+
+echo
+echo "-- P3's ratio, net of CI, against whichever denominator was chosen --"
+
+# checkr NAME EXPECT src rlo pklo roof   (EXPECT "" means "no bound at all")
+checkr() {
+  local name="$1" want="$2"; shift 2
+  local got; got="$(p3_ratio_lo "$1" "$2" "$3" "$4")"
+  if [[ -z "$want" && -z "$got" ]] ||
+     { [[ -n "$want" && -n "$got" ]] &&
+       awk -v a="$got" -v b="$want" 'BEGIN{exit !(a-b < 0.0005 && b-a < 0.0005)}'; }; then
+    printf '  ok    %-53s %s\n' "$name" "${got:-<no bound, treated as a failure to measure>}"
+  else
+    printf '  FAIL  %-53s got "%s", want "%s"\n' "$name" "$got" "$want"
+    FAILED=1
+  fi
+}
+
+# 16. The plain branch passes benchstat's own bound through untouched.
+checkr "openblas denominator: the bound is benchstat's" 0.641 openblas 0.641 0.311 0
+# 17. The roofline branch divides keel/peak by the roofline: janus's 31.1% net of CI
+#     against a 48.65% roofline is 63.9% of the cap. This is the arithmetic a wrong
+#     division direction would turn into 15.1%, or into 64.6%-looking nonsense.
+checkr "roofline denominator: pklo/roof"               0.6393 roofline 0.390 0.311 0.486486
+# 18. When the reference's interval is the wider one, keel/OpenBLAS is the tighter
+#     bound on the same ratio and is the one reported.
+checkr "the tighter of the two valid bounds wins"      0.700 roofline 0.700 0.311 0.486486
+# 19. Fail closed: no bounded keel/peak ratio yields no bound, not a zero and not an
+#     unbounded pass.
+checkr "no bounded keel/peak: no amended bound at all" ""    roofline 0.390 ""    0.486486
+checkr "no roofline: no amended bound at all"          ""    roofline 0.390 0.311 0
+
+echo
 if [[ "$FAILED" -eq 0 ]]; then
   echo "roofline controls: all pass"
 else

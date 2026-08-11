@@ -171,3 +171,102 @@ throughput_verdict() {
     printf "%s %.4f %.4f %.6f %.6f %s %s\n", class, cspread, mspread, roof, attain, result, why
   }'
 }
+
+# ---------------------------------------------------- P3's denominator (#23)
+# p3_denominator — which number keel's Sgemm is divided by at 2048^3, as a pure
+# function of measurements already taken.
+#
+# The ruling (DESIGN.md §4/P3, as amended): the reference is same-host OpenBLAS,
+# and on an issue-bound host the denominator is
+#
+#       min(same-host OpenBLAS, roofline * measured peak)
+#
+# because OpenBLAS's K-loop on such a host is hand assembly that folds
+# accumulation and an embedded broadcast into single FMAs — instructions the
+# intrinsic layer provably cannot emit (T12, #17/#18) — so it sits *above* the
+# front-end ceiling keel's kernels are capped by. Asking for 60% of that is asking
+# the decode stage rather than the kernel.
+#
+# Four properties, each of which is a line of code below rather than a promise:
+#
+# ONE-SIDED. The result is never larger than OB_RATE, so this can only ever lower
+# a denominator and never raise one. An FMA-bound host takes the OpenBLAS branch
+# unconditionally: no classification, no roofline, no leniency.
+#
+# THE SHAPE UNDER TEST IS THE SHAPE THAT RAN. I_ACTIVE is the audited insns/FMA of
+# the kernel `Sgemm` actually dispatched to (read from the keel-bench-kern marker of
+# the run that produced the ratio), not of the best shape available. It carries P2's anti-vacuity guard
+# unchanged: a shape more than `slack` above the sweep's best zero-spill insns/FMA
+# is refused a roofline and the host reverts to plain OpenBLAS. A fatter kernel
+# cannot buy itself a lower bar.
+#
+# SELF-RETIRING. roof = PMAX / I_ACTIVE rises as the lowering improves, and PMAX is
+# pinned from below by the register-only peak kernel. Once roof * peak exceeds
+# OpenBLAS the min() picks OpenBLAS and the amendment is gone with no expiry clause
+# to remember — reported as why=reference, which is the outcome to hope for.
+#
+# NO HIDDEN DENOMINATOR. The caller is handed SOURCE and ROOF so it can print both
+# ratios; §7 rule 7 applies to the gate's own arithmetic.
+#
+# Arguments, in order:
+#   1 class        "issue" or anything else, from throughput_verdict on this host
+#   2 pmax         max_i p_i for this host (ROOF * I_b from that same verdict)
+#   3 i_active     audited insns/FMA of the shape Sgemm ran
+#   4 sweep_best   best zero-spill insns/FMA in the recorded sweep
+#   5 slack        how far above it a shape may be and still get a roofline
+#   6 ob_rate      same-host OpenBLAS GFLOP/s at 2048^3
+#   7 peak_rate    same-host measured peak GFLOP/s
+#
+# Echoes one line: DENOM SOURCE ROOF WHY
+#   SOURCE in {openblas, roofline}
+#   ROOF   the roofline fraction used (0 when the denominator is OpenBLAS)
+#   WHY    in {fma-bound, shape, reference, issue-capped, nopeak}
+p3_denominator() {
+  awk -v class="$1" -v pmax="$2" -v i_active="$3" -v sweep_best="$4" \
+      -v slack="$5" -v ob="$6" -v peak="$7" '
+  BEGIN {
+    if (class != "issue")                { print_ob("fma-bound"); exit }
+    if (i_active <= 0 || pmax <= 0)      { print_ob("nopeak");    exit }
+    if (peak <= 0)                       { print_ob("nopeak");    exit }
+    if (i_active > sweep_best * slack)   { print_ob("shape");     exit }
+
+    roof = pmax / i_active
+    cap  = roof * peak
+    # min(), stated as a comparison so the branch taken is reportable.
+    if (cap < ob) printf "%.6f roofline %.6f issue-capped\n", cap, roof
+    else          printf "%.6f openblas %.6f reference\n",    ob,  roof
+  }
+  function print_ob(why) { printf "%.6f openblas 0.000000 %s\n", ob, why }'
+}
+
+# p3_ratio_lo SOURCE RLO PKLO ROOF — the conservative lower bound on keel's ratio
+# against whichever denominator p3_denominator chose.
+#
+# Against plain OpenBLAS that is just $RLO, benchstat's bound on Sgemm/OpenBLAS.
+# Against the roofline cap it is keel_lo / (roof · peak_hi), and since
+# bench_ratio_lo already returns keel_lo/peak_hi as $PKLO, that is $PKLO/roof.
+#
+# Why a max() and not simply the second expression: the cap is *below* OpenBLAS by
+# construction, so $RLO is also a valid lower bound on the same ratio, and which of
+# the two is tighter depends on whose confidence interval is wider — the reference's
+# or the peak kernel's. Taking the larger is not cherry-picking; both bound the same
+# quantity from below, and discarding the tighter one would report a ratio lower than
+# the measurements support. The direction that would be cherry-picking — inventing a
+# bound the measurements do not support — is impossible here, because both inputs are
+# benchstat's own net-of-CI ratios.
+#
+# It is a separate function with fixtures because it is the arithmetic where a
+# division in the wrong direction would silently flatter keel, and reading it inline
+# in a gate script is not evidence that it is right.
+#
+# Echoes the bound, or nothing if the inputs cannot support one (empty $PKLO on the
+# roofline branch is a failure to measure, and the caller must treat it as one).
+p3_ratio_lo() {
+  awk -v src="$1" -v rlo="$2" -v pklo="$3" -v roof="$4" '
+  BEGIN {
+    if (src != "roofline") { if (rlo != "") printf "%.6f\n", rlo; exit }
+    if (pklo == "" || roof + 0 <= 0) exit
+    v = pklo / roof
+    printf "%.6f\n", (v > rlo + 0) ? v : rlo + 0
+  }'
+}

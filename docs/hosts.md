@@ -127,28 +127,99 @@ structurally from the two desktop/HEDT parts. DESIGN.md §4/P3 sizes KC/MC/NC
 against a cache hierarchy, so the blocking parameters that suit vesta should not
 be assumed to transfer here. Measure per host.
 
-## Two roles P3 assigns to a host
+## What P3 asks of every host, and of one
 
-`scripts/gate-p3.sh` reads two more machine-local lists, both in the same format
-as `.keel-hosts` and both gitignored for the same reason.
+**The OpenBLAS reference is same-host, on all three** (ruling on issue #23).
+There is no reference-host list and no golden machine. P3's second criterion is
+≥60% of single-thread OpenBLAS at 2048³, and the only apples-to-apples version of
+that ratio is same silicon, same thread count, same run — so each host is divided
+by *its own* OpenBLAS, in one benchmark invocation, from a native build of the
+`openblas`-tagged cgo harness shipped as `git archive HEAD`. A cross-host ratio
+would compare two microarchitectures and attribute the difference to keel
+(DESIGN.md §7 rule 7); this dev host would be the worst case of that, being
+`darwin/arm64` where keel's AVX-512 path does not exist at all.
 
-**The OpenBLAS reference host** (`.keel-openblas-hosts`, or
-`$KEEL_OPENBLAS_HOSTS`). P3's second criterion is ≥60% of single-thread OpenBLAS
-at 2048³, and the only place that ratio means anything is a machine where both
-halves can execute: this dev host is `darwin/arm64`, where keel's shipped
-AVX-512 path does not exist at all, so an OpenBLAS-on-arm64 denominator would be
-comparing across silicon (DESIGN.md §7 rule 7). So the comparison runs on an
-amd64 host, in one benchmark invocation, from a native build of the
-`openblas`-tagged cgo harness — which is the one thing in this project that needs
-a Go toolchain *and* a system library on the target. None of the three current
-hosts has either; provisioning is a decision, and the gate prints the exact
-commands rather than quietly reporting percent-of-peak instead.
+That makes the amd64 hosts the one place in this project that needs a Go
+toolchain *and* a system library installed, rather than a cross-compiled static
+binary. None of the three had either as of 2026-08-11:
+
+| Host | distro ID | `go` on a non-login `ssh` PATH | `libopenblas.so` | governor |
+|---|---|---|---|---|
+| vesta | `ubuntu` | none | none | performance |
+| janus | `rocky` | none | none | performance |
+| antares | `ubuntu` | none | none | powersave |
+
+(janus runs Rocky Linux 9, not RHEL proper — the `dnf` package name is the same.)
+
+Provisioning is Scott's decision and Scott's `sudo`, so it lives in
+`scripts/provision-openblas.sh`, which he runs; the gate connects with
+`BatchMode=yes` and never handles a credential. A host that cannot produce a
+reference **fails** the gate by name, with the exact commands for its own distro
+printed. It does not fall back to percent-of-peak: CLAUDE.md's "the OpenBLAS
+reference when available; otherwise say it isn't" is a rule about reporting
+numbers, and using it to satisfy a criterion would be weakening a gate.
+
+Three things get recorded per host, because each of them moves the ratio:
+
+1. **the OpenBLAS version and build string** — what the denominator *is*;
+2. **`OPENBLAS_NUM_THREADS=1` taking effect**, read back from
+   `openblas_get_num_threads()` rather than assumed from the environment;
+3. **the `DYNAMIC_ARCH`-selected kernel family**, from
+   `openblas_get_corename()`, checked against an AVX2-or-better allowlist
+   (`haswell skylakex cooperlake sapphirerapids zen`).
+
+The third is the one that is easy to omit and the only one whose failure mode is
+*in keel's favour*: a package that quietly selects a generic or pre-AVX2 kernel
+on an AVX-512 host produces a reference that reads low, which inflates keel's
+ratio while the version string, the thread count and the config line all still
+look right. An unrecognized name fails too — missing knowledge should cost a
+human one line of diff, not silently widen a bar.
+
+On an **issue-bound** host the denominator is
+`min(same-host OpenBLAS, roofline × measured peak)` (the same ruling, citing
+#17/#18): OpenBLAS's K-loop there is hand assembly folding accumulation and an
+embedded broadcast into single FMAs, which the intrinsic layer provably cannot
+emit (T12), so it sits *above* the front-end ceiling keel's kernels are capped
+by. vesta and antares classify FMA-bound and therefore face the unmodified
+criterion — which keeps at least one host where the comparison is completely
+unassisted. Both ratios, amended and plain, are printed on every host.
 
 Note what stays true regardless: the `openblas` tag keeps that harness out of the
 module's dependency graph, so nothing keel ships ever links OpenBLAS.
 
-**The throughput sentinel** (`.keel-sentinel`, or `$KEEL_SENTINEL_HOST`). The
-ruling on issue #19 left P2's floor with a class-dependent denominator, and on an
+*The dev host has OpenBLAS, and that is useful for exactly one thing.* Homebrew
+OpenBLAS 0.3.34 is installed here, so the tagged harness is compile- and
+run-verifiable locally — the cgo declarations, the linker flags, the provenance
+plumbing and the thread pin were all checked this way before the gate ever shipped
+them to a remote host (see toolchain note T13 for the file layout cgo forced).
+What it cannot do is produce the criterion, and the measurements say why more
+plainly than the architecture argument does:
+
+| Config (n=1024, single sub-benchmark) | Rate |
+|---|---|
+| OpenBLAS, `OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1` | ~1410 GFLOP/s |
+| OpenBLAS, unpinned (`threads=12`) | ~1400 GFLOP/s |
+| keel, scalar backend (n=256) | ~6 GFLOP/s |
+
+The pin works and is honest — `openblas_get_num_threads()` reports 1, and user CPU
+time equals wall time to within a few percent, so one thread really is doing the
+work. That one thread reaches roughly ten times what this core's NEON FMA units
+can issue, and adding eleven more threads buys nothing, which together say the
+reference is running on the M4's matrix unit rather than on its vector units
+(config target `vortexm4`). Against that, keel's *scalar* path is the only thing
+this host can run. A ratio of ~1:200 between a matrix coprocessor and a Go scalar
+loop is not evidence about the AVX-512 kernel P3's criterion is actually about.
+
+Two of the longer local runs of the *identical* pinned configuration also came in
+at 119 and 712 GFLOP/s — up to 12× run-to-run — which is what a laptop with no
+governor to pin and an aggressive QoS scheduler looks like. DESIGN.md §5.4's
+methodology exists to exclude exactly this, and it is a second, independent reason
+no number from this machine is reportable.
+
+**The throughput sentinel** is the one role P3 assigns to a single host, named in
+`.keel-sentinel` or `$KEEL_SENTINEL_HOST` — same format as `.keel-hosts`, and
+gitignored for the same reason. The ruling
+on issue #19 left P2's floor with a class-dependent denominator, and on an
 issue-bound host that floor *rises* as the kernel's instruction count falls. The
 same arithmetic makes such a host the one that notices a K-loop getting fatter,
 which is the risk P3 carries — packing, edge handling and beta variants all add
@@ -156,6 +227,11 @@ code around the loop. So gate P3 re-runs P2's verdict there. janus is the
 sentinel today: it is the host where instruction count binds (46.0% of peak,
 94.6% of a 48.6% issue roofline). If the file is absent, every host is a
 sentinel — missing configuration costs time, never coverage.
+
+Gate P3 classifies *every* host with that same measurement even when only one is
+judged by it, because the amended denominator above applies only where the
+classifier says issue-bound. A host whose classification could not be measured is
+treated as FMA-bound and faces the unmodified bar, which is the strict direction.
 
 ## What has been verified here
 

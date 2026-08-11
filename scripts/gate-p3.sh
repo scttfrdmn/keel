@@ -77,8 +77,11 @@
 #
 #     So this gate implements the other reading: the *comparison* is dev-only —
 #     built behind the `openblas` tag, absent from the module's dependency graph,
-#     never linked into anything keel ships — and it runs on the amd64 host where
-#     both halves can execute. Concretely:
+#     never linked into anything keel ships — and it runs on the amd64 hosts where
+#     both halves can execute. Per the ruling on issue #23 that is EVERY gate host,
+#     each against its own OpenBLAS: no cross-host reference and no golden machine,
+#     because the only apples-to-apples ratio is same silicon, same thread count,
+#     same run. Concretely:
 #       - the reference and keel's Sgemm are measured in the SAME benchmark
 #         invocation on the SAME host, so they share a frequency and a thermal
 #         state. P2's criterion 5 settled this: a ratio of two numbers taken from
@@ -91,19 +94,46 @@
 #         multi-threaded OpenBLAS would enlarge the denominator and make the bar
 #         harder rather than easier — but it would also make it meaningless, and
 #         refusing meaningless numbers in both directions is this gate's job.
+#       - the reference's own configuration is checked, not just recorded. A
+#         DYNAMIC_ARCH build that selected a pre-AVX2 kernel on an AVX-512 host
+#         reads low, and a low reference *inflates* keel's ratio — the one
+#         direction in which a gate must never fail. So the selected kernel name
+#         must be an AVX2-or-better target, and an unrecognized name fails too:
+#         missing knowledge should cost a human a minute, not silently widen a bar.
 #       - a host needs a Go toolchain and OpenBLAS for that, and the execution
 #         hosts deliberately have neither (docs/hosts.md: cross-compiled static
-#         binaries, nothing installed). Provisioning is Scott's to approve, so
-#         when no host can produce a reference this gate FAILS and prints the
-#         exact commands. It does not fall back to percent-of-peak. CLAUDE.md's
-#         "the OpenBLAS reference when available; otherwise say it isn't" is a
-#         rule about reporting numbers; using it to satisfy a gate criterion
-#         would be weakening the gate, which is the one option never available.
+#         binaries, nothing installed). Provisioning is Scott's to approve, so a
+#         host that cannot produce a reference FAILS this gate and gets the exact
+#         commands for its own distro printed. It does not fall back to
+#         percent-of-peak. CLAUDE.md's "the OpenBLAS reference when available;
+#         otherwise say it isn't" is a rule about reporting numbers; using it to
+#         satisfy a gate criterion would be weakening the gate, which is the one
+#         option never available.
 #
-#     Every host that has a reference must clear the bar, at least one must exist,
-#     and at least one must clear it under the performance governor (DESIGN.md
-#     §5.4 rule 5). Percent of measured peak is printed for every host either way,
-#     because that number is informative even where it is not a criterion.
+#     EVERY gate host must produce a reference and clear the bar, and at least one
+#     must clear it under the performance governor (DESIGN.md §5.4 rule 5). Percent
+#     of measured peak is printed for every host either way, because that number is
+#     informative even where it is not a criterion.
+#
+#  6b. THE DENOMINATOR ON AN ISSUE-BOUND HOST, AND WHY IT IS NOT A CONCESSION.
+#     Also from the ruling on #23: where the P2 classifier says a host is
+#     issue-bound, the denominator is min(same-host OpenBLAS, roofline x measured
+#     peak). OpenBLAS's K-loop there is hand assembly folding accumulation and an
+#     embedded broadcast into single FMAs — instructions the intrinsic layer
+#     provably cannot emit (T12, #17/#18) — so it sits above the front-end ceiling
+#     keel's kernels are capped by, and 60% of it is a demand on the decode stage.
+#
+#     The decision is the pure function `p3_denominator` in scripts/roofline.sh,
+#     driven by the same fixtures as P2's verdict and running before any
+#     benchmarking. It is one-sided (it can only lower a denominator, never raise
+#     one), it applies only to a host the classifier admitted on independent
+#     evidence, and it carries P2's anti-vacuity shape guard against the shape
+#     `Sgemm` ACTUALLY RAN — read from the keel-bench-kern marker of the very run
+#     that produced the ratio, not from the best shape on the shelf and not from a
+#     different host's log. A fatter kernel therefore cannot buy itself a lower bar;
+#     as this is written the dispatched 4x32 is refused for exactly that reason
+#     (issue #24). Both ratios, amended and plain, are printed on every host: the
+#     gate's own leniency is a number, and §7 rule 7 applies to it too.
 #
 #  7. WHAT THIS GATE DOES NOT CHECK. "Beta handling as kernel variants, not
 #     branches in the loop" and "packing SIMD-accelerated through the shim" are
@@ -173,17 +203,17 @@ GATE_PEAK="Peak/avx512"
 SGEMM_BENCH_FILTER='Peak|Sgemm|OpenBLAS/avx512|n=2048'
 OPENBLAS_REMOTE_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 
-# openblas_hosts prints the hosts that can produce an OpenBLAS reference, i.e.
-# those with both a Go toolchain and OpenBLAS. Machine-local like .keel-hosts,
-# and for the same reason.
-openblas_hosts() {
-  if [[ -n "${KEEL_OPENBLAS_HOSTS:-}" ]]; then
-    tr ' ' '\n' <<<"$KEEL_OPENBLAS_HOSTS" | sed '/^$/d'
-    return
-  fi
-  [[ -r .keel-openblas-hosts ]] || return 0
-  sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' .keel-openblas-hosts
-}
+# The OpenBLAS kernel families that are AVX2-or-better on x86-64, lowercased.
+# DYNAMIC_ARCH picks one at load time and reports it through
+# openblas_get_corename(); anything not on this list — a generic build, a
+# pre-AVX2 family, or a name added by a future OpenBLAS — fails the criterion.
+#
+# An allowlist rather than a denylist, deliberately, and it is the strictness that
+# is the point: a reference that quietly runs a Nehalem kernel on a Skylake-X host
+# is slow, and a slow reference makes keel look good. Every other failure mode of
+# this gate costs a session; this one would cost the truth of a number. A new
+# legitimate target name failing here costs whoever sees it one line of diff.
+OPENBLAS_OK_CORES="haswell skylakex cooperlake sapphirerapids zen"
 
 # sentinel_hosts prints the hosts the P2 throughput regression re-runs on:
 # whatever is configured, else every host (criterion 5).
@@ -229,6 +259,47 @@ audit_ipf() {
       }
       if (ins != "" && ar != "" && ar + 0 > 0) { printf "%.6f", ins / ar; exit }
     }' "$2"
+}
+
+# ob_preflight HOST — what the same-host reference needs, before trying to build it.
+#
+# The native build failing with a linker error and thirty lines of go tooling is a
+# worse gate line than "this host has no libopenblas.so", and the two are told apart
+# here rather than by reading a compiler diagnostic. `go` is looked up as ssh finds
+# it: a non-interactive, non-login shell, which is exactly how the build below runs,
+# so a toolchain installed only in an interactive PATH reports as missing — which is
+# the truth about this gate's ability to use it.
+ob_preflight() {
+  ssh "${KEEL_SSH_OPTS[@]}" "$1" '
+    distro=unknown
+    [ -r /etc/os-release ] && distro=$(sed -n "s/^ID=//p" /etc/os-release | tr -d \")
+    go=none
+    command -v go >/dev/null 2>&1 && go=$(go version | cut -d" " -f3)
+    lib=none
+    for d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib; do
+      if [ -e "$d/libopenblas.so" ]; then lib="$d/libopenblas.so"; break; fi
+    done
+    printf "distro=%s go=%s lib=%s\n" "$distro" "$go" "$lib"
+  ' 2>/dev/null
+}
+
+# ob_provision_help HOST DISTRO — the exact commands needed on HOST, named per
+# distribution because "install OpenBLAS" is not a command anybody can run.
+#
+# Printed, never executed: provisioning needs sudo, the gate connects with
+# BatchMode=yes, and installing software on Scott's machines is his call, not this
+# script's. scripts/provision-openblas.sh is the thing he runs.
+ob_provision_help() {
+  case "$2" in
+    ubuntu|debian|pop|linuxmint)
+      info "  [$1] sudo apt-get install -y libopenblas-dev" ;;
+    rhel|centos|rocky|almalinux|fedora)
+      info "  [$1] sudo dnf install -y openblas-devel" ;;
+    *)
+      info "  [$1] install an OpenBLAS development package (unrecognized distro id '${2:-unknown}')" ;;
+  esac
+  info "  [$1] plus a go1.26.5+ toolchain from go.dev/dl, on PATH for a non-login ssh"
+  info "  [$1] scripts/provision-openblas.sh does both, with sudo prompts the gate cannot answer"
 }
 
 echo "== gate-p3: packing + blocking -> full Sgemm =="
@@ -523,11 +594,24 @@ BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 
 SENTINELS="$(sentinel_hosts)"
+# Criterion 5 judges the sentinel hosts. Criterion 6b needs something else from the
+# same measurement: a *classification* for every host whose Sgemm will be divided by
+# an OpenBLAS number, because the amended denominator applies only where the host is
+# issue-bound. So the loop runs on every host and only the pass/fail is restricted to
+# $SENTINELS; each host's (class, pmax) is recorded under $BINDIR for the OpenBLAS
+# section to read, rather than re-derived there from a second set of measurements.
+#
+# A host with no recorded verdict is treated as FMA-bound below, which is the strict
+# direction: no roofline, no leniency, the unmodified 60%-of-OpenBLAS bar.
+CLASSIFY="$(printf '%s\n%s\n' "$SENTINELS" "$HOSTS" | sed '/^[[:space:]]*$/d' | awk '!seen[$0]++')"
 if [[ -z "$SENTINELS" ]]; then
   fail "no sentinel host and no hosts at all; P2's floor cannot be re-checked"
 else
   if [[ -z "${KEEL_SENTINEL_HOST:-}" && ! -r .keel-sentinel ]]; then
     info "no sentinel configured, so every host is one: $(tr '\n' ' ' <<<"$SENTINELS")"
+  fi
+  if [[ "$(tr '\n' ' ' <<<"$CLASSIFY")" != "$(tr '\n' ' ' <<<"$SENTINELS")" ]]; then
+    info "classifying every host for criterion 6b (judged as sentinels: $(tr '\n' ' ' <<<"$SENTINELS"))"
   fi
   if ! remote_build_test ./bench "$KERNBIN" >"$LOG" 2>&1; then
     fail "cross-compile of the linux/amd64 bench binary (kernel benchmarks)"
@@ -535,9 +619,16 @@ else
   fi
   while read -r host; do
     [[ -n "$host" ]] || continue
+    # Judged only if configured as a sentinel; classified either way.
+    JUDGED=0
+    [[ $'\n'"$SENTINELS"$'\n' == *$'\n'"$host"$'\n'* ]] && JUDGED=1
     if ! remote_exec "$host" "$KERNBIN" "${BFLAGS[@]}" -test.bench="$KERN_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
-      fail "[$host] sentinel: kernel benchmark run failed"
-      sed 's/^/        /' "$BENCHLOG" | tail -20
+      if [[ "$JUDGED" -eq 1 ]]; then
+        fail "[$host] sentinel: kernel benchmark run failed"
+        sed 's/^/        /' "$BENCHLOG" | tail -20
+      else
+        info "[$host] kernel benchmark run failed; unclassified, so criterion 6b treats it as FMA-bound (the strict reading)"
+      fi
       continue
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
@@ -563,7 +654,11 @@ else
     done
     [[ -n "$IPF_PEAK" ]] && MIXES="$MIXES $GATE_PEAK_FUNC|1.0:$IPF_PEAK"
     if [[ -z "$BEST_LO" ]]; then
-      fail "[$host] sentinel: no bounded percent-of-peak for any shipped shape"
+      if [[ "$JUDGED" -eq 1 ]]; then
+        fail "[$host] sentinel: no bounded percent-of-peak for any shipped shape"
+      else
+        info "[$host] no bounded percent-of-peak; unclassified, so criterion 6b treats it as FMA-bound"
+      fi
       continue
     fi
     # The ceiling set is every mix except the shape under test; see gate-p2.sh
@@ -582,6 +677,16 @@ else
     fracpt="$(awk -v r="$BEST_PT" 'BEGIN{printf "%.1f", r * 100}')"
     attpc="$(awk -v a="$ATTAIN" 'BEGIN{printf "%.1f", a * 100}')"
     roofpc="$(awk -v r="$ROOF" 'BEGIN{printf "%.1f", r * 100}')"
+    # pmax = max_i f_i·I_i, recovered from the verdict's own two outputs so that
+    # criterion 6b's roofline is built from the same ceiling this one judged
+    # against — not from a second reduction of the same mixes.
+    printf '%s %s\n' "$CLASS" \
+      "$(awk -v r="$ROOF" -v i="${BEST_IPF:-0}" 'BEGIN{printf "%.6f", r * i}')" \
+      >"$BINDIR/class-$host"
+    if [[ "$JUDGED" -eq 0 ]]; then
+      info "[$host] classified ${CLASS}-bound (roofline ${roofpc}%) for criterion 6b; not a sentinel, so P2's floor is not judged here"
+      continue
+    fi
     case "$CLASS/$RESULT" in
       issue/pass)
         pass "[$host] sentinel: $BEST_ID holds P2's floor — ${fracpt}% of peak (${frac}% net of CI) = ${attpc}% of its ${roofpc}% issue roofline (>= 90%)" ;;
@@ -592,7 +697,7 @@ else
       *)
         fail "[$host] sentinel: $BEST_ID fell below P2's floor — ${fracpt}% of peak, ${frac}% net of CI, ${CLASS}-bound (why=$WHY)" ;;
     esac
-  done <<<"$SENTINELS"
+  done <<<"$CLASSIFY"
 fi
 
 # ----------------------------------------------- Sgemm at 2048^3 vs OpenBLAS
@@ -630,28 +735,37 @@ if [[ -n "$HOSTS" ]]; then
   done <<<"$HOSTS"
 fi
 
-# The reference: same host, same invocation, built natively behind the cgo tag.
-OB_HOSTS="$(openblas_hosts)"
+# The reference: same host, same invocation, built natively behind the cgo tag —
+# on EVERY gate host (ruling on #23). There is no reference-host list any more; the
+# only apples-to-apples ratio is same silicon, same thread count, same run, so a
+# host that cannot produce its own reference cannot contribute to this criterion,
+# and it says so per host instead of one host standing in for three.
 OB_CLEARED=0
+OB_MEASURED=0
 OB_PERF_GOV=""
-if [[ -z "$OB_HOSTS" ]]; then
-  fail "no OpenBLAS reference host configured, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute)"
-  info "This criterion needs one amd64 host with a Go toolchain and OpenBLAS. The"
-  info "execution hosts deliberately have neither (docs/hosts.md: cross-compiled"
-  info "static binaries, nothing installed), and provisioning is Scott's to approve."
-  info "Exact commands, for one host:"
-  info "  Ubuntu:  sudo apt-get install -y libopenblas-dev"
-  info "  RHEL 9:  sudo dnf install -y openblas-devel"
-  info "  plus a go1.26.5+ toolchain (GOEXPERIMENT=simd support): distro packages"
-  info "  are likely older, so install from go.dev/dl and put it on PATH."
-  info "Then name the host in .keel-openblas-hosts (gitignored) or \$KEEL_OPENBLAS_HOSTS."
+NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
+if [[ -z "$HOSTS" ]]; then
+  fail "no execution hosts, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute)"
 elif [[ -n "$(git status --porcelain)" ]]; then
   fail "the working tree is dirty, so \`git archive HEAD\` would measure something other than what is here; commit first"
 else
   while read -r host; do
     [[ -n "$host" ]] || continue
     gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
-    info "[$host] governor=${gov:-unknown}; building the openblas-tagged harness natively from git archive HEAD ($(git rev-parse --short HEAD))"
+    pre="$(ob_preflight "$host")"
+    obdistro="$(field distro "$pre")"
+    obgo="$(field go "$pre")"
+    oblib="$(field lib "$pre")"
+    info "[$host] governor=${gov:-unknown} distro=${obdistro:-unknown} go=${obgo:-none} libopenblas=${oblib:-none}"
+    if [[ "$obgo" == none || -z "$obgo" || "$oblib" == none || -z "$oblib" ]]; then
+      MISS=""
+      [[ "$obgo"  == none || -z "$obgo"  ]] && MISS="a Go toolchain"
+      [[ "$oblib" == none || -z "$oblib" ]] && MISS="${MISS:+$MISS and }libopenblas.so"
+      fail "[$host] no same-host OpenBLAS reference: this host is missing $MISS, so its ratio is unmeasured (percent-of-peak is NOT a substitute)"
+      ob_provision_help "$host" "$obdistro"
+      continue
+    fi
+    info "[$host] building the openblas-tagged harness natively from git archive HEAD ($(git rev-parse --short HEAD))"
     # KEEL_SCP_OPTS, not KEEL_SSH_OPTS: the latter carries -n, which would close
     # stdin and hand tar an empty archive. The remote-side paths below expand
     # here, on the client, which is what is wanted — they are this script's
@@ -694,6 +808,22 @@ else
       fail "[$host] GOMAXPROCS=${gmp:-unreported}; keel's side of the comparison must be single-threaded too"
       continue
     fi
+    # The kernel family DYNAMIC_ARCH selected. Checked because it is the one part of
+    # the reference's configuration whose failure mode is a *low* denominator, and a
+    # low denominator flatters keel — see $OPENBLAS_OK_CORES above.
+    obcore="$(field corename "$obm" | tr '[:upper:]' '[:lower:]')"
+    if [[ -z "$obcore" ]]; then
+      fail "[$host] the OpenBLAS marker carries no corename=, so the reference's kernel family is unknown and a generic kernel cannot be ruled out"
+      continue
+    fi
+    CORE_OK=0
+    for c in $OPENBLAS_OK_CORES; do [[ "$obcore" == "$c" ]] && CORE_OK=1; done
+    if [[ "$CORE_OK" -eq 0 ]]; then
+      fail "[$host] OpenBLAS selected the '$obcore' kernel, which is not on the AVX2-or-better allowlist ($OPENBLAS_OK_CORES); a reference slower than the host can be is a denominator that flatters keel"
+      info "  [$host] if '$obcore' is a legitimate AVX2-or-better target, add it to OPENBLAS_OK_CORES in this script; if it is a generic build, the distro package needs replacing"
+      continue
+    fi
+    info "[$host] reference kernel family: $obcore (on the AVX2-or-better allowlist)"
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
     if [[ -z "$(bench_stat "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)" ]]; then
@@ -709,16 +839,64 @@ else
     fi
     rlopc="$(awk -v r="$rlo" 'BEGIN{printf "%.1f", r*100}')"
     rptpc="$(awk -v r="$rpt" 'BEGIN{printf "%.1f", r*100}')"
-    if awk -v r="$rlo" -v f="$OPENBLAS_FLOOR" 'BEGIN{exit !(r >= f)}'; then
-      pass "[$host] Sgemm at 2048^3 is ${rptpc}% of single-thread OpenBLAS, ${rlopc}% net of CI (>= 60%)"
+    OB_MEASURED=$((OB_MEASURED + 1))
+
+    # ---- criterion 6b: which number this host's Sgemm is divided by (#23, #17/#18)
+    # Every input is a measurement already taken, and all of them from THIS run on
+    # THIS host: the reference rate, the peak rate, the shape Sgemm dispatched to,
+    # and the classification recorded by the sentinel loop above.
+    obclass="fma"; obpmax="0"
+    if [[ -r "$BINDIR/class-$host" ]]; then read -r obclass obpmax <"$BINDIR/class-$host"; fi
+    # "4x32/avx512 (available: ...)" -> Kernel4x32; audited, not assumed, because a
+    # roofline built from the wrong shape's instruction count is the hole the shape
+    # guard exists to close.
+    obkern="$(marker bench-kern "$BENCHLOG")"; obkern="${obkern%% *}"
+    obtile="${obkern%%/*}"
+    i_active="$(audit_ipf "Kernel$obtile" "$AUDITKERN")"
+    ob_rate="$(bench_gflops "$GATE_OPENBLAS" "$BENCHCSV")"
+    peak_rate="$(bench_gflops "$GATE_PEAK" "$BENCHCSV")"
+    read -r obdenom obsrc obroof obwhy <<<"$(p3_denominator \
+      "$obclass" "$obpmax" "${i_active:-0}" \
+      "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" "${ob_rate:-0}" "${peak_rate:-0}")"
+    info "[$host] denominator: $obsrc $(printf '%.2f' "$obdenom") GFLOP/s (why=$obwhy, class=$obclass, Sgemm ran ${obkern:-unknown} at $(printf '%.3f' "${i_active:-0}") insns/FMA, roofline $(awk -v r="$obroof" 'BEGIN{printf "%.1f", r*100}')% of a $(printf '%.2f' "${peak_rate:-0}") GFLOP/s peak)"
+
+    # Net of CI, in the same conservative direction as everything else here. Against
+    # the roofline cap that is keel_lo/(roof · peak_hi) = pklo/roof; $rlo remains a
+    # valid (weaker) bound on the same ratio because the cap is below OpenBLAS, so
+    # the tighter of the two is taken rather than whichever came to hand.
+    alo="$rlo"; apt="$rpt"
+    if [[ "$obsrc" == roofline ]]; then
+      pklo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
+      alo="$(p3_ratio_lo roofline "$rlo" "$pklo" "$obroof")"
+      if [[ -z "$alo" ]]; then
+        fail "[$host] no bounded Sgemm/peak ratio, so the amended denominator cannot be bounded either; that is a failure to measure, not a pass"
+        continue
+      fi
+      apt="$(awk -v k="$(bench_gflops "$GATE_SGEMM" "$BENCHCSV")" -v d="$obdenom" 'BEGIN{printf "%.4f", k / d}')"
+    fi
+    alopc="$(awk -v r="$alo" 'BEGIN{printf "%.1f", r*100}')"
+    aptpc="$(awk -v r="$apt" 'BEGIN{printf "%.1f", r*100}')"
+    # Both ratios, always, whichever one binds (§7 rule 7 applies to this script's
+    # arithmetic as much as to the library's benchmarks).
+    if [[ "$obsrc" == roofline ]]; then
+      info "[$host] amended (issue-capped): ${aptpc}%, ${alopc}% net of CI | plain OpenBLAS: ${rptpc}%, ${rlopc}% net of CI"
+    else
+      info "[$host] plain OpenBLAS is the denominator (why=$obwhy), so the amended and unmodified ratios are the same number"
+    fi
+    if awk -v r="$alo" -v f="$OPENBLAS_FLOOR" 'BEGIN{exit !(r >= f)}'; then
+      pass "[$host] Sgemm at 2048^3 is ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (>= 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
       OB_CLEARED=$((OB_CLEARED + 1))
       [[ "$gov" == "performance" ]] && OB_PERF_GOV="$host"
     else
-      fail "[$host] Sgemm at 2048^3 is only ${rptpc}% of single-thread OpenBLAS, ${rlopc}% net of CI (< 60%)"
+      fail "[$host] Sgemm at 2048^3 is only ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (< 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
     fi
-  done <<<"$OB_HOSTS"
-  if [[ "$OB_CLEARED" -eq 0 ]]; then
-    fail "no host cleared the 60%-of-OpenBLAS bar"
+  done <<<"$HOSTS"
+  if [[ "$OB_MEASURED" -eq 0 ]]; then
+    fail "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed"
+  elif [[ "$OB_CLEARED" -eq "$NHOSTS" ]]; then
+    pass "every gate host cleared 60% of its own single-thread OpenBLAS ($OB_CLEARED/$NHOSTS)"
+  else
+    fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar; ruling #23 asks every host to clear its own reference"
   fi
   if [[ -n "$OB_PERF_GOV" ]]; then
     pass "the OpenBLAS bar was cleared under the performance governor ($OB_PERF_GOV)"

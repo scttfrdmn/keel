@@ -62,9 +62,23 @@ func provenance() {
 		for _, line := range peakFormulaLines() {
 			fmt.Println("keel-bench-peak-formula:", line)
 		}
-		fmt.Println("keel-bench-openblas: not available (no cgo reference harness built)")
+		fmt.Println("keel-bench-gomaxprocs:", runtime.GOMAXPROCS(0))
+		fmt.Println("keel-bench-kern:", keel.ActiveKernTile()+"/"+keel.ActiveKernBackend(),
+			"(available: "+strings.Join(keel.AvailableKernels(), " ")+")")
+		fmt.Println("keel-bench-openblas:", openblasProvenance)
 	})
 }
+
+// openblasProvenance describes the reference this binary can measure against.
+// The openblas-tagged file replaces it with the library's own report of itself
+// and its thread count; without that tag there is no reference, and the marker
+// says so rather than leaving the gate to infer it from a missing line.
+//
+// GOMAXPROCS is printed beside it because the P3 criterion is single-thread on
+// both sides: an OpenBLAS pinned to one thread against a keel free to use
+// sixteen would be a comparison of two different questions.
+var openblasProvenance = "not available (no cgo reference harness built; " +
+	"rebuild with -tags openblas on a host that has OpenBLAS)"
 
 // The three readers below are best-effort and say so when they fail. A missing
 // governor is reported as unknown rather than guessed at: "performance" assumed

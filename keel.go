@@ -11,6 +11,7 @@ package keel
 import (
 	"math"
 
+	"github.com/scttfrdmn/keel/internal/block"
 	"github.com/scttfrdmn/keel/internal/l1"
 )
 
@@ -265,6 +266,42 @@ func checkVectorPos(fn, arg string, n int, v []float32, inc int) {
 	checkVector(fn, arg, n, v, inc)
 }
 
+// checkTranspose maps a Transpose to the bool the internals use, panicking on
+// anything else. BLAS's ConjTrans is meaningless for a real type and reference
+// SGEMM rejects it; a byte that is neither 'N' nor 'T' is a caller typo, and
+// treating an unknown flag as NoTrans would silently compute the wrong product.
+func checkTranspose(fn, arg string, t Transpose) bool {
+	switch t {
+	case NoTrans:
+		return false
+	case Trans:
+		return true
+	}
+	panic("keel: " + fn + ": " + arg + " is neither NoTrans nor Trans")
+}
+
+// checkMatrix validates one row-major matrix argument: the row stride must hold a
+// row, and the slice must reach the last element of the last row.
+//
+// The length needed is (rows-1)*ld + cols, not rows*ld: a caller may legitimately
+// pass a slice that stops at the end of the last row rather than at the end of
+// its stride, and demanding the padding would reject a valid submatrix view.
+//
+// ld >= max(1, cols) is checked even for an empty matrix, matching reference
+// BLAS's LDA >= MAX(1,...) tests, because an ld of zero is a caller bug whether or
+// not this particular call would dereference it.
+func checkMatrix(fn, arg string, rows, cols int, v []float32, ld int) {
+	if ld < 1 || ld < cols {
+		panic("keel: " + fn + ": ld" + arg + " < max(1, columns of " + arg + ")")
+	}
+	if rows == 0 || cols == 0 {
+		return // empty matrix; v may be nil
+	}
+	if need := (rows-1)*ld + cols; len(v) < need {
+		panic("keel: " + fn + ": " + arg + " shorter than its dimensions and ld" + arg + " require")
+	}
+}
+
 // absf32 clears the sign bit rather than branching, so -0 becomes +0 and a NaN
 // keeps its payload — identical to internal/l1.absf32 and vec.ScalarAbs. The
 // strided paths above need it and must not import l1 for one scalar op.
@@ -283,9 +320,49 @@ func Sger(m, n int, alpha float32, x []float32, incX int, y []float32, incY int,
 
 // Level 3 — Phases P3 (Sgemm) and P4 (derived).
 
-// Sgemm computes C = alpha*op(A)*op(B) + beta*C for row-major matrices.
+// Sgemm computes C = alpha*op(A)*op(B) + beta*C for row-major matrices, where
+// op(X) is X or Xᵀ. op(A) is m×k, op(B) is k×n and C is m×n; lda, ldb and ldc
+// are row strides in elements and must each be at least the number of columns of
+// the array they describe (before any transpose — lda bounds a's own rows).
+//
+// Argument errors panic, as everywhere else in keel. A zero m, n or k is not an
+// error: k == 0 is the empty product, so C = beta*C, and m or n == 0 does
+// nothing at all. A matrix whose declared shape is empty may be nil; one whose
+// declared shape is not empty must be long enough for it even on a call that
+// will not read it.
+//
+// alpha == 0 gives C = beta*C without reading A or B, matching reference SGEMM:
+// a NaN or an infinity in A must not reach C through a multiply by zero. beta == 0
+// writes zeros without reading C, also matching reference, so an uninitialized C
+// is a legitimate destination for beta = 0.
+//
+// The summation order is the blocked one — packed panels, KC-deep accumulation
+// per tile, alpha folded into the packed A — so results are not bit-identical to
+// a textbook triple loop, or to another backend's. Every backend is held to
+// DESIGN.md §5's tolerance model against a float64 oracle that folds alpha the
+// same way. See internal/block for the loop nest and internal/pack for the panel
+// layout.
 func Sgemm(tA, tB Transpose, m, n, k int, alpha float32, a []float32, lda int, b []float32, ldb int, beta float32, c []float32, ldc int) {
-	panic(nyi("Sgemm", "P3"))
+	ta := checkTranspose("Sgemm", "tA", tA)
+	tb := checkTranspose("Sgemm", "tB", tB)
+	if m < 0 || n < 0 || k < 0 {
+		panic("keel: Sgemm: negative dimension")
+	}
+	// op(A) is m×k and op(B) is k×n; the stored arrays are those shapes
+	// transposed when the flag says so, and it is the stored shape that lda and
+	// ldb have to fit.
+	ra, ca := m, k
+	if ta {
+		ra, ca = k, m
+	}
+	rb, cb := k, n
+	if tb {
+		rb, cb = n, k
+	}
+	checkMatrix("Sgemm", "a", ra, ca, a, lda)
+	checkMatrix("Sgemm", "b", rb, cb, b, ldb)
+	checkMatrix("Sgemm", "c", m, n, c, ldc)
+	block.Gemm(activeKern, ta, tb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
 }
 func Ssyrk(ul Uplo, t Transpose, n, k int, alpha float32, a []float32, lda int, beta float32, c []float32, ldc int) {
 	panic(nyi("Ssyrk", "P4"))
