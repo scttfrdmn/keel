@@ -18,6 +18,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | Every inlined non-intrinsic call costs a 1-byte NOP in the loop body | [T9](#t9) | candidate |
 | 2026-08-11 | go1.26.5 | Only 15 of 32 vector registers are allocatable; no `231` FMA form exists | [T10](#t10) | yes (#18) |
 | 2026-08-11 | go1.26.5 | `GOSSAFUNC` is not in the build cache key: on a cache hit it writes no `ssa.html` but still prints `dumped SSA … to ./ssa.html` | [T11](#t11) | candidate |
+| 2026-08-11 | go1.26.5 | The assembler encodes `vfmadd231ps mem{1to16}` and the intrinsic layer cannot reach it: no 231 SSA op, the load-merge rule folds memory into the addend, and nothing emits `.BCST` | [T12](#t12) | yes (#20) |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -749,3 +750,87 @@ exists rather than believing the exit status, which is what turned this up.
 
 `-a` would also work and rebuilds the standard library; a content change to the
 package would not, since Go hashes source content rather than mtimes.
+
+## T12 — the assembler encodes the FMA a GEMM wants; the intrinsic layer cannot reach it
+
+This is the note behind P2's roofline amendment (DESIGN.md §4/P2) and the upstream
+report in #20. It is three findings that look like one wall from inside a kernel.
+
+A hand-written SGEMM K-loop accumulates with a single instruction per FMA:
+
+```
+vfmadd231ps zmm_acc, zmm_b, [a_ptr]{1to16}     // acc += b * broadcast(*a_ptr)
+```
+
+Everything about that is available in Go's assembler today. Verified by
+assembling it, then decoding the emitted bytes with `llvm-mc` because Go's own
+`objdump` does not decode EVEX:
+
+```
+$ cat a_amd64.s
+#include "textflag.h"
+TEXT ·try(SB), NOSPLIT, $0
+        VFMADD231PS.BCST 12(SI), Z1, Z0
+        RET
+$ GOOS=linux GOARCH=amd64 go tool asm -I $(go env GOROOT)/pkg/include -p x -o s.o a_amd64.s
+$ llvm-mc --disassemble --arch=x86-64 <<< '0x62 0xf2 0x75 0x58 0xb8 0x46 0x03'
+        vfmadd231ps 12(%rsi){1to16}, %zmm1, %zmm0  ## zmm0 = (zmm1 * mem) + zmm0
+```
+
+EVEX.512, embedded broadcast, disp8 compression, accumulate-in-place, memory as a
+*multiplicand*. The assembler is not the constraint.
+
+The intrinsic path emits four instructions for that same work — `VMOVSS`,
+`VBROADCASTSS`, a `VMOVDQU64` register copy, and `VFMADD213PS` — for three
+independent reasons, each individually small:
+
+**1. Only the 213 form has an SSA op.** `simdAMD64ops.go` defines
+`VFMADD213PS{128,256,512}` and their masked variants, and no 231-shaped op for
+any width. All are `resultInArg0: true`, so the destination is the first
+multiplicand and `acc += a·b` can never land in `acc` (this is T10 property 2;
+the register copy is its cost). `AMD64Ops.go` does define scalar `VFMADD231SS`
+and `VFMADD231SD`, and `AMD64.rules` uses them for scalar `math.FMA` — so the 231
+*shape* is already understood by the compiler, just not for vectors.
+
+**2. The load-merge rule that exists folds into the wrong operand.** This is the
+sharp one, because the machinery is not missing — it fires, into the operand a
+GEMM cannot spare:
+
+```
+simdAMD64.rules:2774
+(VFMADD213PS512 x y l:(VMOVDQUload512 {sym} [off] ptr mem)) && canMergeLoad(v, l) && clobber(l)
+  => (VFMADD213PS512load {sym} [off] x y ptr mem)
+```
+
+`MulAddFloat32x16(x,y,z)` is `x*y+z`, so the merged third operand is the
+**addend**. In the 213 encoding the addend is the only operand that may be
+memory, and in a GEMM K-loop the addend is the accumulator — the one value that
+must stay in a register for the whole loop. So the fold is unreachable in the
+only loop that would benefit. Getting a *multiplicand* from memory requires the
+231 form, where the destination is the addend and `src3/m512` is a multiplicand.
+The 16 `VFMADD*load` rules present all have this property.
+
+**3. Nothing emits `.BCST`.** `obj/x86/evex.go` supports the suffix
+(`BroadcastEnabled`, and `"BCST"`/`"BCST.Z"` in the suffix table), and there is
+no occurrence of `BCST` anywhere under `cmd/compile/internal/ssa/_gen/`. So a
+broadcast from a slice element costs `VMOVSS` + `VBROADCASTSS` (T9 adds an anchor
+NOP at the load call site) where the ISA allows zero instructions.
+
+### Measured cost, on the shipped 2×32 tile
+
+74 instructions per pass, 16 FMAs. Removing what the 231 form and the embedded
+broadcast would remove — 8 register copies, 8 `VMOVSS`, 8 `VBROADCASTSS`, and the
+anchor NOPs at the A-side load sites — leaves ~46, so `insns/FMA` goes
+4.625 → ~2.875. On a host whose front end is the binding constraint that is the
+difference between 46% and ~74% of measured peak (DESIGN.md §4/P2, the janus
+roofline). The three causes are individually modest and jointly a factor of ~1.6
+on 2-FMA/cycle hardware; none of them alone clears keel's own P2 floor.
+
+### Why this is not "archsimd is missing an operation"
+
+Every intrinsic keel needs exists and lowers to the right instruction. The gap is
+entirely in *operand shape*: which operand may be memory, which may be broadcast,
+and which is overwritten. A vector intrinsic API that lowers each call in
+isolation has no way to express those choices, and the peephole layer that would
+normally recover them (the `canMergeLoad` rules) is present but pointed at the
+addend. That framing is the upstream report; #20 carries it.

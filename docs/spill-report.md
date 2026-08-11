@@ -4,8 +4,15 @@
 # P2 go/no-go report — the microkernel is spill-free and still misses the floor on one host
 
 Required by DESIGN.md §4/P2 and §7 rule 4 (`CLAUDE.md`, "P2 is a go/no-go, not a
-hurdle"). `scripts/gate-p2.sh` is **RED**. Work stopped here; nothing in P3 has
-been started, and no gate criterion was relaxed to change the colour.
+hurdle"). `scripts/gate-p2.sh` was **RED**. Work stopped here; nothing in P3 was
+started, and no gate criterion was relaxed to change the colour.
+
+> **Status: resolved — read §9 first if you want the outcome.** The gate's *model*
+> was amended by the ruling on issue #19 (the floor's denominator was wrong, not
+> its value), the mechanism behind the ceiling was identified and filed upstream
+> (T12/#20), and §5's instruction accounting was corrected — the toolchain gap is
+> ~1.75× larger than this report originally measured. §§1–8 are preserved as the
+> record of the red gate, which is the artifact this document exists to carry.
 
 **The headline is not the one this file's name predicts.** The spill audit is
 green — both shipped shapes have zero vector stack traffic, zero calls and zero
@@ -197,7 +204,20 @@ So this is not "we have not tried hard enough shapes". Every shape the register
 allocator can hold without spilling costs more than 3.88 instructions per FMA, and
 §5 says where those instructions go.
 
-## 5. Where the 16 removable instructions are, and both are already filed
+## 5. Where the 28 removable instructions are, and all of them are filed
+
+> **Corrected 2026-08-11.** This section first credited two causes worth 16 of the
+> 74 instructions (T9 anchor NOPs, T10 register copies) and concluded that both
+> together clear the floor while either alone leaves janus at ~52%. That
+> accounting was incomplete. Verifying the mechanism named in the ruling on #19
+> found a third and larger lever — the FMA cannot take a broadcast memory
+> multiplicand, though Go's assembler encodes exactly that instruction (T12,
+> issue #20) — which accounts for 16 more instructions on its own. The corrected
+> tables are below; §5.1 is the original pair, §5.2 the one that dominates them.
+> The direction of the correction is worth stating plainly: the toolchain gap is
+> ~1.75× larger than this report first claimed, not smaller.
+
+### 5.1 The two register-pressure and debug-info costs
 
 The 2×32 body is 74 instructions for 16 FMAs. Excerpt from
 `spill-audit -func Kernel2x32 -v`, showing both overheads in the act:
@@ -221,27 +241,67 @@ toolchain overhead rather than arithmetic or addressing:
 | `VMOVDQU64` register copies | 8 | only `VFMADD213PS512` exists, and it clobbers its first multiplicand, so `acc += a·b` cannot land in `acc` | T10 property 2, issue #18 |
 | `XCHGL AX, AX` anchor NOPs | 8 | one per inlined archsimd call site whose instructions took the callee's source position | T9, issue #17 |
 
-Sixteen instructions of 74 that do no work the algorithm asked for — and janus
-needs twelve of them gone:
+Sixteen instructions of 74 that do no work the algorithm asked for.
 
-| body | insns/FMA | projected janus % of peak |
-|---|---|---|
-| as shipped, 74/16 | 4.625 | 46.1% (measured) |
-| minus the 8 anchor NOPs (T9) | 4.125 | 51.7% |
-| minus the 8 register copies (T10) | 4.125 | 51.7% |
-| **minus both** | **3.625** | **58.8% — clears the floor** |
+### 5.2 The operand that cannot be folded (T12, issue #20)
 
-Projected by holding janus's measured 4.15 instructions/cycle constant, which is
+A hand-written SGEMM K-loop does not load and broadcast the B element at all. It
+writes one instruction per FMA:
+
+```asm
+VFMADD231PS.BCST 12(SI), Z1, Z0     // zmm0 += zmm1 * broadcast(float32 at 12(SI))
+```
+
+Go's **assembler encodes this today**. Assembled with `go tool asm` and decoded
+with `llvm-mc`, the seven bytes `62 f2 75 58 b8 46 03` are
+`vfmadd231ps 12(%rsi){1to16}, %zmm1, %zmm0 ## zmm0 = (zmm1 * mem) + zmm0` — EVEX.512
+with embedded broadcast, disp8 compression, accumulation in place, and memory as a
+multiplicand. Every property the kernel wants, in one instruction.
+
+The intrinsic layer cannot reach it, for three independent reasons (full repro in
+`docs/toolchain-notes.md` T12):
+
+1. Only 213-shaped FMA SSA ops exist for vectors, so the accumulation cannot land
+   in the accumulator. (Scalar `VFMADD231SS/SD` *do* exist, and `math.FMA` uses
+   them.)
+2. The load-merge rule that does exist, `simdAMD64.rules:2774`, folds a memory
+   operand into the 213 form's **addend** — which in a GEMM is the accumulator,
+   the one operand that must stay in a register. The machinery is present but can only
+   target the addend, so in a GEMM it can never fire usefully.
+3. Nothing under `cmd/compile/internal/ssa/_gen/` ever emits the `.BCST` suffix,
+   although `obj/x86/evex.go` fully supports it.
+
+So this is one coherent root cause rather than a missing archsimd operation, and
+it costs 16 instructions per 16 FMAs: 8 `VMOVSS` loads and 8 `VBROADCASTSS`. It
+also subsumes T10's 8 register copies, since a 231-shaped FMA has nothing to
+preserve.
+
+### 5.3 Corrected projection
+
+| body | insns | insns/FMA | projected janus % of peak |
+|---|---|---|---|
+| as shipped | 74 | 4.625 | **46.1% (measured)** |
+| minus the 8 anchor NOPs (T9/#17) alone | 66 | 4.125 | 51.7% |
+| minus the 8 register copies (T10/#18) alone | 66 | 4.125 | 51.7% |
+| minus both | 58 | 3.625 | 58.8% |
+| 231-shaped FMA, no embedded broadcast (#20 partly) | 66 | 4.125 | 51.7% |
+| 231 + `.BCST`, anchors kept (#20) | 50 | 3.125 | 68.2% |
+| **231 + `.BCST` + anchors halved (#17 + #20)** | **46** | **2.875** | **74.2%** |
+
+Projected by holding janus's measured 4.145 instructions/cycle constant, which is
 justified only because §3 established that janus is issue-bound; the same
 projection would be meaningless for vesta or antares, where instruction count is
 not what binds. It is a projection from a measured scaling law on that host, not a
-measurement of a kernel that exists.
+measurement of a kernel that exists. (The independent roofline arithmetic agrees:
+at `I = 2.875` the roofline is `2.250 ÷ 2.875 = 78.3%` of peak, and 74.2% is 94.8%
+of it — the same attainment the kernel achieves today.)
 
-**Either fix alone leaves janus at ~52% and still red. Both together clear the
-floor.** That is the sharpest statement this report can make, and it is the
-upstream case: two independently-filed, individually-modest gaps in an
-experimental package, which together account for exactly the distance between what
-keel achieves and what its own gate demands.
+**The corrected sharpest statement.** The embedded broadcast is the largest single
+lever and dominates the pair this section originally identified: T9 + T10 together
+reach 58.8%, while the operand fold alone reaches 68.2% and with T9 reaches ~74%.
+The upstream case is one root cause plus one general debug-info issue, which
+together account for roughly 2× of peak on this host — not two modest gaps that
+happen to sum to the gate's margin.
 
 ## 6. What the ssa.html evidence does and does not show
 
@@ -277,6 +337,11 @@ still printing `dumped SSA … to ./ssa.html`.
 
 ## 7. The decisions, and what is not being decided here
 
+> **Resolved 2026-08-11 by the ruling on issue #19.** D1 was answered with
+> *neither* reading, and D2/D3/D4 with "file upstream now, and gate against what
+> the lowering can express". See §9; the list below is preserved as the state of
+> the question when it was put.
+
 DESIGN.md §4/P2 names three: "file upstream vs. avo fallback vs. accept AVX2
 shapes". The scope question in §2 is a fourth, and it comes first.
 
@@ -304,9 +369,71 @@ argument for keeping it, not for removing it.
 Not decided here, and not started: no shape was added or removed, no threshold
 moved, no host dropped, and no assembly written.
 
-## 8. Standing status
+## 8. Standing status (as of the RED gate, superseded by §9)
 
 - `scripts/gate-p2.sh`: **RED**, on the janus.local percent-of-peak line only.
 - Spill audit, call audit, bounds-check audit, peak-kernel register-only audit,
   correctness on three hosts, both builds and vet: **green**.
 - P3: not started.
+
+## 9. Resolution: the ruling on #19 and the amended floor
+
+The decision was not to pick a scope for the 55% floor but to fix the floor's
+denominator. Reference-host scoping is survivorship — it green-lights by ignoring
+the one machine carrying information. Uniform every-host is gate-worship — it
+demands the kernel beat the decode stage. The floor is instead expressed against
+what the instruction set *as lowered* can deliver (DESIGN.md §4/P2, amended):
+
+- **FMA-bound host → ≥55% of measured peak, unchanged.**
+- **Issue-bound host → ≥90% of its issue roofline**, `maxᵢ(f_i·I_i) ÷ I`, with `I`
+  taken from this report's own instruction counts. The host's FMA/cycle cancels, so
+  no clock, `taskset` or `perf` counter enters the gate.
+
+Under one written rule, all three hosts are green — not two rules and a wink:
+
+| host | class | why | number | bar |
+|---|---|---|---|---|
+| vesta (Zen 4) | FMA-bound | ceiling mixes diverge 1.90× | 96.6% of peak | ≥55% |
+| janus (Skylake-X) | issue-bound | ceiling mixes converge 1.023× over a 2.78× mix spread | 46.0% = **94.6% of a 48.6% roofline** | ≥90% |
+| antares (Zen 5) | FMA-bound | ceiling mixes converge 1.091×, but the winning shape retires 158.5% of the roofline they imply, falsifying it | 62.3% net of CI | ≥55% |
+
+Those are the amended gate's own numbers (`bash scripts/gate-p2.sh`, exit 0, log in
+the closing comment on issue #3). They differ from §4's failing run by ≤0.5
+percentage points on every host, in both directions.
+
+Three properties keep this from being a weaker gate, and each is a fixture in
+`scripts/roofline-test.sh` rather than a claim in prose:
+
+1. **A host cannot classify itself issue-bound by being slow.** The naive test
+   ("measured rate below what 55% requires") reduces to `f < 0.55`. The shipped
+   test is convergence of structurally different mixes, which only a machine
+   property produces; a merely-slow kernel yields divergent rates and faces 55%.
+2. **A kernel cannot raise its own roofline by emitting more instructions.** A
+   +40-instruction padded 2×32 scores 94.7% of its self-inflated roofline and is
+   *refused*, because the shape must also be within 5% of the sweep's best
+   zero-spill insns/FMA (KERNEL.md §3).
+3. **The roofline test is not implied by the classifier that admits you to it.**
+   The first implementation computed both over the same mix set, which makes
+   `attain ≥ 1/cspread ≥ 0.909` an identity — above the 0.90 floor by
+   construction, and on janus identical to it to four decimal places. The ceiling
+   is therefore established by the mixes *other* than the shape under test.
+
+Bounded leniency: because the peak kernel always pins the ceiling from beneath and
+the shape guard caps the denominator, the amended floor never falls below
+`0.90 × 2.25 ÷ 4.659 = 43.5%` of measured peak. And it **ratchets**: the floor is
+`0.90 × maxᵢ p_i ÷ I`, monotone in `I`, so when #20 lands and `I` falls to ~2.875,
+janus's required floor *rises* from today's 43.8% (`0.90 × 48.6%`) to 70.4% —
+stricter than the 55% it replaced. The amendment needs no expiry clause because improving the
+toolchain tightens it automatically.
+
+**Standing task, and janus's new role.** keel issues #17, #18 and #20 go upstream to
+`golang/go` with keel as the minimal repro and §5.3 as the impact statement; the
+upstream numbers land in `docs/toolchain-notes.md` beside each note. When a
+toolchain folds a broadcast memory operand into a 231-shaped FMA, re-audit and
+re-measure janus expecting ~74%. Janus is now the fleet's regression sentinel: it
+is the one host whose number moves when upstream lowering changes, which makes it
+more useful red-then-roofline-green than it would have been quietly clearing 55%.
+
+- `scripts/gate-p2.sh` under the amended model: see §1 of `CHANGELOG.md`
+  `[Unreleased]` and the closing comment on issue #3 for the verbatim output.
+- P3: unblocked.

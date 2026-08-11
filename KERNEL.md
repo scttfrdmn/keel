@@ -193,6 +193,32 @@ the remainder is non-empty. Two panels, ten instructions, zero bounds checks.
   and introduces 12 vector stack references, for a net 78 instructions. Recorded
   in issue #17 with both measurements.
 
+### The instruction the loop wants, and cannot ask for (T12, issue #20)
+
+Rows 2–4 of the budget table above — 8 B-panel loads, 16 A load+broadcast pairs,
+8 register copies — are 32 of the 74 instructions, and a hand-written K-loop emits
+none of them. It writes one instruction per FMA:
+
+```asm
+VFMADD231PS.BCST 12(SI), Z1, Z0     // zmm0 += zmm1 * broadcast(float32 at 12(SI))
+```
+
+Go's **assembler already encodes this.** `go tool asm` plus `llvm-mc` confirm the
+seven bytes `62 f2 75 58 b8 46 03` decode as
+`vfmadd231ps 12(%rsi){1to16}, %zmm1, %zmm0` — EVEX.512, embedded broadcast, disp8
+compression, accumulate in place, memory as a multiplicand. No shaping of the Go
+source can reach it, for three reasons documented in `docs/toolchain-notes.md` T12:
+only 213-shaped FMA SSA ops exist for vectors; the load-merge rule that does exist
+folds memory into the 213 form's *addend*, which in a GEMM is the accumulator and
+the one operand that must stay in a register; and nothing in the compiler's SSA
+generators emits `.BCST`, though `obj/x86/evex.go` supports it.
+
+This is not "archsimd is missing an operation" — `MulAdd` is exactly the right
+source-level primitive. It is a lowering gap, and it is the largest term in the
+budget: 74 → ~46 instructions, 4.625 → 2.875 insns/FMA. See
+`docs/spill-report.md` §5.2–5.3 for the corrected accounting, which supersedes an
+earlier version of that report crediting only T9 and T10.
+
 ## 4. Where the loop bodies live, and why
 
 The K-loops are in `internal/vec/gemm_amd64.go`, not in `internal/kern`. CLAUDE.md
@@ -266,9 +292,13 @@ own measured `BenchmarkPeak`, never of a formula.
 
 | host | CPU | zmm FMA/cyc | 2×32 ×4 | 4×32 ×1 | **winner** | 6×32 ref |
 |---|---|---|---|---|---|---|
-| vesta.local | Ryzen 9 7950X3D (Zen 4) | 1 | 153.1 GF/s — 92.4% | 159.9 GF/s — **96.6%** | 4×32 | 50.44 — 30.5% |
-| janus.local | i9-9960X (Skylake-X) | 2 | 99.48 GF/s — **46.1%** | 76.03 GF/s — 35.2% | 2×32 | 39.24 — 18.2% |
-| antares.local | RYZEN AI MAX+ 395 (Zen 5) | 2 | 174.1 GF/s — 53.1% | 210.2 GF/s — **64.1%** | 4×32 | 48.13 — 14.7% |
+| vesta.local | Ryzen 9 7950X3D (Zen 4) | 1 | 152.9 GF/s — 92.4% | 159.9 GF/s — **96.6%** | 4×32 | 50.39 — 30.5% |
+| janus.local | i9-9960X (Skylake-X) | 2 | 99.45 GF/s — **46.0%** | 75.98 GF/s — 35.2% | 2×32 | 39.2 — 18.1% |
+| antares.local | RYZEN AI MAX+ 395 (Zen 5) | 2 | 174.0 GF/s — 53.1% | 210.5 GF/s — **64.2%** | 4×32 | 48.17 — 14.7% |
+
+Two independent gate runs an hour apart agree to within 0.1 percentage point on
+every cell (the earlier one read 46.1%, 64.1% and 30.5%), which is the
+reproducibility claim §6 needs and the reason the winner column can be trusted.
 
 **The winner flips, which is why both shapes ship.** §1 argued that neither
 dominates and that the benchmark would have to decide per host; it did. The
@@ -287,18 +317,33 @@ must feed twice the arithmetic from the same front end, so it has half the
 instruction budget per FMA, and instruction count starts to bind where it did not
 before (docs/spill-report.md §3.3).
 
-### The floor is not met on every host
+### One host is issue-bound, and the floor is expressed accordingly
 
-**janus.local reaches 46.1% of its measured peak, against a 55% floor.** The gate
-is RED and P2 is a go/no-go, so work stopped there: `docs/spill-report.md` has the
-evidence, the diagnosis, and the open decisions. In brief — janus is limited by
-instruction issue rather than by spills (its two shapes' throughputs stand in the
-inverse ratio of their instruction counts, 1.308 measured against 1.351 predicted,
-and both derive the same ~4.2 instructions per cycle); it needs ≤3.88 instructions
-per FMA and no zero-spill shape in the 115-shape sweep is below 4.438; and the
-8 anchor NOPs (T9) plus 8 register copies (T10) are 16 of the body's 74
-instructions, enough to clear the floor if both were removed and not enough if
-only one were.
+**janus.local reaches 46.0% of its measured peak.** A flat 55% floor is unreachable
+there by any arrangement of this source: janus is limited by instruction issue
+rather than by spills (its two shapes' throughputs stand in the inverse ratio of
+their instruction counts, 1.308 measured against 1.351 predicted, and both derive
+the same ~4.2 instructions per cycle), it would need ≤3.88 instructions per FMA,
+and no zero-spill shape in the 115-shape sweep is below 4.438. Its **issue
+roofline is 48.6% of peak**, so the kernel is at 94.6% of what the instruction set
+as-lowered can express.
+
+That was a RED gate, and P2 is a go/no-go, so work stopped there and
+`docs/spill-report.md` carries the evidence. The ruling on issue #19 then amended
+the floor's *denominator* rather than its value (DESIGN.md §4/P2): FMA-bound hosts
+keep ≥55% of measured peak; an issue-bound host is held to ≥90% of its issue
+roofline, computed from the spill audit's own instruction counts. Under that one
+rule all three hosts are green — vesta and antares FMA-bound at 96.6% and 62.3%
+net of CI, janus issue-bound at 94.6% of 48.6%. The decision function is
+`scripts/roofline.sh` and its adversarial fixtures are `scripts/roofline-test.sh`,
+which run before any benchmarking in the gate.
+
+The cause is filed, not absorbed: 8 anchor NOPs (T9/#17), 8 register copies
+(T10/#18), and — the largest term, found while verifying the ruling — the
+unreachable broadcast-memory FMA operand (T12/#20), together ~28 of the body's 74
+instructions. When that lands, `I` falls to ~2.875 and janus's *required* floor
+rises to 70.4%, above the 55% it replaced; see `docs/spill-report.md` §9 on why the
+amendment ratchets rather than expires.
 
 The two Zen hosts clear it comfortably. The reference tile's 14.7–30.5% is on the
 same silicon with the same harness, which is the control: the gap between 30.5%

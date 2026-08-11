@@ -138,27 +138,60 @@ While the major version is 0, minor versions may contain breaking changes.
   can deliver, because excluding packing and blocking is what makes it a
   measurement of the K-loop.
 - `docs/spill-report.md`: the P2 go/no-go report, required by DESIGN.md §4/P2 when
-  the gate is red. **The spill audit passes and the 55%-of-peak floor does not** —
-  janus.local (Skylake-X) reaches 46.1% against the floor, while vesta (Zen 4)
-  reaches 96.6% and antares (Zen 5) 64.1%. The binding constraint is instructions
-  issued per FMA, not spills, established two ways from keel's own measurements: a
-  clock-free test (the two shipped shapes' throughputs stand in the inverse ratio
-  of their instruction counts on janus, 1.308 measured against 1.351 predicted, and
-  do not on the other two hosts) and a per-cycle derivation (both janus shapes
-  return the same ~4.2 instructions per cycle despite differing 35% in instruction
-  count). Includes the four open decisions and states which were not taken.
+  the gate is red. **The spill audit passed and the flat 55%-of-peak floor did
+  not** — janus.local (Skylake-X) reached 46.1% against the floor, while vesta
+  (Zen 4) reached 96.6% and antares (Zen 5) 64.1%. The binding constraint is
+  instructions issued per FMA, not spills, established two ways from keel's own
+  measurements: a clock-free test (the two shipped shapes' throughputs stand in the
+  inverse ratio of their instruction counts on janus, 1.308 measured against 1.351
+  predicted, and do not on the other two hosts) and a per-cycle derivation (both
+  janus shapes return the same ~4.2 instructions per cycle despite differing 35% in
+  instruction count). §7 listed four open decisions and stated which were not taken;
+  the ruling on issue #19 took the first, and §9 now records the amended gate model
+  and why it tightens rather than expires.
 - **zmm FMA/cycle is now measured per host, not cited**: `BenchmarkPeak/avx512`
   pinned with `taskset` while sampling that core's `cpufreq/scaling_cur_freq` gives
   0.996 on vesta, 1.944 on janus, 1.996 on antares — Zen 4 double-pumping AVX-512
   over 256-bit datapaths, and both the Skylake-X and Zen 5 parts retiring two
-  full-width FMAs per cycle. This is the column that explains the floor failure: a
-  2-FMA/cycle machine feeds twice the arithmetic from the same front end, so it has
-  half the instruction budget per FMA (docs/spill-report.md §3.3).
+  full-width FMAs per cycle. This is the column that explains why one host is
+  issue-bound: a 2-FMA/cycle machine feeds twice the arithmetic from the same front
+  end, so it has half the instruction budget per FMA
+  (docs/spill-report.md §3.3).
 - `KERNEL.md` §7, the per-host winner: **the winner flips, so both shapes ship.**
-  The load-lean 4×32 wins on vesta (96.6% vs 92.4%) and antares (64.1% vs 53.1%);
-  the instruction-lean 2×32 wins on janus (46.1% vs 35.2%). Shipping one shape on
+  The load-lean 4×32 wins on vesta (96.6% vs 92.4%) and antares (64.2% vs 53.1%);
+  the instruction-lean 2×32 wins on janus (46.0% vs 35.2%). Shipping one shape on
   theory would have been wrong on at least one machine in this fleet, and the shape
   theory most favoured wins on the fewest hosts.
+- `docs/toolchain-notes.md` T12 (issue #20): **the K-loop's ideal instruction
+  exists in Go's assembler and cannot be reached from Go.** `go tool asm` plus
+  `llvm-mc` confirm `VFMADD231PS.BCST 12(SI), Z1, Z0` encodes as the seven bytes
+  `62 f2 75 58 b8 46 03` — EVEX.512, embedded broadcast, accumulate in place,
+  memory as a *multiplicand*. Three independent reasons the intrinsic layer cannot
+  emit it: only 213-shaped FMA SSA ops exist for vectors (scalar `VFMADD231SS/SD`
+  do exist, for `math.FMA`); the one load-merge rule that exists
+  (`simdAMD64.rules:2774`) can only fold memory into the 213 form's *addend*, which
+  in a GEMM is the accumulator and the single operand that must stay in a register;
+  and nothing under `ssa/_gen/` emits `.BCST`, though `obj/x86/evex.go` supports it.
+  This is the largest term in the 2×32 budget — 74 → ~46 instructions, 4.625 →
+  2.875 insns/FMA — and it supersedes `docs/spill-report.md` §5's original
+  accounting, which credited only T9 and T10 and was therefore short by ~1.75×.
+- `scripts/roofline.sh`: the throughput verdict as a single pure function with no
+  I/O, so the rule that decides a go/no-go can be read in one place and tested
+  without a benchmark. Classifies a host FMA-bound or issue-bound from measured
+  `(fraction-of-peak, audited insns/FMA)` pairs and returns
+  `CLASS CSPREAD MSPREAD ROOF ATTAIN RESULT WHY`. The roofline is clock-free: with
+  `f_i` the measured fraction of peak and `I_i` the audited insns/FMA,
+  `roofline(I) = maxᵢ(f_i·I_i)/I` — the retirement rate cancels, so no clock,
+  `taskset` or perf counter enters the gate.
+- `scripts/roofline-test.sh`: 15 adversarial fixtures for that function, run by
+  `gate-p2.sh` *before* any benchmarking, so a broken decision rule fails the gate
+  on any host in a second. Fixtures feed measured `(f, I)` pairs rather than
+  pre-reduced spreads, so a fixture cannot describe a host that could not exist —
+  which is how one of the first hand-written negative controls was caught being
+  fake. They include a kernel padded with 40 dead instructions trying to buy itself
+  a roofline, a slow kernel on a wide host, a sandbagged alternate shape, a
+  single-mix host, both sides of the 90.0% and +5.0% boundaries, and the post-T12-fix
+  janus that needs 70.4% and the one that only makes 76.7% of its roofline.
 - `docs/toolchain-notes.md` T11: `GOSSAFUNC` is not part of the build cache key,
   so a repeated build is a cache hit that writes no `ssa.html` — while replaying
   the cached compiler stderr, including `dumped SSA for <fn> to ./ssa.html`. Found
@@ -201,8 +234,8 @@ While the major version is 0, minor versions may contain breaking changes.
   against 74 with 8 when `internal/vec` names archsimd directly — 27% of the loop
   body was anchors. `internal/kern` is now the shape registry, tile protocol and
   scalar reference; the "all simd imports in `internal/vec`" rule is unchanged.
-- `scripts/gate-p2.sh`: real P2 checks. The 55% floor applies to the best *shipped*
-  shape per host — P3 dispatches to one of the two, so failing a host for carrying
+- `scripts/gate-p2.sh`: real P2 checks. The throughput floor applies to the best
+  *shipped* shape per host — P3 dispatches to one of the two, so failing a host for carrying
   a second kernel it would never select would measure the wrong thing — with every
   shape's number printed either way, numerator and denominator taken in the same
   benchmark invocation, and the audit of the deliberately-spilling reference tile
@@ -260,16 +293,50 @@ While the major version is 0, minor versions may contain breaking changes.
   on every host, net of benchstat's confidence interval: 8.57× on Zen 4 (Ryzen 9
   7950X3D), 7.53× on Skylake-X (i9-9960X), 8.79× on Zen 5 (Ryzen AI MAX+ 395),
   with at least one host clearing it under the `performance` governor.
-- **Gate P2 is RED, and P2 is a go/no-go rather than a hurdle, so work stopped
-  there.** Every compile-time criterion passes on both shipped shapes — 0
+- **Gate P2 was RED on the flat 55%-of-peak floor, and P2 is a go/no-go rather
+  than a hurdle, so work stopped there and the decision went to Scott (issue
+  #19).** Every compile-time criterion passed on both shipped shapes — 0
   accumulator spills, 0 calls and 0 surviving bounds checks in the steady-state
   K-loop, `ssa.html` archived for each, all three peak kernels register-only — and
-  correctness passes on all three amd64 hosts with the AVX-512 tile exercised on
-  each. The single failing line is the 55%-of-measured-peak floor on janus.local
-  (Skylake-X, i9-9960X): 46.1%, 46.1% net of CI. It reproduces (46.0% on an
-  independent run 40 minutes earlier), and the two Zen hosts clear the floor at
-  96.6% and 64.1%. Nothing was relaxed to change the colour: no shape added or
-  removed, no threshold moved, no host dropped, no assembly written. P3 is not
-  started and the four open decisions are in `docs/spill-report.md` §7 — the first
-  of which is that DESIGN.md §4/P2 never says on how many hosts the floor applies,
-  and `scripts/gate-p2.sh` implements the strict all-hosts reading.
+  correctness passed on all three amd64 hosts with the AVX-512 tile exercised on
+  each. The single failing line was the floor on janus.local (Skylake-X, i9-9960X):
+  46.1%, 46.1% net of CI, reproducing at 46.0% on an independent run. Nothing was
+  relaxed to change the colour: no shape added or removed, no threshold moved, no
+  host dropped, no assembly written.
+- **The P2 throughput floor now has a class-dependent denominator, and the gate is
+  green** (DESIGN.md §4/P2 amendment, ruling on issue #19). One written rule, not
+  two rules and a wink: an **FMA-bound** host keeps the flat ≥55% of measured peak;
+  an **issue-bound** host is held to **≥90% of its issue roofline**, computed from
+  the spill audit's own instruction counts. Classification and floor are the pure
+  function `scripts/roofline.sh`, and three properties keep it from being a licence:
+  - **Independence.** The ceiling mixes are every mix *except* the shape being
+    gated. The first draft included it, which made the 90% floor algebraically
+    vacuous: with the shape under test in the ceiling set,
+    `attain ≥ 1/cspread ≥ 1/1.10 = 0.909 > 0.90` as an identity, so no host could
+    ever fail that criterion. Caught by trying to write a fixture that failed it.
+  - **Falsification.** If the shape under test retires *above* the ceiling the other
+    mixes set (`attain > 1.0`), the issue-bound hypothesis is disproved by its own
+    data and the host reverts to the flat floor. This is what returns antares
+    (Zen 5) to FMA-bound: its mixes converge to 1.091× but 4×32 retires at 158.5%
+    of the 39.3% roofline they imply.
+  - **Bounded leniency.** The register-only peak kernel is always in the ceiling set,
+    pinning `maxᵢ p_i ≥ 2.25`, and a shape more than 5% above the 115-shape sweep's
+    best 4.438 insns/FMA is refused a roofline outright — so a kernel cannot pad
+    itself into a lower bar, and the effective floor can never fall below
+    `0.90 × 2.25 / 4.659` = **43.5%** of measured peak.
+
+  It also **ratchets rather than expires**, which is stronger than the
+  "self-retiring" property first claimed for it (that claim was false — the
+  arithmetic shows janus stays issue-bound after the fix). The floor is
+  `0.90 × maxᵢ p_i / I_b`, monotone in the gated shape's instruction count, so
+  fixing the lowering *tightens* the gate: with T9+T12 landed, janus's roofline is
+  78.3% and its required floor 70.4% — above the 55% it replaced.
+- **Gate P2 is green on all three amd64 hosts under that one rule**
+  (`bash scripts/gate-p2.sh`, exit 0): vesta.local FMA-bound at 96.6% of measured
+  peak (96.6% net of CI), antares.local FMA-bound at 64.2% (62.3% net of CI) after
+  its issue-bound hypothesis is falsified, janus.local issue-bound at 46.0% of peak
+  = 94.6% of its 48.6% issue roofline. The performance-governor requirement is met
+  by janus. The compile-time criteria are unchanged and still binding, and the
+  15 verdict fixtures run before any benchmark. janus.local becomes the standing
+  regression sentinel for P3: it is the host where instruction count binds, so it is
+  the host that notices when a shape gets fatter.
