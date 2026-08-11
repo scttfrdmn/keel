@@ -11,11 +11,13 @@ package keel
 // Level 1 — Phase P1.
 
 func Sdot(n int, x []float32, incX int, y []float32, incY int) float32 { panic(nyi("Sdot", "P1")) }
-func Saxpy(n int, alpha float32, x []float32, incX int, y []float32, incY int) { panic(nyi("Saxpy", "P1")) }
+func Saxpy(n int, alpha float32, x []float32, incX int, y []float32, incY int) {
+	panic(nyi("Saxpy", "P1"))
+}
 func Sscal(n int, alpha float32, x []float32, incX int) { panic(nyi("Sscal", "P1")) }
-func Snrm2(n int, x []float32, incX int) float32 { panic(nyi("Snrm2", "P1")) }
-func Sasum(n int, x []float32, incX int) float32 { panic(nyi("Sasum", "P1")) }
-func Isamax(n int, x []float32, incX int) int { panic(nyi("Isamax", "P1")) }
+func Snrm2(n int, x []float32, incX int) float32        { panic(nyi("Snrm2", "P1")) }
+func Sasum(n int, x []float32, incX int) float32        { panic(nyi("Sasum", "P1")) }
+func Isamax(n int, x []float32, incX int) int           { panic(nyi("Isamax", "P1")) }
 
 // Level 2 — Phase P4.
 
