@@ -31,18 +31,19 @@ import (
 // clock as reported at bench time. DESIGN.md §7 rule 7 requires every number to
 // carry its denominator.
 //
-// The theoretical peak is NOT printed, and that is a deliberate omission rather
-// than an oversight. DESIGN.md's formula (cores·freq·2 FMA ports·16 lanes·2
-// flops) assumes two 512-bit FMA units. Zen 4 double-pumps AVX-512 over 256-bit
-// datapaths and retires one 512-bit FMA per cycle, so the formula overstates
-// vesta.local's ceiling by 2x; Skylake-X matches it; the Zen 5 host's width has
-// not been measured. Printing a percent-of-peak against a denominator known to
-// be wrong on at least one host would be worse than printing none, so the
-// harness prints the numerator and names the open question. Tracked as issue
-// #11, which blocks P2's 55%-of-peak gate for the same reason.
+// The percent-of-peak denominator is measured on this host by BenchmarkPeak, not
+// derived from a formula (decision on issue #11 — DESIGN.md's formula assumes two
+// full-width 512-bit FMA units, which Zen 4 does not have). The formula is printed
+// as a cross-check only; see peak_test.go, and internal/vec/peak.go for what makes
+// the measured number a ceiling.
 //
-// GFLOP/s below is therefore a measured rate with no percentage attached: it is
-// comparable across runs on one machine, and between machines only as a rate.
+// The percentage itself is computed by the gate, from benchstat medians of this
+// benchmark and BenchmarkPeak on the same host in the same run. Nothing in this
+// process divides one rate by another: a second, statistics-free denominator is
+// precisely what DESIGN.md §7 rule 7 forbids.
+//
+// GFLOP/s below is therefore a measured rate: comparable across runs on one
+// machine, and between machines only as a rate.
 
 var provenanceOnce sync.Once
 
@@ -55,8 +56,12 @@ func provenance() {
 		fmt.Println("keel-bench-platform:", runtime.GOOS+"/"+runtime.GOARCH)
 		fmt.Println("keel-bench-backend:", keel.ActiveL1Backend(),
 			"(available: "+strings.Join(keel.AvailableL1Backends(), " ")+")")
-		fmt.Println("keel-bench-peak: withheld — the theoretical-peak denominator " +
-			"is unsettled across these microarchitectures, see issue #11")
+		fmt.Println("keel-bench-peak-method: measured on this host by " +
+			"BenchmarkPeak (register-only FMA saturation); the formula below is a " +
+			"cross-check, not the denominator (issue #11)")
+		for _, line := range peakFormulaLines() {
+			fmt.Println("keel-bench-peak-formula:", line)
+		}
 		fmt.Println("keel-bench-openblas: not available (no cgo reference harness built)")
 	})
 }

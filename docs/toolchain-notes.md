@@ -286,3 +286,105 @@ standing between a v1 binary and an illegal instruction on an old CPU, which
 raises the stakes on that check appreciably: there is no build-tag backstop
 underneath it. Gate P0 already refuses to accept a backend that was compiled in
 but never executed, which is the same concern from the other side.
+
+## T8 — CSE merges identical FMA accumulator chains (and two neighbours)
+
+**Observation.** A register-only FMA-saturation kernel — N independent
+accumulator chains, no memory, used as the measured percent-of-peak denominator
+(DESIGN.md §4/P2, issue #11) — does not measure what it looks like it measures
+if the chains are written the obvious way. Three separate ways to get it wrong
+showed up in one file, and all three are invisible in the Go source.
+
+**(a) Identical initial values collapse every chain into one.** Twelve
+accumulators all starting at `Zero512()`, all fed `FMA512(x, y, aᵢ)` with the
+same `x` and `y`, are twelve copies of the same SSA expression, and CSE keeps
+one:
+
+```
+$ cat > /tmp/cse/peak_amd64.go <<'GO'
+//go:build goexperiment.simd && amd64
+package p
+import "simd/archsimd"
+func Peak(iters int, out []float32) {
+    x, y := archsimd.BroadcastFloat32x16(1), archsimd.BroadcastFloat32x16(1)
+    var a0, a1, a2, a3 archsimd.Float32x16   // four chains, all starting at zero
+    for i := 0; i < iters; i++ {
+        a0 = x.MulAdd(y, a0); a1 = x.MulAdd(y, a1)
+        a2 = x.MulAdd(y, a2); a3 = x.MulAdd(y, a3)
+    }
+    a0.Add(a1).Add(a2.Add(a3)).StoreSlice(out)
+}
+GO
+$ GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go build -gcflags=-S ./... 2>&1 \
+    | sed -n '/Peak STEXT/,/RET/p' | grep -E 'VFMADD|VADDPS|INCQ|JGT'
+	VFMADD213PS	Z0, Z1, Z2        # one FMA in the loop, not four
+	INCQ	DX
+	JGT	34
+	VADDPS	Z0, Z0, Z0        # ... and the reduction is x+x, twice
+	VADDPS	Z0, Z0, Z0
+```
+
+One chain measures FMA *latency* (~4 cycles), not throughput. With twelve chains
+intended, the measured "peak" comes in ~8× low — and as a denominator, that
+inflates every percent-of-peak figure by ~8×. A P2 gate would have passed a bad
+kernel while displaying what looked like a hardware measurement.
+
+*Fix:* start each accumulator at a distinct value (1…N). Nothing is left for CSE
+to merge. The result is then an exact function of how many chains survived
+(`vec.PeakKernel.Witness`), so `TestPeakChainsAreIndependent` detects a
+recurrence by arithmetic, on any host, with no assembly grep.
+
+**(b) `VFMADD213PS` clobbers a multiplicand, so the natural accumulator form
+costs 26 register copies per iteration.** `x.MulAdd(y, z)` is `(x*y)+z` and
+lowers to `VFMADD213PS` (T2), whose destination is the *first multiplicand*.
+Written as `a = FMA(x, y, a)`, the destination cannot be `a`, so the allocator
+preserves `x` around every FMA:
+
+```
+	VMOVDQU64	Z0, Z13
+	VFMADD213PS	Z1, Z0, Z0
+	VMOVDQU64	Z13, Z14
+	VFMADD213PS	Z2, Z13, Z13
+	...                        # 12 FMAs, 12 copies, then 14 more for the phis
+```
+
+38 uops per iteration against a 4-wide allocator is ~9.5 cycles of dispatch for
+6 cycles of FMA work: on a dual-512-FMA Skylake-X the loop would have measured
+issue width and reported roughly two thirds of the real ceiling. (Register moves
+are latency-free and may be eliminated at rename, but they still take issue
+slots.)
+
+*Fix:* put the accumulator in the destination position — `a = FMA(a, y, x)`,
+i.e. `a*1 + 1`. The dependency then runs through a multiplicand rather than the
+addend, which costs nothing on Zen or Skylake (FMA latency is operand-uniform),
+and the loop body becomes exactly twelve `VFMADD213PS`, one `INCQ`, one `CMPQ`,
+one `JGT`. Zero copies.
+
+**(c) Constant multiplicands delete the multiply and add a load.** In the scalar
+reference kernel, `const x, y = float32(1), float32(1)` means `x*y` folds at
+compile time. The loop body came out as ten `ADDSS` and no multiply — half the
+flops the harness was counting — plus a `MOVSS $f32.3f800000(SB), X8` *inside*
+the loop, violating the no-memory property the kernel's whole claim rests on:
+
+```
+	MOVSS	$f32.3f800000(SB), X8      # a load, per iteration
+	ADDSS	X8, X7
+	...                                # 10 adds, 0 multiplies
+```
+
+*Fix:* obtain the multiplicands from a `//go:noinline` function returning 1. The
+call sits outside the loop; the loop body becomes ten `MULSS` and ten `ADDSS`,
+all register operands.
+
+**Assessment.** None of these is a compiler bug — (a) and (c) are CSE and
+constant folding doing exactly their jobs, and (b) is a reasonable lowering of an
+API whose destination operand is fixed by the ISA. What they have in common is
+that the Go source reads correctly in all three cases while the measurement is
+wrong by 2×–8×, and always in the direction that flatters the code being
+measured. Two conclusions, both now standing practice in this repo: a
+microbenchmark that claims a hardware ceiling is not credible until its
+steady-state loop has been read in disassembly, and where the property can be
+restated as arithmetic it should be, so a test rather than a human catches the
+regression. `internal/vec/peak.go` states the four properties; the arithmetic
+witness guards two of them, and `scripts/gate-p2.sh` greps the loop for the
+third.

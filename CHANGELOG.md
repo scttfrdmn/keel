@@ -35,7 +35,15 @@ While the major version is 0, minor versions may contain breaking changes.
 - `docs/hosts.md`: the three amd64 execution targets, what each one is good for, and
   the Zen 4 double-pumped-AVX-512 caveat that P2's percent-of-peak denominator
   has to account for.
-- `docs/toolchain-notes.md`: seven field notes on `GOEXPERIMENT=simd` in go1.26.5,
+- `docs/toolchain-notes.md` T8: three ways a register-only FMA-saturation
+  microbenchmark silently stops measuring a hardware ceiling — CSE merging
+  identical accumulator chains into one (an ~8× understatement, hence an ~8×
+  inflation of everything divided by it), `VFMADD213PS`'s clobbered multiplicand
+  costing 26 register copies per iteration in the natural accumulator form, and
+  constant multiplicands deleting the multiply while adding a load. Each with a
+  verified repro. None is a compiler bug; all three read correctly in Go source
+  and are wrong only in the disassembly, always in the flattering direction.
+- `docs/toolchain-notes.md`: seven earlier field notes on `GOEXPERIMENT=simd` in go1.26.5,
   each with a minimal repro — archsimd being amd64-only, the `VFMADD213PS`
   lowering, the absent float32 `Abs`/bitwise ops, the absent `Float32x16`
   horizontal reduce, the absent portable `simd` package, the `Max`/`Min` NaN
@@ -68,17 +76,62 @@ While the major version is 0, minor versions may contain breaking changes.
   propagation swept across body/remainder/masked-tail positions, and the
   argument-validation panics.
 - `bench/`: benchmark harness reporting GFLOP/s with CPU model, core count,
-  governor, clock snapshot and active backend. Theoretical peak is deliberately
-  **withheld** with the reason printed inline: the DESIGN.md formula assumes two
-  512-bit FMA units and Zen 4 double-pumps, so percent-of-peak has no trustworthy
-  denominator yet (issue #11, which also blocks P2).
+  governor, clock snapshot, active backend, and the host's measured FMA peak with
+  the formula printed beside it as a cross-check.
 - `scripts/gate-p1.sh`: real P1 checks — both builds, vet, L1 tests with
   enforced per-backend coverage on every host, the whole suite re-run under
   `KEEL_FORCE=scalar` on machines that *have* AVX-512 (a scalar pass on arm64
   would not prove the override works), and the ≥4× Sdot ratio measured
-  within-machine from min-of-5 samples with every raw sample printed.
+  within-machine under the §5.4 methodology — benchstat median, cleared net of
+  its confidence interval, on every host, with at least one clearing it under the
+  `performance` governor. It also measures and prints each host's FMA peak and
+  512/256 width ratio: not a P1 criterion, but P2 divides by that number, so both
+  phases' figures share a measurement regime from the start.
+
+- **A measured percent-of-peak denominator** (`internal/vec/peak.go`,
+  `bench/BenchmarkPeak`), replacing the DESIGN.md formula. Register-only FMA
+  saturation: no memory in the loop, twelve independent accumulator chains at
+  512 bits (ten at 256 and ten scalar), each starting at a distinct value so CSE
+  cannot merge them, and the accumulator in the destination operand so the
+  lowering needs no register copies. Verified three ways — disassembly of the
+  steady-state loop, an exact arithmetic witness
+  (`TestPeakChainsAreIndependent`) that fails on any host if a chain does not
+  survive compilation, and the same witness re-checked inside the benchmark that
+  produces the number.
+- `scripts/bench.sh`: the one gate benchmark methodology, shared by every gate
+  so none can deviate from it — `-count=10 -benchtime=1s`, aggregated by the
+  `benchstat` pinned as a module tool, thresholds cleared net of the reported
+  confidence interval, and no verdict at all when benchstat cannot bound the
+  distribution.
 
 ### Changed
+- **The percent-of-peak denominator is now measured per host, not derived**
+  (DESIGN.md §4/P2, issue #11). The formula remains as a printed cross-check.
+  First measurements, single core, float32: Zen 4 (7950X3D) 165.6 GFLOP/s avx512
+  against 165.5 avx2 — a width ratio of 1.00×, which is the double-pumped
+  256-bit datapath measured directly rather than looked up; Skylake-X (i9-9960X)
+  215.9 against 101.8, ratio 2.12×; Zen 5 (Ryzen AI MAX+ 395) 327.8 against
+  164.0, ratio 2.00×, settling the open question about that part's datapath
+  width. The formula overstates Zen 4 by 2.23× (the double-pump) and Skylake-X by
+  1.30× (the AVX-512 frequency license, visible as an implied 3.37 GHz against a
+  4.4 GHz max clock); on Zen 5 it lands within 1.01×. Unlike the L1 ratios, these
+  reproduce to within 0.4% between runs — a register-only kernel has no cache or
+  placement to be lucky about.
+- **Gate benchmarks: `-count=10 -benchtime=1s`, benchstat medians, thresholds
+  cleared net of CI** (DESIGN.md §5.4 rule 5, issue #14). `-benchtime=3x` is now
+  for smoke runs only.
+- **P1's Sdot ratios are re-derived under that methodology and supersede the
+  first ones**, which came from `-benchtime=3x -count=5` reduced by
+  min-of-samples. Net of CI, over three gate runs: 8.71×/7.18×/8.57× on Zen 4,
+  7.55×/7.48×/7.53× on Skylake-X, 9.14×/8.96×/8.79× on Zen 5. The old numbers —
+  4.28×, 5.91×, 4.09× — were not merely noisy but biased low by roughly 2×: three
+  iterations of a 4096-element kernel measure cold caches and frequency ramp,
+  both of which cost the vector path proportionally more. The remaining
+  run-to-run drift on Zen 4 — bimodal, two runs within 1.6% and one 17% below
+  them, invisible to a within-run confidence interval — is recorded in
+  `docs/hosts.md` as an open question rather than averaged away: core placement
+  across that part's two CCDs is the leading hypothesis (bimodality fits it and
+  not thermal drift), and pinning changes what the measurement means.
 - `oracle.Tolerance` gained an underflow floor term: `C·f(n)·(eps32·scale +
   eta32/2)`. Rounding error is only relatively bounded above the smallest
   representable magnitude; a float32 dot product of ~1e-25 elements has products
@@ -102,7 +155,6 @@ While the major version is 0, minor versions may contain breaking changes.
 - Gate P1 is green. All six Level-1 routines match the float64 oracle on scalar,
   AVX2 and AVX-512 on all three amd64 hosts, pass again with dispatch forced to
   scalar on machines that have AVX-512, and clear the ≥4× Sdot floor at n=4096
-  on every host: 4.28× on Zen 4 (Ryzen 9 7950X3D), 5.91× on Skylake-X (i9-9960X),
-  4.09× on Zen 5 (Ryzen AI MAX+ 395). Those margins are narrow and the
-  `-benchtime=3x` samples they come from spread by up to 3× within one backend;
-  see the measurement-methodology issue before treating them as stable.
+  on every host, net of benchstat's confidence interval: 8.57× on Zen 4 (Ryzen 9
+  7950X3D), 7.53× on Skylake-X (i9-9960X), 8.79× on Zen 5 (Ryzen AI MAX+ 395),
+  with at least one host clearing it under the `performance` governor.

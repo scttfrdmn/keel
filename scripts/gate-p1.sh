@@ -30,18 +30,32 @@
 #     inflate the ratio for free. This makes the gate harder to pass and the
 #     resulting claim worth making.
 #
-#  4. BENCH NOISE. DESIGN.md §5.4 specifies `-bench=Gate -benchtime=3x`. Three
-#     iterations of a few-microsecond kernel is a very small sample, so the
-#     gate takes `-count=5` samples and uses the *minimum* ns/op per backend —
-#     the standard way to suppress scheduler noise without changing benchtime.
-#     Every raw sample is printed so the spread is visible rather than implied.
-#     Every host that exercised avx512 must clear 4x; the ratio is
-#     within-machine, so a throttled or busy host has no excuse.
+#  4. BENCH NOISE. `-count=10 -benchtime=1s`, aggregated by benchstat, and the
+#     4x bar counts as cleared only if the median clears it *net of both
+#     confidence intervals* (decision on issue #14; mechanics and rationale in
+#     scripts/bench.sh). The first P1 numbers came from `-benchtime=3x -count=5`
+#     reduced by min-of-samples, whose raw samples spread by 3.08x within one
+#     backend; those are superseded here rather than kept for comparison,
+#     because comparing across measurement regimes is how a perf project loses
+#     track of what it knows. Every host that exercised avx512 must clear the
+#     bar, and at least one of them must have done so under the performance
+#     governor: the ratio is within-machine, so a throttled host has no excuse,
+#     but nor does it get to be the only evidence.
+#
+#  5. THE PEAK DENOMINATOR IS MEASURED HERE TOO, and printed. P1 has no
+#     percent-of-peak criterion, so this is provenance rather than a gate
+#     criterion — but P2's 55% floor divides by this number, and recording it
+#     alongside P1's ratios means the two phases' numbers share a regime from
+#     the start (issue #11). BenchmarkPeak's witness check runs on real silicon
+#     as a side effect, which is the only place a collapsed accumulator chain
+#     could still hide.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/remote.sh
 source scripts/remote.sh
+# shellcheck source=scripts/bench.sh
+source scripts/bench.sh
 
 FAIL=0
 pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
@@ -63,6 +77,9 @@ echo "-- L1 tests (oracle, cross-backend differential, properties) --"
 LOG="$(mktemp)"
 BINDIR="$(mktemp -d)"
 BIN="$BINDIR/keel.test"
+BENCHBIN="$BINDIR/bench.test"
+BENCHLOG="$BINDIR/bench.log"
+BENCHCSV="$BINDIR/bench.csv"
 trap 'rm -rf "$LOG" "$BINDIR"' EXIT
 
 AVX512_GREEN=""
@@ -157,47 +174,117 @@ fi
 
 # -------------------------------------------------------- Sdot >= 4x scalar
 echo
-echo "-- Sdot n=4096: avx512 vs scalar (DESIGN.md §5.4 CI-mode) --"
+echo "-- Sdot n=4096: avx512 vs scalar (issue #14 methodology) --"
+info "-count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME, benchstat median, bar cleared net of CI"
+BFLAGS=()
+while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
+
+PERF_GOV_HOST=""
 if [[ -z "$HOSTS" ]]; then
   fail "the 4x criterion needs an amd64 host; none configured"
 else
-  # min ns/op for one backend's sub-benchmark across all -count samples.
-  read_min() {
-    awk -v be="$1" '
-      $1 ~ ("^BenchmarkGateSdot/" be "(-[0-9]+)?$") {
-        for (i = 2; i <= NF; i++)
-          if ($i == "ns/op") { v = $(i-1) + 0; if (m == 0 || v < m) m = v }
-      }
-      END { if (m > 0) printf "%.1f", m }' "$2"
-  }
+  if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
+    pass "cross-compiled linux/amd64 bench binary"
+  else
+    fail "cross-compile of linux/amd64 bench binary"
+    sed 's/^/        /' "$LOG" | tail -20
+  fi
+
   while read -r host; do
     [[ -n "$host" ]] || continue
-    if ! remote_exec "$host" "$BIN" \
-         -test.run=NONE -test.bench='GateSdot' -test.benchtime=3x -test.count=5 \
-         >"$LOG" 2>&1; then
+    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
+    info "[$host] governor=${gov:-unknown}"
+
+    if ! remote_exec "$host" "$BIN" "${BFLAGS[@]}" -test.bench='GateSdot' \
+         >"$BENCHLOG" 2>&1; then
       fail "[$host] benchmark run failed"
-      sed 's/^/        /' "$LOG" | tail -20
+      sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
-    s="$(read_min scalar "$LOG")"
-    a="$(read_min avx512 "$LOG")"
-    raw="$(grep -oE 'BenchmarkGateSdot/[a-z0-9]+(-[0-9]+)?[[:space:]]+[0-9]+[[:space:]]+[0-9.]+ ns/op' "$LOG" | tr -s ' ' | paste -sd'; ' -)"
-    if [[ -z "$s" || -z "$a" ]]; then
-      info "[$host] samples: ${raw:-none}"
-      if grep -q 'avx512' "$LOG"; then
-        fail "[$host] could not parse both scalar and avx512 ns/op"
+    bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
+    [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    info "[$host] scalar $(bench_describe GateSdot/scalar "$BENCHCSV")"
+    info "[$host] avx512 $(bench_describe GateSdot/avx512 "$BENCHCSV")"
+
+    lo="$(bench_ratio_lo GateSdot/scalar GateSdot/avx512 "$BENCHCSV")"
+    pt="$(bench_ratio GateSdot/scalar GateSdot/avx512 "$BENCHCSV")"
+    if [[ -z "$lo" ]]; then
+      if [[ -n "$(bench_stat GateSdot/avx512 "$BENCHCSV")" ]]; then
+        # A median with no interval is not a measurement this gate can use.
+        fail "[$host] no bounded ratio: benchstat established no confidence interval"
       else
         info "[$host] no avx512 sub-benchmark (CPU lacks it); not counted"
       fi
       continue
     fi
-    ratio="$(awk -v s="$s" -v a="$a" 'BEGIN{printf "%.2f", s/a}')"
-    info "[$host] scalar $s ns/op, avx512 $a ns/op"
-    info "[$host] samples: $raw"
-    if awk -v r="$ratio" 'BEGIN{exit !(r >= 4.0)}'; then
-      pass "[$host] Sdot n=4096 speedup ${ratio}x (>= 4x)"
+    if awk -v r="$lo" 'BEGIN{exit !(r >= 4.0)}'; then
+      pass "[$host] Sdot n=4096 speedup ${pt}x, ${lo}x net of CI (>= 4x)"
+      [[ "$gov" == "performance" ]] && PERF_GOV_HOST="$host"
     else
-      fail "[$host] Sdot n=4096 speedup ${ratio}x (< 4x required)"
+      fail "[$host] Sdot n=4096 speedup ${pt}x, only ${lo}x net of CI (< 4x required)"
+    fi
+  done <<<"$HOSTS"
+
+  if [[ -n "$PERF_GOV_HOST" ]]; then
+    pass "the 4x bar was cleared under the performance governor ($PERF_GOV_HOST)"
+  else
+    fail "no host cleared 4x under the performance governor (issue #14 requires one)"
+  fi
+fi
+
+# ------------------------------------- measured FMA peak (provenance for P2)
+echo
+echo "-- measured FMA peak per host (issue #11; provenance, not a P1 criterion) --"
+if [[ -n "$HOSTS" ]]; then
+  while read -r host; do
+    [[ -n "$host" ]] || continue
+    if ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench='Peak' \
+         >"$BENCHLOG" 2>&1; then
+      # Not a P1 criterion, but a failure here is either a collapsed accumulator
+      # chain or an unmeasurable host, and both must stop P2 from starting.
+      fail "[$host] BenchmarkPeak failed; P2's denominator cannot be measured here"
+      sed 's/^/        /' "$BENCHLOG" | tail -20
+      continue
+    fi
+    pass "[$host] BenchmarkPeak ran; accumulator-chain witness held on real silicon"
+    bench_csv "$BENCHLOG" >"$BENCHCSV" 2>/dev/null || true
+    g512=""; g256=""
+    for be in avx512 avx2 scalar; do
+      g="$(bench_gflops "Peak/$be" "$BENCHCSV")"
+      [[ -n "$g" ]] || continue
+      [[ "$be" == "avx512" ]] && g512="$g"
+      [[ "$be" == "avx2" ]] && g256="$g"
+      f="$(sed -n "s/.*keel-bench-peak-formula: $be: \([0-9.]*\) GFLOP\/s.*/\1/p" "$BENCHLOG" | head -1)"
+      if [[ -n "$f" ]]; then
+        # The formula assumes two full-width FMA ports running at max clock.
+        # Divergence means one of those assumptions does not hold here — a
+        # double-pumped datapath, an AVX-512 frequency license, or a latency
+        # coupling the formula does not model. It is reported, never corrected
+        # for: the measured number is the denominator either way.
+        info "[$host] peak $be: measured $(awk -v g="$g" 'BEGIN{printf "%.1f", g}') GFLOP/s, formula $f — $(
+          awk -v g="$g" -v f="$f" 'BEGIN{
+            d = f / g
+            if (d >= 1) printf "formula %.2fx high", d
+            else printf "formula %.2fx low", 1 / d
+            if (d >= 1.5) printf " (>=1.5x: a formula assumption overstates this host)"
+            else if (d <= 0.667) printf " (>=1.5x: the formula understates this host, so its port count is wrong here too)"
+          }')"
+      else
+        info "[$host] peak $be: measured $(awk -v g="$g" 'BEGIN{printf "%.1f", g}') GFLOP/s, no formula cross-check available"
+      fi
+    done
+    # The width ratio is a direct measurement of the 512-bit datapath, and a far
+    # better diagnostic than measured-vs-formula: it needs no clock, no port
+    # count and no assumption about the frequency license, because both halves
+    # were measured on this host under identical conditions.
+    if [[ -n "$g512" && -n "$g256" ]]; then
+      info "[$host] peak width ratio avx512/avx2 = $(awk -v a="$g512" -v b="$g256" 'BEGIN{
+        r = a / b
+        printf "%.2fx", r
+        if (r >= 1.75) printf " (~2x: a true full-width 512-bit datapath)"
+        else if (r <= 1.25) printf " (~1x: AVX-512 double-pumped over a 256-bit datapath)"
+        else printf " (between the two shapes; treat with suspicion)"
+      }')"
     fi
   done <<<"$HOSTS"
 fi
