@@ -684,7 +684,15 @@ else
       "$(awk -v r="$ROOF" -v i="${BEST_IPF:-0}" 'BEGIN{printf "%.6f", r * i}')" \
       >"$BINDIR/class-$host"
     if [[ "$JUDGED" -eq 0 ]]; then
-      info "[$host] classified ${CLASS}-bound (roofline ${roofpc}%) for criterion 6b; not a sentinel, so P2's floor is not judged here"
+      # The roofline is quoted only where it can be used. On an FMA-bound host the
+      # classifier still computes one — and on antares it computes 39.3%, from a
+      # ceiling its own best shape then exceeds — so printing it beside "fma-bound"
+      # would read as leniency that this host does not get.
+      if [[ "$CLASS" == issue ]]; then
+        info "[$host] classified issue-bound (roofline ${roofpc}%) for criterion 6b; not a sentinel, so P2's floor is not judged here"
+      else
+        info "[$host] classified ${CLASS}-bound for criterion 6b, so no roofline applies and it faces the unmodified bar; not a sentinel, so P2's floor is not judged here"
+      fi
       continue
     fi
     case "$CLASS/$RESULT" in
