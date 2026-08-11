@@ -5,6 +5,10 @@
 /bin/
 # spill-audit artifacts (archived per-commit under docs/ssa when wanted)
 ssa.html
+# gate scratch: build/ssa holds one ssa.html per audited kernel, ~5 MB each.
+# Not committed — the gate regenerates it on every run, and a stale copy would be
+# worse than none when writing docs/spill-report.md.
+/build/
 # bench scratch
 bench/results/*.local.*
 # machine-local remote execution targets (see .keel-hosts.example, docs/hosts.md)

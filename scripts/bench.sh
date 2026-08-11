@@ -47,19 +47,21 @@ bench_csv() {
   go tool benchstat -format=csv "$1"
 }
 
-# bench_stat NAME CSV — print "median_seconds ci_fraction" for one benchmark.
+# bench_stat NAME CSV [UNIT] — print "median ci_fraction" for one benchmark.
 #
-# Prints nothing if the benchmark is absent, and a ci of "inf" when benchstat
-# could not establish an interval. The unit is tracked from the section headers
-# so a B/s row can never be read as a time: benchstat emits one section per
-# unit, and both sections carry the same benchmark names.
+# UNIT defaults to sec/op. Prints nothing if the benchmark is absent under that
+# unit, and a ci of "inf" when benchstat could not establish an interval. The
+# unit is tracked from the section headers so a B/s or GFLOP/s row can never be
+# read as a time: benchstat emits one section per unit and every section carries
+# the same benchmark names, which is a trap worth closing once here rather than
+# per gate.
 bench_stat() {
-  awk -F, -v want="$1" '
+  awk -F, -v want="$1" -v wantunit="${3:-sec/op}" '
     /^,/ { unit = $2; next }
     {
       name = $1
       sub(/-[0-9]+$/, "", name)
-      if (name == want && unit == "sec/op") {
+      if (name == want && unit == wantunit) {
         ci = $3
         sub(/%$/, "", ci)
         if (ci == "" || ci ~ /∞/) ci = "inf"; else ci = ci / 100
@@ -69,16 +71,22 @@ bench_stat() {
     }' "$2"
 }
 
-# bench_ratio_lo NUM DEN CSV — conservative lower bound on NUM/DEN.
+# bench_ratio_lo NUM DEN CSV [UNIT] — conservative lower bound on NUM/DEN.
 #
 # (median_num · (1 − ci_num)) / (median_den · (1 + ci_den)): the smallest ratio
 # consistent with both confidence intervals. Prints nothing if either benchmark
 # is missing or unbounded, so the caller must treat empty as "not measured"
 # rather than as zero.
+#
+# The formula is unit-agnostic on purpose. For sec/op the caller puts the slow
+# side on top (scalar/vector) and reads a speedup; for GFLOP/s it puts the
+# achieved rate on top and reads a fraction of peak. Both want the same
+# conservative treatment — numerator down by its interval, denominator up by
+# its own — so both get it from one function.
 bench_ratio_lo() {
   local n d
-  n="$(bench_stat "$1" "$3")"
-  d="$(bench_stat "$2" "$3")"
+  n="$(bench_stat "$1" "$3" "${4:-sec/op}")"
+  d="$(bench_stat "$2" "$3" "${4:-sec/op}")"
   [[ -n "$n" && -n "$d" ]] || return 0
   awk -v n="$n" -v d="$d" '
     BEGIN {
@@ -88,38 +96,39 @@ bench_ratio_lo() {
     }'
 }
 
-# bench_ratio NUM DEN CSV — the point estimate, for reporting alongside the bound.
+# bench_ratio NUM DEN CSV [UNIT] — the point estimate, for reporting alongside
+# the bound. Printing both is the point: the gap between them is how much of the
+# result is measurement noise, and hiding it would make a 43%-CI run look like a
+# clean one (see docs/hosts.md on antares).
 bench_ratio() {
   local n d
-  n="$(bench_stat "$1" "$3")"
-  d="$(bench_stat "$2" "$3")"
+  n="$(bench_stat "$1" "$3" "${4:-sec/op}")"
+  d="$(bench_stat "$2" "$3" "${4:-sec/op}")"
   [[ -n "$n" && -n "$d" ]] || return 0
   awk -v n="$n" -v d="$d" 'BEGIN { split(n, a, " "); split(d, b, " "); printf "%.3f", a[1] / b[1] }'
 }
 
-# bench_describe NAME CSV — a human-readable "1.23µs ± 2%" for a gate line.
+# bench_describe NAME CSV [UNIT] — a human-readable "1.23e-06 s +/- 2%" for a
+# gate line. Rate units are printed with their own name and 4 significant
+# figures; sec/op keeps the exponent form, which is what benchstat gives.
 bench_describe() {
-  local s
-  s="$(bench_stat "$1" "$2")"
+  local s unit
+  unit="${3:-sec/op}"
+  s="$(bench_stat "$1" "$2" "$unit")"
   [[ -n "$s" ]] || { printf 'not measured'; return 0; }
-  awk -v s="$s" '
+  awk -v s="$s" -v unit="$unit" '
     BEGIN {
       split(s, a, " ")
-      if (a[2] == "inf") printf "%.4g s (no CI: too few or too noisy samples)", a[1]
-      else printf "%.4g s +/- %.1f%%", a[1], a[2] * 100
+      label = (unit == "sec/op") ? "s" : unit
+      if (a[2] == "inf") printf "%.4g %s (no CI: too few or too noisy samples)", a[1], label
+      else printf "%.4g %s +/- %.1f%%", a[1], label, a[2] * 100
     }'
 }
 
-# bench_gflops NAME CSV LOG — the GFLOP/s a benchmark reported, median over
-# samples. benchstat sections cover custom units too, but "GFLOP/s" is a rate
-# where higher is better and benchstat's ± is computed the same way regardless,
-# so this reads the same csv with a different unit filter.
+# bench_gflops NAME CSV — the GFLOP/s a benchmark reported, median over samples,
+# without its interval. For printing a provenance line; anything that compares
+# against a threshold must go through bench_ratio_lo instead, which is why this
+# drops the CI rather than returning it and inviting a raw comparison.
 bench_gflops() {
-  awk -F, -v want="$1" '
-    /^,/ { unit = $2; next }
-    {
-      name = $1
-      sub(/-[0-9]+$/, "", name)
-      if (name == want && unit == "GFLOP/s") { print $2; exit }
-    }' "$2"
+  bench_stat "$1" "$2" GFLOP/s | awk '{ print $1 }'
 }

@@ -14,6 +14,10 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-10 | go1.26.5 | No portable `simd` package; only `simd/archsimd` exists | [T5](#t5) | none — expected in 1.27 |
 | 2026-08-10 | go1.26.5 | `Max`/`Min` operand order for NaN/±0 — **resolved on hardware**, spec was right | [T6](#t6) | closed (#9) |
 | 2026-08-10 | go1.26.5 | `GOAMD64` level does not gate archsimd intrinsics; a v1 binary runs AVX-512 | [T7](#t7) | none — load-bearing for keel |
+| 2026-08-10 | go1.26.5 | CSE merges identical FMA accumulator chains; two more ways a peak kernel lies | [T8](#t8) | none — not a defect |
+| 2026-08-11 | go1.26.5 | Every inlined non-intrinsic call costs a 1-byte NOP in the loop body | [T9](#t9) | candidate |
+| 2026-08-11 | go1.26.5 | Only 15 of 32 vector registers are allocatable; no `231` FMA form exists | [T10](#t10) | yes (#18) |
+| 2026-08-11 | go1.26.5 | `GOSSAFUNC` is not in the build cache key: on a cache hit it writes no `ssa.html` but still prints `dumped SSA … to ./ssa.html` | [T11](#t11) | candidate |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -388,3 +392,360 @@ restated as arithmetic it should be, so a test rather than a human catches the
 regression. `internal/vec/peak.go` states the four properties; the arithmetic
 witness guards two of them, and `scripts/gate-p2.sh` greps the loop for the
 third.
+
+---
+
+## T9 — every inlined non-intrinsic call costs a 1-byte NOP in the loop body
+
+**Observation.** The P2 spill audit's first clean run on the peak kernel
+reported a steady-state loop of **27 instructions carrying 12 FMAs**. The
+expected body is 15: twelve `VFMADD213PS`, `INCQ`, `CMPQ`, `JGT`. The other
+twelve are 1-byte NOPs, encoded `XCHGL AX, AX` (`0x90`), one per FMA:
+
+```
+	0x0067 00266 (peak_amd64.go:33)	XCHGL	AX, AX
+	0x0068 00267 (peak_amd64.go:34)	XCHGL	AX, AX
+	...                                            # twelve, one per source statement
+	0x006b 00278 (vec_avx512.go:72)	VFMADD213PS	Z1, Z0, Z2
+	...                                            # twelve FMAs, all at vec_avx512.go:72
+	0x0083 00350 (peak_amd64.go:47)	INCQ	CX
+```
+
+Note the source positions: the NOPs are at the *caller's* lines and the FMAs are
+all at one line inside `internal/vec`, which is what points at the cause.
+
+**Cause: a statement-position anchor.** Go's line table has to be able to say
+"execution is at `peak_amd64.go:33`" for a debugger, a profile sample and an
+inlined traceback. When a statement's only instruction is an FMA that has been
+attributed to the *callee's* line — because `vec.FMA512` was inlined and the
+instruction inherited its body's position — nothing in the emitted code carries
+the statement's own position, so the compiler emits a 1-byte NOP to carry it.
+One statement whose work all moved into an inlinee, one anchor.
+
+**It is inlining, not statements.** Four separate statements and one
+tuple-assignment of four calls emit the same four NOPs, because the anchor
+belongs to each *inlined call site*, not to each `;`. And calling the intrinsic
+directly emits none at all:
+
+| Shape | NOPs in the loop body |
+|---|---|
+| `a0 = a0.MulAdd(x, x)` ×4, separate statements | **0** |
+| `a0, a1, a2, a3 = a0.MulAdd(...), ...`, one statement | **0** |
+| `a0 = fma(a0, x, x)` ×4 through a one-line wrapper | **4** |
+| `a0, ... = fma(a0,...), ...` one statement, same wrapper | **4** |
+
+**The line that divides the two halves of that table is bodyless vs emulated.**
+`MulAdd` is declared with no body in `archsimd/ops_amd64.go`:
+
+```go
+func (x Float32x16) MulAdd(y Float32x16, z Float32x16) Float32x16
+```
+
+It is a compiler intrinsic, so the instruction is emitted *at the call site* and
+carries the call site's position — there is no callee position to lose, and no
+anchor is needed. A one-line Go wrapper around it is an ordinary function that
+gets inlined, so its body's position wins and the caller's statement buys a NOP.
+
+The same split exists *inside* `archsimd`. Ops in `ops_amd64.go` are bodyless
+intrinsics; ops in `other_gen_amd64.go` are marked `// Emulated` and have real
+Go bodies:
+
+```go
+// Emulated, CPU Feature: AVX512F
+func BroadcastFloat32x16(x float32) Float32x16 {
+	var z Float32x4
+	return z.SetElem(0, x).Broadcast1To16()
+}
+```
+
+So a broadcast costs an anchor NOP *and* lowers to two instructions
+(`VMOVSS` then `VBROADCASTSS`) rather than the one a hand-written
+`VBROADCASTSS mem, Z` would use. That matters much more in a microkernel, where
+six broadcasts happen per k-step, than in the peak kernel, where they are
+hoisted out.
+
+**Cost, stated carefully.** A 1-byte NOP occupies no execution port and has zero
+latency, but it is decoded, allocated and retired like any other instruction, so
+it consumes front-end and retire bandwidth. Twelve FMAs on a machine with two
+512-bit FMA units are 6 cycles of *execution*; 27 instructions through a 4-wide
+allocator are 6.75 cycles of *issue*. On Skylake-X, therefore, the NOPs are
+plausibly the binding constraint in `avx512Peak` — which would mean the measured
+peak on janus (215.9 GFLOP/s, docs/hosts.md) is understated by up to ~12%, and
+that P2's percent-of-peak bar is correspondingly *easier* than it should be.
+Confirming that needs a cycle counter this repo does not yet have, so it is
+recorded as a caveat on the denominator rather than as a correction to it. On
+Zen 4 and Zen 5 the front end is 6-wide and double-pumped or full-width FMAs
+take ≥6 cycles per twelve, so there is headroom and no effect is expected.
+
+**Not suppressible by the obvious flags.** `-gcflags=-dwarf=false` (no debug
+info wanted), `-gcflags=-N=0`, and `-gcflags=-l=4` (maximal inlining) all leave
+the count unchanged: the anchors are for the pprof/traceback line table, not for
+DWARF, and they are emitted after inlining rather than by it.
+
+**Consequence for keel, and the shape of the fix.** Every op in a keel hot loop
+goes through a one-line `internal/vec` shim today, so every op in every hot loop
+costs one extra instruction. The microkernel makes ~20 shim calls per k-step,
+which is ~20 NOPs against 12 FMAs.
+
+The fix does not require abandoning the rule that all `simd` imports live in
+`internal/vec`, because `vec.F32x16` is a type *alias* for
+`archsimd.Float32x16`. A caller in `internal/kern` can therefore write
+`acc.MulAdd(a, b)` — the aliased type's own bodyless intrinsic method, at the
+call site, with no anchor NOP and no `simd` import to grep for. The shim
+functions remain the documented spelling for everything that is not a hot loop.
+That is a P2 kernel-shaping step (issue #17), taken after this note rather than
+before it, and it is measured in `KERNEL.md`.
+
+**Assessment.** Not a bug: the line table is doing its job, and the alternative
+— a hot loop whose profile samples all land on one line inside a helper package
+— would be worse for everyone who is not counting instructions. It is a real
+abstraction cost of the shim pattern, though, and one that no amount of reading
+Go source will reveal. Worth an upstream conversation about whether a
+`//go:linkname`-style "transparent wrapper" marker is wanted, since keel's shim
+layer is the shape every simd-using library will grow.
+
+---
+
+## T10 — the register allocator can use 15 of the 32 vector registers, and only the `213` FMA form exists
+
+**Date:** 2026-08-11 · **Toolchain:** go1.26.5, `GOEXPERIMENT=simd`, linux/amd64
+· **Issue:** #18 · **Upstream candidate:** yes
+
+This is the note P2 turns on. Two independent properties of go1.26.5 combine to
+cap what a Go SGEMM microkernel can hold in registers, and the cap is below what
+`DESIGN.md` §4/P2 budgeted for.
+
+### Property 1: SIMD values are allocated out of 15 registers, not 32
+
+`cmd/compile/internal/ssa/regalloc.go:942` picks the candidate register set for
+a value by type:
+
+```go
+if t.IsSIMD() {
+    if t.Size() > 8 {
+        return s.f.Config.fpRegMask & s.allocatable
+    } else {
+        // K mask
+        return s.f.Config.gpRegMask & s.allocatable
+    }
+}
+```
+
+and `s.allocatable` (`regalloc.go:721`) is
+
+```go
+s.allocatable = s.f.Config.gpRegMask | s.f.Config.fpRegMask | s.f.Config.specialRegMask
+```
+
+so for a 512-bit value the candidate set is exactly `fpRegMask`. On amd64
+(`opGen.go:96120`):
+
+| mask | value | bits | registers |
+| --- | --- | --- | --- |
+| `fpRegMaskAMD64` | `2147418112` = `0x7FFF0000` | 16–30 | **X0–X14** |
+| `specialRegMaskAMD64` | `71494644084506624` | 49–55 | K1–K7 |
+| `gpRegMaskAMD64` | `49135` = `0xBFEF` | 0–13, 15 | integer, minus BP/g |
+
+`registersAMD64` numbers `X15` as 31 and `X16`–`X31` as 32–47. Bit 31 is
+excluded deliberately — X15 is the ABI's zero register. Bits 32–47 are in *no*
+mask at all, so **X16–X31 are not allocatable to any value**, and half the
+architectural register file is unreachable.
+
+This is not visible from the operation definitions, which is what makes it
+surprising. `_gen/simdAMD64ops.go` gives `VFMADD213PS512` the register shape
+`w31`, and `w31`'s masks list X16–X31 among the legal operands. The op says the
+instruction may use Z16; the allocator will never offer it one.
+
+**Repro** (`/tmp/hireg`, 20 independent register-only FMA chains with distinct
+starts so CSE cannot merge them — see [T8](#t8) for why that matters):
+
+```
+$ GOEXPERIMENT=simd spill-audit -pkg . -func chains -mode nomemory
+chains: steady-state loop [575,905] 49 insns: 20 arith, 25 vector stack refs, 1 reg copies, 0 calls, 0 other mem refs
+chains: 25 memory reference(s) in a loop that must be register-only:
+    00575 (/tmp/hireg/main.go:11)	VMOVDQU64	Z0, main.a19(SP)
+    …
+$ … -v | grep -oE '\bZ[0-9]+' | sort -u | tail -1
+Z14
+```
+
+Every vector operand in the body names Z0–Z14. There is not one Z15 or higher in
+the listing; the allocator makes 25 stack references per iteration rather than
+touch a register it does not believe exists. A 20-chain kernel needs 20
+registers, has 32 on the machine, is offered 15, and pays L1 round trips for the
+rest.
+
+### Property 2: there is no `231` or `132` FMA, so an accumulate needs a scratch register
+
+[T2](#t2) recorded that `MulAdd` lowers to `VFMADD213PS`. The stronger statement
+is that nothing else is available:
+
+```
+$ grep -n 'name: "VF.*PS512"' _gen/simdAMD64ops.go
+VFMADD213PS512      VFMADDSUB213PS512      VFMSUBADD213PS512
+```
+
+plus their `load` and `Masked` variants. No `VFMADD231PS512`, no `132`.
+
+`213` writes its result to its first multiplicand (`resultInArg0: true`). A GEMM
+accumulate is `acc += a·b`, so `acc` is the *addend* — argument 2 — and the
+result therefore cannot land in `acc`'s register. The compiler handles this
+well: it lets the second FMA of a row consume the broadcast destructively, so
+the accumulator migrates into the broadcast's old register and the measured cost
+is one `VMOVDQU64` register copy per *broadcast*, not per FMA. But it needs one
+live scratch register beyond the working set, always.
+
+The load form does not help. The rule is
+
+```
+(VFMADD213PS512 x y l:(VMOVDQUload512 …)) => (VFMADD213PS512load … x y ptr mem)
+```
+
+which folds argument 2 — the addend, i.e. the accumulator. Folding the
+accumulator from memory is the one thing a GEMM kernel must never do. Had a
+`231` form existed, its memory operand would have been a multiplicand: the B
+panel could have been read straight out of the FMA, and with AVX-512 embedded
+broadcast the A operand too, at zero registers and zero extra instructions.
+
+### The consequence: 8 accumulators, not 12
+
+Put the two together. For an MR×(NB·16) tile with unroll u, the values live
+across the unrolled body are
+
+```
+MR·NB  accumulators
+NB     B-panel vectors
+MR·u   A-panel scalars   ← the SSA scheduler hoists every step's loads to the top
+1      FMA scratch (Property 2)
+------
+       ≤ 15 (Property 1)
+```
+
+`DESIGN.md` budgeted 12 accumulators + 2 B + 1 broadcast = 15 live and called it
+exactly full. That budget is right on Property 1's number and wrong on Property
+2's: 12 + 2 leaves one register, and one register has to be both the A operand
+and the scratch. `MR·u` makes it worse, because Go's scheduler hoists all of an
+unrolled body's independent loads to the top of the body, so unrolling *raises*
+peak pressure instead of amortizing the copies — which is the opposite of why
+`DESIGN.md` asked for the unroll.
+
+Sweeping the shape space confirms it (115 generated kernels, audited with
+`spill-audit`; `b` = scalar broadcast, `p` = one A vector load plus `VPERMPS`
+lane broadcasts with the selector folded from memory):
+
+| shape | u | insns | FMAs | ins/FMA | vec stack refs |
+| --- | --- | --- | --- | --- | --- |
+| 2×64 `p` | 2 | 71 | 16 | **4.44** | 0 |
+| 2×32 `p` | 4 | 73 | 16 | 4.56 | 0 |
+| 2×32 `b` | 4 | 74 | 16 | **4.62** | 0 |
+| 3×32 `p` | 2 | 56 | 12 | 4.67 | 0 |
+| 3×32 `b` | 2 | 60 | 12 | 5.00 | 0 |
+| 4×32 `b` | 1 | 50 | 8 | 6.25 | 0 |
+| 4×32 `b` | 2 | 83 | 16 | 5.19 | 8 |
+| **6×32 `b`** | **1** | 76 | 12 | 6.33 | **12** ← DESIGN.md's tile, no unroll |
+| **6×32 `b`** | **4** | 270 | 48 | 5.62 | **90** ← DESIGN.md's tile as specified |
+
+Every configuration with 12 accumulators spills. The frontier is at 8, and it is
+reached by shrinking M (2×64, 2×32) rather than N, because N is where the
+vectors are and M is what costs a broadcast.
+
+Where the 74 instructions of the best scalar-broadcast shape go, per iteration
+of 16 FMAs:
+
+| class | count | per FMA |
+| --- | --- | --- |
+| `VFMADD213PS` | 16 | 1.00 |
+| integer loop overhead (two slice re-slices, counters, compare, branch) | 18 | 1.13 |
+| `VMOVDQU64` B loads | 8 | 0.50 |
+| `VMOVSS` A scalar loads | 8 | 0.50 |
+| `VBROADCASTSS` | 8 | 0.50 |
+| `VMOVDQU64` register copies (Property 2) | 8 | 0.50 |
+| `XCHGL AX, AX` anchor NOPs ([T9](#t9)) | 8 | 0.50 |
+
+Nothing here is a spill; the kernel is clean by P2's stated criterion. It is
+still 4.6 instructions per unit of arithmetic, and on a machine whose front end
+retires 4 per cycle and whose FMA units accept 2 per cycle, that is the binding
+constraint rather than the arithmetic. The 18 integer instructions are the
+largest single non-FMA block: `a, b = a[k:], b[j:]` compiles to
+`ADDQ/MOVQ/NEGQ/SARQ $63/ANDL` per slice — a branchless "advance the pointer
+only if the remainder is non-empty" clamp — and there are two panels.
+
+### Assessment
+
+Property 1 looks like a plain oversight and is the more valuable of the two
+upstream: nothing in the design of `archsimd` wants X16–X31 withheld, the op
+definitions already permit them, and the cost is that any kernel needing more
+than 15 live vectors silently spills instead of using idle hardware. Property 2
+is a missing-op report rather than a bug, but it is the one with the larger
+effect on generated code: a `231` form would remove one instruction per
+broadcast *and* let both GEMM operands come from memory.
+
+Neither is worked around here. The tile is shrunk to what fits, the shrink is
+recorded in `KERNEL.md`, and P2's percent-of-peak measurement is taken on the
+kernel the compiler can actually allocate. What that measurement says about the
+go/no-go is a separate question from this note, and is answered with numbers in
+`KERNEL.md` rather than with the model above.
+
+---
+
+## T11 — `GOSSAFUNC` is not in the build cache key, and says otherwise on a cache hit
+
+`GOSSAFUNC=Name go build` dumps the compiler's SSA for `Name` to `./ssa.html`.
+The environment variable is read by the compiler, but it is not part of the
+action ID the `go` command caches on — so the second identical build is a cache
+hit, the compiler never runs, and no file is written. The dangerous half is that
+the *cached compiler stderr is replayed*, so the build still prints the success
+message.
+
+```
+$ mkdir /tmp/gossacache && cd /tmp/gossacache
+$ printf 'module gossaprobe\n\ngo 1.26\n' > go.mod
+$ cat > f.go <<'GO'
+package p
+
+func Add(a, b []float32) {
+	for i := range a {
+		a[i] += b[i]
+	}
+}
+GO
+$ export GOCACHE=/tmp/gossacache/cache      # a cache of our own, so run 1 is cold
+
+$ GOSSAFUNC=Add go build -o /dev/null .
+# gossaprobe
+dumped SSA for Add,1 to ./ssa.html
+$ ls -s ssa.html
+344 ssa.html
+
+$ rm ssa.html
+$ GOSSAFUNC=Add go build -o /dev/null .     # identical build: cache hit
+# gossaprobe
+dumped SSA for Add,1 to ./ssa.html          # <-- replayed from the cache
+$ ls ssa.html
+ls: ssa.html: No such file or directory     # <-- and nothing was written
+```
+
+Run 3, with a *different* `GOSSAFUNC` value, printed nothing at all and also
+wrote nothing: the action ID is the same either way, so the value cannot select
+a different dump once the package is cached.
+
+This is a `cmd/go` caching question rather than a simd one, and it would bite any
+use of `GOSSAFUNC` in a script. It is filed here because it bit this project's
+gate: `scripts/gate-p2.sh` requires an archived `ssa.html` per audited kernel so
+that a red spill audit always ships with the allocator evidence behind it, and the
+requirement passed on the first run of the session and failed on the second — the
+audit's own earlier `-gcflags=-S` compile having warmed the cache in between.
+Trusting the printed message would have produced a gate that reported evidence it
+had not collected.
+
+### Workaround
+
+`internal/spill/cmd/spill-audit` gives each dump a private `GOCACHE` under its
+scratch directory, which guarantees a cold compile because `GOCACHE` *is* part of
+the lookup. Measured cost for `./internal/vec` cross-compiled to linux/amd64:
+**0.63 s and 18 MB** per function, discarded afterwards — cheap enough that no
+cleverer invalidation is worth the fragility. The tool then verifies the file
+exists rather than believing the exit status, which is what turned this up.
+
+`-a` would also work and rebuilds the standard library; a content change to the
+package would not, since Go hashes source content rather than mtimes.

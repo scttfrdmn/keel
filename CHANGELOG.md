@@ -103,8 +103,110 @@ While the major version is 0, minor versions may contain breaking changes.
   `benchstat` pinned as a module tool, thresholds cleared net of the reported
   confidence interval, and no verdict at all when benchstat cannot bound the
   distribution.
+- `internal/spill`, the P2 spill audit: parses `go build -gcflags=-S`, identifies
+  the steady-state K-loop (innermost loop carrying the arithmetic, excluding the
+  `runtime.morestack` re-entry jump that spans every function), and classifies its
+  body. It separates the three things a grep conflates: a *spill* (a vector
+  register moved to or from `(SP)`), a *register copy* (`VFMADD213PS`'s clobbered
+  multiplicand, an issue slot rather than memory traffic), and a *broadcast*
+  (arithmetic setup). Also counts the `XCHGL AX, AX` statement anchors, which a
+  listing parser cannot drop because they are not spelled `NOP`.
+- **Bounds-check elimination is checked on the loop body, not on the package.** The
+  audit reports a surviving bounds check as what it actually is in the object code
+  — a conditional branch out of the loop body to a block that calls
+  `runtime.panic*` — because the panic block is laid out after the hot path, so
+  grepping the body for a `CALL` finds nothing. `-d=ssa/check_bce` is printed as
+  provenance and is not the criterion: it reports dozens of legitimate checks
+  outside the K-loop (`a[:kc*MR]` in the prologue, `c[i*ldc:i*ldc+NR]` in the
+  write-out), each of which costs nothing amortized over K, so a gate that failed
+  on them would be unsatisfiable for reasons unrelated to P2. Verified both ways
+  against a positive and a negative control.
+- **SGEMM microkernels** (`internal/vec/gemm_amd64.go`, registry in
+  `internal/kern`): two zero-spill AVX-512 tiles, 2×32 unrolled ×4 and 4×32
+  unrolled ×1, both differential-tested against a scalar twin of their own shape
+  under `oracle.Tolerance`, over kc values covering 0, the sub-unroll cases, exact
+  multiples, remainders, and 128, with guard rows and columns checked untouched.
+  Both audit clean: 0 spills, 0 calls, 0 surviving bounds checks in the
+  steady-state loop.
+- `KERNEL.md`: the tile shape record P2 exists to produce — the register budget,
+  the measured spill frontier over a 115-shape sweep, the full 74-instruction
+  opcode histogram of the 2×32 body, the two shaping attempts that were measured
+  and dropped, and the per-host winner.
+- `bench/BenchmarkKernel`: every shape on packed L1-resident panels at kc ∈ {8,
+  32, 128, 512}, reporting GFLOP/s (shapes do different work per call, so ns/op
+  cannot compare them) and flops/call. Documented as an *upper bound* on what P3
+  can deliver, because excluding packing and blocking is what makes it a
+  measurement of the K-loop.
+- `docs/spill-report.md`: the P2 go/no-go report, required by DESIGN.md §4/P2 when
+  the gate is red. **The spill audit passes and the 55%-of-peak floor does not** —
+  janus.local (Skylake-X) reaches 46.1% against the floor, while vesta (Zen 4)
+  reaches 96.6% and antares (Zen 5) 64.1%. The binding constraint is instructions
+  issued per FMA, not spills, established two ways from keel's own measurements: a
+  clock-free test (the two shipped shapes' throughputs stand in the inverse ratio
+  of their instruction counts on janus, 1.308 measured against 1.351 predicted, and
+  do not on the other two hosts) and a per-cycle derivation (both janus shapes
+  return the same ~4.2 instructions per cycle despite differing 35% in instruction
+  count). Includes the four open decisions and states which were not taken.
+- **zmm FMA/cycle is now measured per host, not cited**: `BenchmarkPeak/avx512`
+  pinned with `taskset` while sampling that core's `cpufreq/scaling_cur_freq` gives
+  0.996 on vesta, 1.944 on janus, 1.996 on antares — Zen 4 double-pumping AVX-512
+  over 256-bit datapaths, and both the Skylake-X and Zen 5 parts retiring two
+  full-width FMAs per cycle. This is the column that explains the floor failure: a
+  2-FMA/cycle machine feeds twice the arithmetic from the same front end, so it has
+  half the instruction budget per FMA (docs/spill-report.md §3.3).
+- `KERNEL.md` §7, the per-host winner: **the winner flips, so both shapes ship.**
+  The load-lean 4×32 wins on vesta (96.6% vs 92.4%) and antares (64.1% vs 53.1%);
+  the instruction-lean 2×32 wins on janus (46.1% vs 35.2%). Shipping one shape on
+  theory would have been wrong on at least one machine in this fleet, and the shape
+  theory most favoured wins on the fewest hosts.
+- `docs/toolchain-notes.md` T11: `GOSSAFUNC` is not part of the build cache key,
+  so a repeated build is a cache hit that writes no `ssa.html` — while replaying
+  the cached compiler stderr, including `dumped SSA for <fn> to ./ssa.html`. Found
+  by the gate requiring the archived dump and checking for the file instead of
+  trusting the exit status: the requirement passed on one run and failed on the
+  next, the audit's own `-gcflags=-S` compile having warmed the cache in between.
+  `spill-audit` now gives each dump a private `GOCACHE`, which is in the lookup —
+  0.63 s and 18 MB per function, discarded after.
 
 ### Changed
+- **DESIGN.md's 32×6 microkernel tile is not implementable on go1.26.5, and P2
+  ships two smaller shapes instead** (`docs/toolchain-notes.md` T10, issue #18,
+  rationale in `KERNEL.md`). Two independent properties of the toolchain, both
+  read out of the compiler's own source and confirmed by probe: the register
+  allocator offers SIMD values only X0–X14 (`fpRegMaskAMD64` is `0x7FFF0000`; X15
+  is the ABI zero register and X16–X31 appear in no allocatable mask at all, even
+  though `VFMADD213PS512`'s register shape lists them as legal), and only the
+  `213` FMA form exists — it writes to its first multiplicand, so `acc += a·b` can
+  never land in `acc` and always needs a live scratch register. DESIGN.md's budget
+  of 12 accumulators + 2 B vectors + 1 broadcast = 15 is therefore one register
+  short of allocatable, and measured across a 115-shape sweep *every*
+  12-accumulator configuration spills. The zero-spill frontier is 8 accumulators;
+  0.75 loads per FMA is a hard floor below it, since a lower ratio needs 9. The
+  DESIGN.md tile is kept as `kern.ReferenceTile` — audited, differential-tested and
+  benchmarked, deliberately absent from `kern.Kernels()` — so the cost of the
+  constraint is a measured GFLOP/s number rather than an assertion, and the gate's
+  zero-spill criterion stays binding on everything that ships.
+- **The microkernel tile is reflected relative to DESIGN.md: MR rows × NR columns,
+  vectors along N** (issue #16). keel's public API is row-major (DESIGN.md §3), so
+  in an M-vectorized tile sixteen consecutive elements of a column are `ldc` apart
+  and every accumulator lane lands on a different cache line — 192 scalar stores
+  per tile, each needing a lane extract that archsimd only offers as a
+  store-and-reload, i.e. a spill. The M-vectorized tile would fail P2's own audit
+  for a reason unrelated to the compiler being audited. The arithmetic and the
+  register pressure the phase was designed to test are unchanged.
+- **The K-loop bodies live in `internal/vec`, not `internal/kern`.** Reaching
+  archsimd through a shim costs one 1-byte `XCHGL` statement anchor per inlined
+  wrapper *with a Go body* per call site (`docs/toolchain-notes.md` T9). Measured on
+  the 2×32 body: 90 instructions with 24 anchor NOPs through two wrapper levels
+  against 74 with 8 when `internal/vec` names archsimd directly — 27% of the loop
+  body was anchors. `internal/kern` is now the shape registry, tile protocol and
+  scalar reference; the "all simd imports in `internal/vec`" rule is unchanged.
+- `scripts/gate-p2.sh`: real P2 checks. The 55% floor applies to the best *shipped*
+  shape per host — P3 dispatches to one of the two, so failing a host for carrying
+  a second kernel it would never select would measure the wrong thing — with every
+  shape's number printed either way, numerator and denominator taken in the same
+  benchmark invocation, and the audit of the deliberately-spilling reference tile
+  run as explicitly non-fatal evidence.
 - **The percent-of-peak denominator is now measured per host, not derived**
   (DESIGN.md §4/P2, issue #11). The formula remains as a printed cross-check.
   First measurements, single core, float32: Zen 4 (7950X3D) 165.6 GFLOP/s avx512
@@ -158,3 +260,16 @@ While the major version is 0, minor versions may contain breaking changes.
   on every host, net of benchstat's confidence interval: 8.57× on Zen 4 (Ryzen 9
   7950X3D), 7.53× on Skylake-X (i9-9960X), 8.79× on Zen 5 (Ryzen AI MAX+ 395),
   with at least one host clearing it under the `performance` governor.
+- **Gate P2 is RED, and P2 is a go/no-go rather than a hurdle, so work stopped
+  there.** Every compile-time criterion passes on both shipped shapes — 0
+  accumulator spills, 0 calls and 0 surviving bounds checks in the steady-state
+  K-loop, `ssa.html` archived for each, all three peak kernels register-only — and
+  correctness passes on all three amd64 hosts with the AVX-512 tile exercised on
+  each. The single failing line is the 55%-of-measured-peak floor on janus.local
+  (Skylake-X, i9-9960X): 46.1%, 46.1% net of CI. It reproduces (46.0% on an
+  independent run 40 minutes earlier), and the two Zen hosts clear the floor at
+  96.6% and 64.1%. Nothing was relaxed to change the colour: no shape added or
+  removed, no threshold moved, no host dropped, no assembly written. P3 is not
+  started and the four open decisions are in `docs/spill-report.md` §7 — the first
+  of which is that DESIGN.md §4/P2 never says on how many hosts the floor applies,
+  and `scripts/gate-p2.sh` implements the strict all-hosts reading.
