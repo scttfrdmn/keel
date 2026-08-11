@@ -426,9 +426,16 @@ janus's required floor *rises* from today's 43.8% (`0.90 × 48.6%`) to 70.4% —
 stricter than the 55% it replaced. The amendment needs no expiry clause because improving the
 toolchain tightens it automatically.
 
-**Standing task, and janus's new role.** keel issues #17, #18 and #20 go upstream to
-`golang/go` with keel as the minimal repro and §5.3 as the impact statement; the
-upstream numbers land in `docs/toolchain-notes.md` beside each note. When a
+**Standing task, and janus's new role.** keel issues #17, #18 and #20 are filed
+upstream with keel as the minimal repro and §5.3 as the impact statement:
+
+| upstream | what | keel note |
+|---|---|---|
+| [golang/go#80828](https://github.com/golang/go/issues/80828) | 512-bit values are allocated from 15 of the 32 zmm registers (`fpRegMaskAMD64` omits X16–X31 although the ops declare them) | T10 property 1, #18 |
+| [golang/go#80829](https://github.com/golang/go/issues/80829) | no 231-shaped vector FMA, the load-merge rule folds the addend, nothing emits `.BCST` | T10 property 2 + T12, #18/#20 |
+| [golang/go#80830](https://github.com/golang/go/issues/80830) | `BroadcastFloat32x16` is emulated; inlined non-intrinsic wrappers cost an anchor NOP per call site | T9, #17 |
+
+When a
 toolchain folds a broadcast memory operand into a 231-shaped FMA, re-audit and
 re-measure janus expecting ~74%. Janus is now the fleet's regression sentinel: it
 is the one host whose number moves when upstream lowering changes, which makes it

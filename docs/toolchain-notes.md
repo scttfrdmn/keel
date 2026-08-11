@@ -15,10 +15,10 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-10 | go1.26.5 | `Max`/`Min` operand order for NaN/±0 — **resolved on hardware**, spec was right | [T6](#t6) | closed (#9) |
 | 2026-08-10 | go1.26.5 | `GOAMD64` level does not gate archsimd intrinsics; a v1 binary runs AVX-512 | [T7](#t7) | none — load-bearing for keel |
 | 2026-08-10 | go1.26.5 | CSE merges identical FMA accumulator chains; two more ways a peak kernel lies | [T8](#t8) | none — not a defect |
-| 2026-08-11 | go1.26.5 | Every inlined non-intrinsic call costs a 1-byte NOP in the loop body | [T9](#t9) | candidate |
-| 2026-08-11 | go1.26.5 | Only 15 of 32 vector registers are allocatable; no `231` FMA form exists | [T10](#t10) | yes (#18) |
+| 2026-08-11 | go1.26.5 | Every inlined non-intrinsic call costs a 1-byte NOP in the loop body | [T9](#t9) | filed: [golang/go#80830](https://github.com/golang/go/issues/80830) (#17) |
+| 2026-08-11 | go1.26.5 | Only 15 of 32 vector registers are allocatable; no `231` FMA form exists | [T10](#t10) | filed: [golang/go#80828](https://github.com/golang/go/issues/80828), [#80829](https://github.com/golang/go/issues/80829) (#18) |
 | 2026-08-11 | go1.26.5 | `GOSSAFUNC` is not in the build cache key: on a cache hit it writes no `ssa.html` but still prints `dumped SSA … to ./ssa.html` | [T11](#t11) | candidate |
-| 2026-08-11 | go1.26.5 | The assembler encodes `vfmadd231ps mem{1to16}` and the intrinsic layer cannot reach it: no 231 SSA op, the load-merge rule folds memory into the addend, and nothing emits `.BCST` | [T12](#t12) | yes (#20) |
+| 2026-08-11 | go1.26.5 | The assembler encodes `vfmadd231ps mem{1to16}` and the intrinsic layer cannot reach it: no 231 SSA op, the load-merge rule folds memory into the addend, and nothing emits `.BCST` | [T12](#t12) | filed: [golang/go#80829](https://github.com/golang/go/issues/80829) (#20) |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -478,10 +478,22 @@ recorded as a caveat on the denominator rather than as a correction to it. On
 Zen 4 and Zen 5 the front end is 6-wide and double-pumped or full-width FMAs
 take ≥6 cycles per twelve, so there is headroom and no effect is expected.
 
-**Not suppressible by the obvious flags.** `-gcflags=-dwarf=false` (no debug
-info wanted), `-gcflags=-N=0`, and `-gcflags=-l=4` (maximal inlining) all leave
-the count unchanged: the anchors are for the pprof/traceback line table, not for
-DWARF, and they are emitted after inlining rather than by it.
+**Not suppressible by the obvious flags.** `-gcflags=-dwarf=false` (no debug info
+wanted) and `-gcflags=-l=4` (maximal inlining) both leave the count unchanged: the
+anchors are for the pprof/traceback line table, not for DWARF, and they are emitted
+after inlining rather than by it. `-gcflags=-N` does remove them, and is not a
+workaround — with optimizations off, each statement's values go to the stack, so
+real instructions carry the caller's own positions and no anchor is needed:
+
+```
+$ go build -gcflags='all=-S -N' .   # 0 XCHGL; the positions ride on stores instead
+	0x0041 00065 (main.go:24)	MOVSS	main.s+1912(SP), X1
+	0x009c 00156 (main.go:24)	VMOVDQU64	Z1, main.a0+1368(SP)
+```
+
+(An earlier version of this note cited `-gcflags=-N=0`, which is the *default*
+— `-N` is a boolean — and therefore said nothing. Corrected 2026-08-11 while
+preparing the upstream report.)
 
 **Consequence for keel, and the shape of the fix.** Every op in a keel hot loop
 goes through a one-line `internal/vec` shim today, so every op in every hot loop
@@ -510,7 +522,7 @@ layer is the shape every simd-using library will grow.
 ## T10 — the register allocator can use 15 of the 32 vector registers, and only the `213` FMA form exists
 
 **Date:** 2026-08-11 · **Toolchain:** go1.26.5, `GOEXPERIMENT=simd`, linux/amd64
-· **Issue:** #18 · **Upstream candidate:** yes
+· **Issue:** #18 · **Upstream:** filed as [golang/go#80828](https://github.com/golang/go/issues/80828) (property 1) and [golang/go#80829](https://github.com/golang/go/issues/80829) (property 2)
 
 This is the note P2 turns on. Two independent properties of go1.26.5 combine to
 cap what a Go SGEMM microkernel can hold in registers, and the cap is below what

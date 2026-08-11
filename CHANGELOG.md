@@ -175,6 +175,20 @@ While the major version is 0, minor versions may contain breaking changes.
   This is the largest term in the 2×32 budget — 74 → ~46 instructions, 4.625 →
   2.875 insns/FMA — and it supersedes `docs/spill-report.md` §5's original
   accounting, which credited only T9 and T10 and was therefore short by ~1.75×.
+- **Three field notes are filed upstream against `golang/go`**, each with a
+  self-contained repro built from scratch for the filing and re-verified against the
+  go1.26.5 GOROOT, and each carrying janus's roofline table as its impact statement:
+  [#80828](https://github.com/golang/go/issues/80828) (512-bit values allocated from
+  15 of 32 zmm registers — a fresh sweep puts the zero-spill frontier at 13
+  independent accumulators and shows no register above Z14 is ever named),
+  [#80829](https://github.com/golang/go/issues/80829) (no 231-shaped vector FMA, the
+  load-merge rule folds the addend, nothing emits `.BCST` — with the byte-identical
+  `go tool asm` / `llvm-mc` encodings and a 9-instructions-for-2-FMAs GEMM row),
+  [#80830](https://github.com/golang/go/issues/80830) (`BroadcastFloat32x16` is
+  emulated as `SetElem`+`Broadcast1To16`; a one-line wrapper costs one anchor NOP per
+  call site — 7 insns/0 NOPs direct against 11/4 wrapped, for identical arithmetic).
+  Recorded in `docs/toolchain-notes.md` beside T9, T10 and T12 and in
+  `docs/spill-report.md` §9.
 - `scripts/roofline.sh`: the throughput verdict as a single pure function with no
   I/O, so the rule that decides a go/no-go can be read in one place and tested
   without a benchmark. Classifies a host FMA-bound or issue-bound from measured
@@ -267,6 +281,12 @@ While the major version is 0, minor versions may contain breaking changes.
   `docs/hosts.md` as an open question rather than averaged away: core placement
   across that part's two CCDs is the leading hypothesis (bimodality fits it and
   not thermal drift), and pinning changes what the measurement means.
+- `docs/toolchain-notes.md` T9's flag list was wrong and is corrected: it cited
+  `-gcflags=-N=0`, which is the *default* (`-N` is a boolean), and therefore claimed
+  nothing. `-N` does remove the anchor NOPs, and is not a workaround — with
+  optimizations off each statement's values go to the stack, so real instructions
+  carry the caller's own positions and no anchor is needed. Found while building the
+  standalone repro for the upstream filing, which is the point of building one.
 - `oracle.Tolerance` gained an underflow floor term: `C·f(n)·(eps32·scale +
   eta32/2)`. Rounding error is only relatively bounded above the smallest
   representable magnitude; a float32 dot product of ~1e-25 elements has products
