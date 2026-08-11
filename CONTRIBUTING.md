@@ -1,0 +1,37 @@
+# Contributing to keel
+
+keel is being built in a human-directed, agent-executed loop (Claude Code
+doing the typing, humans holding the gates). The process rules below bind
+both kinds of contributor.
+
+## Process
+- **Phases and gates.** Work proceeds through phases P0–P5 (DESIGN.md §4),
+  tracked as GitHub milestones. Each phase's gate script
+  (`scripts/gate-pN.sh`) is written at the start of the phase and must exit
+  0 before the next phase begins. No overrides.
+- **Issues are the source of truth.** Each phase has an umbrella issue with
+  its task checklist. Discoveries become new issues with the right labels
+  (`toolchain-report`, `perf`, `correctness`, `blocked`, `upstream`) rather
+  than drive-by fixes.
+- **Commits.** Small, single-purpose, present tense. Gate-closing commits
+  use `PN: <summary> [gate green]`.
+
+## Code rules
+- All `simd`/`archsimd` imports live in `internal/vec` only.
+- Every vector op has a scalar twin and a differential test before it merges.
+- Tolerances come from `internal/oracle.Tolerance` only.
+- Benchmark numbers are never reported without CPU model + theoretical peak.
+
+## Versioning & releases
+- [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). While
+  major is 0, minor bumps may break API.
+- [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): every user-visible
+  change lands in `CHANGELOG.md` under `[Unreleased]` in the same PR/commit.
+- Releases are tagged `vX.Y.Z`; v0.1.0 requires gates P0–P5 green plus the
+  scalar-only build passing on a stock toolchain.
+
+## License
+Apache-2.0. New files carry the two-line header:
+
+    // Copyright 2026 Scott Friedman
+    // SPDX-License-Identifier: Apache-2.0

@@ -1,0 +1,9 @@
+# binaries & profiles
+*.test
+*.out
+*.prof
+/bin/
+# spill-audit artifacts (archived per-commit under docs/ssa when wanted)
+ssa.html
+# bench scratch
+bench/results/*.local.*
