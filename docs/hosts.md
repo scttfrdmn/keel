@@ -127,6 +127,36 @@ structurally from the two desktop/HEDT parts. DESIGN.md §4/P3 sizes KC/MC/NC
 against a cache hierarchy, so the blocking parameters that suit vesta should not
 be assumed to transfer here. Measure per host.
 
+## Two roles P3 assigns to a host
+
+`scripts/gate-p3.sh` reads two more machine-local lists, both in the same format
+as `.keel-hosts` and both gitignored for the same reason.
+
+**The OpenBLAS reference host** (`.keel-openblas-hosts`, or
+`$KEEL_OPENBLAS_HOSTS`). P3's second criterion is ≥60% of single-thread OpenBLAS
+at 2048³, and the only place that ratio means anything is a machine where both
+halves can execute: this dev host is `darwin/arm64`, where keel's shipped
+AVX-512 path does not exist at all, so an OpenBLAS-on-arm64 denominator would be
+comparing across silicon (DESIGN.md §7 rule 7). So the comparison runs on an
+amd64 host, in one benchmark invocation, from a native build of the
+`openblas`-tagged cgo harness — which is the one thing in this project that needs
+a Go toolchain *and* a system library on the target. None of the three current
+hosts has either; provisioning is a decision, and the gate prints the exact
+commands rather than quietly reporting percent-of-peak instead.
+
+Note what stays true regardless: the `openblas` tag keeps that harness out of the
+module's dependency graph, so nothing keel ships ever links OpenBLAS.
+
+**The throughput sentinel** (`.keel-sentinel`, or `$KEEL_SENTINEL_HOST`). The
+ruling on issue #19 left P2's floor with a class-dependent denominator, and on an
+issue-bound host that floor *rises* as the kernel's instruction count falls. The
+same arithmetic makes such a host the one that notices a K-loop getting fatter,
+which is the risk P3 carries — packing, edge handling and beta variants all add
+code around the loop. So gate P3 re-runs P2's verdict there. janus is the
+sentinel today: it is the host where instruction count binds (46.0% of peak,
+94.6% of a 48.6% issue roofline). If the file is absent, every host is a
+sentinel — missing configuration costs time, never coverage.
+
 ## What has been verified here
 
 2026-08-10, gate P0: the differential suite ran on all three hosts, bit-exact

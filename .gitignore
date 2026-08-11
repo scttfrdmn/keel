@@ -13,3 +13,9 @@ ssa.html
 bench/results/*.local.*
 # machine-local remote execution targets (see .keel-hosts.example, docs/hosts.md)
 /.keel-hosts
+# machine-local P3 gate targets: the host(s) that can build and run the
+# openblas-tagged cgo reference, and the throughput regression sentinel.
+# Hostnames are infrastructure, not source; absent means "every host", never
+# "skip the check" (scripts/gate-p3.sh criterion 5).
+/.keel-openblas-hosts
+/.keel-sentinel

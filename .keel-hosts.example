@@ -8,6 +8,21 @@
 #
 # Or set KEEL_REMOTE_HOSTS="host-a host-b", which takes precedence.
 # See docs/hosts.md.
+#
+# Two more machine-local lists, same format, both read by scripts/gate-p3.sh:
+#
+#   .keel-openblas-hosts  ($KEEL_OPENBLAS_HOSTS) — hosts that can produce the
+#     OpenBLAS reference for P3's >=60% criterion. Unlike the list above, these
+#     DO need a Go toolchain, plus OpenBLAS, because the comparison is built
+#     natively there so both halves of the ratio run in one invocation on one
+#     machine. Empty means the criterion cannot be evaluated, which is a gate
+#     failure, not a skip.
+#
+#   .keel-sentinel  ($KEEL_SENTINEL_HOST) — the host P2's throughput floor is
+#     re-checked on, to notice a K-loop that P3 made fatter. Should be the host
+#     that classifies issue-bound, since that is where instruction count binds.
+#     Empty means every host is a sentinel: missing configuration costs time,
+#     never coverage.
 
 # zen4.example.internal
 # skylake-x.example.internal

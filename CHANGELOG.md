@@ -254,6 +254,38 @@ While the major version is 0, minor versions may contain breaking changes.
   shape's number printed either way, numerator and denominator taken in the same
   benchmark invocation, and the audit of the deliberately-spilling reference tile
   run as explicitly non-fatal evidence.
+- `scripts/gate-p3.sh`: real P3 checks, written before any P3 code. Three things
+  in it are decisions rather than transcriptions of DESIGN.md §4/P3, and are
+  stated in the script so they can be argued with:
+  - **The sweep's extent is enforced, not trusted.** A green `go test` proves
+    only that whatever ran, passed, so the tests print coverage markers and the
+    gate parses them: every size in DESIGN.md's list, the complete transpose
+    lattice, and alpha and beta each covering 0, 1 *and* a general value — 0 and
+    1 are the special-cased paths, so a lattice of only those would exercise
+    every shortcut and never the general multiply. The enumerated sets must
+    multiply out to the reported combination count, so a marker cannot claim
+    combinations it did not run.
+  - **The oracle's cost is a declared property of each size.** A float64 oracle
+    at 2048³ is 8.6 GFLOP per combination. Sizes up to 65 must be verified in
+    full; 500, 1000 and 2048 may be verified by a seeded sample of exactly
+    computed entries, but only by saying so per size, with a floor of 256 entries
+    and a printed seed. "We sampled" is the kind of concession that starts at
+    2048 and ends up applying to 17.
+  - **The OpenBLAS bar runs where both halves can execute.** Read as "measure on
+    the dev machine", the ≥60% criterion is vacuous here: this dev host is
+    `darwin/arm64`, so the ratio would compare OpenBLAS-on-arm64 against keel's
+    scalar fallback. The gate instead keeps the *comparison* dev-only — behind the
+    `openblas` build tag, out of the module's dependency graph — and runs it on an
+    amd64 host in one invocation, from a native build of `git archive HEAD`, with
+    single-thread verified from the harness's own report on both sides. No
+    reference host means the gate FAILS and prints the exact provisioning
+    commands; percent-of-peak is not accepted as a substitute.
+  It also carries P2 forward: the spill/call/bounds-check audit re-runs on every
+  gate from here on, because packing and edge handling are exactly what would
+  break those properties, and P2's throughput floor is re-checked on a sentinel
+  host so a K-loop that P3 made fatter is noticed (issue #19; janus, where
+  instruction count binds). An unconfigured sentinel means *every* host is one:
+  missing configuration costs time, never coverage.
 - **The percent-of-peak denominator is now measured per host, not derived**
   (DESIGN.md §4/P2, issue #11). The formula remains as a printed cross-check.
   First measurements, single core, float32: Zen 4 (7950X3D) 165.6 GFLOP/s avx512
