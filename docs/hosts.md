@@ -37,7 +37,7 @@ checked in.
 
 ## Current targets
 
-Both were verified on 2026-08-10 and both run all three backends.
+All three were verified on 2026-08-10 and all three run all three backends.
 
 ### Zen 4 — AMD Ryzen 9 7950X3D, 16C/32T, Linux 6.17, `performance`
 
@@ -86,10 +86,42 @@ duplicate:
   DESIGN.md §4/P2 already asks for ("CPUID + measured frequency") and which
   this machine makes non-optional.
 
+### Zen 5 — AMD Ryzen AI MAX+ 395 (Strix Halo), 16C/32T, Linux 7.0, `powersave`
+
+The newest microarchitecture available, and the widest AVX-512 feature set of
+the three: F, DQ, CD, BW, VL, IFMA, VBMI, VBMI2, VNNI, BITALG, VPOPCNTDQ, BF16,
+and `avx512_vp2intersect` — the last being genuinely unusual, since Intel
+shipped it on Tiger Lake and then dropped it. keel uses none of it beyond
+F/DQ/CD/BW/VL; it is recorded because it makes this the second machine (with
+vesta) that could host any future reduced-precision parking-lot work.
+
+Two things to settle before it produces a number, both instances of the same
+principle:
+
+- **Governor is `powersave`**, unlike the other two. Any benchmark taken here as
+  it stands is measuring the governor as much as the kernel. Fix before
+  measuring, or report it as a floor rather than a result.
+- **Its FMA datapath width is unknown to this project and must be measured, not
+  looked up.** AMD has shipped Zen 5 in both configurations — full 512-bit on
+  some parts, 256-bit double-pumped on others — and which one an APU of this
+  class uses is exactly the kind of detail that is easy to assert confidently
+  and wrongly. With Zen 4 (double-pumped), Skylake-X (true 512-bit) and Zen 5
+  (unknown) all in the pool, the argument in issue #11 stops being a Zen 4
+  special case: the percent-of-peak denominator has to come from a measured FMA
+  ceiling per host, not from a formula with a hardcoded port count.
+
+Also worth noting for P3 rather than P2: this is an APU with unified LPDDR5X
+rather than separate DIMM channels, so its bandwidth and cache hierarchy differ
+structurally from the two desktop/HEDT parts. DESIGN.md §4/P3 sizes KC/MC/NC
+against a cache hierarchy, so the blocking parameters that suit vesta should not
+be assumed to transfer here. Measure per host.
+
 ## What has been verified here
 
-2026-08-10, gate P0: the differential suite ran on both hosts, bit-exact
+2026-08-10, gate P0: the differential suite ran on all three hosts, bit-exact
 across all 14 shim ops on all three backends. This settled the `Max`/`Min`
 operand-order question (issue #9) that disassembly could not: `x.Max(y)`
-returns `y` for NaN and for `max(±0, ∓0)` on both microarchitectures, which is
-what the scalar spec already claimed.
+returns `y` for NaN and for `max(±0, ∓0)` on Zen 4, Zen 5 and Skylake-X alike,
+which is what the scalar spec already claimed. Three independent
+implementations of `VMAXPS` agreeing is the reason that claim is now stated as
+fact rather than as a convention keel happens to follow.

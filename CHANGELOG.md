@@ -32,7 +32,7 @@ While the major version is 0, minor versions may contain breaking changes.
   AVX-512 code — and, from P1 on, benchmark it — with no Go toolchain
   installed on the target. Hosts come from `.keel-hosts` (gitignored) or
   `$KEEL_REMOTE_HOSTS`; see `docs/hosts.md`.
-- `docs/hosts.md`: the amd64 execution targets, what each one is good for, and
+- `docs/hosts.md`: the three amd64 execution targets, what each one is good for, and
   the Zen 4 double-pumped-AVX-512 caveat that P2's percent-of-peak denominator
   has to account for.
 - `docs/toolchain-notes.md`: seven field notes on `GOEXPERIMENT=simd` in go1.26.5,
@@ -45,8 +45,8 @@ While the major version is 0, minor versions may contain breaking changes.
 - `vec.ScalarMax`/`ScalarMin`: the operand-order claim for NaN and signed zero
   is now **verified on hardware** rather than marked UNVERIFIED. `x.Max(y)`
   returns `y` for NaN and for `max(±0, ∓0)`, as the spec already said —
-  confirmed bit-exactly on Zen 4 and Skylake-X, two independent implementations
+  confirmed bit-exactly on Zen 4, Zen 5 and Skylake-X — three independent implementations
   of `VMAXPS`. Disassembly could not settle this; only execution could.
 - Gate P0 is green. All 14 shim ops agree bit-exactly across scalar, AVX2 and
-  AVX-512 on both amd64 hosts, and both FMA wrappers lower to a single
+  AVX-512 on all three amd64 hosts, and both FMA wrappers lower to a single
   `VFMADD213PS`.
