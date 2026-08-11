@@ -295,6 +295,15 @@ While the major version is 0, minor versions may contain breaking changes.
   cgo binding is a package file, the benchmark a test file, and since package files
   cannot see `_test.go` identifiers the provenance variable is set from the tagged
   test file's `init`.
+- `docs/toolchain-notes.md` T14 (issue #25): `archsimd` reports CPU *features* and
+  nothing else — no vendor, family, model or brand string — and the data is not
+  merely unexported one layer down, since `internal/cpu` calls `cpuid(1, 0)` and
+  keeps only `ecx`, discarding the signature word. Kernel *shape* selection is a
+  per-µarch decision (KERNEL.md §7: the winner flips between hosts with identical
+  feature sets), which is why every production BLAS dispatches on vendor plus
+  family/model, so on this toolchain keel has to fingerprint a feature bundle
+  instead. Recorded before the workaround, with the two upstream shapes that would
+  retire it.
 
 ### Changed
 - **DESIGN.md's 32×6 microkernel tile is not implementable on go1.26.5, and P2

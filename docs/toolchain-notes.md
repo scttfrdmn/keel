@@ -20,6 +20,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | `GOSSAFUNC` is not in the build cache key: on a cache hit it writes no `ssa.html` but still prints `dumped SSA … to ./ssa.html` | [T11](#t11) | candidate |
 | 2026-08-11 | go1.26.5 | The assembler encodes `vfmadd231ps mem{1to16}` and the intrinsic layer cannot reach it: no 231 SSA op, the load-merge rule folds memory into the addend, and nothing emits `.BCST` | [T12](#t12) | filed: [golang/go#80829](https://github.com/golang/go/issues/80829) (#20) |
 | 2026-08-11 | go1.26.5 | `import "C"` in a `_test.go` file is rejected outright — a benchmark cannot call C directly, so a reference harness needs a package file | [T13](#t13) | none — long-standing, not simd |
+| 2026-08-11 | go1.26.5 | `archsimd` exposes CPU *features* and nothing else: no vendor, family, model or name, and `internal/cpu` discards the signature word. Per-µarch kernel selection has to fingerprint a feature bundle | [T14](#t14) | candidate (#25) |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -906,3 +907,74 @@ package file cannot touch `openblasProvenance` (declared in `bench_test.go`); th
 tagged *test* file's `init` sets it from the wrappers instead. Verified building
 and running against Homebrew OpenBLAS 0.3.34 on the dev host — see docs/hosts.md
 for why a number from that host is not the P3 criterion.
+
+---
+
+## T14 — archsimd reports features, never a microarchitecture, so per-µarch dispatch must fingerprint
+
+**Observation.** P3 needs to pick a microkernel *shape* per host: KERNEL.md §7
+measures the instruction-lean 2×32 winning on Skylake-X and the load-lean 4×32
+winning on Zen 4 and Zen 5, so a single shape is wrong on at least one machine in
+this fleet (issue #24). Every production BLAS makes that choice from the CPU's
+identity — BLIS and OpenBLAS both dispatch on vendor plus family/model. That
+identity is not reachable from a pure-Go `GOEXPERIMENT=simd` program.
+
+`archsimd`'s entire CPU-introspection surface is twenty feature predicates:
+
+```
+$ GOEXPERIMENT=simd go doc simd/archsimd.X86Features
+type X86Features struct{}
+    var X86 X86Features
+func (X86Features) AVX() bool
+func (X86Features) AVX2() bool
+func (X86Features) AVX512() bool
+func (X86Features) AVX512BITALG() bool
+func (X86Features) AVX512GFNI() bool
+func (X86Features) AVX512VAES() bool
+func (X86Features) AVX512VBMI() bool
+func (X86Features) AVX512VBMI2() bool
+func (X86Features) AVX512VNNI() bool
+func (X86Features) AVX512VPCLMULQDQ() bool
+func (X86Features) AVX512VPOPCNTDQ() bool
+func (X86Features) AVXAES() bool
+func (X86Features) AVXVNNI() bool
+func (X86Features) FMA() bool
+func (X86Features) SHA() bool
+func (X86Features) VAES() bool
+```
+
+No vendor, no family, no model, no brand string. Nor is the data available one
+layer down and merely unexported by `archsimd`: `internal/cpu` calls
+`cpuid(1, 0)` and keeps only `ecx`, dropping `eax` — the processor signature word
+holding stepping, model and family — on the floor.
+
+```
+$ R=$(go env GOROOT)
+$ grep -n 'cpuid(1, 0)' $R/src/internal/cpu/cpu_x86.go
+124:	_, _, ecx1, _ := cpuid(1, 0)
+$ grep -c 'Family\|Model\|Stepping' $R/src/internal/cpu/cpu_x86.go
+0
+```
+
+`internal/cpu.Name()` does read the brand string (`cpu_x86.go:236`, CPUID leaves
+`0x80000002`–`0x80000004`), but `internal/cpu` is not importable and `archsimd`
+re-exports none of it. So a pure-Go program on this toolchain can ask *what
+instructions* a CPU has and never *which CPU* it is.
+
+**Consequence for keel, stated as a proxy rather than hidden as one.** Dispatch
+classifies the front end by the feature bundle that arrived with Ice Lake and Zen 4
+— `AVX512VBMI2` and `AVX512VPOPCNTDQ` — and treats an AVX-512 machine *without*
+that bundle as the Skylake-X/Cascade Lake/Cooper Lake generation, which is the
+generation P2 measured as issue-bound. See `internal/kern/class_amd64.go` for the
+rule and the direction each way it can be wrong; the short version is that a wrong
+answer costs throughput or a red gate, never a lenient one, because the gate's
+own classification is measured rather than fingerprinted and the two are compared.
+
+**Alternatives considered.** `/proc/cpuinfo` carries `vendor_id`, `cpu family` and
+`model` and would give the true identity — on Linux only, so the same silicon
+would classify differently under a different OS, and dispatch would do file I/O at
+init. A CPUID stub in assembly would be exact and portable across OSes, but keel
+is a pure-Go experiment and P2's ruling was explicit that assembly is not a
+unilateral move. Both are recorded in #25 as the shapes an upstream fix would make
+unnecessary: one exported accessor for the signature word, or a documented
+`archsimd` µarch enum, removes the fingerprint entirely.
