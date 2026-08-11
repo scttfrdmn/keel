@@ -6,3 +6,225 @@
 // OpenBLAS reference when the dev-only cgo harness (build tag `openblas`)
 // is available on the machine. See DESIGN.md §5 and §7 rule 7.
 package bench
+
+import (
+	"fmt"
+	"os"
+	"runtime"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/scttfrdmn/keel"
+)
+
+// # What this harness measures, and what it deliberately does not
+//
+// These benchmarks call keel through its public API with whatever backend
+// dispatch selected, which is what a caller actually gets. They do not iterate
+// over backends: the backend table is unexported, and a benchmark that reached
+// into it would be measuring something no caller can invoke. Pin a backend with
+// KEEL_FORCE=scalar|avx2|avx512 and run again to compare — the same mechanism
+// gate-p1 uses, so the comparison is one users can reproduce.
+//
+// Provenance is printed once per run: CPU model, core count, governor, and the
+// clock as reported at bench time. DESIGN.md §7 rule 7 requires every number to
+// carry its denominator.
+//
+// The theoretical peak is NOT printed, and that is a deliberate omission rather
+// than an oversight. DESIGN.md's formula (cores·freq·2 FMA ports·16 lanes·2
+// flops) assumes two 512-bit FMA units. Zen 4 double-pumps AVX-512 over 256-bit
+// datapaths and retires one 512-bit FMA per cycle, so the formula overstates
+// vesta.local's ceiling by 2x; Skylake-X matches it; the Zen 5 host's width has
+// not been measured. Printing a percent-of-peak against a denominator known to
+// be wrong on at least one host would be worse than printing none, so the
+// harness prints the numerator and names the open question. Tracked as issue
+// #11, which blocks P2's 55%-of-peak gate for the same reason.
+//
+// GFLOP/s below is therefore a measured rate with no percentage attached: it is
+// comparable across runs on one machine, and between machines only as a rate.
+
+var provenanceOnce sync.Once
+
+func provenance() {
+	provenanceOnce.Do(func() {
+		fmt.Println("keel-bench-cpu:", cpuModel())
+		fmt.Println("keel-bench-cores:", runtime.NumCPU(), "logical")
+		fmt.Println("keel-bench-governor:", governor())
+		fmt.Println("keel-bench-clock-mhz:", clockMHz())
+		fmt.Println("keel-bench-platform:", runtime.GOOS+"/"+runtime.GOARCH)
+		fmt.Println("keel-bench-backend:", keel.ActiveL1Backend(),
+			"(available: "+strings.Join(keel.AvailableL1Backends(), " ")+")")
+		fmt.Println("keel-bench-peak: withheld — the theoretical-peak denominator " +
+			"is unsettled across these microarchitectures, see issue #11")
+		fmt.Println("keel-bench-openblas: not available (no cgo reference harness built)")
+	})
+}
+
+// The three readers below are best-effort and say so when they fail. A missing
+// governor is reported as unknown rather than guessed at: "performance" assumed
+// wrongly would silently flatter every number underneath it.
+
+func cpuModel() string {
+	b, err := os.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return "unknown (" + runtime.GOARCH + ", no /proc/cpuinfo)"
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if k, v, ok := strings.Cut(line, ":"); ok && strings.TrimSpace(k) == "model name" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return "unknown (no model name in /proc/cpuinfo)"
+}
+
+func governor() string {
+	b, err := os.ReadFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
+	if err != nil {
+		return "unknown (no cpufreq)"
+	}
+	return strings.TrimSpace(string(b))
+}
+
+// clockMHz reports the range of per-core clocks at the moment of the call. It is
+// a snapshot, not the frequency sustained during the measurement — enough to
+// catch a throttled or idling host, not enough to compute a peak from, which is
+// one more reason the peak line above is withheld.
+func clockMHz() string {
+	b, err := os.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return "unknown"
+	}
+	lo, hi := 0.0, 0.0
+	for _, line := range strings.Split(string(b), "\n") {
+		k, v, ok := strings.Cut(line, ":")
+		if !ok || strings.TrimSpace(k) != "cpu MHz" {
+			continue
+		}
+		var f float64
+		if _, err := fmt.Sscanf(strings.TrimSpace(v), "%g", &f); err != nil {
+			continue
+		}
+		if lo == 0 || f < lo {
+			lo = f
+		}
+		if f > hi {
+			hi = f
+		}
+	}
+	if hi == 0 {
+		return "unknown (no cpu MHz field)"
+	}
+	return fmt.Sprintf("%.0f-%.0f (snapshot, not sustained)", lo, hi)
+}
+
+// Sizes span L1-resident to memory-resident so the shape of the rate curve is
+// visible: the small end measures the kernel, the large end measures the memory
+// system, and reporting only one of them is how a BLAS gets to claim a number it
+// cannot sustain.
+var sizes = []int{256, 4096, 65536, 1 << 20}
+
+func makeVec(n int) []float32 {
+	v := make([]float32, n)
+	for i := range v {
+		v[i] = float32(i%17) - 8
+	}
+	return v
+}
+
+// rate reports GFLOP/s for a routine performing flopsPerElem operations per
+// element. b.Elapsed() excludes setup, so the denominator is the timed region
+// only.
+func rate(b *testing.B, n int, flopsPerElem float64) {
+	b.ReportMetric(flopsPerElem*float64(n)*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+}
+
+func BenchmarkL1Sdot(b *testing.B) {
+	provenance()
+	for _, n := range sizes {
+		x, y := makeVec(n), makeVec(n)
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			b.SetBytes(int64(2 * 4 * n))
+			for i := 0; i < b.N; i++ {
+				sink = keel.Sdot(n, x, 1, y, 1)
+			}
+			rate(b, n, 2) // one multiply + one add per element
+		})
+	}
+}
+
+func BenchmarkL1Saxpy(b *testing.B) {
+	provenance()
+	for _, n := range sizes {
+		x, y := makeVec(n), makeVec(n)
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			b.SetBytes(int64(3 * 4 * n)) // read x, read y, write y
+			for i := 0; i < b.N; i++ {
+				keel.Saxpy(n, 1.0000001, x, 1, y, 1)
+			}
+			rate(b, n, 2)
+		})
+	}
+}
+
+func BenchmarkL1Sscal(b *testing.B) {
+	provenance()
+	for _, n := range sizes {
+		x := makeVec(n)
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			b.SetBytes(int64(2 * 4 * n))
+			for i := 0; i < b.N; i++ {
+				keel.Sscal(n, 1.0000001, x, 1)
+			}
+			rate(b, n, 1)
+		})
+	}
+}
+
+func BenchmarkL1Sasum(b *testing.B) {
+	provenance()
+	for _, n := range sizes {
+		x := makeVec(n)
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			b.SetBytes(int64(4 * n))
+			for i := 0; i < b.N; i++ {
+				sink = keel.Sasum(n, x, 1)
+			}
+			rate(b, n, 1)
+		})
+	}
+}
+
+func BenchmarkL1Snrm2(b *testing.B) {
+	provenance()
+	for _, n := range sizes {
+		x := makeVec(n)
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			b.SetBytes(int64(4 * n))
+			for i := 0; i < b.N; i++ {
+				sink = keel.Snrm2(n, x, 1)
+			}
+			rate(b, n, 2)
+		})
+	}
+}
+
+func BenchmarkL1Isamax(b *testing.B) {
+	provenance()
+	for _, n := range sizes {
+		x := makeVec(n)
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			b.SetBytes(int64(4 * n))
+			for i := 0; i < b.N; i++ {
+				sinkI = keel.Isamax(n, x, 1)
+			}
+			// No GFLOP/s here: Isamax does comparisons, not arithmetic.
+			// Reporting a flop rate for it would be inventing a numerator.
+		})
+	}
+}
+
+var (
+	sink  float32
+	sinkI int
+)

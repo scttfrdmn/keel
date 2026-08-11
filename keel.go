@@ -8,16 +8,269 @@
 // gate is green; see DESIGN.md §4 and the GitHub milestones.
 package keel
 
-// Level 1 — Phase P1.
+import (
+	"math"
 
-func Sdot(n int, x []float32, incX int, y []float32, incY int) float32 { panic(nyi("Sdot", "P1")) }
-func Saxpy(n int, alpha float32, x []float32, incX int, y []float32, incY int) {
-	panic(nyi("Saxpy", "P1"))
+	"github.com/scttfrdmn/keel/internal/l1"
+)
+
+// Level 1 — Phase P1.
+//
+// Each routine validates its arguments, then splits two ways: unit stride goes
+// to the active backend's kernel (internal/l1, one indirect call for the whole
+// vector), and any other stride goes to a scalar strided loop right here. See
+// internal/l1's package doc for why strided access is not vectorized.
+//
+// Argument errors panic rather than returning silently as reference BLAS does.
+// Reference SSCAL's `IF (n.LE.0 .OR. incx.LE.0) RETURN` turns a caller's
+// off-by-one into a no-op that looks like success; in Go the caller has no
+// XERBLA to consult, so a bad n, a zero stride, or a slice too short for the
+// stride is a program bug and says so. n == 0 is not an error: it is the empty
+// vector, and the slices may be nil.
+
+// Sdot returns the inner product of x and y.
+//
+// The summation order is the active backend's, so the result is not bit-stable
+// across backends — it is stable within one, and every backend is held to
+// DESIGN.md §5's tolerance model against a float64 oracle.
+func Sdot(n int, x []float32, incX int, y []float32, incY int) float32 {
+	checkVector("Sdot", "x", n, x, incX)
+	checkVector("Sdot", "y", n, y, incY)
+	if n == 0 {
+		return 0
+	}
+	if incX == 1 && incY == 1 {
+		return activeL1.Dot(x[:n], y[:n])
+	}
+	return stridedDot(n, x, incX, y, incY)
 }
-func Sscal(n int, alpha float32, x []float32, incX int) { panic(nyi("Sscal", "P1")) }
-func Snrm2(n int, x []float32, incX int) float32        { panic(nyi("Snrm2", "P1")) }
-func Sasum(n int, x []float32, incX int) float32        { panic(nyi("Sasum", "P1")) }
-func Isamax(n int, x []float32, incX int) int           { panic(nyi("Isamax", "P1")) }
+
+// Saxpy computes y += alpha*x.
+//
+// alpha == 0 returns without touching y, matching reference SAXPY. That is a
+// numerics decision, not just a shortcut: y[i] += 0*x[i] would poison y with
+// NaN wherever x holds a NaN or an infinity, and callers that scale by a
+// computed-to-zero alpha rely on the vector being left alone.
+//
+// x and y must not overlap unless they are the same vector with the same
+// stride; BLAS leaves partial overlap undefined and keel does not detect it.
+func Saxpy(n int, alpha float32, x []float32, incX int, y []float32, incY int) {
+	checkVector("Saxpy", "x", n, x, incX)
+	checkVector("Saxpy", "y", n, y, incY)
+	if n == 0 || alpha == 0 {
+		return
+	}
+	if incX == 1 && incY == 1 {
+		activeL1.Axpy(alpha, x[:n], y[:n])
+		return
+	}
+	ix, iy := offset(n, incX), offset(n, incY)
+	for j := 0; j < n; j++ {
+		y[iy+j*incY] += alpha * x[ix+j*incX]
+	}
+}
+
+// Sscal computes x *= alpha.
+//
+// No alpha == 0 shortcut, unlike Saxpy: reference SSCAL has none either, and
+// the difference is real. Scaling by zero must write zeros (that is the whole
+// point of the call), and it must leave NaN as NaN because 0*NaN is NaN.
+func Sscal(n int, alpha float32, x []float32, incX int) {
+	checkVectorPos("Sscal", "x", n, x, incX)
+	if n == 0 {
+		return
+	}
+	if incX == 1 {
+		activeL1.Scal(alpha, x[:n])
+		return
+	}
+	for j := 0; j < n; j++ {
+		x[j*incX] *= alpha
+	}
+}
+
+// Sasum returns the sum of magnitudes of x.
+func Sasum(n int, x []float32, incX int) float32 {
+	checkVectorPos("Sasum", "x", n, x, incX)
+	if n == 0 {
+		return 0
+	}
+	if incX == 1 {
+		return activeL1.Asum(x[:n])
+	}
+	var a0, a1 float32
+	j := 0
+	for ; j+2 <= n; j += 2 {
+		a0 += absf32(x[j*incX])
+		a1 += absf32(x[(j+1)*incX])
+	}
+	for ; j < n; j++ {
+		a0 += absf32(x[j*incX])
+	}
+	return a0 + a1
+}
+
+// Snrm2 returns the Euclidean norm of x.
+//
+// # Why this is not just sqrt(sum of squares)
+//
+// Squaring costs half of float32's exponent range. Any |xᵢ| above ~1.8e19
+// squares to +Inf and any below ~1.1e-19 squares to zero, so the naive sum
+// overflows for large inputs and silently loses small ones — for x = {1e-30}
+// it returns 0 where the answer is 1e-30 exactly, representable in float32.
+// LAPACK's SNRM2 solves this with a running-scale loop; keel does not, because
+// that loop has a branch per element and would drag the vector kernel down to
+// scalar speed for the 99% of inputs that never come near either limit.
+//
+// Instead the fast kernel runs unguarded and its *result* is inspected. A sum
+// of squares is monotonically non-decreasing, so overflow can only end at +Inf
+// and total underflow can only end at exactly 0 — one check after the loop sees
+// everything a per-element check would. Either outcome (plus NaN, which the
+// same check catches) reruns the whole vector in float64, where no rescaling is
+// needed at all: the largest float32 squared is ~1.2e77 and float64 reaches
+// ~1.8e308, so float32 inputs cannot overflow a float64 accumulator until
+// n exceeds 1e230 elements. The rescue is therefore exact-by-construction
+// rather than clever, which is the property worth having in a path that runs
+// only on inputs nobody tested.
+func Snrm2(n int, x []float32, incX int) float32 {
+	checkVectorPos("Snrm2", "x", n, x, incX)
+	if n == 0 {
+		return 0
+	}
+	var s float32
+	if incX == 1 {
+		s = activeL1.SumSq(x[:n])
+	} else {
+		var a0, a1 float32
+		j := 0
+		for ; j+2 <= n; j += 2 {
+			v0, v1 := x[j*incX], x[(j+1)*incX]
+			a0 += v0 * v0
+			a1 += v1 * v1
+		}
+		for ; j < n; j++ {
+			v := x[j*incX]
+			a0 += v * v
+		}
+		s = a0 + a1
+	}
+	// s == 0 with a nonzero input means underflow; a non-finite s means overflow
+	// or a NaN in the data. Both go to the float64 path. s == 0 for a genuinely
+	// zero vector also lands there and costs one pass to confirm 0.
+	if s > 0 && !math.IsInf(float64(s), 1) {
+		return float32(math.Sqrt(float64(s)))
+	}
+	var sum float64
+	for j := 0; j < n; j++ {
+		v := float64(x[j*incX])
+		sum += v * v
+	}
+	return float32(math.Sqrt(sum))
+}
+
+// Isamax returns the 0-based index of the first element of greatest magnitude,
+// or -1 when n == 0.
+//
+// Two deviations from Fortran ISAMAX, both deliberate. The index is 0-based
+// because every other index in this package is. And an empty vector returns -1
+// rather than 0, because 0 is a valid answer for n == 1 and a sentinel that
+// collides with a real result is how off-by-one bugs survive review.
+//
+// The NaN convention is inherited exactly from the reference: a NaN in the
+// first position wins, a NaN anywhere else is ignored. See internal/l1.Iamax
+// for why that convention is worth preserving and why this one routine has no
+// vector backend.
+func Isamax(n int, x []float32, incX int) int {
+	checkVectorPos("Isamax", "x", n, x, incX)
+	if n == 0 {
+		return -1
+	}
+	if incX == 1 {
+		return l1.Iamax(x[:n])
+	}
+	best, bi := absf32(x[0]), 0
+	for j := 1; j < n; j++ {
+		if v := absf32(x[j*incX]); v > best {
+			best, bi = v, j
+		}
+	}
+	return bi
+}
+
+// stridedDot is Sdot's non-unit-stride path, split out only to keep Sdot's own
+// body short. Two accumulators rather than the kernels' four: this loop is
+// bound by the gather, not by FMA latency.
+func stridedDot(n int, x []float32, incX int, y []float32, incY int) float32 {
+	ix, iy := offset(n, incX), offset(n, incY)
+	var a0, a1 float32
+	j := 0
+	for ; j+2 <= n; j += 2 {
+		a0 += x[ix+j*incX] * y[iy+j*incY]
+		a1 += x[ix+(j+1)*incX] * y[iy+(j+1)*incY]
+	}
+	for ; j < n; j++ {
+		a0 += x[ix+j*incX] * y[iy+j*incY]
+	}
+	return a0 + a1
+}
+
+// offset returns the storage index of element 0 of a strided BLAS vector. For
+// inc < 0 the vector runs backwards from the far end, so element j is at
+// offset(n, inc) + j*inc. Same rule as oracle.Index, stated separately because
+// the oracle is a test-only cross-check and must not become this code's
+// definition of the convention.
+//
+// Only Sdot and Saxpy call it: reference BLAS defines negative strides for
+// those two and requires inc > 0 for the rest (see checkVectorPos), so the
+// remaining routines index from zero.
+func offset(n, inc int) int {
+	if inc > 0 {
+		return 0
+	}
+	return -(n - 1) * inc
+}
+
+// checkVector validates n and one vector argument for the routines that accept
+// any nonzero stride.
+func checkVector(fn, arg string, n int, v []float32, inc int) {
+	if n < 0 {
+		panic("keel: " + fn + ": n < 0")
+	}
+	if inc == 0 {
+		panic("keel: " + fn + ": inc" + arg + " == 0")
+	}
+	if n == 0 {
+		return // empty vector; v may be nil
+	}
+	span := inc
+	if span < 0 {
+		span = -span
+	}
+	if need := (n-1)*span + 1; len(v) < need {
+		panic("keel: " + fn + ": " + arg + " shorter than n and inc" + arg + " require")
+	}
+}
+
+// checkVectorPos is checkVector for the routines reference BLAS defines only
+// for inc > 0: SSCAL, SASUM, SNRM2, ISAMAX. Reference returns silently on
+// inc <= 0; keel panics, because a caller passing a negative stride to Sscal
+// believes it is scaling a vector and would instead scale nothing.
+func checkVectorPos(fn, arg string, n int, v []float32, inc int) {
+	if inc <= 0 {
+		if n < 0 {
+			panic("keel: " + fn + ": n < 0")
+		}
+		panic("keel: " + fn + ": inc" + arg + " <= 0 (not defined for this routine)")
+	}
+	checkVector(fn, arg, n, v, inc)
+}
+
+// absf32 clears the sign bit rather than branching, so -0 becomes +0 and a NaN
+// keeps its payload — identical to internal/l1.absf32 and vec.ScalarAbs. The
+// strided paths above need it and must not import l1 for one scalar op.
+func absf32(v float32) float32 {
+	return math.Float32frombits(math.Float32bits(v) &^ (1 << 31))
+}
 
 // Level 2 — Phase P4.
 

@@ -73,10 +73,25 @@ remote_probe() {
 
 # remote_exec HOST BIN [ARGS...] — ship BIN to HOST and run it there.
 # stdout/stderr are the remote program's; the return status is its exit code.
+#
+# $KEEL_REMOTE_ENV is prepended to the remote command as environment
+# assignments (e.g. KEEL_REMOTE_ENV="KEEL_FORCE=scalar"). sshd strips
+# arbitrary env vars by default, so passing them through the command line is
+# the reliable way rather than SendEnv/AcceptEnv on both sides.
+#
+# ARGS are quoted with printf %q before crossing the wire. ssh concatenates its
+# command words and hands the result to a remote shell, so an unquoted argument
+# is *shell input* on the far side: `-test.bench='A|B'` arrived at the remote
+# bash as a pipeline and tried to execute B as a command. That failure was loud
+# here, but the same expansion applied to a glob or a `$` would have silently
+# altered what got measured.
 remote_exec() {
   local host="$1" bin="$2"; shift 2
   local base; base="$(basename "$bin")"
+  local args="" a
+  for a in "$@"; do args+=" $(printf '%q' "$a")"; done
   ssh "${KEEL_SSH_OPTS[@]}" "$host" "mkdir -p '$KEEL_REMOTE_DIR'" >/dev/null
   scp -q "${KEEL_SCP_OPTS[@]}" "$bin" "$host:$KEEL_REMOTE_DIR/$base"
-  ssh "${KEEL_SSH_OPTS[@]}" "$host" "cd '$KEEL_REMOTE_DIR' && ./'$base' $*"
+  ssh "${KEEL_SSH_OPTS[@]}" "$host" \
+    "cd '$KEEL_REMOTE_DIR' && env ${KEEL_REMOTE_ENV:-} ./'$base'$args"
 }
