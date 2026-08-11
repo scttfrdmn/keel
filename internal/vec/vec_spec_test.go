@@ -164,10 +164,11 @@ func TestSpecAbsIsBitwise(t *testing.T) {
 // math.Max, so getting them wrong would be invisible in ordinary data and
 // wrong at the edges.
 //
-// The operand-order half of this claim is still unverified against hardware —
-// see ScalarMax's doc comment and docs/toolchain-notes.md. This test locks in
-// what the spec currently says so that the first differential run on an amd64
-// host either confirms it or produces a specific, legible failure.
+// The operand-order half of this claim was confirmed on hardware on
+// 2026-08-10 — both Zen 4 and Skylake-X agree that x.Max(y) yields y for NaN
+// and for max(±0, ∓0). This test keeps that pinned here, where it runs on
+// every GOARCH, so the spec cannot drift back to an IEEE-754 maxNum reading on
+// a machine that has no way to notice.
 func TestSpecMaxMinNaNAndSignedZero(t *testing.T) {
 	nan := float32(math.NaN())
 	posZero, negZero := float32(0), float32(math.Copysign(0, -1))

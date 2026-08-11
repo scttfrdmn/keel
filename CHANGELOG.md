@@ -24,9 +24,29 @@ While the major version is 0, minor versions may contain breaking changes.
   stock toolchain and on every GOARCH — including witnesses that fail if
   `MulAdd` stops being fused or `HSum` stops folding pairwise.
 - `scripts/gate-p0.sh`: real P0 checks (both builds, vet, shim tests with
-  enforced backend coverage, and FMA fusion verified by disassembly).
-- `docs/toolchain-notes.md`: six field notes on `GOEXPERIMENT=simd` in go1.26.5,
+  enforced backend coverage, and FMA fusion verified by disassembly). Now
+  scores one *execution target* per machine and requires that all three
+  backends ran together on real silicon, naming which machine did it.
+- `scripts/remote.sh`: ships a cross-compiled static `go test -c` binary to an
+  amd64 host over ssh and runs it, so a `darwin/arm64` dev host can execute
+  AVX-512 code — and, from P1 on, benchmark it — with no Go toolchain
+  installed on the target. Hosts come from `.keel-hosts` (gitignored) or
+  `$KEEL_REMOTE_HOSTS`; see `docs/hosts.md`.
+- `docs/hosts.md`: the amd64 execution targets, what each one is good for, and
+  the Zen 4 double-pumped-AVX-512 caveat that P2's percent-of-peak denominator
+  has to account for.
+- `docs/toolchain-notes.md`: seven field notes on `GOEXPERIMENT=simd` in go1.26.5,
   each with a minimal repro — archsimd being amd64-only, the `VFMADD213PS`
   lowering, the absent float32 `Abs`/bitwise ops, the absent `Float32x16`
-  horizontal reduce, the absent portable `simd` package, and the unverified
-  `Max`/`Min` NaN operand order.
+  horizontal reduce, the absent portable `simd` package, the `Max`/`Min` NaN
+  operand order, and `GOAMD64` not gating archsimd intrinsics.
+
+### Changed
+- `vec.ScalarMax`/`ScalarMin`: the operand-order claim for NaN and signed zero
+  is now **verified on hardware** rather than marked UNVERIFIED. `x.Max(y)`
+  returns `y` for NaN and for `max(±0, ∓0)`, as the spec already said —
+  confirmed bit-exactly on Zen 4 and Skylake-X, two independent implementations
+  of `VMAXPS`. Disassembly could not settle this; only execution could.
+- Gate P0 is green. All 14 shim ops agree bit-exactly across scalar, AVX2 and
+  AVX-512 on both amd64 hosts, and both FMA wrappers lower to a single
+  `VFMADD213PS`.

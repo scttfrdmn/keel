@@ -134,12 +134,13 @@ func ScalarMulAdd(x, y, z Block) Block {
 // max(+0,-0) is y. Written as "if x > y then x else y", which reproduces
 // both of those cases exactly.
 //
-// UNVERIFIED ON HARDWARE: the operand order — whether archsimd's x.Max(y)
-// lowers to VMAXPS with x or with y as the second source, and therefore
-// whether the NaN case yields y (as specified here) or x. Disassembly alone
-// cannot settle it and no amd64 host was available this session. The
-// differential test covers exactly these inputs, so the first run on amd64
-// hardware decides it. See docs/toolchain-notes.md.
+// VERIFIED ON HARDWARE (2026-08-10): archsimd's x.Max(y) does put y in the
+// second-source position, so the NaN and signed-zero results above are what
+// the vector backends produce. Confirmed by the differential tests over every
+// ordered pair from the NaN/±0 pool on both Zen 4 (Ryzen 9 7950X3D) and
+// Skylake-X (Core i9-9960X) — two microarchitectures, since this is a
+// property of the ISA and not of one chip. Disassembly could not settle it;
+// only execution could. See docs/hosts.md and docs/toolchain-notes.md T6.
 func ScalarMax(x, y Block) Block {
 	var r Block
 	for i := range r {
@@ -153,8 +154,8 @@ func ScalarMax(x, y Block) Block {
 }
 
 // ScalarMin returns the lanewise minimum with x86 VMINPS semantics; see
-// ScalarMax for the NaN/signed-zero rule and the same open question about
-// operand order.
+// ScalarMax for the NaN/signed-zero rule and for the hardware verification of
+// the operand order, which covered Min on the same inputs.
 func ScalarMin(x, y Block) Block {
 	var r Block
 	for i := range r {

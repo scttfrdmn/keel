@@ -26,9 +26,23 @@
 #     differential tests must report having actually exercised all three
 #     backends, and if they cannot, the gate FAILS and says why. It does not
 #     downgrade to "scalar-only green".
+#
+#  3. EXECUTION TARGETS. Since the dev host is darwin/arm64, "all three
+#     backends ran" is a claim about some *other* machine. The gate therefore
+#     runs the differential suite on every configured target — the local host
+#     always, plus each host in .keel-hosts / $KEEL_REMOTE_HOSTS, reached by
+#     shipping a cross-compiled static test binary (scripts/remote.sh) — and
+#     requires that (a) every target that ran, passed, and (b) at least one
+#     target exercised all three backends in one binary on one CPU, with that
+#     machine named in the output. This is the same substantive requirement as
+#     before, correctly attributed: a host without AVX-512 is no longer
+#     *blamed* for lacking it, but nothing is accepted as green until real
+#     silicon has executed it.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/remote.sh
+source scripts/remote.sh
 
 FAIL=0
 pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
@@ -81,29 +95,103 @@ echo
 echo "-- shim differential tests --"
 TESTLOG="$(mktemp)"
 ASM="$(mktemp)"
-trap 'rm -f "$TESTLOG" "$ASM"' EXIT
-if GOEXPERIMENT=simd go test -v -count=1 ./internal/vec/... >"$TESTLOG" 2>&1; then
-  pass "internal/vec tests pass"
+TESTBIN="$(mktemp -u)/vec.test"
+trap 'rm -f "$TESTLOG" "$ASM" "$TESTBIN"; rmdir "$(dirname "$TESTBIN")" 2>/dev/null || true' EXIT
+mkdir -p "$(dirname "$TESTBIN")"
+
+# FULL_COVER_TARGET names the machine on which all three backends actually
+# executed. Empty at the end of this section means a red gate.
+FULL_COVER_TARGET=""
+
+# record_target NAME LOG OK — score one execution target's test run.
+#
+# The suite prints exactly which backends it ran ops against, so a
+# silently-skipped backend cannot masquerade as a green gate. A target that
+# merely *lacks* a backend is reported, not failed; the aggregate check below
+# is what insists some target had all three.
+record_target() {
+  local name="$1" log="$2" ok="$3" cover missing=""
+  if [[ "$ok" -eq 0 ]]; then
+    pass "[$name] internal/vec tests pass"
+  else
+    fail "[$name] internal/vec tests pass"
+    sed 's/^/        /' "$log" | tail -40
+  fi
+
+  cover="$(grep -o 'keel-backends-exercised:.*' "$log" | tail -1 || true)"
+  if [[ -z "$cover" ]]; then
+    fail "[$name] no backend-coverage marker in test output"
+    info "expected a line 'keel-backends-exercised: ...' from TestBackendCoverage"
+    return
+  fi
+  info "[$name] $cover"
+  local want
+  for want in scalar avx2 avx512; do
+    grep -qE "keel-backends-exercised:.*(^| )$want( |$)" <<<"$cover" \
+      || missing="$missing $want"
+  done
+  if [[ -z "$missing" ]]; then
+    pass "[$name] exercised all three backends in one binary"
+    [[ "$ok" -eq 0 ]] && FULL_COVER_TARGET="$name"
+  else
+    info "[$name] backends unavailable here:$missing"
+  fi
+}
+
+# Local target. Always run: it is what proves the scalar spec and the
+# characterization tests hold on the dev host and on a non-amd64 GOARCH.
+LOCAL_OK=0
+GOEXPERIMENT=simd go test -v -count=1 ./internal/vec/... >"$TESTLOG" 2>&1 || LOCAL_OK=$?
+record_target "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$TESTLOG" "$LOCAL_OK"
+
+# Remote targets: ship a cross-compiled static test binary and run it there.
+HOSTS="$(remote_hosts)"
+if [[ -z "$HOSTS" ]]; then
+  info "no remote targets configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)"
 else
-  fail "internal/vec tests pass"
-  sed 's/^/        /' "$TESTLOG" | tail -40
+  if remote_build_test ./internal/vec/ "$TESTBIN" >"$TESTLOG" 2>&1; then
+    pass "cross-compiled linux/amd64 test binary (static, GOAMD64 default)"
+  else
+    fail "cross-compile of linux/amd64 test binary"
+    sed 's/^/        /' "$TESTLOG" | tail -20
+  fi
+  # Count configured vs. actually-scored targets and compare at the end. A
+  # target that disappears mid-loop must not pass unnoticed — the first
+  # version of this loop lost every host after the first (ssh drained the
+  # loop's stdin) and still printed GREEN off one machine.
+  N_CONFIGURED=0
+  N_SCORED=0
+  while read -r host; do
+    [[ -n "$host" ]] || continue
+    N_CONFIGURED=$((N_CONFIGURED + 1))
+    provenance="$(remote_probe "$host" || true)"
+    if [[ -z "$provenance" ]]; then
+      # Unreachable is a failure, never a silent skip: a configured target
+      # that quietly vanishes is how a gate starts lying.
+      fail "[$host] unreachable, or /proc/cpuinfo unreadable"
+      continue
+    fi
+    info "[$host] $provenance"
+    REMOTE_OK=0
+    remote_exec "$host" "$TESTBIN" -test.v >"$TESTLOG" 2>&1 || REMOTE_OK=$?
+    record_target "$host" "$TESTLOG" "$REMOTE_OK"
+    N_SCORED=$((N_SCORED + 1))
+  done <<<"$HOSTS"
+
+  if [[ "$N_SCORED" -eq "$N_CONFIGURED" ]]; then
+    pass "every configured remote target ran ($N_SCORED/$N_CONFIGURED)"
+  else
+    fail "only $N_SCORED of $N_CONFIGURED configured remote targets ran"
+  fi
 fi
 
-# The suite prints exactly which backends it actually ran ops against, so a
-# silently-skipped backend cannot masquerade as a green gate.
-COVER="$(grep -o 'keel-backends-exercised:.*' "$TESTLOG" | tail -1 || true)"
-if [[ -z "$COVER" ]]; then
-  fail "no backend-coverage marker in test output"
-  info "expected a line 'keel-backends-exercised: ...' from TestBackendCoverage"
+if [[ -n "$FULL_COVER_TARGET" ]]; then
+  pass "all three backends exercised on real silicon (target: $FULL_COVER_TARGET)"
 else
-  info "$COVER"
-  for want in scalar avx2 avx512; do
-    if grep -qE "keel-backends-exercised:.*(^| )$want( |$)" <<<"$COVER"; then
-      pass "differential tests exercised backend: $want"
-    else
-      fail "backend NOT exercised on this host: $want"
-    fi
-  done
+  fail "no execution target exercised all three backends"
+  info "simd/archsimd is amd64-only and the AVX-512 backend needs the"
+  info "F/CD/BW/DQ/VL bundle at runtime. Point .keel-hosts at an amd64"
+  info "AVX-512 host; see docs/hosts.md and docs/toolchain-notes.md T1."
 fi
 
 # ------------------------------------------------------------ FMA lowering

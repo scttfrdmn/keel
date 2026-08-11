@@ -1,0 +1,13 @@
+# Hosts that execute keel's linux/amd64 vector code, one per line.
+#
+# Copy to .keel-hosts (gitignored) and edit. Requirements per host:
+#   - amd64 with AVX2+FMA, and for the AVX-512 backend the F/CD/BW/DQ/VL
+#     bundle that archsimd.X86.AVX512() gates on
+#   - sshd with key auth from this machine; no Go toolchain needed
+#   - for P2/P3 benchmark numbers, a fixed frequency governor
+#
+# Or set KEEL_REMOTE_HOSTS="host-a host-b", which takes precedence.
+# See docs/hosts.md.
+
+# zen4.example.internal
+# skylake-x.example.internal

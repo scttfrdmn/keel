@@ -7,3 +7,5 @@
 ssa.html
 # bench scratch
 bench/results/*.local.*
+# machine-local remote execution targets (see .keel-hosts.example, docs/hosts.md)
+/.keel-hosts
