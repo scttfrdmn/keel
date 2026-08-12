@@ -1479,7 +1479,21 @@ else
     read -r obdenom obsrc obroof obwhy <<<"$(p3_denominator \
       "$obclass" "$obpmax" "${i_active:-0}" \
       "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" "${ob_rate:-0}" "${peak_rate:-0}")"
-    info "[$host] denominator: $obsrc $(printf '%.2f' "$obdenom") GFLOP/s (why=$obwhy, class=$obclass, Sgemm ran ${obkern:-unknown} at $(printf '%.3f' "${i_active:-0}") insns/FMA, roofline $(awk -v r="$obroof" 'BEGIN{printf "%.1f", r*100}')% of a $(printf '%.2f' "${peak_rate:-0}") GFLOP/s peak)"
+    # A roofline that does not apply is printed as n/a, not as 0.0% (issue #34).
+    # p3_denominator returns 0 as its sentinel and that stays its contract; it is
+    # only the rendering that must not dress a not-applicable as a measured zero.
+    #
+    # The condition is `roof == 0`, NOT `obsrc == openblas` as the issue first
+    # proposed: an issue-bound host whose min() picked the reference (why=reference)
+    # has a real roofline that was computed and compared, and printing n/a there
+    # would hide a number instead of a hole — the same misreading in the other
+    # direction. The sentinel is the thing to test, so test the sentinel.
+    if awk -v r="$obroof" 'BEGIN{exit !(r>0)}'; then
+      roofstr="roofline $(awk -v r="$obroof" 'BEGIN{printf "%.1f", r*100}')% of a $(printf '%.2f' "${peak_rate:-0}") GFLOP/s peak"
+    else
+      roofstr="roofline n/a (why=$obwhy) against a $(printf '%.2f' "${peak_rate:-0}") GFLOP/s peak"
+    fi
+    info "[$host] denominator: $obsrc $(printf '%.2f' "$obdenom") GFLOP/s (why=$obwhy, class=$obclass, Sgemm ran ${obkern:-unknown} at $(printf '%.3f' "${i_active:-0}") insns/FMA, $roofstr)"
 
     # Net of CI, in the same conservative direction as everything else here. Against
     # the roofline cap that is keel_lo/(roof · peak_hi) = pklo/roof; $rlo remains a

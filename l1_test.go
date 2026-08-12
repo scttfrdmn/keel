@@ -341,6 +341,15 @@ func TestIsamax(t *testing.T) {
 		}
 		// Ties, sign symmetry and the sentinel. Isamax is exact, so these are
 		// equality checks with no tolerance in sight.
+		//
+		// negZero is constructed rather than written, because `-0.0` in Go source
+		// is a *positive* zero: the minus applies to the untyped constant 0, and
+		// constant arithmetic has no signed zero to produce (issue #38). This file
+		// carried `[]float32{0, -0.0}` as its negative-zero case for four phases,
+		// which was two positive zeros — a case that could not fail. Same idiom as
+		// internal/vec's spec tests, which construct it the same way for the same
+		// reason.
+		negZero := float32(math.Copysign(0, -1))
 		for _, tc := range []struct {
 			name string
 			x    []float32
@@ -350,7 +359,16 @@ func TestIsamax(t *testing.T) {
 			{"single", []float32{-3}, 0},
 			{"tie-first-wins", []float32{2, -2, 2}, 0},
 			{"negative-largest", []float32{1, -5, 3}, 1},
-			{"minus-zero-vs-zero", []float32{0, -0.0}, 0},
+			// |-0| == |+0|, so every one of these is a tie the first index wins.
+			// Both orders are checked: a kernel comparing raw values instead of
+			// magnitudes gets one of them right by accident.
+			{"minus-zero-vs-zero", []float32{0, negZero}, 0},
+			{"zero-vs-minus-zero", []float32{negZero, 0}, 0},
+			{"all-minus-zero", []float32{negZero, negZero, negZero}, 0},
+			// And -0 must lose to any nonzero, which is the case a sign-confused
+			// comparison would fail outright rather than by a tie-break.
+			{"minus-zero-loses-to-nonzero", []float32{negZero, 1}, 1},
+			{"minus-zero-loses-to-negative", []float32{negZero, -1}, 1},
 			{"all-zero", []float32{0, 0, 0}, 0},
 			{"last", []float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}, 16},
 		} {

@@ -5,19 +5,26 @@
 #
 # Criteria (verbatim from DESIGN.md §4/P0):
 #   "shim tests pass under all three backends; FMA disassembles to a single
-#    VFMADD231PS (grep -gcflags=-S output)."
+#    fused multiply-add instruction — any VFMADD*PS form — rather than a
+#    separate multiply and add (grep -gcflags=-S output)."
 #
 # Two notes on how those are mechanized here — both deliberate, and both
 # printed in the gate output rather than hidden:
 #
-#  1. MNEMONIC. DESIGN.md predicted VFMADD231PS. On go1.26.5 the compiler
-#     lowers Float32x16.MulAdd to VFMADD213PS — the same FMA instruction in a
-#     different operand-order encoding (132/213/231 differ only in which
-#     operand carries the addend). The gate therefore requires exactly one
+#  1. MNEMONIC. The criterion above is the reworded one (issue #10, 2026-08-12);
+#     DESIGN.md originally named VFMADD231PS specifically. On go1.26.5 the
+#     compiler lowers Float32x16.MulAdd to VFMADD213PS — the same FMA
+#     instruction in a different operand-order encoding (132/213/231 differ only
+#     in which operand carries the addend) — so the criterion as first written
+#     would have failed a toolchain that satisfied what P0 actually needs. This
+#     gate has always required the property rather than the encoding: exactly one
 #     instruction from the VFMADD{132,213,231}PS family AND zero separate
-#     VMULPS/VADDPS in the wrapper body, which is the property DESIGN.md
-#     actually cares about ("mul+add is a half-of-peak ceiling"). The
-#     mnemonic found is printed on every run. See docs/toolchain-notes.md.
+#     VMULPS/VADDPS in the wrapper body ("mul+add is a half-of-peak ceiling"), so
+#     the rewording brings DESIGN.md into line with the check, not the reverse.
+#     Which operand order it is remains consequential and is tracked where the
+#     consequences are — DESIGN.md's roofline section, where 231-with-broadcast
+#     versus 213 is I = 2.875 versus 4.625 (T12, #17/#18/#20). The mnemonic found
+#     is printed on every run. See docs/toolchain-notes.md.
 #
 #  2. HOST ARCH. simd/archsimd is amd64-only in go1.26.5 (its vector types
 #     live in *_amd64.go files). The FMA disassembly check works from any

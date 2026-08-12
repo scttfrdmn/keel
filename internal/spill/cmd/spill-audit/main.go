@@ -198,7 +198,19 @@ func emitSSA(pkg, fn, dir string) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
+	// Reported rather than discarded (issue #39). The cleanup is not
+	// load-bearing for correctness — the gate reads dir/<fn>.html, never the
+	// scratch dir — but each leak strands the private GOCACHE this function
+	// creates, measured at 18MB per function, inside a gitignored directory
+	// nobody looks at. A silent `_ =` would make that invisible; failing the
+	// audit over it would let a chmod on a temp dir suppress an SSA dump that
+	// was produced correctly. So: say it on stderr, keep the primary error.
+	defer func() {
+		if err := os.RemoveAll(tmp); err != nil {
+			fmt.Fprintf(os.Stderr, "spill-audit: scratch dir %s left behind (%v); "+
+				"it holds a private GOCACHE and can be deleted\n", tmp, err)
+		}
+	}()
 
 	abs, err := filepath.Abs(pkg)
 	if err != nil {

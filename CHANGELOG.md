@@ -583,6 +583,44 @@ While the major version is 0, minor versions may contain breaking changes.
   which is how #40 was found. A claim kept in a function can be checked; a claim
   kept in prose can only be believed.
 
+- **P5 stage 1 opens with the four ruled one-liners, and the lint criterion is
+  green** (#38, #39, #34, #10):
+  - **#38 — `Isamax`'s negative-zero case was two positive zeros.** `-0.0` in Go
+    source is a *positive* zero: the minus applies to the untyped constant, and
+    constant arithmetic has no signed zero to produce. So `[]float32{0, -0.0}` was a
+    case that could not fail, and it had been the only negative-zero coverage for
+    four phases. It now constructs the value the way `internal/vec`'s spec tests
+    already do (`float32(math.Copysign(0, -1))`) and covers five cases instead of
+    one: both tie orders, all-negative-zero, and `-0` losing to a positive and to a
+    negative nonzero — the last two being what a sign-confused comparison would fail
+    outright rather than by a tie-break. **They pass on all three backends on all
+    three amd64 hosts**, so the vacuous test was hiding nothing: the test was the
+    defect, not `Isamax`.
+  - **#39 — the spill audit's `os.RemoveAll` reports instead of discarding.** Not
+    load-bearing for correctness (the gate reads `dir/<fn>.html`, never the scratch
+    dir), but each leak strands the private 18MB `GOCACHE` this function creates
+    inside a gitignored directory nobody looks at. A silent `_ =` would make that
+    invisible, and failing the audit over it would let a `chmod` suppress an SSA dump
+    that was produced correctly — so it names the leak on stderr and keeps the
+    primary error.
+  - **#34 — `roofline 0.0%` no longer renders a not-applicable as a measured zero.**
+    `p3_denominator`'s contract is unchanged: 0 remains the right sentinel to
+    *return*. Only the rendering changed, and **the condition is `roof == 0`, not
+    `src == openblas` as the issue proposed**: an issue-bound host whose `min()`
+    picked the reference (`why=reference`) has a real roofline that was computed and
+    compared, and printing `n/a` there would hide a number instead of a hole — the
+    same misreading in the other direction. Test the sentinel, not a proxy for it.
+  - **#10 — P0's criterion states fusion rather than an encoding.** It named
+    `VFMADD231PS`, which is the form a hand-written K-loop wants and not what
+    go1.26.5 emits (`VFMADD213PS`), so as written it would have failed a toolchain
+    that satisfied what P0 actually needs: one instruction doing the multiply and the
+    add with a single rounding. `gate-p0.sh` has always checked the property — one
+    `VFMADD{132,213,231}PS` and zero separate `VMULPS`/`VADDPS` — so this brings
+    `DESIGN.md` into line with the check rather than the reverse. Which operand order
+    it is stays consequential and stays tracked where the consequences are: the
+    roofline section, where 231-with-broadcast versus 213 is `I = 2.875` versus
+    `4.625`.
+
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel
   loop nest, then the scaling gate** (`DESIGN.md` §4/P5, ruled 2026-08-12). #26
