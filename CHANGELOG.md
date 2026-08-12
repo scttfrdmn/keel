@@ -331,7 +331,7 @@ While the major version is 0, minor versions may contain breaking changes.
     the dispatched 4×32 a roofline on janus, which is what surfaced the bug.
   - `gate-p3.sh` also prints **retention** per host — the share of its own microkernel
     the blocked loop nest keeps — as reported-never-judged provenance beside
-    percent-of-peak. vesta ~90%, antares ~91%, janus ~77%, so P5 inherits #26 as a
+    percent-of-peak. vesta ~90%, antares ~92%, janus ~77%, so P5 inherits #26 as a
     re-runnable measurement instead of a remembered figure (`DESIGN.md` §4/P5 names it
     as a carried-in input). It is a ratio of two point estimates from two invocations
     and is labelled as such, with both inputs printed; nothing compares it to a

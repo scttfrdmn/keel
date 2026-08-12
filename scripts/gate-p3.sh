@@ -165,8 +165,8 @@
 #     informative even where it is not a criterion — and so is RETENTION, the share
 #     of its own microkernel the blocked loop nest keeps, printed on the same
 #     reported-never-judged footing. It is there because #26 is a named P5 input
-#     (DESIGN.md §4/P5) and an input needs a number: janus keeps ~77% where both Zen
-#     hosts keep ~90%, and P5 should inherit that as a measurement it can re-run
+#     (DESIGN.md §4/P5) and an input needs a number: janus keeps ~77% where the Zen
+#     hosts keep 90-92%, and P5 should inherit that as a measurement it can re-run
 #     rather than a figure someone remembers. Judging it here would be P3 annexing
 #     P5's blocking-parameter work; printing it is how P3 hands that work over.
 #
@@ -932,8 +932,8 @@ if [[ -n "$HOSTS" ]]; then
     # Reported, never judged — the same standing as percent-of-peak, and for the same
     # reason: P3's criterion is the ratio against OpenBLAS, and blocking-parameter
     # work is P5's by DESIGN.md §4. It is printed because #26 is a named P5 input and
-    # an input needs a number: janus keeps ~77% of its microkernel where both Zen
-    # hosts keep ~90%, and P5 inherits that gap as a measurement rather than as a
+    # an input needs a number: janus keeps ~77% of its microkernel where the Zen
+    # hosts keep 90-92%, and P5 inherits that gap as a measurement rather than as a
     # recollection of one. A run that stops printing it is a run that quietly dropped
     # P5's baseline, so the line is absent only when a measurement is missing.
     #
