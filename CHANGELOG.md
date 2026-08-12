@@ -422,6 +422,27 @@ While the major version is 0, minor versions may contain breaking changes.
   shape's number printed either way, numerator and denominator taken in the same
   benchmark invocation, and the audit of the deliberately-spilling reference tile
   run as explicitly non-fatal evidence.
+- **`scripts/gate-p3.sh` is GREEN: 47 PASS / 0 FAIL at `6c0f722`**, and P3's
+  headline criterion — single-thread `Sgemm` at 2048³ against ≥60% of the same
+  host's own OpenBLAS — is met on every gate host, each against a reference chosen
+  by measurement and verified to have taken. Both fully-measured runs, for
+  reproducibility (the second on the hardened gate; every number here is from one
+  invocation per host under the `performance` governor, `-count=10 -benchtime=1s`,
+  medians net of benchstat's confidence interval):
+
+  | Host | reference family | keel / denominator | run 1 | run 2 |
+  |---|---|---|---|---|
+  | vesta, Zen 4 (7950X3D) | Haswell, +5.5%/+6.5% over `DYNAMIC_ARCH`'s Cooperlake | openblas, FMA-bound | 91.8% | 91.1% |
+  | janus, Skylake-X (i9-9960X) | SkylakeX | roofline, issue-capped | 73.5% (plain OpenBLAS 40.3%) | 73.6% (40.4%) |
+  | antares, Zen 5 (Ryzen AI MAX+ 395) | Cooperlake | openblas, FMA-bound | 65.3% | 64.5% |
+
+  Reported, never judged: percent of measured peak is 88.1% (vesta), 46.1%
+  (janus), 58.5% (antares), and retention — how much of its own microkernel the
+  blocked loop nest keeps — is 91%, 77% and 91%, which is issue #26's P5 baseline
+  as a measurement rather than a recollection. janus's sentinel, P2's floor re-run
+  on the dispatched shape and the tightest margin in the gate, holds at 46.1% of
+  peak = **94.8%** of its 48.6% issue roofline without using the one re-run the
+  sentinel retry policy allows.
 - `scripts/gate-p3.sh`: real P3 checks, written before any P3 code. Three things
   in it are decisions rather than transcriptions of DESIGN.md §4/P3, and are
   stated in the script so they can be argued with:
