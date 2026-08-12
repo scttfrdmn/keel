@@ -139,18 +139,35 @@ vesta) that could host any future reduced-precision parking-lot work.
     was 14%. That does not *exclude* a 43% outlier — three draws cannot rule out a
     rare event, and the original 43% was itself one run in three — so the honest form
     is a bound, not an absolution: under `performance`, three runs produced ≤14%.
-  - **A scalar-path instability remains, and it is now isolated to the scalar path.**
-    The scalar median's interval ranged 3–14% while the AVX-512 median's ranged
-    0–1% in the same runs, on the same host, minutes apart. An order of magnitude of
-    difference between two kernels measured together is not ambient machine noise;
-    it is a property of the kernel that touches memory. So the governor cannot be
-    credited with having caused what was never shown to be caused by it, and the 43%
-    has **no identified cause** — it has a bound and a location.
+  - **A scalar-path instability remains, and the location is established.** The
+    scalar median's interval ranged 3–14% while the AVX-512 median's ranged 0–1% in
+    the same runs, on the same host, minutes apart. That comparison is
+    *differential* — two kernels co-measured under identical conditions — so an
+    order of magnitude between them is a property of one kernel rather than ambient
+    machine noise. The governor therefore cannot be credited with having caused what
+    was never shown to be caused by it, and the 43% has **no identified cause**: it
+    has a bound and a location.
 
-  The candidates are thermals and this APU's boost behaviour under a mobile power
-  budget, and they are untested. This is the same *character* of finding as vesta's
-  bimodal Sdot ratio, and it lives in the same place: issue #15, the run-to-run
-  instability and pinning decision, which now carries both hosts' data.
+  **Location identified, mechanism open, and the difference matters.** "The kernel
+  that touches memory" is the tempting phrase and it does not discriminate: both
+  kernels read the same two arrays over the same 32 KB working set. What actually
+  differs between them is runtime per op (~10×), frequency sensitivity and issue
+  character. So there are two candidate classes, and neither is favoured by the data
+  in hand:
+
+  1. **Clock-domain exposure.** A scalar loop spanning ten times the wall time per
+     measurement samples ten times more boost and thermal wander, which on a mobile
+     APU under a shared power budget is at least as available a mechanism as anything
+     in the cache hierarchy.
+  2. **Memory-path behaviour** at that working set — the reading the phrase above
+     assumes, which would need evidence the two kernels' memory traffic differs in a
+     way their identical arrays do not already fix.
+
+  Both untested. This is the same *character* of finding as vesta's bimodal Sdot
+  ratio and lives in the same place: issue #15, the run-to-run instability and
+  pinning decision, which now carries both hosts' data. Keeping the mechanism open
+  is the same discipline that reopened the 43% in the first place — a plausible
+  phrase is not an explanation.
 
   What is not in question: the register-only peak measurement was unaffected (0.4%
   across three runs), so whatever this is, it appears only once a benchmark touches

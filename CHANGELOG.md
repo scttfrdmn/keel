@@ -1057,12 +1057,18 @@ While the major version is 0, minor versions may contain breaking changes.
   result is a *bound* (≤14% in three runs), not an absolution. What the runs did
   establish is a location: the scalar median carried 3–14% intervals while the
   AVX-512 median carried 0–1% in the same runs on the same host, an order of
-  magnitude apart, which is a property of the kernel that touches memory rather
-  than ambient machine noise. So the governor is not credited with fixing what it
-  was never shown to cause, and the 43% now has a bound and a location but **no
-  identified cause** — thermals and this APU's boost behaviour are the untested
-  candidates, recorded on issue #15 beside vesta's bimodal ratio, which is the same
-  character of finding. A stale explanation is worse than a missing one, because the
+  magnitude apart. That comparison is differential — two kernels co-measured under
+  identical conditions — so it is a property of one kernel rather than ambient
+  machine noise. **Location identified, mechanism open:** "the kernel that touches
+  memory" does not discriminate, because both kernels read the same two arrays over
+  the same 32 KB working set; what differs is runtime per op (~10×), frequency
+  sensitivity and issue character. Two candidate classes, neither favoured by the
+  data — clock-domain exposure (a loop spanning 10× the wall time samples 10× more
+  boost and thermal wander, which on a mobile APU is at least as available as any
+  cache-hierarchy story) and memory-path behaviour at that working set. So the
+  governor is not credited with fixing what it was never shown to cause, and the 43%
+  now has a bound and a location but **no identified cause** — recorded on issue #15
+  beside vesta's bimodal ratio, which is the same character of finding. A stale explanation is worse than a missing one, because the
   next unstable measurement here would be attributed to a setting nobody set. The
   dated measurement records are unchanged and now say they are dated; the P1 table
   notes that antares's rows predate the change and are not restated as current.
