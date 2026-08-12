@@ -200,8 +200,13 @@ verify_go_tarball() {
     src="\$KEEL_GO_SHA256 (an independent pin)"
   else
     src="go.dev/dl?mode=json (same origin as the download: integrity, not provenance)"
+    # `tr -d '\n'` first, and it is not cosmetic (issue #29): go.dev serves
+    # pretty-printed JSON, so splitting on '{' alone leaves the object's fields on
+    # separate lines and the line-oriented `grep` returns only the "filename" line —
+    # the sha256 is on a neighbour and never reaches the sed. $want was therefore
+    # empty for every version ever requested, and this check had never once run.
     want="$(curl -fsSL 'https://go.dev/dl/?mode=json&include=all' |
-      tr '{' '\n' | grep -F "\"$GO_TARBALL\"" | tr ',' '\n' |
+      tr -d '\n' | tr '{' '\n' | grep -F "\"$GO_TARBALL\"" |
       sed -n 's/.*"sha256": *"\([0-9a-f]\{64\}\)".*/\1/p' | head -1)"
   fi
   if [[ -z "$want" ]]; then
