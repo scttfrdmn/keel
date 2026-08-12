@@ -530,7 +530,7 @@ else
         elif [[ "$gotk" != *"/scalar" ]]; then
           fail "[$host] KEEL_FORCE=$want gave l1=$got and a microkernel of '${gotk:-none}': the documented ceiling is scalar at Level 3, so this is neither the $want kernel nor the fallback"
         else
-          pass "[$host] KEEL_FORCE=$want takes as a Level-1-only rung (l1=$got, kern=$gotk — the #40 ceiling, reported honestly)"
+          pass "[$host] KEEL_FORCE=$want takes effect as a Level-1-only rung (l1=$got, kern=$gotk — the #40 ceiling, reported honestly)"
         fi
       elif [[ "$gotk" != *"/$want" ]]; then
         fail "[$host] KEEL_FORCE=$want reached the L1 dispatcher (l1=$got) and the microkernel came back as '${gotk:-none}': this rung is in the Level-3 chain, so a backend it does not reach is a wiring bug or a missing kernel"
@@ -636,7 +636,12 @@ race_verdict() {
     # as meeting the criterion. `-race` implies -d=checkptr, and archsimd's
     # partial slice ops convert &s[0] to a full-width *[N]T, which checkptr
     # rejects fatally. See docs/toolchain-notes.md T17 and issue #42.
-    fail "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42 — awaiting a disposition)"
+    #
+    # Ruled 2026-08-12: this criterion is not amendable to exclude checkptr, and
+    # the workaround lands inside #22's edge campaign as an admissibility
+    # condition on its candidates. So the message names the fix's address rather
+    # than saying "awaiting a disposition" — the disposition exists.
+    fail "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42, upstream golang/go#80856 — the fix lands in #22's campaign; the criterion is not amendable)"
     sed -n '/checkptr: converted pointer straddles/,/^testing\.tRunner/p' "$log" | sed 's/^/        /' | head -20
   else
     fail "$label the -race run failed without the detector reporting a race, so the criterion is unmeasured: a test that fails under instrumentation says nothing either way about whether keel has a race"
