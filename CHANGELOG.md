@@ -465,6 +465,36 @@ While the major version is 0, minor versions may contain breaking changes.
   `gate-p4.sh` would be a number that can drift out of agreement with itself.
 
 ### Changed
+- **P5's internal order is now stated: single-thread remediation, then the parallel
+  loop nest, then the scaling gate** (`DESIGN.md` §4/P5, ruled 2026-08-12). #26
+  (retention), #36 (Ssymm's dense expansion), #37 (Strsm's scalar diagonal solves)
+  and the deferred measurements on #21/#22 all sequence *before* the
+  parallelization rather than beside it: each is a single-thread cost that
+  parallelization multiplies rather than hides, so parallelizing first would
+  certify scaling curves for routines the same phase intends to change — every
+  number re-measured and a record carrying two regimes. The certifying measurement
+  comes last, over the final artifact, which is the same rule that made P3 keep the
+  hardened re-run instead of the green it inherited. #21 and #22 join the campaign
+  because they are the same code as #36/#37, and entering it twice is how a
+  measurement ends up compared against a different build than it was taken on.
+- **P5's scaling floor binds by parallelism class rather than by routine list**
+  (`DESIGN.md` §4/P5, ruled 2026-08-12; the question was whether P4's derived
+  routines are judged or only `Sgemm`).
+  - `Sgemm`, `Ssyrk` and `Ssymm` are **one class — GEMM-shaped nests over
+    independent tiles, no cross-iteration dependence — and the ≥6× floor binds all
+    three.** Judging only `Sgemm` would let a serialization bug in the triangular
+    C-update masking hide behind "the derived routines are reported, not judged",
+    which is both the likeliest place to introduce a dependence and the measurement
+    that would catch it.
+  - `Strsm` is a **different class, and its floor is deferred to a measurement.**
+    Its diagonal solves impose a dependency chain the other three lack, and its
+    available parallelism varies with `side` and shape. P5 measures its scaling,
+    reports it beside the judged three, and states the parallelism model behind the
+    number — the rank-update/diagonal-solve split at the gate's shape; that pair
+    sets the floor, which binds from the commit recording it forward. Recorded on
+    issue #37 so the deferral is a named debt and not a standing exemption. Writing
+    6× on `Strsm` today would be a threshold without a model, which is the move
+    this project has now refused six times.
 - **`Sgemm` selects its microkernel shape per host instead of taking the registry's
   first entry** (ruling on issue #24; `KERNEL.md` §8, `DESIGN.md` §4/P3). Both
   shipped shapes are zero-spill and neither dominates — 4×32 wins on Zen 4 and
