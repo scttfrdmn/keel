@@ -335,7 +335,10 @@ While the major version is 0, minor versions may contain breaking changes.
     in the record. It never applies to a correctness criterion — those fail on first
     miss, since a differential test that passes on retry has found a nondeterminism.
     The gate script is unchanged and still fails on first miss; the allowance is the
-    operator's and the archive is what keeps it bounded.
+    operator's and the archive is what keeps it bounded. How often the retry is needed
+    is itself the signal: a sentinel that needs it often is reporting that the margin
+    is gone, not that it is noisy, and the answer is throughput or a re-derived bar
+    rather than more retries.
   - `gate-p3.sh` also prints **retention** per host — the share of its own microkernel
     the blocked loop nest keeps — as reported-never-judged provenance beside
     percent-of-peak. vesta ~90%, antares ~92%, janus ~77%, so P5 inherits #26 as a
