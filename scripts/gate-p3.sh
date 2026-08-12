@@ -162,7 +162,13 @@
 #     EVERY gate host must produce a reference and clear the bar, and at least one
 #     must clear it under the performance governor (DESIGN.md §5.4 rule 5). Percent
 #     of measured peak is printed for every host either way, because that number is
-#     informative even where it is not a criterion.
+#     informative even where it is not a criterion — and so is RETENTION, the share
+#     of its own microkernel the blocked loop nest keeps, printed on the same
+#     reported-never-judged footing. It is there because #26 is a named P5 input
+#     (DESIGN.md §4/P5) and an input needs a number: janus keeps ~77% where both Zen
+#     hosts keep ~90%, and P5 should inherit that as a measurement it can re-run
+#     rather than a figure someone remembers. Judging it here would be P3 annexing
+#     P5's blocking-parameter work; printing it is how P3 hands that work over.
 #
 #  6b. THE DENOMINATOR ON AN ISSUE-BOUND HOST, AND WHY IT IS NOT A CONCESSION.
 #     Also from the ruling on #23: where the P2 classifier says a host is
@@ -179,10 +185,12 @@
 #     evidence, and it carries P2's anti-vacuity shape guard against the shape
 #     `Sgemm` ACTUALLY RAN — read from the keel-bench-kern marker of the very run
 #     that produced the ratio, not from the best shape on the shelf and not from a
-#     different host's log. A fatter kernel therefore cannot buy itself a lower bar;
-#     as this is written the dispatched 4x32 is refused for exactly that reason
-#     (issue #24). Both ratios, amended and plain, are printed on every host: the
-#     gate's own leniency is a number, and §7 rule 7 applies to it too.
+#     different host's log. A fatter kernel therefore cannot buy itself a lower bar.
+#     That guard is what surfaced issue #24: it refused the then-dispatched 4x32 on
+#     janus, and the fix was dispatch, not the threshold — janus now ships 2x32 at
+#     4.625 insns/FMA and is inside the guard on its merits (criterion 5b). Both
+#     ratios, amended and plain, are printed on every host: the gate's own leniency
+#     is a number, and §7 rule 7 applies to it too.
 #
 #  7. WHAT THIS GATE DOES NOT CHECK. "Beta handling as kernel variants, not
 #     branches in the loop" and "packing SIMD-accelerated through the shim" are
@@ -191,6 +199,14 @@
 #     and criterion 4 enforces them structurally, since a branch or a call that
 #     landed in the K-loop is exactly what the audit reports. Anything stronger
 #     would be this gate inventing criteria the design document did not set.
+#
+#     Retention (#26) is in this category too, deliberately: it is measured and
+#     printed on every host and judged on none. The gap it names is real throughput,
+#     but it is packing and memory traffic rather than the front-end ceiling the
+#     roofline models, so it is neither excused by the amendment nor netted out of
+#     it — and closing it means sweeping KC/MC/NC, which DESIGN.md §4 parked in P5.
+#     Turning it into a P3 criterion would be scope migration; dropping it would
+#     leave P5 without a baseline. Printing it does neither.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -835,11 +851,20 @@ else
     fi
     attpc="$(awk -v a="$ATTAIN" 'BEGIN{printf "%.1f", a * 100}')"
     roofpc="$(awk -v r="$ROOF" 'BEGIN{printf "%.1f", r * 100}')"
-    # pmax = max_i f_i·I_i, recovered from the verdict's own two outputs so that
-    # criterion 6b's roofline is built from the same ceiling this one judged
-    # against — not from a second reduction of the same mixes.
-    printf '%s %s\n' "$CLASS" \
+    # What this host's sentinel measurement tells the later sections, in one file so
+    # neither of them re-derives it from a second set of measurements:
+    #
+    #   CLASS  the verdict, for criterion 6b's denominator
+    #   pmax   = max_i f_i·I_i, recovered from the verdict's own two outputs so that
+    #          criterion 6b's roofline is built from the same ceiling this one judged
+    #          against
+    #   ACT_PT the dispatched microkernel's percent of peak, and ACT_ID the shape it
+    #          was measured on, for the retention line (#26) — that line divides the
+    #          blocked Sgemm by this, so it must be the same shape Sgemm ships, which
+    #          is exactly what criterion 5b part 2 established above
+    printf '%s %s %s %s\n' "$CLASS" \
       "$(awk -v r="$ROOF" -v i="${ACT_IPF:-0}" 'BEGIN{printf "%.6f", r * i}')" \
+      "$ACT_PT" "$ACT_ID" \
       >"$BINDIR/class-$host"
     if [[ "$JUDGED" -eq 0 ]]; then
       # The roofline is quoted only where it can be used. On an FMA-bound host the
@@ -901,6 +926,31 @@ if [[ -n "$HOSTS" ]]; then
     pklo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
     if [[ -n "$pk" ]]; then
       info "[$host] = $(awk -v r="$pk" 'BEGIN{printf "%.1f", r*100}')% of measured peak ($(awk -v r="${pklo:-0}" 'BEGIN{printf "%.1f", r*100}')% net of CI) — reported, not a P3 criterion"
+    fi
+
+    # ---- retention: how much of its own microkernel the blocked loop nest keeps.
+    # Reported, never judged — the same standing as percent-of-peak, and for the same
+    # reason: P3's criterion is the ratio against OpenBLAS, and blocking-parameter
+    # work is P5's by DESIGN.md §4. It is printed because #26 is a named P5 input and
+    # an input needs a number: janus keeps ~77% of its microkernel where both Zen
+    # hosts keep ~90%, and P5 inherits that gap as a measurement rather than as a
+    # recollection of one. A run that stops printing it is a run that quietly dropped
+    # P5's baseline, so the line is absent only when a measurement is missing.
+    #
+    # THIS IS A RATIO OF TWO POINT ESTIMATES FROM TWO INVOCATIONS, and it is not
+    # bounded net of CI, because the two percentages come from different CSVs with a
+    # peak measurement each — bench_ratio_lo cannot reach across them, and inventing
+    # a bound here would be the statistics-free denominator §7 rule 7 forbids. Both
+    # inputs are printed beside it so the division is reconstructible and so nobody
+    # is tempted to compare the quotient against anything.
+    if [[ -r "$BINDIR/class-$host" ]]; then
+      read -r _ _ kpct kshape <"$BINDIR/class-$host"
+      if [[ -n "$pk" && -n "$kpct" && -n "$kshape" ]] &&
+         awk -v k="$kpct" 'BEGIN{exit !(k > 0)}'; then
+        info "[$host] retention: the blocked loop nest keeps $(awk -v s="$pk" -v k="$kpct" 'BEGIN{printf "%.0f", s / k * 100}')% of its own $kshape microkernel ($(awk -v r="$pk" 'BEGIN{printf "%.1f", r*100}')% of peak blocked vs $(awk -v r="$kpct" 'BEGIN{printf "%.1f", r*100}')% unblocked; point estimates from two invocations) — reported, never judged; P5 baseline for #26"
+      else
+        info "[$host] retention not computable: no bounded microkernel percent-of-peak recorded for this host, so #26's P5 baseline is missing this run"
+      fi
     fi
 
     # ---- criterion 5b, part 5: the shape choice, seen through packing and blocking
@@ -1055,7 +1105,7 @@ else
     # THIS host: the reference rate, the peak rate, the shape Sgemm dispatched to,
     # and the classification recorded by the sentinel loop above.
     obclass="fma"; obpmax="0"
-    if [[ -r "$BINDIR/class-$host" ]]; then read -r obclass obpmax <"$BINDIR/class-$host"; fi
+    if [[ -r "$BINDIR/class-$host" ]]; then read -r obclass obpmax _ _ <"$BINDIR/class-$host"; fi
     # "4x32/avx512 (available: ...)" -> Kernel4x32; audited, not assumed, because a
     # roofline built from the wrong shape's instruction count is the hole the shape
     # guard exists to close.

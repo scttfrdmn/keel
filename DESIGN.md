@@ -111,7 +111,8 @@ Every phase ends in an executable gate: a command that exits 0 or 1. No narrativ
 - Runtime dispatch finalized: `avx512 → avx2 → scalar`, overridable by env `KEEL_FORCE=scalar` for testing.
 - The package must compile and pass (scalar path) *without* `GOEXPERIMENT=simd` — build tags make the fast paths additive. This is what lets it exist on proper `go get` terms the day the experiment graduates.
 - Scaling benchmark, README with honest numbers, `doc.go`.
-- **Gate P5:** ≥6× single-thread throughput at 8 cores on 4096³; race detector clean; `go vet`/`golangci-lint` clean; scalar-only build green on stock toolchain.
+- **Named input carried in from P3: close janus's retention gap (issue #26), don't regress the Zens** (added 2026-08-11). This is the "make them vars, auto-tune later" half of P3's blocking work coming due. The blocked `Sgemm` keeps about 87% and 91% of its own microkernel's throughput on vesta and antares but only about 77% on janus, so roughly 13 points of Skylake-X throughput are sitting in packing, memory traffic and loop-nest overhead — *not* in the front-end ceiling the P3 roofline models, which is why the amendment neither excuses it nor nets it out. `KC=384 MC=144 NC=4096` were chosen once and never swept per host. `scripts/gate-p3.sh` prints retention per host on every run as reported-never-judged provenance, so this phase starts from a re-runnable measurement rather than a remembered one, and the success criterion is written by that number: bring the issue-bound host toward the retention band the FMA-bound hosts already sit in, without moving them down.
+- **Gate P5:** ≥6× single-thread throughput at 8 cores on 4096³; race detector clean; `go vet`/`golangci-lint` clean; scalar-only build green on stock toolchain. Retention stays reported rather than judged: #26's target is a direction to work in, not a threshold invented after the fact.
 
 ## 5. Testing philosophy (for the whole project)
 

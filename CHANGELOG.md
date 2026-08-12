@@ -329,6 +329,13 @@ While the major version is 0, minor versions may contain breaking changes.
     ranking cannot come to rest on a stale count.
   - Found by the gate, not by a benchmark: P2's anti-vacuity shape guard refused
     the dispatched 4×32 a roofline on janus, which is what surfaced the bug.
+  - `gate-p3.sh` also prints **retention** per host — the share of its own microkernel
+    the blocked loop nest keeps — as reported-never-judged provenance beside
+    percent-of-peak. vesta ~90%, antares ~91%, janus ~77%, so P5 inherits #26 as a
+    re-runnable measurement instead of a remembered figure (`DESIGN.md` §4/P5 names it
+    as a carried-in input). It is a ratio of two point estimates from two invocations
+    and is labelled as such, with both inputs printed; nothing compares it to a
+    threshold, because closing that gap means sweeping `KC`/`MC`/`NC`, which is P5 work.
   - `docs/spill-report.md` carries a superseded-by note: its P2-era prediction that
     "P3 will dispatch this kernel on all three machines" is the premise this change
     removes. The report's measurements are left as recorded — it documents P2, not
