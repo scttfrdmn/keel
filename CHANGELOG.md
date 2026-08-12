@@ -665,6 +665,26 @@ While the major version is 0, minor versions may contain breaking changes.
     methodology before it could become a default. `NC` stops at 2048 because
     `plan()` clamps it to `n`, so every larger value is the same measurement under
     another name.
+- **`BenchmarkPackDirections`, and the correction it exists to make measurable**
+  (#21). Both #21 and #26 stated which pack direction transposes, and both stated
+  it backwards: `APanels` passes `!trans` as `depthContig` and `BPanels` passes
+  `trans`, so at `NN` — the shape every benchmark in this repo runs — it is **A**
+  that takes the transposing branch and B that gets `memmove`, and the case where
+  both directions transpose at once is `NT`. `internal/pack`'s own package doc had
+  the rule right; the issue text misapplied it. The fix is a benchmark dimension
+  rather than a prose edit: both directions, all four flag combinations, at the
+  block shapes the nest uses, counting valid elements only (padding is zero-fill,
+  not data movement).
+  - It refutes #21's premise. The `copy`-based branch — the one the rule calls
+    "already vectorized" — is **2.8× slower** than the transposing branch it
+    replaces on the A side at `TN` (0.77 vs 2.19 Gelem/s, dev host, pure-Go
+    `internal/pack`), because its run length is `blk = MR ∈ {2,4}`: 8 or 16 bytes
+    per `copy` call, ~27,600 calls per pass. Cost scales as 1/`blk` and flattens
+    once the run reaches 64 B, and removing the source stride entirely changes
+    nothing (1.0–1.1×), which refutes the locality explanation that was tried
+    first. So the rule "copy the contiguous axis" is right for B (`NR = 32`) and
+    wrong for A, and the 16×16 `Permute` transpose is no longer the first thing to
+    try there.
 
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel

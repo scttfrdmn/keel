@@ -138,13 +138,13 @@ func BenchmarkNest(b *testing.B) {
 				b.Run("pack-a", func(b *testing.B) {
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						packAOnly(kn, m, n, k, am, k, ap)
+						packAOnly(kn, m, n, k, am, k, ap, false)
 					}
 				})
 				b.Run("pack-b", func(b *testing.B) {
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						packBOnly(kn, m, n, k, bm, n, bp)
+						packBOnly(kn, m, n, k, bm, n, bp, false)
 					}
 				})
 				b.Run(fmt.Sprintf("kernel/kc=%d", kc), func(b *testing.B) {
@@ -198,6 +198,77 @@ func BenchmarkBlocking(b *testing.B) {
 						b.ReportMetric(flops*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
 					})
 				}
+			}
+		}
+	}
+}
+
+// BenchmarkPackDirections is #21's first item: what the two pack directions cost,
+// per element and per call, at the block shapes the nest actually uses, for each of
+// the four transpose flag combinations.
+//
+// # Which side transposes, since both issues have it backwards
+//
+// #21 says "the transposing direction is on the A side for TN/TT and the B side for
+// NN/TN", and #26 says the B pack is "the transposing direction" for the benchmark
+// shape. Both are inverted. internal/pack is the arbiter and it is unambiguous:
+// APanels passes !trans as depthContig and BPanels passes trans, so
+//
+//	NN   A transposes, B copies      <- the shape every benchmark in this repo runs
+//	NT   A transposes, B transposes  <- both scalar; #21's real worst case
+//	TN   A copies,     B copies      <- neither scalar
+//	TT   A copies,     B transposes
+//
+// The package doc of internal/pack states the rule correctly ("whichever axis is
+// contiguous in the source is copied"); it is the issue text that misapplied it. It
+// matters for what gets measured: a campaign that went looking for a scalar B pack
+// at NN would find memmove and conclude packing was cheap, and it would never reach
+// NT, where both directions are scalar at once.
+//
+// So the flags are a dimension here rather than a claim. Elements are counted off
+// the block generator — valid elements only, padding excluded, since padding is
+// zero-fill rather than data movement — so Gelem/s compares the two directions on
+// the axis they differ on, and ns/op is what the decomposition's fractions use.
+//
+// This benchmark has no vector code under it: internal/pack is pure Go with no
+// build tags. The dev host is therefore a legitimate platform for the *shape* of
+// the asymmetry, though not for any host's absolute numbers.
+func BenchmarkPackDirections(b *testing.B) {
+	flags := []struct {
+		name           string
+		transA, transB bool
+	}{{"NN", false, false}, {"NT", false, true}, {"TN", true, false}, {"TT", true, true}}
+
+	for _, kn := range tileShapes() {
+		for _, n := range []int{2048} {
+			m, k := n, n
+			blocks := nestBlocks(kn, m, n, k)
+			var aelem, belem float64
+			for _, blk := range blocks {
+				aelem += float64(blk.im) * float64(blk.kk)
+				if blk.newPanel {
+					belem += float64(blk.jn) * float64(blk.kk)
+				}
+			}
+			kc, mc, nc := plan(kn, m, n, k)
+			ap := make([]float32, pack.ALen(kn.MR, mc, kc))
+			bp := make([]float32, pack.BLen(kn.NR, nc, kc))
+			src := benchMat(n, n) // square, so one source serves every flag combination
+			for _, f := range flags {
+				b.Run(fmt.Sprintf("%s/n=%d/%s/pack-a", kn.Tile(), n, f.name), func(b *testing.B) {
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						packAOnly(kn, m, n, k, src, k, ap, f.transA)
+					}
+					b.ReportMetric(aelem*float64(b.N)/b.Elapsed().Seconds()/1e9, "Gelem/s")
+				})
+				b.Run(fmt.Sprintf("%s/n=%d/%s/pack-b", kn.Tile(), n, f.name), func(b *testing.B) {
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						packBOnly(kn, m, n, k, src, n, bp, f.transB)
+					}
+					b.ReportMetric(belem*float64(b.N)/b.Elapsed().Seconds()/1e9, "Gelem/s")
+				})
 			}
 		}
 	}
@@ -269,18 +340,35 @@ func nestNoPack(kn kern.Kernel, m, n, k int, beta float32, ap, bp, c []float32, 
 // two counts differ only by the ic loop, but at a shape with several column blocks
 // the A packing is repeated work — a property of this loop order, not a defect, and
 // BenchmarkNest's marker prints both counts.
-func packAOnly(kn kern.Kernel, m, n, k int, a []float32, lda int, ap []float32) {
+func packAOnly(kn kern.Kernel, m, n, k int, a []float32, lda int, ap []float32, trans bool) {
 	for _, b := range nestBlocks(kn, m, n, k) {
-		pack.APanels(ap, kn.MR, 1, a, lda, false, b.ic, b.im, b.pc, b.kk)
+		pack.APanels(ap, kn.MR, 1, a, lda, trans, b.ic, b.im, b.pc, b.kk)
 	}
 }
 
-func packBOnly(kn kern.Kernel, m, n, k int, bm []float32, ldb int, bp []float32) {
+func packBOnly(kn kern.Kernel, m, n, k int, bm []float32, ldb int, bp []float32, trans bool) {
 	for _, b := range nestBlocks(kn, m, n, k) {
 		if b.newPanel {
-			pack.BPanels(bp, kn.NR, bm, ldb, false, b.pc, b.kk, b.jc, b.jn)
+			pack.BPanels(bp, kn.NR, bm, ldb, trans, b.pc, b.kk, b.jc, b.jn)
 		}
 	}
+}
+
+// tileShapes is the distinct MR×NR shapes registered on this build, scalar
+// references included: a pack cost depends on the tile geometry and on nothing else
+// about the kernel, so restricting these to a vector backend would refuse to
+// measure a pure-Go routine on a host that can run it.
+func tileShapes() []kern.Kernel {
+	var out []kern.Kernel
+	seen := map[string]bool{}
+	for _, k := range kern.Measured() {
+		if seen[k.Tile()] {
+			continue
+		}
+		seen[k.Tile()] = true
+		out = append(out, k)
+	}
+	return out
 }
 
 // benchKernels is the shipped shapes worth measuring at 2048³: everything
