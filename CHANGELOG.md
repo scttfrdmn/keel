@@ -685,6 +685,40 @@ While the major version is 0, minor versions may contain breaking changes.
     first. So the rule "copy the contiguous axis" is right for B (`NR = 32`) and
     wrong for A, and the 16×16 `Permute` transpose is no longer the first thing to
     try there.
+- **`internal/pack` gets tests of its own** (#45), before #21/#22/#36 change its
+  loops. Four invariants that the root package's differential tests cannot see,
+  because they are visible at this boundary and not in `Sgemm`'s output:
+  - The packed **layout is checked against the doc's formula**, written out as index
+    arithmetic on the source rather than by calling anything in the package — so a
+    layout change has to be made twice, by someone who means it. A layout that
+    changed consistently with the microkernels would otherwise pass every existing
+    test while breaking the contract future kernels are written against.
+  - "**The zeros are written, not assumed**" becomes an assertion. A poisoned buffer
+    catches an unwritten slot; the case that actually happens in `gemm` is a slot
+    holding a *previous pack's* plausible value, so a large block is packed and then
+    a smaller one into the same buffer, with every slot the second claims required to
+    hold what the second put there. Padding is compared bitwise, since a stale −0
+    passes `== 0`.
+  - **The two branches are required to be bit-identical**, which is the guard that
+    makes #21's branch-selection change safe: the same logical matrix packed from a
+    row-major source and from its transpose, over ±0, ±Inf, NaN, `MaxFloat32` and
+    the smallest denormal. The one input where they provably differ — a *signalling*
+    NaN, which `copy` moves untouched and `alpha*v` quiets — is documented as a known
+    asymmetry rather than tested as a requirement, since no IEEE operation produces
+    one and BLAS specifies nothing about NaN payloads.
+  - `ALen`/`BLen` are **exactly enough**, and one float short panics *with both
+    lengths named*. Asserting the message and not merely the panic is the point:
+    deleting the guard outright still panics, from the panel re-slice, so a test that
+    accepted any panic would pass over code with no guard.
+
+  Nine mutations were applied to `pack.go` to check the suite can fail — dropped
+  zero-fill in each branch, a transposed layout index, an ignored `alpha`, an
+  off-by-one `valid`, an `ALen` that forgets the ragged panel, a deleted length
+  guard, and `nb` taken from the buffer length instead of the shape. Eight are
+  caught, each by the test that should catch it. The ninth (dropping `count == 0`
+  from the early return) is an equivalent mutant, not a bug, and the test comment
+  says so rather than the suite being tightened around a distinction that does not
+  exist.
 
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel
