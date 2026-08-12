@@ -438,6 +438,31 @@ While the major version is 0, minor versions may contain breaking changes.
   counts are *useful* flops: the half of each diagonal tile that is computed and
   discarded is the cost the bar exists to measure, so it is not counted as work.
   Rule 7's "never a number without its denominator" pointed at the numerator.
+- **`scripts/gate-p4.sh` is GREEN: 65 PASS / 0 FAIL** at `dd740e5`. P4's headline
+  criterion — single-thread `Ssyrk` at ≥85% of the *same host's own* `Sgemm`, both
+  rates from one benchmark invocation at n = k = 2048 under the `performance`
+  governor, `-count=10 -benchtime=1s`, medians net of benchstat's confidence
+  interval — is met on all three gate hosts:
+
+  | Host | Ssyrk | Sgemm | Ssyrk / Sgemm | of measured peak |
+  |---|---|---|---|---|
+  | vesta, Zen 4 (7950X3D) | 134.4 | 148.1 | **90.8%** | 80.9% / 89.2% of 166.1 |
+  | janus, Skylake-X (i9-9960X) | 69.11 | 77.27 | **89.4%** | 31.9% / 35.6% of 216.9 |
+  | antares, Zen 5 (Ryzen AI MAX+ 395) | 168.5 | 191.3 | **88.1%** | 51.4% / 58.3% of 328.1 |
+
+  GFLOP/s. Percent of measured peak is reported and not judged, here as in P3.
+  Criterion 7 was measured twice — an earlier run of the same gate, aborted later
+  in criterion 8, produced 90.6 / 89.8 / 88.2 — so the three ratios agree within
+  0.4 points across two independent measurements, and the ordering by host is the
+  same both times. The remaining 9–12 points are the derivation's stated cost:
+  tiles that straddle the diagonal are computed whole and half-discarded, and the
+  discarded half is deliberately absent from the numerator.
+- P4's gate carries P3's rather than restating its threshold: criterion 8 runs
+  `scripts/gate-p3.sh` on the same commit (**47 PASS / 0 FAIL**, its fourth green
+  full run) and refuses a dirty tree as unmeasured. The Ssyrk/Sgemm ratio is a
+  ratio against a number P4's own commits can move, so the denominator's bar is
+  enforced by the gate that owns it — a second copy of "≥60% of OpenBLAS" in
+  `gate-p4.sh` would be a number that can drift out of agreement with itself.
 
 ### Changed
 - **`Sgemm` selects its microkernel shape per host instead of taking the registry's
