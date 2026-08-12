@@ -475,6 +475,28 @@ While the major version is 0, minor versions may contain breaking changes.
   verdicts and their aggregate. A gate that cannot run its own checks understates
   itself. The delegated P4 gate is **green** on this commit (64 PASS / 0 FAIL),
   so every absolute rate the ≥6× ratio stands on is still a measured one.
+
+  It is **red in 20 places as of `51d206f`** (20 FAIL / 32 PASS, `gate-p5: RED`),
+  and the three that left are the #40 ruling landing: each per-host
+  `KEEL_FORCE=avx2` verdict became a PASS that *asserts* the Level-3 ceiling
+  (`l1=avx2, kern=4x32/scalar`) rather than one that excused the missing rung.
+  Nothing else in the set moved — an intended delta of exactly three, which is the
+  evidence the narrowing was surgical. The absent `keel-p5-dispatch` marker stayed
+  **one** failure rather than becoming two when the check gained a second field: no
+  marker emitted is one defect with one cause, and a count that inflated with the
+  number of things the missing marker *would* have been checked against would
+  overstate how much is wrong.
+
+  The 20 all have an owner and a stage: **1** lint failure carrying two findings
+  (#39's unchecked `os.RemoveAll` and #38's `-0.0` literal); **8** absent
+  determinism/no-state markers, two per routine across the four; **1** absent
+  dispatch marker; **3** `-race` deaths from `archsimd`'s `checkptr` violation
+  (#42, ruled into #22's campaign) **plus 1** aggregate saying no host produced a
+  reading at all; **3** hosts reporting the scaling ratios' inputs unmeasured
+  **plus 1** aggregate for the headline criterion; and **2** shipping artifacts
+  absent — `doc.go`, and the README's `keel-numbers` block. Stage 2 owns nine of
+  them, stage 3 six, stage 1's one-liners the lint pair, and #22's campaign the
+  four race lines.
   The judgement calls are in the script's header at length; the ones that shape
   the phase:
   - The ≥6× floor is judged on `Sgemm`, `Ssyrk` **and** `Ssymm` (one parallelism
