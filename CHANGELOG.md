@@ -282,11 +282,22 @@ While the major version is 0, minor versions may contain breaking changes.
   will check — version, `OPENBLAS_NUM_THREADS=1` read back from the library, and
   the selected kernel family against the gate's own allowlist. Separate from the
   gate on purpose: it needs interactive `sudo`, which the gate's `BatchMode=yes`
-  connection cannot answer and should not try to. It handles no credentials, and
-  it reports a non-`performance` governor rather than changing a machine's power
-  policy. The Go tarball's digest is enforced against `$KEEL_GO_SHA256` when set
-  and otherwise against `go.dev/dl?mode=json`, and it says which of the two it
-  did, since only the first is provenance. It distinguishes "no usable toolchain"
+  connection cannot answer and should not try to. It handles no credentials, and it
+  reports a non-`performance` governor rather than changing a machine's power
+  policy — but reports it as a **failure**, since the gate now refuses such a host
+  outright (issue #31): a machine whose library and toolchain are fine and whose
+  governor is wrong is provisioned-and-unmeasurable, and finding that out here is
+  cheaper than finding it out in a gate run. The Go tarball's digest is enforced
+  against `$KEEL_GO_SHA256` when set and otherwise against `go.dev/dl?mode=json`,
+  and it says which of the two it did, since only the first is provenance. That
+  fallback lookup had never once run (issue #29): go.dev serves pretty-printed
+  JSON, so splitting the objects on `{` alone left each object's fields on separate
+  lines and the line-oriented `grep` matched only the `"filename"` line, never the
+  neighbouring `"sha256"`. The expected digest was therefore empty for every
+  version ever requested. It failed closed, so nothing unverified was ever
+  installed — but `install_go` could not complete without `$KEEL_GO_SHA256`, which
+  is why the check's silence went unnoticed: the visible symptom was a refusal, not
+  a pass. It distinguishes "no usable toolchain"
   from "usable toolchain, not on the PATH the gate uses" and links the latter rather
   than deleting it (issue #27): probing only the ssh `PATH` would have had it
   `sudo rm -rf` a working go1.26.5 on antares to reinstall the same version, and the
@@ -449,6 +460,33 @@ While the major version is 0, minor versions may contain breaking changes.
     itself with no expiry clause as the lowering improves. vesta and antares
     classify FMA-bound and face the unmodified criterion. Both ratios are printed
     on every host: §7 rule 7 applies to the gate's own arithmetic too.
+  - **The reference is the fastest *measured* OpenBLAS on that host, chosen by a
+    coretype sweep** (ruling on issue #31), not whatever `DYNAMIC_ARCH` selected.
+    The gate forces `OPENBLAS_CORETYPE` through {default, Zen, Haswell, SkylakeX,
+    Cooperlake, SapphireRapids}, records every candidate's achieved corename and
+    GFLOP/s, pins the winner for the run that produces the ratio, and *verifies*
+    the pin took by comparing the library's own `corename` in the measured run
+    against the sweep's. The allowlist is now the floor ("modern enough"), the
+    sweep the ceiling ("best this silicon can do"). `DYNAMIC_ARCH` dispatches on an
+    ISA feature bit, so on vesta's Zen 4 it ships the full-width Cooperlake kernel
+    onto a double-pumped 256-bit datapath: 149.5 GFLOP/s where the AVX2 Haswell
+    kernel measures 159.5, a 6.7% understated denominator — keel's own issue #24
+    with the vendors reversed, which the allowlist structurally cannot catch
+    because it contains both the right and the wrong answer for every gate host.
+    Selection is best-of-N; the number that enters the record is still measured
+    under the full §5.4 methodology with the winner pinned. antares and janus
+    default correctly (Cooperlake 297.2, SkylakeX 193.5) and the sweep confirms it
+    by measurement rather than by assumption.
+  - **The performance governor is asserted on every host in a preamble, not
+    assumed** (same ruling). Anything but `performance` fails that host before a
+    benchmark runs, and an unreadable governor fails too: an unchecked
+    precondition is not a met one. It is then re-read at measurement time, so a
+    governor that changed after the preamble fails that host rather than passing
+    on a stale check. This replaces a tally that any single host could satisfy —
+    "at least one host cleared the bar under the performance governor" — which let
+    antares contribute numbers from `powersave`, where the first reading of its
+    sweep was 245.0 GFLOP/s against a 296–297 steady state: an 18% error in a
+    denominator, decided by how recently the core had been busy.
   It also carries P2 forward: the spill/call/bounds-check audit re-runs on every
   gate from here on, because packing and edge handling are exactly what would
   break those properties, and P2's throughput floor is re-checked on a sentinel

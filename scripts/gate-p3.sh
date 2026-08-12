@@ -162,6 +162,18 @@
 #         direction in which a gate must never fail. So the selected kernel name
 #         must be an AVX2-or-better target, and an unrecognized name fails too:
 #         missing knowledge should cost a human a minute, not silently widen a bar.
+#       - and the family is not merely allowed, it is CHOSEN BY MEASUREMENT
+#         (ruling on issue #31). The reference is the fastest of a coretype sweep
+#         forced through OPENBLAS_CORETYPE, best-of-N under this gate's own
+#         methodology, pinned for the run that produces the ratio, with every
+#         candidate's rate printed and the pin verified from the library's reported
+#         corename. The allowlist is the floor; the sweep is the ceiling. It exists
+#         because DYNAMIC_ARCH dispatches on an ISA feature bit: on vesta's Zen 4
+#         it ships a full-width Cooperlake kernel onto a double-pumped 256-bit
+#         datapath, where the AVX2 Haswell kernel is 6.7% faster — keel's own #24
+#         bug with the vendors reversed. Trusting that selector would delegate the
+#         denominator's one inviolable property to a heuristic this project has
+#         measured to be wrong on one of its three hosts.
 #       - a host needs a Go toolchain and OpenBLAS for that, and the execution
 #         hosts deliberately have neither (docs/hosts.md: cross-compiled static
 #         binaries, nothing installed). Provisioning is Scott's to approve, so a
@@ -172,8 +184,16 @@
 #         satisfy a gate criterion would be weakening the gate, which is the one
 #         option never available.
 #
-#     EVERY gate host must produce a reference and clear the bar, and at least one
-#     must clear it under the performance governor (DESIGN.md §5.4 rule 5). Percent
+#     EVERY gate host must produce a reference and clear the bar, and every host
+#     must be on the performance governor to be measured at all — asserted in a
+#     preamble before any benchmark runs, not assumed and not noted afterwards
+#     (DESIGN.md §5.4 rule 5, tightened by the ruling with #31). The old wording
+#     here was "at least one must clear it under the performance governor", which
+#     let antares contribute numbers from `powersave`: its first OpenBLAS reading
+#     of the sweep was 245.0 GFLOP/s against a 296-297 steady state, i.e. an 18%
+#     error in a denominator, decided by how recently the core had been busy. An
+#     unreadable governor fails too, on the same principle as the unrecognized
+#     kernel name: an unchecked precondition is not a met one. Percent
 #     of measured peak is printed for every host either way, because that number is
 #     informative even where it is not a criterion — and so is RETENTION, the share
 #     of its own microkernel the blocked loop nest keeps, printed on the same
@@ -297,6 +317,30 @@ OPENBLAS_REMOTE_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 # legitimate target name failing here costs whoever sees it one line of diff.
 OPENBLAS_OK_CORES="haswell skylakex cooperlake sapphirerapids zen"
 
+# The coretype candidates the reference is swept over, and the reason the sweep
+# exists at all (ruling on issue #31).
+#
+# The denominator is the FASTEST MEASURED same-host OpenBLAS across these, not
+# whatever DYNAMIC_ARCH selected at load time. Measured on the three gate hosts:
+# on vesta's Zen 4, DYNAMIC_ARCH picks an Intel-tuned Cooperlake kernel and the
+# AVX2 Haswell kernel is 6.7% faster (159.5 vs 149.5 GFLOP/s), because Zen 4
+# double-pumps AVX-512 through a 256-bit datapath. That is the same physics that
+# makes keel dispatch 2x32 on an issue-bound host: upstream's dispatch consults an
+# ISA feature bit, ours classifies the machine. Their heuristic is wrong on one of
+# our three hosts, and a reference chosen by it is a denominator that flatters keel
+# — the one property this denominator must never have.
+#
+# The allowlist above keeps its narrowed job (reject an ancient family: the FLOOR).
+# The sweep supplies the CEILING. Neither substitutes for the other: an allowlist
+# cannot tell "correct for this silicon" from "merely modern", and this one contains
+# both the right and the wrong answer for every host here.
+#
+# A superset of the ruled set {default, Zen, Haswell, SkylakeX-where-valid}, because
+# adding candidates can only raise the ceiling and never lower it, and because
+# "where valid" is established by RUNNING each candidate rather than by consulting a
+# table: one that cannot execute here is recorded as unavailable, not assumed absent.
+OPENBLAS_CORETYPES="default Zen Haswell SkylakeX Cooperlake SapphireRapids"
+
 # sentinel_hosts prints the hosts the P2 throughput regression re-runs on:
 # whatever is configured, else every host (criterion 5).
 sentinel_hosts() {
@@ -404,6 +448,46 @@ ob_provision_help() {
   info "  [$1] scripts/provision-openblas.sh does both, with sudo prompts the gate cannot answer"
 }
 
+# ob_coretype_sweep HOST — the reference's ceiling, measured (issue #31).
+#
+# Prints one line per candidate: "requested achieved GFLOP/s". A candidate that
+# cannot run here reports "- -": forcing a coretype the silicon cannot execute kills
+# the harness, and that is a valid answer about this host rather than an error in the
+# gate. A candidate that silently falls back reports the family it actually got, so
+# the achieved name — never the requested one — is what gets compared and pinned.
+#
+# The rate is the best of $KEEL_BENCH_COUNT readings at the same -benchtime as every
+# other number here, so the winner is chosen under the ratified methodology and not
+# by a quick probe. Best-of-N rather than a median because this picks a candidate
+# rather than reporting a result; the number that enters the record is measured again
+# below, under full methodology, with the winner pinned.
+#
+# KEEL_SCP_OPTS, not KEEL_SSH_OPTS: the latter carries -n, and the script arrives on
+# stdin. $BFLAGS is expanded at call time, by which point the methodology flags are
+# set — this function is defined before them and must not capture them early.
+ob_coretype_sweep() {
+  local host="$1"
+  # shellcheck disable=SC2087  # unquoted EOF on purpose: the candidate list, the
+  # remote dir, the benchmark name and $BFLAGS are this gate's own values and must
+  # expand here. Everything the remote shell owns is escaped as \$.
+  ssh "${KEEL_SCP_OPTS[@]}" "$host" 'bash -s' 2>/dev/null <<EOF
+cd '$OPENBLAS_REMOTE_DIR' || exit 1
+for ct in $OPENBLAS_CORETYPES; do
+  if [ "\$ct" = default ]; then unset OPENBLAS_CORETYPE; else export OPENBLAS_CORETYPE="\$ct"; fi
+  out="\$(env GOMAXPROCS=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 ./bench-ob.test \
+    -test.run=NONE -test.bench='$GATE_OPENBLAS' $(printf '%s ' "${BFLAGS[@]}") 2>&1)" || {
+    printf '%s - -\n' "\$ct"
+    continue
+  }
+  core="\$(printf '%s\n' "\$out" | sed -n 's/.*corename=\([^ ]*\).*/\1/p' | tail -1)"
+  best="\$(printf '%s\n' "\$out" |
+    awk '{ for (i = 1; i < NF; i++) if (\$(i + 1) == "GFLOP/s" && \$i + 0 > m) m = \$i + 0 }
+         END { if (m > 0) printf "%.2f", m }')"
+  printf '%s %s %s\n' "\$ct" "\${core:--}" "\${best:--}"
+done
+EOF
+}
+
 echo "== gate-p3: packing + blocking -> full Sgemm =="
 echo
 
@@ -456,6 +540,38 @@ else
 fi
 
 HOSTS="$(remote_hosts)"
+
+# ---- the measurement precondition, asserted rather than assumed (ruling with #31)
+#
+# DESIGN.md §5.4 rule 5 asks for the performance governor. Until this ruling the gate
+# READ scaling_governor and used it only to label criterion 6's pass line, so a host
+# on `powersave` still contributed numbers to the record. antares did exactly that:
+# its first OpenBLAS reading was 245.0 GFLOP/s against a 296-297 GFLOP/s steady
+# state — a ramping-core artifact, indistinguishable in a log from a slow machine,
+# and precisely what rule 5 exists to exclude.
+#
+# Now every host must be on `performance` or the gate is red. This is the same move
+# as reading `threads=` back out of the library instead of trusting the environment
+# that was passed to it: a precondition that is not checked is a precondition that
+# drifts, and it drifts silently in whichever direction the machine happens to be
+# configured. Unreadable counts as unmet — an unverified precondition is not a met
+# one, and "unknown" is the answer a missing cpufreq sysfs gives on a VM.
+if [[ -n "$HOSTS" ]]; then
+  while read -r host; do
+    [[ -n "$host" ]] || continue
+    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
+    if [[ "$hgov" == performance ]]; then
+      pass "[$host] cpufreq governor is performance (§5.4 rule 5)"
+    elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
+      fail "[$host] scaling_governor is unreadable, so §5.4 rule 5 cannot be verified; an unchecked precondition is not a met one"
+    else
+      fail "[$host] cpufreq governor is '$hgov', not performance (§5.4 rule 5): a ramping core produces cold readings that enter the record as measurements"
+      info "  [$host] sudo cpupower frequency-set -g performance"
+      info "  [$host] or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+    fi
+  done <<<"$HOSTS"
+fi
+
 AVX512_GREEN=""
 SCALAR_FORCED=""
 if [[ -z "$HOSTS" ]]; then
@@ -1014,7 +1130,6 @@ fi
 # and it says so per host instead of one host standing in for three.
 OB_CLEARED=0
 OB_MEASURED=0
-OB_PERF_GOV=""
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   fail "no execution hosts, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute)"
@@ -1029,6 +1144,16 @@ else
     obgo="$(field go "$pre")"
     oblib="$(field lib "$pre")"
     info "[$host] governor=${gov:-unknown} distro=${obdistro:-unknown} go=${obgo:-none} libopenblas=${oblib:-none}"
+    # Re-read, and re-checked, because the preamble's assertion has to hold at the
+    # moment of measurement and not merely at the start of the gate. A governor that
+    # changed in between belongs to a machine somebody started using, and the reading
+    # it produces is not one §5.4 rule 5 covers. This replaces the old
+    # "at least one host cleared the bar under the performance governor" tally, which
+    # was satisfied by any single host and therefore said nothing about this one.
+    if [[ "$gov" != performance ]]; then
+      fail "[$host] governor is '${gov:-unknown}' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5.4 rule 5"
+      continue
+    fi
     if [[ "$obgo" == none || -z "$obgo" || "$oblib" == none || -z "$oblib" ]]; then
       MISS=""
       [[ "$obgo"  == none || -z "$obgo"  ]] && MISS="a Go toolchain"
@@ -1056,11 +1181,45 @@ else
       sed 's/^/        /' "$LOG" | tail -30
       continue
     fi
+    # ---- the reference's ceiling, established before the run that counts (#31).
+    # Every candidate is recorded, not just the winner: a provenance block that names
+    # only the family used cannot be checked against the one that was rejected, and
+    # the margin over DYNAMIC_ARCH's own choice is the part a reader needs in order
+    # to know whether upstream's selector was wrong here.
+    SWEEP="$(ob_coretype_sweep "$host")"
+    if [[ -z "$SWEEP" ]]; then
+      fail "[$host] the coretype sweep produced nothing, so the reference's ceiling is unmeasured and the denominator would be whatever DYNAMIC_ARCH happened to pick"
+      continue
+    fi
+    info "[$host] coretype sweep, best of $KEEL_BENCH_COUNT at -benchtime=$KEEL_BENCH_TIME:"
+    while read -r cq cach cgf; do
+      [[ -n "$cq" ]] || continue
+      if [[ "$cgf" == "-" ]]; then
+        info "  [$host] OPENBLAS_CORETYPE=$cq: unavailable on this host"
+      else
+        info "  [$host] OPENBLAS_CORETYPE=$cq -> corename=$cach, $cgf GFLOP/s"
+      fi
+    done <<<"$SWEEP"
+    read -r OBCT OBCT_CORE OBCT_RATE <<<"$(awk '$3 != "-" && $3 + 0 > m { m = $3 + 0; best = $0 } END { print best }' <<<"$SWEEP")"
+    if [[ -z "${OBCT:-}" || "${OBCT_RATE:--}" == "-" ]]; then
+      fail "[$host] no candidate coretype produced a rate, so the reference cannot be pinned to its best family and its ceiling is unmeasured"
+      continue
+    fi
+    OBDEF_RATE="$(awk '$1 == "default" && $3 != "-" { print $3 }' <<<"$SWEEP")"
+    if [[ -n "$OBDEF_RATE" ]]; then
+      info "[$host] reference pinned to OPENBLAS_CORETYPE=$OBCT (corename=$OBCT_CORE, $OBCT_RATE GFLOP/s), $(awk -v w="$OBCT_RATE" -v d="$OBDEF_RATE" 'BEGIN{printf "%+.1f%%", (w / d - 1) * 100}') against DYNAMIC_ARCH's own choice ($OBDEF_RATE GFLOP/s)"
+    else
+      info "[$host] reference pinned to OPENBLAS_CORETYPE=$OBCT (corename=$OBCT_CORE, $OBCT_RATE GFLOP/s); the default selection produced no rate to compare it against"
+    fi
     OBARGS=""
     for a in "${BFLAGS[@]}" "-test.bench=$SGEMM_BENCH_FILTER"; do OBARGS+=" $(printf '%q' "$a")"; done
+    OBENV=(GOMAXPROCS=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1)
+    # Pinned only when the sweep chose something other than what the library picks
+    # unaided, so the common case runs exactly the command it always did.
+    [[ "$OBCT" != default ]] && OBENV+=("OPENBLAS_CORETYPE=$OBCT")
     # shellcheck disable=SC2029  # client-side expansion of a client-side path
     if ! ssh "${KEEL_SSH_OPTS[@]}" "$host" \
-         "cd '$OPENBLAS_REMOTE_DIR' && env GOMAXPROCS=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 ./bench-ob.test$OBARGS" >"$BENCHLOG" 2>&1; then
+         "cd '$OPENBLAS_REMOTE_DIR' && env ${OBENV[*]} ./bench-ob.test$OBARGS" >"$BENCHLOG" 2>&1; then
       fail "[$host] the openblas-tagged benchmark run failed"
       sed 's/^/        /' "$BENCHLOG" | tail -30
       continue
@@ -1095,7 +1254,15 @@ else
       info "  [$host] if '$obcore' is a legitimate AVX2-or-better target, add it to OPENBLAS_OK_CORES in this script; if it is a generic build, the distro package needs replacing"
       continue
     fi
-    info "[$host] reference kernel family: $obcore (on the AVX2-or-better allowlist)"
+    # The pin has to be verified, not trusted: OPENBLAS_CORETYPE is honoured by the
+    # library, not by us, and a pin that silently did not take would divide keel by a
+    # slower reference than the one this gate chose and reported — the flattering
+    # direction, arrived at through a line of output claiming otherwise.
+    if [[ "$obcore" != "$(tr '[:upper:]' '[:lower:]' <<<"$OBCT_CORE")" ]]; then
+      fail "[$host] the coretype pin did not take: the sweep chose corename=$OBCT_CORE (OPENBLAS_CORETYPE=$OBCT) but the measured run reports corename=$obcore, so the number keel is about to be divided by is not the reference that was selected"
+      continue
+    fi
+    info "[$host] reference kernel family: $obcore (on the AVX2-or-better allowlist, and the sweep's winner as pinned)"
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
     if [[ -z "$(bench_stat "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)" ]]; then
@@ -1158,7 +1325,6 @@ else
     if awk -v r="$alo" -v f="$OPENBLAS_FLOOR" 'BEGIN{exit !(r >= f)}'; then
       pass "[$host] Sgemm at 2048^3 is ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (>= 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
       OB_CLEARED=$((OB_CLEARED + 1))
-      [[ "$gov" == "performance" ]] && OB_PERF_GOV="$host"
     else
       fail "[$host] Sgemm at 2048^3 is only ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (< 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
     fi
@@ -1169,11 +1335,6 @@ else
     pass "every gate host cleared 60% of its own single-thread OpenBLAS ($OB_CLEARED/$NHOSTS)"
   else
     fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar; ruling #23 asks every host to clear its own reference"
-  fi
-  if [[ -n "$OB_PERF_GOV" ]]; then
-    pass "the OpenBLAS bar was cleared under the performance governor ($OB_PERF_GOV)"
-  else
-    fail "no host cleared the OpenBLAS bar under the performance governor (§5.4 rule 5 requires one)"
   fi
 fi
 

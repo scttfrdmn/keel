@@ -345,10 +345,24 @@ while read -r -u 3 host; do
   atver="$(fieldof goat "$p")"
   lib="$(fieldof lib "$p")";       gov="$(fieldof governor "$p")"
   note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib governor=$gov"
+  # A non-performance governor is now a failure, not a note (ruling with issue #31).
+  # It used to say "§5.4 rule 5 needs at least one gate host on performance", which
+  # was true of the old gate and let antares sit on `powersave` while contributing
+  # numbers: its first OpenBLAS reading was 245.0 GFLOP/s against a 296-297 steady
+  # state. gate-p3.sh now fails any host that is not on performance, so a host in
+  # that state is not provisioned-and-ready, it is provisioned-and-unusable — and
+  # this script exists to find that out before a session is spent on it.
+  #
+  # Still reported rather than changed: a power policy is a standing property of
+  # somebody's machine, not a thing a provisioning script should quietly flip and
+  # leave flipped.
+  GOV_OK=1
   if [[ "$gov" != performance ]]; then
-    note "governor is $gov. DESIGN.md §5.4 rule 5 needs at least one gate host on"
-    note "performance; this script does not change a machine's power policy. To set it:"
-    note "  sudo cpupower frequency-set -g performance   (or write scaling_governor)"
+    GOV_OK=0
+    bad "governor is $gov, and the gate fails any host not on performance (DESIGN.md §5.4 rule 5)"
+    note "this script does not change a machine's power policy. To set it:"
+    note "  sudo cpupower frequency-set -g performance"
+    note "  or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
   fi
 
   if [[ "$lib" == none ]]; then
@@ -374,6 +388,15 @@ while read -r -u 3 host; do
     fi
   fi
   verify "$host" || RC=1
+  # After verify(), so that a host whose library and toolchain are fine but whose
+  # governor is wrong ends on the reason it still cannot be measured, rather than on
+  # "ready". The installs above are not skipped for it: the package work is valid and
+  # worth keeping, and re-running once the governor is set should have nothing left
+  # to do but re-verify.
+  if [[ "$GOV_OK" -eq 0 ]]; then
+    bad "$host is provisioned but not measurable: governor=$gov, not performance"
+    RC=1
+  fi
 done 3<<<"$HOSTS"
 
 echo
