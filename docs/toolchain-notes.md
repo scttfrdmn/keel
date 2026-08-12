@@ -21,6 +21,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | The assembler encodes `vfmadd231ps mem{1to16}` and the intrinsic layer cannot reach it: no 231 SSA op, the load-merge rule folds memory into the addend, and nothing emits `.BCST` | [T12](#t12) | filed: [golang/go#80829](https://github.com/golang/go/issues/80829) (#20) |
 | 2026-08-11 | go1.26.5 | `import "C"` in a `_test.go` file is rejected outright — a benchmark cannot call C directly, so a reference harness needs a package file | [T13](#t13) | none — long-standing, not simd |
 | 2026-08-11 | go1.26.5 | `archsimd` exposes CPU *features* and nothing else: no vendor, family, model or name, and `internal/cpu` discards the signature word. Per-µarch kernel selection has to fingerprint a feature bundle | [T14](#t14) | candidate (#25) |
+| 2026-08-11 | go1.26.5 | `-bench` splits on top-level `\|` **before** `/`, so `A\|B/c` is `{A}` or `{B,c}` — not `{A,B}` then `{c}`. A gate filter silently ran neither the benchmark it named nor only the ones it named | [T15](#t15) | none — documented behavior |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -978,3 +979,76 @@ is a pure-Go experiment and P2's ruling was explicit that assembly is not a
 unilateral move. Both are recorded in #25 as the shapes an upstream fix would make
 unnecessary: one exported accessor for the signature word, or a documented
 `archsimd` µarch enum, removes the fingerprint entirely.
+
+---
+
+## T15 — `-bench` splits on top-level `|` before `/`, so an alternation of paths is not what it reads as
+
+**Observation.** `go test -bench` patterns are not one regexp matched against the
+full benchmark name. `testing.splitRegexp` splits the pattern on **top-level `|`
+first**, producing an *alternation of whole patterns*, and only then splits each
+alternative on `/` into per-depth elements. So
+
+```
+Peak|Sgemm|OpenBLAS/avx512|n=2048
+```
+
+is four independent alternatives — `{Peak}`, `{Sgemm}`, `{OpenBLAS, avx512}`,
+`{n=2048}` — and not the two-level filter `{Peak,Sgemm,OpenBLAS}` then
+`{avx512,n=2048}` that it reads as. Two things follow, in opposite directions:
+
+- an alternative with **fewer** elements than the name is depth-unconstrained, so
+  `Peak` runs every `Peak/*` sub-benchmark;
+- an alternative with **more** elements than any real name matches *nothing*, but
+  matches the parent **partially** — `simpleMatch.matches` returns
+  `ok=true, partial=true` when `len(name) < len(m)` — so the parent benchmark is
+  entered and every child is then rejected.
+
+The second is the dangerous one: the parent runs its `init`-time output and no
+sub-benchmark result appears, which looks exactly like a benchmark that was
+present but produced nothing.
+
+**Repro.** Any package with two-level sub-benchmarks; here keel's `bench/`, whose
+top-level names are `Peak` (children `avx512`, `avx2`, `scalar`), `Sgemm` and
+`OpenBLAS` (children `n=256…2048`). Run on janus (linux/amd64); nothing here is
+architecture-dependent.
+
+```
+$ B="./bench-ob.test -test.run=NONE -test.count=1 -test.benchtime=1x"
+
+$ $B -test.bench='Peak|Sgemm|OpenBLAS/avx512|n=2048' | grep -c '^BenchmarkOpenBLAS'
+0                                    # the OpenBLAS alternative can never match
+$ $B -test.bench='Peak|Sgemm|OpenBLAS/avx512|n=2048' | grep -c '^BenchmarkSgemm'
+4                                    # ...and the Sgemm alternative is unconstrained
+
+$ $B -test.bench='Peak|Sgemm|OpenBLAS/n=2048' | grep -c '^BenchmarkOpenBLAS'
+1                                    # moving the '/' into the right alternative fixes that one
+$ $B -test.bench='Peak|Sgemm|OpenBLAS/n=2048' | grep -c '^BenchmarkSgemm'
+4                                    # but not the other
+
+$ $B -test.bench='(Peak|Sgemm|OpenBLAS)/(avx512|n=2048)' | grep '^Benchmark' | cut -d' ' -f1
+BenchmarkSgemm/n=2048-32
+BenchmarkOpenBLAS/n=2048-32
+BenchmarkPeak/avx512-32              # exactly three, which is what was meant
+```
+
+The mechanism is `$GOROOT/src/testing/match.go`: `splitRegexp` tracks `[`/`]` and
+`(`/`)` nesting and splits `|` and `/` only at depth zero, so parentheses suppress
+both splits and turn the `|`s back into ordinary regexp alternation inside a
+two-element pattern.
+
+**Not a defect** — it is what the code says and what `go help testflag`'s "the
+regular expression is split by unbracketed slash characters" implies if read
+closely. Recorded because of the failure mode rather than the behavior: a shell
+variable holding a pattern like the one above reads as a two-level filter to
+everyone who reviews it, runs without error, and produces a benchmark log that is
+missing a row nobody asked twice about. In keel it meant the P3 gate's headline
+criterion — keel vs same-host OpenBLAS — never ran its denominator's benchmark,
+which stayed invisible for as long as the hosts had no OpenBLAS to fail on first
+(issue #32). It also cost every gate run three unread `Sgemm` sizes and two unread
+`Peak` variants at `-count=10 -benchtime=1s` per host.
+
+**Consequence for keel.** Gate filters are parenthesized, and `scripts/gate-p3.sh`
+now fails a host with a message that distinguishes "no reference on this host" from
+"the run produced no such row", because those two states had the same wording and
+only the second is a bug in the gate.

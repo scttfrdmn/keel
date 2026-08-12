@@ -327,6 +327,17 @@ While the major version is 0, minor versions may contain breaking changes.
   family/model, so on this toolchain keel has to fingerprint a feature bundle
   instead. Recorded before the workaround, with the two upstream shapes that would
   retire it.
+- `docs/toolchain-notes.md` T15 (issue #32): `go test -bench` splits a pattern on
+  top-level `|` **before** `/`, so `A|B/c` is the alternation `{A}` or `{B,c}` and
+  not the two-level filter `{A,B}` then `{c}` that it reads as. An alternative with
+  fewer elements than the name is depth-unconstrained, and one with more matches no
+  benchmark while still matching the *parent* partially — `simpleMatch.matches`
+  returns `ok, partial = true, true` when `len(name) < len(m)` — so the parent is
+  entered, prints its `init` output, and yields no result row. Not a compiler bug
+  and not simd-specific; recorded for the failure mode, which is a filter that reads
+  correctly to every reviewer, runs without error, and silently measures something
+  other than what it names. Parentheses suppress both splits, which is the fix.
+  Repro on janus, plus the audit of every filter in the repo.
 
 ### Changed
 - **`Sgemm` selects its microkernel shape per host instead of taking the registry's
@@ -487,6 +498,35 @@ While the major version is 0, minor versions may contain breaking changes.
     antares contribute numbers from `powersave`, where the first reading of its
     sweep was 245.0 GFLOP/s against a 296–297 steady state: an 18% error in a
     denominator, decided by how recently the core had been busy.
+  - **`SGEMM_BENCH_FILTER` never ran the OpenBLAS benchmark** (issue #32,
+    `docs/toolchain-notes.md` T15), found by the first gate run that could reach
+    criterion 6. `go test -bench` splits a pattern on top-level `|` *first*, into
+    an alternation of whole patterns, and only then splits each alternative on
+    `/`. So `Peak|Sgemm|OpenBLAS/avx512|n=2048` was four alternatives — `{Peak}`,
+    `{Sgemm}`, `{OpenBLAS,avx512}`, `{n=2048}` — and not the two-level filter the
+    comment above it claimed. `{OpenBLAS,avx512}` cannot match anything, because
+    `BenchmarkOpenBLAS`'s children are `n=…`, so the reference's benchmark never
+    ran and criterion 6 had no denominator; `{Peak}` and `{Sgemm}` were
+    depth-unconstrained, so every gate run also paid for three `Sgemm` sizes and
+    two `Peak` variants it never reads. Now
+    `(Peak|Sgemm|OpenBLAS)/(avx512|n=2048)`, where the parentheses are
+    load-bearing: they suppress both splits and make the `|`s ordinary regexp
+    alternation inside one two-element pattern. The audit of every other filter in
+    the repo found no second instance. The failure message is also split in two,
+    because "no result row to divide by" and "no reference on this host" had the
+    same wording and only the first is a defect in the gate.
+  - **The coretype sweep read the theoretical-peak provenance line as a benchmark
+    rate** (issue #33), in the same run. Taking the maximum over every field
+    followed by `GFLOP/s` on every line picked up
+    `keel-bench-peak-formula: avx512: 368.9 GFLOP/s`, which is larger than any
+    real rate and identical across candidates: all six tied on every host, the
+    winner defaulted to whichever came first, and the sweep reported `+0.0%`
+    against `DYNAMIC_ARCH`'s own choice — the 6.7% finding it exists to enforce,
+    erased by its own parser. It now reads a rate only from a result row whose
+    benchmark name is exactly the one requested, and a run that produces no such
+    row fails the host as a gate defect instead of degrading to a number. With the
+    fix, the gate's own sweep reproduces the finding: vesta `default` → 149.4,
+    `Haswell` → **159.5**.
   It also carries P2 forward: the spill/call/bounds-check audit re-runs on every
   gate from here on, because packing and edge handling are exactly what would
   break those properties, and P2's throughput floor is re-checked on a sentinel

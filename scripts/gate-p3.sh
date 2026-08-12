@@ -295,10 +295,20 @@ OPENBLAS_FLOOR=0.60
 GATE_SGEMM="Sgemm/n=2048"
 GATE_OPENBLAS="OpenBLAS/n=2048"
 GATE_PEAK="Peak/avx512"
-# Exactly one '/' in the pattern, so `go test -bench` splits it into two depth
-# elements: {Peak,Sgemm,OpenBLAS} then {avx512,n=2048}. Written as one string
-# because those depth semantics bit gate-p2 once already (see its BENCH_FILTER).
-SGEMM_BENCH_FILTER='Peak|Sgemm|OpenBLAS/avx512|n=2048'
+# THE PARENTHESES ARE LOAD-BEARING (issue #32, docs/toolchain-notes.md T15).
+# `go test -bench` does not match one regexp against the full name: it splits on
+# top-level '|' FIRST, into an alternation of whole patterns, and only then splits
+# each alternative on '/'. So the previous value here —
+#   Peak|Sgemm|OpenBLAS/avx512|n=2048
+# — was four alternatives, {Peak}, {Sgemm}, {OpenBLAS,avx512}, {n=2048}, and not the
+# two-level filter its comment claimed. {OpenBLAS,avx512} can never match, because
+# BenchmarkOpenBLAS's children are n=..., so THE REFERENCE BENCHMARK NEVER RAN and
+# criterion 6 had no denominator to divide by; {Peak} and {Sgemm} were
+# depth-unconstrained, so the gate also paid for three Sgemm sizes and two Peak
+# variants it never reads. Parenthesized, the '|'s are ordinary regexp alternation
+# inside one two-element pattern, and this runs exactly the three benchmarks the
+# gate reads: Peak/avx512, Sgemm/n=2048, OpenBLAS/n=2048.
+SGEMM_BENCH_FILTER='(Peak|Sgemm|OpenBLAS)/(avx512|n=2048)'
 # Criterion 5b's cross-check run: the blocked Sgemm only, with the shape pinned to
 # the other class. No Peak and no OpenBLAS, because what is wanted from it is one
 # rate to compare against the dispatched shape's rate — not a ratio.
@@ -455,6 +465,19 @@ ob_provision_help() {
 # the harness, and that is a valid answer about this host rather than an error in the
 # gate. A candidate that silently falls back reports the family it actually got, so
 # the achieved name — never the requested one — is what gets compared and pinned.
+# A candidate whose harness ran but produced no matching row reports `norow`, which
+# the caller fails on: that is a defect in this gate, not a property of the host.
+#
+# The rate is read ONLY from a benchmark result row whose name is exactly the one
+# requested (issue #33). The first version took the maximum over every field followed
+# by "GFLOP/s" on every line, which silently picked up
+#   keel-bench-peak-formula: avx512: 368.9 GFLOP/s (5.76 GHz x 2 FMA ports x 16 lanes)
+# — a theoretical peak, larger than any real rate, identical across candidates. All
+# six candidates then tied on every host, the winner was whichever came first
+# (`default`), and the sweep reported +0.0% against DYNAMIC_ARCH's own choice: the
+# 6.7% finding this function exists to enforce, erased by its own parser. Requiring
+# the row name closes the neighbouring hole too, where a filter runs more benchmarks
+# than intended (issue #32) and a different benchmark's rate is in reach.
 #
 # The rate is the best of $KEEL_BENCH_COUNT readings at the same -benchtime as every
 # other number here, so the winner is chosen under the ratified methodology and not
@@ -480,10 +503,17 @@ for ct in $OPENBLAS_CORETYPES; do
     continue
   }
   core="\$(printf '%s\n' "\$out" | sed -n 's/.*corename=\([^ ]*\).*/\1/p' | tail -1)"
-  best="\$(printf '%s\n' "\$out" |
-    awk '{ for (i = 1; i < NF; i++) if (\$(i + 1) == "GFLOP/s" && \$i + 0 > m) m = \$i + 0 }
-         END { if (m > 0) printf "%.2f", m }')"
-  printf '%s %s %s\n' "\$ct" "\${core:--}" "\${best:--}"
+  best="\$(printf '%s\n' "\$out" | awk -v want='$GATE_OPENBLAS' '
+    \$1 !~ /^Benchmark/ { next }
+    {
+      n = \$1
+      sub(/-[0-9]+\$/, "", n)
+      sub(/^Benchmark/, "", n)
+      if (n != want) next
+      for (i = 2; i < NF; i++) if (\$(i + 1) == "GFLOP/s" && \$i + 0 > m) m = \$i + 0
+    }
+    END { if (m > 0) printf "%.2f", m }')"
+  printf '%s %s %s\n' "\$ct" "\${core:--}" "\${best:-norow}"
 done
 EOF
 }
@@ -1192,14 +1222,25 @@ else
       continue
     fi
     info "[$host] coretype sweep, best of $KEEL_BENCH_COUNT at -benchtime=$KEEL_BENCH_TIME:"
+    SWEEP_NOROW=0
     while read -r cq cach cgf; do
       [[ -n "$cq" ]] || continue
       if [[ "$cgf" == "-" ]]; then
         info "  [$host] OPENBLAS_CORETYPE=$cq: unavailable on this host"
+      elif [[ "$cgf" == norow ]]; then
+        SWEEP_NOROW=1
+        bad_row="$cq"
       else
         info "  [$host] OPENBLAS_CORETYPE=$cq -> corename=$cach, $cgf GFLOP/s"
       fi
     done <<<"$SWEEP"
+    # A harness that ran and produced no $GATE_OPENBLAS row is this gate misreading
+    # its own output or misnaming its own benchmark, and #33 is what that looks like
+    # when it is allowed to degrade into a number instead of a failure.
+    if [[ "$SWEEP_NOROW" -eq 1 ]]; then
+      fail "[$host] the sweep ran the harness for OPENBLAS_CORETYPE=$bad_row and it produced no $GATE_OPENBLAS result row: that is a defect in this gate's filter or parser, not a property of the host"
+      continue
+    fi
     read -r OBCT OBCT_CORE OBCT_RATE <<<"$(awk '$3 != "-" && $3 + 0 > m { m = $3 + 0; best = $0 } END { print best }' <<<"$SWEEP")"
     if [[ -z "${OBCT:-}" || "${OBCT_RATE:--}" == "-" ]]; then
       fail "[$host] no candidate coretype produced a rate, so the reference cannot be pinned to its best family and its ceiling is unmeasured"
@@ -1266,7 +1307,13 @@ else
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
     if [[ -z "$(bench_stat "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)" ]]; then
-      fail "[$host] no $GATE_OPENBLAS benchmark result to divide by"
+      # Two very different states used to share this one sentence, and only one of
+      # them is a missing reference (#32). The library is present and reported itself
+      # a few lines above, so if the row is absent the run did not produce it — a
+      # gate defect. Say which, and print the names that did come back, because
+      # "the filter ran something else" is what that looks like from here.
+      fail "[$host] the benchmark run produced no $GATE_OPENBLAS result row, although this host's OpenBLAS built, ran and reported itself above: the reference is present, so this is a defect in what the gate asked to be run rather than a missing reference"
+      info "  [$host] -test.bench=$SGEMM_BENCH_FILTER returned: $(awk -F, '/^Benchmark/ { n = $1; sub(/-[0-9]+$/, "", n); print n }' "$BENCHCSV" | sort -u | tr '\n' ' ')"
       continue
     fi
     info "[$host] keel $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s) vs OpenBLAS $(bench_describe "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s), one invocation"
