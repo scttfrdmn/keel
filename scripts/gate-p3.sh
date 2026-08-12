@@ -1308,16 +1308,66 @@ else
       fail "[$host] the coretype sweep is non-discriminating: $SWEEP_FAMS distinct kernel families measured an identical rate, so it cannot rank them and any winner would be an artifact of candidate order — the instrument is broken rather than the families equal (issue #33)"
       continue
     fi
-    read -r OBCT OBCT_CORE OBCT_RATE <<<"$(awk '$3 != "-" && $3 + 0 > m { m = $3 + 0; best = $0 } END { print best }' <<<"$SWEEP")"
-    if [[ -z "${OBCT:-}" || "${OBCT_RATE:--}" == "-" ]]; then
-      fail "[$host] no candidate coretype produced a rate, so the reference cannot be pinned to its best family and its ceiling is unmeasured"
-      continue
-    fi
-    OBDEF_RATE="$(awk '$1 == "default" && $3 != "-" { print $3 }' <<<"$SWEEP")"
-    if [[ -n "$OBDEF_RATE" ]]; then
-      info "[$host] reference pinned to OPENBLAS_CORETYPE=$OBCT (corename=$OBCT_CORE, $OBCT_RATE GFLOP/s), $(awk -v w="$OBCT_RATE" -v d="$OBDEF_RATE" 'BEGIN{printf "%+.1f%%", (w / d - 1) * 100}') against DYNAMIC_ARCH's own choice ($OBDEF_RATE GFLOP/s)"
+    # ---- the pin is an intervention justified by a measured effect: no effect, no
+    # intervention (ruling on issue #35).
+    #
+    # Ranking every candidate by rate and pinning the maximum crowns noise on a host
+    # where no distinct family is actually faster. Across two full gate runs, janus's
+    # and antares's winning *request* moved (SapphireRapids, then default; then
+    # SapphireRapids, then Cooperlake) while the achieved *family* never did, with
+    # margins of 0.0-1.0% — and the sweep measures a same-family drift of about 0.5%
+    # itself, because two invocations of one kernel on one machine do not repeat
+    # exactly. A winner by a margin inside that drift is a winner by dice: #33's
+    # lesson relocated from the parser to the selection.
+    #
+    # So the question is not "which candidate was fastest" but "did a family the
+    # library did not already choose beat the one it did, by more than this sweep's
+    # own noise floor". If yes, pin it — that is what the #31 ruling exists for. If
+    # no, run the reference the way the library runs itself, UNPINNED, and record
+    # that as the finding. What reproduces on those hosts is the default family; the
+    # noise-ranked alias does not, and pinning it would encode false precision into
+    # the provenance line.
+    #
+    # The noise floor is measured, not assumed: the largest spread between candidates
+    # that landed on the same achieved corename. Same silicon, same kernel, different
+    # invocation — that is drift by construction. Hosts where no two candidates alias
+    # yield 0, which makes the test "strictly faster", the strict direction.
+    SWEEP_DRIFT="$(awk '
+      $3 == "-" || $3 == "norow" { next }
+      {
+        if (!($2 in hi) || $3 + 0 > hi[$2]) hi[$2] = $3 + 0
+        if (!($2 in lo) || $3 + 0 < lo[$2]) lo[$2] = $3 + 0
+      }
+      END { d = 0; for (f in hi) if (hi[f] - lo[f] > d) d = hi[f] - lo[f]; printf "%.2f", d }' <<<"$SWEEP")"
+    read -r OBDEF_CORE OBDEF_RATE <<<"$(awk '$1 == "default" && $3 != "-" && $3 != "norow" { print $2, $3 }' <<<"$SWEEP")"
+    # The best candidate from a family the default did NOT already select. Compared by
+    # achieved corename, so an alias of the default's own family is not a contender.
+    read -r XF_CT XF_CORE XF_RATE <<<"$(awk -v def="${OBDEF_CORE:-}" '
+      $3 == "-" || $3 == "norow" || $2 == def { next }
+      $3 + 0 > m { m = $3 + 0; best = $0 }
+      END { print best }' <<<"$SWEEP")"
+    if [[ -z "${OBDEF_RATE:-}" ]]; then
+      # No baseline, so "beats the default" is not a question that can be asked. Fall
+      # back to the fastest candidate and say which reading this is, rather than
+      # presenting it as a win over a comparison that never happened.
+      read -r OBCT OBCT_CORE OBCT_RATE <<<"$(awk '$3 != "-" && $3 != "norow" && $3 + 0 > m { m = $3 + 0; best = $0 } END { print best }' <<<"$SWEEP")"
+      if [[ -z "${OBCT:-}" ]]; then
+        fail "[$host] no candidate coretype produced a rate, so the reference cannot be pinned to its best family and its ceiling is unmeasured"
+        continue
+      fi
+      info "[$host] reference pinned to OPENBLAS_CORETYPE=$OBCT (corename=$OBCT_CORE, $OBCT_RATE GFLOP/s), the fastest candidate; the default selection produced no rate, so there is no baseline this can be called a win over"
+    elif [[ -n "${XF_RATE:-}" ]] &&
+         awk -v x="$XF_RATE" -v d="$OBDEF_RATE" -v n="$SWEEP_DRIFT" 'BEGIN{exit !(x - d > n)}'; then
+      OBCT="$XF_CT"; OBCT_CORE="$XF_CORE"; OBCT_RATE="$XF_RATE"
+      info "[$host] reference pinned to OPENBLAS_CORETYPE=$OBCT (corename=$OBCT_CORE, $OBCT_RATE GFLOP/s), $(awk -v w="$OBCT_RATE" -v d="$OBDEF_RATE" 'BEGIN{printf "%+.1f%%", (w / d - 1) * 100}') against DYNAMIC_ARCH's own choice (corename=$OBDEF_CORE, $OBDEF_RATE GFLOP/s): a cross-family win of $(awk -v w="$OBCT_RATE" -v d="$OBDEF_RATE" 'BEGIN{printf "%.2f", w - d}') GFLOP/s against this sweep's own measured same-family drift of $SWEEP_DRIFT"
     else
-      info "[$host] reference pinned to OPENBLAS_CORETYPE=$OBCT (corename=$OBCT_CORE, $OBCT_RATE GFLOP/s); the default selection produced no rate to compare it against"
+      OBCT=default; OBCT_CORE="$OBDEF_CORE"; OBCT_RATE="$OBDEF_RATE"
+      if [[ -n "${XF_RATE:-}" ]]; then
+        info "[$host] no cross-family winner beyond drift: the best family the library did not already choose is $XF_CORE (OPENBLAS_CORETYPE=$XF_CT) at $XF_RATE GFLOP/s against the default's $OBDEF_RATE, a difference of $(awk -v w="$XF_RATE" -v d="$OBDEF_RATE" 'BEGIN{printf "%+.2f", w - d}') GFLOP/s inside a measured same-family drift of $SWEEP_DRIFT"
+      else
+        info "[$host] no cross-family winner beyond drift: every candidate that produced a rate landed on the default's own $OBDEF_CORE"
+      fi
+      info "[$host] the reference therefore runs UNPINNED, the way the library runs itself (corename=$OBDEF_CORE, $OBDEF_RATE GFLOP/s) — the pin is an intervention justified by a measured effect, and there is none here (#35)"
     fi
     OBARGS=""
     for a in "${BFLAGS[@]}" "-test.bench=$SGEMM_BENCH_FILTER"; do OBARGS+=" $(printf '%q' "$a")"; done
@@ -1367,10 +1417,21 @@ else
     # slower reference than the one this gate chose and reported — the flattering
     # direction, arrived at through a line of output claiming otherwise.
     if [[ "$obcore" != "$(tr '[:upper:]' '[:lower:]' <<<"$OBCT_CORE")" ]]; then
-      fail "[$host] the coretype pin did not take: the sweep chose corename=$OBCT_CORE (OPENBLAS_CORETYPE=$OBCT) but the measured run reports corename=$obcore, so the number keel is about to be divided by is not the reference that was selected"
+      if [[ "$OBCT" == default ]]; then
+        # The unpinned case is still checked, and it is not a vacuous check: the sweep
+        # ran the default candidate too, so this compares two unpinned invocations and
+        # catches a library whose unaided choice is not stable across runs.
+        fail "[$host] the reference ran unpinned and selected corename=$obcore, but the sweep's own unpinned candidate selected corename=$OBCT_CORE: the library's unaided choice is not stable on this host, so the rate keel is about to be divided by is not the one the sweep measured"
+      else
+        fail "[$host] the coretype pin did not take: the sweep chose corename=$OBCT_CORE (OPENBLAS_CORETYPE=$OBCT) but the measured run reports corename=$obcore, so the number keel is about to be divided by is not the reference that was selected"
+      fi
       continue
     fi
-    info "[$host] reference kernel family: $obcore (on the AVX2-or-better allowlist, and the sweep's winner as pinned)"
+    if [[ "$OBCT" == default ]]; then
+      info "[$host] reference kernel family: $obcore (on the AVX2-or-better allowlist, unpinned and matching the sweep's unpinned candidate)"
+    else
+      info "[$host] reference kernel family: $obcore (on the AVX2-or-better allowlist, and the sweep's winner as pinned)"
+    fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
     # All three declared, not just the reference: criterion 6b reads the peak too, and

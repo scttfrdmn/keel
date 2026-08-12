@@ -548,6 +548,28 @@ While the major version is 0, minor versions may contain breaking changes.
     row fails the host as a gate defect instead of degrading to a number. With the
     fix, the gate's own sweep reproduces the finding: vesta `default` → 149.4,
     `Haswell` → **159.5**.
+  - **The coretype pin is an intervention justified by a measured effect: no
+    effect, no intervention** (ruling on issue #35). Pinning the fastest candidate
+    crowns noise on a host where no distinct family is actually faster. Across two
+    full gate runs, janus's and antares's winning *request* moved while the achieved
+    *family* never did, with margins of 0.0–1.0% against a same-family drift the
+    sweep measures at about 0.5% — a winner by a margin inside drift is a winner by
+    dice, which is #33's lesson relocated from the parser to the selection layer.
+    The sweep now asks whether a family the library did *not* already choose beats
+    the one it did by more than this sweep's own noise floor, measured as the largest
+    spread between candidates that landed on the same achieved corename. If it does,
+    the winner is pinned and the margin is reported against the drift it had to
+    clear; if it does not, the reference runs **unpinned**, the way the library runs
+    itself, and "no cross-family winner beyond drift" is the recorded finding. On
+    both hosts where this changes the outcome the decision is unanimous rather than
+    marginal: the best cross-family candidate is slower than the default outright
+    (janus Cooperlake 187.70 against SkylakeX 194.70; antares SkylakeX 298.10 against
+    Cooperlake 298.60), so the old winner was an alias of the default's own family
+    drawing a high sample. vesta's genuine cross-family win survives on both runs
+    and is still pinned: Haswell at +5.5% and +6.5% over `DYNAMIC_ARCH`'s Cooperlake,
+    against drifts of 1.20 and 0.40 GFLOP/s. The pin verification still runs in the
+    unpinned case, where it compares two unpinned invocations and so catches a
+    library whose unaided choice is not stable across runs.
   - **Absence is a first-class outcome in every criterion that reads a benchmark**
     (DESIGN.md §5 rule 6, new). `bench_expect` in `scripts/bench.sh` takes the
     benchmarks a criterion declares it will read and asserts a minimum row count
