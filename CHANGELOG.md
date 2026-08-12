@@ -464,6 +464,55 @@ While the major version is 0, minor versions may contain breaking changes.
   enforced by the gate that owns it — a second copy of "≥60% of OpenBLAS" in
   `gate-p4.sh` would be a number that can drift out of agreement with itself.
 
+- `scripts/gate-p5.sh`: P5's criteria, written before P5's code (CLAUDE.md), and red
+  in 22 places on the commit that adds them — every one of them "P5 has not been
+  built yet", plus three findings the gate produced on its first run and that are
+  now issues rather than drive-by fixes. The judgement calls are in the script's
+  header at length; the ones that shape the phase:
+  - The ≥6× floor is judged on `Sgemm`, `Ssyrk` **and** `Ssymm` (one parallelism
+    class) and measured-not-judged on `Strsm`, whose floor is deferred to that
+    measurement plus a stated model (#37). `STRSM_FLOOR` is left empty in the
+    script with a comment saying it may only be filled by a ratification recorded
+    in `DESIGN.md` — the deferral is mechanized, not remembered.
+  - Both rates come from **one** invocation with the thread count in the benchmark
+    name (`Scale/Sgemm/n=4096/threads=8`), because `-cpu=1,8` distinguishes rows
+    only by the `-N` suffix that `bench_stat` and `bench_expect` strip — benchstat
+    would aggregate the one- and eight-thread samples into a single row and the
+    gate would divide a mixture by itself and read 1.0×.
+  - The parallelism is checked rather than assumed: each row declares the
+    GOMAXPROCS it set and the workers the library used, and both must equal the
+    thread count in its own name. A threads=8 row that ran on one worker and a
+    threads=1 row that ran on eight both produce 1.0×, and both are measurement
+    failures dressed as performance failures.
+  - Flop counts are re-derived by the gate for all four routines
+    (`2mnk`, `kn(n+1)`, `2mnk`, `nm(m+1)`), formula string included, so the
+    numerator of a scaling ratio is verified rather than asserted.
+  - The README's published numbers are re-measured by the gate that ships them:
+    rows keyed by **CPU model** (never hostnames — `.keel-hosts` is gitignored
+    infrastructure), each carrying its denominator, each within 5% of this run; and
+    any `GFLOP/s` figure outside that block fails the gate outright.
+  - Bitwise determinism against the serial nest at threads 1, 3 and 8 — 3 because a
+    row-partition off-by-one hides at every power of two — since splitting the MC
+    loop reassociates nothing and a tolerance here would be hiding something.
+  - It runs `scripts/gate-p4.sh` (which runs `gate-p3.sh`, which carries P2's
+    audit) rather than restating any absolute bar. "≥6× single-thread" is a ratio
+    whose denominator this phase is chartered to *improve*; a parallel nest that
+    slowed the serial path would make the bar easier, and a bar that falls when the
+    code gets worse is not a bar.
+- `docs/toolchain-notes.md` T16 (issue #41): on arm64, whether `a*a + c` is
+  FMA-fused depends on whether the compiler **constant-folds** it first, and
+  `-race` defeats the folding — so one source line yields `0` in a plain build and
+  `2^-24` under `-race`, on the same machine and toolchain. Both readings are
+  spec-compliant. Found by `gate-p5.sh`'s race criterion, which is the first thing
+  in this project ever to run `-race` on the dev host: `internal/vec`'s
+  `TestSpecMulAddIsFused` computed its *unfused* witness as `a*a + c` and its own
+  vacuity guard fired rather than comparing the fused answer against itself. It had
+  been passing everywhere for a reason nobody had written down — on amd64 because
+  gc does not contract `x*y+z` there at all, and on arm64 only because the witness
+  was folded before code generation. The witness now writes `float32(a*a) + c`,
+  which forbids fusion by the spec's own rule: state the rounding you require
+  rather than inheriting whatever the optimizer chose.
+
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel
   loop nest, then the scaling gate** (`DESIGN.md` §4/P5, ruled 2026-08-12). #26
