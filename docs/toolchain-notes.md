@@ -22,6 +22,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | `import "C"` in a `_test.go` file is rejected outright — a benchmark cannot call C directly, so a reference harness needs a package file | [T13](#t13) | none — long-standing, not simd |
 | 2026-08-11 | go1.26.5 | `archsimd` exposes CPU *features* and nothing else: no vendor, family, model or name, and `internal/cpu` discards the signature word. Per-µarch kernel selection has to fingerprint a feature bundle | [T14](#t14) | candidate (#25) |
 | 2026-08-11 | go1.26.5 | `-bench` splits on top-level `\|` **before** `/`, so `A\|B/c` is `{A}` or `{B,c}` — not `{A,B}` then `{c}`. A gate filter silently ran neither the benchmark it named nor only the ones it named | [T15](#t15) | none — documented behavior |
+| 2026-08-12 | go1.26.5 | On arm64, whether `a*a + c` is FMA-fused depends on whether the compiler **constant-folds** it, and `-race` defeats the folding: the same source line yields `0` in a plain build and `2^-24` under `-race` | [T16](#t16) | none — not a defect |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -1052,3 +1053,86 @@ which stayed invisible for as long as the hosts had no OpenBLAS to fail on first
 now fails a host with a message that distinguishes "no reference on this host" from
 "the run produced no such row", because those two states had the same wording and
 only the second is a bug in the gate.
+
+## T16 — on arm64, whether `a*a + c` fuses depends on constant folding, and `-race` changes the answer
+
+**Observation.** The Go spec permits an implementation to fuse a floating-point
+multiply and add, and gc does so on arm64. What is not obvious is that gc's decision
+is not a property of the *expression* — it is a property of whether the expression
+survives to code generation at all. When the operands are compile-time constants the
+product is folded at compile time, with the spec's per-operation rounding, and the
+result is the **unfused** value. Add anything that defeats constant propagation —
+`-race` instrumentation, or a `//go:noinline` call — and the same source line is
+evaluated at run time by a single `FMADD`, giving the **fused** value.
+
+So one line yields two different float32 results in the same toolchain on the same
+machine, depending on a flag that is not about arithmetic.
+
+**Repro.** `go1.26.5 darwin/arm64`, no build tags, no experiment needed. The witness is
+keel's own: `a = 1+2^-12`, so `a*a = 1 + 2^-11 + 2^-24` exactly, which needs a 24th
+fractional bit float32 does not have and sits exactly halfway between neighbours.
+Unfused it rounds to `1+2^-11` (ties-to-even) and `+c` gives exactly `0`; fused it
+returns `2^-24 = 5.9604645e-08`.
+
+```go
+package fmarepro
+
+import (
+	"math"
+	"testing"
+)
+
+//go:noinline
+func opaque(f float32) float32 { return f }
+
+func TestFuse(t *testing.T) {
+	a := float32(1) + math.Float32frombits(0x39800000)  // 1 + 2^-12
+	c := -(float32(1) + math.Float32frombits(0x3A000000)) // -(1 + 2^-11)
+
+	t.Logf("constants:     a*a + c          = %v", a*a+c)
+	t.Logf("constants:     float32(a*a) + c = %v", float32(a*a)+c)
+
+	b, d := opaque(a), opaque(c)
+	t.Logf("through call:  b*b + d          = %v", b*b+d)
+	t.Logf("through call:  float32(b*b) + d = %v", float32(b*b)+d)
+}
+```
+
+```
+$ go test -count=1 -v -run TestFuse .
+    constants:     a*a + c          = 0                 # folded at compile time: unfused
+    constants:     float32(a*a) + c = 0
+    through call:  b*b + d          = 5.9604645e-08     # run-time FMADD: fused
+    through call:  float32(b*b) + d = 0
+
+$ go test -race -count=1 -v -run TestFuse .
+    constants:     a*a + c          = 5.9604645e-08     # -race defeats the folding: fused
+    constants:     float32(a*a) + c = 0
+    through call:  b*b + d          = 5.9604645e-08
+    through call:  float32(b*b) + d = 0
+```
+
+Three readings, one flag apart. `float32(a*a) + c` is `0` in every configuration: an
+explicit conversion of an operand to its own type is the spec's documented way to
+forbid fusion, and it is the only form here that means the same thing twice.
+
+**Not a defect.** Both results are spec-compliant — the language explicitly allows
+fusing and explicitly allows constant expressions to be evaluated with the rounding of
+each operation. It is recorded because of what it does to *tests*: an assertion whose
+premise is "this expression is not fused" is testing the optimizer's mood, and it will
+hold for a year and then fail on a flag that has nothing to do with floating point.
+amd64 hides it completely — gc does not contract `x*y+z` there, so an amd64-only CI
+would never see either reading change.
+
+**Consequence for keel.** `internal/vec.TestSpecMulAddIsFused` proves `ScalarMulAdd`
+rounds once, and it does that by comparing against an unfused witness computed as
+`a*a + c`. It carries a guard — "if the compiler or the platform changed such that the
+unfused route no longer differs, this test would pass vacuously and stop protecting
+anything" — and that guard is what found this: the test **failed loudly** under
+`gate-p5.sh`'s `-race` criterion on darwin/arm64 rather than quietly comparing the
+fused answer against itself. It had been passing everywhere else for a reason that was
+not the one anybody wrote down: on amd64 because gc does not fuse, and on arm64 without
+`-race` because the witness was folded before codegen. The witness now writes the
+rounding it wants (`float32(a*a) + c`) instead of hoping for it, which is the same
+correction T2 made to a different assumption: say what you require, do not infer it
+from what the compiler happened to emit. See issue #41.

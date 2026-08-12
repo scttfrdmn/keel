@@ -41,12 +41,20 @@ func TestSpecMulAddIsFused(t *testing.T) {
 	c := -(float32(1) + math.Float32frombits(bitsPow2Neg11))
 	wantFused := math.Float32frombits(bitsPow2Neg24)
 
+	// The conversion is not redundant: `a*a` is already float32, and writing
+	// `float32(a*a)` is the spec's documented way to *forbid* fusing this
+	// product into the following add. Without it, gc fuses on arm64 — but only
+	// when it does not constant-fold the expression first, so the same line gave
+	// 0 in a plain build and 2^-24 under -race, and this witness compared the
+	// fused answer against itself (docs/toolchain-notes.md T16, issue #41).
+	// State the rounding you require; do not inherit the optimizer's.
+	unfused := float32(a*a) + c
+
 	// Guard the witness itself: if the compiler or the platform changed such
 	// that the unfused route no longer differs, this test would pass
-	// vacuously and stop protecting anything.
-	unfused := a*a + c
+	// vacuously and stop protecting anything. This guard is what caught T16.
 	if unfused == wantFused {
-		t.Fatalf("witness is no longer discriminating: unfused a*a+c = %v, "+
+		t.Fatalf("witness is no longer discriminating: unfused float32(a*a)+c = %v, "+
 			"which already equals the fused answer %v", unfused, wantFused)
 	}
 
@@ -63,7 +71,7 @@ func TestSpecMulAddIsFused(t *testing.T) {
 			break
 		}
 	}
-	t.Logf("fused = %s, unfused a*a+c = %s (they must differ)",
+	t.Logf("fused = %s, unfused float32(a*a)+c = %s (they must differ)",
 		fmtF32(wantFused), fmtF32(unfused))
 }
 
