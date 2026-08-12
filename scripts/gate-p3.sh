@@ -66,6 +66,19 @@
 #     regression check because a file was absent would be a gate that got weaker
 #     when someone cloned the repo.
 #
+#     IF THIS CRITERION READS RED, THE POLICY IS IN DESIGN.md §4 AND IT IS ONE
+#     RE-RUN. The issue-bound roofline check is the tightest margin in this gate --
+#     two independent runs on janus read 95.0% and 93.7% against a 90% floor -- so a
+#     single dip is within the variance the bar was set above. Exactly one immediate
+#     re-run; the criterion fails only if both runs fail; both outputs go into the
+#     umbrella issue verbatim either way, so a pass on the second reading says so in
+#     the record. Not a loop, and not available to any correctness criterion above:
+#     a differential test that passes on retry has found a nondeterminism, which is
+#     worth more attention than the gate colour rather than less. This script does
+#     not implement the retry -- it fails on the first miss, and the allowance is the
+#     operator's, because an auditable human re-run beats a script trusted to
+#     confess that it retried.
+#
 #  5b. THE SHAPE MEASURED IS THE SHAPE DISPATCH SELECTS (ruling on issue #24).
 #     P2 shipped two zero-spill shapes and neither dominates: 4x32 wins on Zen 4
 #     and Zen 5, 2x32 wins on Skylake-X by 11 percentage points (KERNEL.md §7).

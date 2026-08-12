@@ -329,6 +329,13 @@ While the major version is 0, minor versions may contain breaking changes.
     ranking cannot come to rest on a stale count.
   - Found by the gate, not by a benchmark: P2's anti-vacuity shape guard refused
     the dispatched 4×32 a roofline on janus, which is what surfaced the bug.
+  - The gate model now states a **one-retry allowance for throughput sentinel readings**
+    (`DESIGN.md` §4): a failing sentinel triggers exactly one re-run, fails only if both
+    runs fail, and both outputs are archived either way, so a pass-on-retry is visible
+    in the record. It never applies to a correctness criterion — those fail on first
+    miss, since a differential test that passes on retry has found a nondeterminism.
+    The gate script is unchanged and still fails on first miss; the allowance is the
+    operator's and the archive is what keeps it bounded.
   - `gate-p3.sh` also prints **retention** per host — the share of its own microkernel
     the blocked loop nest keeps — as reported-never-judged provenance beside
     percent-of-peak. vesta ~90%, antares ~92%, janus ~77%, so P5 inherits #26 as a
