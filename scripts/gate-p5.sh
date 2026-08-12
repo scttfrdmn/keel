@@ -107,12 +107,31 @@
 #     because both cost nothing until a caller runs keel inside something that
 #     counts goroutines or calls it twice.
 #
-#  7. THE DISPATCH CHAIN IS EXERCISED BY THIS GATE, NOT ONLY REPORTED BY THE TESTS.
-#     The tests declare the chain and that an unrecognized KEEL_FORCE refuses to
-#     run; the gate additionally re-runs the binary with KEEL_FORCE=scalar, avx2 and
-#     avx512 and requires the library's own active-backend markers to name what was
-#     asked for, then runs it with a nonsense value and requires a non-zero exit. A
-#     dispatch chain that is only self-reported is a chain nobody pulled on.
+#  7. THE DISPATCH CHAINS ARE EXERCISED BY THIS GATE, NOT ONLY REPORTED BY THE
+#     TESTS — AND THERE ARE TWO OF THEM. Level 1 dispatches avx512 -> avx2 ->
+#     scalar; Level 3 dispatches avx512 -> scalar (ruled 2026-08-12, #40:
+#     internal/kern has no AVX2 microkernel, no host here is AVX2-only silicon, and
+#     KEEL_FORCE=avx2 on an AVX-512 part is evidence about correctness, not about
+#     performance — so a third Level-3 rung would be advertised with nothing able
+#     to back it). The tests declare both chains and that an unrecognized
+#     KEEL_FORCE refuses to run; the gate additionally re-runs the binary with
+#     KEEL_FORCE=scalar, avx2 and avx512 and requires the library's own
+#     active-backend markers to name what was asked for, then runs it with a
+#     nonsense value and requires a non-zero exit. A dispatch chain that is only
+#     self-reported is a chain nobody pulled on.
+#
+#     The narrowing is enforced in the direction that costs something. For a
+#     Level-1-only rung the gate requires the microkernel to come back *scalar*
+#     and the library to say so: an avx2 microkernel appearing at Level 3 fails
+#     here, because the ruling narrowed what is claimed and a claim that grows
+#     back silently is what this gate exists to catch. The debt keeps its trigger
+#     on #40 — an AVX2-native evidentiary host — so P5_KERN_CHAIN grows a rung by
+#     a measurement, not by a session's convenience.
+#
+#     Marker contract, since the chains are now per level:
+#       keel-p5-dispatch: l1=avx512,avx2,scalar kern=avx512,scalar
+#     A single `chain=` field cannot state the Level-3 narrowing at all, and a
+#     ruling that cannot be stated is one the next session re-litigates.
 #
 #  8. RETENTION IS PRINTED AND NOT JUDGED. DESIGN.md §4/P5 says so in the gate line
 #     itself: issue #26 is a direction to work in. It is printed for the same reason
@@ -231,10 +250,25 @@ P5_BENCH_FILTER='Scale|Peak'
 P5_DET_THREADS="1 3 8"
 # The properties the no-state marker must name (criterion 6).
 P5_NOSTATE_REQ="goroutines-return-to-baseline repeat-call-bit-identical"
-# The dispatch chain, in order, and the backends this gate itself forces
+# The dispatch chains, in order, and the backends this gate itself forces
 # (criterion 7).
-P5_CHAIN="avx512,avx2,scalar"
+#
+# TWO CHAINS, NOT ONE, by ruling (2026-08-12, #40 — DESIGN.md §4/P5). Level 1
+# dispatches all three rungs; Level 3 dispatches two, because internal/kern has no
+# AVX2 microkernel and no host here is AVX2-only silicon, so a three-rung Level-3
+# claim would advertise a link no gate can back. This gate is where that ruling is
+# enforced, and it is enforced in the direction that costs something: the check
+# below does not merely stop failing on avx2 at Level 3, it *requires* that
+# forcing avx2 lands on a scalar microkernel and that KERN_CHAIN never names avx2.
+# The narrowing is a criterion change, so it is written where the criteria are, with
+# the ruling's date and number beside it; the day an AVX2 microkernel is measured on
+# AVX2-native silicon, KERN_CHAIN grows a rung and this comment is what says why.
+P5_L1_CHAIN="avx512,avx2,scalar"
+P5_KERN_CHAIN="avx512,scalar"
 P5_FORCED="scalar avx2 avx512"
+# Backends that are Level 1 only: forcing one must produce that L1 backend and a
+# *scalar* microkernel, with the library saying so.
+P5_L1_ONLY="avx2"
 
 # How far a published README number may sit from this run's measurement before it
 # stops being the same claim (criterion 9). 5% is wider than any CI this project
@@ -474,18 +508,32 @@ else
         -test.v -test.run 'TestKeelForce|TestBackend|TestDispatch' >"$LOG" 2>&1 || FOK=$?
       got="$(marker l1-active "$LOG")"
       gotk="$(marker sgemm-active "$LOG")"
-      # Three failure states, told apart because they have three different causes
-      # and a red that names the wrong one is as untrustworthy as a green that does
-      # (issue #32's lesson, applied to a correctness check). The middle one is the
-      # interesting one: a rung the L1 dispatcher honours and the microkernel does
-      # not have is not a wiring bug, it is a missing backend.
+      # Failure states told apart because they have different causes, and a red
+      # that names the wrong one is as untrustworthy as a green that does (issue
+      # #32's lesson, applied to a correctness check).
+      #
+      # The Level-1-only rungs are the interesting case. Under the #40 ruling a
+      # scalar microkernel there is the *specified* outcome, not a miss — so this
+      # check asserts the ceiling rather than excusing it: forcing avx2 must give
+      # an avx2 Level 1 AND a scalar microkernel, and the library must say so. A
+      # run that quietly produced an avx2 microkernel would now fail here, which
+      # is the point: the ruling narrowed what is claimed, and a claim that grows
+      # back silently is exactly what this gate exists to catch.
       if [[ "$FOK" -ne 0 ]]; then
         fail "[$host] KEEL_FORCE=$want: the forced run failed"
         sed 's/^/        /' "$LOG" | tail -20
       elif [[ "$got" != "$want" ]]; then
         fail "[$host] KEEL_FORCE=$want was asked for and the L1 dispatcher selected '${got:-none}': the override is not wired to what dispatch actually selects"
+      elif set_has "$want" "$P5_L1_ONLY"; then
+        if [[ "$gotk" == *"/$want" ]]; then
+          fail "[$host] KEEL_FORCE=$want produced an $want microkernel ('$gotk'), but the Level-3 chain does not claim one (#40): an unmeasured rung has appeared at Level 3 without the ruling that would justify advertising it"
+        elif [[ "$gotk" != *"/scalar" ]]; then
+          fail "[$host] KEEL_FORCE=$want gave l1=$got and a microkernel of '${gotk:-none}': the documented ceiling is scalar at Level 3, so this is neither the $want kernel nor the fallback"
+        else
+          pass "[$host] KEEL_FORCE=$want takes as a Level-1-only rung (l1=$got, kern=$gotk — the #40 ceiling, reported honestly)"
+        fi
       elif [[ "$gotk" != *"/$want" ]]; then
-        fail "[$host] KEEL_FORCE=$want reached both dispatchers (l1=$got) and the microkernel came back as '${gotk:-none}': internal/kern has no $want backend, so this rung of the chain does not exist at Level 3 (#40) — DESIGN.md §4/P5 calls the chain finalized, and two of its three rungs are Level 1 only"
+        fail "[$host] KEEL_FORCE=$want reached the L1 dispatcher (l1=$got) and the microkernel came back as '${gotk:-none}': this rung is in the Level-3 chain, so a backend it does not reach is a wiring bug or a missing kernel"
       else
         pass "[$host] KEEL_FORCE=$want takes (l1=$got, kern=$gotk)"
       fi
@@ -540,13 +588,25 @@ else
       fi
     fi
   done
+  # Both chains are checked, because the #40 ruling is precisely that there are
+  # two of them. A single `chain=` field would make the Level-3 narrowing
+  # unstateable, and an unstateable ruling is one the next session re-litigates.
   dc="$(marker p5-dispatch "$SWEEPLOG")"
   if [[ -z "$dc" ]]; then
-    fail "no keel-p5-dispatch marker, so the library never stated the chain it selects from"
-  elif [[ "$(field chain "$dc")" != "$P5_CHAIN" ]]; then
-    fail "the declared dispatch chain is '$(field chain "$dc")', not '$P5_CHAIN' (DESIGN.md §4/P5)"
+    fail "no keel-p5-dispatch marker, so the library never stated the chains it selects from"
   else
-    pass "dispatch chain declared as $P5_CHAIN, and this gate forced every element of it above"
+    gl1="$(field l1 "$dc")"
+    gk="$(field kern "$dc")"
+    if [[ "$gl1" != "$P5_L1_CHAIN" ]]; then
+      fail "the declared Level-1 chain is '${gl1:-none}', not '$P5_L1_CHAIN' (DESIGN.md §4/P5)"
+    else
+      pass "Level-1 chain declared as $P5_L1_CHAIN, and this gate forced every element of it above"
+    fi
+    if [[ "$gk" != "$P5_KERN_CHAIN" ]]; then
+      fail "the declared Level-3 chain is '${gk:-none}', not '$P5_KERN_CHAIN' (DESIGN.md §4/P5, narrowed by the #40 ruling: no AVX2 microkernel exists and no host here is AVX2-only silicon, so a third rung would be advertised without evidence)"
+    else
+      pass "Level-3 chain declared as $P5_KERN_CHAIN — two rungs by ruling (#40), and the avx2 ceiling asserted per host above"
+    fi
   fi
 fi
 

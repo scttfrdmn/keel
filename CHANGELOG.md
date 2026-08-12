@@ -552,6 +552,14 @@ While the major version is 0, minor versions may contain breaking changes.
   *inside* gate-p4's log ("47 PASS / 0 FAIL"), so a green delegated gate was
   reported as "65 PASS / 1 FAIL". The verdict itself was always taken from the
   delegated gate's exit code and was correct; only the number beside it lied.
+- `keel.L1Chain()` and `keel.KernChain()`: the *advertised* dispatch chains, per
+  level, as functions rather than as prose. They answer a different question from
+  `AvailableL1Backends`/`AvailableKernels`, which report what is runnable on the
+  machine in hand and are properly shorter on a host without AVX-512. This is the
+  claim keel makes about itself, so `gate-p5.sh` reads it and checks it against
+  `DESIGN.md` §4/P5 and against the backends that actually have implementations —
+  which is how #40 was found. A claim kept in a function can be checked; a claim
+  kept in prose can only be believed.
 
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel
@@ -969,3 +977,56 @@ While the major version is 0, minor versions may contain breaking changes.
   15 verdict fixtures run before any benchmark. janus.local becomes the standing
   regression sentinel for P3: it is the host where instruction count binds, so it is
   the host that notices when a shape gets fatter.
+- **The advertised dispatch chain is now stated per level: Level 1
+  `avx512→avx2→scalar`, Level 3 `avx512→scalar`** (`DESIGN.md` §3 and §4/P5,
+  `dispatch.go`, ruling on issue #40). Runtime behaviour is unchanged — there has
+  never been an AVX2 microkernel and `KEEL_FORCE=avx2` has always acted as a
+  *ceiling* at Level 3, reporting `scalar` — but the documentation claimed a
+  three-rung chain at both levels, and the missing rung was the discrepancy. The
+  narrowing goes in the strict direction: no gate check was deleted. `gate-p5.sh`
+  now **requires** that forcing a Level-1-only rung yields a scalar microkernel and
+  that `kern=` never names `avx2`, so a claim that grows back silently fails the
+  gate that found it. The coverage marker gained a field for the same reason
+  (`keel-p5-dispatch: l1=avx512,avx2,scalar kern=avx512,scalar`): a ruling that
+  cannot be stated is one the next session re-litigates. Level 1 keeps its AVX2
+  path, which is measured and has been gated since P1. The AVX2 microkernel is
+  **deferred with its unblocking condition named** rather than dropped — an
+  AVX2-native evidentiary host, since `KEEL_FORCE=avx2` on an AVX-512 machine
+  establishes correctness and says nothing about performance on a part that lacks
+  AVX-512. Debt with a trigger, not a wish.
+- **P5's `-race` criterion is not amendable to exclude `checkptr`, and #42 is
+  merged into #22 as an admissibility condition** (`DESIGN.md` §4/P5, ruled
+  2026-08-12). A library that fatals under `go test -race` inside a 1×1 `Sgemv`
+  through its public API is unshippable to a Go audience: race-clean is table
+  stakes, and checkptr-clean is what race-clean means for code holding `unsafe`.
+  Excluding the pointer checker would certify keel safe minus the instrument that
+  checks. So the criterion stands unamended and the T17 workaround lands inside
+  #22's campaign rather than as a point patch — **stage 1 measures masked-partial
+  against zero-padded-panel among `checkptr`-clean implementations only.** A faster
+  variant that fatals under the pointer checker is disqualified, not ranked:
+  admissibility first, then speed.
+- **janus.local keeps its gate-host and sentinel roles through P5** (confirmed
+  2026-08-12; `docs/hosts.md`, `DESIGN.md` §4/P5). The question was whether a host
+  sitting at 31.9% of measured peak should go on certifying phases. It should: it is
+  the only Intel part, the only issue-bound one, and the machine the roofline
+  amendment's standing task names as the thing to re-measure when the lowering
+  improves. Because that amendment ratchets — the floor is monotone non-increasing
+  in the gated shape's instruction count — the exception tightens automatically
+  instead of granting a permanent dispensation. A host whose low number is
+  *explained*, by a model that gets stricter as the explanation goes away, carries
+  more information per run than a host that simply passes.
+- Filed upstream as **[golang/go#80856](https://github.com/golang/go/issues/80856)**:
+  `archsimd`'s partial slice load/store are not `checkptr`-safe (toolchain note
+  T17, issue #42). This one is a correctness-contract violation rather than a
+  performance finding like #17/#18 — the helpers manufacture a full-width
+  `*[16]float32` from a short slice, it reproduces without the race detector, and
+  it is demonstrated through a public API at the minimum input. #42 carries the new
+  `standing-task` label and no milestone, the same pattern as #17/#18: when
+  upstream's helpers go `checkptr`-clean, keel's workaround retires.
+- Issue bookkeeping brought current, which finishes the ruling from two sessions
+  back. The four pre-existing open issues outside P5 were triaged against a stated
+  rule — ruled-but-unlanded one-liner, deferred-to-a-P5-measurement,
+  upstream-dependent standing task, or overtaken by events — and #34, #10, #8 and
+  #12 all moved to the P5 milestone with their sorting recorded on each. With every
+  earlier milestone empty of open issues, **milestones P0, P1, P2, P3 and P4 are
+  closed**; P5 is the only open one.

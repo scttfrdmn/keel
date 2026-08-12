@@ -11,9 +11,22 @@ import (
 	"github.com/scttfrdmn/keel/internal/l1"
 )
 
-// Backend selection. Order: avx512 → avx2 → scalar, chosen once at init from
-// runtime CPU feature detection. Finalized in P5; the Level-1 dispatch below
-// is what P1 needs, and P2/P3 will add the kernel tables beside it.
+// Backend selection, chosen once at init from runtime CPU feature detection.
+//
+// # The chain is per level, and Level 3 has two rungs, not three
+//
+// Level 1 dispatches avx512 → avx2 → scalar. Level 3 — the SGEMM microkernel and
+// everything blocked around it — dispatches avx512 → scalar. That asymmetry is a
+// ruling (2026-08-12, issue #40), not an accident of what got written first, and
+// the reason is evidentiary: internal/kern has no AVX2 microkernel, and no host
+// this project measures on is AVX2-only silicon. KEEL_FORCE=avx2 on an AVX-512
+// machine establishes correctness under forced narrowing but says nothing about
+// performance on a part that lacks AVX-512, so a three-rung Level-3 chain would
+// advertise a middle link no gate could back. Level 1 keeps its AVX2 path because
+// that one is measured, and has been gated since P1.
+//
+// The AVX2 microkernel is deferred rather than dropped, and its unblocking
+// condition is named on #40: an AVX2-native evidentiary host. Debt with a trigger.
 //
 // KEEL_FORCE=scalar|avx2|avx512 pins the choice. It exists for testing — gate
 // P1 uses it to run the whole suite scalar-only on a machine that *has*
@@ -22,6 +35,20 @@ import (
 // downgrading: a test run that believed it was measuring AVX-512 and quietly
 // measured scalar is worse than a crash.
 const envForce = "KEEL_FORCE"
+
+// L1Chain and KernChain report the *advertised* dispatch chains: the claim the
+// documentation makes about what this library will try, in order, on a machine
+// that has everything. AvailableL1Backends and AvailableKernels answer a
+// different question — what is runnable *here* — and on a host without AVX-512
+// they are properly shorter. The gate checks the advertised chains against
+// DESIGN.md §4/P5 and checks that neither one advertises a rung with no
+// implementation behind it, which is how #40 was found: keeping the claim in a
+// function means a gate can read it, where a claim in prose can only be believed.
+func L1Chain() []string { return []string{l1.AVX512, l1.AVX2, l1.Scalar} }
+
+// KernChain reports the advertised Level-3 chain. Two rungs by ruling; see the
+// envForce comment above for why the middle one is absent.
+func KernChain() []string { return []string{kern.AVX512, kern.Scalar} }
 
 // activeL1 is the Level-1 kernel set every public L1 routine calls through.
 // One indirect call per routine invocation, outside every loop.
@@ -72,7 +99,8 @@ var activeKern = selectKern()
 // table.
 //
 // P2 shipped AVX-512 tiles and a scalar reference; there is no AVX2 microkernel
-// (internal/kern's package doc explains why the shapes are what they are). So
+// (internal/kern's package doc explains why the shapes are what they are), and as
+// of the #40 ruling the Level-3 chain does not claim one — see KernChain. So
 // KEEL_FORCE=avx2 asks for a Level-3 backend that does not exist. Panicking
 // would make a legitimate Level-1 test configuration unable to call Sgemm at
 // all, so instead KEEL_FORCE acts as a *ceiling* here and Level 3 runs scalar —

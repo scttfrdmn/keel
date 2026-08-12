@@ -228,6 +228,17 @@ sentinel today: it is the host where instruction count binds (46.0% of peak,
 94.6% of a 48.6% issue roofline). If the file is absent, every host is a
 sentinel — missing configuration costs time, never coverage.
 
+**janus keeps that role through P5** (confirmed 2026-08-12 by ruling). The
+question raised was whether a host sitting at 31.9% of peak should go on
+certifying phases, and the answer is that this is precisely the host worth
+keeping: the only Intel part, the only issue-bound one, and the machine the
+roofline section's standing task names as the thing to re-measure when the
+lowering improves. Because the amendment ratchets — the floor is monotone
+non-increasing in `I_b` — the exception tightens automatically rather than
+granting a permanent dispensation. A host whose low number is *explained*, by a
+model that gets stricter as the explanation goes away, carries more information
+per run than a host that simply passes.
+
 Gate P3 classifies *every* host with that same measurement even when only one is
 judged by it, because the amended denominator above applies only where the
 classifier says issue-bound. A host whose classification could not be measured is

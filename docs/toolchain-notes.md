@@ -23,7 +23,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | `archsimd` exposes CPU *features* and nothing else: no vendor, family, model or name, and `internal/cpu` discards the signature word. Per-µarch kernel selection has to fingerprint a feature bundle | [T14](#t14) | candidate (#25) |
 | 2026-08-11 | go1.26.5 | `-bench` splits on top-level `\|` **before** `/`, so `A\|B/c` is `{A}` or `{B,c}` — not `{A,B}` then `{c}`. A gate filter silently ran neither the benchmark it named nor only the ones it named | [T15](#t15) | none — documented behavior |
 | 2026-08-12 | go1.26.5 | On arm64, whether `a*a + c` is FMA-fused depends on whether the compiler **constant-folds** it, and `-race` defeats the folding: the same source line yields `0` in a plain build and `2^-24` under `-race` | [T16](#t16) | none — not a defect |
-| 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [#42](https://github.com/scttfrdmn/keel/issues/42) |
+| 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [golang/go#80856](https://github.com/golang/go/issues/80856) (#42) |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -1301,5 +1301,15 @@ full-width stack array and use the *full-width* `LoadFloat32x16Slice` / `StoreSl
 which take a `[]T` and never convert a pointer. In the same instrumented run that fataled
 on `LoadFloat32x8SlicePart`, the copy-based form on the line above it completed. The cost
 is a 64-byte zero-and-copy on the tail iteration only, never in the steady-state loop or
-the K-loop. Whether keel takes that trade now or documents `-race` as broken until
-upstream moves is a decision for the owner, not a drive-by fix — see issue #42.
+the K-loop. **Disposition (ruled 2026-08-12).** keel takes the workaround, and the P5 `-race`
+criterion **stands unamended**: race-clean is table stakes for a Go library, and
+`checkptr`-clean is what race-clean means for code holding `unsafe`, so excluding
+`checkptr` from the criterion would certify keel safe minus the instrument that
+checks. The fix lands inside issue #22's edge-handling campaign rather than as a
+point patch, because #22 and #42 are the same question from two directions — how
+keel touches memory at a vector or tile edge — and **`checkptr`-cleanliness is an
+admissibility condition on #22's candidates, not a competitor in the measurement**:
+a faster variant that fatals under the pointer checker is disqualified, not ranked.
+Filed upstream as [golang/go#80856](https://github.com/golang/go/issues/80856) with
+this repro; #42 carries the standing task, so when upstream's helpers go
+`checkptr`-clean, keel's copy-based form retires rather than calcifying.
