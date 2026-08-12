@@ -89,21 +89,31 @@ confirm() {
   [[ "$reply" == [yY]* ]]
 }
 
-# probe HOST — distro id, go version, libopenblas path, governor. Same probe the
-# gate uses (gate-p3.sh, ob_preflight), deliberately: a prerequisite this script
-# calls satisfied and the gate calls missing would be the worst outcome here.
+# probe HOST — distro id, go version, libopenblas path, governor.
+#
+# `go=` is what the gate sees: the toolchain on a non-interactive, non-login ssh
+# PATH, found the same way gate-p3.sh's ob_preflight finds it. A prerequisite this
+# script calls satisfied and the gate calls missing would be the worst outcome here.
+#
+# `goat=` is what is INSTALLED at /usr/local/go, which is a different question and
+# the one that decides install-versus-symlink (issue #27). Conflating them cost
+# antares a `sudo rm -rf /usr/local/go` on a working go1.26.5 that was merely
+# unlinked: "no usable toolchain" and "usable toolchain, wrong PATH" need different
+# repairs, and only the first one justifies deleting anything.
 probe() {
   ssh -n -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$1" '
     distro=unknown
     [ -r /etc/os-release ] && distro=$(sed -n "s/^ID=//p" /etc/os-release | tr -d \")
     go=none
     command -v go >/dev/null 2>&1 && go=$(go version | cut -d" " -f3)
+    goat=none
+    [ -x /usr/local/go/bin/go ] && goat=$(/usr/local/go/bin/go version | cut -d" " -f3)
     lib=none
     for d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib; do
       if [ -e "$d/libopenblas.so" ]; then lib="$d/libopenblas.so"; break; fi
     done
     gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
-    printf "distro=%s go=%s lib=%s governor=%s\n" "$distro" "$go" "$lib" "$gov"
+    printf "distro=%s go=%s goat=%s lib=%s governor=%s\n" "$distro" "$go" "$goat" "$lib" "$gov"
   ' 2>/dev/null
 }
 
@@ -177,15 +187,39 @@ verify_go_tarball() {
   note "digest ok ($got) against $src"
 }
 
+# link_go HOST VERSION — put an already-installed /usr/local/go on the system PATH.
+#
+# The cheap repair, and the correct one when the host already has a new-enough
+# toolchain that is merely unlinked (issue #27). It touches two symlinks and deletes
+# nothing: replacing a working toolchain with a fresh copy of the same version is
+# risk without benefit, and the risk lands on somebody else's machine.
+link_go() {
+  local host="$1"
+  note "on $host: /usr/local/go is already $2, which is new enough; linking it onto the PATH"
+  confirm "create /usr/local/bin/{go,gofmt} symlinks?" || { note "skipped"; return 1; }
+  ssh "${SSH_TTY_OPTS[@]}" "$host" '
+    set -e
+    sudo ln -sf /usr/local/go/bin/go /usr/local/bin/go
+    sudo ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+    /usr/local/bin/go version
+  '
+}
+
 # install_go HOST — $GO_VERSION into /usr/local/go and onto the system PATH.
 #
 # /etc/profile.d only helps interactive logins, and the gate builds over a
 # non-interactive, non-login ssh, so the symlinks in /usr/local/bin are the part
 # that actually matters. This is the same reason the gate's preflight looks up `go`
 # the way ssh does rather than the way a human does.
+#
+# This DELETES /usr/local/go, so the caller must have established that what is there
+# is absent or too old (issue #27). The deletion is named in the prompt for the same
+# reason: it is the only irreversible thing this script does to a host.
 install_go() {
   local host="$1" tmp
-  note "on $host: install $GO_VERSION into /usr/local/go (replacing any /usr/local/go)"
+  note "on $host: install $GO_VERSION into /usr/local/go"
+  [[ "${2:-none}" == none ]] ||
+    note "this DELETES the existing /usr/local/go ($2), which cannot do GOEXPERIMENT=simd"
   confirm "download and install it?" || { note "skipped"; return 1; }
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' RETURN
@@ -269,8 +303,9 @@ while read -r host; do
     continue
   fi
   distro="$(fieldof distro "$p")"; ver="$(fieldof go "$p")"
+  atver="$(fieldof goat "$p")"
   lib="$(fieldof lib "$p")";       gov="$(fieldof governor "$p")"
-  note "distro=$distro go=$ver libopenblas=$lib governor=$gov"
+  note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib governor=$gov"
   if [[ "$gov" != performance ]]; then
     note "governor is $gov. DESIGN.md §5.4 rule 5 needs at least one gate host on"
     note "performance; this script does not change a machine's power policy. To set it:"
@@ -286,10 +321,18 @@ while read -r host; do
   fi
   if [[ "$ver" == none ]] || ! go_new_enough "$ver"; then
     if [[ "$CHECK_ONLY" -eq 1 ]]; then
-      bad "go is $ver, and the harness needs $GO_VERSION or newer (re-run without --check)"
+      bad "go on the ssh PATH is $ver, and the harness needs $GO_VERSION or newer (re-run without --check)"
+      [[ "$atver" != none ]] && go_new_enough "$atver" &&
+        bad "note: /usr/local/go is already $atver; it only needs linking onto the PATH (#27)"
       RC=1; continue
     fi
-    install_go "$host" || { RC=1; continue; }
+    # Two different repairs for two different states (#27): link what is there if it
+    # is new enough, install only when there is nothing usable to link.
+    if [[ "$atver" != none ]] && go_new_enough "$atver"; then
+      link_go "$host" "$atver" || { RC=1; continue; }
+    else
+      install_go "$host" "$atver" || { RC=1; continue; }
+    fi
   fi
   verify "$host" || RC=1
 done <<<"$HOSTS"

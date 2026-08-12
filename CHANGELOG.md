@@ -286,7 +286,12 @@ While the major version is 0, minor versions may contain breaking changes.
   it reports a non-`performance` governor rather than changing a machine's power
   policy. The Go tarball's digest is enforced against `$KEEL_GO_SHA256` when set
   and otherwise against `go.dev/dl?mode=json`, and it says which of the two it
-  did, since only the first is provenance.
+  did, since only the first is provenance. It distinguishes "no usable toolchain"
+  from "usable toolchain, not on the PATH the gate uses" and links the latter rather
+  than deleting it (issue #27): probing only the ssh `PATH` would have had it
+  `sudo rm -rf` a working go1.26.5 on antares to reinstall the same version, and the
+  one irreversible action it can take on a host is now named in the prompt that
+  authorizes it.
 - `docs/toolchain-notes.md` T13: `import "C"` in a `_test.go` file is rejected
   outright (`use of cgo in test … not supported`,
   `cmd/go/internal/modindex/read.go:589`), and it fails as `[setup failed]` — which
