@@ -93,7 +93,11 @@ bad()  { printf '   \033[31m!!\033[0m %s\n' "$1"; }
 #
 # No tty and no --yes is a distinct outcome from a refusal, and says so. Printing
 # "skipped" when nobody was asked reports a decision that was never made, which is
-# the failure mode this script exists to avoid rather than commit.
+# the failure mode this script exists to avoid rather than commit. confirm() prints
+# that outcome word itself, so callers say `confirm ... || return 1` and cannot
+# describe a refusal that did not happen: the caller does not know which of the two
+# it got, and the first version of this fix proved that by printing "skipped" under
+# the message explaining that nothing had been asked.
 confirm() {
   [[ "$ASSUME_YES" -eq 1 ]] && return 0
   local reply
@@ -110,7 +114,9 @@ confirm() {
     bad "could not read an answer from the terminal"
     return 1
   }
-  [[ "$reply" == [yY]* ]]
+  [[ "$reply" == [yY]* ]] && return 0
+  note "skipped: declined at the prompt"
+  return 1
 }
 
 # probe HOST — distro id, go version, libopenblas path, governor.
@@ -172,7 +178,7 @@ install_openblas() {
     *) bad "unrecognized distro id '$distro'; install an OpenBLAS development package by hand"; return 1 ;;
   esac
   note "on $host: $cmd"
-  confirm "run it?" || { note "skipped"; return 1; }
+  confirm "run it?" || return 1
   # shellcheck disable=SC2029  # $cmd is this script's own string, expanded here
   ssh "${SSH_TTY_OPTS[@]}" "$host" "$cmd"
 }
@@ -220,7 +226,7 @@ verify_go_tarball() {
 link_go() {
   local host="$1"
   note "on $host: /usr/local/go is already $2, which is new enough; linking it onto the PATH"
-  confirm "create /usr/local/bin/{go,gofmt} symlinks?" || { note "skipped"; return 1; }
+  confirm "create /usr/local/bin/{go,gofmt} symlinks?" || return 1
   ssh "${SSH_TTY_OPTS[@]}" "$host" '
     set -e
     sudo ln -sf /usr/local/go/bin/go /usr/local/bin/go
@@ -244,7 +250,7 @@ install_go() {
   note "on $host: install $GO_VERSION into /usr/local/go"
   [[ "${2:-none}" == none ]] ||
     note "this DELETES the existing /usr/local/go ($2), which cannot do GOEXPERIMENT=simd"
-  confirm "download and install it?" || { note "skipped"; return 1; }
+  confirm "download and install it?" || return 1
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' RETURN
   say "downloading $GO_TARBALL"
