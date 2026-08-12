@@ -621,6 +621,51 @@ While the major version is 0, minor versions may contain breaking changes.
     roofline section, where 231-with-broadcast versus 213 is `I = 2.875` versus
     `4.625`.
 
+- **An instrument for the retention gap, before any theory about it** (#26 —
+  the blocked `Sgemm` keeps ~90% of its own dispatched microkernel on both Zen
+  hosts and ~77% on janus). `internal/block/nest_bench_test.go` +
+  `scripts/retention.sh`, and three properties it was built to have:
+  - **The decomposition is measured, and its residual is reported.** One blocked
+    `Sgemm` splits into `nest-no-pack` + `pack-a` + `pack-b`, so
+    `residual = full − the three` is what the split does not explain — printed as a
+    line of the table rather than absorbed into whichever part is under
+    discussion. `nest-no-pack` packs one set of panels outside the timer and reuses
+    those buffers for every block: wrong values, nothing reads the result, and
+    identical cost structure (same microkernel calls at the same `kk`, same
+    buffers, same C traffic, same beta pass, same fringe path). What it drops is
+    named where the residual is defined: the pack calls, the cache interference
+    between packing and the kernel that follows, and `gemm`'s three per-call
+    allocations (`bp` alone is a zeroed 3.1 MB at n=2048).
+  - **Retention becomes a ratio instead of a quotient.** `gate-p3.sh` prints it
+    from two invocations with two peak measurements and says so, because
+    `bench_ratio_lo` cannot reach across two CSVs. `BenchmarkNest` measures the
+    microkernel *in the same invocation* at the depth the nest actually calls it
+    with, so retention is bounded by both confidence intervals. It is still a ratio
+    of medians and the script still says so.
+  - **The parts provably walk the blocks the shipped nest walks.** The parts share
+    one block generator, `nestBlocks`, which is a copy of `gemm`'s three outer
+    loops — exactly the kind of copy that drifts. So it is not trusted by
+    inspection: `TestNestBlocksDriveTheSameGemm` drives a full pack-and-multiply
+    GEMM from the generator alone and requires it to equal `Gemm` element for
+    element over seven shapes (remainders in each dimension, sub-tile sizes,
+    `k=1`, and both non-square orientations). A drifted bound, a missed remainder
+    block or a B panel packed at the wrong `(jc, pc)` fails it. `block.go` gained
+    only `plan()`, the clamp arithmetic `gemm` already did, extracted so both sides
+    read the blocking from one place.
+  - Shape is a sub-benchmark dimension rather than a dispatch, which answers #26's
+    third candidate — does the gap track the host's *class*? — with no
+    `KEEL_KERN_CLASS` pinning: both shipped shapes' retention is measured on every
+    host. It also avoids a second copy of `selectKern` in a package that cannot
+    import the root one.
+  - `scripts/retention.sh` is **not a gate**: it certifies nothing, moves no
+    criterion, and exits 0 whatever it finds. `decompose` runs the standard gate
+    methodology because its numbers are meant to be quoted; `sweep` (KC/MC/NC over
+    a coarse grid at 2048³) runs at `-count=5` and is labelled EXPLORATORY in its
+    own output — a point it nominates has to be re-measured under the full
+    methodology before it could become a default. `NC` stops at 2048 because
+    `plan()` clamps it to `n`, so every larger value is the same measurement under
+    another name.
+
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel
   loop nest, then the scaling gate** (`DESIGN.md` §4/P5, ruled 2026-08-12). #26

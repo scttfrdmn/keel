@@ -96,6 +96,28 @@ func Params(kn kern.Kernel) (kc, mc, nc int) {
 	return KC, wholeTiles(MC, kn.MR), wholeTiles(NC, kn.NR)
 }
 
+// plan is the blocking parameters clamped to one problem's shape: the vars above
+// rounded to whole tiles by Params, then cut down to m/n/k where the problem is
+// smaller than a block.
+//
+// A function rather than four lines inside gemm because the retention
+// decomposition (nest_bench_test.go, issue #26) has to walk the *same* blocks the
+// real nest walks — a decomposition whose parts were measured over a different
+// block structure than the whole would not be a decomposition of anything.
+func plan(kn kern.Kernel, m, n, k int) (kc, mc, nc int) {
+	kc, mc, nc = Params(kn)
+	if kc > k {
+		kc = k
+	}
+	if mc > m {
+		mc = wholeTiles(m+kn.MR-1, kn.MR) // whole tiles covering m, not m rounded down
+	}
+	if nc > n {
+		nc = wholeTiles(n+kn.NR-1, kn.NR)
+	}
+	return kc, mc, nc
+}
+
 // wholeTiles rounds v down to a multiple of blk, floored at one tile. A partial
 // tile at the end of an interior block would pack a padded panel in the middle
 // of the matrix, which is correct but pays for arithmetic on zeros where nothing
@@ -143,16 +165,7 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 	}
 
 	mr, nr := kn.MR, kn.NR
-	kc, mc, nc := Params(kn)
-	if kc > k {
-		kc = k
-	}
-	if mc > m {
-		mc = wholeTiles(m+mr-1, mr) // whole tiles covering m, not m rounded down
-	}
-	if nc > n {
-		nc = wholeTiles(n+nr-1, nr)
-	}
+	kc, mc, nc := plan(kn, m, n, k)
 
 	ap := make([]float32, pack.ALen(mr, mc, kc))
 	bp := make([]float32, pack.BLen(nr, nc, kc))
