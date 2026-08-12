@@ -512,6 +512,33 @@ While the major version is 0, minor versions may contain breaking changes.
   was folded before code generation. The witness now writes `float32(a*a) + c`,
   which forbids fusion by the spec's own rule: state the rounding you require
   rather than inheriting whatever the optimizer chose.
+- `docs/toolchain-notes.md` T17 (issue #42): `archsimd`'s partial slice load/store
+  are not `checkptr`-safe, so **`go test -race` is a fatal error** — not a warning —
+  on any keel call whose length is not a multiple of the vector width.
+  `LoadFloat32x16SlicePart` and `StoreSlicePart` reach their masked operation by
+  converting `&s[0]` to a full-width `*[16]float32` inside an `unsafe` helper; the
+  mask keeps the *instruction* in bounds, but `checkptr` instruments the
+  *conversion* and cannot know that. Reproduced standalone on linux/amd64 with no
+  keel code involved, and — the part that isolates the cause —
+  `-gcflags=all=-d=checkptr` alone reproduces it identically, so this is not the
+  race detector and cannot be dodged with race options. It is also
+  data-dependent: it fires on how much room the *allocation* has past `&s[0]`, not
+  on the slice's length, so a call site can be quiet for a whole suite and abort
+  after an allocator layout change. Two consequences, and the second is the one
+  that matters for v0.1.0: `gate-p5.sh`'s race criterion is unmeetable on amd64
+  while keel calls these, and **any user who runs `go test -race` on their own
+  code crashes inside a library they did not write**. A `checkptr`-clean local
+  workaround is confirmed (copy the remainder into a full-width stack array, use
+  the full-width `Load…Slice`/`StoreSlice`, which convert no pointer; cost is one
+  64-byte zero-and-copy on the tail iteration, never in the K-loop) but is *not*
+  applied: it changes the "remainders use masked partial loads" story, so the
+  disposition is #42's to settle rather than a drive-by fix.
+- `scripts/gate-p5.sh`'s race verdict now classifies a `checkptr` death as its own
+  outcome, naming T17 and #42 — still a **FAIL**, because naming a cause is not
+  meeting a criterion. Its diagnostic for the generic case also prints the *head*
+  of the failing-test detail rather than the tail: on a multi-package failure the
+  `--- FAIL:` lines that identify the cause precede the per-package summaries, and
+  a `tail` had been dropping exactly the lines worth reading.
 
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel

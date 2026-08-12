@@ -571,9 +571,19 @@ race_verdict() {
   elif grep -q 'WARNING: DATA RACE' "$log"; then
     fail "$label the race detector reports a data race"
     sed -n '/WARNING: DATA RACE/,/^==================$/p' "$log" | sed 's/^/        /' | head -60
+  elif grep -q 'checkptr: converted pointer straddles multiple allocations' "$log"; then
+    # A known upstream defect, and still a FAIL: naming a cause is not the same
+    # as meeting the criterion. `-race` implies -d=checkptr, and archsimd's
+    # partial slice ops convert &s[0] to a full-width *[N]T, which checkptr
+    # rejects fatally. See docs/toolchain-notes.md T17 and issue #42.
+    fail "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42 — awaiting a disposition)"
+    sed -n '/checkptr: converted pointer straddles/,/^testing\.tRunner/p' "$log" | sed 's/^/        /' | head -20
   else
     fail "$label the -race run failed without the detector reporting a race, so the criterion is unmeasured: a test that fails under instrumentation says nothing either way about whether keel has a race"
-    grep -E '^(---|\s+---|FAIL|ok|\?)|\.go:[0-9]+:' "$log" | sed 's/^/        /' | tail -20
+    # head, not tail: on a multi-package failure the `--- FAIL:` lines that name
+    # the cause come before the per-package summaries, and a tail dropped them.
+    grep -E '^(---|[[:space:]]+---)|\.go:[0-9]+:' "$log" | sed 's/^/        /' | head -20
+    grep -E '^(FAIL|ok|\?)[[:space:]]' "$log" | sed 's/^/        /' | head -6
   fi
 }
 RACE_LOCAL=0

@@ -23,6 +23,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | `archsimd` exposes CPU *features* and nothing else: no vendor, family, model or name, and `internal/cpu` discards the signature word. Per-µarch kernel selection has to fingerprint a feature bundle | [T14](#t14) | candidate (#25) |
 | 2026-08-11 | go1.26.5 | `-bench` splits on top-level `\|` **before** `/`, so `A\|B/c` is `{A}` or `{B,c}` — not `{A,B}` then `{c}`. A gate filter silently ran neither the benchmark it named nor only the ones it named | [T15](#t15) | none — documented behavior |
 | 2026-08-12 | go1.26.5 | On arm64, whether `a*a + c` is FMA-fused depends on whether the compiler **constant-folds** it, and `-race` defeats the folding: the same source line yields `0` in a plain build and `2^-24` under `-race` | [T16](#t16) | none — not a defect |
+| 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [#42](https://github.com/scttfrdmn/keel/issues/42) |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -1136,3 +1137,169 @@ not the one anybody wrote down: on amd64 because gc does not fuse, and on arm64 
 rounding it wants (`float32(a*a) + c`) instead of hoping for it, which is the same
 correction T2 made to a different assumption: say what you require, do not infer it
 from what the compiler happened to emit. See issue #41.
+
+---
+
+## T17 — `archsimd`'s partial slice load/store are not `checkptr`-safe, so `-race` is a fatal error
+
+**Observation.** `archsimd`'s `LoadFloat32x16SlicePart` / `StoreSlicePart` (and the same
+pair at every other width) handle a short slice by building a full-width masked
+operation over `&s[0]`. To get an address of the right static type they go through an
+`unsafe` helper that reinterprets the slice's first element as a pointer to a
+**full-width array**, whatever the slice's actual length:
+
+```go
+// $(go env GOROOT)/src/simd/archsimd/unsafe_helpers.go:205
+// paFloat32x16 returns a type-unsafe pointer to array that can
+// only be used with partial load/store operations that only
+// access the known-safe portions of the array.
+func paFloat32x16(s []float32) *[16]float32 {
+	return (*[16]float32)(unsafe.Pointer(&s[0]))
+}
+```
+
+The mask does keep the *hardware* from touching anything past `len(s)` — the comment's
+claim is true of the instruction. But the **conversion itself** is what `checkptr`
+instruments, and `checkptr` has no way to know a mask will narrow the access later. It
+sees a 64-byte type placed at an address with fewer than 64 bytes left in its heap
+object and throws:
+
+```
+fatal error: checkptr: converted pointer straddles multiple allocations
+```
+
+Three properties make this worse than a normal instrumentation gripe:
+
+1. **It is fatal, not reported.** A data race prints `WARNING: DATA RACE` and the test
+   keeps going with a non-zero exit. This aborts the process at the first occurrence, so
+   it also destroys any race-detector run it happens to precede.
+2. **`-race` is not the trigger; `checkptr` is.** `-race` merely implies
+   `-d=checkptr`. `-gcflags=all=-d=checkptr` alone reproduces it identically, so this
+   is not the race detector's fault and cannot be dodged by tweaking race options.
+3. **It is data-dependent, not shape-dependent.** Whether it fires depends on how much
+   room the *allocation* has past `&s[0]`, not on the slice's length or capacity. The
+   same call site can be quiet for a whole test suite and abort when an allocator layout
+   changes. My first attempt at this repro passed for exactly that reason.
+
+**Repro.** `go1.26.5 linux/amd64`, `GOEXPERIMENT=simd`, no keel code involved. The
+buffer is exactly one vector wide and forced to the heap, and the slices are taken from
+its tail so that the 64-byte window provably runs past the object's end.
+
+```go
+package ckptr
+
+import (
+	"simd/archsimd"
+	"testing"
+)
+
+var sink []float32
+
+func TestLoadSlicePartNearObjectEnd(t *testing.T) {
+	buf := make([]float32, 16) // exactly one vector wide: 64 bytes
+	sink = buf                 // keep it on the heap
+	for _, n := range []int{1, 2, 4, 8, 15} {
+		s := buf[16-n:] // len n, and &s[0]+64 runs past the end of buf
+		v := archsimd.LoadFloat32x16SlicePart(s)
+		var out [16]float32
+		v.StoreSlice(out[:])
+		t.Logf("len=%d lane0=%v", n, out[0])
+	}
+}
+```
+
+Uninstrumented, every length is fine — the masking works exactly as documented:
+
+```
+$ GOEXPERIMENT=simd go test -count=1 -v ./...
+=== RUN   TestLoadSlicePartNearObjectEnd
+    ckptr_test.go:18: len=1 lane0=0
+    ckptr_test.go:18: len=2 lane0=0
+    ckptr_test.go:18: len=4 lane0=0
+    ckptr_test.go:18: len=8 lane0=0
+    ckptr_test.go:18: len=15 lane0=0
+--- PASS: TestLoadSlicePartNearObjectEnd (0.00s)
+ok  	ckptr	0.001s
+```
+
+Under `-race`, the first iteration kills the process:
+
+```
+$ GOEXPERIMENT=simd CGO_ENABLED=1 go test -count=1 -race -v ./...
+=== RUN   TestLoadSlicePartNearObjectEnd
+fatal error: checkptr: converted pointer straddles multiple allocations
+
+goroutine 20 gp=0xc000104b40 m=0 mp=0x7d03c0 [running]:
+runtime.throw({0x652aca?, 0x566a01?})
+	/usr/local/go/src/runtime/panic.go:1229 +0x48 fp=0xc0000cbd80 sp=0xc0000cbd50 pc=0x4beba8
+runtime.checkptrAlignment(0x5668e0?, 0x75f460?, 0x7a54c0?)
+	/usr/local/go/src/runtime/checkptr.go:26 +0x5b fp=0xc0000cbda0 sp=0xc0000cbd80 pc=0x44fafb
+simd/archsimd.paFloat32x16(...)
+	/usr/local/go/src/simd/archsimd/unsafe_helpers.go:209
+simd/archsimd.LoadFloat32x16SlicePart(...)
+	/usr/local/go/src/simd/archsimd/slice_gen_amd64.go:578
+ckptr.TestLoadSlicePartNearObjectEnd(0xc000160248)
+	/tmp/ckptr3/ckptr_test.go:15 +0x312 fp=0xc0000cbee0 sp=0xc0000cbda0 pc=0x5e36f2
+```
+
+And with `checkptr` alone, no race instrumentation, no cgo — the same fatal error at the
+same two frames, which is what isolates the cause:
+
+```
+$ GOEXPERIMENT=simd go test -count=1 -gcflags=all=-d=checkptr -v ./...
+=== RUN   TestLoadSlicePartNearObjectEnd
+fatal error: checkptr: converted pointer straddles multiple allocations
+...
+runtime.checkptrAlignment(0x24?, 0x755?, 0x754?)
+	/usr/local/go/src/runtime/checkptr.go:26 +0x5b
+simd/archsimd.paFloat32x16(...)
+	/usr/local/go/src/simd/archsimd/unsafe_helpers.go:209
+simd/archsimd.LoadFloat32x16SlicePart(...)
+	/usr/local/go/src/simd/archsimd/slice_gen_amd64.go:578
+```
+
+**Assessment.** This is an upstream defect, not a keel bug and not a false positive to
+be waved away. `checkptr`'s complaint is literally correct about the conversion it is
+shown; the `unsafe` helper's own comment concedes the pointer is "type-unsafe" and
+constrains its use to operations that "only access the known-safe portions". What is
+missing is any way to *say* that to the compiler. The consequence is that a supported,
+exported, non-`unsafe` API — the documented way to handle a remainder — is unusable
+under the standard Go debugging flag. Upstream has options keel does not (an intrinsic
+that takes a `*T` and a length, a `checkptr` exemption, or generating the masked op
+without a full-width array type); the right fix is theirs.
+
+**Both widths, both directions.** `paFloat32x8` behaves identically
+(`unsafe_helpers.go:139`, reached from `slice_gen_amd64.go:962`), and the store side goes
+through the same helper (`StoreSlicePart` → `paFloat32x16` at `slice_gen_amd64.go:594`).
+So this is the whole partial-memory family, not one function.
+
+**Consequence for keel.** Four call sites, all of them the remainder handling that every
+Level-1 routine reaches on any length that is not a multiple of the vector width:
+
+```
+internal/vec/vec_avx2.go:28    LoadPart256  → archsimd.LoadFloat32x8SlicePart
+internal/vec/vec_avx2.go:34    StorePart256 → x.StoreSlicePart
+internal/vec/vec_avx512.go:40  LoadPart512  → archsimd.LoadFloat32x16SlicePart
+internal/vec/vec_avx512.go:46  StorePart512 → x.StoreSlicePart
+```
+
+Two things follow, and the second is the one that matters for v0.1.0:
+
+- `gate-p5.sh`'s "race detector clean" criterion is **unmeetable on amd64** as long as
+  keel calls these. It is worth noting *how* this surfaced: the gate's native `-race`
+  run failed with no `WARNING: DATA RACE` in the log, and the script's three-way verdict
+  called that **unmeasured** rather than clean — "a test that fails under instrumentation
+  says nothing either way about whether keel has a race". A two-way pass/fail check would
+  have recorded a red for a race that does not exist, or worse, been written to accept a
+  non-zero exit with no warning as a pass.
+- **Any keel user who runs `go test -race` on their own code gets a fatal error**, from
+  inside a library they did not write, on any vector whose length is not a multiple of 16.
+  That is not an internal testing inconvenience; it is a shipping defect.
+
+A local workaround exists and is confirmed `checkptr`-clean: copy the remainder into a
+full-width stack array and use the *full-width* `LoadFloat32x16Slice` / `StoreSlice`,
+which take a `[]T` and never convert a pointer. In the same instrumented run that fataled
+on `LoadFloat32x8SlicePart`, the copy-based form on the line above it completed. The cost
+is a 64-byte zero-and-copy on the tail iteration only, never in the steady-state loop or
+the K-loop. Whether keel takes that trade now or documents `-race` as broken until
+upstream moves is a decision for the owner, not a drive-by fix — see issue #42.
