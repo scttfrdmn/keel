@@ -6,6 +6,8 @@ package block
 import (
 	"fmt"
 	"math/rand"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/scttfrdmn/keel/internal/kern"
@@ -60,19 +62,43 @@ import (
 // n=2048, and Go zeroes it — so it is named here rather than left for somebody to
 // rediscover inside the residual.
 //
-// # The kernel denominator, in the same invocation
+// # The kernel denominator, in the same invocation — and there are two of them
 //
-// The fifth sub-benchmark, kernel/kc=<kc>, is the microkernel alone on L1-resident
-// panels at the depth this nest actually calls it with. #26's table divided a
-// kernel rate from one invocation by a blocked rate from another and said so as a
-// caveat; here both are in one binary on one host in one run, so the ratio is a
-// ratio. It is still a ratio of medians and no interval is claimed for it.
+// #26's table divided a kernel rate from one invocation by a blocked rate from
+// another and said so as a caveat. Everything here is one binary on one host in one
+// run, so the ratio is a ratio, bounded by both confidence intervals. It is still a
+// ratio of medians.
 //
-// GFLOP/s is reported for full and nest-no-pack (useful gemm flops, 2mnk) and for
-// kernel (its own 2·MR·NR·kc per call), which is what makes those three
-// comparable. The two pack sub-benchmarks report no flop rate at all: they do no
-// arithmetic, and inventing a numerator for them is the thing rule 7 forbids.
-// Their contribution is read off ns/op, in the same units as full.
+// Which quantity belongs in the denominator turned out to be the harder question,
+// and the first answer was wrong, so both are measured:
+//
+//	kernel/kc=<kc>/ctiles=1   the P2-style ceiling: one call, one depth, one C tile
+//	kernel/kc=<kc>/ctiles=8   the same, with consecutive calls made independent
+//	kernel-calls              exactly the calls this nest makes, at its own depths
+//
+// The first is what bench/BenchmarkKernel measures and what #26's number divided
+// by. It has two properties a retention denominator should not have. Consecutive
+// calls accumulate into the *same* C tile, a dependency the real nest never has
+// (its consecutive calls write different tiles) — hence the ctiles manipulation,
+// which changes only that. And it runs at one depth, while the nest runs at several:
+// with k=2048 and KC=384 a sixth of the work is at kk=128, whose per-call overhead
+// fraction is three times larger, so charging the nest for that difference and
+// calling it loop overhead is a mislabelling.
+//
+// kernel-calls is therefore the denominator retention wants: the call multiset from
+// the same generator every other part uses, run flat on L1-resident panels with
+// rotating C tiles, containing none of the nest (no real C, no panel address
+// arithmetic, no beta pass, no fringe tile, no macro loops). See its doc, and
+// callsPerDepth's.
+//
+// GFLOP/s is reported for full, nest-no-pack and kernel-calls over the same useful
+// 2mnk, so ratios among them are pure ratios of time; the marker line prints
+// padwaste so the reader can confirm the padded tiles do no extra arithmetic at
+// these shapes. kernel/ctiles=N reports its own 2·MR·NR·kc per call, since it is a
+// per-call ceiling and not a whole-GEMM rate. The two pack sub-benchmarks report no
+// flop rate at all: they do no arithmetic, and inventing a numerator for them is the
+// thing rule 7 forbids. Their contribution is read off ns/op, in the same units as
+// full.
 //
 // # Shape is a dimension, not a dispatch
 //
@@ -106,10 +132,30 @@ func BenchmarkNest(b *testing.B) {
 						bpacks++
 					}
 				}
+				// The call multiset, as depth:count pairs, because the kernel-calls
+				// denominator is only as honest as the claim that it makes the same
+				// calls the nest does. Sorted, so the line is stable across runs.
+				// padwaste is how much more arithmetic the padded tiles perform than
+				// the useful 2mnk every rate here is reported over — zero at these
+				// shapes, and printed rather than assumed to be zero.
+				counts := callsPerDepth(kn, m, n, k)
+				depths := make([]int, 0, len(counts))
+				for kk := range counts {
+					depths = append(depths, kk)
+				}
+				sort.Ints(depths)
+				calls, padded := 0, 0.0
+				parts := make([]string, 0, len(depths))
+				for _, kk := range depths {
+					calls += counts[kk]
+					padded += float64(counts[kk]) * 2 * float64(kn.MR) * float64(kn.NR) * float64(kk)
+					parts = append(parts, fmt.Sprintf("%d:%d", kk, counts[kk]))
+				}
 				fmt.Printf("keel-nest-plan: name=%s kc=%d mc=%d nc=%d mr=%d nr=%d "+
-					"blocks=%d apacks=%d bpacks=%d\n",
+					"blocks=%d apacks=%d bpacks=%d calls=%d depths=%s padwaste=%.4f\n",
 					kn.ID()+"/n="+fmt.Sprint(n), kc, mc, nc, kn.MR, kn.NR,
-					len(blocks), len(blocks), bpacks)
+					len(blocks), len(blocks), bpacks,
+					calls, strings.Join(parts, ","), padded/flops-1)
 
 				am, bm, c := benchMat(m, k), benchMat(k, n), benchMat(m, n)
 				ap := make([]float32, pack.ALen(kn.MR, mc, kc))
@@ -147,15 +193,19 @@ func BenchmarkNest(b *testing.B) {
 						packBOnly(kn, m, n, k, bm, n, bp, false)
 					}
 				})
-				b.Run(fmt.Sprintf("kernel/kc=%d", kc), func(b *testing.B) {
-					ka, kb, kc2, ldc := benchPanels(kn, kc)
-					perCall := 2.0 * float64(kn.MR) * float64(kn.NR) * float64(kc)
-					b.ResetTimer()
-					for i := 0; i < b.N; i++ {
-						kn.Fn(kc, ka, kb, kc2, ldc)
-					}
-					b.ReportMetric(perCall*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
-					benchSink = kc2[0]
+				// D1, the P2-style ceiling: one call at one depth on L1-resident
+				// panels, repeated. ctiles varies the number of C tiles the
+				// repeated calls rotate through, which is the manipulation — see
+				// the doc on kernelRepeat.
+				for _, ct := range []int{1, 8} {
+					b.Run(fmt.Sprintf("kernel/kc=%d/ctiles=%d", kc, ct), func(b *testing.B) {
+						kernelRepeat(b, kn, kc, ct)
+					})
+				}
+				// D2: the calls this nest actually makes, at the depths it makes
+				// them, and nothing else.
+				b.Run("kernel-calls", func(b *testing.B) {
+					kernelCalls(b, kn, m, n, k, flops)
 				})
 			})
 		}
@@ -272,6 +322,113 @@ func BenchmarkPackDirections(b *testing.B) {
 			}
 		}
 	}
+}
+
+// kernelRepeat is the P2-style kernel ceiling with one thing made variable: how
+// many C tiles the repeated calls rotate through.
+//
+// bench/BenchmarkKernel, and this benchmark until now, call the microkernel b.N
+// times on one C tile. That makes every call accumulate into the same memory the
+// previous call just stored to, which is a dependency the real nest does not have:
+// consecutive kernel calls in a GEMM write to different tiles of C. Whether that
+// dependency costs anything is a question about the machine, not something to
+// reason about — so it is a dimension. ctiles=1 is the historical measurement;
+// ctiles=8 breaks the chain while changing nothing else.
+//
+// The index arithmetic (i&(ctiles-1), one AND and one multiply) is paid at both
+// settings, so the comparison varies only the dependency. ctiles must be a power of
+// two for the mask; both values here are. The tiles together are a few KB, so they
+// are L1-resident at either setting and this stays P2's kind of measurement.
+//
+// This benchmark exists to answer whether the retention *denominator* is a ceiling.
+// A denominator that is itself depressed makes retention look worse than it is, and
+// #26's headline number ("~77% on janus") divides by exactly this quantity.
+func kernelRepeat(b *testing.B, kn kern.Kernel, kc, ctiles int) {
+	if ctiles&(ctiles-1) != 0 {
+		b.Fatalf("ctiles=%d is not a power of two, so the index mask is wrong", ctiles)
+	}
+	ka, kb, c0, ldc := benchPanels(kn, kc)
+	tile := kn.MR * ldc
+	cs := make([]float32, tile*ctiles)
+	for r := 0; r < ctiles; r++ {
+		copy(cs[r*tile:], c0)
+	}
+	perCall := 2.0 * float64(kn.MR) * float64(kn.NR) * float64(kc)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r := i & (ctiles - 1)
+		kn.Fn(kc, ka, kb, cs[r*tile:(r+1)*tile], ldc)
+	}
+	b.ReportMetric(perCall*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+	benchSink = cs[0]
+}
+
+// kernelCalls is the retention denominator the ratio actually wants: exactly the
+// microkernel calls this nest makes, at the depths it makes them, with no nest
+// around them.
+//
+// The P2-style ceiling (kernelRepeat) measures one depth, and the nest does not run
+// at one depth: with k=2048 and KC=384 there are five blocks at kk=384 and one at
+// kk=128, so a sixth of the work runs at a depth whose per-call overhead fraction is
+// three times larger. Dividing the blocked rate by a kc=384 measurement charges the
+// nest for a difference in call *shape* and calls the result loop overhead.
+//
+// So the call multiset comes from the same generator every other part uses, and this
+// runs it flat: for each depth, the number of calls the nest makes at that depth,
+// back to back, on L1-resident panels, rotating through eight C tiles so consecutive
+// calls are independent the way the nest's are. What separates it from nest-no-pack
+// is what it leaves out — the real C matrix, the panel address arithmetic, the beta
+// pass, the fringe temp tile and the macro loops. Those are the nest, and the point
+// of a denominator is to not contain them.
+//
+// GFLOP/s is reported over the same useful 2mnk as full and nest-no-pack, not over
+// the padded flops the calls nominally perform, so that the ratio between them is a
+// pure ratio of times. At every shape here they are equal anyway (2048 and 1024 are
+// multiples of 2, 4 and 32), and the marker line prints the call counts so a reader
+// can check that.
+func kernelCalls(b *testing.B, kn kern.Kernel, m, n, k int, flops float64) {
+	const ctiles = 8
+	counts := callsPerDepth(kn, m, n, k)
+	depths := make([]int, 0, len(counts))
+	for kk := range counts {
+		depths = append(depths, kk)
+	}
+	sort.Ints(depths)
+
+	maxDepth := depths[len(depths)-1]
+	ka, kb, c0, ldc := benchPanels(kn, maxDepth)
+	tile := kn.MR * ldc
+	cs := make([]float32, tile*ctiles)
+	for r := 0; r < ctiles; r++ {
+		copy(cs[r*tile:], c0)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r := 0
+		for _, kk := range depths {
+			for c := counts[kk]; c > 0; c-- {
+				kn.Fn(kk, ka, kb, cs[r*tile:(r+1)*tile], ldc)
+				r = (r + 1) & (ctiles - 1)
+			}
+		}
+	}
+	b.ReportMetric(flops*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+	benchSink = cs[0]
+}
+
+// callsPerDepth counts the microkernel calls the nest makes, keyed by the depth kk
+// it makes them at. Tiles per block are ceil(im/MR)·ceil(jn/NR) because a fringe
+// tile is a full-shape call on zero-padded panels — that is the edge strategy, and
+// it is why the count is over padded tiles rather than over valid elements.
+func callsPerDepth(kn kern.Kernel, m, n, k int) map[int]int {
+	counts := map[int]int{}
+	for _, b := range nestBlocks(kn, m, n, k) {
+		ti := (b.im + kn.MR - 1) / kn.MR
+		tj := (b.jn + kn.NR - 1) / kn.NR
+		counts[b.kk] += ti * tj
+	}
+	return counts
 }
 
 // nestBlock is one (jc, pc, ic) block of the nest: the column block, the depth

@@ -14,6 +14,17 @@
 #                        retention is a bounded ratio rather than a quotient of two
 #                        point estimates from two runs (which is what gate-p3
 #                        prints, with that caveat attached).
+#
+#                        Three denominators are printed, not one. The historical
+#                        one (a single call at a single depth into a single C tile,
+#                        which is what bench/BenchmarkKernel measures and what #26's
+#                        "~77%" divided by) turned out not to be a ceiling: the
+#                        repeated calls share one C tile, a dependency the real nest
+#                        does not have. So the table shows that measurement, the same
+#                        measurement with the dependency broken, and the nest's own
+#                        call multiset at its own depths — which is the one retention
+#                        is quoted against. The superseded number stays visible
+#                        because three gates reported it.
 #   sweep                BenchmarkBlocking: KC/MC/NC over a coarse grid at 2048^3.
 #
 # The two modes have deliberately different methodologies and say so in their
@@ -91,37 +102,77 @@ pct() { [[ -n "$1" ]] && awk -v r="$1" 'BEGIN{printf "%.1f%%", r*100}' || printf
 # in one CSV can be bounded by both their intervals (bench_ratio_lo), and a ratio
 # across two invocations cannot be bounded at all (§7 rule 7).
 decompose_host() {
-  local host="$1" csv="$2" log="$3" case_ kc full kern ret retlo pa pb np resid
+  local host="$1" csv="$2" log="$3" case_ kc full ret retlo pa pb np resid
+  local d1 d1r d8 d8r calls callsr nprate npret npretlo
   # The sub-benchmark set is discovered from the log rather than listed here: the
   # shapes are whatever internal/kern registers for this host's backend, and a
   # hard-coded list would silently measure fewer shapes than ran.
   while read -r case_; do
-    kc="$(awk -v c="$case_" '$0 ~ "^Benchmark"c"/kernel/kc=" { n=$1; sub(/-[0-9]+$/,"",n); sub(/.*kc=/,"",n); print n; exit }' "$log")"
+    kc="$(awk -v c="$case_" '$0 ~ "^Benchmark"c"/kernel/kc=" { n=$1; sub(/-[0-9]+$/,"",n); sub(/\/ctiles=.*/,"",n); sub(/.*kc=/,"",n); print n; exit }' "$log")"
     if [[ -z "$kc" ]]; then
       warn "[$host] $case_: no kernel sub-benchmark ran, so retention has no denominator this run"
       continue
     fi
+    d1="$case_/kernel/kc=$kc/ctiles=1"
+    d8="$case_/kernel/kc=$kc/ctiles=8"
+    calls="$case_/kernel-calls"
     if ! bench_expect "$log" "$csv" sec/op \
-         "$case_/full" "$case_/nest-no-pack" "$case_/pack-a" "$case_/pack-b" "$case_/kernel/kc=$kc" >"$BINDIR/miss"; then
+         "$case_/full" "$case_/nest-no-pack" "$case_/pack-a" "$case_/pack-b" \
+         "$d1" "$d8" "$calls" >"$BINDIR/miss"; then
       warn "[$host] $case_: incomplete —$(tr '\n' ' ' <"$BINDIR/miss")"
       continue
     fi
     full="$(bench_gflops "$case_/full" "$csv")"
-    kern="$(bench_gflops "$case_/kernel/kc=$kc" "$csv")"
+    # The three candidate denominators. d1 is what bench/BenchmarkKernel measures and
+    # what #26's original number divided by; d8 is d1 with consecutive calls made
+    # independent, which is the manipulation; calls is the nest's own call multiset at
+    # its own depths. Only the last is a denominator for retention — see
+    # internal/block/nest_bench_test.go — but all three are printed, because the
+    # first is the number three earlier gates reported and a revision that hides
+    # what it revised is not a revision.
+    d1r="$(bench_gflops "$d1" "$csv")"
+    d8r="$(bench_gflops "$d8" "$csv")"
+    callsr="$(bench_gflops "$calls" "$csv")"
+    # The rate the nest would reach if packing were free: measured, not derived from
+    # the time fractions, so bench_ratio_lo can bound it.
+    nprate="$(bench_gflops "$case_/nest-no-pack" "$csv")"
     # Retention with both intervals honoured: the blocked rate pushed down by its
-    # own CI, the kernel rate pushed up by its own. A retention that clears a number
+    # own CI, the denominator pushed up by its own. A retention that clears a number
     # here would clear it if both measurements were as wrong as benchstat allows.
-    ret="$(bench_ratio "$case_/full" "$case_/kernel/kc=$kc" "$csv" GFLOP/s)"
-    retlo="$(bench_ratio_lo "$case_/full" "$case_/kernel/kc=$kc" "$csv" GFLOP/s)"
+    ret="$(bench_ratio "$case_/full" "$calls" "$csv" GFLOP/s)"
+    retlo="$(bench_ratio_lo "$case_/full" "$calls" "$csv" GFLOP/s)"
+    npret="$(bench_ratio "$case_/nest-no-pack" "$calls" "$csv" GFLOP/s)"
+    npretlo="$(bench_ratio_lo "$case_/nest-no-pack" "$calls" "$csv" GFLOP/s)"
     # The parts, as fractions of the whole, in seconds — the unit they share.
     np="$(bench_ratio "$case_/nest-no-pack" "$case_/full" "$csv")"
     pa="$(bench_ratio "$case_/pack-a" "$case_/full" "$csv")"
     pb="$(bench_ratio "$case_/pack-b" "$case_/full" "$csv")"
     resid="$(awk -v a="${np:-0}" -v b="${pa:-0}" -v c="${pb:-0}" 'BEGIN{printf "%.4f", 1-a-b-c}')"
     printf '  %s\n' "$case_"
-    info "kernel      $(printf '%8.1f' "${kern:-0}") GFLOP/s at kc=$kc   $(bench_describe "$case_/kernel/kc=$kc" "$csv" GFLOP/s)"
-    info "blocked     $(printf '%8.1f' "${full:-0}") GFLOP/s            $(bench_describe "$case_/full" "$csv" GFLOP/s)"
-    info "retention   $(pct "$ret") of its own microkernel ($(pct "$retlo") net of both CIs)"
+    info "blocked        $(printf '%8.1f' "${full:-0}") GFLOP/s   $(bench_describe "$case_/full" "$csv" GFLOP/s)"
+    info "no-pack        $(printf '%8.1f' "${nprate:-0}") GFLOP/s   $(bench_describe "$case_/nest-no-pack" "$csv" GFLOP/s)"
+    info "denominators, per call at kc=$kc and over the nest's own call multiset:"
+    info "  ctiles=1     $(printf '%8.1f' "${d1r:-0}") GFLOP/s   $(bench_describe "$d1" "$csv" GFLOP/s)"
+    info "  ctiles=8     $(printf '%8.1f' "${d8r:-0}") GFLOP/s   $(bench_describe "$d8" "$csv" GFLOP/s)"
+    info "  kernel-calls $(printf '%8.1f' "${callsr:-0}") GFLOP/s   $(bench_describe "$calls" "$csv" GFLOP/s)"
+    info "  ctiles=8/ctiles=1 $(pct "$(bench_ratio "$d8" "$d1" "$csv" GFLOP/s)") ($(pct "$(bench_ratio_lo "$d8" "$d1" "$csv" GFLOP/s)") net of both CIs)"
+    info "  — above 100% means the historical one-C-tile measurement is not a ceiling."
+    info "  ctiles=* and kernel-calls are NOT comparable to each other: the first two"
+    info "  are per-call rates over 2*MR*NR*kc, kernel-calls is a whole-GEMM rate over"
+    info "  2mnk. Only the ctiles ratio answers the dependency question, and only"
+    info "  kernel-calls is a denominator for retention."
+    info "retention   $(pct "$ret") of the kernel calls it makes ($(pct "$retlo") net of both CIs)"
+    info "  with packing removed: $(pct "$npret") ($(pct "$npretlo") net of both CIs)"
+    # Positive is a cost: points of the denominator's rate that this part gives up.
+    # The two terms sum to the total by construction (they are 1-npret and npret-ret).
+    info "  the $(awk -v a="${ret:-0}" 'BEGIN{printf "%.1f", (1-a)*100}') points it gives up split into"
+    info "    packing + residual  $(awk -v a="${npret:-0}" -v b="${ret:-0}" 'BEGIN{printf "%+.1f", (a-b)*100}')  (both, since nest-no-pack drops both)"
+    info "    the loop nest       $(awk -v a="${npret:-0}" 'BEGIN{printf "%+.1f", (1-a)*100}')  (macro loops, beta pass, real C, fringe tile)"
+    if awk -v a="${npret:-0}" 'BEGIN{exit !(a > 1)}'; then
+      info "    the loop-nest term is NEGATIVE: nest-no-pack is faster than the flat"
+      info "    call sequence, so kernel-calls is not an upper bound either and this"
+      info "    split is not a cost breakdown. Reported, not explained away."
+    fi
     info "  parts of the blocked time: nest-no-pack $(pct "$np")  pack-a $(pct "$pa")  pack-b $(pct "$pb")  residual $(pct "$resid")"
     info "  (residual is a point estimate with no interval — a difference of four"
     info "   medians. It holds what nest-no-pack drops by construction: the"
