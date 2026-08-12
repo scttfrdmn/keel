@@ -33,6 +33,11 @@
 # The methodology, in one place so no gate can quietly deviate from it.
 KEEL_BENCH_COUNT="${KEEL_BENCH_COUNT:-10}"
 KEEL_BENCH_TIME="${KEEL_BENCH_TIME:-1s}"
+# How many result rows a declared benchmark must have produced before a criterion
+# is allowed to read it (bench_expect). It is -count, not benchstat's minimum of
+# 6: a run that produced 7 of 10 rows is a run that died partway, and it should
+# say so rather than be silently aggregated over whatever survived.
+KEEL_BENCH_MIN_ROWS="${KEEL_BENCH_MIN_ROWS:-$KEEL_BENCH_COUNT}"
 
 # bench_flags — the -test.* flags for a gate benchmark run.
 bench_flags() {
@@ -69,6 +74,58 @@ bench_stat() {
         exit
       }
     }' "$2"
+}
+
+# bench_expect LOG CSV UNIT NAME... — the declared-then-checked half of every
+# measurement. Prints one word per declared benchmark that did not fully arrive,
+# each with the state it was found in, and returns 1 if any did not.
+#
+# WHY THIS EXISTS. bench_stat prints nothing both when a benchmark never ran and
+# when it ran and reported nothing under the unit asked for, so every call site
+# had to invent its own reading of empty — and each read it as whatever that
+# criterion happened to be about. Issue #32 was a -bench filter that silently
+# never ran BenchmarkOpenBLAS for the whole of P3: the gate reported "no
+# OpenBLAS/n=2048 benchmark result to divide by", which reads as a missing
+# library, and the real cause — the gate measuring less than it claimed — went
+# unnamed. A gate's product is verdicts, so a red for the wrong reason is as
+# untrustworthy as a green for the wrong reason (DESIGN.md §5 rule 6).
+#
+# So a criterion states up front which benchmarks it intends to read and calls
+# this before reading any of them. An absent measurement then has exactly one
+# verdict available to it — unmeasured — instead of a shape each caller misreads
+# its own way.
+#
+# The three states are reported distinctly rather than collapsed into "missing",
+# because they have different causes: no rows at all is a filter that did not
+# select the benchmark, too few rows is a run that died partway, and rows without
+# a unit section is a benchmark reporting a metric this gate does not read.
+#
+# Row counting is exact-name, matching bench_stat and the sweep parser: strip the
+# -GOMAXPROCS suffix, strip the Benchmark prefix, compare as a string. A prefix
+# match would let Sgemm/n=2048 be satisfied by Sgemm/n=20480.
+bench_expect() {
+  local log csv unit name got bad=""
+  log="$1"; csv="$2"; unit="$3"; shift 3
+  for name in "$@"; do
+    got="$(awk -v want="$name" '
+      /^Benchmark/ {
+        n = $1
+        sub(/-[0-9]+$/, "", n)
+        sub(/^Benchmark/, "", n)
+        if (n == want) c++
+      }
+      END { print c + 0 }' "$log")"
+    if [[ "$got" -eq 0 ]]; then
+      bad="$bad ${name}(no result row at all: this run never produced it)"
+    elif [[ "$got" -lt "$KEEL_BENCH_MIN_ROWS" ]]; then
+      bad="$bad ${name}($got of $KEEL_BENCH_MIN_ROWS sample rows: the run did not finish it)"
+    elif [[ -z "$(bench_stat "$name" "$csv" "$unit")" ]]; then
+      bad="$bad ${name}($got sample rows, but benchstat reports no $unit for it)"
+    fi
+  done
+  [[ -z "$bad" ]] && return 0
+  printf '%s\n' "${bad# }"
+  return 1
 }
 
 # bench_ratio_lo NUM DEN CSV [UNIT] — conservative lower bound on NUM/DEN.

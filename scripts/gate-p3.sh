@@ -255,6 +255,23 @@ pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
 fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
 info() { printf '        %s\n' "$1"; }
 
+# require_bench LABEL LOG CSV UNIT NAME... — declare what a criterion is about to
+# read, and give absence exactly one verdict.
+#
+# Returns 0 when every declared benchmark produced its full complement of rows, so
+# the caller reads only measurements it has already confirmed exist. Otherwise it
+# emits a single "unmeasured" failure naming the run as the suspect, and the caller
+# must skip the criterion rather than interpret the gap. See bench_expect in
+# scripts/bench.sh for why empty is not a readable value, and DESIGN.md §5 rule 6
+# for why an unmeasured criterion may not resolve as either colour.
+require_bench() {
+  local label miss
+  label="$1"; shift
+  miss="$(bench_expect "$@")" && return 0
+  fail "$label unmeasured: $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
+  return 1
+}
+
 # ---------------------------------------------------------------- the sweep
 # DESIGN.md §4/P3's list, verbatim. 1..17 covers every M and N remainder against
 # any MR/NR a kernel might ship; 63/64/65 straddle a power of two; 500 and 1000
@@ -889,6 +906,21 @@ else
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    # Declared before read: the peak denominator and both shipped shapes. This is NOT
+    # degraded for an unjudged host the way a failed *run* is above, because the run
+    # succeeded — a missing row after a successful run is this gate's filter or parser
+    # misreading its own output, and that is a defect on every host equally rather
+    # than a property of one.
+    #
+    # This is the call site that matters most. Without it, a missing Peak/avx512
+    # leaves every shape with an empty bench_ratio_lo and the criterion reports "no
+    # bounded percent-of-peak for any shipped shape" — a red that blames the shapes
+    # for the absence of their denominator, inside the criterion that carries P2's
+    # floor forward. That message is entirely believable, which is exactly what would
+    # have made the misattribution durable (#32's species; DESIGN.md §5 rule 6).
+    # shellcheck disable=SC2086  # GATE_KERNELS is a deliberate word list
+    require_bench "[$host] the kernel sentinel's inputs" \
+      "$BENCHLOG" "$BENCHCSV" GFLOP/s "$GATE_PEAK" $GATE_KERNELS || continue
 
     # ---- criterion 5b, part 1: the registry's recorded insns/FMA vs the object code
     # Same binary on every host, so this is checked once — but it is checked from a
@@ -1076,10 +1108,11 @@ if [[ -n "$HOSTS" ]]; then
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
-    if [[ -z "$(bench_stat "$GATE_SGEMM" "$BENCHCSV" GFLOP/s)" ]]; then
-      fail "[$host] no $GATE_SGEMM benchmark result"
-      continue
-    fi
+    # Both, declared together: the percent-of-peak line, the retention line and the
+    # 5b comparison all read the peak, and an absent peak used to degrade silently
+    # into a missing info line rather than into a verdict.
+    require_bench "[$host] the blocked Sgemm's inputs" \
+      "$BENCHLOG" "$BENCHCSV" GFLOP/s "$GATE_SGEMM" "$GATE_PEAK" || continue
     info "[$host] Sgemm 2048^3 $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s), peak $(bench_describe "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
     pk="$(bench_ratio "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
     pklo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
@@ -1241,6 +1274,40 @@ else
       fail "[$host] the sweep ran the harness for OPENBLAS_CORETYPE=$bad_row and it produced no $GATE_OPENBLAS result row: that is a defect in this gate's filter or parser, not a property of the host"
       continue
     fi
+    # #33's signature, mechanized. A sweep exists to discriminate, so if every kernel
+    # family it reached measured the same rate to the last printed digit, the
+    # instrument is broken by construction and any "winner" is an artifact of the
+    # order awk saw the candidates in. Variance too low is as diagnostic as variance
+    # too high.
+    #
+    # The test is over DISTINCT ACHIEVED corenames, not over candidates, because
+    # candidates that alias to one family are supposed to agree: vesta answers both
+    # Cooperlake and SapphireRapids with corename=Cooperlake, and a check counting
+    # candidates would fire on that and punish OpenBLAS for correctly reporting that
+    # two names are one family. Counting families also makes this indifferent to the
+    # candidate list's composition — three more aliases landing on Cooperlake cannot
+    # perturb it, because the question is how many families were reached, not how many
+    # requests were made. A host whose library ignores every request has reached one
+    # family, ties with itself legitimately, and is caught by the pin verification
+    # below instead: that half asks "did the request take", this half asks "can the
+    # instrument tell the families apart".
+    #
+    # Exact equality is the threshold, and the measurements support it: two separate
+    # invocations of one family on vesta read 150.60 and 149.80, so real rates of the
+    # same silicon do not tie to two decimals. An exact tie across distinct families
+    # is unambiguous.
+    read -r SWEEP_FAMS SWEEP_SPREAD <<<"$(awk '
+      $3 == "-" || $3 == "norow" { next }
+      {
+        fams[$2] = 1
+        if (hi == "" || $3 + 0 > hi) hi = $3 + 0
+        if (lo == "" || $3 + 0 < lo) lo = $3 + 0
+      }
+      END { n = 0; for (f in fams) n++; printf "%d %s", n, (hi == "" ? "-" : hi - lo) }' <<<"$SWEEP")"
+    if [[ "${SWEEP_FAMS:-0}" -ge 2 ]] && awk -v s="$SWEEP_SPREAD" 'BEGIN{exit !(s + 0 == 0)}'; then
+      fail "[$host] the coretype sweep is non-discriminating: $SWEEP_FAMS distinct kernel families measured an identical rate, so it cannot rank them and any winner would be an artifact of candidate order — the instrument is broken rather than the families equal (issue #33)"
+      continue
+    fi
     read -r OBCT OBCT_CORE OBCT_RATE <<<"$(awk '$3 != "-" && $3 + 0 > m { m = $3 + 0; best = $0 } END { print best }' <<<"$SWEEP")"
     if [[ -z "${OBCT:-}" || "${OBCT_RATE:--}" == "-" ]]; then
       fail "[$host] no candidate coretype produced a rate, so the reference cannot be pinned to its best family and its ceiling is unmeasured"
@@ -1306,13 +1373,20 @@ else
     info "[$host] reference kernel family: $obcore (on the AVX2-or-better allowlist, and the sweep's winner as pinned)"
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
-    if [[ -z "$(bench_stat "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)" ]]; then
-      # Two very different states used to share this one sentence, and only one of
-      # them is a missing reference (#32). The library is present and reported itself
-      # a few lines above, so if the row is absent the run did not produce it — a
-      # gate defect. Say which, and print the names that did come back, because
-      # "the filter ran something else" is what that looks like from here.
-      fail "[$host] the benchmark run produced no $GATE_OPENBLAS result row, although this host's OpenBLAS built, ran and reported itself above: the reference is present, so this is a defect in what the gate asked to be run rather than a missing reference"
+    # All three declared, not just the reference: criterion 6b reads the peak too, and
+    # an absent peak used to reach p3_denominator as peak=0, which takes the nopeak
+    # branch and silently reverts an issue-bound host to plain OpenBLAS. That is the
+    # strict direction, so it could never flatter keel — but it would have replaced a
+    # ruled denominator with a different one on the strength of a measurement that was
+    # never taken, and printed "of a 0.00 GFLOP/s peak" while doing it.
+    if ! require_bench "[$host] the keel/OpenBLAS ratio's inputs" \
+         "$BENCHLOG" "$BENCHCSV" GFLOP/s "$GATE_SGEMM" "$GATE_OPENBLAS" "$GATE_PEAK"; then
+      # Two very different states used to share one sentence here, and only one of them
+      # is a missing reference (#32). The library is present and reported itself a few
+      # lines above, so an absent row means the run did not produce it — a gate defect.
+      # Print the names that did come back, because "the filter ran something else" is
+      # what that looks like from here.
+      info "  [$host] this host's OpenBLAS built, ran and reported itself above, so the absence is in what the gate asked to be run, not in the reference"
       info "  [$host] -test.bench=$SGEMM_BENCH_FILTER returned: $(awk -F, '/^Benchmark/ { n = $1; sub(/-[0-9]+$/, "", n); print n }' "$BENCHCSV" | sort -u | tr '\n' ' ')"
       continue
     fi

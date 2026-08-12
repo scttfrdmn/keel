@@ -527,6 +527,46 @@ While the major version is 0, minor versions may contain breaking changes.
     row fails the host as a gate defect instead of degrading to a number. With the
     fix, the gate's own sweep reproduces the finding: vesta `default` → 149.4,
     `Haswell` → **159.5**.
+  - **Absence is a first-class outcome in every criterion that reads a benchmark**
+    (DESIGN.md §5 rule 6, new). `bench_expect` in `scripts/bench.sh` takes the
+    benchmarks a criterion declares it will read and asserts a minimum row count
+    for each of them — `-count` rows, not benchstat's minimum of 6 — before the
+    criterion reads any of them. `bench_stat` printing nothing was previously
+    indistinguishable at every call site from a benchmark that ran and reported
+    nothing under the unit asked for, and each caller invented its own reading of
+    empty; that indistinguishability is where #32 lived for the whole of P3. The
+    three states are reported separately rather than collapsed into "missing",
+    because a filter that did not select the benchmark, a run that died partway,
+    and a benchmark reporting a metric the gate does not read have different
+    causes. Three call sites in `gate-p3.sh`: criterion 5, criterion 6 — and the
+    kernel sentinel, which is the one that would have survived audits. With
+    `Peak/avx512` absent it reported *"no bounded percent-of-peak for any shipped
+    shape"*: a red that blames the shapes for the absence of their denominator,
+    inside the criterion that carries P2's floor forward, and believable enough to
+    be read as a real result. Criterion 6 now declares the peak as well, where an
+    absent peak used to reach `p3_denominator` as `peak=0`, silently reverting an
+    issue-bound host to plain OpenBLAS — the strict direction, so never flattering,
+    but a ruled denominator replaced on the strength of a measurement never taken.
+  - **A non-discriminating coretype sweep fails instead of crowning a winner by
+    candidate order** (issue #33's signature, mechanized). A sweep exists to
+    discriminate, so distinct kernel families measuring an identical rate means the
+    instrument is broken by construction: variance too low is as diagnostic as
+    variance too high. The test is over distinct *achieved* corenames, not over
+    candidates, because candidates that alias to one family are supposed to agree —
+    vesta answers both `Cooperlake` and `SapphireRapids` with `corename=Cooperlake`,
+    and counting candidates would fire on that and punish OpenBLAS for correctly
+    reporting that two names are one family. Counting families also makes the check
+    indifferent to the candidate list's composition. The halves are disjoint: the
+    pin verification asks whether a request took, this asks whether the instrument
+    can tell the families apart. Exact equality is the threshold and the
+    measurements support it — two invocations of one family on vesta read 150.60 and
+    149.80, so real rates of the same silicon do not tie to two decimals.
+  - **DESIGN.md §5 rule 5 amended to match the ruling already applied to §4/P3**:
+    *every* measuring host under the `performance` governor, asserted per host and
+    re-read at the moment of measurement. The vicarious wording ("at least one
+    measuring host") had survived in the source clause while its replacement was
+    enforced downstream, so the gate cited a rule that contradicted its own
+    behaviour.
   It also carries P2 forward: the spill/call/bounds-check audit re-runs on every
   gate from here on, because packing and edge handling are exactly what would
   break those properties, and P2's throughput floor is re-checked on a sentinel
