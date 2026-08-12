@@ -66,6 +66,55 @@
 #     regression check because a file was absent would be a gate that got weaker
 #     when someone cloned the repo.
 #
+#  5b. THE SHAPE MEASURED IS THE SHAPE DISPATCH SELECTS (ruling on issue #24).
+#     P2 shipped two zero-spill shapes and neither dominates: 4x32 wins on Zen 4
+#     and Zen 5, 2x32 wins on Skylake-X by 11 percentage points (KERNEL.md §7).
+#     Dispatch now chooses per host, from the same issue-bound/FMA-bound
+#     classification this gate's own model defines — FMA-bound takes the fewest
+#     memory ops per FMA, issue-bound the fewest instructions per FMA. That fixed
+#     the performance bug criterion 6b's shape guard found (janus was shipping
+#     4x32), and it opens three ways for a gate to be lied to, so it closes all
+#     three:
+#
+#       - EVALUATING ONE KERNEL WHILE SHIPPING ANOTHER. Criterion 5 used to judge
+#         P2's floor against whichever shipped shape measured fastest on the host.
+#         With a per-host choice that is no longer the same thing as the shape
+#         `Sgemm` runs, so the sentinel now judges the DISPATCHED shape, named by
+#         the keel-bench-kern marker of the run being judged. The other shapes
+#         become the ceiling set, which is what INDEPENDENCE in scripts/roofline.sh
+#         asks for anyway.
+#
+#       - A WRONG CHOICE PASSING QUIETLY. Both shapes are benchmarked in one
+#         invocation, so "did dispatch pick the faster one" is answerable from the
+#         same measurement: if another shape's lower bound exceeds the dispatched
+#         shape's point estimate, this gate fails. That direction is the one the
+#         classification can be wrong in without any other criterion noticing —
+#         see internal/kern/class_amd64.go, which documents both error directions
+#         and why the other one only ever makes this gate stricter. The margin is
+#         CI-based rather than exact so the check cannot flake on noise.
+#
+#         The blocked `Sgemm` is then re-measured under KEEL_KERN_CLASS pinned to
+#         the other class, and the dispatched shape must be no slower there either.
+#         That run is a second invocation — weaker evidence than the same-run
+#         kernel comparison above, and it is a cross-check, not the criterion —
+#         but it is the only way to see the choice through packing and blocking,
+#         which is where P3's number actually comes from.
+#
+#       - A CLASSIFICATION NOBODY CHECKED. The library cannot read a
+#         microarchitecture: archsimd exposes CPU features and no vendor, family or
+#         model, so HostClass fingerprints the generation from a feature bundle
+#         (docs/toolchain-notes.md T14, issue #25). A proxy that decides what ships
+#         must be checked against something measured, so the library prints its
+#         classification and its grounds (keel-bench-kern-class) and this gate
+#         compares them against the class its own convergence test derives from the
+#         measurements. Disagreement is a gate failure, on every host, every run.
+#
+#     And because the ranking reads an audited instruction count recorded in Go
+#     source, that number is re-derived from the object code here: every shipped
+#     shape's Kernel.InsnsPerFMA must equal what the spill audit counts in its loop
+#     body. A measurement in source that nothing recomputes is a measurement that
+#     drifts, and this one decides what ships.
+#
 #  6. THE OPENBLAS BAR, AND WHICH READING OF "DEV MACHINE ONLY" THIS IMPLEMENTS.
 #     DESIGN.md says the OpenBLAS harness is cgo behind a build tag, "dev machine
 #     only, never a package dependency". Read as "measure on the dev machine" the
@@ -201,6 +250,10 @@ GATE_PEAK="Peak/avx512"
 # elements: {Peak,Sgemm,OpenBLAS} then {avx512,n=2048}. Written as one string
 # because those depth semantics bit gate-p2 once already (see its BENCH_FILTER).
 SGEMM_BENCH_FILTER='Peak|Sgemm|OpenBLAS/avx512|n=2048'
+# Criterion 5b's cross-check run: the blocked Sgemm only, with the shape pinned to
+# the other class. No Peak and no OpenBLAS, because what is wanted from it is one
+# rate to compare against the dispatched shape's rate — not a ratio.
+SGEMM_SHAPE_FILTER='Sgemm/n=2048'
 OPENBLAS_REMOTE_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 
 # The OpenBLAS kernel families that are AVX2-or-better on x86-64, lowercased.
@@ -261,6 +314,26 @@ audit_ipf() {
     }' "$2"
 }
 
+# other_class CLASS — the class criterion 5b pins KEEL_KERN_CLASS to: the one
+# dispatch did not choose on this host, so the cross-check measures the shape that
+# was passed over. An unrecognized class yields nothing and the caller skips the
+# cross-check with a reason rather than silently comparing a shape against itself.
+other_class() {
+  case "$1" in
+    issue) printf 'fma' ;;
+    fma)   printf 'issue' ;;
+  esac
+}
+
+# audit_ipf_tile TILE FILE — the audited insns/FMA for a shape named as it appears
+# in a marker ("4x32"), via the convention that internal/vec's loop body for that
+# shape is KernelTILE. One place, because the sentinel and criterion 6b both need
+# the mapping and a mismatch between them would be invisible.
+audit_ipf_tile() {
+  [[ -n "$1" ]] || return 0
+  audit_ipf "Kernel$1" "$2"
+}
+
 # ob_preflight HOST — what the same-host reference needs, before trying to build it.
 #
 # The native build failing with a linker error and thirty lines of go tooling is a
@@ -319,6 +392,10 @@ KERNBIN="$BINDIR/kern.test"
 BENCHBIN="$BINDIR/bench.test"
 BENCHLOG="$BINDIR/bench.log"
 BENCHCSV="$BINDIR/bench.csv"
+# Criterion 5b's cross-check run, kept beside the dispatched one rather than
+# overwriting it: the comparison needs both rates at once.
+ALTLOG="$BINDIR/bench-alt.log"
+ALTCSV="$BINDIR/bench-alt.csv"
 SWEEPLOG="$BINDIR/sweep-avx512.log"
 AUDITKERN="$BINDIR/audit-kern.log"
 AUDITPEAK="$BINDIR/audit-peak.log"
@@ -574,7 +651,7 @@ fi
 
 # ------------------------------------------ the throughput sentinel (P2, #19)
 echo
-echo "-- throughput sentinel (criterion 5): P2's floor re-run, so a fatter K-loop is noticed --"
+echo "-- throughput sentinel (criteria 5 and 5b): P2's floor re-run on the dispatched shape --"
 if RTLOG="$(bash scripts/roofline-test.sh 2>&1)"; then
   pass "roofline verdict controls ($(grep -c '^  ok ' <<<"$RTLOG") fixtures)"
 else
@@ -582,8 +659,8 @@ else
   # shellcheck disable=SC2001  # prefixing every line; not a scalar substitution
   sed 's/^/        /' <<<"$RTLOG"
 fi
-IPF_2x32="$(audit_ipf Kernel2x32 "$AUDITKERN")"
-IPF_4x32="$(audit_ipf Kernel4x32 "$AUDITKERN")"
+IPF_2x32="$(audit_ipf_tile 2x32 "$AUDITKERN")"
+IPF_4x32="$(audit_ipf_tile 4x32 "$AUDITKERN")"
 IPF_PEAK="$(audit_ipf "$GATE_PEAK_FUNC" "$AUDITPEAK")"
 if [[ -n "$IPF_2x32" && -n "$IPF_4x32" && -n "$IPF_PEAK" ]]; then
   info "audited insns/FMA: 2x32 $(printf '%.3f' "$IPF_2x32"), 4x32 $(printf '%.3f' "$IPF_4x32"), $GATE_PEAK_FUNC $(printf '%.3f' "$IPF_PEAK")"
@@ -604,6 +681,10 @@ SENTINELS="$(sentinel_hosts)"
 # A host with no recorded verdict is treated as FMA-bound below, which is the strict
 # direction: no roofline, no leniency, the unmodified 60%-of-OpenBLAS bar.
 CLASSIFY="$(printf '%s\n%s\n' "$SENTINELS" "$HOSTS" | sed '/^[[:space:]]*$/d' | awk '!seen[$0]++')"
+# Criterion 5b's registry drift check runs once, on the first host that reports the
+# marker: the binary is the same everywhere, and three identical lines would say no
+# more than one. Empty after the loop means it never ran, which fails.
+DRIFT_CHECKED=""
 if [[ -z "$SENTINELS" ]]; then
   fail "no sentinel host and no hosts at all; P2's floor cannot be re-checked"
 else
@@ -633,7 +714,40 @@ else
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
-    BEST_LO=""; BEST_PT=""; BEST_ID=""; BEST_IPF=""; MIXES=""
+
+    # ---- criterion 5b, part 1: the registry's recorded insns/FMA vs the object code
+    # Same binary on every host, so this is checked once — but it is checked from a
+    # marker a host actually produced, not from source, because the point is to
+    # compare what the shipped library believes against what the audit counts.
+    kaudit="$(marker bench-kern-audit "$BENCHLOG")"
+    if [[ -z "$DRIFT_CHECKED" && -n "$kaudit" ]]; then
+      DRIFT_CHECKED="$host"
+      DRIFT_BAD=""
+      for pair in $kaudit; do
+        rtile="${pair%%/*}"; rval="${pair#*=}"
+        raud="$(audit_ipf_tile "$rtile" "$AUDITKERN")"
+        if [[ -z "$raud" ]]; then
+          DRIFT_BAD="$DRIFT_BAD ${rtile}(recorded $rval, not audited by this gate)"
+        elif ! awk -v a="$rval" -v b="$raud" 'BEGIN{exit !(a - b < 0.001 && b - a < 0.001)}'; then
+          DRIFT_BAD="$DRIFT_BAD ${rtile}(recorded $rval, audited $(printf '%.3f' "$raud"))"
+        fi
+      done
+      if [[ -z "$DRIFT_BAD" ]]; then
+        pass "every shipped shape's recorded insns/FMA matches the audited object code ($kaudit)"
+      else
+        fail "the shape ranking reads stale instruction counts:$DRIFT_BAD — internal/kern's registry has drifted from the K-loop it describes"
+      fi
+    fi
+
+    # The shape this host's library actually dispatches to, and the class it chose
+    # under, from the very run being judged.
+    hkern="$(marker bench-kern "$BENCHLOG")"; hkern="${hkern%% *}"
+    htile="${hkern%%/*}"
+    hclassline="$(marker bench-kern-class "$BENCHLOG")"
+    hclass="${hclassline%% *}"
+
+    ACT_LO=""; ACT_PT=""; ACT_ID=""; ACT_IPF=""
+    BEST_LO=""; BEST_PT=""; BEST_ID=""; MIXES=""; RIVALS=""
     for kname in $GATE_KERNELS; do
       [[ -n "$(bench_stat "$kname" "$BENCHCSV" GFLOP/s)" ]] || continue
       klo="$(bench_ratio_lo "$kname" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
@@ -642,14 +756,16 @@ else
         info "[$host] ${kname##Kernel/}: no CI, not counted"
         continue
       fi
-      case "$kname" in
-        *2x32*) kipf="$IPF_2x32" ;;
-        *4x32*) kipf="$IPF_4x32" ;;
-        *)      kipf="" ;;
-      esac
-      [[ -n "$kipf" ]] && MIXES="$MIXES ${kname##Kernel/}|$kpt:$kipf"
+      kid="${kname##Kernel/}"
+      kipf="$(audit_ipf_tile "${kid%%/*}" "$AUDITKERN")"
+      [[ -n "$kipf" ]] && MIXES="$MIXES $kid|$kpt:$kipf"
+      if [[ "${kid%%/*}" == "$htile" ]]; then
+        ACT_LO="$klo"; ACT_PT="$kpt"; ACT_ID="$kid"; ACT_IPF="$kipf"
+      else
+        RIVALS="$RIVALS $kid|$klo|$kpt"
+      fi
       if [[ -z "$BEST_LO" ]] || awk -v a="$klo" -v b="$BEST_LO" 'BEGIN{exit !(a > b)}'; then
-        BEST_LO="$klo"; BEST_PT="$kpt"; BEST_ID="${kname##Kernel/}"; BEST_IPF="$kipf"
+        BEST_LO="$klo"; BEST_PT="$kpt"; BEST_ID="$kid"
       fi
     done
     [[ -n "$IPF_PEAK" ]] && MIXES="$MIXES $GATE_PEAK_FUNC|1.0:$IPF_PEAK"
@@ -661,27 +777,69 @@ else
       fi
       continue
     fi
+    # ---- criterion 5b, part 2: the sentinel judges the shape that ships.
+    # Not the fastest one on the shelf: with a per-host choice those are different
+    # claims, and the one P3's numbers rest on is the dispatched shape.
+    if [[ -z "$ACT_LO" ]]; then
+      fail "[$host] Sgemm dispatches to ${hkern:-an unreported shape}, which this gate did not benchmark ($GATE_KERNELS): the shipped kernel would go unjudged"
+      continue
+    fi
+    if [[ "$ACT_ID" != "$BEST_ID" ]]; then
+      info "[$host] dispatched $ACT_ID; fastest measured here is $BEST_ID ($(awk -v r="$BEST_PT" 'BEGIN{printf "%.1f", r*100}')% of peak vs $(awk -v r="$ACT_PT" 'BEGIN{printf "%.1f", r*100}')%) — checked below"
+    fi
     # The ceiling set is every mix except the shape under test; see gate-p2.sh
     # criterion 5b and scripts/roofline.sh (INDEPENDENCE).
     CEIL=""
     for mx in $MIXES; do
-      [[ "${mx%%|*}" == "$BEST_ID" ]] && continue
+      [[ "${mx%%|*}" == "$ACT_ID" ]] && continue
       CEIL="$CEIL ${mx#*|}"
     done
     # shellcheck disable=SC2086  # CEIL is a deliberate list of f:I words
     read -r CLASS _CSPREAD _MSPREAD ROOF ATTAIN RESULT WHY <<<"$(
-      throughput_verdict "$BEST_LO" "${BEST_IPF:-0}" \
+      throughput_verdict "$ACT_LO" "${ACT_IPF:-0}" \
         "$PEAK_FLOOR" "$ROOF_FLOOR" "$ISSUE_CONVERGE_MAX" \
         "$ISSUE_MIX_SPREAD_MIN" "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" $CEIL)"
-    frac="$(awk -v r="$BEST_LO" 'BEGIN{printf "%.1f", r * 100}')"
-    fracpt="$(awk -v r="$BEST_PT" 'BEGIN{printf "%.1f", r * 100}')"
+    frac="$(awk -v r="$ACT_LO" 'BEGIN{printf "%.1f", r * 100}')"
+    fracpt="$(awk -v r="$ACT_PT" 'BEGIN{printf "%.1f", r * 100}')"
+
+    # ---- criterion 5b, part 3: the classification that chose the shape, checked
+    # against the one this gate measured. The library fingerprints a feature bundle
+    # because no microarchitecture is readable from pure Go (T14, #25); this is the
+    # measurement that says whether the fingerprint was right on this machine.
+    if [[ -z "$hclass" ]]; then
+      fail "[$host] no keel-bench-kern-class marker: the shape was chosen by a classification this gate cannot check"
+    elif [[ "$hclass" == "$CLASS" ]]; then
+      pass "[$host] the library's ${hclass}-bound classification matches this gate's measured verdict — ${hclassline#* }"
+    else
+      fail "[$host] the library classified this host ${hclass}-bound and chose $ACT_ID; this gate measures it ${CLASS}-bound — ${hclassline#* }"
+      info "  [$host] a shape chosen from the wrong class is issue #24 again: fix internal/kern.HostClass's fingerprint, not this check"
+    fi
+
+    # ---- criterion 5b, part 4: did the choice lose throughput, in this same run?
+    # A rival counts as faster only if its lower bound clears the dispatched shape's
+    # point estimate, so noise cannot fail the gate and a real 11-point gap cannot
+    # hide in it.
+    LOST=""
+    for rv in $RIVALS; do
+      rid="${rv%%|*}"; rest="${rv#*|}"; rlo2="${rest%%|*}"; rpt2="${rest#*|}"
+      if awk -v a="$rlo2" -v b="$ACT_PT" 'BEGIN{exit !(a > b)}'; then
+        LOST="$LOST $rid($(awk -v r="$rpt2" 'BEGIN{printf "%.1f", r*100}')% of peak, ${rid} lower bound $(awk -v r="$rlo2" 'BEGIN{printf "%.1f", r*100}')% > dispatched ${fracpt}%)"
+      fi
+    done
+    if [[ -z "$RIVALS" ]]; then
+      info "[$host] only one shape measured, so there is nothing to prefer over $ACT_ID"
+    elif [[ -z "$LOST" ]]; then
+      pass "[$host] no other shipped shape beats the dispatched $ACT_ID here (same invocation, net of CI)"
+    else
+      fail "[$host] dispatch selected $ACT_ID and left throughput on the table:$LOST"
+    fi
     attpc="$(awk -v a="$ATTAIN" 'BEGIN{printf "%.1f", a * 100}')"
     roofpc="$(awk -v r="$ROOF" 'BEGIN{printf "%.1f", r * 100}')"
     # pmax = max_i f_i·I_i, recovered from the verdict's own two outputs so that
     # criterion 6b's roofline is built from the same ceiling this one judged
     # against — not from a second reduction of the same mixes.
     printf '%s %s\n' "$CLASS" \
-      "$(awk -v r="$ROOF" -v i="${BEST_IPF:-0}" 'BEGIN{printf "%.6f", r * i}')" \
+      "$(awk -v r="$ROOF" -v i="${ACT_IPF:-0}" 'BEGIN{printf "%.6f", r * i}')" \
       >"$BINDIR/class-$host"
     if [[ "$JUDGED" -eq 0 ]]; then
       # The roofline is quoted only where it can be used. On an FMA-bound host the
@@ -697,21 +855,25 @@ else
     fi
     case "$CLASS/$RESULT" in
       issue/pass)
-        pass "[$host] sentinel: $BEST_ID holds P2's floor — ${fracpt}% of peak (${frac}% net of CI) = ${attpc}% of its ${roofpc}% issue roofline (>= 90%)" ;;
+        pass "[$host] sentinel: dispatched $ACT_ID holds P2's floor — ${fracpt}% of peak (${frac}% net of CI) = ${attpc}% of its ${roofpc}% issue roofline (>= 90%)" ;;
       */pass)
-        pass "[$host] sentinel: $BEST_ID holds P2's floor — ${fracpt}% of peak, ${frac}% net of CI, ${CLASS}-bound (>= 55%)" ;;
+        pass "[$host] sentinel: dispatched $ACT_ID holds P2's floor — ${fracpt}% of peak, ${frac}% net of CI, ${CLASS}-bound (>= 55%)" ;;
       */refuse)
-        fail "[$host] sentinel: $BEST_ID at $(printf '%.3f' "${BEST_IPF:-0}") insns/FMA is outside the shape guard — P3 fattened the K-loop (why=$WHY)" ;;
+        fail "[$host] sentinel: dispatched $ACT_ID at $(printf '%.3f' "${ACT_IPF:-0}") insns/FMA is outside the shape guard — P3 fattened the K-loop (why=$WHY)" ;;
       *)
-        fail "[$host] sentinel: $BEST_ID fell below P2's floor — ${fracpt}% of peak, ${frac}% net of CI, ${CLASS}-bound (why=$WHY)" ;;
+        fail "[$host] sentinel: dispatched $ACT_ID fell below P2's floor — ${fracpt}% of peak, ${frac}% net of CI, ${CLASS}-bound (why=$WHY)" ;;
     esac
   done <<<"$CLASSIFY"
+  # No host produced the marker at all: the ranking's inputs are then unverified,
+  # which is a failure to check rather than a check that passed.
+  [[ -n "$DRIFT_CHECKED" ]] || fail "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA were never checked against the object code"
 fi
 
 # ----------------------------------------------- Sgemm at 2048^3 vs OpenBLAS
 echo
 echo "-- Sgemm at 2048^3: percent of measured peak, and >= 60% of single-thread OpenBLAS --"
 info "-count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME; the bar counts as cleared only net of both confidence intervals"
+info "each host is also run once more with KEEL_KERN_CLASS pinned to the other class (criterion 5b), which is where the extra Sgemm time goes"
 
 if [[ -n "$HOSTS" ]]; then
   if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
@@ -739,6 +901,45 @@ if [[ -n "$HOSTS" ]]; then
     pklo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
     if [[ -n "$pk" ]]; then
       info "[$host] = $(awk -v r="$pk" 'BEGIN{printf "%.1f", r*100}')% of measured peak ($(awk -v r="${pklo:-0}" 'BEGIN{printf "%.1f", r*100}')% net of CI) — reported, not a P3 criterion"
+    fi
+
+    # ---- criterion 5b, part 5: the shape choice, seen through packing and blocking
+    # The kernel comparison in the sentinel section is the stronger evidence — both
+    # shapes in one invocation. This is the same question asked of the number P3's
+    # criterion actually rests on, which no single invocation can answer: the shape
+    # is fixed at init, so measuring the other one means running the binary again
+    # with KEEL_KERN_CLASS pinned to the class dispatch did not use.
+    #
+    # Two invocations, so the comparison is one-sided and CI-based: the passed-over
+    # shape has to beat the dispatched shape's point estimate from below its own
+    # interval before this fails. That makes it insensitive to the frequency drift
+    # between two adjacent runs, at the cost of not seeing a small regression — the
+    # same-invocation check above is what sees those.
+    hclass="$(marker bench-kern-class "$BENCHLOG")"; hclass="${hclass%% *}"
+    hkern="$(marker bench-kern "$BENCHLOG")"; hkern="${hkern%% *}"
+    alt="$(other_class "$hclass")"
+    if [[ -z "$alt" ]]; then
+      fail "[$host] the bench run reports kernel class '${hclass:-<none>}', which is not a class this gate knows, so the shape choice cannot be cross-checked at 2048^3"
+    elif ! KEEL_REMOTE_ENV="GOMAXPROCS=1 KEEL_KERN_CLASS=$alt" remote_exec "$host" "$BENCHBIN" \
+           "${BFLAGS[@]}" -test.bench="$SGEMM_SHAPE_FILTER" >"$ALTLOG" 2>&1; then
+      fail "[$host] the KEEL_KERN_CLASS=$alt Sgemm run failed, so the shape choice is uncorroborated at 2048^3"
+      sed 's/^/        /' "$ALTLOG" | tail -20
+    else
+      altkern="$(marker bench-kern "$ALTLOG")"; altkern="${altkern%% *}"
+      bench_csv "$ALTLOG" >"$ALTCSV" 2>"$LOG" || true
+      [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+      altlo="$(bench_gflops_lo "$GATE_SGEMM" "$ALTCSV")"
+      altpt="$(bench_gflops "$GATE_SGEMM" "$ALTCSV")"
+      disppt="$(bench_gflops "$GATE_SGEMM" "$BENCHCSV")"
+      if [[ -z "$altkern" || "$altkern" == "$hkern" ]]; then
+        info "[$host] KEEL_KERN_CLASS=$alt selects ${altkern:-the same shape} too, so both classes agree here and there is nothing to compare"
+      elif [[ -z "$altlo" || -z "$disppt" ]]; then
+        fail "[$host] the KEEL_KERN_CLASS=$alt run established no bounded Sgemm rate, so the shape choice is unmeasured at 2048^3 rather than confirmed"
+      elif awk -v a="$altlo" -v b="$disppt" 'BEGIN{exit !(a > b)}'; then
+        fail "[$host] at 2048^3 the passed-over $altkern beats the dispatched $hkern: $(printf '%.1f' "$altpt") GFLOP/s, $(printf '%.1f' "$altlo") net of CI, against $(printf '%.1f' "$disppt")"
+      else
+        pass "[$host] the dispatched $hkern is no slower than $altkern at 2048^3 ($(printf '%.1f' "$disppt") vs $(printf '%.1f' "$altpt") GFLOP/s, $(printf '%.1f' "$altlo") net of CI; separate invocations)"
+      fi
     fi
   done <<<"$HOSTS"
 fi
@@ -860,7 +1061,7 @@ else
     # guard exists to close.
     obkern="$(marker bench-kern "$BENCHLOG")"; obkern="${obkern%% *}"
     obtile="${obkern%%/*}"
-    i_active="$(audit_ipf "Kernel$obtile" "$AUDITKERN")"
+    i_active="$(audit_ipf_tile "$obtile" "$AUDITKERN")"
     ob_rate="$(bench_gflops "$GATE_OPENBLAS" "$BENCHCSV")"
     peak_rate="$(bench_gflops "$GATE_PEAK" "$BENCHCSV")"
     read -r obdenom obsrc obroof obwhy <<<"$(p3_denominator \

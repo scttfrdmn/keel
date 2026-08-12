@@ -5,6 +5,7 @@ package keel
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/scttfrdmn/keel/internal/kern"
 	"github.com/scttfrdmn/keel/internal/l1"
@@ -81,23 +82,88 @@ var activeKern = selectKern()
 //
 // A name that is not a backend at all still panics, in selectL1 above: it is
 // declared first, so it initializes first.
+//
+// # The shape, as opposed to the backend
+//
+// Which *shape* of that backend runs is a second decision, and it is per-host.
+// Both shipped tiles are zero-spill and neither dominates: the load-lean 4×32 wins
+// on Zen 4 and Zen 5, the instruction-lean 2×32 wins on Skylake-X by 11 percentage
+// points (KERNEL.md §7). This function used to take the first entry of the registry
+// and therefore shipped 4×32 everywhere, which was wrong on one of three hosts —
+// issue #24, and the ruling there is that shape selection uses the same
+// issue-bound/FMA-bound classification P2's gate model already defines.
+//
+// So: internal/kern classifies the host (kern.HostClass, a documented feature-bundle
+// fingerprint because archsimd exposes no µarch identity — T14/#25) and ranks the
+// candidate shapes for that class (kern.Preferred). Nothing here measures anything
+// at init; auto-tuning is P5's subject.
+//
+// KEEL_KERN_CLASS=fma|issue overrides the classification, which is how the gate
+// measures the shape it did *not* choose on each host and requires the chosen one to
+// be no slower. An unrecognized value panics rather than falling back, for the same
+// reason KEEL_FORCE does: a run that believed it had pinned a shape and quietly
+// measured the other one is worse than a crash.
 func selectKern() kern.Kernel {
 	avail := kern.Kernels() // widest tile first, scalar references last
 	want, forced := os.LookupEnv(envForce)
+	backend := avail[0].Name
+	if forced && want != "" {
+		backend = ""
+		for _, k := range avail {
+			if k.Name == want {
+				backend = want
+				break
+			}
+		}
+		if backend == "" {
+			// KEEL_FORCE names a backend with no microkernel — avx2 today. It
+			// acts as a ceiling at Level 3 rather than a panic, so that a
+			// legitimate Level-1 configuration can still call Sgemm, and
+			// ActiveKernBackend reports what actually ran.
+			backend = kern.Scalar
+		}
+	}
+	var cand []kern.Kernel
+	for _, k := range avail {
+		if k.Name == backend {
+			cand = append(cand, k)
+		}
+	}
+	k, ok := kern.Preferred(activeKernClass, cand)
+	if !ok {
+		panic("keel: no microkernel available for backend " + backend +
+			" (internal/kern.Kernels has none, not even scalar)")
+	}
+	return k
+}
+
+// activeKernClass is the host classification shape selection is made from, and it
+// is a variable rather than a call so that both it and the kernel chosen under it
+// can be reported together: a marker saying "2x32 on an issue-bound host" is
+// checkable against the gate's own measured classification, where "2x32" alone is
+// not.
+var activeKernClass = selectKernClass()
+
+const envKernClass = "KEEL_KERN_CLASS"
+
+func selectKernClass() kern.Class {
+	want, forced := os.LookupEnv(envKernClass)
 	if !forced || want == "" {
-		return avail[0]
+		return kern.HostClass()
 	}
-	for _, k := range avail {
-		if k.Name == want {
-			return k
+	c, ok := kern.ParseClass(want)
+	if !ok {
+		names := ""
+		for i, v := range kern.Classes() {
+			if i > 0 {
+				names += "|"
+			}
+			names += string(v)
 		}
+		panic("keel: " + envKernClass + "=" + want + " is not a kernel class; want " +
+			names + " (unset " + envKernClass + " to classify this host)")
 	}
-	for _, k := range avail {
-		if k.Name == kern.Scalar {
-			return k
-		}
-	}
-	panic("keel: no microkernel available, not even scalar (internal/kern.Kernels is empty)")
+	return c
 }
 
 // ActiveKernBackend reports which SGEMM microkernel backend is dispatched to,
@@ -109,6 +175,28 @@ func ActiveKernBackend() string { return activeKern.Name }
 // markers and benchmark names, e.g. "4x32".
 func ActiveKernTile() string { return activeKern.Tile() }
 
+// ActiveKernClass reports the host classification the tile was chosen under —
+// "fma" or "issue" — and ActiveKernClassEvidence the grounds for it. Both are
+// printed as provenance so that the gate can compare this classification against
+// the one it measures on the same host, rather than taking the fingerprint's word
+// for it (docs/toolchain-notes.md T14).
+func ActiveKernClass() string { return string(activeKernClass) }
+
+// ActiveKernClassEvidence describes how the class was arrived at: the feature
+// bundle read, or the override that replaced it.
+func ActiveKernClassEvidence() string {
+	if want, forced := os.LookupEnv(envKernClass); forced && want != "" {
+		return envKernClass + "=" + want + " (override; fingerprint says " +
+			string(kern.HostClass()) + ")"
+	}
+	return kern.HostClassEvidence()
+}
+
+// ActiveKernInsnsPerFMA reports the audited instructions per FMA recorded for the
+// dispatched shape, 0 for an unaudited one. The gate cross-checks it against the
+// spill audit, so a stale number in the registry cannot survive a gate run.
+func ActiveKernInsnsPerFMA() float64 { return activeKern.InsnsPerFMA }
+
 // AvailableKernels reports every microkernel runnable here, widest tile first,
 // as shape/backend identifiers.
 func AvailableKernels() []string {
@@ -116,6 +204,25 @@ func AvailableKernels() []string {
 	out := make([]string, len(ks))
 	for i, k := range ks {
 		out[i] = k.ID()
+	}
+	return out
+}
+
+// KernelAudits reports the audited instructions per FMA recorded for every
+// shipped shape that has one, as "shape/backend=value" pairs.
+//
+// It exists so the gate can check the registry against the object code: those
+// numbers are the input to shape selection, and a measurement recorded in source
+// drifts unless something recomputes it. scripts/gate-p3.sh disassembles each
+// shape's loop body, recounts, and fails on disagreement — so the ranking cannot
+// come to rest on a stale count. Unaudited shapes are absent rather than listed
+// as zero: there is nothing to check them against.
+func KernelAudits() []string {
+	var out []string
+	for _, k := range kern.Kernels() {
+		if k.InsnsPerFMA > 0 {
+			out = append(out, k.ID()+"="+strconv.FormatFloat(k.InsnsPerFMA, 'f', 3, 64))
+		}
 	}
 	return out
 }

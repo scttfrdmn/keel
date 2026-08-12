@@ -11,6 +11,20 @@ import "github.com/scttfrdmn/keel/internal/vec"
 // on go1.26.5; which is faster is a per-host measurement (see the package doc and
 // KERNEL.md), so both are built and both are benchmarked.
 //
+// THIS ORDER NO LONGER DECIDES WHAT SHIPS. It did, and that was issue #24: the
+// first matching entry won on every host, so every host ran 4×32 including the one
+// where 2×32 measures 11 percentage points faster. Dispatch now asks Preferred with
+// the host's class (class.go), and this list is the candidate set. Order still
+// decides between shapes the class rule cannot separate — two shapes with equal
+// insns/FMA and equal loads/FMA, or shapes with no audited instruction count at
+// all — so it stays widest-first rather than becoming arbitrary.
+//
+// The InsnsPerFMA numbers are the spill audit's own counts for the loop bodies in
+// internal/vec: 74 instructions per pass for 16 FMAs, and 50 for 8. They are
+// written as that division rather than as 4.625 and 6.25 so the provenance is
+// visible at the assignment, and scripts/gate-p3.sh recomputes both from the audit
+// on every run and fails on any disagreement.
+//
 // The loop bodies are in internal/vec, not here: reaching archsimd through this
 // package's shims costs one anchor NOP per inlined wrapper per call site, which
 // was 27% of the 2x32 loop body (docs/toolchain-notes.md T9, and the header
@@ -22,8 +36,8 @@ func vectorKernels() []Kernel {
 		return nil
 	}
 	return []Kernel{
-		{Name: AVX512, MR: 4, NR: 32, Unroll: 1, Fn: vec.Kernel4x32},
-		{Name: AVX512, MR: 2, NR: 32, Unroll: 4, Fn: vec.Kernel2x32},
+		{Name: AVX512, MR: 4, NR: 32, Unroll: 1, Fn: vec.Kernel4x32, InsnsPerFMA: 50.0 / 8},
+		{Name: AVX512, MR: 2, NR: 32, Unroll: 4, Fn: vec.Kernel2x32, InsnsPerFMA: 74.0 / 16},
 	}
 }
 
@@ -32,6 +46,11 @@ func vectorKernels() []Kernel {
 // so that nothing ships it and the gate's zero-spill criterion stays binding on
 // the kernels that do. It exists to make the T10 register ceiling a measured
 // number rather than a spill count.
+//
+// It carries no InsnsPerFMA on purpose. The gate audits and cross-checks that
+// number only for the shapes that ship, and a recorded measurement nothing checks
+// is a measurement that drifts; zero also keeps it unrankable by Preferred, so
+// there is no arrangement of classes under which a spilling tile could be chosen.
 var ReferenceTile = Kernel{Name: AVX512, MR: 6, NR: 32, Unroll: 4, Fn: vec.Kernel6x32}
 
 // referenceTiles is what the benchmark adds to Kernels(): shapes that are

@@ -39,7 +39,8 @@ Neither dominates the other, which is why both ship:
   B-panel loads feeds four rows instead of two.
 
 Which cost binds is a property of the host's front-end width and load ports, not
-of the source. So the benchmark decides per host and §7 records the answer.
+of the source. So the benchmark decides per host, §7 records the answer, and from
+P3 on dispatch selects between them per host by the rule in §8.
 
 `kern.Kernel` carries `MR`, `NR` and `Unroll` as fields rather than constants for
 exactly this reason: the shape is a measurement result. Tests pack panels for
@@ -252,6 +253,13 @@ benchmarked, and it is deliberately **absent from `kern.Kernels()`**, so:
 - and the cost of the T10 register ceiling is a measured GFLOP/s number in the gate
   log rather than an assertion in a document.
 
+It also carries no `InsnsPerFMA`, which since §8 is a second lock on the same door:
+the shape ranking treats an unaudited count as unrankable, so there is no
+arrangement of host classes under which a spilling tile could be selected. The
+absence is deliberate for its own reason too — the gate re-derives that number from
+the object code only for the shapes that ship, and a recorded measurement nothing
+checks is a measurement that drifts.
+
 `kern.Measured()` is `Kernels()` plus the reference tiles: what the benchmark runs.
 The gate audits it too, non-fatally, and says so loudly if it ever *stops*
 spilling — that would mean the register ceiling moved upstream and every shape here
@@ -349,3 +357,83 @@ The two Zen hosts clear it comfortably. The reference tile's 14.7–30.5% is on 
 same silicon with the same harness, which is the control: the gap between 30.5%
 and 96.6% on vesta is what the register ceiling costs, and it is much larger than
 the gap between the two shipped shapes anywhere.
+
+## 8. Which shape ships on which host (P3, ruling on issue #24)
+
+§7 measured the winner and left the choice to a human reading the table. P3 makes
+it automatic, because a table nobody consults is a table the library disagrees
+with: `Sgemm` took the first entry of `internal/kern`'s registry and therefore ran
+4×32 on all three hosts, including the one where 2×32 measures 11 percentage
+points faster. That was issue #24, found by the gate's own anti-vacuity shape
+guard rather than by a benchmark.
+
+**The rule.** Dispatch classifies the host with the same two-way classification
+P2's throughput model already defines, and picks the shape that is extremal on
+that class's binding cost:
+
+| class | what binds the K-loop | shape rule | winner today |
+|---|---|---|---|
+| FMA-bound | arithmetic throughput; instructions are cheap | fewest **memory ops per FMA** | 4×32 ×1 — 0.75 |
+| issue-bound | the front end retires a fixed number of instructions per cycle | fewest **instructions per FMA** | 2×32 ×4 — 4.625 |
+
+so vesta and antares run 4×32 and janus runs 2×32 — in every case the shape §7
+measured as that host's winner. That agreement is not a coincidence and it is not
+a fit: on janus the two shapes' throughputs stand in the inverse ratio of their
+instruction counts (1.308 measured, 1.351 predicted, §7), which is what
+"issue-bound" means quantitatively. The rule is the physics, and the measurement
+is the check on it — `scripts/gate-p3.sh` criterion 5b benchmarks both shapes in
+one invocation on every host and fails if the passed-over one is faster net of its
+confidence interval.
+
+Per-target microkernel shapes are what BLIS and OpenBLAS both carry. "One shape
+everywhere" was never a design principle here either — only the skeleton's
+simplicity.
+
+**How the class is decided, and its two error directions.** `archsimd` reports CPU
+features and no vendor, family or model, and `internal/cpu` discards the CPUID
+signature word, so the microarchitecture is unreachable from pure Go on this
+toolchain (`docs/toolchain-notes.md` T14, issue #25). `kern.HostClass` therefore
+fingerprints the generation from a feature bundle: AVX-512 **with**
+AVX512_VBMI2 + AVX512_VPOPCNTDQ is Ice Lake / Zen 4 or later and treated as
+FMA-bound; AVX-512 **without** them is the Skylake-X / Cascade Lake / Cooper Lake
+generation and treated as issue-bound. A proxy that decides what ships has to be
+checked against something measured, so the library prints its classification and
+its grounds and the gate compares them against the class its own convergence test
+derives from the measurements. `internal/kern/class_amd64.go` documents why
+neither error direction can make a gate lenient; `KEEL_KERN_CLASS=fma|issue`
+overrides the fingerprint, which is how the gate measures the shape dispatch did
+*not* choose.
+
+### janus's sentinel number is 2×32's, and the roofline moves with the shape
+
+**Read this once, loudly, because the number looks like a property of the host and
+is not.** The issue roofline is `max_i(f_i·I_i) / I_b` — it divides by `I_b`, the
+instructions per FMA of *the shape being judged*. So janus's **48.6% is 2×32's
+roofline**, not janus's. Under the other shape the same host's roofline would be
+
+```
+janus's ceiling mixes:  4×32  0.352 × 6.250 = 2.200
+                        peak  1.000 × 2.250 = 2.250   <- pmax
+judging 2×32:  2.250 / 4.625 = 48.6% of peak,  46.0% measured = 94.6% of it
+judging 4×32:  2.250 / 6.250 = 36.0% of peak,  35.2% measured = 97.8% of it
+```
+
+which is to say a *fatter* kernel would have cleared the ≥90%-of-roofline floor
+more comfortably than the fast one does. That is the vacuity P2's shape guard
+exists to refuse, and it does: 6.25 insns/FMA is outside `sweep_best 4.438 × slack
+1.05 = 4.659`, so 4×32 is granted no roofline at all and faces the unmodified bar.
+
+What P3 changes is which shape that number describes. Through P2 the sentinel
+judged whichever shipped shape measured fastest, while `Sgemm` dispatched to the
+registry's first entry — so on janus the quoted 48.6% belonged to a shape the
+library did not run. The gate now judges the **dispatched** shape, and criterion 5b
+requires the library's classification to match the gate's measured one, so the two
+can no longer diverge. The consequence for reading §7: janus's 46.0% / 94.6% of
+48.6% is the shipped configuration's number as of P3, and it was already 2×32's
+arithmetic before dispatch agreed — the figures do not move, their subject does.
+
+The corollary is that a future shape change re-bases the floor rather than
+inheriting it. Anything that lowers a shipped shape's `I_b` *raises* the roofline
+it must clear (§7's last paragraph: at `I` ≈ 2.875 janus would owe 70.4%), and
+anything that raises `I_b` lowers the roofline until the shape guard refuses it
+one. Neither direction is a number to carry over from a previous run.

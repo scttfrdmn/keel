@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -65,6 +66,15 @@ func provenance() {
 		fmt.Println("keel-bench-gomaxprocs:", runtime.GOMAXPROCS(0))
 		fmt.Println("keel-bench-kern:", keel.ActiveKernTile()+"/"+keel.ActiveKernBackend(),
 			"(available: "+strings.Join(keel.AvailableKernels(), " ")+")")
+		// The shape above is chosen per host, so the marker has to carry the
+		// grounds as well as the answer: the gate measures the host's class
+		// itself and fails if its verdict and this classification disagree
+		// (issue #24). Without the class line, "4x32" alone cannot be told from
+		// "4x32 on a host that should be running 2x32".
+		fmt.Println("keel-bench-kern-class:", keel.ActiveKernClass(),
+			"insns-per-fma="+strconv.FormatFloat(keel.ActiveKernInsnsPerFMA(), 'f', 3, 64),
+			"("+keel.ActiveKernClassEvidence()+")")
+		fmt.Println("keel-bench-kern-audit:", strings.Join(keel.KernelAudits(), " "))
 		fmt.Println("keel-bench-openblas:", openblasProvenance)
 	})
 }

@@ -306,6 +306,29 @@ While the major version is 0, minor versions may contain breaking changes.
   retire it.
 
 ### Changed
+- **`Sgemm` selects its microkernel shape per host instead of taking the registry's
+  first entry** (ruling on issue #24; `KERNEL.md` §8, `DESIGN.md` §4/P3). Both
+  shipped shapes are zero-spill and neither dominates — 4×32 wins on Zen 4 and
+  Zen 5, 2×32 wins on Skylake-X by 11 percentage points — so shipping one shape
+  everywhere was a measured performance bug on one of three gate hosts. Dispatch
+  now classifies the host with the same issue-bound/FMA-bound classification the
+  gate's throughput model already defines and takes the shape extremal on that
+  class's binding cost: fewest memory ops per FMA when arithmetic binds, fewest
+  instructions per FMA when the front end does. `KEEL_KERN_CLASS=fma|issue`
+  overrides the classification, and an unrecognized value panics rather than
+  falling back, for the same reason `KEEL_FORCE` does.
+  - The classification is a feature-bundle fingerprint, because no
+    microarchitecture is readable from pure Go on this toolchain (T14, #25). It is
+    printed with its grounds and checked against the gate's own measured verdict on
+    every host on every run; disagreement is a gate failure.
+  - `gate-p3.sh` criterion 5b: the throughput sentinel now judges the *dispatched*
+    shape rather than whichever shipped shape measures fastest, fails if a
+    passed-over shape beats it net of CI in the same invocation, re-measures the
+    blocked `Sgemm` at 2048³ under the other class as a cross-check, and re-derives
+    every shipped shape's recorded `InsnsPerFMA` from the object code so the
+    ranking cannot come to rest on a stale count.
+  - Found by the gate, not by a benchmark: P2's anti-vacuity shape guard refused
+    the dispatched 4×32 a roofline on janus, which is what surfaced the bug.
 - **DESIGN.md's 32×6 microkernel tile is not implementable on go1.26.5, and P2
   ships two smaller shapes instead** (`docs/toolchain-notes.md` T10, issue #18,
   rationale in `KERNEL.md`). Two independent properties of the toolchain, both

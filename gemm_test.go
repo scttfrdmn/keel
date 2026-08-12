@@ -617,6 +617,13 @@ func printGemmMarkers() {
 		activeKern.MR, activeKern.NR, kc, mc, nc, block.EdgeStrategy, block.BetaVariants,
 		"go-copy+scalar-transpose")
 	fmt.Println("keel-sgemm-active:", ActiveKernTile()+"/"+ActiveKernBackend())
+	// The shape is per-host now (issue #24), so the correctness run reports the
+	// classification it was chosen under too. It is the same marker the benchmark
+	// prints, from a different binary: if the two disagree the gate is comparing
+	// a correctness result on one shape against a rate on another.
+	fmt.Println("keel-sgemm-class:", ActiveKernClass(),
+		"insns-per-fma="+strconv.FormatFloat(ActiveKernInsnsPerFMA(), 'f', 3, 64),
+		"("+ActiveKernClassEvidence()+")")
 	fmt.Println("keel-sgemm-available:", strings.Join(AvailableKernels(), " "))
 
 	var sizes []string

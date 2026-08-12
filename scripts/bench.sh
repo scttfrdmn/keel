@@ -132,3 +132,18 @@ bench_describe() {
 bench_gflops() {
   bench_stat "$1" "$2" GFLOP/s | awk '{ print $1 }'
 }
+
+# bench_gflops_lo NAME CSV — median · (1 − ci): the smallest rate consistent with
+# the interval. Prints nothing when benchstat established no interval, so an
+# unbounded measurement reads as "not measured" rather than as its median.
+#
+# This is a bare bound, not a ratio, and it exists for exactly one comparison that
+# bench_ratio_lo cannot express: two rates from two different benchmark
+# invocations, where there is no common denominator to divide by. Do not use it to
+# build a ratio — dividing this by another median is precisely the second
+# statistics-free denominator DESIGN.md §7 rule 7 forbids, and bench_ratio_lo
+# handles both intervals correctly when the two numbers share a CSV.
+bench_gflops_lo() {
+  bench_stat "$1" "$2" GFLOP/s |
+    awk '{ if ($2 == "inf") exit; printf "%.4f", $1 * (1 - $2) }'
+}

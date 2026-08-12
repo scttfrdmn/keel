@@ -21,3 +21,14 @@ func HasAVX512() bool { return false }
 
 // HasAVX2 reports false: no AVX2 backend was compiled into this binary.
 func HasAVX2() bool { return false }
+
+// HasAVX512VBMI2 and HasAVX512VPOPCNTDQ report false. They are the µarch
+// fingerprint internal/kern reads (docs/toolchain-notes.md T14); with no AVX-512
+// backend there is no vector shape to choose between, so the answer is unused
+// rather than wrong.
+
+// HasAVX512VBMI2 reports false: this build has no AVX-512 backend.
+func HasAVX512VBMI2() bool { return false }
+
+// HasAVX512VPOPCNTDQ reports false: this build has no AVX-512 backend.
+func HasAVX512VPOPCNTDQ() bool { return false }

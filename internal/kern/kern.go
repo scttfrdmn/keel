@@ -80,7 +80,11 @@
 // does with the K-loop, and packed input is the premise of that question.
 package kern
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/scttfrdmn/keel/internal/vec"
+)
 
 // Tile bounds. They exist to size the scalar reference's accumulator buffer and
 // to bound what a caller may ask for; the shapes actually implemented are in
@@ -111,6 +115,22 @@ type Kernel struct {
 	MR, NR int    // tile shape
 	Unroll int    // k-steps per pass of the steady-state loop
 	Fn     func(kc int, a, b, c []float32, ldc int)
+
+	// InsnsPerFMA is this shape's audited instructions per FMA in the
+	// steady-state K-loop: the spill audit's own integer counts, divided.
+	//
+	// It is a *measurement recorded in source*, which is a thing to be
+	// suspicious of, so two properties keep it honest. It is only ever read to
+	// rank shapes against each other (Preferred), never to justify a number in
+	// a report — every published instruction count comes from the audit itself.
+	// And the gate recomputes it from the audit on every run and fails on
+	// disagreement, so it cannot drift away from the object code the way a
+	// comment would: a recompilation that fattened a loop body would be caught
+	// by criterion 4's spill audit and by this check, in that order.
+	//
+	// Zero means unaudited, which is what the scalar reference shapes are.
+	// Preferred treats zero as unrankable rather than as lean.
+	InsnsPerFMA float64
 }
 
 // Backend names, shared with the vec shim's vocabulary.
@@ -125,6 +145,26 @@ func (k Kernel) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
 // ID names one kernel uniquely: shape then backend, e.g. "4x32/avx512". This is
 // the string the benchmark sub-names and the gate's thresholds are keyed on.
 func (k Kernel) ID() string { return k.Tile() + "/" + k.Name }
+
+// MemOpsPerFMA is how many vector loads and broadcasts the tile issues per FMA.
+// Unlike InsnsPerFMA this is exact arithmetic on the shape, not a measurement:
+// with MR rows and V = NR/Lanes vectors along N, one unrolled pass reads V·u
+// B-panel vectors and MR·u A scalars for MR·V·u FMAs, so the ratio is
+//
+//	1/MR + 1/V = 1/MR + Lanes/NR
+//
+// and the unroll cancels out (KERNEL.md §3, where 0.75 is shown to be a hard
+// floor on go1.26.5: anything lower needs 9 accumulators and spills).
+//
+// It describes the vector tile protocol, so it is only meaningful for a vector
+// kernel; Preferred consults it only alongside an audited InsnsPerFMA, which the
+// scalar shapes do not have.
+func (k Kernel) MemOpsPerFMA() float64 {
+	if k.MR <= 0 || k.NR <= 0 {
+		return 0
+	}
+	return 1/float64(k.MR) + float64(vec.Lanes)/float64(k.NR)
+}
 
 // Ref is the scalar reference for k's shape — the kernel the differential test
 // holds k to. Every vector kernel has one, and it is derived from the shape

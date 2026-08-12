@@ -147,3 +147,26 @@ func blockOf512(v F32x16) Block {
 // HasAVX512 reports whether this CPU supports the AVX512F+CD+BW+DQ+VL bundle
 // that archsimd requires before any AVX-512 op may be used.
 func HasAVX512() bool { return archsimd.X86.AVX512() }
+
+// The two predicates below are the only ones here that no op in this package
+// uses. They exist because archsimd reports CPU *features* and never a
+// microarchitecture (docs/toolchain-notes.md T14, issue #25), and keel's kernel
+// *shape* choice is a per-µarch decision, so the shape registry has to
+// fingerprint a generation from the features it can see.
+//
+// They live here because this is the only package allowed to import
+// simd/archsimd (CLAUDE.md), and they are deliberately raw: this file reports
+// bits, and internal/kern decides what a bit means. A predicate here called
+// something like IsSkylakeServer would be putting a guess about silicon into the
+// shim, where nothing can test it.
+//
+// Both identifiers were copied from `go doc simd/archsimd.X86Features` on
+// go1.26.5, per DESIGN.md §4/P0.
+
+// HasAVX512VBMI2 reports whether this CPU has AVX512_VBMI2, one half of the
+// feature bundle that arrived with Ice Lake and Zen 4.
+func HasAVX512VBMI2() bool { return archsimd.X86.AVX512VBMI2() }
+
+// HasAVX512VPOPCNTDQ reports whether this CPU has AVX512_VPOPCNTDQ, the other
+// half.
+func HasAVX512VPOPCNTDQ() bool { return archsimd.X86.AVX512VPOPCNTDQ() }
