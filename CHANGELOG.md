@@ -291,7 +291,14 @@ While the major version is 0, minor versions may contain breaking changes.
   than deleting it (issue #27): probing only the ssh `PATH` would have had it
   `sudo rm -rf` a working go1.26.5 on antares to reinstall the same version, and the
   one irreversible action it can take on a host is now named in the prompt that
-  authorizes it.
+  authorizes it. Its `[y/N]` prompts read from `/dev/tty` and its host loop from
+  fd 3 (issue #28): both used stdin, so each prompt consumed the *next host* as its
+  answer — three hosts named meant one was never visited, having been spent as a
+  keystroke, and the interactive path had therefore never worked at all. This is the
+  hazard `scripts/remote.sh` already documents and defeats with `ssh -n`, in the one
+  script that cannot use `-n` because `sudo` needs the `-t` tty. No tty and no
+  `--yes` now fails with its own message instead of printing `skipped`, which had
+  reported a decision nobody was asked to make.
 - `docs/toolchain-notes.md` T13: `import "C"` in a `_test.go` file is rejected
   outright (`use of cgo in test … not supported`,
   `cmd/go/internal/modindex/read.go:589`), and it fails as `[setup failed]` — which

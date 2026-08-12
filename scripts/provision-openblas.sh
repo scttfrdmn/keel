@@ -82,10 +82,34 @@ note() { printf '   %s\n' "$1"; }
 bad()  { printf '   \033[31m!!\033[0m %s\n' "$1"; }
 
 # confirm PROMPT — ask before changing somebody's machine, unless --yes.
+#
+# Reads from /dev/tty, not from stdin, and the reason is issue #28: the host loop at
+# the bottom of this script used to be fed on stdin, so this `read` consumed the NEXT
+# HOST as its answer. Three hosts named meant one was silently never visited, having
+# been spent as a keystroke — and the interactive path, the whole point of this
+# script, had therefore never once worked. The loop now reads on fd 3 as well; either
+# fix alone leaves the other half of the collision in place, because `ssh -t` in the
+# install functions also reads stdin to let sudo prompt.
+#
+# No tty and no --yes is a distinct outcome from a refusal, and says so. Printing
+# "skipped" when nobody was asked reports a decision that was never made, which is
+# the failure mode this script exists to avoid rather than commit.
 confirm() {
   [[ "$ASSUME_YES" -eq 1 ]] && return 0
   local reply
-  read -r -p "   $1 [y/N] " reply
+  # Opened rather than tested with -r: /dev/tty exists and is readable by that test
+  # even where there is no controlling terminal to open (bash then fails the redirect
+  # with "Device not configured" on its own stderr, which is noise on top of a wrong
+  # message). Try the open, quietly, and report what is actually true.
+  if ! { : </dev/tty; } 2>/dev/null; then
+    bad "no terminal to ask on, and --yes was not given, so consent cannot be obtained"
+    bad "run this from a terminal, or pass --yes if you have already read what it does"
+    return 1
+  fi
+  read -r -p "   $1 [y/N] " reply </dev/tty || {
+    bad "could not read an answer from the terminal"
+    return 1
+  }
   [[ "$reply" == [yY]* ]]
 }
 
@@ -293,7 +317,11 @@ verify() {
 }
 
 RC=0
-while read -r host; do
+# The host list is read on fd 3, leaving stdin as the terminal (issue #28). Two things
+# in this loop need stdin: confirm(), which asks the operator, and the `ssh -t` calls
+# in install_openblas/install_go/link_go, which need a tty for sudo to prompt on. With
+# `done <<<"$HOSTS"` both of those were reading the host list instead.
+while read -r -u 3 host; do
   [[ -n "$host" ]] || continue
   say "$host"
   p="$(probe "$host")"
@@ -335,7 +363,7 @@ while read -r host; do
     fi
   fi
   verify "$host" || RC=1
-done <<<"$HOSTS"
+done 3<<<"$HOSTS"
 
 echo
 if [[ "$RC" -eq 0 ]]; then
