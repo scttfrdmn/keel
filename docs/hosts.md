@@ -94,7 +94,7 @@ duplicate:
   denominator on this machine; measuring the ceiling directly sidesteps the
   question, which is the second independent reason peak is measured (issue #11).
 
-### Zen 5 — AMD Ryzen AI MAX+ 395 (Strix Halo), 16C/32T, Linux 7.0, `powersave`
+### Zen 5 — AMD Ryzen AI MAX+ 395 (Strix Halo), 16C/32T, Linux 7.0, `performance`
 
 The newest microarchitecture available, and the widest AVX-512 feature set of
 the three: F, DQ, CD, BW, VL, IFMA, VBMI, VBMI2, VNNI, BITALG, VPOPCNTDQ, BF16,
@@ -112,20 +112,66 @@ vesta) that could host any future reduced-precision parking-lot work.
   despite being a mobile APU. The formula agrees here to within **1.01×**, which
   is worth noting precisely because it is the exception: the same formula is
   2.23× high on vesta and 1.30× high on janus.
-- **Governor is `powersave`**, unlike the other two. It does not appear to cost
-  this machine its ceiling — the register-only peak measurement is unaffected —
-  but it does cost reproducibility on memory-touching kernels: one gate run
-  reported the scalar Sdot median with a **43% confidence interval** (and a
-  point-estimate speedup of 16.03×, against 8.96× the next run). The net-of-CI
-  rule absorbed it correctly, reporting 9.14×, 8.96× and 8.79× across three runs,
-  which is the rule doing its job rather than a reason to trust the point
-  estimate.
+- **The 43% confidence interval on this host has no explanation on record, and
+  that is the honest state of it** (issue #44). On 2026-08-11 this machine was in
+  `powersave` while the other two were in `performance`, and one gate run reported
+  the scalar Sdot median with a **43% confidence interval** (point-estimate speedup
+  16.03×, against 8.96× the next run). The governor was the obvious suspect and was
+  written here as the cause. It has since been set to `performance` during the
+  OpenBLAS provisioning campaign — every gate run from 2026-08-12 reads
+  `governor=performance` from the machine itself — which removes the suspect
+  without settling anything: the variance was measured under the old setting and
+  has not been re-measured under the new one.
+
+  So this paragraph now records a question rather than an answer, deliberately. A
+  stale explanation is worse than a missing one, because the next unstable
+  measurement here would be attributed to a setting that is no longer set.
+  **Before any stage-3 number leans on antares, the variance gets re-measured under
+  the asserted governor.** If it persists, it was never the governor — thermals or
+  this APU's boost behaviour under a mobile power budget are the candidates — and
+  that finding gets its own line here rather than inheriting an excuse.
+
+  What is not in question: the register-only peak measurement was unaffected (0.4%
+  across three runs), so whatever this is, it appears only once a benchmark touches
+  memory. The net-of-CI rule absorbed it correctly either way, reporting 9.14×,
+  8.96× and 8.79× across three runs, which is the rule doing its job rather than a
+  reason to trust the point estimate.
 
 Also worth noting for P3 rather than P2: this is an APU with unified LPDDR5X
 rather than separate DIMM channels, so its bandwidth and cache hierarchy differ
 structurally from the two desktop/HEDT parts. DESIGN.md §4/P3 sizes KC/MC/NC
 against a cache hierarchy, so the blocking parameters that suit vesta should not
 be assumed to transfer here. Measure per host.
+
+## Stage-3 cloud hosts (ruled 2026-08-12, issue #12)
+
+Two classes, and the distinction is what each one is allowed to produce:
+
+| class | machines | produces | tenancy |
+|---|---|---|---|
+| **evidentiary** | `c7i.metal` (Sapphire Rapids, true 512-bit datapath), `c7a.metal` (Zen 4 server) | published scaling curves; the stage-3 numbers | bare metal only |
+| **correctness** | spot instances, any µarch | differential and correctness coverage across more microarchitectures | spot is fine |
+
+The reason for the split is that the two roles have different failure modes. A
+correctness run either agrees bit-for-bit with the scalar spec or it does not, and a
+noisy neighbour cannot change that answer; a throughput run on shared tenancy cannot
+distinguish a noisy neighbour or an invisible frequency ceiling from a bad loop nest,
+which is #12's own argument and the reason the evidentiary class is metal-only.
+
+What the evidentiary hosts are *for*: the ≥6× floor was written when the largest gate
+host had 16 cores. 6× at 8 threads on a client part with client memory channels says
+little about where the parallel nest actually stops scaling — packing-buffer contention
+invisible at 16 threads is the whole show at 64. **The floor does not move**; the
+metal hosts add a wider curve (16/32/64 threads) reported beside the judged number,
+and they must clear the same ≥6× every other host clears, so adding them can only
+make the gate stricter.
+
+Mechanics: `truffle`/`spawn` under `AWS_PROFILE=aws`, one entry in this file per host
+with its class recorded, torn down at session end. **Launched when there is something
+to measure** — the nest they exist to measure is stage 2's output, so a metal instance
+running during stage 1 would bill for hours and measure nothing. Gates keep running on
+the three local hosts: a gate that depends on a paid resource being up is a gate that
+can go red for billing reasons.
 
 ## What P3 asks of every host, and of one
 
@@ -147,7 +193,7 @@ binary. None of the three had either as of 2026-08-11:
 |---|---|---|---|---|
 | vesta | `ubuntu` | none | none | performance |
 | janus | `rocky` | none | none | performance |
-| antares | `ubuntu` | none | none | powersave |
+| antares | `ubuntu` | none | none | powersave → performance (set during provisioning; #44) |
 
 (janus runs Rocky Linux 9, not RHEL proper — the `dnf` package name is the same.)
 
@@ -263,6 +309,12 @@ each host's FMA ceiling measured by `bench.BenchmarkPeak`, single core,
 | vesta | Zen 4 | 165.6 | 165.5 | 1.00× | 2.23× high | 8.71× / 7.18× / 8.57× |
 | janus | Skylake-X | 215.9 | 101.8 | 2.12× | 1.30× high | 7.55× / 7.48× / 7.53× |
 | antares | Zen 5 | 327.8 | 164.0 | 2.00× | 1.01× high | 9.14× / 8.96× / 8.79× |
+
+Those rows are dated, and one of them is dated for a reason: **antares was in
+`powersave` when its figures were taken** and is in `performance` now (#44), so its
+Sdot column in particular is not directly comparable with a re-run today. The
+measurements stand as records of what was measured; they are not restated as
+current.
 
 GFLOP/s, float32. The width ratio is the useful column: it is a direct
 measurement of the datapath, requiring no clock estimate, port count or

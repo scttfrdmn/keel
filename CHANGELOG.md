@@ -1045,6 +1045,35 @@ While the major version is 0, minor versions may contain breaking changes.
   it is demonstrated through a public API at the minimum input. #42 carries the new
   `standing-task` label and no milestone, the same pattern as #17/#18: when
   upstream's helpers go `checkptr`-clean, keel's workaround retires.
+- **`docs/hosts.md` no longer explains antares's 43% confidence interval with a
+  governor that is not set** (issue #44). The host was in `powersave` when that
+  interval was measured on 2026-08-11 and has been in `performance` since the
+  OpenBLAS provisioning campaign — every gate run from 2026-08-12 reads
+  `governor=performance` from the machine itself. Removing the suspect settles
+  nothing, so the paragraph now records a question instead of an answer: the
+  variance has not been re-measured under the asserted governor, and **it gets
+  re-measured before any stage-3 number leans on antares.** If it persists, the
+  governor was never the cause and the real one — thermals, or this APU's boost
+  behaviour under a mobile power budget — earns its own line. A stale explanation is
+  worse than a missing one, because the next unstable measurement here would be
+  attributed to a setting nobody set. The dated measurement records are unchanged
+  and now say they are dated; the P1 table notes that antares's rows predate the
+  change and are not restated as current.
+- **Stage 3 gets an evidentiary bare-metal host, and the ≥6× floor does not move**
+  (`DESIGN.md` §4/P5, `docs/hosts.md`, ruling on issue #12). Cloud hosts split into
+  two classes with different licences: **evidentiary** (`c7i.metal` for a true
+  512-bit server datapath, `c7a.metal` for Zen 4 server) may produce published
+  scaling curves, and is metal-only because on shared tenancy a noisy neighbour and
+  an invisible frequency ceiling are indistinguishable from a bad loop nest;
+  **correctness** (spot, any µarch) may widen the differential sweep, where a noisy
+  neighbour cannot change a bit-exact answer. The motive is that 6× at 8 threads on
+  a 16-core client part does not locate where the nest stops scaling — packing-buffer
+  contention invisible at 16 threads is the whole show at 64. Adding hosts makes the
+  gate **stricter**: the floor stays ≥6× at 8 threads on 4096³, every host must clear
+  it, and the wider 16/32/64-thread curve is reported beside the judged number rather
+  than becoming a threshold invented after seeing the data. Gates keep running on the
+  three local hosts, and the metal hosts are launched only when stage 2's nest exists
+  to be measured.
 - Issue bookkeeping brought current, which finishes the ruling from two sessions
   back. The four pre-existing open issues outside P5 were triaged against a stated
   rule — ruled-but-unlanded one-liner, deferred-to-a-P5-measurement,
