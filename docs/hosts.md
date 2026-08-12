@@ -123,13 +123,34 @@ vesta) that could host any future reduced-precision parking-lot work.
   without settling anything: the variance was measured under the old setting and
   has not been re-measured under the new one.
 
-  So this paragraph now records a question rather than an answer, deliberately. A
-  stale explanation is worse than a missing one, because the next unstable
-  measurement here would be attributed to a setting that is no longer set.
-  **Before any stage-3 number leans on antares, the variance gets re-measured under
-  the asserted governor.** If it persists, it was never the governor — thermals or
-  this APU's boost behaviour under a mobile power budget are the candidates — and
-  that finding gets its own line here rather than inheriting an excuse.
+  **Re-measured under the asserted governor on 2026-08-12, and the governor was not
+  the whole story.** Three independent runs of the same benchmark under the same
+  methodology (`GateSdot` at n=4096, `-count=10 -benchtime=1s`, benchstat median):
+
+  | run | scalar median | avx512 median | ratio | net of CI |
+  |---|---|---|---|---|
+  | 1 | 9.437e-07 s ± 8.0% | 9.505e-08 s ± 0.0% | 9.93× | 9.13× |
+  | 2 | 1.039e-06 s ± 14.0% | 9.514e-08 s ± 1.0% | 10.92× | 9.29× |
+  | 3 | 1.017e-06 s ± 3.0% | 9.519e-08 s ± 0.0% | 10.69× | 10.37× |
+
+  Two readings, and both belong here:
+
+  - **The 43% interval did not reproduce.** The widest scalar interval in three runs
+    was 14%. That does not *exclude* a 43% outlier — three draws cannot rule out a
+    rare event, and the original 43% was itself one run in three — so the honest form
+    is a bound, not an absolution: under `performance`, three runs produced ≤14%.
+  - **A scalar-path instability remains, and it is now isolated to the scalar path.**
+    The scalar median's interval ranged 3–14% while the AVX-512 median's ranged
+    0–1% in the same runs, on the same host, minutes apart. An order of magnitude of
+    difference between two kernels measured together is not ambient machine noise;
+    it is a property of the kernel that touches memory. So the governor cannot be
+    credited with having caused what was never shown to be caused by it, and the 43%
+    has **no identified cause** — it has a bound and a location.
+
+  The candidates are thermals and this APU's boost behaviour under a mobile power
+  budget, and they are untested. This is the same *character* of finding as vesta's
+  bimodal Sdot ratio, and it lives in the same place: issue #15, the run-to-run
+  instability and pinning decision, which now carries both hosts' data.
 
   What is not in question: the register-only peak measurement was unaffected (0.4%
   across three runs), so whatever this is, it appears only once a benchmark touches

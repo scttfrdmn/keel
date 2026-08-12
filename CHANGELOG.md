@@ -1051,14 +1051,21 @@ While the major version is 0, minor versions may contain breaking changes.
   OpenBLAS provisioning campaign — every gate run from 2026-08-12 reads
   `governor=performance` from the machine itself. Removing the suspect settles
   nothing, so the paragraph now records a question instead of an answer: the
-  variance has not been re-measured under the asserted governor, and **it gets
-  re-measured before any stage-3 number leans on antares.** If it persists, the
-  governor was never the cause and the real one — thermals, or this APU's boost
-  behaviour under a mobile power budget — earns its own line. A stale explanation is
-  worse than a missing one, because the next unstable measurement here would be
-  attributed to a setting nobody set. The dated measurement records are unchanged
-  and now say they are dated; the P1 table notes that antares's rows predate the
-  change and are not restated as current.
+  variance was **re-measured under the asserted governor** the same day, three runs,
+  same benchmark and methodology. The 43% interval did not reproduce — the widest
+  scalar interval was 14% — but three draws cannot exclude a rare event, so the
+  result is a *bound* (≤14% in three runs), not an absolution. What the runs did
+  establish is a location: the scalar median carried 3–14% intervals while the
+  AVX-512 median carried 0–1% in the same runs on the same host, an order of
+  magnitude apart, which is a property of the kernel that touches memory rather
+  than ambient machine noise. So the governor is not credited with fixing what it
+  was never shown to cause, and the 43% now has a bound and a location but **no
+  identified cause** — thermals and this APU's boost behaviour are the untested
+  candidates, recorded on issue #15 beside vesta's bimodal ratio, which is the same
+  character of finding. A stale explanation is worse than a missing one, because the
+  next unstable measurement here would be attributed to a setting nobody set. The
+  dated measurement records are unchanged and now say they are dated; the P1 table
+  notes that antares's rows predate the change and are not restated as current.
 - **Stage 3 gets an evidentiary bare-metal host, and the ≥6× floor does not move**
   (`DESIGN.md` §4/P5, `docs/hosts.md`, ruling on issue #12). Cloud hosts split into
   two classes with different licences: **evidentiary** (`c7i.metal` for a true
