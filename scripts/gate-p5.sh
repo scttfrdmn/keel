@@ -880,12 +880,16 @@ else
   P4RC=0
   bash scripts/gate-p4.sh >"$P4LOG" 2>&1 || P4RC=$?
   info "full output: $P4LOG ($(grep -c '' "$P4LOG" || true) lines) — paste it verbatim into the umbrella issue beside this gate's own; it names gate-p3's log in turn"
-  info "$(grep -c 'PASS' "$P4LOG" || true) PASS / $(grep -c 'FAIL' "$P4LOG" || true) FAIL, verdict: $(grep -E '^gate-p4: (GREEN|RED)' "$P4LOG" | tail -1)"
+  # Count the delegated gate's own verdict lines, not every line containing the
+  # word: a bare `grep -c FAIL` also matches gate-p3's summary line *inside*
+  # gate-p4's log ("47 PASS / 0 FAIL"), which made a green gate report 1 FAIL.
+  P4_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P4LOG")
+  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL, verdict: $(grep -E '^gate-p4: (GREEN|RED)' "$P4LOG" | tail -1)"
   if [[ "$P4RC" -eq 0 ]]; then
     pass "gate-p4 is green on this commit ($(git rev-parse --short HEAD)), so every rate this gate divided by is still a measured one"
   else
     fail "gate-p4 is RED on this commit (exit $P4RC), so nothing above that divides by a single-thread rate means what it says"
-    grep 'FAIL' "$P4LOG" | sed 's/^/        /' | head -20
+    printf '%s\n' "$P4_STRIP" | grep '^  FAIL  ' | sed 's/^/        /' | head -20
     info "  DESIGN.md §4's one-re-run allowance for a failing throughput sentinel applies inside the delegated gates exactly as it does when they are run directly: one immediate re-run, both outputs archived, never for a correctness criterion"
   fi
 fi

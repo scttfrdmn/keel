@@ -465,10 +465,18 @@ While the major version is 0, minor versions may contain breaking changes.
   `gate-p4.sh` would be a number that can drift out of agreement with itself.
 
 - `scripts/gate-p5.sh`: P5's criteria, written before P5's code (CLAUDE.md), and red
-  in 22 places on the commit that adds them — every one of them "P5 has not been
-  built yet", plus three findings the gate produced on its first run and that are
-  now issues rather than drive-by fixes. The judgement calls are in the script's
-  header at length; the ones that shape the phase:
+  in **23** places on the first clean-tree run (`583ca74`: 23 FAIL / 29 PASS,
+  `gate-p5: RED`) — almost all of them "P5 has not been built yet", plus four
+  findings the gate produced by being run at all, each now an issue rather than a
+  drive-by fix (#38, #39, #40, #42). The count was 22 on the first run, taken
+  against a dirty tree, which is the *less* red number for a reason worth keeping:
+  three of those 22 were "this check could not run", and running them on a clean
+  tree turned one skip into four real failures — the three per-host `-race`
+  verdicts and their aggregate. A gate that cannot run its own checks understates
+  itself. The delegated P4 gate is **green** on this commit (64 PASS / 0 FAIL),
+  so every absolute rate the ≥6× ratio stands on is still a measured one.
+  The judgement calls are in the script's header at length; the ones that shape
+  the phase:
   - The ≥6× floor is judged on `Sgemm`, `Ssyrk` **and** `Ssymm` (one parallelism
     class) and measured-not-judged on `Strsm`, whose floor is deferred to that
     measurement plus a stated model (#37). `STRSM_FLOOR` is left empty in the
@@ -538,7 +546,12 @@ While the major version is 0, minor versions may contain breaking changes.
   meeting a criterion. Its diagnostic for the generic case also prints the *head*
   of the failing-test detail rather than the tail: on a multi-package failure the
   `--- FAIL:` lines that identify the cause precede the per-package summaries, and
-  a `tail` had been dropping exactly the lines worth reading.
+  a `tail` had been dropping exactly the lines worth reading. Its summary of the
+  delegated P4 gate also counts that gate's own verdict lines rather than every
+  line containing the word: a bare `grep -c FAIL` matched gate-p3's summary line
+  *inside* gate-p4's log ("47 PASS / 0 FAIL"), so a green delegated gate was
+  reported as "65 PASS / 1 FAIL". The verdict itself was always taken from the
+  delegated gate's exit code and was correct; only the number beside it lied.
 
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel
