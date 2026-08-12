@@ -329,6 +329,10 @@ While the major version is 0, minor versions may contain breaking changes.
     ranking cannot come to rest on a stale count.
   - Found by the gate, not by a benchmark: P2's anti-vacuity shape guard refused
     the dispatched 4×32 a roofline on janus, which is what surfaced the bug.
+  - `docs/spill-report.md` carries a superseded-by note: its P2-era prediction that
+    "P3 will dispatch this kernel on all three machines" is the premise this change
+    removes. The report's measurements are left as recorded — it documents P2, not
+    what ships now.
 - **DESIGN.md's 32×6 microkernel tile is not implementable on go1.26.5, and P2
   ships two smaller shapes instead** (`docs/toolchain-notes.md` T10, issue #18,
   rationale in `KERNEL.md`). Two independent properties of the toolchain, both

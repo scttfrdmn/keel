@@ -95,6 +95,15 @@ this kernel on all three machines, and a 46%-of-peak SGEMM on Skylake-X is a
 product defect rather than a rounding error. P2 exists to find that before P3 is
 built on top of it.
 
+> **Superseded in P3 (issue #24).** The premise of that last paragraph — that P3
+> dispatches one shape everywhere — no longer holds. P3 selects the microkernel
+> shape per host from the same issue-bound/FMA-bound classification this report
+> established, so janus now ships 2×32 rather than the 4×32 measured here; see
+> KERNEL.md §8. The argument for the strict reading survives the change intact
+> (it is *why* the shapes are now chosen per class), and the numbers below are
+> left exactly as measured in P2 — this is a record of that phase, not a
+> statement about what currently ships.
+
 ## 3. Diagnosis: janus is issue-bound, and this is measured, not modelled
 
 Two independent derivations, both from keel's own numbers.
