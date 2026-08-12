@@ -168,6 +168,73 @@ func rate(b *testing.B, n int, flopsPerElem float64) {
 	b.ReportMetric(flopsPerElem*float64(n)*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
 }
 
+// # The numerator, declared (scripts/gate-p4.sh criterion 7)
+//
+// A GFLOP/s figure is a fraction, and rule 7's "never a number without its
+// denominator" cuts the same way pointed at the top of it. The Level-3 benchmarks
+// below are compared against each other — P4's criterion is Ssyrk against Sgemm at
+// the same size — and the two routines do different amounts of arithmetic for the
+// same n: Sgemm fills n² entries, Ssyrk fills the n(n+1)/2 of one triangle. A
+// harness that counted 2·n²·k for both would report about twice Ssyrk's real rate,
+// and the 85% bar would be cleared by a routine running at 43%.
+//
+// So a work value carries the shape and the flop count together, one per benchmark
+// case, and it is used twice: rateWork divides by w.flops to report the metric, and
+// prints the same w in a keel-bench-flops marker. The gate recomputes the count from
+// the declared m/n/k and fails on disagreement — so this is a declaration that can
+// be wrong out loud, rather than an assumption buried in a multiplier.
+//
+// The counts are USEFUL flops, not executed ones. A masked C-update computes full
+// MR×NR tiles on the diagonal and keeps half of each; counting the discarded half as
+// work would hide exactly the cost the 85% bar exists to measure.
+type work struct {
+	m, n, k int
+	formula string
+	flops   float64
+}
+
+// gemmWork is the shape BenchmarkSgemm runs and, under the openblas tag, the shape
+// BenchmarkOpenBLAS runs. One function so the ratio the gate computes has provably
+// one numerator: two independently written counts would agree at n=2048 and could
+// still be two different claims.
+func gemmWork(n int) work {
+	return work{
+		m: n, n: n, k: n,
+		formula: "2*m*n*k",
+		flops:   2 * float64(n) * float64(n) * float64(n),
+	}
+}
+
+// syrkWork is Ssyrk's: one multiply and one add per (i, j, p) over the n(n+1)/2
+// entries of one triangle, i.e. 2·k·n(n+1)/2 = k·n·(n+1).
+func syrkWork(n int) work {
+	return work{
+		m: n, n: n, k: n,
+		formula: "k*n*(n+1)",
+		flops:   float64(n) * float64(n) * float64(n+1),
+	}
+}
+
+// flopsDeclared keeps the marker to one line per benchmark name: a sub-benchmark
+// body runs several times as testing grows b.N, and once more per -count.
+var flopsDeclared = map[string]bool{}
+
+// rateWork reports the GFLOP/s metric for one case and declares the numerator it
+// used. Called after the timed loop; the metric is computed from b.Elapsed() before
+// anything is printed, so the marker cannot land inside the measurement.
+func rateWork(b *testing.B, w work) {
+	b.ReportMetric(w.flops*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+	// The gate matches on the sub-benchmark path as `go test` reports it, minus the
+	// Benchmark prefix — "Sgemm/n=2048".
+	name := strings.TrimPrefix(b.Name(), "Benchmark")
+	if flopsDeclared[name] {
+		return
+	}
+	flopsDeclared[name] = true
+	fmt.Printf("keel-bench-flops: name=%s flops=%s formula=%s m=%d n=%d k=%d\n",
+		name, strconv.FormatFloat(w.flops, 'f', 0, 64), w.formula, w.m, w.n, w.k)
+}
+
 func BenchmarkL1Sdot(b *testing.B) {
 	provenance()
 	for _, n := range sizes {

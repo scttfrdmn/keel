@@ -117,6 +117,17 @@ func wholeTiles(v, blk int) int {
 func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []float32, lda int,
 	b []float32, ldb int, beta float32, c []float32, ldc int) {
 
+	gemm(kn, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, triMask{})
+}
+
+// gemm is Gemm with a triangular mask on the C update: every write to C, beta
+// included, is confined to tri's triangle, and a tile lying entirely outside it
+// is not computed at all. tri.on false is plain GEMM and costs nothing — the mask
+// predicates fold to constants, the whole-tile test is the one that was already
+// there, and no extra work appears in the loop nest. See tri.go for who uses it.
+func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []float32, lda int,
+	b []float32, ldb int, beta float32, c []float32, ldc int, tri triMask) {
+
 	if kn.MR < 1 || kn.MR > kern.MaxMR || kn.NR < 1 || kn.NR > kern.MaxNR {
 		panic(fmt.Sprintf("block: kernel tile %dx%d outside %dx%d", kn.MR, kn.NR, kern.MaxMR, kern.MaxNR))
 	}
@@ -127,7 +138,7 @@ func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 	// touch A or B: reference SGEMM does not multiply in that case either, so a
 	// NaN or infinity in A cannot reach C through 0·x.
 	if k == 0 || alpha == 0 {
-		scale(beta, m, n, c, ldc)
+		scaleTri(beta, 0, 0, m, n, c, ldc, tri)
 		return
 	}
 
@@ -152,19 +163,27 @@ func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 
 	for jc := 0; jc < n; jc += nc {
 		jn := min(nc, n-jc)
+		// No row of this column block is in the triangle, so neither B's panels
+		// nor anything downstream of them is worth building.
+		if tri.none(0, jc, m, jn) {
+			continue
+		}
 		for pc := 0; pc < k; pc += kc {
 			kk := min(kc, k-pc)
 			pack.BPanels(bp, nr, b, ldb, transB, pc, kk, jc, jn)
 			for ic := 0; ic < m; ic += mc {
 				im := min(mc, m-ic)
+				if tri.none(ic, jc, im, jn) {
+					continue
+				}
 				pack.APanels(ap, mr, alpha, a, lda, transA, ic, im, pc, kk)
 				cb := c[ic*ldc+jc:]
 				if pc == 0 {
 					// First depth block for this C block: apply beta before
 					// anything accumulates into it.
-					scale(beta, im, jn, cb, ldc)
+					scaleTri(beta, ic, jc, im, jn, cb, ldc, tri)
 				}
-				macro(kn, ap, bp, im, jn, kk, cb, ldc, tile)
+				macro(kn, ap, bp, ic, jc, im, jn, kk, cb, ldc, tile, tri)
 			}
 		}
 	}
@@ -178,29 +197,39 @@ func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 // multiply. kk is this block's depth, and it is also the panel stride, because
 // the last depth block is shorter than KC and the panels were packed for kk, not
 // for the buffer's capacity.
-func macro(kn kern.Kernel, ap, bp []float32, mc, nc, kk int, c []float32, ldc int, tile []float32) {
+//
+// i0 and j0 are the block's position in the whole C matrix, needed only by the
+// mask: c is already offset to (i0, j0), and every index below is local.
+func macro(kn kern.Kernel, ap, bp []float32, i0, j0, mc, nc, kk int, c []float32, ldc int, tile []float32, tri triMask) {
 	mr, nr := kn.MR, kn.NR
 	for jr := 0; jr < nc; jr += nr {
 		bpanel := bp[(jr/nr)*nr*kk:][:nr*kk]
 		jn := min(nr, nc-jr)
 		for ir := 0; ir < mc; ir += mr {
-			apanel := ap[(ir/mr)*mr*kk:][:mr*kk]
 			im := min(mr, mc-ir)
+			if tri.none(i0+ir, j0+jr, im, jn) {
+				continue
+			}
+			apanel := ap[(ir/mr)*mr*kk:][:mr*kk]
 			ct := c[ir*ldc+jr:]
-			if im == mr && jn == nr {
+			if im == mr && jn == nr && tri.whole(i0+ir, j0+jr, im, jn) {
 				kn.Fn(kk, apanel, bpanel, ct, ldc)
 				continue
 			}
-			// Fringe tile: the kernel computes the full MR×NR shape into the
-			// scratch buffer (the padding rows and columns of the panels are
-			// zero, so those results are zero), and only the valid rectangle is
-			// added back. Writing the padded columns straight into C would
-			// clobber the caller's memory past n, or past the end of the slice.
+			// Fringe or mask-crossing tile: the kernel computes the full MR×NR
+			// shape into the scratch buffer (the padding rows and columns of the
+			// panels are zero, so those results are zero), and only the part that
+			// belongs to C is added back. Writing the padded columns straight into
+			// C would clobber the caller's memory past n, or past the end of the
+			// slice; writing the masked half would clobber a triangle the routine
+			// promises not to touch. One path serves both, which is why the
+			// triangular routines need no edge handling of their own.
 			clear(tile)
 			kn.Fn(kk, apanel, bpanel, tile, nr)
 			for i := 0; i < im; i++ {
-				dst := ct[i*ldc : i*ldc+jn]
-				src := tile[i*nr : i*nr+jn]
+				lo, hi := tri.rowRange(i0+ir+i, j0+jr, jn)
+				dst := ct[i*ldc+lo : i*ldc+hi]
+				src := tile[i*nr+lo : i*nr+hi]
 				for j, v := range src {
 					dst[j] += v
 				}
@@ -209,20 +238,26 @@ func macro(kn kern.Kernel, ap, bp []float32, mc, nc, kk int, c []float32, ldc in
 	}
 }
 
-// scale applies C = beta·C to an m×n block, as one of three variants chosen
-// once. See the package doc for why beta lives here and not in the kernel, and
-// why beta == 0 writes rather than skips.
-func scale(beta float32, m, n int, c []float32, ldc int) {
+// scaleTri applies C = beta·C to the part of an m×n block that lies in tri's
+// triangle, as one of three variants chosen once. See the package doc for why
+// beta lives here and not in the kernel, and why beta == 0 writes rather than
+// skips.
+//
+// i0 and j0 place the block in the whole matrix, as in macro. With tri.on false
+// every row range is the full row and this is the unmasked pass verbatim.
+func scaleTri(beta float32, i0, j0, m, n int, c []float32, ldc int, tri triMask) {
 	switch beta {
 	case 1:
 		return
 	case 0:
 		for i := 0; i < m; i++ {
-			clear(c[i*ldc : i*ldc+n])
+			lo, hi := tri.rowRange(i0+i, j0, n)
+			clear(c[i*ldc+lo : i*ldc+hi])
 		}
 	default:
 		for i := 0; i < m; i++ {
-			row := c[i*ldc : i*ldc+n]
+			lo, hi := tri.rowRange(i0+i, j0, n)
+			row := c[i*ldc+lo : i*ldc+hi]
 			for j := range row {
 				row[j] *= beta
 			}

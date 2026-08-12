@@ -41,7 +41,36 @@ func BenchmarkSgemm(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				keel.Sgemm(keel.NoTrans, keel.NoTrans, n, n, n, 1, a, n, bm, n, 0, c, n)
 			}
-			rate(b, n*n*n, 2) // one multiply + one add per (i, j, p)
+			rateWork(b, gemmWork(n)) // 2*m*n*k, declared and checked by gate-p4
+		})
+	}
+}
+
+// BenchmarkSsyrk is P4's numerator in the criterion "Ssyrk >= 85% of Sgemm GFLOPS
+// at same size" (DESIGN.md §4/P4). Same sizes as BenchmarkSgemm, and k = n, so the
+// two rates are at one shape rather than at two — a ratio between rates measured at
+// different sizes is not a ratio (DESIGN.md §7 rule 7), and gate-p4 checks the
+// declared dimensions against each other rather than trusting this comment.
+//
+// uplo=Lower, trans=NoTrans, alpha=1, beta=0: the flags do not change the flop
+// count, and the four corners of the triangular mask are a correctness question
+// (tri_test.go), not a throughput one — the masked path is the same code with the
+// diagonal on the other side. beta=0 skips reading C, as BenchmarkSgemm's does.
+//
+// What this measures against Sgemm is the whole cost of the derivation: the tiles
+// that straddle the diagonal are computed in full and half-discarded, and the flop
+// count declared here counts only the half kept. The gap from 100% is that waste
+// plus the blocks the mask skipped unevenly, and 85% is where DESIGN.md put the bar.
+func BenchmarkSsyrk(b *testing.B) {
+	provenance()
+	for _, n := range gemmSizes {
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			a, c := makeMat(n, n), makeMat(n, n)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				keel.Ssyrk(keel.Lower, keel.NoTrans, n, n, 1, a, n, 0, c, n)
+			}
+			rateWork(b, syrkWork(n)) // k*n*(n+1) — one triangle, not one square
 		})
 	}
 }

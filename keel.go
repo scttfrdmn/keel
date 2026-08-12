@@ -309,13 +309,218 @@ func absf32(v float32) float32 {
 	return math.Float32frombits(math.Float32bits(v) &^ (1 << 31))
 }
 
-// Level 2 — Phase P4.
-
-func Sgemv(tA Transpose, m, n int, alpha float32, a []float32, lda int, x []float32, incX int, beta float32, y []float32, incY int) {
-	panic(nyi("Sgemv", "P4"))
+// checkUplo maps a Uplo to the bool the internals use — true for Lower — and
+// panics on anything else, for the same reason checkTranspose does: a routine that
+// read the wrong triangle would return a plausible answer computed from memory the
+// caller never meant it to see.
+func checkUplo(fn, arg string, ul Uplo) bool {
+	switch ul {
+	case Upper:
+		return false
+	case Lower:
+		return true
+	}
+	panic("keel: " + fn + ": " + arg + " is neither Upper nor Lower")
 }
+
+// checkSide maps a Side to true for Left.
+func checkSide(fn, arg string, s Side) bool {
+	switch s {
+	case Left:
+		return true
+	case Right:
+		return false
+	}
+	panic("keel: " + fn + ": " + arg + " is neither Left nor Right")
+}
+
+// checkDiag maps a Diag to true for Unit.
+func checkDiag(fn, arg string, d Diag) bool {
+	switch d {
+	case NonUnit:
+		return false
+	case Unit:
+		return true
+	}
+	panic("keel: " + fn + ": " + arg + " is neither NonUnit nor Unit")
+}
+
+// Level 2 — Phase P4.
+//
+// Both routines are a loop over A's rows whose body is one Level-1 kernel call on
+// a contiguous row: Sgemv's NoTrans case is a dot product per row, its Trans case
+// and Sger are an axpy per row. That is the whole design, and the reason is that
+// row-major A makes a row the only unit-stride vector in sight — a column-wise
+// formulation would gather with stride lda and lose the kernel entirely (see
+// internal/l1's package doc on why keel does not vectorize strided access).
+//
+// A non-unit stride on x or y is handled by gathering it into a contiguous scratch
+// buffer once per call rather than by a strided inner loop: the gather is O(len)
+// against the O(m·n) of the multiply, so it buys the kernel back for the price of
+// one pass. That is the opposite of the Level-1 decision, and the difference is
+// the ratio: in Sdot a gather would be the whole cost of the routine.
+
+// Sgemv computes y = alpha·op(A)·x + beta·y, where a holds A as m×n row-major
+// regardless of tA, so lda >= n always. op(A)·x is m long for NoTrans and n long
+// for Trans, and x is the other one.
+//
+// Argument errors panic, as everywhere in keel. Either stride may be negative,
+// following reference SGEMV, in which case that vector runs backwards from its far
+// end.
+//
+// # Two deliberate deviations from reference SGEMV
+//
+// Reference returns without touching y when m == 0, n == 0, or alpha == 0 and
+// beta == 1. keel returns y = beta·y when the reduction is empty, because that is
+// the value of the expression: the empty product is zero, exactly as documented for
+// Sgemm's k == 0, and a caller who scales by beta through a loop whose n reaches
+// zero on the last iteration should not get a different rule at the boundary. When
+// there are no output elements at all — m == 0 for NoTrans — there is nothing to
+// write and the routines agree.
+//
+// alpha is applied to the dot product rather than folded into A one element at a
+// time, which is not what Sgemm does (internal/pack folds it) and not what the
+// oracle does. The difference is one rounding on a value the tolerance model
+// already carries n+1 of, so it is covered rather than ignored — but it is a real
+// difference, and it is here because folding alpha per element would cost a pass
+// over A that a Level-2 routine, which touches each element of A exactly once,
+// cannot amortize.
+func Sgemv(tA Transpose, m, n int, alpha float32, a []float32, lda int, x []float32, incX int, beta float32, y []float32, incY int) {
+	trans := checkTranspose("Sgemv", "tA", tA)
+	if m < 0 || n < 0 {
+		panic("keel: Sgemv: negative dimension")
+	}
+	checkMatrix("Sgemv", "a", m, n, a, lda)
+	rows, inner := m, n
+	if trans {
+		rows, inner = n, m
+	}
+	checkVector("Sgemv", "x", inner, x, incX)
+	checkVector("Sgemv", "y", rows, y, incY)
+	if rows == 0 {
+		return
+	}
+	if inner == 0 || alpha == 0 {
+		scaleStrided(beta, rows, y, incY)
+		return
+	}
+	if trans {
+		gemvTrans(m, n, alpha, a, lda, x, incX, beta, y, incY)
+		return
+	}
+	xs := gather(inner, x, incX)
+	iy := offset(rows, incY)
+	for i := 0; i < m; i++ {
+		d := alpha * activeL1.Dot(a[i*lda:i*lda+n], xs)
+		switch beta {
+		case 0:
+			y[iy+i*incY] = d
+		case 1:
+			y[iy+i*incY] += d
+		default:
+			y[iy+i*incY] = d + beta*y[iy+i*incY]
+		}
+	}
+}
+
+// gemvTrans is Sgemv's y = alpha·Aᵀ·x + beta·y, split out because its shape is the
+// other one: the output is as long as a row of A, so beta is applied to the whole
+// of y up front and each row of A then contributes an axpy.
+//
+// That ordering is why beta is not folded in afterwards: y = beta·y first means
+// the accumulation runs on the final destination and beta == 0 never reads y,
+// which is the case a caller relies on when y is uninitialized.
+func gemvTrans(m, n int, alpha float32, a []float32, lda int, x []float32, incX int,
+	beta float32, y []float32, incY int) {
+
+	ys, scattered := y, false
+	if incY != 1 {
+		// n accumulations per element would each pay the stride; one gather and one
+		// scatter pay it twice in total.
+		ys, scattered = make([]float32, n), true
+		if beta != 0 {
+			iy := offset(n, incY)
+			for j := 0; j < n; j++ {
+				ys[j] = y[iy+j*incY]
+			}
+		}
+	}
+	scaleStrided(beta, n, ys, 1)
+	ix := offset(m, incX)
+	for i := 0; i < m; i++ {
+		// No `if s != 0` guard, deliberately. Skipping a zero row scale would be
+		// free and would change the answer: 0·Inf is NaN, so a guard makes y
+		// depend on which of two mathematically equal formulations ran. Reference
+		// SGER has such a guard and reference SGEMV does not; keel takes the
+		// unguarded rule for both, because it is the one a float64 oracle can
+		// check element by element (see internal/oracle.GemvEntry).
+		activeL1.Axpy(alpha*x[ix+i*incX], a[i*lda:i*lda+n], ys[:n])
+	}
+	if scattered {
+		iy := offset(n, incY)
+		for j := 0; j < n; j++ {
+			y[iy+j*incY] = ys[j]
+		}
+	}
+}
+
+// Sger computes A += alpha·x·yᵀ for A m×n row-major, x m long and y n long.
+// Either stride may be negative. alpha == 0 returns without reading x or y,
+// matching reference SGER — the same rule as Saxpy's, and load-bearing for the
+// same reason.
+//
+// Reference SGER additionally skips a row whose scale is zero; keel does not. See
+// gemvTrans for why not.
 func Sger(m, n int, alpha float32, x []float32, incX int, y []float32, incY int, a []float32, lda int) {
-	panic(nyi("Sger", "P4"))
+	if m < 0 || n < 0 {
+		panic("keel: Sger: negative dimension")
+	}
+	checkVector("Sger", "x", m, x, incX)
+	checkVector("Sger", "y", n, y, incY)
+	checkMatrix("Sger", "a", m, n, a, lda)
+	if m == 0 || n == 0 || alpha == 0 {
+		return
+	}
+	ys := gather(n, y, incY)
+	ix := offset(m, incX)
+	for i := 0; i < m; i++ {
+		activeL1.Axpy(alpha*x[ix+i*incX], ys, a[i*lda:i*lda+n])
+	}
+}
+
+// gather returns n elements of a strided BLAS vector as a contiguous slice,
+// returning v itself when the stride is already one so the common case allocates
+// nothing.
+func gather(n int, v []float32, inc int) []float32 {
+	if inc == 1 {
+		return v[:n]
+	}
+	out := make([]float32, n)
+	iv := offset(n, inc)
+	for j := 0; j < n; j++ {
+		out[j] = v[iv+j*inc]
+	}
+	return out
+}
+
+// scaleStrided applies y = beta·y to n elements of a strided vector, in the same
+// three variants as internal/block's C scaling and for the same reason: beta == 0
+// must write zeros without reading y, so that an uninitialized destination is
+// legal.
+func scaleStrided(beta float32, n int, y []float32, inc int) {
+	if beta == 1 {
+		return
+	}
+	iy := offset(n, inc)
+	if beta == 0 {
+		for j := 0; j < n; j++ {
+			y[iy+j*inc] = 0
+		}
+		return
+	}
+	for j := 0; j < n; j++ {
+		y[iy+j*inc] *= beta
+	}
 }
 
 // Level 3 — Phases P3 (Sgemm) and P4 (derived).
@@ -364,16 +569,90 @@ func Sgemm(tA, tB Transpose, m, n, k int, alpha float32, a []float32, lda int, b
 	checkMatrix("Sgemm", "c", m, n, c, ldc)
 	block.Gemm(activeKern, ta, tb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
 }
+
+// The three routines below are derivations on Sgemm's loop nest rather than
+// implementations beside it: same packing, same blocking parameters, same beta
+// variants, same microkernel — see internal/block/tri.go for each one's reduction
+// and for what that inheritance costs. Their argument checking is here, with
+// Sgemm's, because the shapes are this package's contract with its caller.
+
+// Ssyrk computes C = alpha·A·Aᵀ + beta·C (NoTrans, A n×k) or C = alpha·Aᵀ·A +
+// beta·C (Trans, A k×n), for C symmetric n×n stored in the triangle ul names.
+//
+// Only that triangle is read or written. The other one is left exactly as the
+// caller passed it — not zeroed, not mirrored — which is reference SSYRK's
+// contract and the reason a caller may keep two matrices packed in one array.
+//
+// k == 0 and alpha == 0 both give C = beta·C over the referenced triangle without
+// reading A, as in Sgemm. Note that C's own diagonal is part of the referenced
+// triangle for either ul.
 func Ssyrk(ul Uplo, t Transpose, n, k int, alpha float32, a []float32, lda int, beta float32, c []float32, ldc int) {
-	panic(nyi("Ssyrk", "P4"))
-}
-func Ssymm(s Side, ul Uplo, m, n int, alpha float32, a []float32, lda int, b []float32, ldb int, beta float32, c []float32, ldc int) {
-	panic(nyi("Ssymm", "P4"))
-}
-func Strsm(s Side, ul Uplo, tA Transpose, d Diag, m, n int, alpha float32, a []float32, lda int, b []float32, ldb int) {
-	panic(nyi("Strsm", "P4"))
+	lower := checkUplo("Ssyrk", "ul", ul)
+	trans := checkTranspose("Ssyrk", "t", t)
+	if n < 0 || k < 0 {
+		panic("keel: Ssyrk: negative dimension")
+	}
+	ra, ca := n, k
+	if trans {
+		ra, ca = k, n
+	}
+	checkMatrix("Ssyrk", "a", ra, ca, a, lda)
+	checkMatrix("Ssyrk", "c", n, n, c, ldc)
+	block.Syrk(activeKern, lower, trans, n, k, alpha, a, lda, beta, c, ldc)
 }
 
-func nyi(fn, phase string) string {
-	return "keel: " + fn + " not implemented until phase " + phase + " gate is green (see DESIGN.md)"
+// Ssymm computes C = alpha·A·B + beta·C (Left) or C = alpha·B·A + beta·C (Right),
+// where A is symmetric and stored in the triangle ul names. A is m×m for Left and
+// n×n for Right; B and C are both m×n.
+//
+// A's other triangle is never read, so it may hold anything at all — that is the
+// property the caller is buying, and internal/block.Symm reflects rather than
+// reads. C is a general matrix here, unlike Ssyrk's: all m·n entries are written.
+//
+// alpha == 0 gives C = beta·C without reading A or B.
+func Ssymm(s Side, ul Uplo, m, n int, alpha float32, a []float32, lda int, b []float32, ldb int, beta float32, c []float32, ldc int) {
+	left := checkSide("Ssymm", "s", s)
+	lower := checkUplo("Ssymm", "ul", ul)
+	if m < 0 || n < 0 {
+		panic("keel: Ssymm: negative dimension")
+	}
+	d := n
+	if left {
+		d = m
+	}
+	checkMatrix("Ssymm", "a", d, d, a, lda)
+	checkMatrix("Ssymm", "b", m, n, b, ldb)
+	checkMatrix("Ssymm", "c", m, n, c, ldc)
+	block.Symm(activeKern, left, lower, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+}
+
+// Strsm solves op(A)·X = alpha·B (Left) or X·op(A) = alpha·B (Right) for X and
+// overwrites B with it. A is triangular, stored in the triangle ul names, m×m for
+// Left and n×n for Right; B is m×n.
+//
+// d == Unit means A's stored diagonal is NOT REFERENCED and is taken to be 1,
+// which is a stronger statement than "it contains ones": a caller holding an LU
+// factorization in one array has L's unit diagonal overwritten by U's, and a
+// routine that read it would silently solve a different system. keel does not read
+// it, and the tests poison it to prove that.
+//
+// alpha == 0 sets B to zero and returns without reading A, as reference STRSM
+// does. A must be nonsingular in its referenced triangle; keel does not check
+// that, and neither does reference BLAS — a zero on the diagonal produces Inf or
+// NaN in B rather than an error.
+func Strsm(s Side, ul Uplo, tA Transpose, d Diag, m, n int, alpha float32, a []float32, lda int, b []float32, ldb int) {
+	left := checkSide("Strsm", "s", s)
+	lower := checkUplo("Strsm", "ul", ul)
+	trans := checkTranspose("Strsm", "tA", tA)
+	unit := checkDiag("Strsm", "d", d)
+	if m < 0 || n < 0 {
+		panic("keel: Strsm: negative dimension")
+	}
+	da := n
+	if left {
+		da = m
+	}
+	checkMatrix("Strsm", "a", da, da, a, lda)
+	checkMatrix("Strsm", "b", m, n, b, ldb)
+	block.Trsm(activeKern, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
 }

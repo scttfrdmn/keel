@@ -339,6 +339,106 @@ While the major version is 0, minor versions may contain breaking changes.
   other than what it names. Parentheses suppress both splits, which is the fix.
   Repro on janus, plus the audit of every filter in the repo.
 
+- **Level 2 BLAS: `Sgemv` (both transposes) and `Sger`.** Both are row-at-a-time
+  loops over `internal/l1`'s unit-stride kernels — a dot product per row of A
+  untransposed, an axpy per row transposed, and an axpy per row for the rank-1
+  update — so there is one indirect call per row of A and none inside a loop.
+  Strided vectors are gathered into a contiguous buffer once per call rather than
+  handled by a strided inner loop: the gather is O(n) against the routine's
+  O(m·n), and it keeps the kernel path the one P1 measured.
+  - Two documented deviations from reference SGEMV, both toward the rule the
+    float64 oracle can check element by element. An empty reduction still applies
+    beta (`y := beta*y` is the value of the expression when the sum is empty — the
+    same rule as `Sgemm`'s `k == 0`, where reference returns early); and alpha
+    multiplies the dot product rather than each element of the row.
+  - **No zero-multiplier guard in either routine.** Reference SGER has one
+    (`IF (TEMP.NE.ZERO)`) and reference SGEMV does not; keel takes the unguarded
+    rule for both, because `0·Inf = NaN` must propagate and a skipped row would
+    disagree with the oracle on exactly that input.
+- **`Ssyrk`, `Ssymm` and `Strsm` as derivations on the P3 loop nest**, not as
+  second implementations of it. Each one inherits the packing, the blocking
+  parameters, the three beta variants, the zero-padded-panel edge strategy and the
+  P2-audited K-loop; `scripts/gate-p4.sh` criterion 5 checks that inheritance from
+  markers rather than trusting it, requiring every derived routine to report the
+  same microkernel and the same `kc`/`mc`/`nc` that `Sgemm` dispatched in the same
+  process.
+  - **`Ssyrk` is one GEMM call with A on both sides and the C update masked to a
+    triangle** (`internal/block/tri.go`). The mask is over C's *global* indices, so
+    the loop nest threads the block offsets down to the macro-kernel; blocks
+    entirely outside the triangle are never packed and never reach the kernel, and
+    a tile that straddles the diagonal runs the existing scratch-tile path — the
+    one the fringe already uses — and copies back a row range instead of a row.
+    `triMask{on: false}` folds every predicate to a constant, so `Sgemm` pays
+    nothing for the mask's existence. No new kernel family, and none of P2's audit
+    surface is widened.
+  - **`Ssymm` reflects the stored triangle of A into a dense square and is then one
+    unmasked GEMM.** The cost is O(d²) of scratch and one extra pass, against the
+    O(d²·n) of the multiply; pack-time mirroring is strictly better, also covers a
+    future `Ssymv`, and is issue #36. `alpha == 0` returns `beta*C` without
+    allocating or reading A, which is a correctness requirement rather than a
+    shortcut: A's unreferenced triangle may hold anything.
+  - **`Strsm` is the BLIS blocked recipe** (Van Zee & van de Geijn, TOMS 2015 §4.3;
+    Goto & van de Geijn, TOMS 2008 §4): a GEMM rank update against the
+    already-solved blocks, then an unblocked solve against one `MB`×`MB` diagonal
+    block, in whichever of the four directions `side` and `uplo != trans` select.
+    All the flops except the diagonal blocks' `O(m·MB·n)` go through the audited
+    kernel. The diagonal solves divide rather than multiply by a reciprocal (a
+    reciprocal changes the last bit and disagrees with the oracle for no gain) and
+    do not skip a zero multiplier (0·Inf must propagate). They are scalar, `MB` is
+    an untuned `var`, and both are issue #37.
+  - `unit` diag means the stored diagonal is **not referenced**, not that it
+    contains ones — the guarantee a caller holding an LU factorization in one array
+    relies on. `alpha == 0` zeroes B without reading A at all, so a singular or
+    infinite diagonal is legal on that call.
+- **P4 differential suite against the float64 oracle** (`gemv_test.go`,
+  `tri_test.go`, `internal/oracle/gemv.go`, `internal/oracle/l3.go`), over the
+  P4 size list 1–17, 31, 32, 33, 63, 64, 65, 500.
+  - The full flag lattice per routine: `Sgemv` 162 combinations (trans × alpha ×
+    beta × incx × incy, each stride being unit, wider-than-one and negative),
+    `Sger` 27, `Ssyrk` 36, `Ssymm` 36, `Strsm` 48 (side × uplo × trans × diag ×
+    alpha). Level 2 runs its lattice at *every* size including 500 and verifies
+    every output element there, because its entry-wise oracle is O(n) per output —
+    an exhaustive comparison costs the same order as the routine. Level 3 runs the
+    full lattice up to 65 and one flag corner rotated by runner index above it, and
+    the reduction is stated in the markers rather than implied.
+  - **Coverage is counted, not declared.** Each routine records the flag sets it
+    swept *and the set of tuples it actually reached*; the gate multiplies the
+    former and requires the product to equal the count of the latter. P3 could
+    print its constants because `Sgemm` has one flag pair; with five routines and
+    sixteen corners the interesting failure is no longer "the sweep is too small",
+    it is "the sweep declares a lattice and skips part of it" — which no test
+    failure would ever show.
+  - **The properties an oracle comparison cannot see**, each about memory the
+    routine must not touch: `Ssyrk`'s untouched triangle of C (poisoned and
+    required back *bit-identical*, not merely close); `Ssymm`'s and `Strsm`'s
+    unreferenced triangle of A and `Strsm`'s unit diagonal (poisoned with NaN, so
+    a read propagates into the answer instead of being absorbed by a tolerance);
+    leading-dimension padding on all three; zero dimensions; argument panics; and
+    the non-finite rules, including an infinity meeting a zero-padded panel on a
+    tile that straddles the diagonal — where the copy-back is what keeps the
+    resulting NaN out of both C's other triangle and its padding.
+  - `Strsm`'s test matrices are diagonally dominant on purpose. A triangular
+    solve's error bound grows multiplicatively down the substitution
+    (`oracle.Trsm` derives the recursion), so a random triangular matrix at
+    n = 500 has a legitimate bound wide enough to admit anything — the test would
+    pass on a broken routine and be reporting on the test matrix instead of on
+    keel.
+  - `internal/block/tri_test.go` checks the mask's three range predicates
+    (`whole`, `none`, `rowRange`) against the element-wise `keeps` definition over
+    every rectangle in a small square. They decide per tile and per row rather than
+    per element, which is what makes the mask free and also what makes an
+    off-by-one in them invisible at most sizes.
+- `bench.BenchmarkSsyrk` at n = 256/512/1024/2048, beside `BenchmarkSgemm` at the
+  same sizes, for P4's `Ssyrk >= 85% of Sgemm` criterion. **Both now declare their
+  numerator**: a `keel-bench-flops` marker naming the flop count, the formula and
+  the dimensions used, from the same `work` value the harness divides by, and
+  `BenchmarkOpenBLAS` takes `Sgemm`'s. `Ssyrk` fills one triangle, so its count is
+  `k*n*(n+1)` and not `2*m*n*k` — counting the latter would report about twice its
+  real rate and the 85% bar would be cleared by a routine running at 43%. The
+  counts are *useful* flops: the half of each diagonal tile that is computed and
+  discarded is the cost the bar exists to measure, so it is not counted as work.
+  Rule 7's "never a number without its denominator" pointed at the numerator.
+
 ### Changed
 - **`Sgemm` selects its microkernel shape per host instead of taking the registry's
   first entry** (ruling on issue #24; `KERNEL.md` §8, `DESIGN.md` §4/P3). Both

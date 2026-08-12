@@ -43,7 +43,10 @@ func BenchmarkOpenBLAS(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				openblasSgemm(n, n, n, 1, a, n, bm, n, 0, c, n)
 			}
-			rate(b, n*n*n, 2)
+			// gemmWork, not a second count of the same thing: the P3 ratio divides
+			// this rate by BenchmarkSgemm's, and two independently written numerators
+			// would agree at these sizes while still being two claims.
+			rateWork(b, gemmWork(n))
 		})
 	}
 }
