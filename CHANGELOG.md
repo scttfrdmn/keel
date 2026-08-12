@@ -422,19 +422,22 @@ While the major version is 0, minor versions may contain breaking changes.
   shape's number printed either way, numerator and denominator taken in the same
   benchmark invocation, and the audit of the deliberately-spilling reference tile
   run as explicitly non-fatal evidence.
-- **`scripts/gate-p3.sh` is GREEN: 47 PASS / 0 FAIL at `6c0f722`**, and P3's
+- **`scripts/gate-p3.sh` is GREEN: 47 PASS / 0 FAIL**, on three consecutive full
+  runs — at `6c0f722` (the closing verdict for P3) and again at `0271dd7`, which
+  changed what criterion 6 executes on two of three hosts and so had to be
+  re-measured rather than assumed: vesta 91.0%, janus 73.8%, antares 65.7%. P3's
   headline criterion — single-thread `Sgemm` at 2048³ against ≥60% of the same
   host's own OpenBLAS — is met on every gate host, each against a reference chosen
-  by measurement and verified to have taken. Both fully-measured runs, for
-  reproducibility (the second on the hardened gate; every number here is from one
-  invocation per host under the `performance` governor, `-count=10 -benchtime=1s`,
-  medians net of benchstat's confidence interval):
+  by measurement and verified to have taken. All three fully-measured runs, for
+  reproducibility (every number is from one invocation per host under the
+  `performance` governor, `-count=10 -benchtime=1s`, medians net of benchstat's
+  confidence interval):
 
-  | Host | reference family | keel / denominator | run 1 | run 2 |
-  |---|---|---|---|---|
-  | vesta, Zen 4 (7950X3D) | Haswell, +5.5%/+6.5% over `DYNAMIC_ARCH`'s Cooperlake | openblas, FMA-bound | 91.8% | 91.1% |
-  | janus, Skylake-X (i9-9960X) | SkylakeX | roofline, issue-capped | 73.5% (plain OpenBLAS 40.3%) | 73.6% (40.4%) |
-  | antares, Zen 5 (Ryzen AI MAX+ 395) | Cooperlake | openblas, FMA-bound | 65.3% | 64.5% |
+  | Host | reference family | keel / denominator | run 1 | run 2 | run 3 |
+  |---|---|---|---|---|---|
+  | vesta, Zen 4 (7950X3D) | Haswell, +5.5 to +6.5% over `DYNAMIC_ARCH`'s Cooperlake | openblas, FMA-bound | 91.8% | 91.1% | 91.0% |
+  | janus, Skylake-X (i9-9960X) | SkylakeX, unpinned | roofline, issue-capped | 73.5% (plain OpenBLAS 40.3%) | 73.6% (40.4%) | 73.8% (40.4%) |
+  | antares, Zen 5 (Ryzen AI MAX+ 395) | Cooperlake, unpinned | openblas, FMA-bound | 65.3% | 64.5% | 65.7% |
 
   Reported, never judged: percent of measured peak is 88.1% (vesta), 46.1%
   (janus), 58.5% (antares), and retention — how much of its own microkernel the
