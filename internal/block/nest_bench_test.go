@@ -417,6 +417,320 @@ func kernelCalls(b *testing.B, kn kern.Kernel, m, n, k int, flops float64) {
 	benchSink = cs[0]
 }
 
+// BenchmarkFeed asks which term curves — issues #48 and #26.
+//
+// # What the sweep left open
+//
+// The KC/MC/NC sweep established that KC is the axis janus differs on. KC is the
+// only parameter that changes how many microkernel calls a fixed GEMM makes
+// ((m/MR)(n/NR)⌈k/KC⌉) while leaving total packing work unchanged, so a local
+// slope Δtime/Δcalls between adjacent KC points has units of ns per call — and on
+// janus at 4×32 that slope is +40…+72 ns/call against +1…+10 on both Zen hosts.
+//
+// It also established that the slope is not a constant: it *rises* with KC
+// (39.7 → 69.3 → 72.3 on janus/4×32/mc=144), so no single number is "the" per-call
+// cost and a straight-line fit through it was measuring an artifact. Something in
+// the nest's per-call cost scales with the call's own *duration*, not with the
+// number of calls.
+//
+// Two candidates, and they have opposite KC signatures:
+//
+//	real C traffic     MR·NR·4 bytes per call, KC-INDEPENDENT. Total C traffic is
+//	                   m·n·4·⌈k/KC⌉, i.e. it scales exactly like the call count, so
+//	                   it contributes a CONSTANT to the per-call cost at every KC.
+//	panel feed         (MR+NR)·KC·4 bytes per call, linear in KC. Total is
+//	                   (m/MR)(n/NR)·k·(MR+NR)·4 — KC-INDEPENDENT, which kills the
+//	                   naive version of this hypothesis outright: a constant-rate
+//	                   per-byte tax contributes NOTHING to the KC slope. The only
+//	                   version that survives is about the level those bytes come
+//	                   from — the same byte count served more slowly as the panels
+//	                   grow past a cache — which is a threshold, hence nonlinear,
+//	                   hence exactly what shows up as curvature rather than slope.
+//
+// So the two terms are distinguishable by shape and not by size: flat in KC is C,
+// curved in KC is feed. That is the whole design of this benchmark.
+//
+// # The arms, each one variable from the last
+//
+// Every arm makes the identical call multiset at the identical depths — the one
+// from callsPerDepth that every other part of #26 uses — so per-call cost is
+// time/calls directly, reported as an ns/call metric, and the differences between
+// arms are differences rather than derivatives. Nothing here needs a slope.
+//
+//	kernel-calls  the denominator: flat replay, L1-resident panels, C in eight
+//	              rotating L1 tiles (kernelCalls, unchanged)
+//	loops         the same calls issued from the nest's own loop structure
+//	              (blocks → jr → ir) instead of a flat per-depth count, with both
+//	              panels and C still L1-resident
+//	cold-c        loops, with C the real m×n matrix at the nest's own tile
+//	              addresses; panels still L1-resident
+//	cold-panels   loops, with the panels streamed from the real packed buffers at
+//	              macro's own offsets; C still eight L1 tiles
+//	nest-no-pack  all of it (nestNoPack, unchanged): real C, real panels, beta
+//	              pass, fringe branch, mask checks
+//	full          Gemm, packing included
+//
+// which decomposes per-call cost into single-variable steps:
+//
+//	loops       − kernel-calls  the macro loops' own address arithmetic and control
+//	cold-c      − loops         real-C traffic          — predicted FLAT in KC
+//	cold-panels − loops         panel feed              — predicted CURVED in KC
+//	nest-no-pack − the above    beta pass, fringe branch, mask checks, interaction
+//	full        − nest-no-pack  packing, including its per-row loop setup, whose
+//	                            count is ⌈k/KC⌉·m and therefore scales like the
+//	                            call count — the reason the sweep's slope must
+//	                            exceed the decomposition's per-call figure, and by
+//	                            how much
+//
+// The last line is not bookkeeping: it is the bridge between the two instruments.
+// The sweep fits *full* time and so its coefficient contains pack loop setup; the
+// decomposition's per-call figure came from nest-no-pack and does not. They were
+// reported as agreeing at ~13% apart, which was wrong — this measures the term
+// that separates them instead of asserting it.
+//
+// # What each arm is not
+//
+// cold-c and cold-panels both carry the loops arm's overhead, which is why `loops`
+// exists as its own arm rather than being assumed away: subtracting kernel-calls
+// from each would charge loop control to C traffic and to panel feed both, and the
+// two "explanations" would sum to more than the nest costs.
+//
+// Neither replay computes a correct GEMM, and neither pretends to. cold-c writes
+// the same wrong tile values into the real C at every block, and cold-panels reads
+// panels whose contents are right only for the first block — the same timing
+// equivalence nest-no-pack already relies on, for the same reason: what a cost
+// measurement needs is the address stream, the byte counts and the call shape, not
+// the arithmetic being meaningful. Nothing reads the result.
+//
+// Both replays require every tile to be whole (no fringe), because a fringe tile in
+// the nest goes through the scratch-tile path and this is not the place to measure
+// that — #22 is. At 2048 with MR ∈ {2,4} and NR = 32 and plan()'s whole-tile
+// rounding there are none; the loop checks rather than trusting that, and skips
+// with the shape it found if it is ever untrue.
+func BenchmarkFeed(b *testing.B) {
+	const n = 2048
+	m, k := n, n
+	flops := 2 * float64(m) * float64(n) * float64(k)
+	defer func(kc, mc, nc int) { KC, MC, NC = kc, mc, nc }(KC, MC, NC)
+	for _, kn := range benchKernels(b) {
+		am, bm, c := benchMat(m, k), benchMat(k, n), benchMat(m, n)
+		for _, kc := range []int{128, 256, 384, 512} {
+			KC = kc
+			// plan() clamps to the problem, so what this point actually ran at is
+			// read back from it rather than assumed to be the loop variable.
+			pkc, pmc, pnc := plan(kn, m, n, k)
+			calls := 0
+			for _, cnt := range callsPerDepth(kn, m, n, k) {
+				calls += cnt
+			}
+			if calls == 0 {
+				b.Fatalf("%s/kc=%d: no calls, so there is nothing to divide by", kn.ID(), kc)
+			}
+			ap := make([]float32, pack.ALen(kn.MR, pmc, pkc))
+			bp := make([]float32, pack.BLen(kn.NR, pnc, pkc))
+			tile := make([]float32, kn.MR*kn.NR)
+			// The panels the real nest would have built for the first block, built
+			// once, outside every timer: nest-no-pack and cold-panels both stream
+			// these buffers and neither packs.
+			pack.APanels(ap, kn.MR, 1, am, k, false, 0, min(pmc, m), 0, pkc)
+			pack.BPanels(bp, kn.NR, bm, n, false, 0, pkc, 0, min(pnc, n))
+
+			name := func(arm string) string {
+				return fmt.Sprintf("%s/kc=%d/%s", kn.ID(), pkc, arm)
+			}
+			b.Run(name("full"), func(b *testing.B) {
+				KC = kc
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					Gemm(kn, false, false, m, n, k, 1, am, k, bm, n, 0, c, n)
+				}
+				feedMetrics(b, flops, calls)
+			})
+			b.Run(name("nest-no-pack"), func(b *testing.B) {
+				KC = kc
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					nestNoPack(kn, m, n, k, 0, ap, bp, c, n, tile)
+				}
+				feedMetrics(b, flops, calls)
+			})
+			b.Run(name("kernel-calls"), func(b *testing.B) {
+				KC = kc
+				kernelCalls(b, kn, m, n, k, flops)
+				b.ReportMetric(float64(b.Elapsed().Nanoseconds())/float64(b.N)/float64(calls), "ns/call")
+			})
+			for _, arm := range []struct {
+				name string
+				fn   func(*testing.B, kern.Kernel, int, int, int, []float32, []float32, []float32)
+			}{
+				{"loops", replayHot},
+				{"cold-c", replayColdC},
+				{"cold-panels", replayColdPanels},
+			} {
+				b.Run(name(arm.name), func(b *testing.B) {
+					KC = kc
+					arm.fn(b, kn, m, n, k, ap, bp, c)
+					feedMetrics(b, flops, calls)
+				})
+			}
+		}
+	}
+}
+
+// feedMetrics reports one arm's two numbers: the whole-GEMM rate over the same
+// useful 2mnk every part of #26 divides by, and the per-call cost.
+//
+// ns/call is the one this benchmark is for. Every arm makes the same calls at the
+// same depths, so dividing by that count is exact rather than a model, and
+// benchstat gives each arm's per-call cost its own confidence interval — so the
+// difference between two arms is a difference of two measured quantities, not the
+// derivative of a fitted line through four grid points.
+func feedMetrics(b *testing.B, flops float64, calls int) {
+	b.ReportMetric(flops*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+	b.ReportMetric(float64(b.Elapsed().Nanoseconds())/float64(b.N)/float64(calls), "ns/call")
+}
+
+// feedWhole reports whether every tile of every block is a whole MR×NR tile. The
+// replay arms below issue one plain kernel call per tile, so a fringe tile would
+// make them measure something the nest does not do (see macro's scratch-tile path).
+func feedWhole(b *testing.B, kn kern.Kernel, blocks []nestBlock) bool {
+	for _, blk := range blocks {
+		if blk.im%kn.MR != 0 || blk.jn%kn.NR != 0 {
+			b.Skipf("block im=%d jn=%d is not whole tiles at %s: the replay arms do not "+
+				"model the fringe path, and #22 is where that belongs", blk.im, blk.jn, kn.ID())
+			return false
+		}
+	}
+	return true
+}
+
+// replayHot issues the nest's calls from the nest's own loop structure, with both
+// panels and C L1-resident. It is kernel-calls plus exactly one thing: the two
+// macro loops and the address arithmetic in them.
+//
+// The C tiles rotate through eight L1-resident copies as kernel-calls does, so
+// consecutive calls stay independent and the only change is where the loop bounds
+// come from. ap/bp are unused; they are in the signature so that all three replay
+// arms share one shape and the benchmark table can iterate them.
+func replayHot(b *testing.B, kn kern.Kernel, m, n, k int, _, _, _ []float32) {
+	const ctiles = 8
+	blocks := nestBlocks(kn, m, n, k)
+	if !feedWhole(b, kn, blocks) {
+		return
+	}
+	mr, nr := kn.MR, kn.NR
+	ka, kb, c0, ldc := benchPanels(kn, feedMaxDepth(blocks))
+	tile := mr * ldc
+	cs := make([]float32, tile*ctiles)
+	for r := 0; r < ctiles; r++ {
+		copy(cs[r*tile:], c0)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r := 0
+		for _, blk := range blocks {
+			for jr := 0; jr < blk.jn; jr += nr {
+				for ir := 0; ir < blk.im; ir += mr {
+					kn.Fn(blk.kk, ka, kb, cs[r*tile:(r+1)*tile], ldc)
+					r = (r + 1) & (ctiles - 1)
+				}
+			}
+		}
+	}
+	benchSink = cs[0]
+}
+
+// replayColdC is replayHot with C the caller's real m×n matrix at the nest's own
+// tile addresses. Panels stay L1-resident, so the difference from replayHot is
+// real-C traffic and the addressing it needs, and nothing else.
+//
+// The tile address is macro's verbatim: cb = c[ic·ldc+jc:] per block, then
+// ct = cb[ir·ldc+jr:]. Which matters — C tiles are MR rows of NR floats at a
+// stride of n, so a tile is 4 or 8 lines scattered across 8 KB, and an address
+// stream that visited them in a different order would be measuring a different
+// machine.
+func replayColdC(b *testing.B, kn kern.Kernel, m, n, k int, _, _, c []float32) {
+	blocks := nestBlocks(kn, m, n, k)
+	if !feedWhole(b, kn, blocks) {
+		return
+	}
+	mr, nr, ldc := kn.MR, kn.NR, n
+	ka, kb, _, _ := benchPanels(kn, feedMaxDepth(blocks))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, blk := range blocks {
+			cb := c[blk.ic*ldc+blk.jc:]
+			for jr := 0; jr < blk.jn; jr += nr {
+				for ir := 0; ir < blk.im; ir += mr {
+					kn.Fn(blk.kk, ka, kb, cb[ir*ldc+jr:], ldc)
+				}
+			}
+		}
+	}
+	// This arm has no beta pass, so unlike nest-no-pack it accumulates into C
+	// across every iteration and every sub-benchmark that shares the matrix. The
+	// magnitudes involved cannot reach the float32 range at any -benchtime this
+	// repo uses (~1e5 after the whole benchmark), but "cannot at the settings I
+	// tried" is not a property, and arithmetic on infinities is not the arithmetic
+	// this is timing. So it is checked rather than reasoned about.
+	if v := c[0]; v-v != 0 {
+		b.Fatalf("C overflowed to %v: this arm accumulates without a beta pass, so a long "+
+			"enough run will do that, and the timing after it is not float32 arithmetic", v)
+	}
+	benchSink = c[0]
+}
+
+// replayColdPanels is replayHot with the panels streamed from the real packed
+// buffers at macro's own offsets. C stays in eight L1 tiles, so the difference from
+// replayHot is what it costs to feed the kernel its panels from wherever mc·kc and
+// nc·kc bytes live on this host — the term that should curve with KC if the
+// surviving form of the panel-feed hypothesis is right.
+//
+// The panel slices are macro's verbatim, including the [:mr*kk] and [:nr*kk]
+// re-slices: those bound the kernel's loads and their absence would change what
+// the compiler can prove about the panel loop.
+func replayColdPanels(b *testing.B, kn kern.Kernel, m, n, k int, ap, bp, _ []float32) {
+	const ctiles = 8
+	blocks := nestBlocks(kn, m, n, k)
+	if !feedWhole(b, kn, blocks) {
+		return
+	}
+	mr, nr := kn.MR, kn.NR
+	_, _, c0, ldc := benchPanels(kn, feedMaxDepth(blocks))
+	tile := mr * ldc
+	cs := make([]float32, tile*ctiles)
+	for r := 0; r < ctiles; r++ {
+		copy(cs[r*tile:], c0)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r := 0
+		for _, blk := range blocks {
+			for jr := 0; jr < blk.jn; jr += nr {
+				bpanel := bp[(jr/nr)*nr*blk.kk:][:nr*blk.kk]
+				for ir := 0; ir < blk.im; ir += mr {
+					apanel := ap[(ir/mr)*mr*blk.kk:][:mr*blk.kk]
+					kn.Fn(blk.kk, apanel, bpanel, cs[r*tile:(r+1)*tile], ldc)
+					r = (r + 1) & (ctiles - 1)
+				}
+			}
+		}
+	}
+	benchSink = cs[0]
+}
+
+// feedMaxDepth is the deepest block in a block sequence: the L1-resident panels the
+// replay arms hold have to be long enough for every call they make.
+func feedMaxDepth(blocks []nestBlock) int {
+	d := 0
+	for _, blk := range blocks {
+		if blk.kk > d {
+			d = blk.kk
+		}
+	}
+	return d
+}
+
 // callsPerDepth counts the microkernel calls the nest makes, keyed by the depth kk
 // it makes them at. Tiles per block are ceil(im/MR)·ceil(jn/NR) because a fringe
 // tile is a full-shape call on zero-padded panels — that is the edge strategy, and

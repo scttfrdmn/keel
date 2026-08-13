@@ -9,6 +9,23 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- `BenchmarkFeed` and `scripts/retention.sh feed`: the per-call decomposition of
+  the blocked nest resolved against KC, which is the question the KC/MC/NC sweep
+  left open (#48). The sweep found that janus's per-call penalty *rises* with KC
+  (39.7 → 69.3 → 72.3 ns/call), so some term scales with a call's own duration
+  rather than with the number of calls — and the two candidates, real C traffic
+  and panel feed, both have KC-independent *totals*, so their size cannot separate
+  them and only their shape against KC can. Six arms per (shape, KC), each one
+  variable from the last, all making the identical call multiset at identical
+  depths: `kernel-calls`, `loops` (the macro loops' own address arithmetic),
+  `cold-c` (real C at the nest's own tile addresses), `cold-panels` (real panels
+  at macro's own offsets), `nest-no-pack`, `full`. Per-call cost is then a
+  measurement divided by an exact count and each column is a difference of two
+  measured quantities — no slope, no fit through grid points. The six steps sum to
+  `full − kernel-calls` by construction, so a hidden term shows up as a residual
+  rather than being absorbed. The pack column's intercept is the term that
+  separates the sweep's slope from the decomposition's per-call cost, which was
+  previously argued rather than measured.
 - Project skeleton: module layout, phase gate scripts, GitHub project bootstrap,
   CI (stock + `GOEXPERIMENT=simd` builds), design document (`DESIGN.md`).
 - `internal/vec`, the simd shim, with all three backends over the ~14 ops SGEMM

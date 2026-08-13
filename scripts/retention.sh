@@ -6,7 +6,7 @@
 # nothing else. This is NOT a gate: it certifies nothing, it changes no criterion,
 # and it exits 0 whatever it measures. Its product is a table.
 #
-# Two modes:
+# Three modes:
 #
 #   decompose (default)  BenchmarkNest on every host: the blocked Sgemm split into
 #                        nest-no-pack + pack-a + pack-b, with the residual, and the
@@ -26,9 +26,20 @@
 #                        is quoted against. The superseded number stays visible
 #                        because three gates reported it.
 #   sweep                BenchmarkBlocking: KC/MC/NC over a coarse grid at 2048^3.
+#   feed                 BenchmarkFeed: the per-call decomposition resolved against
+#                        KC, which is what the sweep left open (issue #48). The
+#                        sweep found that janus's per-call penalty is not a constant
+#                        — it RISES with KC — so something in the nest scales with a
+#                        call's own duration rather than with the number of calls.
+#                        Two candidates, and both have KC-independent totals, so
+#                        size cannot tell them apart: real C traffic is flat in KC
+#                        per call, panel feed is not. Six arms, each one variable
+#                        from the last, all making the identical call multiset, so
+#                        the columns are differences of measured quantities instead
+#                        of derivatives of a fit.
 #
-# The two modes have deliberately different methodologies and say so in their
-# output. decompose runs the standard gate methodology (scripts/bench.sh:
+# The three modes have deliberately different methodologies and say so in their
+# output. decompose and feed run the standard gate methodology (scripts/bench.sh:
 # -count=10 -benchtime=1s, benchstat medians, ratios net of CI) because its numbers
 # are meant to be quoted. sweep runs -count=5 by default over 72 points per shape
 # and is EXPLORATORY: it exists to find which way the surface tilts, and any point
@@ -36,7 +47,7 @@
 # default. A 72-point grid at count=10 is half an hour per host, and the first
 # question is only whether the parameters matter at all.
 #
-# GOMAXPROCS=1 on both, as every single-thread measurement in this repo does: P5's
+# GOMAXPROCS=1 in all three, as every single-thread measurement in this repo does: P5's
 # parallel nest does not exist yet and a benchmark that used all cores would be
 # measuring the runtime's scheduler.
 set -euo pipefail
@@ -163,6 +174,139 @@ decompose_host() {
   done < <(awk '/^Benchmark.*\/full/ { n=$1; sub(/-[0-9]+$/,"",n); sub(/^Benchmark/,"",n); sub(/\/full$/,"",n); print n }' "$log" | sort -u)
 }
 
+# ns_call NAME CSV — one arm's per-call cost in nanoseconds, or empty.
+#
+# The unit asked for is sec/call, not the ns/call the benchmark prints: benchfmt
+# rewrites any ns/<x> metric to sec/<x> and divides by 1e9 before benchstat ever
+# sees it. Asking for "ns/call" here would find nothing, silently, because
+# bench_stat prints nothing for a unit that is absent — the same trap its own doc
+# describes for B/s. So this reads the unit benchstat has and converts back.
+ns_call() { bench_stat "$1" "$2" sec/call | awk '{ if ($1 != "") printf "%.2f", $1 * 1e9 }'; }
+
+# ci_call NAME CSV — the same arm's interval as a percentage, or "inf".
+ci_call() {
+  bench_stat "$1" "$2" sec/call |
+    awk '{ if ($2 == "inf") printf "inf"; else printf "%.1f", $2 * 100 }'
+}
+
+# feed_host HOST CSV LOG — which term curves with KC (issue #48).
+#
+# Six arms per (shape, KC), each one variable from the one before it, all making the
+# identical call multiset at identical depths — so per-call cost is a measurement
+# divided by an exact count, and the step between two arms is a difference of two
+# measured quantities rather than the derivative of a line fitted through four grid
+# points. See BenchmarkFeed's doc for what each arm holds and what it does not.
+#
+# The steps are point estimates with no interval, being differences of medians. Each
+# arm's own median has one, and the widest on each row is printed next to it: a step
+# narrower than that is not resolved by this run and must not be read as a term.
+feed_host() {
+  local host="$1" csv="$2" log="$3" case_ kc arm rows worst ci
+  local -a kcs vals
+  rows="$BINDIR/feedrows"
+  while read -r case_; do
+    mapfile -t kcs < <(awk -v c="$case_" -v q="/kc=" '
+      index($1, "Benchmark" c q) == 1 {
+        n = $1; sub(/-[0-9]+$/, "", n); sub(/.*\/kc=/, "", n); sub(/\/.*/, "", n); print n
+      }' "$log" | sort -n -u)
+    if [[ ${#kcs[@]} -eq 0 ]]; then
+      warn "[$host] $case_: no kc points ran, so there is no KC axis to read"
+      continue
+    fi
+    : >"$rows"
+    for kc in "${kcs[@]}"; do
+      if ! bench_expect "$log" "$csv" sec/call \
+           "$case_/kc=$kc/kernel-calls" "$case_/kc=$kc/loops" "$case_/kc=$kc/cold-c" \
+           "$case_/kc=$kc/cold-panels" "$case_/kc=$kc/nest-no-pack" "$case_/kc=$kc/full" \
+           >"$BINDIR/miss"; then
+        warn "[$host] $case_/kc=$kc: incomplete —$(tr '\n' ' ' <"$BINDIR/miss")"
+        continue
+      fi
+      vals=()
+      worst=0
+      for arm in kernel-calls loops cold-c cold-panels nest-no-pack full; do
+        vals+=("$(ns_call "$case_/kc=$kc/$arm" "$csv")")
+        ci="$(ci_call "$case_/kc=$kc/$arm" "$csv")"
+        [[ "$ci" == inf ]] && worst=inf
+        [[ "$worst" != inf ]] && worst="$(awk -v a="$worst" -v b="$ci" 'BEGIN{print (b>a)?b:a}')"
+      done
+      printf '%s %s %s\n' "$kc" "${vals[*]}" "$worst" >>"$rows"
+    done
+    [[ -s "$rows" ]] || { warn "[$host] $case_: no complete kc point"; continue; }
+    printf '  %s\n' "$case_"
+    info "per-call cost of each arm, ns/call. Every arm makes the same calls at the same"
+    info "depths; worst-ci is the widest interval on the row, and a step below it is noise."
+    printf '        %-5s %9s %9s %9s %9s %9s %9s %9s\n' \
+      kc calls loops cold-c cold-pan no-pack full worst-ci
+    awk '{ printf "        %-5s %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f %8s%%\n",
+             $1, $2, $3, $4, $5, $6, $7, $8 }' "$rows" | sed 's/inf%/     inf/'
+    info ""
+    info "the single-variable steps between them, each in ns per call:"
+    printf '        %-5s %11s %11s %11s %9s %9s %11s\n' \
+      kc macro-loops C-traffic panel-feed rest pack "total"
+    # rest = no-pack - loops - (cold-c - loops) - (cold-panels - loops), i.e. what
+    # the nest costs that none of the three isolated steps accounts for: the beta
+    # pass, the fringe branch, the mask checks, and any interaction between C
+    # traffic and panel feed that measuring them one at a time cannot see. The six
+    # columns sum to full - kernel-calls by construction, which is the point: a
+    # decomposition whose parts do not add up to the whole is hiding a term.
+    awk '{ printf "        %-5s %+11.2f %+11.2f %+11.2f %+9.2f %+9.2f %+11.2f\n",
+             $1, $3-$2, $4-$3, $5-$3, $6-$4-$5+$3, $7-$6, $7-$2 }' "$rows"
+    info ""
+    info "which term curves (the question #48 exists to ask):"
+    feed_curve "$rows" 'C traffic ' 4 3 \
+      "predicted FLAT. Total C traffic is m*n*4*ceil(k/KC), which scales exactly like" \
+      "the call count, so per call it is a constant and adds nothing to the KC slope."
+    feed_curve "$rows" 'panel feed' 5 3 \
+      "predicted to CURVE, and this is the surviving form of the feed hypothesis." \
+      "Total panel bytes are (m/MR)(n/NR)*k*(MR+NR)*4 — KC-INDEPENDENT — so a" \
+      "constant-rate per-byte tax adds nothing either. Only the level those bytes" \
+      "come from can, which is a threshold, hence a curve rather than a slope."
+    feed_curve "$rows" 'pack      ' 7 6 \
+      "KC-proportional by construction: total pack work is KC-independent and the" \
+      "call count falls as 1/KC, so this column must rise roughly linearly and its" \
+      "slope means nothing. Its INTERCEPT is the finding — pack's per-row loop setup" \
+      "count is ceil(k/KC)*m, which scales like the call count, and that constant is" \
+      "the term separating the sweep's slope from the decomposition's per-call cost."
+  done < <(awk '/^BenchmarkFeed\// {
+      n = $1; sub(/-[0-9]+$/, "", n); sub(/^Benchmark/, "", n); sub(/\/kc=.*/, "", n); print n
+    }' "$log" | sort -u)
+}
+
+# feed_curve ROWS LABEL MINUEND SUBTRAHEND NOTE... — one step's values across the KC
+# grid, with its spread and what was predicted of it. The step is column MINUEND
+# minus column SUBTRAHEND of the row file, both 1-based awk field numbers.
+#
+# The spread is what answers #48. A term that is flat in KC contributes a constant to
+# per-call cost and therefore nothing to the sweep's KC slope; a term that grows with
+# KC is the one that slope was measuring. Since both candidates have KC-independent
+# *totals*, size cannot separate them and shape has to.
+#
+# No verdict is printed. The prediction goes next to the numbers and whether they
+# match is the reader's call — this script certifies nothing.
+feed_curve() {
+  local rows="$1" label="$2" a="$3" b="$4" note pad
+  shift 4
+  awk -v label="$label" -v a="$a" -v b="$b" '
+    { v[++n] = $a - $b; k[n] = $1
+      if (n == 1 || v[n] < lo) lo = v[n]
+      if (n == 1 || v[n] > hi) hi = v[n]
+      sum += v[n] }
+    END {
+      s = ""
+      for (i = 1; i <= n; i++) s = s sprintf("%s%+.2f", (i > 1 ? " -> " : ""), v[i])
+      m = sum / n
+      printf "          %s  %s\n", label, s
+      printf "          %*s  spread %.2f ns over kc=%s..%s", length(label), "", hi - lo, k[1], k[n]
+      if (m != 0) printf ", %.0f%% of its own mean", 100 * (hi - lo) / (m < 0 ? -m : m)
+      printf "\n"
+    }' "$rows"
+  pad="$(printf '%*s' "${#label}" '')"
+  for note in "$@"; do
+    printf '          %s  %s\n' "$pad" "$note"
+  done
+}
+
 # sweep_host HOST CSV LOG — the KC/MC/NC grid, ranked, with the shipped point marked.
 sweep_host() {
   local host="$1" csv="$2" log="$3" kc mc nc gridnc shipped mark
@@ -207,8 +351,8 @@ main() {
 
   local MODE="${1:-decompose}"
   case "$MODE" in
-    decompose|sweep) ;;
-    *) echo "usage: $0 [decompose|sweep]" >&2; exit 2 ;;
+    decompose|sweep|feed) ;;
+    *) echo "usage: $0 [decompose|sweep|feed]" >&2; exit 2 ;;
   esac
 
   BINDIR="$(mktemp -d)"
@@ -241,6 +385,7 @@ main() {
   local BFLAGS FILTER='BenchmarkNest'
   mapfile -t BFLAGS < <(bench_flags)
   [[ "$MODE" == sweep ]] && FILTER='BenchmarkBlocking'
+  [[ "$MODE" == feed ]] && FILTER='BenchmarkFeed'
 
   echo "methodology: -count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME, GOMAXPROCS=1, benchstat medians"
   [[ "$MODE" == sweep ]] && echo "             EXPLORATORY: re-measure any nominated point at -count=10 before it becomes a default"
@@ -269,11 +414,11 @@ main() {
     grep '^keel-nest-plan:' "$LOG" | sed 's/^/        /' || true
     bench_csv "$LOG" >"$CSV" 2>"$BINDIR/bserr" || true
     [[ -s "$BINDIR/bserr" ]] && sed 's/^/        benchstat: /' "$BINDIR/bserr"
-    if [[ "$MODE" == decompose ]]; then
-      decompose_host "$host" "$CSV" "$LOG"
-    else
-      sweep_host "$host" "$CSV" "$LOG"
-    fi
+    case "$MODE" in
+      decompose) decompose_host "$host" "$CSV" "$LOG" ;;
+      sweep)     sweep_host "$host" "$CSV" "$LOG" ;;
+      feed)      feed_host "$host" "$CSV" "$LOG" ;;
+    esac
     echo
   done <<<"$HOSTS"
 
