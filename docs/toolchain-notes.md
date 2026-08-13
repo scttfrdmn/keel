@@ -24,6 +24,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | `-bench` splits on top-level `\|` **before** `/`, so `A\|B/c` is `{A}` or `{B,c}` — not `{A,B}` then `{c}`. A gate filter silently ran neither the benchmark it named nor only the ones it named | [T15](#t15) | none — documented behavior |
 | 2026-08-12 | go1.26.5 | On arm64, whether `a*a + c` is FMA-fused depends on whether the compiler **constant-folds** it, and `-race` defeats the folding: the same source line yields `0` in a plain build and `2^-24` under `-race` | [T16](#t16) | none — not a defect |
 | 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [golang/go#80856](https://github.com/golang/go/issues/80856) (#42) |
+| 2026-08-12 | go1.26.5 | A **loop-invariant vector constant is re-materialized every iteration**: `BroadcastInt32x16(const)` inside a loop stays inside it (3 insns/iteration), while the same constant written above the loop stays above it. CSE shares it across unrolled uses within one iteration; nothing lifts it across iterations | [T18](#t18) | candidate (#8) |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -1313,3 +1314,108 @@ a faster variant that fatals under the pointer checker is disqualified, not rank
 Filed upstream as [golang/go#80856](https://github.com/golang/go/issues/80856) with
 this repro; #42 carries the standing task, so when upstream's helpers go
 `checkptr`-clean, keel's copy-based form retires rather than calcifying.
+
+---
+
+## T18 — a loop-invariant vector constant is re-materialized every iteration
+
+**Toolchain.** go1.26.5, `GOEXPERIMENT=simd`, cross-compiled to `linux/amd64`.
+
+`internal/vec.Abs512` has to build its mask from a constant, because T3 says there is
+no float32 `Abs` and no float32 bitwise op to use instead. The mask is
+loop-invariant. It is not hoisted: it is rebuilt on every iteration of any loop that
+inlines the function.
+
+**Repro.** Two loops that differ only in where the source puts the constant.
+
+```go
+//go:build goexperiment.simd && amd64
+
+package licm
+
+import "simd/archsimd"
+
+const signMaskI32 int32 = -1 << 31
+
+func inLoop(x, out []float32) {
+	acc := archsimd.BroadcastFloat32x16(0)
+	for i := 0; i+16 <= len(x); i += 16 {
+		v := archsimd.LoadFloat32x16Slice(x[i : i+16])
+		abs := v.AsInt32x16().AndNot(archsimd.BroadcastInt32x16(signMaskI32)).AsFloat32x16()
+		acc = acc.Add(abs)
+	}
+	acc.StoreSlice(out)
+}
+
+func hoisted(x, out []float32) {
+	acc := archsimd.BroadcastFloat32x16(0)
+	mask := archsimd.BroadcastInt32x16(signMaskI32)
+	for i := 0; i+16 <= len(x); i += 16 {
+		v := archsimd.LoadFloat32x16Slice(x[i : i+16])
+		abs := v.AsInt32x16().AndNot(mask).AsFloat32x16()
+		acc = acc.Add(abs)
+	}
+	acc.StoreSlice(out)
+}
+```
+
+```
+GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go build -gcflags=-S ./...
+```
+
+`inLoop` — the loop is entered at `JMP 64`, its latch is `[64,81]`, and its back-edge
+is `JLS 28`, so the body is `[28,61]`. The three mask instructions are at 32/38/43,
+**inside**:
+
+```
+0x001a 00026 (licm.go:13)	JMP	64
+0x001c 00028 (licm.go:14)	LEAQ	(AX)(DX*4), R9
+0x0020 00032 (other_gen_amd64.go:211)	MOVL	$-2147483648, R10     <- in the loop
+0x0026 00038 (other_gen_amd64.go:211)	VMOVD	R10, X1               <- in the loop
+0x002b 00043 (other_gen_amd64.go:211)	VPBROADCASTD	X1, Z1        <- in the loop
+0x0031 00049 (licm.go:15)	VPANDND	(R9), Z1, Z1
+0x0037 00055 (<unknown line number>)	NOP                           <- T9
+0x0037 00055 (licm.go:16)	VADDPS	Z1, Z0, Z0
+0x003d 00061 (licm.go:13)	MOVQ	R8, DX
+0x0040 00064 (licm.go:13)	LEAQ	16(DX), R8
+...
+0x0051 00081 (licm.go:14)	JLS	28
+```
+
+`hoisted` — the same three instructions at 14/19/34, ahead of the `JMP 63` that
+enters the loop:
+
+```
+0x000e 00014 (other_gen_amd64.go:211)	MOVL	$-2147483648, DX
+0x0013 00019 (other_gen_amd64.go:211)	VMOVD	DX, X0
+0x0022 00034 (other_gen_amd64.go:211)	VPBROADCASTD	X0, Z0
+0x002a 00042 (licm.go:25)	JMP	63
+0x0030 00048 (licm.go:27)	VPANDND	(R9), Z0, Z2
+0x0036 00054 (licm.go:28)	VADDPS	Z2, Z1, Z1
+```
+
+Total function size barely moves (116 vs 115 bytes) — the instructions are not
+removed, they are relocated out of the loop. That is the whole effect, and it is the
+effect that matters.
+
+**Not a register-pressure decision, as far as this repro can tell.** The hoisted form
+*stays* hoisted, so nothing forces the materialization back down at this pressure.
+But `hoisted` uses three vector registers, and the real `avx512Asum` runs four
+accumulators against T10's 15-register ceiling — so whether the allocator would
+rematerialize the constant into the body under real pressure is a question this repro
+does not answer. It has to be re-audited in place, not assumed.
+
+**Interaction with T8.** CSE and this are orthogonal, and the combination is why the
+observed cost is smaller than the naive count. `avx512Asum` inlines `Abs512` four
+times per iteration; all four `VPANDND`s share `Z5`, so the mask is built **once**
+per iteration, not four times. CSE works within an iteration; nothing lifts across
+iterations. The cost is therefore 3 instructions per 64 elements, not 12 — which is
+what #8 asked and is the reason the answer to #8 is "partially".
+
+**Consequence for keel.** Issue #8. One `Abs512` call site pattern, in the four
+`Asum` loops (`avx512Asum`, `avx2Asum`, and the two `SumSq` neighbours do not use the
+mask). Any hoist means changing `internal/vec`'s API, because `Abs512(x)` builds the
+mask internally and there is nowhere else to put it — which needs a scalar twin and a
+differential test like every other vector op. It is 3 of the 41 instructions in
+`avx512Asum`'s loop; #47's bounds checks are 7 of them. Both edit the same bodies, so
+they should be measured together rather than as two claims about the same benchmark.

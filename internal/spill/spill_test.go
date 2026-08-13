@@ -36,6 +36,18 @@ const listing = `main.spillsAndPanics STEXT size=96 args=0x18 locals=0x40 funcid
 	0x0031 00049 (k.go:12)	RET
 	0x0032 00060 (k.go:11)	MOVQ	AX, CX
 	0x0035 00063 (k.go:11)	CALL	runtime.panicIndex(SB)
+main.panicsBehindPadding STEXT size=48 args=0x10 locals=0x0 funcid=0x0 align=0x0
+	0x0000 00000 (k.go:25)	TEXT	main.panicsBehindPadding(SB), ABIInternal, $0-16
+	0x0004 00004 (k.go:26)	XORL	AX, AX
+	0x0006 00006 (k.go:27)	VMOVDQU64	(CX)(AX*4), Z0
+	0x000c 00012 (k.go:27)	VFMADD213PS	Z1, Z0, Z2
+	0x0012 00018 (k.go:27)	JCS	40
+	0x0014 00020 (k.go:27)	INCQ	AX
+	0x0017 00023 (k.go:27)	CMPQ	AX, BX
+	0x001a 00026 (k.go:27)	JLT	6
+	0x001c 00028 (k.go:28)	RET
+	0x0028 00040 (k.go:27)	NOP
+	0x0030 00048 (k.go:27)	CALL	runtime.panicBounds(SB)
 main.clean STEXT size=32 args=0x10 locals=0x0 funcid=0x0 align=0x0
 	0x0000 00000 (k.go:16)	TEXT	main.clean(SB), ABIInternal, $0-16
 	0x0004 00004 (k.go:17)	XORL	AX, AX
@@ -123,6 +135,30 @@ func TestAuditCleanLoop(t *testing.T) {
 	}
 	if got, want := r.Memory(), 1; len(got) != want {
 		t.Errorf("%d memory reference(s), want %d (the panel load)", len(got), want)
+	}
+}
+
+// TestAuditSeesAPanicBehindAlignmentPadding is the regression test for issue #46:
+// the audit reported 0 bounds-check exits for loops that had one, because the
+// branch targeted an *aligned* out-of-line panic block and the alignment NOP —
+// which Parse drops, and which owns its own offset rather than sharing the next
+// instruction's — was the exact offset the resolver looked for.
+//
+// This is the failure mode a detector must never have, because gate-p2 converts
+// this count into a passing criterion ("0 surviving bounds checks in the
+// steady-state K-loop"). A false clean does not merely lose information; it
+// manufactures a green. So the listing above spells the case out — JCS 40, a NOP
+// at 40, the CALL at 48 — rather than trusting that some real function happens to
+// exercise it.
+func TestAuditSeesAPanicBehindAlignmentPadding(t *testing.T) {
+	r := report(t, "panicsBehindPadding")
+	if n := len(r.PanicExits); n != 1 {
+		t.Fatalf("%d bounds-check exit(s), want 1 — the branch at 18 targets an "+
+			"alignment NOP at 40 and the panic call is at 48, so an exact-offset "+
+			"resolver misses it entirely: %s", n, r.Summary())
+	}
+	if got := r.PanicExits[0].Offset; got != 18 {
+		t.Errorf("the exit is reported at offset %d, want 18 (the branch, not its target)", got)
 	}
 }
 

@@ -484,9 +484,26 @@ func (f Func) panicExits(l Loop) []Insn {
 
 // reachesPanic reports whether a runtime panic call sits within
 // panicLookahead instructions of the given offset.
+//
+// The target is resolved to the first instruction at *or after* it rather than to
+// an exact offset match, and that is load-bearing rather than defensive. Parse
+// drops NOP lines, and a NOP is two different things in one mnemonic: the
+// zero-length inlining marker, which shares the following instruction's offset
+// (T9), and real alignment padding, which owns its offset and is several bytes
+// wide. When the compiler aligns an out-of-line panic block, the branch targets
+// the padding — so an exact match found nothing, this returned false, and the
+// bounds check was invisible.
+//
+// That was not hypothetical: it is why avx512Scal and avx512Axpy were reported
+// with 0 bounds-check exits while carrying one each (issue #46). A miss here is
+// the worst kind this tool can have, because the P2 gate turns it into a passing
+// criterion — "0 surviving bounds checks in the steady-state K-loop" — and a
+// detector that cannot fire certifies nothing. Resolving forward is also strictly
+// conservative in the direction that matters: where an exact match existed it
+// finds the same instruction, so no previously-reported exit disappears.
 func (f Func) reachesPanic(offset int) bool {
 	for i, in := range f.Insns {
-		if in.Offset != offset {
+		if in.Offset < offset {
 			continue
 		}
 		for j := i; j < len(f.Insns) && j < i+panicLookahead; j++ {

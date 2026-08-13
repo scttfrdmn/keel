@@ -720,6 +720,41 @@ While the major version is 0, minor versions may contain breaking changes.
   says so rather than the suite being tightened around a distinction that does not
   exist.
 
+- `docs/toolchain-notes.md` T18: a **loop-invariant vector constant is
+  re-materialized every iteration**. `BroadcastInt32x16(const)` written inside a loop
+  stays inside it (`MOVL`/`VMOVD`/`VPBROADCASTD`, 3 instructions per iteration); the
+  same constant written above the loop stays above it, and the function's total size
+  barely changes — the instructions are relocated, not removed. The repro carries its
+  own control (both loops, differing only in where the source puts the constant), and
+  the entry is explicit that it cannot rule out the allocator rematerializing under
+  the register pressure of a real four-accumulator kernel, which has to be re-audited
+  in place. Answers #8: combined with T8's CSE, which shares the mask across the four
+  unrolled `Abs512` calls *within* one iteration, the cost is 3 instructions per 64
+  elements rather than 12 — so the answer to "does it hoist" is no, and the answer to
+  "does it cost 12" is also no.
+
+### Fixed
+- **`spill-audit` could not see a bounds check whose panic block was aligned**, and
+  `gate-p2.sh` turns that count into a passing criterion — so the instrument
+  certifying "0 surviving bounds checks in the steady-state K-loop" had a false-clean
+  mode (#46). `Parse` drops `NOP` lines as zero-length pseudo-instructions, which is
+  right for the T9 inlining marker but wrong for *alignment padding*: that owns its
+  own offset and is several bytes wide. `reachesPanic` matched the branch target
+  exactly, so when the compiler aligned an out-of-line panic block the branch pointed
+  at padding, no instruction was found there, and the exit went uncounted. Targets now
+  resolve to the first instruction at or after the offset, which finds the same
+  instruction wherever an exact match existed — the change can only find *more* exits,
+  never fewer. Regression test added to the hand-written listing
+  (`TestAuditSeesAPanicBehindAlignmentPadding`), verified to fail against the old
+  resolver.
+
+  **The P2 criterion holds.** Re-audited with the fixed detector, `Kernel2x32` and
+  `Kernel4x32` still report 0 bounds-check exits and 0 calls, and the three peak
+  kernels are still register-only. P2's green was correct — but for a period it was
+  correct without being verifiable, and those are not the same thing. Two published
+  counts *are* revised, both in `internal/l1` (#47): `avx512Scal` and `avx2Scal` were
+  reported clean and carry one each.
+
 ### Changed
 - **P5's internal order is now stated: single-thread remediation, then the parallel
   loop nest, then the scaling gate** (`DESIGN.md` §4/P5, ruled 2026-08-12). #26
