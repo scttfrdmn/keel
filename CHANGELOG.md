@@ -9,6 +9,18 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- `BenchmarkFeed` now documents a **measured residency caveat on its own denominator**
+  (#48). `kernel-calls` reuses one hot panel pair to remove memory effects, and at one KC
+  per host that backfires: a pair that *just* overflows L1d churns on capacity misses
+  where a plainly-too-large one streams with the prefetcher working, so the denominator
+  gets slower than the nest it is meant to bound. The two resolved negatives in a 24-row
+  `nest-no-pack − kernel-calls` matrix each sit at the first KC where `(MR+NR)·kk·4`
+  exceeds *that host's own* L1d — Zen 4 at 34816 B against 32 KB (−16.90 ns/call, 14.3×
+  its noise floor) and Zen 5 at 52224 B against 48 KB (−3.30, 2.3×) — while Skylake-X,
+  with the same 32 KB L1d as the Zen 4 part, never dips. Crossing L1d is necessary and
+  not sufficient. Documented rather than fixed, which is what #48's own criterion asked
+  for, and unfixable by shrinking the pair since `kk` is fixed by the call multiset every
+  arm shares.
 - `docs/toolchain-notes.md` T18, re-audited in place — the question T18 left open, and
   the answer is sharper than "it does not hoist" (#8). In the real `avx512Asum` the
   loop-invariant sign mask is rebuilt at the back-edge target, and **the reason is that

@@ -516,6 +516,27 @@ func kernelCalls(b *testing.B, kn kern.Kernel, m, n, k int, flops float64) {
 // not fixable by shrinking the buffer — kk is fixed by the call multiset every arm
 // must share, and the panel size follows from kk.
 //
+// # kernel-calls is not an upper bound at the first KC past L1d (measured, #48)
+//
+// The denominator reuses one hot panel pair precisely to remove memory effects, and
+// at one KC per host that backfires: a buffer that *just* overflows L1d churns on
+// capacity misses where a plainly-too-large one is streamed with the prefetcher
+// working, so the denominator itself gets slower than the nest it is meant to bound.
+// Measured, ns/call, nest-no-pack − kernel-calls, and the two resolved negatives in a
+// 24-row matrix each sit at the first KC where (MR+NR)·kk·4 exceeds THAT host's L1d:
+//
+//	Zen 4, 32 KB L1d, MR=2:  +6.50, -16.90 (34816 B), +3.50, +3.40
+//	Zen 5, 48 KB L1d, MR=2:  +3.72,  +1.45,           -3.30 (52224 B), +1.80
+//	Skylake-X, 32 KB, MR=2: +37.30, +40.35,          +53.35,          +65.75
+//
+// −16.90 is 14.3× its noise floor and −3.30 is 2.3× its own; every other row is
+// positive or sub-floor. Note the third line: crossing L1d is necessary, not
+// sufficient — the same 32 KB L1d as the first, and it never dips. So this is a
+// documented residency caveat and not a fix, which is what #48's own criterion asked
+// for. It cannot be fixed by shrinking the pair: kk is fixed by the call multiset
+// every arm must share. Read the keel-feed-panels byte count against the host's L1d
+// before treating a step off this denominator as a bound in either direction.
+//
 // cold-c and cold-panels both carry the loops arm's overhead, which is why `loops`
 // exists as its own arm rather than being assumed away: subtracting kernel-calls
 // from each would charge loop control to C traffic and to panel feed both, and the
