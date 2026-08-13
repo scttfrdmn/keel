@@ -62,12 +62,29 @@ remote_build_test() {
 # measurement without the machine it came from, and a correctness result is
 # just as host-specific as a benchmark (which microarchitecture confirmed the
 # NaN operand order?).
+#
+# The private cache sizes are here for the same reason, added when #48's feed
+# decomposition turned out to depend on one: several benchmarks hold a buffer they
+# describe as L1-resident, whose size follows from the blocking parameters, and
+# whether that description is true is a comparison against a number no host record
+# carried. It is read from sysfs rather than assumed per microarchitecture — Zen 5
+# has a 48 KB L1d where Zen 4 and Skylake-X have 32 KB, which is exactly the kind of
+# difference a from-memory constant gets wrong. Missing files degrade to "?" rather
+# than to a plausible default.
 remote_probe() {
   local host="$1"
   ssh "${KEEL_SSH_OPTS[@]}" "$host" '
     cpu=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2- | sed "s/^ *//")
     gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
-    printf "%s | %s cpus | governor=%s | %s\n" "$cpu" "$(nproc)" "$gov" "$(uname -sr)"
+    cache=""
+    for d in /sys/devices/system/cpu/cpu0/cache/index*; do
+      [ -r "$d/level" ] || continue
+      lvl=$(cat "$d/level"); typ=$(cat "$d/type"); sz=$(cat "$d/size")
+      case "$typ" in Instruction) continue ;; Data) tag="L${lvl}d" ;; *) tag="L${lvl}" ;; esac
+      cache="$cache${cache:+ }$tag=$sz"
+    done
+    printf "%s | %s cpus | governor=%s | %s | %s\n" \
+      "$cpu" "$(nproc)" "$gov" "$(uname -sr)" "${cache:-caches=?}"
   ' 2>/dev/null
 }
 

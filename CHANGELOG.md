@@ -776,6 +776,22 @@ While the major version is 0, minor versions may contain breaking changes.
   make the two arms differ by whatever else happened to be dirty.
 
 ### Fixed
+- **Three of `BenchmarkFeed`'s arms describe their panels as L1-resident, and above
+  `kc=128` they are not.** One kernel call needs an MR×kk A panel and an NR×kk B
+  panel, so the reused pair is `(MR+NR)·kk·4` bytes: at NR=32 that is 17 KB at
+  kc=128 but 34, 51 and 68 KB at 256, 384 and 512, against a 32 KB L1d on Skylake-X
+  and Zen 4. Where the premise fails, both panel arms feed from L2 and
+  `cold-panels − loops` is a difference of *locality within one level* rather than of
+  level — which is what the vesta run's panel-feed column looks like: resolved and
+  positive at kc=128, and at or below its noise floor (or negative) at every larger
+  KC. The size cannot be fixed by allocating less, because kk is fixed by the call
+  multiset every arm must share. So it is printed instead: a `keel-feed-panels:`
+  marker per point gives reused-panel, rotating-C and real-panel byte counts,
+  `remote_probe` now reports each host's private cache sizes from sysfs (no host
+  record carried them, and Zen 5's L1d is 48 KB where Zen 4's is 32 KB, so a
+  from-memory constant would have been wrong), and the panel-feed column says to read
+  itself against both. Every doc comment that claimed L1 residency for these buffers
+  now says "reused panel pair" and where the residency actually holds.
 - **The feed decomposition's noise floor printed as `0%`, which is not a number**
   (T21). benchstat rounds its confidence interval to a whole percent, so `0%` means
   only "under 0.5%" — and `scripts/retention.sh feed` was printing that percent as

@@ -298,16 +298,74 @@ feed_host() {
       "predicted to CURVE, and this is the surviving form of the feed hypothesis." \
       "Total panel bytes are (m/MR)(n/NR)*k*(MR+NR)*4 — KC-INDEPENDENT — so a" \
       "constant-rate per-byte tax adds nothing either. Only the level those bytes" \
-      "come from can, which is a threshold, hence a curve rather than a slope."
+      "come from can, which is a threshold, hence a curve rather than a slope." \
+      "READ THIS AGAINST reused-panel-bytes IN THE keel-feed-panels LINES ABOVE, and" \
+      "against this host's L1d in the provenance line: where the reused pair does not" \
+      "fit L1d, both arms feed from L2 and this step is a difference of locality" \
+      "within one level, not of level. It is a measurement of feed cost only at the" \
+      "KC where the premise holds."
     feed_curve "$rows" 'pack      ' 7 6 \
       "KC-proportional by construction: total pack work is KC-independent and the" \
       "call count falls as 1/KC, so this column must rise roughly linearly and its" \
       "slope means nothing. Its INTERCEPT is the finding — pack's per-row loop setup" \
       "count is ceil(k/KC)*m, which scales like the call count, and that constant is" \
       "the term separating the sweep's slope from the decomposition's per-call cost."
+    feed_fit "$rows" 'pack      ' 7 6
   done < <(awk '/^BenchmarkFeed\// {
       n = $1; sub(/-[0-9]+$/, "", n); sub(/^Benchmark/, "", n); sub(/\/kc=.*/, "", n); print n
     }' "$log" | sort -u)
+}
+
+# feed_fit ROWS LABEL MINUEND SUBTRAHEND — a least-squares line through one step
+# against KC, printed as slope, intercept and worst residual.
+#
+# Only pack gets this, and only for its intercept. Pack per call is expected to be
+# α·KC + β: α is per-byte work and says nothing (total pack work is KC-independent,
+# so α is an artifact of dividing a constant total by a call count that falls as
+# 1/KC), while β is the per-call constant — pack's per-row loop setup, whose count
+# ceil(k/KC)·m scales like the call count. β is the term that separates the sweep's
+# per-call slope from this decomposition's per-call costs, which is why #26 promised
+# it as a number.
+#
+# It is a fit through four medians, not a measurement, and it is printed as one: the
+# worst residual is shown so the reader can see whether a line describes these points
+# at all, and an intercept smaller than the rows' own noise floors is called
+# indistinguishable from zero rather than quoted as a small number.
+feed_fit() {
+  local rows="$1" label="$2" a="$3" b="$4"
+  awk -v label="$label" -v a="$a" -v b="$b" '
+    { n++
+      x = $1 + 0; y = $a - $b
+      xs[n] = x; ys[n] = y
+      sx += x; sy += y; sxx += x * x; sxy += x * y
+      if ($9 != "inf") { fs += $9; fn++ } }
+    END {
+      d = n * sxx - sx * sx
+      if (n < 3 || d == 0) {
+        printf "          %*s  too few KC points for a fit\n", length(label), ""
+        exit
+      }
+      m = (n * sxy - sx * sy) / d
+      c = (sy - m * sx) / n
+      for (i = 1; i <= n; i++) {
+        r = ys[i] - (m * xs[i] + c)
+        if (r < 0) r = -r
+        if (r > worst) worst = r
+      }
+      floor = (fn > 0) ? fs / fn : 0
+      printf "          %*s  least squares: %+.4f ns per KC unit, intercept %+.2f ns", \
+             length(label), "", m, c
+      printf ", worst residual %.2f ns\n", worst
+      printf "          %*s  the intercept is the bridge term, and it is ", length(label), ""
+      if (fn == 0)
+        printf "unbounded here (no row had a\n          %*s  usable interval).\n", length(label), ""
+      else if ((c < 0 ? -c : c) < floor)
+        printf "INDISTINGUISHABLE FROM ZERO: |%.2f| is\n          %*s  under the mean row floor of %.2f ns, so pack carries no measurable\n          %*s  per-call constant on this host at this shape — the whole column is\n          %*s  per-byte work divided by a shrinking call count.\n", \
+               c, length(label), "", floor, length(label), "", length(label), ""
+      else
+        printf "%+.2f ns per call against a mean row floor\n          %*s  of %.2f ns, so it is resolved and is the number #26 asked for.\n", \
+               c, length(label), "", floor
+    }' "$rows"
 }
 
 # feed_curve ROWS LABEL MINUEND SUBTRAHEND NOTE... — one step's values across the KC
@@ -497,7 +555,10 @@ main() {
     # above prints the request. This line is the log counting itself (#49).
     info "samples this host produced: $(rows_per_bench "$LOG")"
     # The plan markers next: they say which blocks the parts were measured over.
-    grep '^keel-nest-plan:' "$LOG" | sed 's/^/        /' || true
+    # keel-feed-panels is the same idea for the arms' premise: the reused panel pair
+    # is L1-resident only while (MR+NR)*kk*4 fits, so the size is printed and the
+    # panel-feed column below is read against it rather than against a claim.
+    grep -E '^keel-(nest-plan|feed-panels):' "$LOG" | sed 's/^/        /' || true
     bench_csv "$LOG" >"$CSV" 2>"$BINDIR/bserr" || true
     [[ -s "$BINDIR/bserr" ]] && sed 's/^/        benchstat: /' "$BINDIR/bserr"
     case "$MODE" in

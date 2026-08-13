@@ -88,7 +88,7 @@ import (
 // calling it loop overhead is a mislabelling.
 //
 // kernel-calls is therefore the denominator retention wants: the call multiset from
-// the same generator every other part uses, run flat on L1-resident panels with
+// the same generator every other part uses, run flat on one reused panel pair with
 // rotating C tiles, containing none of the nest (no real C, no panel address
 // arithmetic, no beta pass, no fringe tile, no macro loops). See its doc, and
 // callsPerDepth's.
@@ -195,8 +195,8 @@ func BenchmarkNest(b *testing.B) {
 						packBOnly(kn, m, n, k, bm, n, bp, false)
 					}
 				})
-				// D1, the P2-style ceiling: one call at one depth on L1-resident
-				// panels, repeated. ctiles varies the number of C tiles the
+				// D1, the P2-style ceiling: one call at one depth on a single
+				// reused panel pair, repeated. ctiles varies the number of C tiles the
 				// repeated calls rotate through, which is the manipulation — see
 				// the doc on kernelRepeat.
 				for _, ct := range []int{1, 8} {
@@ -388,8 +388,9 @@ func kernelRepeat(b *testing.B, kn kern.Kernel, kc, ctiles int) {
 //
 // So the call multiset comes from the same generator every other part uses, and this
 // runs it flat: for each depth, the number of calls the nest makes at that depth,
-// back to back, on L1-resident panels, rotating through eight C tiles so consecutive
-// calls are independent the way the nest's are. What separates it from nest-no-pack
+// back to back, on one reused panel pair — (MR+NR)·kk·4 bytes, L1-resident only at
+// small kk, which BenchmarkFeed's keel-feed-panels marker quantifies — rotating
+// through eight C tiles so consecutive calls are independent the way the nest's are. What separates it from nest-no-pack
 // is what it leaves out — the real C matrix, the panel address arithmetic, the beta
 // pass, the fringe temp tile and the macro loops. Those are the nest, and the point
 // of a denominator is to not contain them.
@@ -470,13 +471,13 @@ func kernelCalls(b *testing.B, kn kern.Kernel, m, n, k int, flops float64) {
 // time/calls directly, reported as an ns/call metric, and the differences between
 // arms are differences rather than derivatives. Nothing here needs a slope.
 //
-//	kernel-calls  the denominator: flat replay, L1-resident panels, C in eight
+//	kernel-calls  the denominator: flat replay, one reused panel pair, C in eight
 //	              rotating L1 tiles (kernelCalls, unchanged)
 //	loops         the same calls issued from the nest's own loop structure
-//	              (blocks → jr → ir) instead of a flat per-depth count, with both
-//	              panels and C still L1-resident
+//	              (blocks → jr → ir) instead of a flat per-depth count, with the
+//	              panel pair and the C tiles still reused
 //	cold-c        loops, with C the real m×n matrix at the nest's own tile
-//	              addresses; panels still L1-resident
+//	              addresses; the panel pair still reused
 //	cold-panels   loops, with the panels streamed from the real packed buffers at
 //	              macro's own offsets; C still eight L1 tiles
 //	nest-no-pack  all of it (nestNoPack, unchanged): real C, real panels, beta
@@ -502,6 +503,18 @@ func kernelCalls(b *testing.B, kn kern.Kernel, m, n, k int, flops float64) {
 // that separates them instead of asserting it.
 //
 // # What each arm is not
+//
+// The three reused-panel arms are NOT reliably L1-resident, and the panel-feed step
+// is only a measurement of feed level where they are. One call needs an MR×kk A
+// panel and an NR×kk B panel, so the reused pair is (MR+NR)·kk·4 bytes — 17 KB at
+// NR=32, kc=128, but 34, 51 and 68 KB at 256, 384 and 512. On a 32 KB L1d only the
+// first point holds; above it the reused pair is served from L2, the real panels are
+// also served from L2 or further out, and cold-panels − loops is a difference between
+// two L2 streams that differ in locality rather than in level. That is why the
+// keel-feed-panels marker prints the byte count for every point: the premise is a
+// size, so it is checkable in the output instead of being taken on trust. It is also
+// not fixable by shrinking the buffer — kk is fixed by the call multiset every arm
+// must share, and the panel size follows from kk.
 //
 // cold-c and cold-panels both carry the loops arm's overhead, which is why `loops`
 // exists as its own arm rather than being assumed away: subtracting kernel-calls
@@ -551,6 +564,24 @@ func BenchmarkFeed(b *testing.B) {
 			name := func(arm string) string {
 				return fmt.Sprintf("%s/kc=%d/%s", kn.ID(), pkc, arm)
 			}
+
+			// The reused-panel arms are described as feeding the kernel from L1, and
+			// that is a claim about a size, so the size is printed rather than
+			// asserted — the same discipline as keel-nest-plan's padwaste.
+			//
+			// One call needs an MR×kk A panel and an NR×kk B panel, so the reused
+			// pair is (MR+NR)·kk·4 bytes and cannot be made smaller without changing
+			// kk, which would change the call multiset every arm shares. At NR=32
+			// that is 17 KB at kc=128 and 68 KB at kc=512: the premise holds at the
+			// bottom of this grid and fails above it on any 32 KB L1d, and where it
+			// fails both panel arms feed from L2 and the step between them is not
+			// measuring the level the panels come from. Read this line against the
+			// host's L1d before reading the panel-feed column.
+			hotPanels := (kn.MR + kn.NR) * feedMaxDepth(nestBlocks(kn, m, n, k)) * 4
+			fmt.Printf("keel-feed-panels: name=%s/kc=%d reused-panel-bytes=%d "+
+				"rotating-c-bytes=%d real-panel-bytes=%d calls=%d\n",
+				kn.ID(), pkc, hotPanels, 8*kn.MR*(kn.NR+16)*4,
+				(len(ap)+len(bp))*4, calls)
 			b.Run(name("full"), func(b *testing.B) {
 				KC = kc
 				b.ResetTimer()
@@ -617,9 +648,13 @@ func feedWhole(b *testing.B, kn kern.Kernel, blocks []nestBlock) bool {
 	return true
 }
 
-// replayHot issues the nest's calls from the nest's own loop structure, with both
-// panels and C L1-resident. It is kernel-calls plus exactly one thing: the two
+// replayHot issues the nest's calls from the nest's own loop structure, reusing one
+// panel pair and eight C tiles. It is kernel-calls plus exactly one thing: the two
 // macro loops and the address arithmetic in them.
+//
+// The panel pair is (MR+NR)·kk·4 bytes, which is L1-resident only at the bottom of
+// the KC grid — see BenchmarkFeed's "what each arm is not", and the
+// keel-feed-panels marker, which prints the number.
 //
 // The C tiles rotate through eight L1-resident copies as kernel-calls does, so
 // consecutive calls stay independent and the only change is where the loop bounds
@@ -654,8 +689,10 @@ func replayHot(b *testing.B, kn kern.Kernel, m, n, k int, _, _, _ []float32) {
 }
 
 // replayColdC is replayHot with C the caller's real m×n matrix at the nest's own
-// tile addresses. Panels stay L1-resident, so the difference from replayHot is
-// real-C traffic and the addressing it needs, and nothing else.
+// tile addresses. The panel pair is the same reused pair replayHot uses, at the same
+// address, so the difference from replayHot is real-C traffic and the addressing it
+// needs, and nothing else — whatever level that pair is served from, both arms are
+// served from it equally, which is what makes this step a clean one.
 //
 // The tile address is macro's verbatim: cb = c[ic·ldc+jc:] per block, then
 // ct = cb[ir·ldc+jr:]. Which matters — C tiles are MR rows of NR floats at a
@@ -732,8 +769,10 @@ func replayColdPanels(b *testing.B, kn kern.Kernel, m, n, k int, ap, bp, _ []flo
 	benchSink = cs[0]
 }
 
-// feedMaxDepth is the deepest block in a block sequence: the L1-resident panels the
-// replay arms hold have to be long enough for every call they make.
+// feedMaxDepth is the deepest block in a block sequence: the reused panel pair the
+// replay arms hold has to be long enough for every call they make. That is also what
+// fixes its size, and therefore what puts the pair beyond L1 at the larger KC — a
+// smaller buffer would mean a different call multiset, so the two cannot be traded.
 func feedMaxDepth(blocks []nestBlock) int {
 	d := 0
 	for _, blk := range blocks {
