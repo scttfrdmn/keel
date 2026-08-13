@@ -21,26 +21,39 @@ While the major version is 0, minor versions may contain breaking changes.
   not sufficient. Documented rather than fixed, which is what #48's own criterion asked
   for, and unfixable by shrinking the pair since `kk` is fixed by the call multiset every
   arm shares.
-- `docs/toolchain-notes.md` T18, now **reduced to a 15-line minimal repro** with the
-  trigger isolated (#8). The first reduction attempt did *not* reproduce, and the
-  difference between the two attempts is the finding: the sign mask is rematerialized
-  inside the loop only when it reaches the loop as a **CSE'd value from inside the
-  callee**, as `Abs512` builds it. Hand-hoisting the identical constant into a local and
-  passing it moves the build to the preheader and the mask survives the whole loop
-  untouched. Accumulator count (1 vs 4), loop count (1 vs 3) and the masked tail were each
-  held against it and none matters. So the upstream-shaped statement is not "the constant
-  does not hoist" but "it hoists and is then clobbered by a same-loop destination
-  assignment, with eleven vector registers free, where hand-hoisting avoids it" — and the
-  negative control is simultaneously the fix #8 needs (a mask parameter on `Abs512`,
-  hence an `internal/vec` API change with a scalar twin and differential).
-- `docs/toolchain-notes.md` T18, re-audited in place — the question T18 left open, and
-  the answer is sharper than "it does not hoist" (#8). In the real `avx512Asum` the
-  loop-invariant sign mask is rebuilt at the back-edge target, and **the reason is that
-  the fourth inlined `VPANDND` writes its result over the register holding the mask**,
-  so the mask is dead before the back-edge. It is not register pressure: the highest
-  vector register the function touches is `Z7`, leaving `Z8`–`Z15` idle, well inside
-  T10's 15-register ceiling. Same character as T8 — the cost is in the operand
-  assignment, not the instruction selection. Three loops rematerialize it, not one (the
+- `docs/toolchain-notes.md` T18, now **reduced to a minimal repro, and the reduction
+  identifies a pre-existing upstream bug rather than a new one** (#8). The effect is that
+  LICM does not lift SIMD ops: a `BroadcastInt32x16` constant with loop-invariant operands
+  stays in the loop body and is rebuilt every iteration. That is
+  [golang/go#79984](https://github.com/golang/go/issues/79984), open since before this
+  note, with keel's exact shape (constant built inside a helper, expected inline-then-hoist,
+  worked around by passing it in, ~4× throughput) already reported there as an addendum,
+  and a fix in flight in [CL 803220](https://go-review.googlesource.com/c/go/+/803220) —
+  work-in-progress as of 2026-08-12, so not in go1.26.5 and the workaround still applies.
+  Nothing was filed upstream; the repro adds no fact the issue does not already carry.
+  **Two claims from the previous T18 entries are withdrawn in the note.** (a) The isolated
+  trigger was written as "the invariant reaches the loop as a CSE'd value from inside the
+  callee rather than as a live local". A third arm with **no helper function at all** — the
+  constant written directly in the loop body — emits the identical defect, 124 bytes
+  against 123, so the callee, the inlining and the CSE are incidental. (b) The re-audit's
+  causal reading, that the allocator "clobbers a live loop-invariant value with eleven
+  registers free" and that this is *why* nothing hoists, has the direction backwards:
+  because the build is inside the body, the mask is dead at that fourth `AndNot`, so
+  reusing its register is free and correct. The clobber is a consequence of the missing
+  hoist, not its cause, and there is no operand-assignment defect in the dump. The
+  hand-hoisted arm was never successful LICM — its definition was already outside the loop
+  and never needed lifting. What survives unchanged: the measured rematerialization, the
+  three-loops-and-six-builds count in `avx512Asum`, and the fix #8 needs (a mask parameter
+  on `Abs512`, hence an `internal/vec` API change with a scalar twin and differential).
+- `docs/toolchain-notes.md` T18, re-audited in place — the question T18 left open (#8). In
+  the real `avx512Asum` the loop-invariant sign mask is rebuilt at the back-edge target,
+  and the fourth inlined `VPANDND` writes its result over the register holding the mask,
+  with the highest vector register the function touches being `Z7`, so `Z8`–`Z15` sit idle
+  well inside T10's 15-register ceiling. **The causal claim this entry originally drew from
+  that — that the clobber is *why* nothing hoists, that it is the same character as T8, and
+  that the cost is in operand assignment — is withdrawn by the reduction above**; the mask
+  is dead at that instruction precisely *because* the build was left in the body, so the
+  reuse is free and the idle registers are beside the point. Three loops rematerialize it, not one (the
   16-lane cleanup loop has the worst ratio, 3 mask instructions against 2 useful vector
   ops); `avx2Asum` does the same with `Y9`–`Y15` idle; and the unrolled body is 29
   instructions of which 8 do the arithmetic. The AVX-512 form folds its load into the

@@ -24,7 +24,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | `-bench` splits on top-level `\|` **before** `/`, so `A\|B/c` is `{A}` or `{B,c}` — not `{A,B}` then `{c}`. A gate filter silently ran neither the benchmark it named nor only the ones it named | [T15](#t15) | none — documented behavior |
 | 2026-08-12 | go1.26.5 | On arm64, whether `a*a + c` is FMA-fused depends on whether the compiler **constant-folds** it, and `-race` defeats the folding: the same source line yields `0` in a plain build and `2^-24` under `-race` | [T16](#t16) | none — not a defect |
 | 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [golang/go#80856](https://github.com/golang/go/issues/80856) (#42) |
-| 2026-08-12 | go1.26.5 | A **loop-invariant vector constant is re-materialized every iteration**: `BroadcastInt32x16(const)` inside a loop stays inside it (3 insns/iteration), while the same constant written above the loop stays above it. CSE shares it across unrolled uses within one iteration; nothing lifts it across iterations | [T18](#t18) | candidate (#8) |
+| 2026-08-12 | go1.26.5 | A **loop-invariant vector constant is re-materialized every iteration**: `BroadcastInt32x16(const)` inside a loop stays inside it (3 insns/iteration), while the same constant written above the loop stays above it. LICM does not lift SIMD ops at all; no helper, inlining or CSE is needed to trigger it. CSE shares it across unrolled uses within one iteration | [T18](#t18) | **pre-existing upstream**: [golang/go#79984](https://github.com/golang/go/issues/79984), fix WIP in [CL 803220](https://go-review.googlesource.com/c/go/+/803220) (#8) |
 | 2026-08-12 | go1.26.5 | `s = s[n:]` in a loop guarded by `len(s) >= n` costs **7 instructions**, not 2: the pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) because the loop may leave the slice exactly empty and the data pointer must not pass the end of the allocation. Guarding with `len(s) > n` collapses it to one `ADDQ` | [T19](#t19) | none — GC-correctness, not a defect |
 | 2026-08-12 | benchstat v0.0.0-20260709024250 | `benchstat A B` **does not compare A and B** when their logs differ in any one `key: value` configuration line — it prints two independent one-column tables, no deltas, no p-values, and **exits 0**. This repo's own provenance markers include a live clock snapshot, so two runs on one host never compare | [T20](#t20) | candidate |
 
@@ -1426,14 +1426,20 @@ it:
 0x0091 00145 (l1_amd64.go:117)	JGE	40
 ```
 
-The last line of the answer is the interesting one. **The fourth `VPANDND` writes its
-result over `Z4`, the register holding the mask** — so the mask is dead before the
-back-edge and has to be rebuilt, which is *why* nothing hoists rather than a separate
-fact about hoisting. And it is not forced: the highest vector register this function
-touches is `Z7`, so `Z8`–`Z15` are free and unused, well inside T10's 15-register
-ceiling. The allocator chose to clobber a live loop-invariant value with a free
-register available. Same character as T8's `VFMADD213PS` finding: the cost is in the
-operand assignment, not in the instruction selection.
+The last line looked like the interesting one at the time. **The fourth `VPANDND` writes
+its result over `Z4`, the register holding the mask**, and the highest vector register
+this function touches is `Z7`, so `Z8`–`Z15` are free and unused, well inside T10's
+15-register ceiling.
+
+**The causal reading that stood here was wrong; the reduction below is what corrected
+it.** It said the allocator "chose to clobber a live loop-invariant value with a free
+register available", that this was *why* nothing hoists, and that it was the same
+character as T8's `VFMADD213PS` finding — a cost in operand assignment. The direction is
+the other way round. Because the build sits inside the body, the mask's last use *is*
+that fourth `AndNot`; the value is dead at that point, so reusing its register is both
+free and correct, and the eleven idle registers are irrelevant. The clobber is a
+consequence of the missing hoist, not its cause, and there is no operand-assignment
+defect in this dump at all. The observation stands; the inference does not.
 
 Two further details from the same dump:
 
@@ -1520,16 +1526,64 @@ Same instruction count in the body minus the two mask instructions.
 
 Three variables were then held against the reproducing form and **none of them matters**:
 one accumulator vs. four, one loop vs. three, and the presence of the 16-lane cleanup and
-masked tail. All four combinations rematerialize; the hand-hoisted form never does. So the
-trigger is not pressure, not accumulator count, and not loop structure — it is solely
-**whether the invariant reaches the loop as a CSE'd value or as a live local**. The
-compiler does lift the constant to the preheader in both cases; what differs is that in
-the CSE'd case the allocator then assigns the fourth `AndNot`'s destination to the
-register holding it, killing it before the back-edge, with eleven registers free.
+masked tail. All four combinations rematerialize; the hand-hoisted form never does.
 
-That is the shape of the report if this goes upstream: not "the constant does not hoist"
-but "the constant hoists and is then clobbered by a same-loop destination assignment,
-where hand-hoisting the identical value into a local avoids it."
+**The trigger, after one more control: the constant is simply never hoisted.** What stood
+here was that the trigger is "whether the invariant reaches the loop as a CSE'd value from
+inside the callee or as a live local", and that the compiler lifts the constant to the
+preheader in both cases. Both halves are wrong. The discriminating control is a third arm
+with **no helper function at all** — the constant written directly in the loop body, so
+nothing is inlined and nothing is CSE'd across a call boundary:
+
+```go
+func SumNoHelper(x []float32) archsimd.Float32x16 {
+	acc := archsimd.BroadcastFloat32x16(0)
+	for len(x) >= 64 {
+		m := archsimd.BroadcastInt32x16(-2147483648)
+		acc = acc.Add(archsimd.LoadFloat32x16Slice(x[0:16]).AsInt32x16().AndNot(m).AsFloat32x16())
+		acc = acc.Add(archsimd.LoadFloat32x16Slice(x[16:32]).AsInt32x16().AndNot(m).AsFloat32x16())
+		acc = acc.Add(archsimd.LoadFloat32x16Slice(x[32:48]).AsInt32x16().AndNot(m).AsFloat32x16())
+		acc = acc.Add(archsimd.LoadFloat32x16Slice(x[48:64]).AsInt32x16().AndNot(m).AsFloat32x16())
+		x = x[64:]
+	}
+	return acc
+}
+```
+
+It emits the identical defect — body `[17,115]` (`JMP 111`, back-edge `JGE 17`), mask
+rebuilt at 37/42/46 inside it, and the same `VPANDND 192(AX), Z2, Z2` — at 124 bytes
+against the callee form's 123, one `XCHGL` nop apart.
+
+So the callee, the inlining and the CSE are all incidental. The single fact is that **a
+SIMD op with loop-invariant operands is not lifted out of the loop**, and the hand-hoisted
+arm "works" only because its definition was already outside the loop in the source and
+never needed lifting. `hoisted`/`SumLocal` is not successful LICM; it is LICM not being
+required.
+
+**Method note, because this is the second wrong isolation in one note.** The two arms of
+the reduction differed in *two* ways at once — where the definition sits relative to the
+loop, and whether it arrives through a callee — and the write-up attributed the effect to
+the salient difference without varying it alone. The three variables that were dutifully
+held were all ones that did not matter; the one that did was never held. The first minimal
+repro not reproducing was a finding; the second reproducing was not, by itself, an
+isolation.
+
+**Already filed upstream: golang/go#79984, "cmd/compile: simd operations not marked as
+hoistable."** Searched before filing anything, which is why nothing was filed. The issue
+predates this note. `randall77` gives the cause — LICM was extended to more ops in
+CL 697235 / CL 772964 and SIMD ops were mostly not allowed, the hard part being that they
+must not be lifted past their CPU feature check — `dr2chase` points at
+`ssa/cpufeatures.go`, and **`balasanjay`'s addendum is keel's exact shape**: a vector
+constant built inside a helper, an expectation of inline-then-hoist, the same workaround of
+passing the constant in, and ~4× throughput in a vectorised base64 decoder. A fix is in
+flight, **CL 803220 "cmd/compile: handle SIMD ops in LICM"** — as of 2026-08-12 `NEW` and
+still **work-in-progress**, last updated 2026-07-25, so not in go1.26.5 and the workaround
+is still needed.
+
+Nothing was posted upstream. The repro adds no fact the issue does not already carry, and
+the one thing keel could contribute that is not there yet is a *measured* delta on a real
+kernel — which #8's A/B will produce. A number earns a comment; a fourth restatement of a
+known miss does not.
 
 **Consequence for keel.** Issue #8, and the repro above names the fix. One `Abs512` call
 site pattern, in the two `Asum` loops (`avx512Asum`, `avx2Asum`; the two `SumSq`
