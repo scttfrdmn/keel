@@ -21,6 +21,18 @@ While the major version is 0, minor versions may contain breaking changes.
   not sufficient. Documented rather than fixed, which is what #48's own criterion asked
   for, and unfixable by shrinking the pair since `kk` is fixed by the call multiset every
   arm shares.
+- `docs/toolchain-notes.md` T18, now **reduced to a 15-line minimal repro** with the
+  trigger isolated (#8). The first reduction attempt did *not* reproduce, and the
+  difference between the two attempts is the finding: the sign mask is rematerialized
+  inside the loop only when it reaches the loop as a **CSE'd value from inside the
+  callee**, as `Abs512` builds it. Hand-hoisting the identical constant into a local and
+  passing it moves the build to the preheader and the mask survives the whole loop
+  untouched. Accumulator count (1 vs 4), loop count (1 vs 3) and the masked tail were each
+  held against it and none matters. So the upstream-shaped statement is not "the constant
+  does not hoist" but "it hoists and is then clobbered by a same-loop destination
+  assignment, with eleven vector registers free, where hand-hoisting avoids it" — and the
+  negative control is simultaneously the fix #8 needs (a mask parameter on `Abs512`,
+  hence an `internal/vec` API change with a scalar twin and differential).
 - `docs/toolchain-notes.md` T18, re-audited in place — the question T18 left open, and
   the answer is sharper than "it does not hoist" (#8). In the real `avx512Asum` the
   loop-invariant sign mask is rebuilt at the back-edge target, and **the reason is that

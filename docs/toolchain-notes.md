@@ -1467,13 +1467,79 @@ per iteration, not four times. CSE works within an iteration; nothing lifts acro
 iterations. The cost is therefore 3 instructions per 64 elements, not 12 — which is
 what #8 asked and is the reason the answer to #8 is "partially".
 
-**Consequence for keel.** Issue #8. One `Abs512` call site pattern, in the four
-`Asum` loops (`avx512Asum`, `avx2Asum`, and the two `SumSq` neighbours do not use the
-mask). Any hoist means changing `internal/vec`'s API, because `Abs512(x)` builds the
-mask internally and there is nowhere else to put it — which needs a scalar twin and a
-differential test like every other vector op. It is 3 of the 41 instructions in
-`avx512Asum`'s loop; #47's bounds checks are 7 of them. Both edit the same bodies, so
-they should be measured together rather than as two claims about the same benchmark.
+**Reduced to a minimal repro, 2026-08-12, and the trigger is one thing.** The re-audit
+above is a reading of real code; this is the 15-line version, and the reduction was worth
+doing because the first attempt at it **did not reproduce** and the difference between the
+two attempts is the whole finding.
+
+The repro (`GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go build -gcflags=-S`):
+
+```go
+package andnotrepro
+
+import "simd/archsimd"
+
+// The mask is built HERE, inside the callee, exactly as internal/vec.Abs512 does.
+func abs(x archsimd.Float32x16) archsimd.Float32x16 {
+	return x.AsInt32x16().AndNot(archsimd.BroadcastInt32x16(-2147483648)).AsFloat32x16()
+}
+
+func Sum(x []float32) float32 {
+	acc := archsimd.BroadcastFloat32x16(0)
+	for len(x) >= 64 {
+		acc = acc.Add(abs(archsimd.LoadFloat32x16Slice(x[0:16])))
+		acc = acc.Add(abs(archsimd.LoadFloat32x16Slice(x[16:32])))
+		acc = acc.Add(abs(archsimd.LoadFloat32x16Slice(x[32:48])))
+		acc = acc.Add(abs(archsimd.LoadFloat32x16Slice(x[48:64])))
+		x = x[64:]
+	}
+	/* horizontal-sum tail, omitted; it does not affect the loop */
+}
+```
+
+emits, with `JMP 136`, the condition at `[136,140]` and the back-edge `JGE 43`, so the
+body is `[43,140]` and the first two instructions of it rebuild the mask:
+
+```
+0x003f 00063 (…/archsimd/other_gen_amd64.go:211)  MOVL  $-2147483648, SI   <- inside the body
+0x0048 00072 (…/archsimd/other_gen_amd64.go:211)  VPBROADCASTD  X2, Z2
+0x004e 00078 (repro.go:6)  VPANDND  (AX), Z2, Z3
+0x005a 00090 (repro.go:6)  VPANDND  64(AX), Z2, Z4
+0x0067 00103 (repro.go:6)  VPANDND  128(AX), Z2, Z4
+0x0074 00116 (repro.go:6)  VPANDND  192(AX), Z2, Z2   <- clobbers the mask
+```
+
+Highest vector register used: `Z4`. `Z5`–`Z15` are free and unused — eleven of them.
+
+**The negative control, which is also the fix.** Hoist the mask by hand — take it as a
+parameter, `func abs(x archsimd.Float32x16, mask archsimd.Int32x16)`, and build it once
+in the caller before the loop — and the rematerialization **disappears**: the build moves
+to the preheader (`VPBROADCASTD X1, Z1` before `JMP`, body `[59,141]`), the mask lives in
+`Z1` for the whole loop, and the four `VPANDND` write `Z3/Z4/Z4/Z4` without touching it.
+Same instruction count in the body minus the two mask instructions.
+
+Three variables were then held against the reproducing form and **none of them matters**:
+one accumulator vs. four, one loop vs. three, and the presence of the 16-lane cleanup and
+masked tail. All four combinations rematerialize; the hand-hoisted form never does. So the
+trigger is not pressure, not accumulator count, and not loop structure — it is solely
+**whether the invariant reaches the loop as a CSE'd value or as a live local**. The
+compiler does lift the constant to the preheader in both cases; what differs is that in
+the CSE'd case the allocator then assigns the fourth `AndNot`'s destination to the
+register holding it, killing it before the back-edge, with eleven registers free.
+
+That is the shape of the report if this goes upstream: not "the constant does not hoist"
+but "the constant hoists and is then clobbered by a same-loop destination assignment,
+where hand-hoisting the identical value into a local avoids it."
+
+**Consequence for keel.** Issue #8, and the repro above names the fix. One `Abs512` call
+site pattern, in the two `Asum` loops (`avx512Asum`, `avx2Asum`; the two `SumSq`
+neighbours do not use the mask). The hoist means changing `internal/vec`'s API, because
+`Abs512(x)` builds the mask internally and there is nowhere else to put it — the negative
+control says a mask parameter is exactly what removes the rematerialization — which needs
+a scalar twin and a differential test like every other vector op. It is 3 of the
+instructions in `avx512Asum`'s loop; #47's bounds checks are 7 of them. Both edit the same
+bodies, so they should be measured together rather than as two claims about the same
+benchmark.
 
 ---
 
