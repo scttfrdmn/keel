@@ -212,6 +212,21 @@ ci_floor_ns() {
   awk -v v="$1" -v c="$2" 'BEGIN{ printf "%.2f", (c + 0.5) / 100 * v }'
 }
 
+# feed_calls LOG NAME — the exact kernel-call count at one point, or "?".
+#
+# Read out of the keel-feed-panels marker, which the benchmark prints from the same
+# callsPerDepth() sum it divides its own ns/call by. Not recomputed here: two
+# implementations of one count is how a totals table comes to disagree with the
+# per-call column it was derived from. A log written before the marker existed gives
+# "?", and the caller must then print no totals rather than a plausible count — the
+# #49 rule, that an instrument may not measure a grid other than the one it reports.
+feed_calls() {
+  awk -v want="name=$2 " '
+    index($0, "keel-feed-panels:") == 1 && index($0, want) {
+      for (i = 1; i <= NF; i++) if (index($i, "calls=") == 1) { sub(/calls=/, "", $i); print $i; exit }
+    }' "$1" | head -1
+}
+
 # feed_host HOST CSV LOG — which term curves with KC (issue #48).
 #
 # Six arms per (shape, KC), each one variable from the one before it, all making the
@@ -224,7 +239,7 @@ ci_floor_ns() {
 # arm's own median has one, and the widest on each row is printed next to it: a step
 # narrower than that is not resolved by this run and must not be read as a term.
 feed_host() {
-  local host="$1" csv="$2" log="$3" case_ kc arm rows worst ci floor f
+  local host="$1" csv="$2" log="$3" case_ kc arm rows worst ci floor f calls
   local -a kcs vals
   rows="$BINDIR/feedrows"
   while read -r case_; do
@@ -258,7 +273,8 @@ feed_host() {
         [[ "$worst" != inf ]] && worst="$(awk -v a="$worst" -v b="$ci" 'BEGIN{print (b>a)?b:a}')"
         [[ "$floor" != inf ]] && floor="$(awk -v a="$floor" -v b="$f" 'BEGIN{print (b>a)?b:a}')"
       done
-      printf '%s %s %s %s\n' "$kc" "${vals[*]}" "$worst" "$floor" >>"$rows"
+      calls="$(feed_calls "$log" "${case_#Feed/}/kc=$kc")"
+      printf '%s %s %s %s %s\n' "$kc" "${vals[*]}" "$worst" "$floor" "${calls:-?}" >>"$rows"
     done
     [[ -s "$rows" ]] || { warn "[$host] $case_: no complete kc point"; continue; }
     printf '  %s\n' "$case_"
@@ -312,9 +328,85 @@ feed_host() {
       "the term separating the sweep's slope from the decomposition's per-call cost."
     feed_fit "$rows" 'pack      ' 7 6
     feed_rest "$rows" 'rest      '
+    feed_totals "$rows" "$host" "$case_"
   done < <(awk '/^BenchmarkFeed\// {
       n = $1; sub(/-[0-9]+$/, "", n); sub(/^Benchmark/, "", n); sub(/\/kc=.*/, "", n); print n
     }' "$log" | sort -u)
+}
+
+# feed_totals ROWS HOST CASE — the same steps as whole-GEMM totals.
+#
+# A per-call cost says how expensive a term is; it does not say whether the term
+# matters, because the number of calls changes with KC by a factor of four across
+# this grid. Multiplying by the point's own exact call count answers the second
+# question, and it also makes the analytic predictions checkable in a way the
+# per-call columns cannot:
+#
+#	C traffic   total is m*n*4*ceil(k/KC), so it must FALL like the call count
+#	pack        total pack work is KC-independent, so it must be FLAT
+#	panel feed  total panel bytes are KC-independent too, so a flat total means a
+#	            constant-rate tax and a rising one means the bytes are coming from
+#	            a colder level — the #48 question again, now in milliseconds
+#
+# The arithmetic is per-call ns x calls, nothing fitted. Where the call count is
+# unknown (a log from before the keel-feed-panels marker) this prints nothing at all
+# rather than assuming (m/MR)(n/NR)ceil(k/KC) from parameters it cannot see.
+feed_totals() {
+  local rows="$1" host="$2" case_="$3"
+  if grep -q ' ?$' "$rows"; then
+    warn "[$host] $case_: no keel-feed-panels marker, so the exact call count is not in" \
+         "this log and no whole-GEMM totals are printed. Re-measure to get them; a" \
+         "count reconstructed here could disagree with the one the ns/call column" \
+         "was divided by, and then the two tables would describe different runs."
+    return
+  fi
+  info ""
+  info "the same steps as whole-GEMM totals: this point's per-call cost times its own"
+  info "exact call count, in ms of one GEMM, with each term's share of full. Nothing is"
+  info "fitted; this is the per-call table times an integer. A * still marks a step"
+  info "below its row's noise floor, and a share computed from one means little."
+  printf '        %-5s %10s %14s %14s %14s %11s\n' \
+    kc calls C-traffic panel-feed pack full
+  awk 'function ms(x, c) { return x * c / 1e6 }
+       function cell(x, c, tot, f) {
+         return sprintf("%.2f%s (%.1f%%)", ms(x, c),
+                        (f == "inf" || (x < 0 ? -x : x) < f) ? "*" : "", 100 * x / tot)
+       }
+       { printf "        %-5s %10d %14s %14s %14s %11.1f\n",
+           $1, $10, cell($4-$3, $10, $7, $9), cell($5-$3, $10, $7, $9),
+           cell($7-$6, $10, $7, $9), ms($7, $10) }' "$rows"
+  # The predicted C ratio is not the constant 4: it is ceil(k/KC1)/ceil(k/KCn), and
+  # since calls = (m/MR)(n/NR)*ceil(k/KC) with a KC-independent prefactor, the call
+  # count ratio IS that prediction — measured off this run, not assumed from a k this
+  # script never sees.
+  awk 'function ms(x, cc) { return x * cc / 1e6 }
+       { n++
+         cn[n] = $10; kcs[n] = $1
+         c[n] = ms($4-$3, $10); p[n] = ms($5-$3, $10); q[n] = ms($7-$6, $10)
+         # A ratio between endpoints is only a number if both endpoints are one: a
+         # negative or unresolved end makes c[1]/c[n] an artefact of noise, and the
+         # honest output there is the two values and the reason, not a quotient.
+         cbad[n] = (c[n] <= 0) || ($9 != "inf" && (($4-$3 < 0 ? $3-$4 : $4-$3) < $9))
+         if (n == 1 || p[n] > pworst) { pworst = p[n]; pat = $1; pshare = 100*($5-$3)/$7 }
+         if (n == 1 || q[n] < qlo) qlo = q[n]
+         if (n == 1 || q[n] > qhi) qhi = q[n] }
+       END {
+         if (cbad[1] || cbad[n]) {
+           printf "          C total     %.2f -> %.2f ms; NO RATIO: an endpoint is negative or below\n", c[1], c[n]
+           printf "                      its noise floor, so the quotient would be an artefact. The\n"
+           printf "                      predicted fall is x%.2f, the call-count ratio this run reported.\n",
+             (cn[n] != 0) ? cn[1]/cn[n] : 0
+         } else {
+           printf "          C total     %.2f -> %.2f ms, x%.2f over the grid; predicted x%.2f,\n",
+             c[1], c[n], c[1]/c[n], (cn[n] != 0) ? cn[1]/cn[n] : 0
+           printf "                      which is the call-count ratio this run reported, not a constant.\n"
+         }
+         printf "          pack total  %.2f -> %.2f ms, spread %.2f ms over the grid;\n", q[1], q[n], qhi - qlo
+         printf "                      predicted FLAT, and a spread here is the residual model error.\n"
+         printf "          feed total  %.2f -> %.2f ms, worst %.2f ms at kc=%s (%.1f%% of full);\n",
+           p[1], p[n], pworst, pat, pshare
+         printf "                      the KC to distrust is that one, not necessarily the last.\n"
+       }' "$rows"
 }
 
 # feed_rest ROWS LABEL — the residual column, and what its SIGN means.

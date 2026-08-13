@@ -9,6 +9,23 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- `scripts/retention.sh feed` prints each step as a whole-GEMM total as well as a
+  per-call cost: the point's own per-call ns times the exact call count out of the
+  `keel-feed-panels` marker, in ms of one GEMM, with each term's share of `full`. A
+  per-call cost says how expensive a term is but not whether it matters, since the
+  call count itself falls 4× across the KC grid — and the totals are where the
+  analytic predictions become checkable. C traffic must fall exactly like the call
+  count and on janus at 4×32 it does (12.29 → 3.01 ms, ×4.08 against the ×4.00 the
+  run's own call counts predict); pack must be flat and is, to within 3.5 ms of 20;
+  panel feed has a KC-independent total, so its *rise* is the #48 finding restated in
+  milliseconds, worst at kc=384 on janus at 2×32 (24.46 ms, 11.0% of the GEMM) —
+  which is independent corroboration of the point defect the KC sweep found there,
+  from a second instrument. The predicted C ratio is read off the run's own call
+  counts rather than hardcoded, since it is `⌈k/KC₁⌉/⌈k/KCₙ⌉` and this script never
+  sees k; a ratio whose endpoint is negative or below its noise floor is refused with
+  the reason rather than printed; and a log written before the marker existed gets no
+  totals table at all, because a reconstructed count could disagree with the one the
+  ns/call column was divided by.
 - `BenchmarkBlocking`'s grid is replaceable per axis from the environment
   (`KEEL_BLOCKING_KC`, `_MC`, `_NC`, comma-separated; `scripts/retention.sh sweep`
   forwards them, since sshd strips arbitrary env). A fine scan around a suspected
