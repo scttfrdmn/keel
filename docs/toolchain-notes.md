@@ -26,6 +26,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [golang/go#80856](https://github.com/golang/go/issues/80856) (#42) |
 | 2026-08-12 | go1.26.5 | A **loop-invariant vector constant is re-materialized every iteration**: `BroadcastInt32x16(const)` inside a loop stays inside it (3 insns/iteration), while the same constant written above the loop stays above it. CSE shares it across unrolled uses within one iteration; nothing lifts it across iterations | [T18](#t18) | candidate (#8) |
 | 2026-08-12 | go1.26.5 | `s = s[n:]` in a loop guarded by `len(s) >= n` costs **7 instructions**, not 2: the pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) because the loop may leave the slice exactly empty and the data pointer must not pass the end of the allocation. Guarding with `len(s) > n` collapses it to one `ADDQ` | [T19](#t19) | none — GC-correctness, not a defect |
+| 2026-08-12 | benchstat v0.0.0-20260709024250 | `benchstat A B` **does not compare A and B** when their logs differ in any one `key: value` configuration line — it prints two independent one-column tables, no deltas, no p-values, and **exits 0**. This repo's own provenance markers include a live clock snapshot, so two runs on one host never compare | [T20](#t20) | candidate |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -1533,3 +1534,89 @@ unrolled and `Axpy` advances two slices: 2 × 7 instructions of advance against 
 The `>` form would recover exactly those, at the price of handing the last full vector
 to the masked-store tail path. That trade is not taken here — it is a runtime question
 and #47's deliverable is a measurement, not a second guess.
+
+---
+
+## T20 — `benchstat A B` silently declines to compare A and B when a config line differs
+
+**Observation.** benchstat groups results into one table per distinct
+*configuration*, where a configuration is every `key: value` line in the log
+(Go's benchmark format allows them anywhere, applying to the rows that follow).
+Two files that differ in one such key are therefore never compared. The output
+still contains both arms' numbers, in table form, one table per arm — so it
+*looks* like a comparison — but it contains no delta, no percentage and no
+p-value. The exit status is 0.
+
+Minimal repro. Two logs of the same benchmark, one 9.7% faster, differing only
+in a `keel-bench-clock-mhz` line:
+
+```
+$ cat r-base.txt
+goos: linux
+goarch: amd64
+pkg: x/bench
+keel-bench-clock-mhz: 2986-5164 (snapshot, not sustained)
+BenchmarkFoo 100 10.1 ns/op          (x6, 10.1 … 10.6)
+$ cat r-new.txt
+goos: linux
+goarch: amd64
+pkg: x/bench
+keel-bench-clock-mhz: 3001-5150 (snapshot, not sustained)
+BenchmarkFoo 100 9.1 ns/op           (x6, 9.1 … 9.6)
+
+$ go tool benchstat r-base.txt r-new.txt
+goos: linux
+goarch: amd64
+pkg: x/bench
+keel-bench-clock-mhz: 2986-5164 (snapshot, not sustained)
+    │ /tmp/bstest/r-base.txt │
+    │         sec/op         │
+Foo              10.35n ± 2%
+
+keel-bench-clock-mhz: 3001-5150 (snapshot, not sustained)
+    │ /tmp/bstest/r-new.txt │
+    │        sec/op         │
+Foo             9.350n ± 3%
+exit=0
+```
+
+The same two files with the volatile key ignored:
+
+```
+$ go tool benchstat -ignore=keel-bench-clock-mhz r-base.txt r-new.txt
+goos: linux
+goarch: amd64
+pkg: x/bench
+    │ /tmp/bstest/r-base.txt │       /tmp/bstest/r-new.txt       │
+    │         sec/op         │   sec/op     vs base              │
+Foo             10.350n ± 2%   9.350n ± 3%  -9.66% (p=0.002 n=6)
+exit=0
+```
+
+**Why.** Deliberate, and right for benchstat's usual job: if two runs were made
+under different conditions, averaging them into one comparison would be worse
+than declining to. `-ignore` exists precisely to say which keys are not
+conditions. The surprise is only that declining is *silent* — same exit status,
+similar-looking output, and the difference between "no significant change" and
+"never compared" is one absent column.
+
+**Consequence for keel.** This one is self-inflicted, which is the interesting
+part. keel prints a provenance preamble (`keel-bench-cpu`, `keel-bench-kern`,
+`keel-bench-peak-method`, …) so that no number ships without its denominator —
+DESIGN.md §7 rule 7. Those markers are `key: value` lines, so they are in
+benchstat's configuration namespace whether we intended that or not, and one of
+them, `keel-bench-clock-mhz`, is a snapshot of the CPU's current frequency
+range: it differs between any two runs on the same host by construction.
+
+The first run of `scripts/l1-bench.sh` therefore produced a per-host A/B of
+#47's loop reshaping in which no arm was ever compared to the other — 20
+benchmarks × 3 hosts × 2 builds of medians with not one delta among them. The
+numbers were all correct; the measurement was not the one the script claimed to
+make. Fixed in `scripts/bench.sh:bench_compare`, which ignores the volatile
+keys *and then checks that a `vs base` column actually appeared*, reporting
+which configuration keys forked the table when it did not. A comparison that did
+not happen now reads as a failed measurement rather than as a table.
+
+The general lesson for anything that prints machine-readable provenance into a
+benchmark log: those lines are not comments, and a tool downstream may treat
+them as the identity of the experiment.

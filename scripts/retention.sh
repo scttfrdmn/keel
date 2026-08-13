@@ -41,59 +41,41 @@
 # measuring the runtime's scheduler.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
-# shellcheck source=scripts/remote.sh
-source scripts/remote.sh
-# shellcheck source=scripts/bench.sh
-source scripts/bench.sh
-
-MODE="${1:-decompose}"
-case "$MODE" in
-  decompose|sweep) ;;
-  *) echo "usage: $0 [decompose|sweep]" >&2; exit 2 ;;
-esac
+# Everything below is a function definition and the last line of the file is
+# `main "$@"`. Bash reads a script incrementally as it executes it, so a script
+# that does its work at the top level can be corrupted by an edit that lands
+# mid-run: the parser resumes at a byte offset that now holds different text.
+# Defining everything before anything runs forces one whole-file parse before the
+# first host is touched, which makes the instrument immune instead of leaving
+# "never edit a running instrument" as a rule someone has to remember.
 
 info() { printf '        %s\n' "$1"; }
 warn() { printf '  \033[33mWARN\033[0m  %s\n' "$1"; }
 
-BINDIR="$(mktemp -d)"
-trap 'rm -rf "$BINDIR"' EXIT
-BIN="$BINDIR/block.test"
-LOG="$BINDIR/log"
-CSV="$BINDIR/csv"
-
-echo "== retention ($MODE) — issue #26. Not a gate: this certifies nothing. =="
-echo
-
-HOSTS="$(remote_hosts)"
-if [[ -z "$HOSTS" ]]; then
-  echo "no execution hosts configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)." >&2
-  echo "simd/archsimd is amd64-only (T1), so there is nothing to measure here." >&2
-  exit 2
-fi
-
-if ! remote_build_test ./internal/block/ "$BIN" >"$LOG" 2>&1; then
-  echo "cross-compile of the internal/block test binary failed:" >&2
-  sed 's/^/  /' "$LOG" >&2
-  exit 2
-fi
-echo "built linux/amd64 internal/block test binary (static)"
-
-if [[ "$MODE" == sweep ]]; then
-  KEEL_BENCH_COUNT="${KEEL_BENCH_COUNT:-5}"
-  # shellcheck disable=SC2034  # read by bench_expect in the sourced scripts/bench.sh
-  KEEL_BENCH_MIN_ROWS="$KEEL_BENCH_COUNT"
-fi
-mapfile -t BFLAGS < <(bench_flags)
-FILTER='BenchmarkNest'
-[[ "$MODE" == sweep ]] && FILTER='BenchmarkBlocking'
-
-echo "methodology: -count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME, GOMAXPROCS=1, benchstat medians"
-[[ "$MODE" == sweep ]] && echo "             EXPLORATORY: re-measure any nominated point at -count=10 before it becomes a default"
-echo
-
 # pct FRACTION — a fraction as a percentage, or a dash when it was not measured.
 pct() { [[ -n "$1" ]] && awk -v r="$1" 'BEGIN{printf "%.1f%%", r*100}' || printf -- '-'; }
+
+# rows_per_bench LOG — how many sample rows this run actually produced per
+# benchmark, counted out of the log.
+#
+# WHY THIS EXISTS. The methodology line used to print $KEEL_BENCH_COUNT, i.e. the
+# variable the run intended to use — and issue #49 was that variable being
+# silently overwritten: scripts/bench.sh is sourced first and defaults it to 10,
+# so this script's own `${KEEL_BENCH_COUNT:-5}` could never see either the
+# caller's setting or its own documented default, and the header printed a
+# methodology that was not the one that ran. A parameter read back out of the
+# measurement cannot be shadowed by whatever set it, so the header now prints
+# both: what was asked for, and what the log says arrived.
+rows_per_bench() {
+  awk '
+    /^Benchmark/ { n = $1; sub(/-[0-9]+$/, "", n); c[n]++ }
+    END {
+      for (k in c) { if (min == "" || c[k] < min) min = c[k]; if (c[k] > max) max = c[k]; nb++ }
+      if (nb == 0) { printf "no benchmark rows at all"; exit }
+      if (min == max) printf "%d rows x %d benchmarks", min, nb
+      else printf "%d-%d rows x %d benchmarks — uneven, so some did not finish", min, max, nb
+    }' "$1"
+}
 
 # decompose_host HOST CSV LOG — one host's table.
 #
@@ -183,44 +165,119 @@ decompose_host() {
 
 # sweep_host HOST CSV LOG — the KC/MC/NC grid, ranked, with the shipped point marked.
 sweep_host() {
-  local host="$1" csv="$2" log="$3" shipped
-  shipped="$(awk '/^[[:space:]]*KC = / {kc=$3} /^[[:space:]]*MC = / {mc=$3} /^[[:space:]]*NC = / {nc=$3} END{print "kc="kc"/mc="mc"/nc="nc}' internal/block/block.go)"
-  info "[$host] shipped point: $shipped (internal/block/block.go). NC>=n collapses to one point at n=2048."
+  local host="$1" csv="$2" log="$3" kc mc nc gridnc shipped mark
+  read -r kc mc nc < <(awk '
+    /^[[:space:]]*KC = / {kc=$3} /^[[:space:]]*MC = / {mc=$3} /^[[:space:]]*NC = / {nc=$3}
+    END{print kc, mc, nc}' internal/block/block.go)
+  shipped="kc=$kc/mc=$mc/nc=$nc"
+  # The row to mark is not the shipped triple's own name. The grid's largest NC is
+  # smaller than the shipped NC, so matching "nc=$nc" literally marked nothing at
+  # all — a marker that could never fire, which reads as "the shipped point is not
+  # on the grid" (second defect found while fixing #49). What is true, and all
+  # that is claimed here, is that the shipped KC/MC appear on the grid, and that
+  # at the grid's largest NC. Whether that row *is* the shipped configuration
+  # depends on n, which this script cannot see: NC clamps to n, so it is the same
+  # single block whenever the grid's largest NC is >= n, and a different blocking
+  # otherwise. Hence the label, which states the condition rather than assuming it.
+  gridnc="$(awk -F, '{ if (match($1, /nc=[0-9]+/)) { v = substr($1, RSTART+3, RLENGTH-3) + 0; if (v > m) m = v } } END { print m+0 }' "$csv")"
+  mark="kc=$kc/mc=$mc/nc=$gridnc"
+  info "[$host] shipped point: $shipped (internal/block/block.go). NC>=n collapses to one point at n=2048,"
+  info "        so the marked row is the shipped KC/MC at the grid's largest NC ($gridnc)."
   awk -F, '
     /^,/ { unit = $2; next }
     unit == "GFLOP/s" {
       name = $1; sub(/-[0-9]+$/, "", name); sub(/^BenchmarkBlocking\//, "", name)
       print $2, name
-    }' "$csv" | sort -rn | awk -v s="$shipped" '
-      { mark = (index($2, s) > 0) ? "  <- shipped" : ""
-        printf "        %2d. %8.1f GFLOP/s  %s%s\n", ++i, $1, $2, mark }'
+    }' "$csv" | sort -rn | awk -v s="$mark" '
+      { m = (index($2, s) > 0) ? "  <- shipped KC/MC" : ""
+        printf "        %2d. %8.1f GFLOP/s  %s%s\n", ++i, $1, $2, m }'
 }
 
-while read -r host; do
-  [[ -n "$host" ]] || continue
-  prov="$(remote_probe "$host" || true)"
-  if [[ -z "$prov" ]]; then
-    warn "[$host] unreachable, or /proc/cpuinfo unreadable — skipped, and its row is missing rather than estimated"
-    continue
-  fi
-  echo "-- $host --"
-  info "$prov"
-  if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BIN" "${BFLAGS[@]}" \
-       -test.bench="$FILTER" >"$LOG" 2>&1; then
-    warn "[$host] the benchmark run failed; nothing is reported for it"
-    sed 's/^/        /' "$LOG" | tail -20
-    continue
-  fi
-  # The plan markers first: they say which blocks the parts were measured over.
-  grep '^keel-nest-plan:' "$LOG" | sed 's/^/        /' || true
-  bench_csv "$LOG" >"$CSV" 2>"$BINDIR/bserr" || true
-  [[ -s "$BINDIR/bserr" ]] && sed 's/^/        benchstat: /' "$BINDIR/bserr"
-  if [[ "$MODE" == decompose ]]; then
-    decompose_host "$host" "$CSV" "$LOG"
-  else
-    sweep_host "$host" "$CSV" "$LOG"
-  fi
-  echo
-done <<<"$HOSTS"
+main() {
+  cd "$(dirname "$0")/.."
+  # Captured before scripts/bench.sh is sourced: sourcing it assigns
+  # KEEL_BENCH_COUNT its own default, after which the sweep's
+  # "${KEEL_BENCH_COUNT:-5}" can distinguish neither the caller's setting nor its
+  # own default from bench.sh's (issue #49).
+  local requested="${KEEL_BENCH_COUNT-}"
+  # shellcheck source=scripts/remote.sh
+  source scripts/remote.sh
+  # shellcheck source=scripts/bench.sh
+  source scripts/bench.sh
 
-echo "done. Numbers above are this host set at this commit; nothing here is a criterion."
+  local MODE="${1:-decompose}"
+  case "$MODE" in
+    decompose|sweep) ;;
+    *) echo "usage: $0 [decompose|sweep]" >&2; exit 2 ;;
+  esac
+
+  BINDIR="$(mktemp -d)"
+  trap 'rm -rf "$BINDIR"' EXIT
+  local BIN="$BINDIR/block.test" LOG="$BINDIR/log" CSV="$BINDIR/csv"
+
+  echo "== retention ($MODE) — issue #26. Not a gate: this certifies nothing. =="
+  echo
+
+  local HOSTS
+  HOSTS="$(remote_hosts)"
+  if [[ -z "$HOSTS" ]]; then
+    echo "no execution hosts configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)." >&2
+    echo "simd/archsimd is amd64-only (T1), so there is nothing to measure here." >&2
+    exit 2
+  fi
+
+  if ! remote_build_test ./internal/block/ "$BIN" >"$LOG" 2>&1; then
+    echo "cross-compile of the internal/block test binary failed:" >&2
+    sed 's/^/  /' "$LOG" >&2
+    exit 2
+  fi
+  echo "built linux/amd64 internal/block test binary (static)"
+
+  if [[ "$MODE" == sweep ]]; then
+    KEEL_BENCH_COUNT="${requested:-5}"
+    # shellcheck disable=SC2034  # read by bench_expect in the sourced scripts/bench.sh
+    KEEL_BENCH_MIN_ROWS="$KEEL_BENCH_COUNT"
+  fi
+  local BFLAGS FILTER='BenchmarkNest'
+  mapfile -t BFLAGS < <(bench_flags)
+  [[ "$MODE" == sweep ]] && FILTER='BenchmarkBlocking'
+
+  echo "methodology: -count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME, GOMAXPROCS=1, benchstat medians"
+  [[ "$MODE" == sweep ]] && echo "             EXPLORATORY: re-measure any nominated point at -count=10 before it becomes a default"
+  echo
+
+  local host prov
+  while read -r host; do
+    [[ -n "$host" ]] || continue
+    prov="$(remote_probe "$host" || true)"
+    if [[ -z "$prov" ]]; then
+      warn "[$host] unreachable, or /proc/cpuinfo unreadable — skipped, and its row is missing rather than estimated"
+      continue
+    fi
+    echo "-- $host --"
+    info "$prov"
+    if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BIN" "${BFLAGS[@]}" \
+         -test.bench="$FILTER" >"$LOG" 2>&1; then
+      warn "[$host] the benchmark run failed; nothing is reported for it"
+      sed 's/^/        /' "$LOG" | tail -20
+      continue
+    fi
+    # What arrived, not what was asked for: -count is a request, and the header
+    # above prints the request. This line is the log counting itself (#49).
+    info "samples this host produced: $(rows_per_bench "$LOG")"
+    # The plan markers next: they say which blocks the parts were measured over.
+    grep '^keel-nest-plan:' "$LOG" | sed 's/^/        /' || true
+    bench_csv "$LOG" >"$CSV" 2>"$BINDIR/bserr" || true
+    [[ -s "$BINDIR/bserr" ]] && sed 's/^/        benchstat: /' "$BINDIR/bserr"
+    if [[ "$MODE" == decompose ]]; then
+      decompose_host "$host" "$CSV" "$LOG"
+    else
+      sweep_host "$host" "$CSV" "$LOG"
+    fi
+    echo
+  done <<<"$HOSTS"
+
+  echo "done. Numbers above are this host set at this commit; nothing here is a criterion."
+}
+
+main "$@"

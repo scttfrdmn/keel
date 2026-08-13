@@ -52,6 +52,55 @@ bench_csv() {
   go tool benchstat -format=csv "$1"
 }
 
+# Configuration keys that describe the run rather than the build under test, and
+# so must not split a comparison. See bench_compare.
+KEEL_BENCH_IGNORE="${KEEL_BENCH_IGNORE:-keel-bench-clock-mhz,keel-bench-flops}"
+
+# bench_config FILE — the "key: value" configuration lines benchstat reads out of
+# a benchmark log, sorted. Go's benchmark format treats any such line as
+# configuration applying to the rows that follow it, wherever it appears.
+bench_config() { grep -E '^[a-zA-Z][a-zA-Z0-9_-]*: ' "$1" | sort -u; }
+
+# bench_compare BASE NEW — benchstat's two-file comparison, with the comparison
+# guaranteed to be present or the failure said out loud.
+#
+# WHY THIS EXISTS. benchstat groups results into one table per distinct
+# *configuration*, and a configuration is every "key: value" line in the log. Two
+# files that differ in one such key are therefore not compared at all: benchstat
+# prints two independent single-column tables, no deltas, no p-values — and exits
+# 0. scripts/l1-bench.sh's first run hit exactly this. Its arms differed only in
+# `keel-bench-clock-mhz`, which is a live snapshot of the CPU's clock range and so
+# differs between any two runs on the same host by construction, and the output
+# looked like a comparison (two tables of the same benchmarks, one per build)
+# while containing not one delta. This repo's own provenance preamble is what
+# broke it: those markers exist so no number ships without its denominator, and
+# they are in benchstat's configuration namespace whether we meant them to be or
+# not.
+#
+# So: the volatile keys are ignored explicitly, and then the result is checked for
+# the thing that was wanted. A comparison that did not happen is a failed
+# measurement, and it now reads as one instead of as a table.
+bench_compare() {
+  local base="$1" new="$2" out differ
+  out="$(go tool benchstat -ignore="$KEEL_BENCH_IGNORE" "$base" "$new" 2>&1)" || true
+  printf '%s\n' "$out"
+  grep -q 'vs base' <<<"$out" && return 0
+  # The ignored keys are dropped from this list: they differ in most runs and did
+  # not cause the fork, so naming them would bury whatever did.
+  differ="$(diff <(bench_config "$base") <(bench_config "$new") |
+    sed -n 's/^[<>] //p' | sed 's/:.*/: <differs>/' | sort -u |
+    grep -Ev "^(${KEEL_BENCH_IGNORE//,/|}):" || true)"
+  printf 'NOT COMPARED: benchstat produced no "vs base" column, so the two arms above\n'
+  printf 'are independent tables and nothing here is a delta. '
+  if [[ -n "$differ" ]]; then
+    printf 'Configuration keys that\ndiffer between the two logs (each one forks the table):\n'
+    printf '%s\n' "$differ" | sed 's/^/  /'
+  else
+    printf 'The two logs configure\nbenchstat identically, so the cause is not a forked table: look for an arm with\nno benchmark rows in it.\n'
+  fi
+  return 1
+}
+
 # bench_stat NAME CSV [UNIT] — print "median ci_fraction" for one benchmark.
 #
 # UNIT defaults to sec/op. Prints nothing if the benchmark is absent under that

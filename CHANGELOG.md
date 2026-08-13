@@ -746,6 +746,42 @@ While the major version is 0, minor versions may contain breaking changes.
   make the two arms differ by whatever else happened to be dirty.
 
 ### Fixed
+- **`benchstat` was silently declining to compare the two arms of every A/B run**
+  (#50, T20). It groups results into one table per distinct *configuration*, where a
+  configuration is every `key: value` line in the log — and keel's provenance
+  preamble, which exists so that no number ships without its denominator, is in that
+  namespace. One of its markers, `keel-bench-clock-mhz`, is a live snapshot of the
+  CPU's frequency range and so differs between any two runs on one host by
+  construction. Two files that differ in one config key are printed as two
+  independent one-column tables: no delta, no percentage, no p-value, exit status 0.
+  The first run of `scripts/l1-bench.sh` produced three hosts × two builds × 20
+  benchmarks of correct medians and not one comparison among them. `bench_compare`
+  in `scripts/bench.sh` now ignores the keys that describe the run rather than the
+  build (`$KEEL_BENCH_IGNORE`) **and then checks that a `vs base` column actually
+  appeared**, printing `NOT COMPARED` plus the offending keys when it did not. No
+  gate verdict was affected: gates aggregate a single log, where a forked table
+  cannot lose a comparison.
+- **`scripts/retention.sh sweep` ran at `-count=10` while its header printed the
+  `-count=5` it documents** (#49). `scripts/bench.sh` is sourced first and defaults
+  `KEEL_BENCH_COUNT` to 10, so the sweep's own `${KEEL_BENCH_COUNT:-5}` could see
+  neither the caller's setting nor its own default. The caller's value is now
+  captured *before* sourcing, and the header prints two separate things: the count
+  that was requested, and — per host, counted out of the log itself — the number of
+  sample rows that actually arrived. A parameter read back out of the measurement
+  cannot be shadowed by whatever set it. (The affected sweep is unharmed: 10 is the
+  stronger discipline, so the error was in the safe direction, and its numbers stand
+  as the exploratory numbers they were labelled.)
+- **The sweep's `<- shipped` marker could never fire**, found while fixing #49: it
+  matched the shipped triple's literal name, whose `nc=4096` is larger than any NC on
+  the grid, so no row was ever marked — which reads as "the shipped point is not on
+  the grid". It now marks the shipped KC/MC at the grid's largest NC, read back from
+  the CSV, and the label says exactly that rather than implying more.
+- **`scripts/retention.sh` now defines everything in functions and ends with
+  `main "$@"`** (#51, the convention; the remaining scripts are tracked there). Bash
+  reads a script incrementally as it executes it, so editing one mid-run can corrupt
+  the parse position of the running copy — a hazard that had become a rule to
+  remember ("never edit a running instrument"). Forcing a whole-file parse before any
+  work begins makes the instrument immune instead.
 - **`spill-audit` could not see a bounds check whose panic block was aligned**, and
   `gate-p2.sh` turns that count into a passing criterion — so the instrument
   certifying "0 surviving bounds checks in the steady-state K-loop" had a false-clean
