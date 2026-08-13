@@ -311,9 +311,48 @@ feed_host() {
       "count is ceil(k/KC)*m, which scales like the call count, and that constant is" \
       "the term separating the sweep's slope from the decomposition's per-call cost."
     feed_fit "$rows" 'pack      ' 7 6
+    feed_rest "$rows" 'rest      '
   done < <(awk '/^BenchmarkFeed\// {
       n = $1; sub(/-[0-9]+$/, "", n); sub(/^Benchmark/, "", n); sub(/\/kc=.*/, "", n); print n
     }' "$log" | sort -u)
+}
+
+# feed_rest ROWS LABEL — the residual column, and what its SIGN means.
+#
+# rest = no-pack − loops − (cold-c − loops) − (cold-panels − loops) is the only column
+# whose sign carries information beyond its size. It holds the nest's remaining real
+# work — beta pass, fringe branch, mask checks — which is positive, plus the
+# INTERACTION between C traffic and panel feed, which has either sign:
+#
+#	rest ≈ 0 or small positive   the two steps are additive, so each isolated step is
+#	                             a fair estimate of its own term
+#	rest large NEGATIVE          sub-additive: the two traffic streams overlap in
+#	                             time, so measuring them one at a time overstates
+#	                             both, and the isolated steps are upper bounds
+#	rest large POSITIVE          super-additive: together they cost more than apart,
+#	                             e.g. contending for the same fill buffers, and the
+#	                             isolated steps are lower bounds
+#
+# It cannot go through feed_curve because it is not one column minus another. It is
+# printed last because it says how far the three above it can be trusted.
+feed_rest() {
+  local rows="$1" label="$2"
+  awk -v label="$label" '
+    { n++
+      v = $6 - $4 - $5 + $3
+      s = s sprintf("%s%+.2f%s", (n > 1 ? " -> " : ""), v,
+                    ($9 == "inf" || (v < 0 ? -v : v) < $9) ? "*" : "")
+      if (v < -worstneg) worstneg = -v
+      if (v > worstpos) worstpos = v }
+    END {
+      printf "          %s  %s\n", label, s
+      if (worstneg > worstpos)
+        printf "          %*s  SUB-ADDITIVE by up to %.2f ns: C traffic and panel feed overlap in\n          %*s  time, so each isolated step above is an UPPER BOUND on its term.\n", \
+               length(label), "", worstneg, length(label), ""
+      else if (worstpos > 0)
+        printf "          %*s  up to %+.2f ns of the nest that no isolated step accounts for: the\n          %*s  beta pass, the fringe branch, the mask checks, and any super-additive\n          %*s  interaction, which would make the steps above LOWER bounds.\n", \
+               length(label), "", worstpos, length(label), "", length(label), ""
+    }' "$rows"
 }
 
 # feed_fit ROWS LABEL MINUEND SUBTRAHEND — a least-squares line through one step

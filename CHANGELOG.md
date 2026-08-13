@@ -776,6 +776,20 @@ While the major version is 0, minor versions may contain breaking changes.
   make the two arms differ by whatever else happened to be dirty.
 
 ### Fixed
+- **The feed decomposition's residual column reached −23.40 ns/call and the
+  instrument said nothing about it.** `rest` is the only column whose *sign* carries
+  information: it holds the nest's remaining real work (beta pass, fringe branch,
+  mask checks), which is positive, plus the interaction between C traffic and panel
+  feed, which is not sign-definite. On janus at 2×32 — the shipped shape, and the
+  memory-bound one — it runs `+0.20 → −7.40 → −23.40 → −21.50`, i.e. the two
+  streams overlap in time, so isolating each one overstates it and the C-traffic and
+  panel-feed columns are *upper bounds* there, not estimates. At 4×32 on the same
+  host it runs `+4.35 → +6.10 → +10.00 → +14.50`, which is unaccounted nest work
+  and would make those columns lower bounds. Either reading changes what the two
+  columns above mean, so `feed_rest` now names the dominant sign, its size, and
+  which direction it biases the steps — printed last, because it says how far the
+  three columns above it can be trusted. A reader should not have to derive the
+  sub-additivity of a decomposition from a column the decomposition printed.
 - **Three of `BenchmarkFeed`'s arms describe their panels as L1-resident, and above
   `kc=128` they are not.** One kernel call needs an MR×kk A panel and an NR×kk B
   panel, so the reused pair is `(MR+NR)·kk·4` bytes: at NR=32 that is 17 KB at
