@@ -196,6 +196,17 @@ func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthC
 				// would quiet a signalling NaN where copy does not — the
 				// asymmetry TestBranchesAgree documents stays exactly as
 				// documented rather than moving to a new place.
+				//
+				// staticcheck's S1001 says to write copy() here, and copy() is
+				// what the branch above this one does. The suppression is the
+				// whole point of the change rather than a wart on it: at
+				// blk < memmoveFloor, copy() is a runtime.memmove call per 8 or
+				// 16 bytes, and replacing it with this loop measured +42.1%
+				// (p=0.000) on the A-side pack at MR=2. This is the repo's only
+				// lint suppression; if a future toolchain inlines short copies,
+				// delete the loop, the constant and this comment together and
+				// re-measure.
+				//nolint:staticcheck // S1001: copy() is a memmove call here; see memmoveFloor
 				for x, v := range row {
 					out[x] = v
 				}

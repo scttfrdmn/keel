@@ -327,14 +327,17 @@ func TestPanelsLenIsExactlyEnough(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			a := seq(s.count+2, s.kc+2, s.kc+2)
 			need := ALen(s.blk, s.count, s.kc)
-			// Exact length and exact capacity: a re-slice past the end faults too.
-			exact := make([]float32, need, need)
+			// make's capacity is its length, so these have no slack: a re-slice
+			// past the end faults rather than reaching into spare capacity, which
+			// is the property this test needs and the reason it does not take a
+			// subslice of something larger.
+			exact := make([]float32, need)
 			APanels(exact, s.blk, 1, a, s.kc+2, false, 0, s.count, 0, s.kc)
 
 			if need == 0 {
 				return // nothing to be one float short of
 			}
-			short := make([]float32, need-1, need-1)
+			short := make([]float32, need-1)
 			func() {
 				defer func() {
 					r := recover()
