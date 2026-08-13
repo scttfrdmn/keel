@@ -1560,7 +1560,10 @@ arm "works" only because its definition was already outside the loop in the sour
 never needed lifting. `hoisted`/`SumLocal` is not successful LICM; it is LICM not being
 required.
 
-**Method note, because this is the second wrong isolation in one note.** The two arms of
+**Method note, because this is the second wrong isolation in one note** — and the second
+structurally-uninformative check in one campaign, so it is named in DESIGN.md §5.7 (*"a
+check that could not have come out otherwise is not evidence"*) alongside #48's tautology
+trap. The two arms of
 the reduction differed in *two* ways at once — where the definition sits relative to the
 loop, and whether it arrives through a callee — and the write-up attributed the effect to
 the salient difference without varying it alone. The three variables that were dutifully

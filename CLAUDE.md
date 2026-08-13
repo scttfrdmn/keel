@@ -52,6 +52,20 @@ and current using `gh`:
    nothing in the next milestone until the commit is pushed.
 5. Toolchain surprises additionally get a row in `docs/toolchain-notes.md`
    with a minimal repro before any workaround lands.
+6. **Search the upstream tracker before any upstream filing, always.** Before
+   opening anything on `golang/go` or another external tracker, search it —
+   `gh api '/search/issues?q=repo:golang/go+<terms>'`, plus label and keyword
+   variants — and read the near matches including their comments and any
+   linked CL. This is the `--check`-before-a-gate rule applied to the tracker:
+   cheap, and it has already paid once. T18 looked like a new
+   register-allocation finding and was in fact `golang/go#79984`, open
+   beforehand, with keel's exact shape already reported on it and a fix CL in
+   flight — so the filing would have been a duplicate *carrying a wrong causal
+   story*, which is worse than no filing. When the bug is already there the
+   deliverable is a `standing-task` issue keyed to the existing issue and its
+   fix CL, not a new report. Comment upstream only with a fact the issue
+   lacks: a measured delta on a real kernel qualifies, a second repro of a
+   known miss does not.
 
 ## Code rules (recap; full text in CONTRIBUTING.md and DESIGN.md)
 - All simd imports in `internal/vec`; scalar twin + differential test before

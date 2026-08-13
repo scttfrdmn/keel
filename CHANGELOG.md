@@ -8,7 +8,37 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- `scripts/l1-bench.sh` **exited 1 on a fully successful run and leaked a git worktree and
+  a temp dir on every invocation** (#55). `WORKTREE` was `local` to the function while the
+  single-quoted `EXIT` trap expanded it at exit, in global scope, where the local no longer
+  existed — so under `set -u` the trap died on its *first* command and `rm -rf "$BINDIR"`
+  never ran, defeating the intent stated in the comment directly above it. Found by the #47
+  A/B: every number printed on all three hosts, then `WORKTREE: unbound variable` and exit
+  1. Same species as #33 and DESIGN.md §5.6 — a successful run that reports failure
+  corrupts the record exactly as much as the reverse, because any wrapper reading the exit
+  status sees a failed measurement next to a complete log.
+
 ### Added
+- **DESIGN.md §5.7 — "a check that could not have come out otherwise is not evidence."** Two
+  confirmations in this campaign were structural rather than evidential, and the pair is now
+  a named trap with a standing order: #48's *tautology trap* (a "second, independent" check
+  that was `4.00 ÷ (per-call rise)`, arithmetic on the quantity it claimed to corroborate)
+  and T18's *unvaried control* (two arms differing in two ways at once, effect attributed to
+  the salient one, three irrelevant variables held while the decisive one was never varied
+  alone). The order is two questions: name the result that would have falsified each
+  confirmation, and name the single variable that differs between each isolation's arms. Plus
+  a corollary for compiler forensics — blame flows upstream through the pass pipeline, so a
+  pass whose fingerprints are on the assembly may be correctly processing the output of one
+  that did nothing.
+- **CLAUDE.md standing order: search the upstream tracker before any upstream filing.** The
+  `--check`-before-a-gate rule applied to the tracker, promoted from instinct after it paid
+  once: T18 looked like a new register-allocation finding and was already
+  [golang/go#79984](https://github.com/golang/go/issues/79984) with keel's exact shape
+  reported on it and a fix CL in flight, so filing would have produced a duplicate carrying
+  a wrong causal story. When the bug already exists the deliverable is a `standing-task`
+  issue keyed to it (#54), and an upstream comment needs a fact the issue lacks — a measured
+  delta on a real kernel qualifies, a second repro does not.
 - `BenchmarkFeed` now documents a **measured residency caveat on its own denominator**
   (#48). `kernel-calls` reuses one hot panel pair to remove memory effects, and at one KC
   per host that backfires: a pair that *just* overflows L1d churns on capacity misses

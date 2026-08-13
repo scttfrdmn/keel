@@ -90,10 +90,15 @@ main() {
   FILTER="${KEEL_L1_FILTER:-BenchmarkL1S}"
 
   BINDIR="$(mktemp -d)"
-  local WORKTREE="$BINDIR/base"
+  # Deliberately not `local`: the EXIT trap below runs in global scope, after this
+  # function has returned, so a local would be unbound there — and under `set -u` that
+  # aborts the trap on its first command, leaking both the worktree and BINDIR while
+  # exiting 1 on a successful run (#55).
+  WORKTREE="$BINDIR/base"
   # The worktree is removed as well as deleted: leaving it registered would make
-  # `git worktree list` grow one stale entry per run of this script.
-  trap 'git worktree remove --force "$WORKTREE" >/dev/null 2>&1 || true; rm -rf "$BINDIR"' EXIT
+  # `git worktree list` grow one stale entry per run of this script. Both paths are
+  # expanded here, at definition time, rather than left to the trap's own scope.
+  trap "git worktree remove --force '$WORKTREE' >/dev/null 2>&1 || true; rm -rf '$BINDIR'" EXIT
 
   BASE_BIN="$BINDIR/base.test"
   NEW_BIN="$BINDIR/new.test"
