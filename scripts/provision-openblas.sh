@@ -42,40 +42,18 @@
 #                     from go.dev/dl/?mode=json -- see verify_go_tarball for exactly
 #                     what that does and does not prove.
 set -euo pipefail
-cd "$(dirname "$0")/.."
-# shellcheck source=scripts/remote.sh
-source scripts/remote.sh
 
-GO_VERSION="${KEEL_GO_VERSION:-go1.26.5}"
-GO_MIN_MINOR=26            # 1.26 is the first release with the simd experiment
-GO_TARBALL="$GO_VERSION.linux-amd64.tar.gz"
-SRC_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
-
-# Interactive options: no -n (sudo needs stdin) and -t (sudo wants a tty).
-SSH_TTY_OPTS=(-t -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
-
-CHECK_ONLY=0
-ASSUME_YES=0
-ARGS=()
-for a in "$@"; do
-  case "$a" in
-    --check) CHECK_ONLY=1 ;;
-    --yes|-y) ASSUME_YES=1 ;;
-    -h|--help) sed -n '5,50p' "$0"; exit 0 ;;
-    -*) echo "unknown option: $a" >&2; exit 2 ;;
-    *) ARGS+=("$a") ;;
-  esac
-done
-
-if [[ "${#ARGS[@]}" -gt 0 ]]; then
-  HOSTS="$(printf '%s\n' "${ARGS[@]}")"
-else
-  HOSTS="$(remote_hosts)"
-fi
-if [[ -z "$HOSTS" ]]; then
-  echo "no hosts: name them as arguments, in .keel-hosts, or in \$KEEL_REMOTE_HOSTS" >&2
-  exit 2
-fi
+# Everything below is a function definition and the last line of the file is
+# `main "$@"`. Bash reads a script incrementally as it executes it, so a script
+# that does its work at the top level can be corrupted by an edit that lands
+# mid-run: the parser resumes at a byte offset that now holds different text. This
+# script changes somebody's machines over an interactive sudo, so a run of it
+# resuming into different text is the worst version of that hazard in this repo.
+# Defining everything before anything runs forces one whole-file parse before the
+# first host is touched (#51).
+#
+# The configuration variables are assigned in main without `local`, so the install
+# and verify helpers see them however they are reached.
 
 say()  { printf '\033[1m==\033[0m %s\n' "$1"; }
 note() { printf '   %s\n' "$1"; }
@@ -327,82 +305,126 @@ verify() {
   say "$host: ready"
 }
 
-RC=0
-# The host list is read on fd 3, leaving stdin as the terminal (issue #28). Two things
+main() {
+  cd "$(dirname "$0")/.."
+  # shellcheck source=scripts/remote.sh
+  source scripts/remote.sh
+
+  GO_VERSION="${KEEL_GO_VERSION:-go1.26.5}"
+  GO_MIN_MINOR=26            # 1.26 is the first release with the simd experiment
+  GO_TARBALL="$GO_VERSION.linux-amd64.tar.gz"
+  SRC_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
+
+  # Interactive options: no -n (sudo needs stdin) and -t (sudo wants a tty).
+  SSH_TTY_OPTS=(-t -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
+
+  CHECK_ONLY=0
+  ASSUME_YES=0
+  local a p distro ver atver lib gov HOSTS host
+  local -a ARGS=()
+  for a in "$@"; do
+    case "$a" in
+      --check) CHECK_ONLY=1 ;;
+      --yes|-y) ASSUME_YES=1 ;;
+      # The usage block ends at the `set -euo pipefail` line, and the wrapper
+      # comment below it is about this file's shape rather than its interface, so
+      # --help stops before it. It used to print to line 50, which reached a few
+      # lines into the code.
+      -h|--help) sed -n '5,43p' "$0"; exit 0 ;;
+      -*) echo "unknown option: $a" >&2; exit 2 ;;
+      *) ARGS+=("$a") ;;
+    esac
+  done
+
+  if [[ "${#ARGS[@]}" -gt 0 ]]; then
+    HOSTS="$(printf '%s\n' "${ARGS[@]}")"
+  else
+    HOSTS="$(remote_hosts)"
+  fi
+  if [[ -z "$HOSTS" ]]; then
+    echo "no hosts: name them as arguments, in .keel-hosts, or in \$KEEL_REMOTE_HOSTS" >&2
+    exit 2
+  fi
+
+  RC=0
+  # The host list is read on fd 3, leaving stdin as the terminal (issue #28). Two things
 # in this loop need stdin: confirm(), which asks the operator, and the `ssh -t` calls
 # in install_openblas/install_go/link_go, which need a tty for sudo to prompt on. With
 # `done <<<"$HOSTS"` both of those were reading the host list instead.
-while read -r -u 3 host; do
-  [[ -n "$host" ]] || continue
-  say "$host"
-  p="$(probe "$host")"
-  if [[ -z "$p" ]]; then
-    bad "cannot reach $host over ssh with BatchMode=yes (the gate uses the same)"
-    RC=1
-    continue
-  fi
-  distro="$(fieldof distro "$p")"; ver="$(fieldof go "$p")"
-  atver="$(fieldof goat "$p")"
-  lib="$(fieldof lib "$p")";       gov="$(fieldof governor "$p")"
-  note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib governor=$gov"
-  # A non-performance governor is now a failure, not a note (ruling with issue #31).
-  # It used to say "§5.4 rule 5 needs at least one gate host on performance", which
-  # was true of the old gate and let antares sit on `powersave` while contributing
-  # numbers: its first OpenBLAS reading was 245.0 GFLOP/s against a 296-297 steady
-  # state. gate-p3.sh now fails any host that is not on performance, so a host in
-  # that state is not provisioned-and-ready, it is provisioned-and-unusable — and
-  # this script exists to find that out before a session is spent on it.
-  #
-  # Still reported rather than changed: a power policy is a standing property of
-  # somebody's machine, not a thing a provisioning script should quietly flip and
-  # leave flipped.
-  GOV_OK=1
-  if [[ "$gov" != performance ]]; then
-    GOV_OK=0
-    bad "governor is $gov, and the gate fails any host not on performance (DESIGN.md §5.4 rule 5)"
-    note "this script does not change a machine's power policy. To set it:"
-    note "  sudo cpupower frequency-set -g performance"
-    note "  or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
-  fi
+  while read -r -u 3 host; do
+    [[ -n "$host" ]] || continue
+    say "$host"
+    p="$(probe "$host")"
+    if [[ -z "$p" ]]; then
+      bad "cannot reach $host over ssh with BatchMode=yes (the gate uses the same)"
+      RC=1
+      continue
+    fi
+    distro="$(fieldof distro "$p")"; ver="$(fieldof go "$p")"
+    atver="$(fieldof goat "$p")"
+    lib="$(fieldof lib "$p")";       gov="$(fieldof governor "$p")"
+    note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib governor=$gov"
+    # A non-performance governor is now a failure, not a note (ruling with issue #31).
+    # It used to say "§5.4 rule 5 needs at least one gate host on performance", which
+    # was true of the old gate and let antares sit on `powersave` while contributing
+    # numbers: its first OpenBLAS reading was 245.0 GFLOP/s against a 296-297 steady
+    # state. gate-p3.sh now fails any host that is not on performance, so a host in
+    # that state is not provisioned-and-ready, it is provisioned-and-unusable — and
+    # this script exists to find that out before a session is spent on it.
+    #
+    # Still reported rather than changed: a power policy is a standing property of
+    # somebody's machine, not a thing a provisioning script should quietly flip and
+    # leave flipped.
+    GOV_OK=1
+    if [[ "$gov" != performance ]]; then
+      GOV_OK=0
+      bad "governor is $gov, and the gate fails any host not on performance (DESIGN.md §5.4 rule 5)"
+      note "this script does not change a machine's power policy. To set it:"
+      note "  sudo cpupower frequency-set -g performance"
+      note "  or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+    fi
 
-  if [[ "$lib" == none ]]; then
-    if [[ "$CHECK_ONLY" -eq 1 ]]; then
-      bad "no libopenblas.so (re-run without --check to install it)"
-      RC=1; continue
+    if [[ "$lib" == none ]]; then
+      if [[ "$CHECK_ONLY" -eq 1 ]]; then
+        bad "no libopenblas.so (re-run without --check to install it)"
+        RC=1; continue
+      fi
+      install_openblas "$host" "$distro" || { RC=1; continue; }
     fi
-    install_openblas "$host" "$distro" || { RC=1; continue; }
-  fi
-  if [[ "$ver" == none ]] || ! go_new_enough "$ver"; then
-    if [[ "$CHECK_ONLY" -eq 1 ]]; then
-      bad "go on the ssh PATH is $ver, and the harness needs $GO_VERSION or newer (re-run without --check)"
-      [[ "$atver" != none ]] && go_new_enough "$atver" &&
-        bad "note: /usr/local/go is already $atver; it only needs linking onto the PATH (#27)"
-      RC=1; continue
+    if [[ "$ver" == none ]] || ! go_new_enough "$ver"; then
+      if [[ "$CHECK_ONLY" -eq 1 ]]; then
+        bad "go on the ssh PATH is $ver, and the harness needs $GO_VERSION or newer (re-run without --check)"
+        [[ "$atver" != none ]] && go_new_enough "$atver" &&
+          bad "note: /usr/local/go is already $atver; it only needs linking onto the PATH (#27)"
+        RC=1; continue
+      fi
+      # Two different repairs for two different states (#27): link what is there if it
+      # is new enough, install only when there is nothing usable to link.
+      if [[ "$atver" != none ]] && go_new_enough "$atver"; then
+        link_go "$host" "$atver" || { RC=1; continue; }
+      else
+        install_go "$host" "$atver" || { RC=1; continue; }
+      fi
     fi
-    # Two different repairs for two different states (#27): link what is there if it
-    # is new enough, install only when there is nothing usable to link.
-    if [[ "$atver" != none ]] && go_new_enough "$atver"; then
-      link_go "$host" "$atver" || { RC=1; continue; }
-    else
-      install_go "$host" "$atver" || { RC=1; continue; }
+    verify "$host" || RC=1
+    # After verify(), so that a host whose library and toolchain are fine but whose
+    # governor is wrong ends on the reason it still cannot be measured, rather than on
+    # "ready". The installs above are not skipped for it: the package work is valid and
+    # worth keeping, and re-running once the governor is set should have nothing left
+    # to do but re-verify.
+    if [[ "$GOV_OK" -eq 0 ]]; then
+      bad "$host is provisioned but not measurable: governor=$gov, not performance"
+      RC=1
     fi
-  fi
-  verify "$host" || RC=1
-  # After verify(), so that a host whose library and toolchain are fine but whose
-  # governor is wrong ends on the reason it still cannot be measured, rather than on
-  # "ready". The installs above are not skipped for it: the package work is valid and
-  # worth keeping, and re-running once the governor is set should have nothing left
-  # to do but re-verify.
-  if [[ "$GOV_OK" -eq 0 ]]; then
-    bad "$host is provisioned but not measurable: governor=$gov, not performance"
-    RC=1
-  fi
-done 3<<<"$HOSTS"
+  done 3<<<"$HOSTS"
 
-echo
-if [[ "$RC" -eq 0 ]]; then
-  echo "all hosts have a same-host OpenBLAS reference the gate can use"
-else
-  echo "some hosts are not ready; scripts/gate-p3.sh will fail those hosts by name" >&2
-fi
-exit "$RC"
+  echo
+  if [[ "$RC" -eq 0 ]]; then
+    echo "all hosts have a same-host OpenBLAS reference the gate can use"
+  else
+    echo "some hosts are not ready; scripts/gate-p3.sh will fail those hosts by name" >&2
+  fi
+  exit "$RC"
+}
+
+main "$@"

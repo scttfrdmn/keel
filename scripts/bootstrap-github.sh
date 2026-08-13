@@ -6,55 +6,28 @@
 # Usage: scripts/bootstrap-github.sh [--public]
 set -euo pipefail
 
-OWNER="scttfrdmn"
-REPO="keel"
-VISIBILITY="--private"
-[[ "${1:-}" == "--public" ]] && VISIBILITY="--public"
+# Everything below is a function definition and the last line of the file is
+# `main "$@"`. Bash reads a script incrementally as it executes it, so a script
+# that does its work at the top level can be corrupted by an edit that lands
+# mid-run: the parser resumes at a byte offset that now holds different text.
+# Defining everything before anything runs forces one whole-file parse before the
+# first API call, which makes the script immune instead of leaving "never edit a
+# running instrument" as a rule someone has to remember (#51). This one is fast
+# rather than long-running, so the conversion is for the convention's sake: it is
+# uniform across the repo's scripts or it is a rule with exceptions to recall.
+#
+# OWNER/REPO/VISIBILITY are assigned in main without `local`, so the four helpers
+# see them however they are reached.
 
-echo "==> repo"
-if ! gh repo view "$OWNER/$REPO" >/dev/null 2>&1; then
-  gh repo create "$OWNER/$REPO" $VISIBILITY \
-    --description "Pure-Go float32 BLAS subset on GOEXPERIMENT=simd" \
-    --source . --push
-else
-  echo "    exists; ensuring remote + push"
-  git remote get-url origin >/dev/null 2>&1 || git remote add origin "https://github.com/$OWNER/$REPO.git"
-  git push -u origin HEAD
-fi
-
-echo "==> labels"
 label() { gh label create "$1" --color "$2" --description "$3" -R "$OWNER/$REPO" --force; }
-label "phase:P0" "0e8a16" "Toolchain probe & shim"
-label "phase:P1" "0e8a16" "Level 1 + test harness"
-label "phase:P2" "b60205" "Microkernel + spill audit (go/no-go)"
-label "phase:P3" "0e8a16" "Packing + blocking -> SGEMM"
-label "phase:P4" "0e8a16" "Level 2 + derived Level 3"
-label "phase:P5" "0e8a16" "Parallelism, dispatch, polish"
-label "gate" "5319e7" "Gate criteria / gate script work"
-label "kind:shim" "1d76db" "internal/vec — the simd shim"
-label "kind:kernel" "1d76db" "Microkernels"
-label "kind:infra" "c5def5" "Build, CI, tooling, project plumbing"
-label "toolchain-report" "fbca04" "GOEXPERIMENT=simd field note; feeds docs/toolchain-notes.md"
-label "upstream" "fbca04" "Candidate golang/go issue"
-label "perf" "d93f0b" "Performance regression or target"
-label "correctness" "d93f0b" "Numerics / oracle mismatch"
-label "blocked" "000000" "Needs a human decision to proceed"
 
-echo "==> milestones"
 ms() {
   gh api -X POST "repos/$OWNER/$REPO/milestones" -f title="$1" -f description="$2" >/dev/null 2>&1 \
     || echo "    milestone '$1' exists"
 }
-ms "P0 — Toolchain probe & shim"        "Gate: shim differential tests green on all backends; FMA lowers to VFMADD231PS. DESIGN.md §4/P0."
-ms "P1 — Level 1 + harness"             "Gate: L1 green vs oracle incl. edge shapes; Sdot >=4x scalar at n=4096. DESIGN.md §4/P1."
-ms "P2 — Microkernel (go/no-go)"        "Gate: 0 accumulator spills in K-loop AND raw kernel >=55% of theoretical peak. On fail: spill-report + STOP. DESIGN.md §4/P2."
-ms "P3 — SGEMM"                         "Gate: Sgemm matches oracle across size sweep; single-thread >=60% OpenBLAS at 2048^3. DESIGN.md §4/P3."
-ms "P4 — L2 + derived L3"               "Gate: sgemv/sger/syrk/symm/trsm green incl. full flag lattice; Ssyrk >=85% of Sgemm GFLOPS. DESIGN.md §4/P4."
-ms "P5 — Parallel + polish"             "Gate: >=6x at 8 cores on 4096^3; race clean; scalar-only stock-toolchain build green; vet/lint clean. DESIGN.md §4/P5."
 
 mnum() { gh api "repos/$OWNER/$REPO/milestones" --jq ".[] | select(.title|startswith(\"$1\")) | .number"; }
 
-echo "==> umbrella issues"
 issue() { # title, milestone-prefix, labels, body
   local t="$1" mp="$2" l="$3" b="$4"
   if gh issue list -R "$OWNER/$REPO" --search "in:title \"$t\"" --json title --jq '.[].title' | grep -qF "$t"; then
@@ -65,7 +38,50 @@ issue() { # title, milestone-prefix, labels, body
   echo "    created '$t'"
 }
 
-issue "P0 umbrella: toolchain probe & the shim" "P0" "phase:P0 kind:shim gate" "$(cat <<'BODY'
+main() {
+  OWNER="scttfrdmn"
+  REPO="keel"
+  VISIBILITY="--private"
+  [[ "${1:-}" == "--public" ]] && VISIBILITY="--public"
+
+  echo "==> repo"
+  if ! gh repo view "$OWNER/$REPO" >/dev/null 2>&1; then
+    gh repo create "$OWNER/$REPO" $VISIBILITY \
+      --description "Pure-Go float32 BLAS subset on GOEXPERIMENT=simd" \
+      --source . --push
+  else
+    echo "    exists; ensuring remote + push"
+    git remote get-url origin >/dev/null 2>&1 || git remote add origin "https://github.com/$OWNER/$REPO.git"
+    git push -u origin HEAD
+  fi
+
+  echo "==> labels"
+  label "phase:P0" "0e8a16" "Toolchain probe & shim"
+  label "phase:P1" "0e8a16" "Level 1 + test harness"
+  label "phase:P2" "b60205" "Microkernel + spill audit (go/no-go)"
+  label "phase:P3" "0e8a16" "Packing + blocking -> SGEMM"
+  label "phase:P4" "0e8a16" "Level 2 + derived Level 3"
+  label "phase:P5" "0e8a16" "Parallelism, dispatch, polish"
+  label "gate" "5319e7" "Gate criteria / gate script work"
+  label "kind:shim" "1d76db" "internal/vec — the simd shim"
+  label "kind:kernel" "1d76db" "Microkernels"
+  label "kind:infra" "c5def5" "Build, CI, tooling, project plumbing"
+  label "toolchain-report" "fbca04" "GOEXPERIMENT=simd field note; feeds docs/toolchain-notes.md"
+  label "upstream" "fbca04" "Candidate golang/go issue"
+  label "perf" "d93f0b" "Performance regression or target"
+  label "correctness" "d93f0b" "Numerics / oracle mismatch"
+  label "blocked" "000000" "Needs a human decision to proceed"
+
+  echo "==> milestones"
+  ms "P0 — Toolchain probe & shim"        "Gate: shim differential tests green on all backends; FMA lowers to VFMADD231PS. DESIGN.md §4/P0."
+  ms "P1 — Level 1 + harness"             "Gate: L1 green vs oracle incl. edge shapes; Sdot >=4x scalar at n=4096. DESIGN.md §4/P1."
+  ms "P2 — Microkernel (go/no-go)"        "Gate: 0 accumulator spills in K-loop AND raw kernel >=55% of theoretical peak. On fail: spill-report + STOP. DESIGN.md §4/P2."
+  ms "P3 — SGEMM"                         "Gate: Sgemm matches oracle across size sweep; single-thread >=60% OpenBLAS at 2048^3. DESIGN.md §4/P3."
+  ms "P4 — L2 + derived L3"               "Gate: sgemv/sger/syrk/symm/trsm green incl. full flag lattice; Ssyrk >=85% of Sgemm GFLOPS. DESIGN.md §4/P4."
+  ms "P5 — Parallel + polish"             "Gate: >=6x at 8 cores on 4096^3; race clean; scalar-only stock-toolchain build green; vet/lint clean. DESIGN.md §4/P5."
+
+  echo "==> umbrella issues"
+  issue "P0 umbrella: toolchain probe & the shim" "P0" "phase:P0 kind:shim gate" "$(cat <<'BODY'
 Tracking issue for phase P0 (DESIGN.md §4/P0). Session-end status comments and Scott's course corrections live here.
 
 - [ ] Toolchain installed (1.27rc or newest 1.26.x); `make build` and `make stock` green
@@ -80,7 +96,7 @@ Tracking issue for phase P0 (DESIGN.md §4/P0). Session-end status comments and 
 BODY
 )"
 
-issue "P1 umbrella: Level 1 + test harness" "P1" "phase:P1 gate" "$(cat <<'BODY'
+  issue "P1 umbrella: Level 1 + test harness" "P1" "phase:P1 gate" "$(cat <<'BODY'
 Tracking issue for phase P1 (DESIGN.md §4/P1).
 
 - [ ] float64 oracle implementations for all six L1 routines
@@ -92,7 +108,7 @@ Tracking issue for phase P1 (DESIGN.md §4/P1).
 BODY
 )"
 
-issue "P2 umbrella: microkernel + spill audit (GO/NO-GO)" "P2" "phase:P2 kind:kernel gate" "$(cat <<'BODY'
+  issue "P2 umbrella: microkernel + spill audit (GO/NO-GO)" "P2" "phase:P2 kind:kernel gate" "$(cat <<'BODY'
 Tracking issue for phase P2 (DESIGN.md §4/P2). **This phase can end the project's current approach; treat the gate as a decision point, not a hurdle.**
 
 - [ ] `internal/spill` audit tool: counts stack-relative vector moves in the steady-state K-loop from `-gcflags=-S`; archives GOSSAFUNC ssa.html per commit
@@ -105,7 +121,7 @@ Tracking issue for phase P2 (DESIGN.md §4/P2). **This phase can end the project
 BODY
 )"
 
-issue "P3 umbrella: packing + blocking → full SGEMM" "P3" "phase:P3 gate" "$(cat <<'BODY'
+  issue "P3 umbrella: packing + blocking → full SGEMM" "P3" "phase:P3 gate" "$(cat <<'BODY'
 Tracking issue for phase P3 (DESIGN.md §4/P3).
 
 - [ ] Goto blocking NC→KC→MC→NR→MR (initial KC=384 MC=144 NC=4096, as vars)
@@ -116,7 +132,7 @@ Tracking issue for phase P3 (DESIGN.md §4/P3).
 BODY
 )"
 
-issue "P4 umbrella: Level 2 + derived Level 3" "P4" "phase:P4 gate" "$(cat <<'BODY'
+  issue "P4 umbrella: Level 2 + derived Level 3" "P4" "phase:P4 gate" "$(cat <<'BODY'
 Tracking issue for phase P4 (DESIGN.md §4/P4).
 
 - [ ] Sgemv (both transposes), Sger
@@ -126,7 +142,7 @@ Tracking issue for phase P4 (DESIGN.md §4/P4).
 BODY
 )"
 
-issue "P5 umbrella: parallelism, dispatch, polish" "P5" "phase:P5 kind:infra gate" "$(cat <<'BODY'
+  issue "P5 umbrella: parallelism, dispatch, polish" "P5" "phase:P5 kind:infra gate" "$(cat <<'BODY'
 Tracking issue for phase P5 (DESIGN.md §4/P5).
 
 - [ ] MC-loop parallelism: bounded workers by GOMAXPROCS, shared packed-B per NC, per-worker packed-A via sync.Pool; no background threads
@@ -138,17 +154,20 @@ Tracking issue for phase P5 (DESIGN.md §4/P5).
 BODY
 )"
 
-echo "==> project board"
-PROJ_TITLE="keel v0"
-if ! gh project list --owner "$OWNER" --format json --jq '.projects[].title' 2>/dev/null | grep -qxF "$PROJ_TITLE"; then
-  gh project create --owner "$OWNER" --title "$PROJ_TITLE" >/dev/null && echo "    created project '$PROJ_TITLE'"
-else
-  echo "    project exists"
-fi
-PNUM=$(gh project list --owner "$OWNER" --format json --jq ".projects[] | select(.title==\"$PROJ_TITLE\") | .number")
-for url in $(gh issue list -R "$OWNER/$REPO" --state open --json url --jq '.[].url'); do
-  gh project item-add "$PNUM" --owner "$OWNER" --url "$url" >/dev/null 2>&1 || true
-done
-echo "    open issues added to project $PNUM"
+  echo "==> project board"
+  local PROJ_TITLE="keel v0" PNUM url
+  if ! gh project list --owner "$OWNER" --format json --jq '.projects[].title' 2>/dev/null | grep -qxF "$PROJ_TITLE"; then
+    gh project create --owner "$OWNER" --title "$PROJ_TITLE" >/dev/null && echo "    created project '$PROJ_TITLE'"
+  else
+    echo "    project exists"
+  fi
+  PNUM=$(gh project list --owner "$OWNER" --format json --jq ".projects[] | select(.title==\"$PROJ_TITLE\") | .number")
+  for url in $(gh issue list -R "$OWNER/$REPO" --state open --json url --jq '.[].url'); do
+    gh project item-add "$PNUM" --owner "$OWNER" --url "$url" >/dev/null 2>&1 || true
+  done
+  echo "    open issues added to project $PNUM"
 
-echo "==> done. https://github.com/$OWNER/$REPO"
+  echo "==> done. https://github.com/$OWNER/$REPO"
+}
+
+main "$@"

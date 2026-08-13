@@ -795,13 +795,19 @@ While the major version is 0, minor versions may contain breaking changes.
   the grid, so no row was ever marked — which reads as "the shipped point is not on
   the grid". It now marks the shipped KC/MC at the grid's largest NC, read back from
   the CSV, and the label says exactly that rather than implying more.
-- **`scripts/retention.sh` and `scripts/l1-bench.sh` now define everything in
-  functions and end with `main "$@"`** (#51, the convention; the remaining scripts
-  are tracked there). Bash
+- **`scripts/retention.sh`, `scripts/l1-bench.sh`, `scripts/roofline-test.sh`,
+  `scripts/provision-openblas.sh` and `scripts/bootstrap-github.sh` now define
+  everything in functions and end with `main "$@"`** (#51, the convention; the six
+  gate scripts are tracked there and go last, each needing a green run of its own).
+  Bash
   reads a script incrementally as it executes it, so editing one mid-run can corrupt
   the parse position of the running copy — a hazard that had become a rule to
   remember ("never edit a running instrument"). Forcing a whole-file parse before any
-  work begins makes the instrument immune instead.
+  work begins makes the instrument immune instead. `scripts/roofline.sh` was on the
+  list and is off it: it is three function definitions and no top-level work, so it
+  is already immune as a sourced library. One behaviour change to declare rather than
+  slip in: `provision-openblas.sh --help` prints a fixed line range of its own header,
+  so that range was narrowed to end before the new wrapper comment.
 - **`spill-audit` could not see a bounds check whose panic block was aligned**, and
   `gate-p2.sh` turns that count into a passing criterion — so the instrument
   certifying "0 surviving bounds checks in the steady-state K-loop" had a false-clean
