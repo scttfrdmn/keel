@@ -755,6 +755,45 @@ While the major version is 0, minor versions may contain breaking changes.
   counts *are* revised, both in `internal/l1` (#47): `avx512Scal` and `avx2Scal` were
   reported clean and carry one each.
 
+- **All ten `internal/l1` vector loops now compile with zero surviving bounds
+  checks** (#47). They were written in P1, before P2 wrote the "pre-sliced panels"
+  rule for kernels, and they were index-driven: a `for i := 0; i+64 <= len(x); i += 64`
+  guard with `x[i+16 : i+32]` sub-slices. `prove` does not discharge those. From
+  `i+64 <= len(x)` and `len(x) <= cap(x)` it will not take the step to
+  `i+64 <= cap(x)`, and `i <= i+16` needs no-overflow reasoning it also does not do,
+  so an unrolled body paid one check per offset sub-slice — `avx512Dot` ran 69
+  instructions to issue four FMAs. Every loop is now driven by `len(x)` with
+  *constant* offsets (`x[16:32]`, never `x[i+16:i+32]`) and re-slices at the bottom,
+  which is the idiom `internal/vec`'s microkernels already use for their panels.
+  The two-slice routines (`Dot`, `Axpy`) re-slice `y` to `len(x)` once above the
+  loop *and* carry `len(y) >= step` in the guard: the re-slice alone is not enough,
+  because the prover loses `len(y) == len(x)` across `y = y[step:]`, which left
+  seven of `y`'s checks standing after `x`'s had all gone. `check_bce` on
+  `l1_amd64.go` goes from 60 reports to 4 — one `IsSliceInBounds` per two-slice
+  routine, which is the `y = y[:len(x)]` precondition itself, hoisted out of the
+  loop and paid once per call instead of per iteration. (`l1.go`'s 21 are the
+  scalar reference path and are untouched.) `spill-audit` reports 0
+  bounds-check exits for all ten vector kernels, where it previously reported
+  them for all ten.
+
+  **The instruction counts do not all improve, and T19 is why.** Excluding T9's
+  1-byte inlining NOPs: `avx512Asum` 41→20, `avx512Dot` 61→32, `avx512SumSq`
+  42→21, `avx2Asum` 45→24, `avx2Dot` 61→32, `avx2SumSq` 42→21 — the six unrolled
+  reductions roughly halve. But `avx512Axpy` 16→21, `avx2Axpy` 17→22,
+  `avx512Scal` 11→12, `avx2Scal` 12→13. A slice advance guarded by `>=` costs
+  seven instructions, not two, because the loop may leave the slice exactly empty
+  and a slice's data pointer must not pass the end of its allocation, so the
+  pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) — see
+  docs/toolchain-notes.md T19, which has the three-function repro. An unrolled body
+  amortizes that over four vector ops; a non-unrolled one cannot, and `Axpy`
+  advances two slices. The `>` form collapses the advance to a single `ADDQ`, and
+  is applicable here because the tail already absorbs a full vector through
+  `LoadPart`/`StorePart` — but it moves the last full vector onto the masked path,
+  so it is a second change wanting its own measurement rather than a free win.
+  Runtime numbers for all five routines at L1-, L2-, L3- and memory-resident sizes
+  are #47's remaining deliverable; the reassociation order is unchanged, so the
+  results are bit-identical, not merely within tolerance.
+
 ### Changed
 - **`internal/pack`'s contiguous branch no longer calls `memmove` for short runs**
   (#21). `copy()` on a slice of statically-unknown length is a `runtime.memmove`

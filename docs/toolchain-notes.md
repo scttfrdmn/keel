@@ -25,6 +25,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-12 | go1.26.5 | On arm64, whether `a*a + c` is FMA-fused depends on whether the compiler **constant-folds** it, and `-race` defeats the folding: the same source line yields `0` in a plain build and `2^-24` under `-race` | [T16](#t16) | none — not a defect |
 | 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [golang/go#80856](https://github.com/golang/go/issues/80856) (#42) |
 | 2026-08-12 | go1.26.5 | A **loop-invariant vector constant is re-materialized every iteration**: `BroadcastInt32x16(const)` inside a loop stays inside it (3 insns/iteration), while the same constant written above the loop stays above it. CSE shares it across unrolled uses within one iteration; nothing lifts it across iterations | [T18](#t18) | candidate (#8) |
+| 2026-08-12 | go1.26.5 | `s = s[n:]` in a loop guarded by `len(s) >= n` costs **7 instructions**, not 2: the pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) because the loop may leave the slice exactly empty and the data pointer must not pass the end of the allocation. Guarding with `len(s) > n` collapses it to one `ADDQ` | [T19](#t19) | none — GC-correctness, not a defect |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -1419,3 +1420,116 @@ mask internally and there is nowhere else to put it — which needs a scalar twi
 differential test like every other vector op. It is 3 of the 41 instructions in
 `avx512Asum`'s loop; #47's bounds checks are 7 of them. Both edit the same bodies, so
 they should be measured together rather than as two claims about the same benchmark.
+
+---
+
+## T19 — the slice-advancing loop pays for its own bounds-check elimination, and `>=` is why
+
+**Toolchain.** go1.26.5, cross-compiled to `linux/amd64`. Not simd-specific: this is
+plain slice arithmetic and reproduces with no `archsimd` import at all. It is here
+because it is the cost side of the idiom CLAUDE.md requires of kernels ("pre-sliced
+panels"), and issue #47 is where keel paid it.
+
+**Observation.** Two things, and the second is the useful one.
+
+1. An index-driven loop guarded by `i+4 <= len(x)` does **not** discharge the
+   sub-slice bounds: `i+4 <= len(x)` plus the slice invariant `len(x) <= cap(x)`
+   implies `i+4 <= cap(x)`, and `prove` does not take that step. Rewriting the loop
+   to advance the slice (`x = x[4:]`) with *constant* offsets in the body removes
+   every check, because the reasoning becomes constant-versus-constant.
+2. The rewrite is not free. `x = x[4:]` compiles to **seven** instructions, five of
+   them a branchless conditional: the pointer is advanced only when the remaining
+   length is still positive. Guard the same loop with `len(x) > 4` instead of `>= 4`
+   and it collapses to a single `ADDQ`.
+
+**Repro.** Three loops with identical bodies.
+
+```go
+package adv
+
+func indexed(x []float32, a float32) {
+	for i := 0; i+4 <= len(x); i += 4 {
+		x[i] *= a; x[i+1] *= a; x[i+2] *= a; x[i+3] *= a
+	}
+}
+
+func advancing(x []float32, a float32) {
+	for len(x) >= 4 {
+		x[0] *= a; x[1] *= a; x[2] *= a; x[3] *= a
+		x = x[4:]
+	}
+}
+
+func strict(x []float32, a float32) {   // the only change is >= to >
+	for len(x) > 4 {
+		x[0] *= a; x[1] *= a; x[2] *= a; x[3] *= a
+		x = x[4:]
+	}
+}
+```
+
+`GOOS=linux GOARCH=amd64 go build -gcflags=-S`:
+
+`indexed` — four surviving checks, one per offset, each with its own panic block:
+
+```
+	00041 (adv.go:6)	CMPQ	BX, CX
+	00044 (adv.go:6)	JLS	143        ---> CALL runtime.panicBounds
+	00064 (adv.go:7)	CMPQ	BX, SI
+	00067 (adv.go:7)	JLS	138        ---> CALL runtime.panicBounds
+	00089 (adv.go:8)	JLS	133        ---> CALL runtime.panicBounds
+	00114 (adv.go:9)	CMPQ	BX, SI
+	00117 (adv.go:9)	JHI	13
+```
+
+`advancing` — no checks, no panic block, and this advance:
+
+```
+	00061 (adv.go:20)	ADDQ	$-4, CX     <- cap -= 4
+	00065 (adv.go:20)	MOVQ	CX, DX
+	00068 (adv.go:20)	NEGQ	DX
+	00071 (adv.go:20)	SARQ	$63, DX     <- DX = -1 if the new cap is > 0, else 0
+	00075 (adv.go:20)	ANDL	$16, DX     <- ... so 16 bytes, or 0
+	00078 (adv.go:20)	ADDQ	DX, AX      <- advance the data pointer, conditionally
+	00081 (adv.go:20)	ADDQ	$-4, BX     <- len -= 4
+	00085 (adv.go:15)	CMPQ	BX, $4
+	00089 (adv.go:15)	JGE	7
+```
+
+`strict` — no checks, and the advance is what one would have written by hand:
+
+```
+	00061 (adv.go:31)	ADDQ	$16, AX
+	00065 (adv.go:31)	ADDQ	$-4, BX
+	00069 (adv.go:26)	CMPQ	BX, $4
+	00073 (adv.go:26)	JGT	7
+```
+
+Function sizes: 91 bytes for `advancing`, 75 for `strict`.
+
+**Why.** Not a missed optimization. With `>=`, the last iteration can take a slice of
+length exactly 4 down to length 0, and Go's runtime requires a slice's data pointer to
+stay inside its allocation — a pointer one past the end can be attributed to the *next*
+heap object and keep it alive, or worse. So the compiler emits the conditional. With
+`>` the loop provably exits while at least one element remains, the pointer can never
+reach the end, and the guard is unnecessary. The five instructions are GC correctness,
+not waste.
+
+**Consequence for keel.** Issue #47. The shaping rewrite took all ten `internal/l1`
+vector loops from 1–11 surviving bounds-check exits to **0**, and the effect on
+instruction count is split by whether the loop is unrolled:
+
+| function | insns (real, excl. T9 nops) | per arith | bounds-check exits |
+|---|---|---|---|
+| `avx512Asum` | 41 → **20** | 10.25 → 7.00 | 7 → **0** |
+| `avx512Dot` | 61 → **32** | 17.25 → 13.00 | 11 → **0** |
+| `avx512SumSq` | 42 → **21** | 12.50 → 8.25 | 7 → **0** |
+| `avx512Axpy` | 16 → **21** | 21.00 → 26.00 | 2 → **0** |
+| `avx512Scal` | 11 → **12** | 14.00 → 15.00 | 1 → **0** |
+
+The three 4×-unrolled reductions roughly halve, because one advance is amortized over
+four vector ops. `Axpy` gets 5 instructions *worse* and `Scal` 1, because they are not
+unrolled and `Axpy` advances two slices: 2 × 7 instructions of advance against one FMA.
+The `>` form would recover exactly those, at the price of handing the last full vector
+to the masked-store tail path. That trade is not taken here — it is a runtime question
+and #47's deliverable is a measurement, not a second guess.
