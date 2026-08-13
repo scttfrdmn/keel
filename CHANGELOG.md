@@ -777,7 +777,9 @@ While the major version is 0, minor versions may contain breaking changes.
   build (`$KEEL_BENCH_IGNORE`) **and then checks that a `vs base` column actually
   appeared**, printing `NOT COMPARED` plus the offending keys when it did not. No
   gate verdict was affected: gates aggregate a single log, where a forked table
-  cannot lose a comparison.
+  cannot lose a comparison. `scripts/l1-bench.sh` now goes through it, and its
+  claim that "the deltas carry p-values" — printed above two tables that contained
+  no deltas — is gone.
 - **`scripts/retention.sh sweep` ran at `-count=10` while its header printed the
   `-count=5` it documents** (#49). `scripts/bench.sh` is sourced first and defaults
   `KEEL_BENCH_COUNT` to 10, so the sweep's own `${KEEL_BENCH_COUNT:-5}` could see
@@ -793,8 +795,9 @@ While the major version is 0, minor versions may contain breaking changes.
   the grid, so no row was ever marked — which reads as "the shipped point is not on
   the grid". It now marks the shipped KC/MC at the grid's largest NC, read back from
   the CSV, and the label says exactly that rather than implying more.
-- **`scripts/retention.sh` now defines everything in functions and ends with
-  `main "$@"`** (#51, the convention; the remaining scripts are tracked there). Bash
+- **`scripts/retention.sh` and `scripts/l1-bench.sh` now define everything in
+  functions and end with `main "$@"`** (#51, the convention; the remaining scripts
+  are tracked there). Bash
   reads a script incrementally as it executes it, so editing one mid-run can corrupt
   the parse position of the running copy — a hazard that had become a rule to
   remember ("never edit a running instrument"). Forcing a whole-file parse before any
