@@ -26,6 +26,14 @@
 #                        is quoted against. The superseded number stays visible
 #                        because three gates reported it.
 #   sweep                BenchmarkBlocking: KC/MC/NC over a coarse grid at 2048^3.
+#                        Any axis can be replaced with KEEL_BLOCKING_KC / _MC / _NC
+#                        (comma-separated), which is how a fine scan around a
+#                        suspected point defect runs the same benchmark on a
+#                        different grid — janus at 2x32 has one at kc=384, and a
+#                        5-point coarse grid can alias a sharp associativity effect
+#                        into fiction in either direction. A fine scan is small
+#                        enough to afford KEEL_BENCH_COUNT=10, and the header then
+#                        says so instead of telling the reader to re-measure.
 #   feed                 BenchmarkFeed: the per-call decomposition resolved against
 #                        KC, which is what the sweep left open (issue #48). The
 #                        sweep found that janus's per-call penalty is not a constant
@@ -440,8 +448,33 @@ main() {
   [[ "$MODE" == sweep ]] && FILTER='BenchmarkBlocking'
   [[ "$MODE" == feed ]] && FILTER='BenchmarkFeed'
 
+  # sshd strips arbitrary env, so anything the benchmark reads has to be handed to
+  # the remote command explicitly. KEEL_BLOCKING_{KC,MC,NC} replace one axis of
+  # BenchmarkBlocking's grid, which is how a fine scan around a suspected point
+  # defect runs the same benchmark rather than a new one. Unset axes are not
+  # forwarded, so the binary's own defaults stay the defaults.
+  local RENV="GOMAXPROCS=1" axis
+  for axis in KEEL_BLOCKING_KC KEEL_BLOCKING_MC KEEL_BLOCKING_NC; do
+    [[ -n "${!axis:-}" ]] && RENV+=" $axis=${!axis}"
+  done
+
   echo "methodology: -count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME, GOMAXPROCS=1, benchstat medians"
-  [[ "$MODE" == sweep ]] && echo "             EXPLORATORY: re-measure any nominated point at -count=10 before it becomes a default"
+  if [[ "$MODE" == sweep ]]; then
+    # The distinction the old unconditional line lost: a count of 10 is the standard
+    # methodology, so telling a reader of a 10-count log to "re-measure at 10" reads
+    # as though this run were not it. What stays true at any count is that a grid
+    # point is not a default — that decision goes through #24's kern.Class, not
+    # through a good row in a sweep.
+    if [[ "$KEEL_BENCH_COUNT" -ge 10 ]]; then
+      echo "             full methodology, and still not a tuner: a winning point becomes a default"
+      echo "             only through kern.Class (#24), never by being the top row here"
+    else
+      echo "             EXPLORATORY: re-measure any nominated point at -count=10 before it becomes a default"
+    fi
+    # What the grid was *asked* to be. What it actually was is readable off the
+    # point names in the ranking below, which is the half that cannot be shadowed.
+    [[ "$RENV" != "GOMAXPROCS=1" ]] && echo "             grid override requested: ${RENV#GOMAXPROCS=1 }"
+  fi
   echo
 
   local host prov
@@ -454,7 +487,7 @@ main() {
     fi
     echo "-- $host --"
     info "$prov"
-    if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BIN" "${BFLAGS[@]}" \
+    if ! KEEL_REMOTE_ENV="$RENV" remote_exec "$host" "$BIN" "${BFLAGS[@]}" \
          -test.bench="$FILTER" >"$LOG" 2>&1; then
       warn "[$host] the benchmark run failed; nothing is reported for it"
       sed 's/^/        /' "$LOG" | tail -20

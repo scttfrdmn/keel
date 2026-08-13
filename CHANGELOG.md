@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- `BenchmarkBlocking`'s grid is replaceable per axis from the environment
+  (`KEEL_BLOCKING_KC`, `_MC`, `_NC`, comma-separated; `scripts/retention.sh sweep`
+  forwards them, since sshd strips arbitrary env). A fine scan around a suspected
+  point defect — janus at 2×32 has one at kc=384 — is then the same benchmark at a
+  different grid rather than a second benchmark, and a 5-point scan is small enough
+  to afford the full `-count=10` methodology, which sharp associativity effects need:
+  a coarse grid can alias them into fiction in either direction. A malformed value is
+  fatal rather than defaulted, because a sweep that silently measures a grid other
+  than the one it was asked for is #49 again; and since every point names its own
+  KC/MC/NC, the grid that actually ran stays readable out of the log. The sweep header
+  no longer tells a reader of a `-count=10` log to re-measure it at 10, and now says
+  what is true at any count: a top row here becomes a default only through #24's
+  `kern.Class`, never by winning a sweep.
 - `BenchmarkFeed` and `scripts/retention.sh feed`: the per-call decomposition of
   the blocked nest resolved against KC, which is the question the KC/MC/NC sweep
   left open (#48). The sweep found that janus's per-call penalty *rises* with KC

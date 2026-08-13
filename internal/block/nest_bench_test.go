@@ -6,7 +6,9 @@ package block
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -230,15 +232,26 @@ func BenchmarkNest(b *testing.B) {
 // The parameters are package vars, so each point sets them, runs, and restores.
 // Sub-benchmarks run sequentially, so this is safe; it would not be under -cpu
 // parallelism, and nothing here uses b.RunParallel.
+//
+// Each axis can be replaced from the environment (KEEL_BLOCKING_KC and friends,
+// see benchGrid) because the coarse grid cannot answer everything it raises: janus
+// at 2×32 has a local defect at kc=384, and a 5-point fine scan around it is the
+// same benchmark at a different grid, not a different benchmark. The grid used is
+// not stated separately anywhere — every point names its own KC/MC/NC in its
+// sub-benchmark name, so whatever ran is readable out of the log rather than
+// asserted next to it (#49).
 func BenchmarkBlocking(b *testing.B) {
 	const n = 2048
 	flops := 2 * float64(n) * float64(n) * float64(n)
 	defer func(kc, mc, nc int) { KC, MC, NC = kc, mc, nc }(KC, MC, NC)
+	kcs := benchGrid(b, "KEEL_BLOCKING_KC", []int{128, 256, 384, 512})
+	mcs := benchGrid(b, "KEEL_BLOCKING_MC", []int{72, 144, 288})
+	ncs := benchGrid(b, "KEEL_BLOCKING_NC", []int{512, 1024, 2048})
 	for _, kn := range benchKernels(b) {
 		am, bm, c := benchMat(n, n), benchMat(n, n), benchMat(n, n)
-		for _, kc := range []int{128, 256, 384, 512} {
-			for _, mc := range []int{72, 144, 288} {
-				for _, nc := range []int{512, 1024, 2048} {
+		for _, kc := range kcs {
+			for _, mc := range mcs {
+				for _, nc := range ncs {
 					b.Run(fmt.Sprintf("%s/kc=%d/mc=%d/nc=%d", kn.ID(), kc, mc, nc), func(b *testing.B) {
 						KC, MC, NC = kc, mc, nc
 						b.ResetTimer()
@@ -855,6 +868,38 @@ func benchKernels(b *testing.B) []kern.Kernel {
 	if len(out) == 0 {
 		b.Skip("no vector microkernel on this build (simd/archsimd is amd64-only, T1); " +
 			"run this on a host from docs/hosts.md")
+	}
+	return out
+}
+
+// benchGrid returns one axis of a parameter sweep: the comma-separated list of
+// positive ints in environment variable env, or def if it is unset or empty.
+//
+// A malformed value is fatal rather than ignored. Falling back to the default on a
+// typo is the exact shape of the bug #49 was: a documented parameter that can be
+// silently shadowed, so the run reports the grid it was asked for and measures a
+// different one. Here the failure is loud, and since every point names its own
+// KC/MC/NC, what actually ran is readable out of the log either way.
+//
+// Values are not deduplicated or sorted. A caller that lists a value twice gets it
+// twice, which is a legitimate thing to want — two independent samples of one point,
+// separated in time by the rest of the grid.
+func benchGrid(b *testing.B, env string, def []int) []int {
+	b.Helper()
+	raw := strings.TrimSpace(os.Getenv(env))
+	if raw == "" {
+		return def
+	}
+	var out []int
+	for _, f := range strings.Split(raw, ",") {
+		f = strings.TrimSpace(f)
+		v, err := strconv.Atoi(f)
+		if err != nil || v <= 0 {
+			b.Fatalf("%s=%q: %q is not a positive integer. This axis is not defaulted on a "+
+				"bad value: a sweep that silently measures a grid other than the one it was "+
+				"asked for is worse than one that does not run.", env, raw, f)
+		}
+		out = append(out, v)
 	}
 	return out
 }
