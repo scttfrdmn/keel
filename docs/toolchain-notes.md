@@ -1620,3 +1620,64 @@ not happen now reads as a failed measurement rather than as a table.
 The general lesson for anything that prints machine-readable provenance into a
 benchmark log: those lines are not comments, and a tool downstream may treat
 them as the identity of the experiment.
+
+## T21 — benchstat's CI is an integer percent, so `± 0%` means "under 0.5%", not "zero"
+
+**Observation.** benchstat formats its confidence interval as a whole number of
+percent, in both the text table and the CSV the scripts here parse. A
+measurement tight enough to round down prints `0%`, which reads as an exact
+number and is not one: it is an interval whose only stated property is that it
+is narrower than half a percent.
+
+Minimal repro. Ten samples spread ±0.2% about 100 ns, then the same at ±0.5%:
+
+```
+$ head -5 tight.txt
+goos: linux
+goarch: amd64
+pkg: x/bench
+BenchmarkFoo 1 99.800 ns/op
+BenchmarkFoo 1 100.200 ns/op
+
+$ go tool benchstat tight.txt
+    │ /tmp/cist/tight.txt │
+    │       sec/op        │
+Foo           100.0n ± 0%
+
+$ go tool benchstat -format=csv tight.txt
+,sec/op,CI
+Foo,1.0000000000000001e-07,0%
+
+$ go tool benchstat -format=csv loose.txt   # samples ±0.5% instead of ±0.2%
+,sec/op,CI
+Foo,1.0000000000000001e-07,1%
+```
+
+**Why.** A display choice, and a defensible one: benchstat's usual question is
+whether two configurations differ, and for that a percent is the useful unit and
+a tenth of a percent is noise about noise. The rounding is only a problem for a
+consumer that does arithmetic with the interval instead of reading it.
+
+**Consequence for keel.** `scripts/bench.sh:bench_stat` divides that percent by
+100 and every gate here compares a *median net of its CI* against a threshold,
+so on any measurement tight enough to print `0%` the gates compare a bare median
+and their stated safety margin is silently zero. That direction is conservative
+for a floor — a threshold cleared by the median alone is cleared — so no shipped
+criterion is wrong because of this. It is not conservative for a *difference*
+between two arms, which is what `scripts/retention.sh feed` is built out of:
+that instrument prints a `worst-ci` column so a reader can tell a resolved step
+from noise, and on vesta it printed `0%` on seven of eight rows. Read as
+written, that says every step is resolved, including the ±0.60 ns ones. Read
+correctly, it bounds the noise floor at 0.5% of the arm — up to 4.4 ns on the
+4×32 kc=512 row, which is larger than three of the four panel-feed steps that
+row's decomposition reports.
+
+So the floor is now printed in nanoseconds as the upper bound the rounded
+percent actually supports (`0.005 × the largest arm on the row`), and a step
+below it is labelled unresolved rather than left for the reader to divide. The
+percent alone was a number without its denominator; the denominator is the arm
+it is a percentage of.
+
+The general lesson, and it is the same one as T20: a formatted number is a
+statement to a human, and a script that parses it inherits the formatting's
+precision, not the underlying quantity's.

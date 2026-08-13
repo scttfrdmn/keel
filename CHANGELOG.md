@@ -763,6 +763,22 @@ While the major version is 0, minor versions may contain breaking changes.
   make the two arms differ by whatever else happened to be dirty.
 
 ### Fixed
+- **The feed decomposition's noise floor printed as `0%`, which is not a number**
+  (T21). benchstat rounds its confidence interval to a whole percent, so `0%` means
+  only "under 0.5%" — and `scripts/retention.sh feed` was printing that percent as
+  the column a reader uses to tell a resolved step from noise. On vesta it read `0%`
+  on seven of eight rows, which says every step is resolved, including the ±0.60 ns
+  ones; read correctly it bounds the floor at 0.5% of the arm, up to 4.4 ns on the
+  4×32 kc=512 row — larger than three of the four panel-feed steps that row reports.
+  The column is now `worst-ci` *and* a `floor` in nanoseconds, computed as
+  `(p+0.5)% × the arm it belongs to` so the bound errs toward calling a step
+  unresolved, steps below their row's floor are marked `*`, and each term says how
+  many of its points are unresolved or negative before the reader reaches its spread.
+  A negative cost is now named as an arm defect rather than reported as a cost. No
+  gate verdict is affected: gates compare a median *net of* its CI against a floor,
+  so a CI rounded down to zero can only make a passing threshold harder to reach —
+  but for a *difference between two arms* the rounding is not conservative, and the
+  whole feed instrument is differences.
 - **`benchstat` was silently declining to compare the two arms of every A/B run**
   (#50, T20). It groups results into one table per distinct *configuration*, where a
   configuration is every `key: value` line in the log — and keel's provenance

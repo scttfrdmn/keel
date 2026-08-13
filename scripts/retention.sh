@@ -184,9 +184,24 @@ decompose_host() {
 ns_call() { bench_stat "$1" "$2" sec/call | awk '{ if ($1 != "") printf "%.2f", $1 * 1e9 }'; }
 
 # ci_call NAME CSV — the same arm's interval as a percentage, or "inf".
+#
+# benchstat rounds this to a whole percent before printing it, so the value read
+# back is not the interval but a bucket containing it: "0" means "under 0.5%",
+# which is why nothing here treats a 0 as an exact median (T21). ci_floor_ns turns
+# the bucket into the nanosecond bound it actually supports.
 ci_call() {
   bench_stat "$1" "$2" sec/call |
     awk '{ if ($2 == "inf") printf "inf"; else printf "%.1f", $2 * 100 }'
+}
+
+# ci_floor_ns NS CI_PERCENT — the widest interval, in ns, consistent with what
+# benchstat printed. A reported p% stands for a true interval below (p+0.5)%,
+# since p is rounded, so this is an upper bound and errs toward calling a step
+# unresolved. That is the safe direction for a decomposition: it can lose a real
+# term to caution, but it cannot manufacture one out of rounding.
+ci_floor_ns() {
+  [[ "$2" == inf ]] && { printf 'inf'; return; }
+  awk -v v="$1" -v c="$2" 'BEGIN{ printf "%.2f", (c + 0.5) / 100 * v }'
 }
 
 # feed_host HOST CSV LOG — which term curves with KC (issue #48).
@@ -201,7 +216,7 @@ ci_call() {
 # arm's own median has one, and the widest on each row is printed next to it: a step
 # narrower than that is not resolved by this run and must not be read as a term.
 feed_host() {
-  local host="$1" csv="$2" log="$3" case_ kc arm rows worst ci
+  local host="$1" csv="$2" log="$3" case_ kc arm rows worst ci floor f
   local -a kcs vals
   rows="$BINDIR/feedrows"
   while read -r case_; do
@@ -224,25 +239,34 @@ feed_host() {
       fi
       vals=()
       worst=0
+      floor=0
       for arm in kernel-calls loops cold-c cold-panels nest-no-pack full; do
         vals+=("$(ns_call "$case_/kc=$kc/$arm" "$csv")")
         ci="$(ci_call "$case_/kc=$kc/$arm" "$csv")"
-        [[ "$ci" == inf ]] && worst=inf
+        # The floor is per arm, not the widest percent applied to the largest arm:
+        # a percentage and the quantity it is a percentage of belong together.
+        f="$(ci_floor_ns "${vals[-1]}" "$ci")"
+        if [[ "$ci" == inf ]]; then worst=inf; floor=inf; fi
         [[ "$worst" != inf ]] && worst="$(awk -v a="$worst" -v b="$ci" 'BEGIN{print (b>a)?b:a}')"
+        [[ "$floor" != inf ]] && floor="$(awk -v a="$floor" -v b="$f" 'BEGIN{print (b>a)?b:a}')"
       done
-      printf '%s %s %s\n' "$kc" "${vals[*]}" "$worst" >>"$rows"
+      printf '%s %s %s %s\n' "$kc" "${vals[*]}" "$worst" "$floor" >>"$rows"
     done
     [[ -s "$rows" ]] || { warn "[$host] $case_: no complete kc point"; continue; }
     printf '  %s\n' "$case_"
     info "per-call cost of each arm, ns/call. Every arm makes the same calls at the same"
-    info "depths; worst-ci is the widest interval on the row, and a step below it is noise."
-    printf '        %-5s %9s %9s %9s %9s %9s %9s %9s\n' \
-      kc calls loops cold-c cold-pan no-pack full worst-ci
-    awk '{ printf "        %-5s %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f %8s%%\n",
-             $1, $2, $3, $4, $5, $6, $7, $8 }' "$rows" | sed 's/inf%/     inf/'
+    info "depths. worst-ci is the widest of the six arms' intervals; floor is that same"
+    info "bound in ns, and it is what a step has to clear to be a term rather than noise."
+    info "benchstat rounds the percent to an integer, so a printed 0% only says 'under"
+    info "0.5%' and the floor takes it as (p+0.5)% of the arm it belongs to (T21)."
+    printf '        %-5s %9s %9s %9s %9s %9s %9s %9s %8s\n' \
+      kc calls loops cold-c cold-pan no-pack full worst-ci floor
+    awk '{ printf "        %-5s %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f %8s%% %8s\n",
+             $1, $2, $3, $4, $5, $6, $7, $8, $9 }' "$rows" | sed 's/inf%/     inf/'
     info ""
-    info "the single-variable steps between them, each in ns per call:"
-    printf '        %-5s %11s %11s %11s %9s %9s %11s\n' \
+    info "the single-variable steps between them, each in ns per call. A * marks a step"
+    info "smaller than its own row's floor: measured, but not resolved by this run."
+    printf '        %-5s %12s %12s %12s %10s %10s %12s\n' \
       kc macro-loops C-traffic panel-feed rest pack "total"
     # rest = no-pack - loops - (cold-c - loops) - (cold-panels - loops), i.e. what
     # the nest costs that none of the three isolated steps accounts for: the beta
@@ -250,8 +274,13 @@ feed_host() {
     # traffic and panel feed that measuring them one at a time cannot see. The six
     # columns sum to full - kernel-calls by construction, which is the point: a
     # decomposition whose parts do not add up to the whole is hiding a term.
-    awk '{ printf "        %-5s %+11.2f %+11.2f %+11.2f %+9.2f %+9.2f %+11.2f\n",
-             $1, $3-$2, $4-$3, $5-$3, $6-$4-$5+$3, $7-$6, $7-$2 }' "$rows"
+    awk 'function m(x, f) {
+           if (f == "inf") return sprintf("%+.2f*", x)
+           return sprintf("%+.2f%s", x, ((x < 0 ? -x : x) < f ? "*" : " "))
+         }
+         { printf "        %-5s %12s %12s %12s %10s %10s %12s\n",
+             $1, m($3-$2, $9), m($4-$3, $9), m($5-$3, $9),
+             m($6-$4-$5+$3, $9), m($7-$6, $9), m($7-$2, $9) }' "$rows"
     info ""
     info "which term curves (the question #48 exists to ask):"
     feed_curve "$rows" 'C traffic ' 4 3 \
@@ -288,13 +317,17 @@ feed_curve() {
   local rows="$1" label="$2" a="$3" b="$4" note pad
   shift 4
   awk -v label="$label" -v a="$a" -v b="$b" '
-    { v[++n] = $a - $b; k[n] = $1
+    { v[++n] = $a - $b; k[n] = $1; f[n] = $9
       if (n == 1 || v[n] < lo) lo = v[n]
       if (n == 1 || v[n] > hi) hi = v[n]
+      if (f[n] == "inf" || (v[n] < 0 ? -v[n] : v[n]) < f[n]) under++
+      if (v[n] < 0) neg++
       sum += v[n] }
     END {
       s = ""
-      for (i = 1; i <= n; i++) s = s sprintf("%s%+.2f", (i > 1 ? " -> " : ""), v[i])
+      for (i = 1; i <= n; i++)
+        s = s sprintf("%s%+.2f%s", (i > 1 ? " -> " : ""), v[i],
+                      (f[i] == "inf" || (v[i] < 0 ? -v[i] : v[i]) < f[i]) ? "*" : "")
       m = sum / n
       printf "          %s  %s\n", label, s
       printf "          %*s  spread %.2f ns over kc=%s..%s", length(label), "", hi - lo, k[1], k[n]
@@ -305,6 +338,26 @@ feed_curve() {
   for note in "$@"; do
     printf '          %s  %s\n' "$pad" "$note"
   done
+  # The prediction is printed before these because they qualify how far the numbers
+  # can be read against it. A spread computed over unresolved points is a spread of
+  # noise, and a negative cost is not a cost: both say the reading stops here, and
+  # both are stated rather than left for a reader to notice.
+  awk -v pad="$pad" -v a="$a" -v b="$b" '
+    { n++
+      v = $a - $b
+      if ($9 == "inf" || (v < 0 ? -v : v) < $9) under++
+      if (v < 0) neg++ }
+    END {
+      if (under > 0) {
+        printf "          %s  %d of %d points are below their own row%cs floor, so the spread\n", pad, under, n, 39
+        printf "          %s  above is partly this run%cs noise and not only this term%cs shape.\n", pad, 39, 39
+      }
+      if (neg > 0) {
+        printf "          %s  %d point(s) NEGATIVE. A cost cannot be negative, so at those KC the\n", pad, neg
+        printf "          %s  two arms differ by something other than the variable named, and\n", pad
+        printf "          %s  nothing about this term is being measured there.\n", pad
+      }
+    }' "$rows"
 }
 
 # sweep_host HOST CSV LOG — the KC/MC/NC grid, ranked, with the shipped point marked.
