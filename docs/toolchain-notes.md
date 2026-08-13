@@ -1407,6 +1407,59 @@ accumulators against T10's 15-register ceiling — so whether the allocator woul
 rematerialize the constant into the body under real pressure is a question this repro
 does not answer. It has to be re-audited in place, not assumed.
 
+**Re-audited in place, 2026-08-12: it rematerializes, and it is still not pressure.**
+`go build -gcflags=-S ./internal/l1/` on the real `avx512Asum`. The unrolled loop is
+entered at `JMP 141`, its condition is at `[141,145]`, and its back-edge is `JGE 40`,
+so the body is `[40,137]` — and the three mask instructions are the *first* three of
+it:
+
+```
+0x0028 00040 (other_gen_amd64.go:211)	MOVL	$-2147483648, DX   <- back-edge target
+0x002d 00045 (other_gen_amd64.go:211)	VMOVD	DX, X4
+0x0031 00049 (other_gen_amd64.go:211)	VPBROADCASTD	X4, Z4
+0x0037 00055 (vec_avx512.go:94)	VPANDND	(AX), Z4, Z5
+0x003d 00061 (vec_avx512.go:94)	VPANDND	64(AX), Z4, Z6
+0x0044 00068 (vec_avx512.go:94)	VPANDND	128(AX), Z4, Z7
+0x004b 00075 (vec_avx512.go:94)	VPANDND	192(AX), Z4, Z4    <- clobbers the mask
+...
+0x008d 00141 (l1_amd64.go:117)	CMPQ	BX, $64
+0x0091 00145 (l1_amd64.go:117)	JGE	40
+```
+
+The last line of the answer is the interesting one. **The fourth `VPANDND` writes its
+result over `Z4`, the register holding the mask** — so the mask is dead before the
+back-edge and has to be rebuilt, which is *why* nothing hoists rather than a separate
+fact about hoisting. And it is not forced: the highest vector register this function
+touches is `Z7`, so `Z8`–`Z15` are free and unused, well inside T10's 15-register
+ceiling. The allocator chose to clobber a live loop-invariant value with a free
+register available. Same character as T8's `VFMADD213PS` finding: the cost is in the
+operand assignment, not in the instruction selection.
+
+Two further details from the same dump:
+
+- **Three loops rematerialize it, not one.** The 64-lane unrolled loop (above), the
+  16-lane cleanup loop (`JGE 149`, mask rebuilt at 166–175), and the masked tail
+  (rebuilt at 238–247). Six `VPBROADCASTD` mask builds in the function. The *worst*
+  ratio is the cleanup loop — 3 mask instructions against 2 useful vector ops — though
+  it runs at most three times.
+- **`avx2Asum` does the same thing for the same reason.** `VPANDN Y8, Y5, Y5`
+  clobbers the mask in `Y5`, with `Y9`–`Y15` free.
+
+The unrolled body is 29 instructions: 3 mask, 4 `VPANDND`, 4 `VADDPS`, 8 one-byte NOPs
+(T9/#17), 1 alignment NOP, 7 pointer/counter (T19's BCE payment), 2 for the latch. So
+8 of 29 do the arithmetic. (This count does not match the "41 instructions, of which
+#47's bounds checks are 7" written above; that number needs rechecking against a
+current build before either is relied on, and the discrepancy is recorded rather than
+silently overwritten.)
+
+**One more observation, not yet reduced to a repro.** The AVX-512 form folds the load
+into the operation — `VPANDND (AX), Z4, Z5` — and the AVX2 form does not, emitting
+`VMOVDQU (AX), Y4` then `VPANDN Y4, Y5, Y4`. Both encodings admit a memory source, so
+this looks like a lowering-rule gap on the AVX2 side rather than an encoding
+limitation, and it is adjacent to T12's memory-operand story (#20). It is written down
+as an observation from real code; it needs its own minimal repro before it becomes a
+note in its own right.
+
 **Interaction with T8.** CSE and this are orthogonal, and the combination is why the
 observed cost is smaller than the naive count. `avx512Asum` inlines `Abs512` four
 times per iteration; all four `VPANDND`s share `Z5`, so the mask is built **once**

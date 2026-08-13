@@ -9,6 +9,27 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- `docs/toolchain-notes.md` T18, re-audited in place — the question T18 left open, and
+  the answer is sharper than "it does not hoist" (#8). In the real `avx512Asum` the
+  loop-invariant sign mask is rebuilt at the back-edge target, and **the reason is that
+  the fourth inlined `VPANDND` writes its result over the register holding the mask**,
+  so the mask is dead before the back-edge. It is not register pressure: the highest
+  vector register the function touches is `Z7`, leaving `Z8`–`Z15` idle, well inside
+  T10's 15-register ceiling. Same character as T8 — the cost is in the operand
+  assignment, not the instruction selection. Three loops rematerialize it, not one (the
+  16-lane cleanup loop has the worst ratio, 3 mask instructions against 2 useful vector
+  ops); `avx2Asum` does the same with `Y9`–`Y15` idle; and the unrolled body is 29
+  instructions of which 8 do the arithmetic. The AVX-512 form folds its load into the
+  operation and the AVX2 form does not, which is recorded as an observation needing its
+  own repro rather than asserted as a note. No workaround landed: the hoist changes
+  `internal/vec`'s API and edits the same loop bodies as #47, so the two get measured
+  together.
+- `docs/hosts.md`: each host's private cache sizes, read from sysfs rather than looked
+  up — vesta 32K/1024K/98304K, janus 32K/1024K/22528K, antares **48K**/1024K/32768K.
+  Zen 5's L1d is 48 KB where Zen 4's and Skylake-X's are 32 KB, which is exactly the
+  kind of constant a from-memory value gets wrong, and the #48 feed decomposition needs
+  it: the reused panel pair is `(MR+NR)·kk·4` bytes, so which KC keeps it L1-resident
+  differs *per host* (kc=128 on vesta and janus, kc=128 and 256 on antares).
 - `scripts/retention.sh feed` prints each step as a whole-GEMM total as well as a
   per-call cost: the point's own per-call ns times the exact call count out of the
   `keel-feed-panels` marker, in ms of one GEMM, with each term's share of `full`. A
