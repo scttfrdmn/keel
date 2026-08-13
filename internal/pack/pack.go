@@ -131,6 +131,24 @@ func BPanels(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0
 // expression: the whole point of packing is that the K-loop reads memory in
 // order, and a shared nest would have made the contiguous case load-strided for
 // the sake of sharing four lines.
+// memmoveFloor is the run length, in float32 elements, at or above which the
+// contiguous branch uses copy() instead of an assignment loop (issue #21).
+//
+// copy() on a slice of statically-unknown length is a runtime.memmove call —
+// confirmed in the object code, `pack.go:169 CALL runtime.memmove`. That is the
+// right instrument for B, whose blocked axis is NR = 32 (128 bytes per run), and
+// the wrong one for A, whose blocked axis is MR ∈ {2,4}: 8 or 16 bytes per call,
+// about 27,600 calls per pass at the shapes the nest uses. BenchmarkPackDirections
+// measured the contiguous branch at 2.8× slower than the transposing branch on the
+// A side for exactly that reason — the cost scales as 1/blk and flattens once the
+// run reaches 64 bytes, and removing the source stride entirely changes nothing
+// (1.0–1.1×), which is what ruled out locality as the explanation.
+//
+// 16 elements is that 64-byte flattening point. It is a measured threshold and not
+// a natural constant: it has no relation to a vector width, and a host whose
+// memmove has a cheaper entry path would want it lower.
+const memmoveFloor = 16
+
 func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthContig bool, b0, count, p0, kc int) {
 	need := panelsLen(blk, count, kc)
 	if len(dst) < need {
@@ -165,11 +183,21 @@ func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthC
 		for p := 0; p < kc; p++ {
 			row := src[(p0+p)*ld+base : (p0+p)*ld+base+valid]
 			out := panel[p*blk : (p+1)*blk]
-			if alpha == 1 {
-				copy(out, row)
-			} else {
+			switch {
+			case alpha != 1:
 				for x, v := range row {
 					out[x] = alpha * v
+				}
+			case blk >= memmoveFloor:
+				copy(out, row)
+			default:
+				// Deliberately not copy(): see memmoveFloor. A plain assignment
+				// loop, not alpha*v with alpha known to be 1, because a multiply
+				// would quiet a signalling NaN where copy does not — the
+				// asymmetry TestBranchesAgree documents stays exactly as
+				// documented rather than moving to a new place.
+				for x, v := range row {
+					out[x] = v
 				}
 			}
 			for x := valid; x < blk; x++ {

@@ -756,6 +756,38 @@ While the major version is 0, minor versions may contain breaking changes.
   reported clean and carry one each.
 
 ### Changed
+- **`internal/pack`'s contiguous branch no longer calls `memmove` for short runs**
+  (#21). `copy()` on a slice of statically-unknown length is a `runtime.memmove`
+  call — confirmed in the object code (`pack.go:169 CALL runtime.memmove`) — which is
+  the right instrument for B, whose blocked axis is `NR = 32` (128 bytes per run),
+  and the wrong one for A, whose blocked axis is `MR ∈ {2,4}`: one call per 8 or 16
+  bytes, about 27,600 of them per pass. Below a `memmoveFloor` of 16 elements the
+  branch now uses a plain assignment loop. The loop assigns rather than multiplying
+  by an alpha known to be 1, so the *signalling*-NaN asymmetry `TestBranchesAgree`
+  documents stays exactly where it was documented instead of moving.
+
+  Dev host (Apple M4 Pro, `GOMAXPROCS` unset, `-benchtime=200ms -count=8`,
+  `go tool benchstat`; a data-movement rate, so the denominator is each cell's own
+  baseline and no percent-of-peak is claimed):
+
+  | case | before | after | |
+  |---|---|---|---|
+  | `2x32/TN/pack-a` (blk=2) | 787.2m ± 2% | 1119.0m ± 6% Gelem/s | **+42.1%** (p=0.000) |
+  | `4x32/TN/pack-a` (blk=4) | 1.529 ± 5% | 1.569 ± 3% Gelem/s | +2.6% (p=0.000) |
+  | `2x32/NN/pack-a` (transposing) | 2.143 ± 13% | 2.067 ± 8% Gelem/s | ~ (p=0.185) |
+  | `4x32/NN/pack-a` (transposing) | 2.365 ± 9% | 2.189 ± 4% Gelem/s | −7.5% (p=0.028) |
+
+  Two caveats stated rather than smoothed. **The 4x32/NN −7.5% is in a branch this
+  change does not touch**, so it is either noise (that cell's baseline varies ±9–12%
+  and its 2x32 twin shows no change) or an instruction-layout effect from the
+  `switch`; it needs the amd64 hosts to resolve and they were measuring #26 at the
+  time. And **this does not close #21**: the contiguous branch at `blk=2` is still
+  1.85× slower than the transposing branch, down from 2.72×, so the remaining gap is
+  the per-k-step overhead of a two-element inner loop, not `memmove`.
+
+  Worth being explicit about the blast radius: `APanels` passes `!trans`, so at `NN`
+  — the shape every gate benchmark runs — A takes the *transposing* branch and this
+  changes nothing. The gain is on `TN`/`TT`, i.e. for callers who pass `transA`.
 - **P5's internal order is now stated: single-thread remediation, then the parallel
   loop nest, then the scaling gate** (`DESIGN.md` §4/P5, ruled 2026-08-12). #26
   (retention), #36 (Ssymm's dense expansion), #37 (Strsm's scalar diagonal solves)
