@@ -39,6 +39,30 @@ checked in.
 
 All three were verified on 2026-08-10 and all three run all three backends.
 
+### Private cache sizes (read from sysfs 2026-08-12, not looked up)
+
+| Host | µarch | L1d | L2 | L3 |
+|---|---|---|---|---|
+| vesta | Zen 4 | 32K | 1024K | 98304K (V-Cache) |
+| janus | Skylake-X | 32K | 1024K | 22528K |
+| antares | Zen 5 | **48K** | 1024K | 32768K |
+
+This table is here because a reading of the #48 feed decomposition turned out to
+need it, and getting it from memory would have been wrong: **Zen 5 has a 48 KB L1d
+where Zen 4 and Skylake-X have 32 KB.** `remote_probe` now reports these from
+`/sys/devices/system/cpu/cpu0/cache/index*` on every run, so the numbers arrive with
+the measurement instead of being asserted next to it.
+
+What they are used for: three of `BenchmarkFeed`'s arms reuse one packed panel pair
+of `(MR+NR)·kk·4` bytes, which at NR=32 is 17/34/51/68 KB for `kc=128/256/384/512`
+(2×32) and 18/36/54/72 KB (4×32). So the "reused pair" is L1-resident only at
+`kc=128` on vesta and janus, and at `kc=128` *and* `256` on antares — and above that
+threshold both panel arms feed from L2, where all four sizes fit on all three hosts.
+The step between them is then a difference of locality *within* L2 rather than a
+difference of level, which is a different measurement from the one the arm's name
+suggests. The threshold moves with the host, which is exactly why the number has to
+come from the host.
+
 ### Zen 4 — AMD Ryzen 9 7950X3D, 16C/32T, Linux 6.17, `performance`
 
 The primary target. DESIGN.md §4/P3 sizes its initial blocking parameters for
