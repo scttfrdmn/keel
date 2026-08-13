@@ -733,6 +733,18 @@ While the major version is 0, minor versions may contain breaking changes.
   elements rather than 12 — so the answer to "does it hoist" is no, and the answer to
   "does it cost 12" is also no.
 
+- **`scripts/l1-bench.sh`**: A/Bs the Level-1 routines at all four of
+  `bench/bench_test.go`'s sizes — 1 KB, 16 KB, 256 KB and 4 MB of float32, i.e. L1-,
+  L2-, L3- and memory-resident on all three hosts — between an arbitrary base ref and
+  the working tree, on every configured host, under the standard methodology with
+  benchstat p-values. Written for #47, whose loop-shaping change *lengthens* four of
+  the ten loops while shortening six, and whose static counts therefore cannot say
+  which way the routines move: at 4 MB per call the loop body is not the limit. Not a
+  gate — it certifies nothing, moves no criterion, and exits 0 whatever it measures.
+  The base build comes from a detached `git worktree`, not from stashing: a stash
+  would mutate a tree another long-running measurement may be reading, and it would
+  make the two arms differ by whatever else happened to be dirty.
+
 ### Fixed
 - **`spill-audit` could not see a bounds check whose panic block was aligned**, and
   `gate-p2.sh` turns that count into a passing criterion — so the instrument
