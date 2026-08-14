@@ -8,6 +8,26 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **The six `internal/l1` reductions lost 4.5–17.4% at n=256** when the `>` guards landed,
+  on all three hosts, and now have an exact-fit epilogue of their own. `Sdot`, `Sasum` and
+  `Snrm2` regressed by +6.2/+13.7/+9.4%, +9.6/+12.8/+17.4% and +4.5/+6.6/+9.8% on Zen 4 /
+  Skylake-X / Zen 5 respectively (`build/l1ab-a2b76eb.log`). 256 is an exact multiple of
+  `step512`, so where `>=` consumed it in four unrolled iterations, `>` stops with 64
+  elements left and hands them to the 16-wide mop-up loop — which accumulates into `a0`
+  alone, replacing four independent FMAs with a four-deep dependent chain at ~4-cycle
+  latency. That is the stall the four-accumulator design exists to prevent, reintroduced in
+  the tail; the prediction that the mop-up loop made an epilogue unnecessary was wrong, and
+  is corrected in place rather than quietly dropped. The epilogue runs the unrolled body once
+  at `step` width with all four accumulators live and ends with `x = x[:0]` — truncating a
+  length cannot produce a past-the-end pointer, so it costs no conditional bump, and the
+  mop-up loop and partial tail below fall through untaken. No partial op is involved, so
+  #42's `checkptr` blast radius is unchanged. All six hot loops are byte-identical to before
+  the epilogue (same instruction ranges, still 0 bounds-check exits / 0 calls / 0 vector
+  stack references), and the four surviving `IsSliceInBounds` are the same four `y = y[:len(x)]`
+  precondition re-slices as before. The existing differential suite already covers the new
+  branch: dropping the epilogue's `a3` term fails `TestSdot` at n=64, 128 and 4096.
+
 ### Changed
 - **All ten `internal/l1` vector loops now guard with `>` rather than `>=`**, which removes
   the branchless conditional pointer bump that bounds-check elimination had bought them
@@ -28,7 +48,8 @@ While the major version is 0, minor versions may contain breaking changes.
   `LoadFloat32x16SlicePart` is documented as equivalent to a full load at 16 or more
   elements, so it would silently ignore a 17th. The two loop shapes handle that differently.
   The reductions' existing 16-wide mop-up loop keeps its `>=` guard and drains the ≤64
-  elements in at most four iterations, so nothing about their tail changes. Axpy and Scal
+  elements in at most four iterations, which was expected to leave their tail unaffected and
+  did not — see the `### Fixed` entry above, which is the measured correction. Axpy and Scal
   have no second loop and get an explicit exact-fit epilogue running the body once at *full*
   width. Leaving that to the masked tail instead was rejected on the deciding ground that it
   would make **every** exact-multiple call execute a partial op where today only ragged

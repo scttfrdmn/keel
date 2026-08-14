@@ -1733,7 +1733,8 @@ where a second slice is advanced), exactly as `strict` above predicts.
 **The anticipated price was avoidable.** The paragraph above assumed `>` means handing
 the last full vector to the masked tail. It does not have to. The reductions already
 carry a 16-wide mop-up loop beneath the unrolled one; it keeps `>=`, drains whatever
-`>` leaves in at most four iterations, and the tail never sees a full vector. Axpy and
+`>` leaves in at most four iterations, and the tail never sees a full vector. *That last
+inference was wrong about cost — see "The mop-up loop is not free" below.* Axpy and
 Scal have no such loop, so they got an explicit exact-fit epilogue that runs the body
 once at full width. That matters beyond one masked store: without it, *every*
 exact-multiple call would execute a partial op where today only ragged lengths do, and
@@ -1745,6 +1746,31 @@ prover a `len != 16` fact before the advance, is not used by `prove`: Scal 16 �
 Axpy got *worse* at 27. Dropping the redundant `&& len(y) > 16` conjunct — y having been
 re-sliced to `len(x)` above the loop — costs 9 instructions (Axpy 15 → 24), so the
 conjunct is load-bearing rather than defensive.
+
+**The mop-up loop is not free** (2026-08-14, after the A/B). "The tail never sees a full
+vector" was true and taken to mean the reductions needed no epilogue. The A/B
+(`build/l1ab-a2b76eb.log`) refutes the cost claim on all three hosts at once — the only
+unanimous signal in the run:
+
+| n=256 | Zen 4 | Skylake-X | Zen 5 |
+|---|---|---|---|
+| Sdot  | +6.2% | +13.7% | +9.4% |
+| Sasum | +9.6% | +12.8% | +17.4% |
+| Snrm2 | +4.5% | +6.6%  | +9.8% |
+
+(time; positive is slower.) 256 is an exact multiple of `step512 = 64`, so `>=` consumed it
+in four unrolled iterations while `>` stops with 64 left and the mop-up loop takes them as
+four 16-wide iterations — all accumulating into `a0`. Four independent FMAs become a
+four-deep dependent chain at ~4-cycle latency. Instruction count barely moves; the
+*dependency graph* is the cost, which is why a static audit could not have caught this and
+only the benchmark did. It is the same latency stall the four-accumulator design was
+adopted to avoid, reintroduced one level down, and the general lesson is that a drain loop
+inherits none of the ILP of the loop it drains.
+
+The fix is the epilogue the reductions were argued out of: `if len(x) == step512 { <body
+once, four accumulators> ; x = x[:0] }`. `x[:0]` rather than `x[step512:]` because
+truncating a length cannot produce a past-the-end pointer — the whole subject of this note —
+so it needs no conditional bump, and the mop-up loop and partial tail fall through untaken.
 
 **Also observed, not filed.** The two-conjunct guard emits a redundant branch: `CMPQ
 BX, $16; JLE 86; JGT 37`, where `JLE` already decided it. Same in the epilogue's `JNE

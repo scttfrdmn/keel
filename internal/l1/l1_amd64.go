@@ -91,10 +91,29 @@ import "github.com/scttfrdmn/keel/internal/vec"
 // load* at 16 or more elements, which means it silently ignores a 17th. So the
 // full block is handled explicitly, and differently for the two loop shapes:
 //
-//   - The reductions already have a 16-wide mop-up loop under the unrolled one.
-//     It keeps its `>=` guard and drains the ≤64 elements `>` leaves, in at most
-//     four iterations. There is no epilogue to write and nothing about the tail
-//     changes. Only the hot loop's guard moves.
+//   - The reductions have a 16-wide mop-up loop under the unrolled one, which
+//     keeps its `>=` guard and drains whatever `>` leaves. That loop was at
+//     first thought sufficient, and the earlier text here said so — "there is no
+//     epilogue to write and nothing about the tail changes". That was wrong, and
+//     the A/B in build/l1ab-a2b76eb.log says so on all three hosts: Sdot, Sasum
+//     and Snrm2 each got *slower* at n=256, by +6.2/+13.7/+9.4, +9.6/+12.8/+17.4
+//     and +4.5/+6.6/+9.8 percent on Zen 4 / Skylake-X / Zen 5.
+//
+//     The mechanism is not subtle in hindsight. 256 is an exact multiple of
+//     step512, so under `>=` four unrolled iterations consumed it exactly; under
+//     `>` the loop stops with 64 elements left and the mop-up loop takes them as
+//     four 16-wide iterations that all accumulate into `a0`. Four *dependent*
+//     FMAs at ~4-cycle latency replace four independent ones — the exact stall
+//     "Why four accumulators" above exists to prevent, reintroduced in the tail.
+//     At n >= 4096 the fixed cost amortizes and the cheaper advance wins, which
+//     is why only the 1 KB column showed it.
+//
+//     So the reductions get an exact-fit epilogue too, at *step* width with all
+//     four accumulators live. It ends with `x = x[:0]` rather than an advance:
+//     truncating the length cannot produce a past-the-end pointer, so it costs no
+//     conditional bump, and it leaves the mop-up loop and partial tail below to
+//     fall through untaken. No partial op is involved, so #42's blast radius is
+//     unchanged here as well.
 //   - Axpy and Scal have no second loop, so they get an explicit exact-fit
 //     epilogue that runs the body once at *full* width. It could have been left
 //     to the partial tail instead, and that was rejected on two counts: a masked
@@ -136,6 +155,13 @@ func avx512Dot(x, y []float32) float32 {
 		a2 = vec.FMA512(vec.Load512(x[32:48]), vec.Load512(y[32:48]), a2)
 		a3 = vec.FMA512(vec.Load512(x[48:64]), vec.Load512(y[48:64]), a3)
 		x, y = x[step512:], y[step512:]
+	}
+	if len(x) == step512 && len(y) == step512 {
+		a0 = vec.FMA512(vec.Load512(x[0:16]), vec.Load512(y[0:16]), a0)
+		a1 = vec.FMA512(vec.Load512(x[16:32]), vec.Load512(y[16:32]), a1)
+		a2 = vec.FMA512(vec.Load512(x[32:48]), vec.Load512(y[32:48]), a2)
+		a3 = vec.FMA512(vec.Load512(x[48:64]), vec.Load512(y[48:64]), a3)
+		x, y = x[:0], y[:0]
 	}
 	for len(x) >= lanes512 && len(y) >= lanes512 {
 		a0 = vec.FMA512(vec.Load512(x[0:16]), vec.Load512(y[0:16]), a0)
@@ -196,6 +222,13 @@ func avx512Asum(x []float32) float32 {
 		a3 = vec.Add512(a3, vec.Abs512(vec.Load512(x[48:64])))
 		x = x[step512:]
 	}
+	if len(x) == step512 {
+		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
+		a1 = vec.Add512(a1, vec.Abs512(vec.Load512(x[16:32])))
+		a2 = vec.Add512(a2, vec.Abs512(vec.Load512(x[32:48])))
+		a3 = vec.Add512(a3, vec.Abs512(vec.Load512(x[48:64])))
+		x = x[:0]
+	}
 	for len(x) >= lanes512 {
 		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
 		x = x[lanes512:]
@@ -218,6 +251,17 @@ func avx512SumSq(x []float32) float32 {
 		a2 = vec.FMA512(v2, v2, a2)
 		a3 = vec.FMA512(v3, v3, a3)
 		x = x[step512:]
+	}
+	if len(x) == step512 {
+		v0 := vec.Load512(x[0:16])
+		v1 := vec.Load512(x[16:32])
+		v2 := vec.Load512(x[32:48])
+		v3 := vec.Load512(x[48:64])
+		a0 = vec.FMA512(v0, v0, a0)
+		a1 = vec.FMA512(v1, v1, a1)
+		a2 = vec.FMA512(v2, v2, a2)
+		a3 = vec.FMA512(v3, v3, a3)
+		x = x[:0]
 	}
 	for len(x) >= lanes512 {
 		v := vec.Load512(x[0:16])
@@ -244,6 +288,13 @@ func avx2Dot(x, y []float32) float32 {
 		a2 = vec.FMA256(vec.Load256(x[16:24]), vec.Load256(y[16:24]), a2)
 		a3 = vec.FMA256(vec.Load256(x[24:32]), vec.Load256(y[24:32]), a3)
 		x, y = x[step256:], y[step256:]
+	}
+	if len(x) == step256 && len(y) == step256 {
+		a0 = vec.FMA256(vec.Load256(x[0:8]), vec.Load256(y[0:8]), a0)
+		a1 = vec.FMA256(vec.Load256(x[8:16]), vec.Load256(y[8:16]), a1)
+		a2 = vec.FMA256(vec.Load256(x[16:24]), vec.Load256(y[16:24]), a2)
+		a3 = vec.FMA256(vec.Load256(x[24:32]), vec.Load256(y[24:32]), a3)
+		x, y = x[:0], y[:0]
 	}
 	for len(x) >= lanes256 && len(y) >= lanes256 {
 		a0 = vec.FMA256(vec.Load256(x[0:8]), vec.Load256(y[0:8]), a0)
@@ -300,6 +351,13 @@ func avx2Asum(x []float32) float32 {
 		a3 = vec.Add256(a3, vec.Abs256(vec.Load256(x[24:32])))
 		x = x[step256:]
 	}
+	if len(x) == step256 {
+		a0 = vec.Add256(a0, vec.Abs256(vec.Load256(x[0:8])))
+		a1 = vec.Add256(a1, vec.Abs256(vec.Load256(x[8:16])))
+		a2 = vec.Add256(a2, vec.Abs256(vec.Load256(x[16:24])))
+		a3 = vec.Add256(a3, vec.Abs256(vec.Load256(x[24:32])))
+		x = x[:0]
+	}
 	for len(x) >= lanes256 {
 		a0 = vec.Add256(a0, vec.Abs256(vec.Load256(x[0:8])))
 		x = x[lanes256:]
@@ -322,6 +380,17 @@ func avx2SumSq(x []float32) float32 {
 		a2 = vec.FMA256(v2, v2, a2)
 		a3 = vec.FMA256(v3, v3, a3)
 		x = x[step256:]
+	}
+	if len(x) == step256 {
+		v0 := vec.Load256(x[0:8])
+		v1 := vec.Load256(x[8:16])
+		v2 := vec.Load256(x[16:24])
+		v3 := vec.Load256(x[24:32])
+		a0 = vec.FMA256(v0, v0, a0)
+		a1 = vec.FMA256(v1, v1, a1)
+		a2 = vec.FMA256(v2, v2, a2)
+		a3 = vec.FMA256(v3, v3, a3)
+		x = x[:0]
 	}
 	for len(x) >= lanes256 {
 		v := vec.Load256(x[0:8])
