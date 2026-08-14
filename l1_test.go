@@ -779,3 +779,85 @@ func TestDispatchReportsHonestly(t *testing.T) {
 		t.Errorf("%s=%q but active backend is %q", envForce, want, active)
 	}
 }
+
+// ------------------------------------------------- the exact-fit epilogue
+
+// TestNoWritePastEnd checks that the writing routines touch nothing beyond
+// element n-1, at every length where a vector loop can end on an exact fit.
+//
+// This is aimed at the `>`-form loops (internal/l1/l1_amd64.go, T19). Those
+// guards exit with a full vector still unconsumed, so Saxpy and Sscal grew an
+// exact-fit epilogue that runs the body once more at *full* width. A full-width
+// store is precisely the operation that can scribble past the end if the
+// epilogue's length reasoning is off by one — and unlike a wrong value, an
+// overrun is invisible to an oracle comparison on x[:n]. So the check is a
+// sentinel past the slice rather than a value check inside it.
+//
+// The lengths are the boundaries of both widths (8, 16) and both unrolled steps
+// (32, 64), each with its neighbours, because off-by-one is the failure mode:
+// n=16 takes the epilogue, n=17 takes epilogue-then-tail, n=15 takes tail alone.
+func TestNoWritePastEnd(t *testing.T) {
+	const (
+		pad      = 8
+		sentinel = float32(-12345.5) // exactly representable; a wrong lane shows up
+	)
+	lengths := []int{0, 1, 7, 8, 9, 15, 16, 17, 24, 31, 32, 33, 47, 48,
+		63, 64, 65, 80, 96, 127, 128, 129, 1024}
+
+	saved := activeL1
+	t.Cleanup(func() { activeL1 = saved })
+	r := newRand()
+
+	for _, b := range l1.Backends() {
+		activeL1 = b
+		exercised[b.Name] = true
+		for _, n := range lengths {
+			// One allocation per call, so a sentinel hit is this call's doing.
+			padded := func() []float32 {
+				v := make([]float32, n+pad)
+				for i := range v {
+					v[i] = sentinel
+				}
+				for i := 0; i < n; i++ {
+					v[i] = r.Float32()*2 - 1
+				}
+				return v
+			}
+			check := func(what string, v []float32) {
+				t.Helper()
+				for i := n; i < n+pad; i++ {
+					if v[i] != sentinel {
+						t.Errorf("%s (%s, n=%d): wrote %v at index %d, %d past the end",
+							what, b.Name, n, v[i], i, i-n)
+					}
+				}
+			}
+
+			x := padded()
+			y := padded()
+			Saxpy(n, 2.5, x[:n], 1, y[:n], 1)
+			check("Saxpy y", y)
+			check("Saxpy x", x) // x is read-only; a store to it is a wire-up bug
+
+			s := padded()
+			Sscal(n, 2.5, s[:n], 1)
+			check("Sscal x", s)
+
+			// The reductions do not write, but they do read one vector past
+			// where a `>` guard stops, so a mis-sized load would fault or
+			// silently fold sentinel values into the result. Compare against
+			// the same input with the padding present versus trimmed: the
+			// answers must be identical, because n bounds the arithmetic.
+			d := append([]float32(nil), x[:n]...)
+			if got, want := Sdot(n, x[:n], 1, y[:n], 1), Sdot(n, d, 1, y[:n], 1); got != want {
+				t.Errorf("Sdot (%s, n=%d): %v with padding vs %v without", b.Name, n, got, want)
+			}
+			if got, want := Sasum(n, x[:n], 1), Sasum(n, d, 1); got != want {
+				t.Errorf("Sasum (%s, n=%d): %v with padding vs %v without", b.Name, n, got, want)
+			}
+			if got, want := Snrm2(n, x[:n], 1), Snrm2(n, d, 1); got != want {
+				t.Errorf("Snrm2 (%s, n=%d): %v with padding vs %v without", b.Name, n, got, want)
+			}
+		}
+	}
+}

@@ -25,7 +25,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-12 | go1.26.5 | On arm64, whether `a*a + c` is FMA-fused depends on whether the compiler **constant-folds** it, and `-race` defeats the folding: the same source line yields `0` in a plain build and `2^-24` under `-race` | [T16](#t16) | none — not a defect |
 | 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [golang/go#80856](https://github.com/golang/go/issues/80856) (#42) |
 | 2026-08-12 | go1.26.5 | A **loop-invariant vector constant is re-materialized every iteration**: `BroadcastInt32x16(const)` inside a loop stays inside it (3 insns/iteration), while the same constant written above the loop stays above it. LICM does not lift SIMD ops at all; no helper, inlining or CSE is needed to trigger it. CSE shares it across unrolled uses within one iteration | [T18](#t18) | **pre-existing upstream**: [golang/go#79984](https://github.com/golang/go/issues/79984), fix WIP in [CL 803220](https://go-review.googlesource.com/c/go/+/803220) (#8) |
-| 2026-08-12 | go1.26.5 | `s = s[n:]` in a loop guarded by `len(s) >= n` costs **7 instructions**, not 2: the pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) because the loop may leave the slice exactly empty and the data pointer must not pass the end of the allocation. Guarding with `len(s) > n` collapses it to one `ADDQ` | [T19](#t19) | none — GC-correctness, not a defect |
+| 2026-08-12 | go1.26.5 | `s = s[n:]` in a loop guarded by `len(s) >= n` costs **7 instructions**, not 2: the pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) because the loop may leave the slice exactly empty and the data pointer must not pass the end of the allocation. Guarding with `len(s) > n` collapses it to one `ADDQ` | [T19](#t19) | none — GC-correctness, not a defect; the `>` form is **taken** as of 2026-08-14, all ten `internal/l1` loops |
 | 2026-08-12 | benchstat v0.0.0-20260709024250 | `benchstat A B` **does not compare A and B** when their logs differ in any one `key: value` configuration line — it prints two independent one-column tables, no deltas, no p-values, and **exits 0**. This repo's own provenance markers include a live clock snapshot, so two runs on one host never compare | [T20](#t20) | candidate |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
@@ -1710,6 +1710,47 @@ unrolled and `Axpy` advances two slices: 2 × 7 instructions of advance against 
 The `>` form would recover exactly those, at the price of handing the last full vector
 to the masked-store tail path. That trade is not taken here — it is a runtime question
 and #47's deliverable is a measurement, not a second guess.
+
+**The `>` form, taken (2026-08-14, go1.26.6).** #47's A/B answered the runtime
+question: Saxpy regressed at 256, 4096 *and* 65536 on all three hosts, worst −40.65%,
+and Saxpy's loop is the one where the advance outweighs the work. So all ten loops
+moved to `>`. Steady-state loop instructions, this time counting everything in the
+body (so these totals are not comparable with the table above, which excludes T9's
+NOPs — the *deltas* are what carry over):
+
+| function | insns | of which bookkeeping | function | insns | bookkeeping |
+|---|---|---|---|---|---|
+| `avx512Dot`   | 52 → **44** | 16 → **8** | `avx2Dot`   | 52 → **44** | 16 → **8** |
+| `avx512Axpy`  | 26 → **15** | 17 → **6** | `avx2Axpy`  | 29 → **18** | 17 → **6** |
+| `avx512Scal`  | 16 → **9**  | 10 → **4** | `avx2Scal`  | 19 → **12** | 10 → **4** |
+| `avx512Asum`  | 29 → **25** | 10 → **6** | `avx2Asum`  | 41 → **37** | 10 → **6** |
+| `avx512SumSq` | 34 → **29** | 9 → **5**  | `avx2SumSq` | 33 → **29** | 9 → **5** |
+
+Vector-op counts are unchanged in all ten, and all ten still audit at 0 bounds-check
+exits, 0 calls and 0 spills. The advance is now `ADDQ $64, AX` (plus `ADDQ $64, DI`
+where a second slice is advanced), exactly as `strict` above predicts.
+
+**The anticipated price was avoidable.** The paragraph above assumed `>` means handing
+the last full vector to the masked tail. It does not have to. The reductions already
+carry a 16-wide mop-up loop beneath the unrolled one; it keeps `>=`, drains whatever
+`>` leaves in at most four iterations, and the tail never sees a full vector. Axpy and
+Scal have no such loop, so they got an explicit exact-fit epilogue that runs the body
+once at full width. That matters beyond one masked store: without it, *every*
+exact-multiple call would execute a partial op where today only ragged lengths do, and
+partial ops are what #42 makes fatal under `-race`. The epilogue keeps that frequency
+where it was.
+
+Two variants were measured and rejected. An early `return` on exact fit, to hand the
+prover a `len != 16` fact before the advance, is not used by `prove`: Scal 16 → 15, and
+Axpy got *worse* at 27. Dropping the redundant `&& len(y) > 16` conjunct — y having been
+re-sliced to `len(x)` above the loop — costs 9 instructions (Axpy 15 → 24), so the
+conjunct is load-bearing rather than defensive.
+
+**Also observed, not filed.** The two-conjunct guard emits a redundant branch: `CMPQ
+BX, $16; JLE 86; JGT 37`, where `JLE` already decided it. Same in the epilogue's `JNE
+115; JNE 115`. One wasted branch per iteration, correctly predicted; below the noise
+floor of anything keel can measure, and named here only so the next reader of this
+assembly does not take it for a bug.
 
 ---
 

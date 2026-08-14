@@ -8,6 +8,36 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **All ten `internal/l1` vector loops now guard with `>` rather than `>=`**, which removes
+  the branchless conditional pointer bump that bounds-check elimination had bought them
+  (T19, #47). Under `>=`, `x = x[16:]` may leave the slice empty and an empty slice may not
+  carry a past-the-end pointer, so the advance compiles to `MOVQ`/`NEGQ`/`SARQ`/`ANDL`/`ADDQ`
+  — five instructions computing an offset that is 64 on every iteration but the last, paid
+  twice by the routines that advance two slices. Under `>` the emptiness case is gone and it
+  collapses to `ADDQ $64, AX`. Steady-state loop instructions (linux/amd64, go1.26.6, whole
+  body including T9's NOPs): `avx512Axpy` 26 → **15**, `avx512Scal` 16 → **9**, `avx512Dot`
+  52 → **44**, `avx512Asum` 29 → **25**, `avx512SumSq` 34 → **29**, and the avx2 twins 29 →
+  18, 19 → 12, 52 → 44, 41 → 37, 33 → 29. Vector-op counts are unchanged in all ten, and all
+  ten still audit at 0 bounds-check exits, 0 calls and 0 vector stack references. The
+  reductions gain least because their advance amortizes over 64 elements where Axpy's and
+  Scal's amortizes over 16 — which is the shape of #47's regression, since Saxpy was the
+  routine that lost 40.65%.
+
+  A `>` guard exits with a full vector unconsumed, and the partial tail cannot absorb it:
+  `LoadFloat32x16SlicePart` is documented as equivalent to a full load at 16 or more
+  elements, so it would silently ignore a 17th. The two loop shapes handle that differently.
+  The reductions' existing 16-wide mop-up loop keeps its `>=` guard and drains the ≤64
+  elements in at most four iterations, so nothing about their tail changes. Axpy and Scal
+  have no second loop and get an explicit exact-fit epilogue running the body once at *full*
+  width. Leaving that to the masked tail instead was rejected on the deciding ground that it
+  would make **every** exact-multiple call execute a partial op where today only ragged
+  lengths do, and partial ops are what #42 makes fatal under `-race`: the epilogue holds that
+  frequency where it was rather than trading instructions for a wider `checkptr` blast
+  radius. Two other shapes were measured and rejected — an early `return` on exact fit to
+  hand `prove` a `len != 16` fact (unused: Scal 16 → 15, Axpy *worse* at 27), and dropping
+  the redundant `&& len(y) > 16` conjunct (Axpy 15 → 24, so the conjunct is load-bearing).
+
 ### Fixed
 - `scripts/l1-bench.sh` **exited 1 on a fully successful run and leaked a git worktree and
   a temp dir on every invocation** (#55). `WORKTREE` was `local` to the function while the
@@ -20,6 +50,18 @@ While the major version is 0, minor versions may contain breaking changes.
   status sees a failed measurement next to a complete log.
 
 ### Added
+- `TestNoWritePastEnd` — a sentinel past the end of every writing routine's slice, at each
+  length where a vector loop can end on an exact fit (0, 1, 7, 8, 9, 15, 16, 17, 24, 31, 32,
+  33, 47, 48, 63, 64, 65, 80, 96, 127, 128, 129, 1024) on every available backend. The
+  `>`-form's exact-fit epilogue is a *full-width store*, which is the one operation that can
+  scribble past `len` while remaining valid Go — `x[0:16]` on a 15-element slice with spare
+  capacity is legal and silently writes a 16th element. An oracle comparison over `x[:n]`
+  cannot see that, so the check is a sentinel rather than a value. Mutation-tested against
+  the standing order in DESIGN.md §5.7: an epilogue firing one element early (`>= lanes-1`)
+  is caught at n=15, 31, 47, 63 and 127 on avx512, so the passing result is evidence rather
+  than a check that could not have failed. The reductions get the paired check — same input
+  with padding present versus trimmed must give bit-identical results, since `n` bounds the
+  arithmetic.
 - **DESIGN.md §5.7 — "a check that could not have come out otherwise is not evidence."** Two
   confirmations in this campaign were structural rather than evidential, and the pair is now
   a named trap with a standing order: #48's *tautology trap* (a "second, independent" check

@@ -55,6 +55,63 @@ import "github.com/scttfrdmn/keel/internal/vec"
 // where the "len(x) == len(y) is the caller's job" precondition gets enforced —
 // once, before anything is written, instead of as a bounds check per iteration —
 // and it is what lets one guard on len(x) discharge y's bounds as well.
+//
+// # Why the guards are `>` and not `>=` (T19)
+//
+// Removing the bounds checks moved the cost rather than removing it. Under
+// `len(x) >= 16`, the advance `x = x[16:]` can produce an *empty* slice, and an
+// empty slice may not carry a past-the-end pointer — so the compiler emits a
+// branchless conditional bump rather than an add:
+//
+//	ADDQ $-16, CX;  MOVQ CX, DX;  NEGQ DX;  SARQ $63, DX;  ANDL $64, DX
+//	...
+//	ADDQ DX, AX                       // += 64 if len-16 > 0, else += 0
+//
+// Five instructions to compute an offset that is 64 on every iteration but the
+// last. Axpy and Dot advance two slices, so they paid it twice: avx512Axpy ran
+// 26 instructions in its steady state to issue four vector ops, seventeen of
+// them bookkeeping.
+//
+// Under `len(x) > 16` the emptiness case is gone, the prover sees it, and the
+// whole sequence collapses to `ADDQ $64, AX`. Measured on go1.26.6, steady-state
+// loop instructions (linux/amd64, the object code the hosts run):
+//
+//	avx512Scal   16 -> 9     avx512Dot    52 -> 44
+//	avx512Axpy   26 -> 15    avx512Asum   29 -> 25
+//
+// The reductions gain less because their advance amortizes over 64 elements
+// where Axpy's and Scal's amortizes over 16. That asymmetry is the shape of
+// #47's regression: Saxpy was the routine that lost, and Saxpy's loop is the one
+// where the advance outweighed the work.
+//
+// # What `>` leaves behind, and why it is not the partial tail's problem
+//
+// A `>` guard exits with up to a full step still unconsumed, and the partial
+// tail cannot absorb that: LoadPart512 is documented as *equivalent to a full
+// load* at 16 or more elements, which means it silently ignores a 17th. So the
+// full block is handled explicitly, and differently for the two loop shapes:
+//
+//   - The reductions already have a 16-wide mop-up loop under the unrolled one.
+//     It keeps its `>=` guard and drains the ≤64 elements `>` leaves, in at most
+//     four iterations. There is no epilogue to write and nothing about the tail
+//     changes. Only the hot loop's guard moves.
+//   - Axpy and Scal have no second loop, so they get an explicit exact-fit
+//     epilogue that runs the body once at *full* width. It could have been left
+//     to the partial tail instead, and that was rejected on two counts: a masked
+//     store where a full one would do, and — the deciding one — it would make
+//     every exact-multiple call execute a partial op, where today only ragged
+//     lengths do. Partial ops are what #42 makes fatal under -race, so widening
+//     their reach from ragged-n to every call would have traded instructions for
+//     a larger `checkptr` blast radius. The epilogue keeps that frequency
+//     exactly where it was.
+//
+// Two shapes that were tried and rejected, both measured:
+//
+//   - `>=` with an early `return` on exact fit, to hand the prover a `len != 16`
+//     fact before the advance. It does not use it: Scal 16 -> 15, and Axpy got
+//     *worse* at 27.
+//   - Dropping the redundant `&& len(y) > 16` conjunct, since y was re-sliced to
+//     len(x) above. Worse: Axpy 15 -> 24. The conjunct is load-bearing.
 
 const (
 	lanes512 = 16
@@ -69,7 +126,7 @@ const (
 func avx512Dot(x, y []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero512(), vec.Zero512(), vec.Zero512(), vec.Zero512()
 	y = y[:len(x)]
-	for len(x) >= step512 && len(y) >= step512 {
+	for len(x) > step512 && len(y) > step512 {
 		a0 = vec.FMA512(vec.Load512(x[0:16]), vec.Load512(y[0:16]), a0)
 		a1 = vec.FMA512(vec.Load512(x[16:32]), vec.Load512(y[16:32]), a1)
 		a2 = vec.FMA512(vec.Load512(x[32:48]), vec.Load512(y[32:48]), a2)
@@ -90,10 +147,15 @@ func avx512Dot(x, y []float32) float32 {
 func avx512Axpy(alpha float32, x, y []float32) {
 	va := vec.Broadcast512(alpha)
 	y = y[:len(x)]
-	for len(x) >= lanes512 && len(y) >= lanes512 {
+	for len(x) > lanes512 && len(y) > lanes512 {
 		xs, ys := x[0:16], y[0:16]
 		vec.Store512(ys, vec.FMA512(va, vec.Load512(xs), vec.Load512(ys)))
 		x, y = x[lanes512:], y[lanes512:]
+	}
+	if len(x) == lanes512 && len(y) == lanes512 {
+		xs, ys := x[0:16], y[0:16]
+		vec.Store512(ys, vec.FMA512(va, vec.Load512(xs), vec.Load512(ys)))
+		return
 	}
 	if len(x) > 0 {
 		vec.StorePart512(y, vec.FMA512(va, vec.LoadPart512(x), vec.LoadPart512(y)))
@@ -102,10 +164,15 @@ func avx512Axpy(alpha float32, x, y []float32) {
 
 func avx512Scal(alpha float32, x []float32) {
 	va := vec.Broadcast512(alpha)
-	for len(x) >= lanes512 {
+	for len(x) > lanes512 {
 		xs := x[0:16]
 		vec.Store512(xs, vec.Mul512(va, vec.Load512(xs)))
 		x = x[lanes512:]
+	}
+	if len(x) == lanes512 {
+		xs := x[0:16]
+		vec.Store512(xs, vec.Mul512(va, vec.Load512(xs)))
+		return
 	}
 	if len(x) > 0 {
 		vec.StorePart512(x, vec.Mul512(va, vec.LoadPart512(x)))
@@ -114,7 +181,7 @@ func avx512Scal(alpha float32, x []float32) {
 
 func avx512Asum(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero512(), vec.Zero512(), vec.Zero512(), vec.Zero512()
-	for len(x) >= step512 {
+	for len(x) > step512 {
 		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
 		a1 = vec.Add512(a1, vec.Abs512(vec.Load512(x[16:32])))
 		a2 = vec.Add512(a2, vec.Abs512(vec.Load512(x[32:48])))
@@ -133,7 +200,7 @@ func avx512Asum(x []float32) float32 {
 
 func avx512SumSq(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero512(), vec.Zero512(), vec.Zero512(), vec.Zero512()
-	for len(x) >= step512 {
+	for len(x) > step512 {
 		v0 := vec.Load512(x[0:16])
 		v1 := vec.Load512(x[16:32])
 		v2 := vec.Load512(x[32:48])
@@ -161,7 +228,7 @@ func avx512SumSq(x []float32) float32 {
 func avx2Dot(x, y []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero256(), vec.Zero256(), vec.Zero256(), vec.Zero256()
 	y = y[:len(x)]
-	for len(x) >= step256 && len(y) >= step256 {
+	for len(x) > step256 && len(y) > step256 {
 		a0 = vec.FMA256(vec.Load256(x[0:8]), vec.Load256(y[0:8]), a0)
 		a1 = vec.FMA256(vec.Load256(x[8:16]), vec.Load256(y[8:16]), a1)
 		a2 = vec.FMA256(vec.Load256(x[16:24]), vec.Load256(y[16:24]), a2)
@@ -181,10 +248,15 @@ func avx2Dot(x, y []float32) float32 {
 func avx2Axpy(alpha float32, x, y []float32) {
 	va := vec.Broadcast256(alpha)
 	y = y[:len(x)]
-	for len(x) >= lanes256 && len(y) >= lanes256 {
+	for len(x) > lanes256 && len(y) > lanes256 {
 		xs, ys := x[0:8], y[0:8]
 		vec.Store256(ys, vec.FMA256(va, vec.Load256(xs), vec.Load256(ys)))
 		x, y = x[lanes256:], y[lanes256:]
+	}
+	if len(x) == lanes256 && len(y) == lanes256 {
+		xs, ys := x[0:8], y[0:8]
+		vec.Store256(ys, vec.FMA256(va, vec.Load256(xs), vec.Load256(ys)))
+		return
 	}
 	if len(x) > 0 {
 		vec.StorePart256(y, vec.FMA256(va, vec.LoadPart256(x), vec.LoadPart256(y)))
@@ -193,10 +265,15 @@ func avx2Axpy(alpha float32, x, y []float32) {
 
 func avx2Scal(alpha float32, x []float32) {
 	va := vec.Broadcast256(alpha)
-	for len(x) >= lanes256 {
+	for len(x) > lanes256 {
 		xs := x[0:8]
 		vec.Store256(xs, vec.Mul256(va, vec.Load256(xs)))
 		x = x[lanes256:]
+	}
+	if len(x) == lanes256 {
+		xs := x[0:8]
+		vec.Store256(xs, vec.Mul256(va, vec.Load256(xs)))
+		return
 	}
 	if len(x) > 0 {
 		vec.StorePart256(x, vec.Mul256(va, vec.LoadPart256(x)))
@@ -205,7 +282,7 @@ func avx2Scal(alpha float32, x []float32) {
 
 func avx2Asum(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero256(), vec.Zero256(), vec.Zero256(), vec.Zero256()
-	for len(x) >= step256 {
+	for len(x) > step256 {
 		a0 = vec.Add256(a0, vec.Abs256(vec.Load256(x[0:8])))
 		a1 = vec.Add256(a1, vec.Abs256(vec.Load256(x[8:16])))
 		a2 = vec.Add256(a2, vec.Abs256(vec.Load256(x[16:24])))
@@ -224,7 +301,7 @@ func avx2Asum(x []float32) float32 {
 
 func avx2SumSq(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero256(), vec.Zero256(), vec.Zero256(), vec.Zero256()
-	for len(x) >= step256 {
+	for len(x) > step256 {
 		v0 := vec.Load256(x[0:8])
 		v1 := vec.Load256(x[8:16])
 		v2 := vec.Load256(x[16:24])
