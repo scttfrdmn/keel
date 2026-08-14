@@ -1924,3 +1924,86 @@ it is a percentage of.
 The general lesson, and it is the same one as T20: a formatted number is a
 statement to a human, and a script that parses it inherits the formatting's
 precision, not the underlying quantity's.
+
+## T22 — a commit that changes no instruction bytes in a function can make it 45% slower, and function-entry alignment mod 64 is the discriminator
+
+**Toolchain.** go1.26.6, cross-compiled to `linux/amd64`. Not simd-specific in
+mechanism, but found on SIMD kernels and worth this much space because it sets an
+upper bound on what any A/B in this repo can attribute.
+
+**Observation.** Commit `53417e8` added an exact-fit epilogue to the six reductions
+(#59). It touches no line of `avx512Axpy` or `avx512Scal` — `git diff` has zero Axpy
+and zero Scal lines. On antares (RYZEN AI MAX+ 395, Zen 5) those two untouched
+routines nevertheless moved, a long way:
+
+| antares, time, `a1c9aa6` → `53417e8` | delta |
+|---|---|
+| Saxpy n=256   | +26.80% |
+| Saxpy n=4096  | **+45.06%** |
+| Saxpy n=65536 | +20.89% |
+| Sscal n=4096  | +19.40% |
+
+Both arms ±0–1%, p=0.000, n=10. The same commit moved these cells by ~0% on
+Skylake-X and by at most +7.04% on Zen 4, so the *magnitude* is a property of the
+microarchitecture, not of the change.
+
+**Minimal repro.** Build the bench binary at both revisions and compare the
+disassembly of a routine the diff does not touch:
+
+```
+go tool objdump -s 'l1\.avx512Scal$' bench-a1c9aa6.bin | awk 'NR>1{print $3,$4}' > a.txt
+go tool objdump -s 'l1\.avx512Scal$' bench-53417e8.bin | awk 'NR>1{print $3,$4}' > b.txt
+diff a.txt b.txt        # empty: 46 instructions, byte-identical
+```
+
+`avx512Axpy` likewise differs in exactly one byte-field across the whole function —
+the relative displacement of an off-hot-path `CALL`. The code is the same code. What
+changed is where it sits:
+
+| entry address | `a1c9aa6` | `53417e8` |
+|---|---|---|
+| avx512Dot   | 0x53c320 (mod64=32) | 0x53c320 (mod64=32) |
+| avx512Axpy  | 0x53c540 (**mod64=0**) | 0x53c5e0 (mod64=32) |
+| avx512Scal  | 0x53c680 (**mod64=0**) | 0x53c720 (mod64=32) |
+| avx512Asum  | 0x53c700 (**mod64=0**) | 0x53c7a0 (mod64=32) |
+| avx512SumSq | 0x53c880 (**mod64=0**) | 0x53c960 (mod64=32) |
+
+`avx512Dot`'s epilogue grew it by 0xa0 = 160 bytes. 160 is a multiple of Go's
+32-byte function alignment on amd64 but not of 64, so every function after it in the
+object flipped from a 64-byte-aligned entry to 64+32 — and the two whose code did not
+change are precisely the two that regressed.
+
+**What it is not.** Two hypotheses were tested and both failed:
+
+  - *Loop alignment within the function.* It points the wrong way. The base `avx512Axpy`
+    hot loop (`0x53c565`–`0x53c596`) straddles a 64-byte boundary; the new one
+    (`0x53c605`–`0x53c636`) fits entirely inside one line. The better-aligned loop is
+    the slower one, and both span two 32-byte fetch windows either way.
+  - *Arm order in the harness.* `scripts/l1-bench.sh` always runs base first and new
+    second, which would penalise the second arm on a thermally-limited part. Ruled out
+    by re-running the identical pair with the arms swapped: Saxpy n=4096 went from
+    +45.06% to −30.98%, i.e. the sign follows the *code*, not the position. Absolute
+    numbers reproduce regardless of arm position (`53417e8` 157.9n as second arm,
+    158.5n as first; `a1c9aa6` 108.9n as first, 109.4n as second). The harness is sound.
+
+**Upstream.** This is `golang/go#8717` ("random performance fluctuations after
+unrelated changes", open since 2014), and the mechanism is worked out in the comments
+of `golang/go#18977`: recent amd64 branch predictors hash the jump IP, so moving code
+creates and destroys prediction aliasing. dvyukov reported the same shape in 2016 —
+a function at 0x10 fast, at 0x20 slow, fixed by forcing alignment — and rsc's note on
+#8717 is that days of investigation produced no actionable rule. `golang/go#6752`
+(explicit alignment annotations) is the knob that does not exist. Nothing here is a
+new bug and nothing was filed; see the keel issue keyed to those three.
+
+**Consequence for keel, which is the reason this entry is long.** An A/B in this repo
+cannot attribute a delta smaller than the drift its own untouched routines show in the
+same run. That floor is not a constant: it was ~0% on Skylake-X, ~7% on Zen 4 and
+~45% on Zen 5 for one commit. So a run has to *carry its own control* — the delta on
+routines the diff provably does not touch is the noise floor for that run on that
+host, and any reported number has to clear it. This is the same discipline as "never a
+number without its denominator", applied to the attribution rather than the units.
+
+It also means a percent-of-peak floor and a two-arm A/B have different exposure: the
+floor compares a median against a fixed denominator and is unaffected, while the A/B
+compares two placements. Gates that assert a floor are safe; gates that assert an
+improvement are not, unless they carry the control.

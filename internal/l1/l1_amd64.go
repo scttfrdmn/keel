@@ -114,6 +114,17 @@ import "github.com/scttfrdmn/keel/internal/vec"
 //     conditional bump, and it leaves the mop-up loop and partial tail below to
 //     fall through untaken. No partial op is involved, so #42's blast radius is
 //     unchanged here as well.
+//
+//     The epilogue did what it was predicted to do — all three routines improved at
+//     n=256 on all three hosts — and it also grew avx512Dot by 160 bytes, which is a
+//     multiple of Go's 32-byte function alignment but not of 64, so every function
+//     below it in this file moved from a 64-byte-aligned entry to 64+32. On Zen 5
+//     that cost avx512Axpy up to 45% and avx512Scal up to 19%, in code that is
+//     byte-identical across the two builds. It is placement, not semantics
+//     (golang/go#8717, #61, T22), and the reason to know it here is that anyone
+//     re-measuring these kernels will see deltas in routines they did not touch.
+//     A delta in this file is only attributable if it clears the drift shown by the
+//     routines the diff leaves byte-identical in the same run.
 //   - Axpy and Scal have no second loop, so they get an explicit exact-fit
 //     epilogue that runs the body once at *full* width. It could have been left
 //     to the partial tail instead, and that was rejected on two counts: a masked

@@ -28,6 +28,19 @@ While the major version is 0, minor versions may contain breaking changes.
   precondition re-slices as before. The existing differential suite already covers the new
   branch: dropping the epilogue's `a3` term fails `TestSdot` at n=64, 128 and 4096.
 
+  Verified on all three hosts: the three routines improved at n=256 on 9/9 host×routine cells,
+  by 14.9/22.3/18.8% (`Sdot`), 14.4/15.6/22.7% (`Sasum`) and 10.5/22.4/5.4% (`Snrm2`) on Zen 4 /
+  Skylake-X / Zen 5, so all three are now at or below their pre-#47 timings except `Snrm2` on
+  Zen 5, which remains 3.8% above it. **This commit is nevertheless net negative on one host**:
+  geomean sec/op moved −2.36% on Zen 4 and −3.49% on Skylake-X but **+2.52% on Zen 5**, because
+  `Saxpy` and `Sscal` — which this diff does not touch, and whose disassembly is byte-identical
+  across the two builds — lost up to 45.06% and 19.40% there. That is a code-placement effect,
+  not a semantic one: `avx512Dot` grew by 160 bytes, which is a multiple of Go's 32-byte function
+  alignment but not of 64, flipping every later function's entry from 64-byte-aligned to 64+32.
+  It is `golang/go#8717`, keel #61 and `docs/toolchain-notes.md` T22, and it is disclosed here
+  rather than netted out because the fix is not what caused it and reverting the fix would only
+  re-win the placement lottery while restoring the dependent-chain stall.
+
 ### Changed
 - **All ten `internal/l1` vector loops now guard with `>` rather than `>=`**, which removes
   the branchless conditional pointer bump that bounds-check elimination had bought them
