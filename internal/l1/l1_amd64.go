@@ -126,6 +126,10 @@ const (
 func avx512Dot(x, y []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero512(), vec.Zero512(), vec.Zero512(), vec.Zero512()
 	y = y[:len(x)]
+	// The len(y) conjunct looks redundant after the re-slice above and is not:
+	// it feeds the prover. Measured on avx512Axpy, dropping it costs 9
+	// instructions per iteration (T19). Not separately measured here, but the
+	// shape is identical — do not simplify without re-running spill-audit.
 	for len(x) > step512 && len(y) > step512 {
 		a0 = vec.FMA512(vec.Load512(x[0:16]), vec.Load512(y[0:16]), a0)
 		a1 = vec.FMA512(vec.Load512(x[16:32]), vec.Load512(y[16:32]), a1)
@@ -147,6 +151,10 @@ func avx512Dot(x, y []float32) float32 {
 func avx512Axpy(alpha float32, x, y []float32) {
 	va := vec.Broadcast512(alpha)
 	y = y[:len(x)]
+	// The len(y) conjunct is redundant to a reader — y is exactly len(x) long by
+	// the line above — and load-bearing to the prover: dropping it took this
+	// loop from 15 instructions to 24 (T19). It is not a defensive check and
+	// deleting it is not a cleanup.
 	for len(x) > lanes512 && len(y) > lanes512 {
 		xs, ys := x[0:16], y[0:16]
 		vec.Store512(ys, vec.FMA512(va, vec.Load512(xs), vec.Load512(ys)))
@@ -228,6 +236,8 @@ func avx512SumSq(x []float32) float32 {
 func avx2Dot(x, y []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero256(), vec.Zero256(), vec.Zero256(), vec.Zero256()
 	y = y[:len(x)]
+	// Load-bearing len(y) conjunct, as in avx512Dot — see avx512Axpy for the
+	// measurement it rests on.
 	for len(x) > step256 && len(y) > step256 {
 		a0 = vec.FMA256(vec.Load256(x[0:8]), vec.Load256(y[0:8]), a0)
 		a1 = vec.FMA256(vec.Load256(x[8:16]), vec.Load256(y[8:16]), a1)
@@ -248,6 +258,7 @@ func avx2Dot(x, y []float32) float32 {
 func avx2Axpy(alpha float32, x, y []float32) {
 	va := vec.Broadcast256(alpha)
 	y = y[:len(x)]
+	// Load-bearing len(y) conjunct, as in avx512Axpy.
 	for len(x) > lanes256 && len(y) > lanes256 {
 		xs, ys := x[0:8], y[0:8]
 		vec.Store256(ys, vec.FMA256(va, vec.Load256(xs), vec.Load256(ys)))
