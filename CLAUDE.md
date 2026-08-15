@@ -10,6 +10,34 @@ before your first action in any session.
   anything else each session (`make build && make stock`).
 - The scalar path must always build on a stock toolchain (`make stock`).
 
+## Long runs: nothing may die, and no run is anyone's to babysit
+A gate or benchmark run must not be able to fail because of the lifetime of the
+shell that started it. Two gate-p5 runs were killed 25–28 minutes in, and the
+conclusion drawn at the time — hand the long gates to Scott so they outlive the
+agent shell — was the wrong fix. **A measurement whose completion depends on who
+typed the command has a defect in its harness.** Scott's ruling: "There is NO
+reason your shell should ever die."
+
+- **Launch every long run detached, via `scripts/detach.sh`.** `tmux new-session
+  -d` daemonises off the caller's process group and session, so reaping the
+  caller does not reach the work:
+
+      scripts/detach.sh run gate-p5-<rev> -- ./scripts/gate-p5.sh
+      scripts/detach.sh stat gate-p5-<rev>
+
+  This is the mechanism for the *remote* half too: `remote.sh` runs each
+  benchmark synchronously over ssh, so a driver that dies SIGHUPs a measurement
+  mid-flight on the far side. Keeping the driver alive keeps every ssh under it
+  alive. tmux is present on the dev host and all three benchmark hosts.
+- **Never `sleep` to wait.** Background the wait or read the log file; interim
+  progress is free.
+- **A killed run is `unmeasured`, never an exit code.** `detach.sh stat` reports
+  `vanished` when there is no status file, because inventing a verdict for work
+  that did not finish is the one failure mode this whole apparatus exists to
+  prevent (DESIGN.md §5.6).
+- **The tree stays frozen for a run's whole life**, detached or not — including
+  across a chain of per-host invocations, each of which rebuilds its own arms.
+
 ## The prime directive on the simd API
 Never write or edit anything in `internal/vec` from memory. First run
 `go doc simd/archsimd` and `go doc simd`, and read the sources under

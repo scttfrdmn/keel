@@ -8,6 +8,18 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **`scripts/detach.sh`** runs a long gate or benchmark detached under `tmux`, so no run's
+  completion depends on the lifetime of the shell that started it. Two `gate-p5` runs had
+  been killed 25–28 minutes into the carried p5→p4→p3→p2 chain, and the response at the
+  time was to have a human invoke the gate instead — which treated a harness defect as a
+  scheduling problem. `tmux new-session -d` daemonises off the caller's process group and
+  session, so reaping the caller cannot reach the work; this covers the remote half as
+  well, since `scripts/remote.sh` runs each benchmark synchronously over `ssh` and a dead
+  driver `SIGHUP`s a measurement in flight on the far side. `stat` reports `vanished`
+  rather than an exit code when no status file was written, because a run that was killed
+  is `unmeasured`, not failed (DESIGN.md §5.6).
+
 ### Fixed
 - **The six `internal/l1` reductions lost 4.5–17.4% at n=256** when the `>` guards landed,
   on all three hosts, and now have an exact-fit epilogue of their own. `Sdot`, `Sasum` and
