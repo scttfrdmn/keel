@@ -154,6 +154,27 @@
 #     is the ratio, and a percent-of-peak floor on Ssyrk would be a threshold
 #     invented here rather than one DESIGN.md set.
 #
+#     THE VERDICT HAS THREE STATES, NOT TWO (ruled 2026-08-15 on issue #67). Net of
+#     CI answers one question — "is the whole interval above the bar?" — and reading
+#     its negative answer as "the ratio is below the bar" collapses two causes into
+#     one FAIL, which DESIGN.md §5.6 forbids. It happened: janus read 87.6% raw with
+#     ±4.0%/±3.0% intervals, bound 81.6%, FAIL; the same tree at the same commit read
+#     87.0% raw at ±0.0%, bound 87.0%, PASS. The raw quantity agreed within 0.6
+#     points. The FAIL recorded the weather. So:
+#       - PASS when the interval sits at or above the bar. This is bench_ratio_lo >=
+#         0.85, unchanged bit for bit — the third state is carved out of the old
+#         FAIL, never out of the old PASS, and nothing that was below the bar gets
+#         in on a lucky draw.
+#       - FAIL when the whole interval sits below the bar. Now a claim about Ssyrk.
+#       - UNMEASURED when the interval straddles the bar. The measurement cannot
+#         decide; the gate stays not-green; the remedy is DESIGN.md §4's one
+#         archived re-run, and for a host that is CHRONICALLY indeterminate here,
+#         a higher KEEL_BENCH_COUNT for this criterion on that host. Never a wider
+#         judgment, and never the raw ratio in place of the bound.
+#     And the flip-headroom — the symmetric CI at which the bound would reach the
+#     bar — prints per host per run, so the record shows how close each verdict ran
+#     to undecidable instead of leaving the reader to solve for it.
+#
 #     Every criterion that reads a benchmark declares what it will read first
 #     (require_bench, DESIGN.md §5 rule 6): an absent measurement has exactly one
 #     verdict available to it, unmeasured, and never a silent pass or a red
@@ -215,6 +236,13 @@ source scripts/bench.sh
 FAIL=0
 pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
 fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
+# unmeasured — the gate is not green, and the log says why it is not a miss. Same
+# effect on the verdict as fail (DESIGN.md §5.6: an unmeasured criterion may not
+# resolve as either colour, and this gate's colour is binary), different label, so
+# a reader and a PASS/FAIL tally can tell "Ssyrk is too slow" from "this reading
+# cannot decide". The word FAIL must not appear in the label: the delegating gates
+# count verdict lines by grepping for it (gate-p5.sh:1083).
+unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s\n' "$1"; FAIL=1; }
 info() { printf '        %s\n' "$1"; }
 
 # require_bench LABEL LOG CSV UNIT NAME... — declare what a criterion is about to
@@ -808,6 +836,11 @@ BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 SYRK_CLEARED=0
 SYRK_MEASURED=0
+# Three outcomes are counted separately because they have three different remedies:
+# cleared needs nothing, missed is a kernel to fix, indeterminate is precision to
+# buy (#67). Collapsing the last two is the defect this criterion had.
+SYRK_MISSED=0
+SYRK_INDET=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   fail "no execution hosts, so the Ssyrk/Sgemm ratio cannot be evaluated"
@@ -923,28 +956,66 @@ else
     done
 
     slo="$(bench_ratio_lo "$GATE_SSYRK" "$GATE_SGEMM" "$BENCHCSV" GFLOP/s)"
+    shi="$(bench_ratio_hi "$GATE_SSYRK" "$GATE_SGEMM" "$BENCHCSV" GFLOP/s)"
     spt="$(bench_ratio "$GATE_SSYRK" "$GATE_SGEMM" "$BENCHCSV" GFLOP/s)"
-    if [[ -z "$slo" ]]; then
-      fail "[$host] no bounded Ssyrk/Sgemm ratio: benchstat established no confidence interval, which is a failure to measure rather than a pass"
+    grade="$(bench_ratio_grade "$GATE_SSYRK" "$GATE_SGEMM" "$BENCHCSV" GFLOP/s "$SYRK_FLOOR")"
+    if [[ -z "$grade" || "$grade" == unbounded ]]; then
+      unmeasured "[$host] no bounded Ssyrk/Sgemm ratio: benchstat established no confidence interval, which is a failure to measure rather than a pass"
       continue
     fi
     SYRK_MEASURED=$((SYRK_MEASURED + 1))
     slopc="$(awk -v v="$slo" 'BEGIN{printf "%.1f", v*100}')"
+    shipc="$(awk -v v="$shi" 'BEGIN{printf "%.1f", v*100}')"
     sptpc="$(awk -v v="$spt" 'BEGIN{printf "%.1f", v*100}')"
-    if awk -v v="$slo" -v f="$SYRK_FLOOR" 'BEGIN{exit !(v >= f)}'; then
-      pass "[$host] Ssyrk holds ${sptpc}% of Sgemm's rate at n=$gn, ${slopc}% net of CI (>= 85%)"
-      SYRK_CLEARED=$((SYRK_CLEARED + 1))
-    else
-      fail "[$host] Ssyrk holds only ${sptpc}% of Sgemm's rate at n=$gn, ${slopc}% net of CI (< 85%): the triangular derivation is losing more than its masked half"
+    # The flip-headroom diagnostic, printed on every host on every run whatever the
+    # verdict: the symmetric CI at which this host's bound would land exactly on the
+    # bar. A green with 1.16 points of allowance against a host that produces 3.0%
+    # intervals is a green that turned on the weather, and until #67 nothing in the
+    # log said so — the reader had to solve raw·(1−a)/(1+a) = bar themselves.
+    hr="$(bench_ratio_headroom "$spt" "$SYRK_FLOOR")"
+    sci="$(bench_stat "$GATE_SSYRK" "$BENCHCSV" GFLOP/s | awk '{ if ($2 == "inf") print "unbounded"; else printf "%.1f%%", $2*100 }')"
+    gci="$(bench_stat "$GATE_SGEMM" "$BENCHCSV" GFLOP/s | awk '{ if ($2 == "inf") print "unbounded"; else printf "%.1f%%", $2*100 }')"
+    info "[$host] criterion 7 interval [${slopc}%, ${shipc}%] about a raw ${sptpc}%, bar $(awk -v f="$SYRK_FLOOR" 'BEGIN{printf "%.1f", f*100}')%; observed CI Ssyrk +/- ${sci}, Sgemm +/- ${gci}; flip-headroom $(awk -v v="$hr" 'BEGIN{printf "%+.2f", v*100}')% symmetric CI"
+    # T21: benchstat's CI is an integer percent, so "+/- 0.0%" means "under 0.5%",
+    # not "zero". If the headroom is smaller than that rounding, a PASS computed
+    # from a 0.0% arm is inside the formatting's own uncertainty and the interval
+    # printed above is narrower than the measurement supports. Say so rather than
+    # let the reader assume the bound is exact.
+    if [[ "$sci" == "0.0%" || "$gci" == "0.0%" ]] &&
+       awk -v v="$hr" 'BEGIN{exit !(v < 0.005)}'; then
+      info "  CAUTION: flip-headroom is under 0.5% and at least one arm's CI printed as 0.0%, which T21 says only bounds it below 0.5% — this verdict lies inside benchstat's rounding, and settling it needs a higher -count on this host, not a re-read of this line"
     fi
+    case "$grade" in
+      pass)
+        pass "[$host] Ssyrk holds ${sptpc}% of Sgemm's rate at n=$gn, ${slopc}% net of CI (>= 85%)"
+        SYRK_CLEARED=$((SYRK_CLEARED + 1))
+        ;;
+      fail)
+        fail "[$host] Ssyrk holds only ${sptpc}% of Sgemm's rate at n=$gn, and the whole interval [${slopc}%, ${shipc}%] is below 85%: the triangular derivation is losing more than its masked half"
+        SYRK_MISSED=$((SYRK_MISSED + 1))
+        ;;
+      *)
+        unmeasured "[$host] Ssyrk's interval [${slopc}%, ${shipc}%] straddles the 85% bar (raw ${sptpc}%), so this reading cannot decide the criterion in either direction — it is not evidence that Ssyrk is too slow, and it is not a pass"
+        info "  remedy, in order: DESIGN.md §4's one immediate re-run with both outputs archived; and if this host is CHRONICALLY indeterminate here, raise KEEL_BENCH_COUNT for this criterion on this host. The bar does not move and the raw ratio is not graded in place of the bound — a true-below ratio would clear on a lucky draw (#67)."
+        SYRK_INDET=$((SYRK_INDET + 1))
+        ;;
+    esac
   done <<<"$HOSTS"
   [[ -n "$DRIFT_CHECKED" ]] || fail "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA were never checked against the object code"
+  # The aggregate inherits the three states, in the order that keeps a real miss
+  # from hiding behind a noisy host: one host below the bar is a red whatever the
+  # others did, and only when nothing is below the bar does indeterminacy become
+  # the reason the criterion did not resolve.
   if [[ "$SYRK_MEASURED" -eq 0 ]]; then
-    fail "no host produced an Ssyrk/Sgemm ratio at all, so criterion 7 is unmeasured rather than missed"
+    unmeasured "no host produced a bounded Ssyrk/Sgemm ratio at all, so criterion 7 is unmeasured rather than missed"
+  elif [[ "$SYRK_MISSED" -gt 0 ]]; then
+    fail "$SYRK_MISSED of $NHOSTS gate hosts are below the bar with the whole interval ($SYRK_CLEARED cleared, $SYRK_INDET undecidable); the criterion is per host, on the host's own Sgemm"
+  elif [[ "$SYRK_INDET" -gt 0 ]]; then
+    unmeasured "$SYRK_INDET of $NHOSTS gate hosts produced an interval straddling the bar and none produced one below it ($SYRK_CLEARED cleared): criterion 7 is undecided on this run, which is not the same as missed, and the gate stays not-green until a re-run or a higher -count settles it (#67)"
   elif [[ "$SYRK_CLEARED" -eq "$NHOSTS" ]]; then
     pass "every gate host cleared 85% of its own Sgemm ($SYRK_CLEARED/$NHOSTS)"
   else
-    fail "$SYRK_CLEARED of $NHOSTS gate hosts cleared the bar; the criterion is per host, on the host's own Sgemm"
+    unmeasured "$SYRK_CLEARED of $NHOSTS gate hosts cleared the bar and the rest produced no verdict at all, so the host count and the verdict count disagree: criterion 7 covered fewer hosts than this gate believes it has"
   fi
 fi
 

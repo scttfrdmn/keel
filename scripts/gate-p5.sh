@@ -1080,13 +1080,18 @@ else
   # Count the delegated gate's own verdict lines, not every line containing the
   # word: a bare `grep -c FAIL` also matches gate-p3's summary line *inside*
   # gate-p4's log ("47 PASS / 0 FAIL"), which made a green gate report 1 FAIL.
+  #
+  # UNMEASURED is counted as its own column, not folded into either. gate-p4's
+  # criterion 7 is three-state since #67, and a tally that printed only PASS and
+  # FAIL would show a straddled interval as neither — the same disappearing act
+  # this comment's own bug did, one column over.
   P4_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P4LOG")
-  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL, verdict: $(grep -E '^gate-p4: (GREEN|RED)' "$P4LOG" | tail -1)"
+  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P4_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED, verdict: $(grep -E '^gate-p4: (GREEN|RED)' "$P4LOG" | tail -1)"
   if [[ "$P4RC" -eq 0 ]]; then
     pass "gate-p4 is green on this commit ($(git rev-parse --short HEAD)), so every rate this gate divided by is still a measured one"
   else
     fail "gate-p4 is RED on this commit (exit $P4RC), so nothing above that divides by a single-thread rate means what it says"
-    printf '%s\n' "$P4_STRIP" | grep '^  FAIL  ' | sed 's/^/        /' | head -20
+    printf '%s\n' "$P4_STRIP" | grep -E '^  (FAIL|UNMEASURED)  ' | sed 's/^/        /' | head -20
     info "  DESIGN.md §4's one-re-run allowance for a failing throughput sentinel applies inside the delegated gates exactly as it does when they are run directly: one immediate re-run, both outputs archived, never for a correctness criterion"
   fi
 fi

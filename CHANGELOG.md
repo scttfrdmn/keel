@@ -9,6 +9,34 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **gate-p4's criterion 7 is graded in three states, and the bar did not move** (ruled
+  2026-08-15 on #67; `DESIGN.md` §4/P4). `Ssyrk ≥ 85% of Sgemm` was judged net of CI, which
+  answers one question — "is the whole interval above the bar?" — and its negative answer
+  was being read as "Ssyrk is too slow". Those are different claims, and §5.6 forbids one
+  verdict standing for two causes. It had already bitten: janus read 87.6% raw with
+  ±4.0%/±3.0% intervals and FAILed at a bound of 81.6%, then read 87.0% raw at ±0.0% on the
+  same tree at the same commit and PASSed. **The raw quantity agreed to within 0.6 points;
+  the FAIL was reporting the weather**, and it spent §4's single re-run allowance to find
+  that out. So: **PASS** when the interval sits at or above the bar — `bench_ratio_lo >=
+  0.85`, unchanged bit for bit — **FAIL** when the whole interval sits below it, and a new
+  **UNMEASURED** when it straddles. The third state is carved out of the old FAIL and never
+  out of the old PASS, so nothing that was below the bar can clear it on a lucky draw; that
+  is why the raw ratio is *not* graded in place of the bound. Replayed against all six
+  archived criterion-7 readings before landing: five stayed PASS, the noisy janus reading
+  moved FAIL → UNMEASURED, and every synthetic edge case (exactly on the bar, unbounded
+  arm, denominator interval reaching zero, missing benchmark) lands where it should.
+  New in `scripts/bench.sh`: `bench_ratio_hi`, `bench_ratio_grade`, `bench_ratio_headroom`.
+  The gate now also prints, per host per run, the interval, both observed CIs and the
+  **flip-headroom** — the symmetric CI at which the bound would land exactly on the bar,
+  `(raw − bar)/(raw + bar)`: 4.17% on the 7950X3D, 1.16% on the i9-9960X, 1.85% on the AI
+  MAX+ 395, against intervals those hosts produce up to 1.0%, 3.0% and 2.0% in one run. Two
+  of three were deciding this criterion on how quiet the machine was and nothing in the log
+  said so. And where the headroom is under 0.5% with an arm whose CI printed `0.0%`, the
+  gate says the verdict lies inside benchstat's integer-percent rounding (T21) rather than
+  letting the bound read as exact. The remedy for UNMEASURED is precision — one archived
+  re-run, then a higher `-count` for this criterion on a chronically undecidable host —
+  never a wider judgment. `gate-p5`'s delegated tally counts the new label as its own
+  column, because a tally with two columns would have made a straddled interval vanish.
 - **`docs/toolchain-notes.md` gains T23 and T24, and T17's "no keel change at all" is
   corrected: `go1.27` moves the floor, but keel does not compile on it yet.** The
   2026-08-15 ruling makes go1.27 keel's minimum and orders `-race` on the vector path as

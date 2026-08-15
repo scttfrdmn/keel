@@ -202,6 +202,105 @@ bench_ratio_lo() {
     }'
 }
 
+# bench_ratio_hi NUM DEN CSV [UNIT] — the mirror of bench_ratio_lo: the LARGEST
+# ratio consistent with both confidence intervals,
+# (median_num · (1 + ci_num)) / (median_den · (1 − ci_den)).
+#
+# WHY A GATE NEEDS THE UPPER END TOO. bench_ratio_lo alone supports exactly one
+# question — "is the whole interval above the bar?" — and a two-state gate reads
+# its negative answer as "below the bar". Those are different claims, and issue
+# #67 is the case where the difference mattered: janus's Ssyrk/Sgemm ratio read
+# 87.6% raw with ±4.0%/±3.0% intervals, so the bound landed at 81.6% and the
+# criterion failed, while the same tree on the same commit read 87.0% raw at
+# ±0.0% and passed. The raw quantity agreed to within 0.6 points both times. What
+# the FAIL actually recorded was that the day was noisy, and DESIGN.md §5.6
+# forbids one verdict standing for two causes.
+#
+# So a threshold comparison gets three outcomes, and this is the second bound it
+# needs. See bench_ratio_grade.
+bench_ratio_hi() {
+  local n d
+  n="$(bench_stat "$1" "$3" "${4:-sec/op}")"
+  d="$(bench_stat "$2" "$3" "${4:-sec/op}")"
+  [[ -n "$n" && -n "$d" ]] || return 0
+  awk -v n="$n" -v d="$d" '
+    BEGIN {
+      split(n, a, " "); split(d, b, " ")
+      if (a[2] == "inf" || b[2] == "inf") exit
+      if (b[2] >= 1) exit   # the denominator interval reaches zero: the ratio is unbounded above
+      printf "%.3f", (a[1] * (1 + a[2])) / (b[1] * (1 - b[2]))
+    }'
+}
+
+# bench_ratio_grade NUM DEN CSV UNIT BAR — three-state verdict for "is NUM/DEN at
+# or above BAR?". Prints exactly one of:
+#
+#   pass           the whole interval sits at or above BAR
+#   fail           the whole interval sits below BAR
+#   indeterminate  the interval straddles BAR — this measurement cannot decide
+#   unbounded      benchstat established no interval for one of the two arms
+#
+# and prints nothing if either benchmark is missing, so empty stays "not
+# measured" as everywhere else in this file.
+#
+# THE PASS CONDITION IS UNCHANGED, BIT FOR BIT. `pass` is `bench_ratio_lo >= BAR`,
+# which is the same comparison every gate here has made since issue #14. Nothing
+# that passed before passes differently now, and nothing that was below the bar
+# gets in: the third state is carved out of the old FAIL, never out of the old
+# PASS. Replayed against the six archived criterion-7 readings at 746cc98 and
+# 2eda333 before it landed: five stayed PASS and the one noisy janus reading
+# (interval [81.6%, 93.9%] about a raw 87.5%, bar 85%) moved FAIL ->
+# indeterminate, which is the reading that started #67. The replay drives these
+# functions from the medians as the logs *printed* them, which bench_describe
+# renders to 4 significant figures, so a replayed raw ratio can sit 0.1 point off
+# the gate's own — antares replays 88.3% where its log says 88.2%. Verdicts are
+# unaffected (every margin here is more than a point), but the numbers are a
+# reproduction to display precision, not to the gate's.
+#
+# The remedy for indeterminate is precision, never a wider judgment: one archived
+# re-run under DESIGN.md §4's allowance, and if a host is *chronically*
+# indeterminate on a criterion, raise KEEL_BENCH_COUNT for that criterion on that
+# host. Moving the bar, or grading the raw ratio, would let a genuinely-below
+# ratio through on a lucky draw. That is the one thing three-state grading exists
+# to prevent.
+bench_ratio_grade() {
+  local lo hi bar
+  bar="$5"
+  lo="$(bench_ratio_lo "$1" "$2" "$3" "$4")"
+  hi="$(bench_ratio_hi "$1" "$2" "$3" "$4")"
+  # Missing is not the same as unbounded: bench_ratio_lo prints nothing for both,
+  # so the arms are re-read here to tell them apart.
+  [[ -n "$(bench_stat "$1" "$3" "$4")" && -n "$(bench_stat "$2" "$3" "$4")" ]] || return 0
+  if [[ -z "$lo" || -z "$hi" ]]; then
+    printf 'unbounded\n'
+    return 0
+  fi
+  awk -v lo="$lo" -v hi="$hi" -v bar="$bar" 'BEGIN {
+    if (lo >= bar)      print "pass"
+    else if (hi < bar)  print "fail"
+    else                print "indeterminate"
+  }'
+}
+
+# bench_ratio_headroom RAW BAR — the symmetric confidence interval at which a raw
+# ratio's conservative lower bound reaches BAR. Prints a fraction; negative means
+# the raw ratio is itself below BAR, so no amount of quiet would clear it.
+#
+# net = raw·(1−a)/(1+a) = bar  =>  a = (raw − bar)/(raw + bar)
+#
+# This is a diagnostic, not a verdict, and it is printed every run because it is
+# the number that says how close a green ran to undecidable. At the 85% bar it
+# came out 4.17% on the 7950X3D, 1.16% on the i9-9960X and 1.85% on the AI MAX+
+# 395 — against intervals those hosts produce up to 1.0%, 3.0% and 2.0% in the
+# same gate. Two of three decide that criterion on how quiet the machine was, and
+# no one could see it from the log until it was printed (#67).
+bench_ratio_headroom() {
+  awk -v raw="$1" -v bar="$2" 'BEGIN {
+    if (raw + bar <= 0) exit
+    printf "%.4f", (raw - bar) / (raw + bar)
+  }'
+}
+
 # bench_ratio NUM DEN CSV [UNIT] — the point estimate, for reporting alongside
 # the bound. Printing both is the point: the gap between them is how much of the
 # result is measurement noise, and hiding it would make a 43%-CI run look like a
