@@ -155,6 +155,14 @@ main() {
   # instructions), so it can carry both jobs.
   FILTER="${KEEL_L1_FILTER:-BenchmarkL1S(asum|scal)}"
 
+  # bench.sh exports bench_flags, not BFLAGS — every caller populates the array
+  # itself (gate-p1/p2/p4/p5, l1-bench). Omitting this aborted under `set -u`,
+  # and it aborted at the *first host*, i.e. after paying for all eight builds.
+  # The `while read` form rather than mapfile, matching the gates, so this does
+  # not depend on a bash newer than 3.2.
+  BFLAGS=()
+  while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
+
   BINDIR="$(mktemp -d)"
   # Not `local`, for the same reason l1-bench.sh says so: the EXIT trap runs in
   # global scope after this function returns, and under `set -u` an unbound name
@@ -176,7 +184,7 @@ main() {
 
   # Build the whole ensemble first, so a build failure costs no host time and so
   # the alignment table can be read before anything is measured.
-  local pad arm bin
+  local pad arm bin f
   echo "-- sampled placements (entry address / mod 64) --"
   printf '        %-5s %-26s %-26s %s\n' pad "$CHANGED_FN (changed)" "$CONTROL_FN (control)" arm
   for pad in "${PADS[@]}"; do
