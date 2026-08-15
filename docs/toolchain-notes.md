@@ -11,7 +11,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-10 | go1.26.5 | `MulAdd` lowers to `VFMADD213PS`, not the `231` form DESIGN.md predicted | [T2](#t2) | none — not a defect |
 | 2026-08-10 | go1.26.5 | No `Abs` and no bitwise ops on any float32 vector type | [T3](#t3) | candidate |
 | 2026-08-10 | go1.26.5 | No horizontal-reduce op for `Float32x16` | [T4](#t4) | candidate |
-| 2026-08-10 | go1.26.5 | No portable `simd` package; only `simd/archsimd` exists | [T5](#t5) | none — expected in 1.27 |
+| 2026-08-10 | go1.26.5 | No portable `simd` package; only `simd/archsimd` exists | [T5](#t5) | none — **shipped in 1.27**, see [T24](#t24) |
 | 2026-08-10 | go1.26.5 | `Max`/`Min` operand order for NaN/±0 — **resolved on hardware**, spec was right | [T6](#t6) | closed (#9) |
 | 2026-08-10 | go1.26.5 | `GOAMD64` level does not gate archsimd intrinsics; a v1 binary runs AVX-512 | [T7](#t7) | none — load-bearing for keel |
 | 2026-08-10 | go1.26.5 | CSE merges identical FMA accumulator chains; two more ways a peak kernel lies | [T8](#t8) | none — not a defect |
@@ -27,6 +27,10 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-12 | go1.26.5 | A **loop-invariant vector constant is re-materialized every iteration**: `BroadcastInt32x16(const)` inside a loop stays inside it (3 insns/iteration), while the same constant written above the loop stays above it. LICM does not lift SIMD ops at all; no helper, inlining or CSE is needed to trigger it. CSE shares it across unrolled uses within one iteration | [T18](#t18) | **pre-existing upstream**: [golang/go#79984](https://github.com/golang/go/issues/79984), fix WIP in [CL 803220](https://go-review.googlesource.com/c/go/+/803220) (#8) |
 | 2026-08-12 | go1.26.5 | `s = s[n:]` in a loop guarded by `len(s) >= n` costs **7 instructions**, not 2: the pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) because the loop may leave the slice exactly empty and the data pointer must not pass the end of the allocation. Guarding with `len(s) > n` collapses it to one `ADDQ` | [T19](#t19) | none — GC-correctness, not a defect; the `>` form is **taken** as of 2026-08-14, all ten `internal/l1` loops |
 | 2026-08-12 | benchstat v0.0.0-20260709024250 | `benchstat A B` **does not compare A and B** when their logs differ in any one `key: value` configuration line — it prints two independent one-column tables, no deltas, no p-values, and **exits 0**. This repo's own provenance markers include a live clock snapshot, so two runs on one host never compare | [T20](#t20) | candidate |
+| 2026-08-12 | benchstat v0.0.0-20260709024250 | benchstat's CI is an **integer percent** in both the text table and the CSV, so `± 0%` means "narrower than 0.5%", not "zero" — a consumer that does arithmetic with the interval inherits the formatting's precision, not the quantity's | [T21](#t21) | none — by design |
+| 2026-08-14 | go1.26.6 | A commit that changes **no instruction byte** of a function can still make it **45% slower**; function-entry alignment mod 64 is the discriminator, and the magnitude is a property of the µarch (~0% Skylake-X, ~7% Zen 4, ~45% Zen 5) | [T22](#t22) | none — long-standing ([golang/go#8717](https://github.com/golang/go/issues/8717), [#18977](https://github.com/golang/go/issues/18977), [#6752](https://github.com/golang/go/issues/6752)) |
+| 2026-08-15 | go1.27rc3 | `archsimd`'s load/store are **renamed with a swap**: the slice forms take over the bare names (`LoadFloat32x16Slice`→`LoadFloat32x16`, `StoreSlice`→`Store`) while the array forms gain an `Array` suffix, and the `…SlicePart` forms become `…Part` *and grow a return value*. keel does not compile under 1.27: 51 errors in 3 files, all of them type errors | [T23](#t23) | none — pre-GA API churn, expected (T5) |
+| 2026-08-15 | go1.27rc3 | The portable `simd` package **ships** (T5's guess was right), with arm64, wasm and a pure-Go emulated fallback — but its vector length is a **runtime** quantity (`VectorBitSize()`, `Len()`), so it cannot express a register-blocked microkernel's compile-time tile, and has no `GetLo`/`GetHi` for `HSum`'s fold tree | [T24](#t24) | none — as designed |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -223,6 +227,11 @@ archsimd
 package as a 1.27 thing and parks the ARM64/NEON kernel behind it. No action
 beyond noting that the P0 instruction to read `go doc simd` is unsatisfiable
 on 1.26 and was not skipped through oversight.
+
+**Resolved (2026-08-15).** It ships in `go1.27rc3`, and DESIGN.md §8's parking of
+the ARM64 kernel behind it needs revisiting rather than resuming: the package is
+vector-length-agnostic at runtime, which is the one property a register-blocked
+microkernel cannot use. See [T24](#t24).
 
 ## T6 — `Max`/`Min` operand order for NaN and ±0 — resolved, spec was right
 
@@ -1370,12 +1379,24 @@ instrumented builds only**; release builds still inline it.
 
 **Consequences for keel.** The copy-into-a-full-width-array workaround above is a **1.26.x
 bridge, not a permanent spelling**, and its price — all ten Level-1 kernels crossing
-`StackSmall` and losing `nosplit`, `internal/l1` +15.5% static instructions — is paid only for
-as long as keel builds on 1.26.x. On 1.27 the four `-race` criteria clear with no keel change
-at all. The admissibility condition on #22's candidates is therefore satisfied by the
-toolchain rather than by a workaround, so the masked-partial candidate is measured **as
-written** instead of in a costume. Still to do, and now confirming rather than deciding: run
-the repro above on go1.27rc1 on a benchmark host.
+`StackSmall` and losing `nosplit`, `internal/l1` +15.5% static instructions — was never
+actually paid: the 2026-08-12 disposition parked the implementation inside #22's campaign
+rather than landing it as a point patch, so `vec.LoadPart512` still calls
+`archsimd.LoadFloat32x16SlicePart` directly and the +15.5% remains a measured *quotation*
+for a change that is now obsolete before it was written. The admissibility condition on
+#22's candidates is therefore satisfied by the toolchain rather than by a workaround, so
+the masked-partial candidate is measured **as written** instead of in a costume.
+
+**Correction (2026-08-15), same day.** The sentence above originally read "on 1.27 the four
+`-race` criteria clear with no keel change at all". That was a prediction, and running it is
+what refuted it: **keel does not compile under `go1.27rc3`** — `archsimd`'s load/store were
+renamed, with two of the old names surviving under new parameter types, and the port is 51
+type errors across three files ([T23](#t23)). So there *is* a keel change between here and
+those four criteria, the criteria remain **unmeasured** on 1.27 rather than clear, and the
+chain is floor → port → `-race` → criteria. Recorded rather than quietly rewritten because
+the failure mode it illustrates is the one this file exists for: a fix confirmed in the
+*compiler* was assumed to be a fix in *keel's build*, which is a different claim needing its
+own run.
 
 ---
 
@@ -2067,3 +2088,177 @@ It also means a percent-of-peak floor and a two-arm A/B have different exposure:
 floor compares a median against a fixed denominator and is unaffected, while the A/B
 compares two placements. Gates that assert a floor are safe; gates that assert an
 improvement are not, unless they carry the control.
+
+---
+
+## T23 — `archsimd`'s load/store are renamed with a *swap*: the slice forms take the bare names, and the array forms gain an `Array` suffix
+
+**Toolchain.** `go1.27rc3 linux/amd64`, installed to its own prefix
+`/usr/local/go1.27rc3` on all three amd64 hosts (docs/hosts.md) and read back
+there — `/usr/local/go` stays on `go1.26.5`, because clobbering it would silently
+re-point every host-invoked gate step and every published number's compiler.
+Compared against `go1.26.5 linux/amd64` on the same host, with the same command.
+keel at `c983e3b`.
+
+**Observation.** `simd/archsimd`'s load and store surface was reshaped between
+1.26 and 1.27, and it is not a set of independent renames. Two of the old names
+*survive with different parameter types*: the slice-taking forms were promoted
+onto the bare names, and the array-taking forms they displaced were pushed out to
+an `Array` suffix. A third pair changed shape as well as name, growing a return
+value.
+
+Both columns are `go doc` output, not recollection (CLAUDE.md's prime directive):
+
+| go1.26.5 | go1.27rc3 | kind |
+|---|---|---|
+| `LoadFloat32x16(y *[16]float32) Float32x16` | `LoadFloat32x16Array(y *[16]float32) Float32x16` | displaced by the swap |
+| `LoadFloat32x16Slice(s []float32) Float32x16` | **`LoadFloat32x16(s []float32) Float32x16`** | takes over the bare name |
+| `LoadFloat32x16SlicePart(s []float32) Float32x16` | **`LoadFloat32x16Part(s []float32) (Float32x16, int)`** | renamed **and** returns a count |
+| `(x Float32x16) Store(y *[16]float32)` | `(x Float32x16) StoreArray(y *[16]float32)` | displaced by the swap |
+| `(x Float32x16) StoreSlice(s []float32)` | **`(x Float32x16) Store(s []float32)`** | takes over the bare name |
+| `(x Float32x16) StoreSlicePart(s []float32)` | **`(x Float32x16) StorePart(s []float32) int`** | renamed **and** returns a count |
+| `(x Float32x16) StoreMasked(y *[16]float32, m Mask32x16)` | `(x Float32x16) StoreArrayMasked(y *[16]float32, m Mask32x16)` | displaced by the swap |
+| `BroadcastFloat32x16`, `BroadcastFloat32x8`, `BroadcastInt32x16`, `BroadcastInt32x8` | unchanged | — |
+
+The same pattern holds for `Float32x8`, `Int32x16` and `Int32x8`.
+
+**The mechanism, which makes the direction predictable.** 1.27 also ships the
+portable `simd` package (T24), whose documented convention is slice-first:
+`Load<Types>(s []T)`, `Load<Types>Part(s []T) (<Types>, int)`, `Store([]T)`,
+`StorePart([]T) int`. `archsimd`'s new names are exactly that convention. So this
+is not arbitrary churn — it is `archsimd` converging on the portable package's
+spelling, and the useful prediction is that *the slice form is now the canonical
+one and any array form is the suffixed special case*. Anything still named for a
+`*[N]T` parameter is the shape most likely to move again.
+
+**Minimal repro.** Both toolchains, one host, one command:
+
+```
+$ GOEXPERIMENT=simd /usr/local/go/bin/go doc simd/archsimd | grep 'LoadFloat32x16'
+func LoadFloat32x16(y *[16]float32) Float32x16
+func LoadFloat32x16Slice(s []float32) Float32x16
+func LoadFloat32x16SlicePart(s []float32) Float32x16
+
+$ GOEXPERIMENT=simd /usr/local/go1.27rc3/bin/go doc simd/archsimd | grep 'LoadFloat32x16'
+func LoadFloat32x16(s []float32) Float32x16
+func LoadFloat32x16Array(y *[16]float32) Float32x16
+func LoadFloat32x16Part(s []float32) (Float32x16, int)
+```
+
+**keel does not compile under 1.27.** `go build -gcflags=-e ./...` (the `-e`
+matters: without it the error list is truncated and the size of the port is
+understated) reports 51 errors, every one a type error, in three files:
+
+| file | errors | what |
+|---|---|---|
+| `internal/vec/gemm_amd64.go` | 35 | all `undefined: archsimd.LoadFloat32x16Slice` |
+| `internal/vec/vec_avx2.go` | 9 | 2 undefined, 2 missing methods, 5 array-pointer-into-slice-parameter |
+| `internal/vec/vec_avx512.go` | 7 | 2 undefined, 2 missing methods, 3 array-pointer-into-slice-parameter |
+
+Sorted by the edit each needs, which is how the port should be planned:
+
+- **Pure rename, signature unchanged — 39 sites.** 36 ×
+  `archsimd.LoadFloat32x16Slice` → `LoadFloat32x16`, 1 ×
+  `archsimd.LoadFloat32x8Slice` → `LoadFloat32x8`, 2 × `.StoreSlice` → `.Store`.
+- **Rename plus a new return value — 4 sites.** `LoadFloat32x16SlicePart` and
+  `LoadFloat32x8SlicePart` become `…Part` returning `(vector, int)`;
+  `.StoreSlicePart` becomes `.StorePart` returning `int`. keel's shim wrappers
+  have to decide whether to expose the count or discard it — it is the same
+  quantity the wrappers currently recompute from `len(s)`.
+- **Array-form sites that must gain the `Array` suffix — 8 sites.** Two
+  `h4.Store(&a)` in the `HSum` fold trees (`vec_avx2.go:83`,
+  `vec_avx512.go:129`), and the six `Block` round-trips in the test layer
+  (`vec_avx512.go:159,163`, `vec_avx2.go:162,163,168,169`). These are real
+  array stores of stack temporaries, so `StoreArray`/`LoadFloat32x16Array` is
+  the right destination; they are not the T17 workaround and are not deleted.
+
+**Every one of the 51 is caught by the type checker, and that is not luck.** A
+name swap is the API change that *can* compile with new semantics, so it is worth
+saying why this one cannot: `*[N]float32` and `[]float32` are mutually
+unassignable in Go, so every displaced call fails to type-check rather than
+silently rebinding, and the two `…Part` forms grow a second result, which Go
+rejects in a single-assignment context. The general rule this instance
+illustrates — a swap is safe only when the two overloads' parameter types are
+mutually unassignable, and this one is — is what makes "it still compiles"
+sufficient evidence *here* and insufficient in general.
+
+**Consequence for keel.** The 2026-08-15 ruling makes go1.27 keel's floor, and
+the first act under the floor was to be `-race` on the vector path. That is a
+two-step chain that turns out to be four: **floor → port `internal/vec` → `-race`
+→ the four `-race` gate criteria.** The `-race` question is still unanswered on
+1.27, because the probe never got far enough to ask it: arm B failed at `go
+build`, before any test ran. Instrumenting that probe for four outcomes
+(`compile-fail` / `checkptr` / `data-race` / `clean`) rather than two is what kept
+this from being reported as "checkptr is still broken".
+
+The floor cannot move yet for a second, independent reason: `go1.27.0` **final
+does not exist** — go.dev/dl lists `go1.27rc3` as the tip and `go1.26.6` as
+stable — and the ruling's own condition is 1.27.0 final installed and read back on
+all three hosts. Landing the port before then would break all three benchmark
+hosts (`go1.26.5`) and the dev host (`go1.26.6`) simultaneously, taking the
+project's whole measurement apparatus offline to chase a toolchain that has not
+shipped. So the port is written against the rename table above and held.
+
+**The one piece of good news, and it is the design bet paying off.** DESIGN.md §3
+confines every `simd` import to `internal/vec` behind a hand-written shim, on the
+argument that an experimental API will move. It moved, in the most invasive way
+short of a semantic change, and the blast radius is 3 files, 51 lines, and **zero
+changes to keel's own API**: `vec.Load512`, `vec.LoadPart512`, `vec.Store512`,
+`vec.StorePart512` and the rest keep their names *and* their signatures — the
+`…Part` wrappers absorb the new return value rather than passing it on — so
+nothing outside `internal/vec` is touched. Five
+files reference `simd/archsimd`; two of those references are comments.
+
+---
+
+## T24 — 1.27 ships the portable `simd` package, and it is vector-length-agnostic *at runtime*, which a register-blocked microkernel cannot be
+
+**Toolchain.** `go1.27rc3 linux/amd64` vs `go1.26.5 linux/amd64`, same host,
+`GOEXPERIMENT=simd`. Found while surveying the T23 rename.
+
+**Observation.** T5 recorded that 1.26 has no portable `simd` package, only
+`simd/archsimd`, and guessed "expected in 1.27". It is there:
+
+```
+$ ls $(/usr/local/go/bin/go env GOROOT)/src/simd/
+archsimd
+
+$ ls $(/usr/local/go1.27rc3/bin/go env GOROOT)/src/simd/
+archsimd  doc.go  midway_amd64.go  midway_arm64.go  midway_wasm.go
+simd_emulated.go  simd_stubs.go  simd_types.go  tofrom_amd64.go
+tofrom_arm64.go  tofrom_wasm.go  ...  (tests elided)
+```
+
+It has amd64, arm64 and wasm backends plus a pure-Go emulated fallback, one
+vector type per primitive numeric type (`Float32s`, `Int16s`, …), and a documented
+bridge in both directions: `ToArch() any` and `Float32sFromArch[T](x T)`.
+
+**The property that decides its usefulness here.** Its own doc: "the vector length
+is at least 128 bits, and within a given program execution, all vectors have the
+same length." The lane count is therefore a *runtime* quantity —
+`simd.VectorBitSize() int`, `simd.Emulated() bool`, `(x Float32s) Len() int` —
+with no compile-time constant anywhere in the API.
+
+**Consequence for keel, which cuts two ways.**
+
+- **Not for the kernel.** keel's microkernel is register-blocked: `MR`, `NR` and
+  `Lanes = 16` are compile-time constants because the accumulator tile has to be
+  a fixed number of named vector registers, which is the entire content of
+  DESIGN.md §3's tile shaping and of the P2 spill audit. A type whose width is
+  only known at runtime cannot express that tile. There is also no `GetLo`/`GetHi`
+  on `Float32s`, so `HSum`'s specified fold tree — the one the differential test
+  demands bit-for-bit — is not expressible portably either. The kernel stays on
+  `archsimd`.
+- **Possibly for the dev host, which is the interesting half.** T1 is that the dev
+  host (darwin/arm64) can execute *no* vector op, so every vector correctness
+  check has to travel to an amd64 host over ssh, and the scalar twin is all that
+  runs locally. An emulated-plus-arm64 portable package is the first thing that
+  could run a vector path *on the dev host* — not for numbers, which stay
+  hardware-keyed, but for the differential tests, where the whole point is
+  agreement rather than throughput.
+
+That second possibility is a design question, not a finding, and it is not decided
+here: it would mean a third backend behind the shim, with its own differential
+test obligations and its own bit-exactness argument (an emulated FMA that fuses
+where hardware does not would be a *worse* oracle than no oracle). Filed as a
+question rather than acted on.

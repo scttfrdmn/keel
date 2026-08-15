@@ -9,7 +9,48 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
-- **`docs/toolchain-notes.md` T17 gains a resolution: fixed upstream in go1.27, and the
+- **`docs/toolchain-notes.md` gains T23 and T24, and T17's "no keel change at all" is
+  corrected: `go1.27` moves the floor, but keel does not compile on it yet.** The
+  2026-08-15 ruling makes go1.27 keel's minimum and orders `-race` on the vector path as
+  the first act under it. Probed on all three benchmark hosts with `go1.27rc3` installed
+  to its own prefix (`/usr/local/go1.27rc3`, leaving `/usr/local/go` on `go1.26.5` so no
+  published number's compiler moves silently — #58), and the probe was written with four
+  outcomes rather than two: `compile-fail` / `checkptr` / `data-race` / `clean`. It came
+  back **`compile-fail`, identically on all three hosts**, which a two-outcome probe would
+  have reported as "checkptr still broken". `simd/archsimd`'s load/store were renamed with
+  a **swap** — the slice forms took over the bare names (`LoadFloat32x16Slice` →
+  `LoadFloat32x16`, `StoreSlice` → `Store`), the displaced array forms gained an `Array`
+  suffix, and the `…SlicePart` forms became `…Part` *and grew a return value* — because
+  `archsimd` is converging on the naming convention of the portable `simd` package that
+  1.27 also ships. `go build -gcflags=-e ./...` gives 51 errors, all type errors, in 3
+  files: 39 pure renames, 4 renames that gain a return value, 8 array-form sites that need
+  the `Array` suffix. **Every one is compile-caught**, because `*[N]float32` and
+  `[]float32` are mutually unassignable, so the swap cannot rebind silently — the property
+  that makes "it still compiles" sufficient evidence here and insufficient in general.
+  So the chain to the four `-race` criteria is **floor → port `internal/vec` → `-race` →
+  criteria**, not floor → `-race` → criteria, and the criteria are `unmeasured` on 1.27
+  rather than clear. The port is specified but **held**: `go1.27.0` final does not exist
+  yet (go.dev/dl has rc3 as tip, 1.26.6 as stable), the ruling's own condition is 1.27.0
+  final installed and read back on all three hosts, and landing it now would break three
+  hosts on `go1.26.5` and the dev host on `go1.26.6` at once. The consolation is DESIGN.md
+  §3's shim bet paying off against a real API break: 3 files, 51 lines, **zero change to
+  keel's own API** (T5, T17, T23, T24; #42, #22).
+- **T5 resolves the way it guessed and the conclusion drawn from it does not: 1.27 ships
+  the portable `simd` package, and DESIGN.md §8's plan to park the ARM64 kernel behind it
+  needs revisiting rather than resuming** (T24). The package is there with amd64, arm64 and
+  wasm backends plus a pure-Go emulated fallback, one vector type per primitive numeric
+  type, and a bridge both ways (`ToArch() any`, `Float32sFromArch[T]`). But its vector
+  length is a **runtime** quantity — `simd.VectorBitSize()`, `simd.Emulated()`,
+  `(x Float32s) Len() int`, no compile-time constant anywhere — and a register-blocked
+  microkernel is exactly the thing that cannot be vector-length-agnostic: `MR`, `NR` and
+  `Lanes = 16` are constants because the accumulator tile is a fixed set of named
+  registers, which is the whole content of the P2 spill audit. There is also no
+  `GetLo`/`GetHi` on `Float32s`, so `HSum`'s bit-exact fold tree is not expressible either.
+  The kernel stays on `archsimd`. The interesting half is the other one: an
+  emulated-plus-arm64 vector path is the first thing that could run a *vector* differential
+  test **on the dev host**, which T1 has forced onto ssh since P0 — but an emulated FMA
+  that fuses where hardware does not would be a worse oracle than none, so that is filed as
+  a question, not adopted. fixed upstream in go1.27, and the
   `-race` doubt that would have made the fix useless is measured away.** CL 761120 marks all
   30 `archsimd` `pa*` helpers `//go:nocheckptr`; the pragma count in
   `src/simd/archsimd/unsafe_helpers.go` is 30 on `go1.27rc1` and 0 in go1.26.6, so every
