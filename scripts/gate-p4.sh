@@ -454,6 +454,21 @@ flops_formula() {
 echo "== gate-p4: Level 2 + derived Level 3 =="
 echo
 
+# ------------------------------------------------------------- tree state (#63)
+# `git status` sees uncommitted changes and nothing else. A registered worktree
+# is a second checkout of another commit in this repo, invisible to that check,
+# and it usually means an l1-bench.sh or layout-ensemble.sh run is in flight --
+# which is exactly the condition that should stop a gate rather than an exception
+# to carve out for. The tree is frozen for a measurement's life and a gate IS a
+# measurement, so a gate concurrent with a benchmark was never legitimate. No
+# allowlist, no exemption (ruled 2026-08-14). See worktree_strays in remote.sh.
+if WORKTREE_STRAYS="$(worktree_strays)"; then
+  pass "no stray git worktrees (this repo is the only registered checkout)"
+else
+  fail "a git worktree is registered besides this one, so either a measurement is in flight or its wreckage was left behind -- wait for it or kill it, then re-run"
+  sed 's/^/        /' <<<"$WORKTREE_STRAYS"
+fi
+
 # ------------------------------------------------------------------- builds
 echo "-- builds --"
 if GOEXPERIMENT=simd go build ./... 2>&1; then pass "make build (GOEXPERIMENT=simd)"; else fail "make build (GOEXPERIMENT=simd)"; fi

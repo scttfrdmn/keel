@@ -42,6 +42,50 @@ remote_hosts() {
   sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$f"
 }
 
+# worktree_strays — print every registered worktree other than this one, as
+# `PATH REVISION`, and return 1 if there are any.
+#
+# WHY A GATE CARES (#63). The gates assert tree state with `git status`, which
+# sees uncommitted changes and nothing else. A *registered worktree* is a second
+# checkout of another commit inside the same repository, and it is invisible to
+# every check we have. It is a hazard twice over:
+#
+#   - a stray build, path glob or tool invocation can read the wrong revision's
+#     sources out of it;
+#   - a future session finds it and cannot tell instrument residue from a live
+#     measurement. That is the "is this state a result, or wreckage?" ambiguity
+#     DESIGN.md §5.6 spends the gates' whole vocabulary eliminating.
+#
+# A worktree here usually means an `l1-bench.sh` or `layout-ensemble.sh` run is
+# in flight, and that is exactly the condition that should stop a gate rather
+# than an exception to be carved out for. The tree is frozen for a measurement's
+# life; a gate IS a measurement; so a gate concurrent with a benchmark was never
+# legitimate, and the runs have been serialized by hand all campaign for that
+# reason. This mechanizes the serialization practice already imposed. One
+# measurement at a time stops being discipline and becomes an assertion.
+#
+# Note the failure is reported on its own rather than folded into the dirty-tree
+# check. A dirty tree breaks `git archive HEAD` and so breaks the delegated
+# chain by construction; a stray worktree does not touch HEAD and breaks nothing
+# mechanically. Sharing one flag would attribute a cause this does not have.
+worktree_strays() {
+  local main path head n=0
+  main="$(git rev-parse --show-toplevel 2>/dev/null)" || return 0
+  while IFS= read -r line; do
+    case "$line" in
+      'worktree '*) path="${line#worktree }" ;;
+      'HEAD '*)
+        head="${line#HEAD }"
+        if [[ "$path" != "$main" ]]; then
+          printf '%s %s\n' "$path" "${head:0:7}"
+          n=$((n + 1))
+        fi
+        ;;
+    esac
+  done < <(git worktree list --porcelain 2>/dev/null)
+  [[ "$n" -eq 0 ]]
+}
+
 # remote_build_test PKG OUT — cross-compile PKG's test binary for linux/amd64.
 #
 # CGO_ENABLED=0 guarantees a static binary that does not care which libc the

@@ -52,6 +52,30 @@ While the major version is 0, minor versions may contain breaking changes.
   earlier "~3 instructions in 25, so ≤12%" reasoning here was wrong, because it assumed
   removed instructions are fungible with the remainder — true only under uniform issue
   pressure. Retires with #54 when CL 803220 lands.
+- **All six gates now assert `git worktree list` as well as `git status`** (#63). `git status`
+  sees uncommitted changes and nothing else; a registered worktree is a second checkout of
+  another commit inside the same repository and was invisible to every check we had. It is a
+  hazard twice over: a stray build or path glob can read the wrong revision's sources out of
+  it, and a later session finds it unable to tell instrument residue from a live measurement —
+  the "is this a result, or wreckage?" ambiguity DESIGN.md §5.6 exists to eliminate. A
+  worktree here usually means an `l1-bench.sh` or `layout-ensemble.sh` run is in flight, which
+  is precisely the condition that should stop a gate rather than an exception to carve out
+  for: the tree is frozen for a measurement's life, a gate *is* a measurement, so a gate
+  concurrent with a benchmark was never legitimate. The runs have been serialized by hand all
+  campaign for that reason and nothing enforced it. **No allowlist and no
+  concurrent-benchmark exemption** — the gate fails, printing each offending worktree's path
+  and revision, since the remedy depends on which it is: wait for the owner, or kill it. One
+  measurement at a time stops being discipline and becomes an assertion. Reported separately
+  from the dirty-tree failure rather than folded into it, because a dirty tree breaks
+  `git archive HEAD` and so breaks the delegated chain by construction while a stray worktree
+  does not touch HEAD and breaks nothing mechanically; sharing one flag would attribute a
+  cause this does not have. The occasion was a real one: a worktree at `e5bce33` had sat in
+  `/private/tmp` since the #47 A/B. Two plausible causes were checked before anything was
+  filed and both were false — `l1-bench.sh` and `layout-ensemble.sh` put their worktrees under
+  `mktemp -d` and already remove them in an EXIT trap (#55), and bash *does* run EXIT traps on
+  death by SIGTERM, SIGHUP and SIGINT, so only SIGKILL escapes. It was a hand-typed
+  `git worktree add` with no owner. Filing the assumed defect would have reported one that
+  does not exist.
 - **`scripts/layout-ensemble.sh`** decides whether an A/B delta is caused by a code change
   or by where the change happened to put the code — see the commit and #61. It grades
   placements as well as sampling them: because a code change displaces everything *after*
