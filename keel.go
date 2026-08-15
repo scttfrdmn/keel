@@ -1,11 +1,7 @@
 // Copyright 2026 Scott Friedman
 // SPDX-License-Identifier: Apache-2.0
 
-// Package keel is a pure-Go float32 BLAS subset whose hot kernels target the
-// experimental simd/archsimd packages (GOEXPERIMENT=simd). See DESIGN.md.
-//
-// Status: pre-alpha skeleton. Every routine below is a stub until its phase
-// gate is green; see DESIGN.md §4 and the GitHub milestones.
+// The package comment lives in doc.go.
 package keel
 
 import (

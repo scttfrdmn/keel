@@ -9,6 +9,76 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The parallel nest (P5).** The Level-3 routines now distribute their work over a
+  bounded pool of goroutines sized by `runtime.GOMAXPROCS(0)`, started per call and
+  joined before the call returns. GOMAXPROCS is the only knob; there is no keel-specific
+  one, because it is the knob a caller already has and already expects a Go library to
+  respect.
+
+  Three properties are contract, and each has a test that fails on it rather than a
+  comment claiming it:
+  - **The result is bit-identical at every thread count.** The parallel axis is the MC
+    (`ic`) loop, which partitions C by row panels and reassociates no single output
+    element's sum, so parallel equals serial *exactly* — not within a tolerance. A float32
+    BLAS whose answer moved with the core count would be a different library on every
+    machine. Checked bitwise at GOMAXPROCS 1, 3 and 8 over five shapes covering all four
+    routines — both Strsm sides, because the two sides split different axes and so reach
+    the blocked nest with different ic-block counts at the same GOMAXPROCS
+    (`TestP5Determinism`; 3 threads because a row-partition off-by-one hides at every
+    power of two).
+  - **Nothing outlives a call.** No resident pool, no background goroutine, and a repeated
+    identical call returns identical bits (`TestP5NoState`) — the second half being what a
+    pooled packed-A buffer could break.
+  - **GOMAXPROCS=1 is the serial nest, in the calling goroutine**, with no goroutine, no
+    atomic and no scheduling in the path (`internal/par.TestRunSerialUsesNoGoroutine`).
+    Every keel number published so far was measured at GOMAXPROCS=1, so the whole prior
+    campaign's denominators are untouched by construction rather than by re-measurement.
+
+  New internal package `internal/par`: per-call workers claiming units dynamically, with
+  each worker's *first* unit assigned statically so the returned worker count is exact
+  rather than a race outcome. Dynamic claiming rather than a range per worker because
+  Ssyrk's `ic` blocks differ in work by a factor of the block count; for a lower mask the
+  claim order is reversed, which is longest-processing-time-first with the sort replaced by
+  the one fact the mask already tells us.
+
+  **Trsm parallelizes on a second axis, and this is an extension of DESIGN.md's
+  instruction rather than a silent deviation.** DESIGN.md names the MC loop, but Trsm's
+  rank update is MB×n×k with MB=64 — fewer rows than one MC block — so that loop has
+  exactly one iteration there and splitting it would yield one worker whatever GOMAXPROCS
+  says. Trsm instead splits its right-hand sides at the top level (columns of B for a left
+  solve, rows for a right one), which are fully independent, and runs the rank updates
+  inside `noSplit` so the two levels cannot multiply. That is also why `gate-p5.sh`
+  judges Trsm as a separate parallelism class (#37).
+
+  `noSplit` runs those updates through `par.Serial`, which exists because the first version
+  wrote `par.Run(1, body)` — and `Run`'s argument is the number of *units*, so that ran ic
+  block 0 and silently dropped the rest. Right-side Strsm at m=n=500 came out wrong by
+  4.2e-2 against the float64 oracle at GOMAXPROCS ≤ 2 and right by 5.6e-7 at GOMAXPROCS=8,
+  since a wide pool cuts each strip below MC and `ceil(m/MC)` really is 1 there. It never
+  shipped, and it is recorded because the sweep should have caught it and could not: the
+  large-size reduction in `TestStrsmSweep` cannot reach a right-side corner on any host
+  here (#64). The right-side shape is now one of `TestP5Determinism`'s five.
+- **`keel.Workers`, `keel.WorkersLastCall`, `keel.GOMAXPROCS`** — the pool's sizing rule,
+  the worker count the last Level-3 call actually used, and GOMAXPROCS as the nest reads
+  it. Instrumentation, not configuration: `WorkersLastCall` exists because a benchmark row
+  named `threads=8` that silently ran on one worker reports a 1.0× ratio, which reads as a
+  performance problem when it is a measurement failure — and the two want opposite
+  responses. Only the library can answer it, so the library answers it.
+- **`Scale/{Sgemm,Ssyrk,Ssymm,Strsm}/n=4096/threads={1,8}` benchmark rows**, the input to
+  P5's headline criterion. Both thread counts run in one process (a run per thread count
+  would put the two arms of a ratio in two page-cache states and two frequency histories),
+  each row sets GOMAXPROCS itself and declares what it got, and each carries its numerator:
+  new `keel-bench-threads` markers alongside the existing `keel-bench-flops`, with
+  `symmWork` (2·m·n·k — symm's saving is memory, never arithmetic) and `trsmWork`
+  (n·m·(m+1), left side). `gate-p5.sh` recomputes both and fails on disagreement.
+- **`block.TrsmWork`**, the parallelism model P5 requires beside Strsm's measured scaling
+  (#37): how the useful flops divide between the blocked rank updates and the serial
+  diagonal solves, walked over the same MB partition Trsm walks. Absolute counts, not
+  fractions, so a caller can check their sum against the total before dividing by it — a
+  pair of fractions summing to 1 is self-consistent no matter how wrong both are, and
+  `TestP5TrsmModel` checks the sum against the gate's own n·m·(m+1) at three shapes,
+  including a ragged one, before printing either fraction. At 4096, left side, MB=64:
+  rank_update=0.98413, diag_solve=0.01587.
 - **`vec.AbsMask512`/`AbsWith512` and the 256-bit pair**, so a caller can build the abs
   sign-bit mask once and reuse it across a loop. `Abs512` now delegates to
   `AbsWith512(x, AbsMask512())`, which keeps the sign-bit trick written exactly once and

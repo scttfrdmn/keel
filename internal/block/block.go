@@ -64,13 +64,47 @@
 // at the small sizes where DESIGN.md already says a scalar fringe is acceptable.
 // The masked variant remains available if a measurement ever asks for it; issue
 // #22 carries the numbers on the sizes where padding is proportionally worst.
+//
+// # The ic loop is the parallel axis (DESIGN.md §4/P5)
+//
+// "Parallelize the MC (ic) loop over a bounded worker pool sized by
+// runtime.GOMAXPROCS(0); shared packed-B panel per NC iteration, per-worker
+// packed-A buffers from a sync.Pool." That is what the ic loop below does, and
+// the reason the instruction picks that loop is that it is the one whose
+// iterations write disjoint memory: block ic writes rows [ic, ic+mc) of C and
+// nothing else, so the partition needs no lock, no reduction and no ordering.
+//
+// Three consequences, each of which the gate checks rather than takes on trust:
+//
+//   - The result is BIT-IDENTICAL to the serial nest at every thread count.
+//     Splitting ic does not reassociate any single output element's sum: the
+//     depth (pc) loop stays serial, the microkernel's k-loop is untouched, and
+//     each element still accumulates over the same pc blocks in the same order.
+//     So the parallel path is checked against equality, not against a tolerance,
+//     and a future implementation that parallelized the K loop would break that
+//     equality loudly instead of quietly widening an epsilon.
+//   - Nothing outlives the call. internal/par starts its goroutines per parallel
+//     region and joins them before returning; the only thing that persists is the
+//     sync.Pool of packed-A buffers, which holds memory rather than goroutines.
+//   - At GOMAXPROCS=1 there is no goroutine, no atomic and no scheduling in the
+//     path — par.Run calls the body in the caller. Every measurement this project
+//     has published was taken pinned to one thread, so the serial nest those
+//     numbers describe is still the code that runs when it is pinned.
+//
+// The packed B panel is shared by every worker in the region, which is what the
+// instruction asks for and also what makes the parallelization cheap: the
+// KC×NC panel is built once per (jc, pc) and then read concurrently, so eight
+// workers reuse one L3-resident copy rather than streaming eight.
 package block
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"github.com/scttfrdmn/keel/internal/kern"
 	"github.com/scttfrdmn/keel/internal/pack"
+	"github.com/scttfrdmn/keel/internal/par"
 )
 
 // Blocking parameters, from DESIGN.md §4/P3's Zen4/Ice-Lake-class starting
@@ -129,6 +163,99 @@ func wholeTiles(v, blk int) int {
 	return (v / blk) * blk
 }
 
+// split says whether one nest call may hand its ic loop to the worker pool.
+//
+// It is a parameter rather than a global because the one caller that must decline
+// is Trsm: it has already split its problem across the pool one level up (over
+// the right-hand sides, which are independent where its row blocks are not — see
+// tri.go), so a rank update that split again would oversubscribe the machine by a
+// factor of GOMAXPROCS and produce a bounded pool in name only.
+type split bool
+
+const (
+	splitIC split = true  // partition the ic loop over the pool
+	noSplit split = false // run in the calling goroutine, whatever GOMAXPROCS says
+)
+
+// apBuf is one worker's packed-A panel. A struct rather than a bare []float32
+// because sync.Pool stores an interface value, and putting a slice in one
+// allocates the header every time — the thing the pool exists to avoid.
+type apBuf struct{ v []float32 }
+
+// apPool holds packed-A panels between parallel regions. This is the sync.Pool
+// DESIGN.md §4/P5 names, and it is the only thing in this package that survives a
+// call.
+//
+// It holds no result and is not read before it is written: pack.APanels fills
+// every panel the macrokernel will then read (including the zero padding of a
+// ragged last panel — see internal/pack), so a buffer arrives carrying nothing
+// that can reach C. scripts/gate-p5.sh checks that claim from the outside by
+// requiring a second identical call to be bit-identical to the first, which is
+// exactly the assertion a pooled buffer could falsify.
+var apPool sync.Pool
+
+// apGet returns a packed-A buffer of exactly n floats, reusing a pooled one when
+// it is large enough. A buffer too small for this call is dropped rather than
+// grown: the sizes come from the blocking parameters, so the pool converges on
+// one size after the first call and a mixed workload pays an allocation instead
+// of every caller paying an indirection.
+func apGet(n int) *apBuf {
+	if b, ok := apPool.Get().(*apBuf); ok && cap(b.v) >= n {
+		b.v = b.v[:n]
+		return b
+	}
+	return &apBuf{v: make([]float32, n)}
+}
+
+func apPut(b *apBuf) { apPool.Put(b) }
+
+// workersLast records how many workers the most recently completed Level-3 call
+// distributed work to. See WorkersLastCall for what it is for and what it is not.
+var workersLast atomic.Int64
+
+// beginCall resets the worker accounting for one public Level-3 call.
+func beginCall() { workersLast.Store(0) }
+
+// recordWorkers keeps the widest parallel region of the current call. Widest
+// rather than last, because a call can have regions of different widths — Symm's
+// expansion pass and the nest it feeds — and the honest answer to "how many
+// workers did this call use" is the most it ever had running at once.
+func recordWorkers(w int) {
+	for {
+		cur := workersLast.Load()
+		if int64(w) <= cur {
+			return
+		}
+		if workersLast.CompareAndSwap(cur, int64(w)) {
+			return
+		}
+	}
+}
+
+// WorkersLastCall reports how many worker goroutines the most recently completed
+// Level-3 call distributed work to, counting the calling goroutine as a worker.
+//
+// # Why this exists, and why it is not "state between calls"
+//
+// scripts/gate-p5.sh criterion 3 requires a benchmark row named threads=8 to
+// declare the workers it actually ran on, because a row that silently ran on one
+// worker yields a 1.0× ratio and reads as a performance problem rather than as
+// the measurement failure it is. Only the library can answer that, so the library
+// answers it.
+//
+// It is instrumentation, and the distinction from state matters enough to state
+// precisely. No computation reads it; no result depends on it; every public
+// Level-3 entry point overwrites it before doing any work, so nothing it holds
+// can reach a later call. The "no state between calls" criterion is about parked
+// goroutines and about buffers whose contents survive into a later result, and a
+// counter that only the harness reads is neither.
+//
+// Its one real limitation, stated rather than papered over: with two Level-3
+// calls in flight in the same process the value belongs to whichever wrote last,
+// so it is meaningless under concurrent callers. The benchmark harness calls one
+// at a time, which is the only context that reads it.
+func WorkersLastCall() int { return int(workersLast.Load()) }
+
 // Gemm computes C = alpha·op(A)·op(B) + beta·C for row-major matrices, using kn
 // as the microkernel. transA/transB say whether a/b hold the transpose.
 //
@@ -139,7 +266,8 @@ func wholeTiles(v, blk int) int {
 func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []float32, lda int,
 	b []float32, ldb int, beta float32, c []float32, ldc int) {
 
-	gemm(kn, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, triMask{})
+	beginCall()
+	gemm(kn, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, triMask{}, splitIC)
 }
 
 // gemm is Gemm with a triangular mask on the C update: every write to C, beta
@@ -147,8 +275,10 @@ func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 // is not computed at all. tri.on false is plain GEMM and costs nothing — the mask
 // predicates fold to constants, the whole-tile test is the one that was already
 // there, and no extra work appears in the loop nest. See tri.go for who uses it.
+//
+// sp says whether the ic loop may be distributed over the worker pool; see split.
 func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []float32, lda int,
-	b []float32, ldb int, beta float32, c []float32, ldc int, tri triMask) {
+	b []float32, ldb int, beta float32, c []float32, ldc int, tri triMask, sp split) {
 
 	if kn.MR < 1 || kn.MR > kern.MaxMR || kn.NR < 1 || kn.NR > kern.MaxNR {
 		panic(fmt.Sprintf("block: kernel tile %dx%d outside %dx%d", kn.MR, kn.NR, kern.MaxMR, kern.MaxNR))
@@ -167,12 +297,9 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 	mr, nr := kn.MR, kn.NR
 	kc, mc, nc := plan(kn, m, n, k)
 
-	ap := make([]float32, pack.ALen(mr, mc, kc))
+	alen := pack.ALen(mr, mc, kc)
 	bp := make([]float32, pack.BLen(nr, nc, kc))
-	// One scratch tile per call, reused by every fringe tile. Its row stride is
-	// nr, so the microkernel's ldc >= NR requirement holds even when the
-	// caller's n is smaller than one tile.
-	tile := make([]float32, mr*nr)
+	nic := (m + mc - 1) / mc
 
 	for jc := 0; jc < n; jc += nc {
 		jn := min(nc, n-jc)
@@ -183,23 +310,72 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 		}
 		for pc := 0; pc < k; pc += kc {
 			kk := min(kc, k-pc)
+			// Built once per (jc, pc) and then read by every worker below. The
+			// packing itself is serial: it is O(kc·nc) against the region's
+			// O(m·nc·kc), and a parallel pack would need its own partition of a
+			// buffer the workers are about to share.
 			pack.BPanels(bp, nr, b, ldb, transB, pc, kk, jc, jn)
-			for ic := 0; ic < m; ic += mc {
-				im := min(mc, m-ic)
-				if tri.none(ic, jc, im, jn) {
-					continue
+
+			body := func(claim func() int) {
+				// Per worker, not per call: this is the "per-worker packed-A
+				// buffers from a sync.Pool" half of the design instruction. The
+				// scratch tile is per worker for the same reason — two workers
+				// accumulating fringe tiles into one buffer would corrupt each
+				// other's C — and is allocated rather than pooled because it is
+				// mr*nr floats against a region of O(mc·nc·kc) flops.
+				ab := apGet(alen)
+				tile := make([]float32, mr*nr)
+				for u := claim(); u >= 0; u = claim() {
+					ic := icOrder(u, nic, tri) * mc
+					im := min(mc, m-ic)
+					if tri.none(ic, jc, im, jn) {
+						continue
+					}
+					pack.APanels(ab.v, mr, alpha, a, lda, transA, ic, im, pc, kk)
+					cb := c[ic*ldc+jc:]
+					if pc == 0 {
+						// First depth block for this C block: apply beta before
+						// anything accumulates into it.
+						scaleTri(beta, ic, jc, im, jn, cb, ldc, tri)
+					}
+					macro(kn, ab.v, bp, ic, jc, im, jn, kk, cb, ldc, tile, tri)
 				}
-				pack.APanels(ap, mr, alpha, a, lda, transA, ic, im, pc, kk)
-				cb := c[ic*ldc+jc:]
-				if pc == 0 {
-					// First depth block for this C block: apply beta before
-					// anything accumulates into it.
-					scaleTri(beta, ic, jc, im, jn, cb, ldc, tri)
-				}
-				macro(kn, ap, bp, ic, jc, im, jn, kk, cb, ldc, tile, tri)
+				apPut(ab)
 			}
+			if sp == noSplit {
+				// Every ic block, in this goroutine, and no accounting: Trsm owns
+				// the worker count for its own calls.
+				//
+				// par.Serial and not par.Run(1, ...): Run's argument is the unit
+				// count, so asking for one unit runs one ic block and silently
+				// drops the rest. See par.Serial for the measured consequence.
+				par.Serial(nic, body)
+				continue
+			}
+			recordWorkers(par.Run(nic, body))
 		}
 	}
+}
+
+// icOrder maps a claim index to an ic block index, heaviest block first.
+//
+// The order is irrelevant to the result — the blocks write disjoint rows of C —
+// and it decides the makespan. Dynamic claiming finishes at (ideal + the last
+// unit claimed), so the tail wants to be the cheap end of the work. With a lower
+// triangular mask, block ic keeps only the columns up to its own rows, so work
+// grows with ic and the last block is the largest one there is: claiming in index
+// order would leave a worker starting the biggest block when every other worker
+// is nearly done. Reversed, the same partition ends on the smallest.
+//
+// An upper mask is the mirror image and already has its heavy end first, and
+// unmasked blocks are equal, so both take the index unchanged. This is
+// longest-processing-time-first with the sort replaced by the one fact the mask
+// already tells us.
+func icOrder(u, nic int, tri triMask) int {
+	if tri.on && tri.lower {
+		return nic - 1 - u
+	}
+	return u
 }
 
 // macro is the two innermost loops: the jr walk over NR-column panels of B and
