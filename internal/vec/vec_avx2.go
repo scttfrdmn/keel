@@ -62,8 +62,18 @@ func Min256(x, y F32x8) F32x8 { return x.Min(y) }
 
 // Abs256 clears the sign bit of every lane; see Abs512 on why this detours
 // through the integer vector type.
-func Abs256(x F32x8) F32x8 {
-	return x.AsInt32x8().AndNot(archsimd.BroadcastInt32x8(signMaskI32)).AsFloat32x8()
+func Abs256(x F32x8) F32x8 { return AbsWith256(x, AbsMask256()) }
+
+// I32x8 is the 256-bit int32 vector; see I32x16 on why the alias exists.
+type I32x8 = archsimd.Int32x8
+
+// AbsMask256 returns the float32 sign bit in every lane; see AbsMask512, which
+// this mirrors including the reason it is the caller's job to hoist it.
+func AbsMask256() I32x8 { return archsimd.BroadcastInt32x8(signMaskI32) }
+
+// AbsWith256 is Abs256 with a caller-supplied mask; see AbsWith512.
+func AbsWith256(x F32x8, mask I32x8) F32x8 {
+	return x.AsInt32x8().AndNot(mask).AsFloat32x8()
 }
 
 // HSum256 sums all 8 lanes, in the fold order ScalarHSum specifies.

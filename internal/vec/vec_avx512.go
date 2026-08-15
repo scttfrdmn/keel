@@ -90,8 +90,28 @@ const signMaskI32 int32 = -1 << 31
 // than merely approximating it. The As* conversions are reinterpretations
 // rather than data movement, so this is at most two instructions of real
 // work. Recorded in docs/toolchain-notes.md.
-func Abs512(x F32x16) F32x16 {
-	return x.AsInt32x16().AndNot(archsimd.BroadcastInt32x16(signMaskI32)).AsFloat32x16()
+func Abs512(x F32x16) F32x16 { return AbsWith512(x, AbsMask512()) }
+
+// I32x16 is the 512-bit int32 vector, aliased for the same reason F32x16 is:
+// a caller that hoists the abs mask out of its own loop has to be able to name
+// the mask's type, and only this package may import simd/archsimd.
+type I32x16 = archsimd.Int32x16
+
+// AbsMask512 returns the mask AbsWith512 wants: the float32 sign bit in every
+// lane. It is loop-invariant, and hoisting it is the *caller's* job because the
+// compiler will not do it — SIMD ops are not lifted by LICM (#54, T18,
+// golang/go#79984). When CL 803220 lands this and AbsWith512 both retire and
+// Abs512 goes back to being the only spelling; #54 tracks that.
+func AbsMask512() I32x16 { return archsimd.BroadcastInt32x16(signMaskI32) }
+
+// AbsWith512 is Abs512 with the mask supplied by the caller rather than built
+// per call. Same two instructions of real work, minus the broadcast.
+//
+// This is the only place the sign-bit trick is written; Abs512 delegates here,
+// so the two spellings cannot drift and the differential test against ScalarAbs
+// covers both.
+func AbsWith512(x F32x16, mask I32x16) F32x16 {
+	return x.AsInt32x16().AndNot(mask).AsFloat32x16()
 }
 
 // HSum512 sums all 16 lanes.

@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`vec.AbsMask512`/`AbsWith512` and the 256-bit pair**, so a caller can build the abs
+  sign-bit mask once and reuse it across a loop. `Abs512` now delegates to
+  `AbsWith512(x, AbsMask512())`, which keeps the sign-bit trick written exactly once and
+  leaves the existing differential test against `ScalarAbs` covering both spellings.
+  `internal/l1`'s two `Asum` kernels hoist the mask by hand, as `Axpy` and `Scal` already
+  do for `alpha`'s broadcast: the compiler will not lift it, because LICM does not lift SIMD
+  ops (#54, T18, `golang/go#79984`). Correctness verified on all three hosts across all
+  three backends (12/12 host×backend combinations). **The performance effect is not yet
+  measured** — the delta is ~3 instructions in 25, against a demonstrated 45% layout
+  envelope on Zen 5 (T22), so it is being put to `scripts/layout-ensemble.sh` before any
+  number is claimed for it. Retires with #54 when CL 803220 lands.
+- **`scripts/layout-ensemble.sh`** decides whether an A/B delta is caused by a code change
+  or by where the change happened to put the code — see the commit and #61.
 - **`scripts/detach.sh`** runs a long gate or benchmark detached under `tmux`, so no run's
   completion depends on the lifetime of the shell that started it. Two `gate-p5` runs had
   been killed 25–28 minutes into the carried p5→p4→p3→p2 chain, and the response at the

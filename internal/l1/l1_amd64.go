@@ -226,26 +226,30 @@ func avx512Scal(alpha float32, x []float32) {
 
 func avx512Asum(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero512(), vec.Zero512(), vec.Zero512(), vec.Zero512()
+	// The sign mask is loop-invariant and the compiler will not lift it: LICM
+	// does not lift SIMD ops (#54, T18, golang/go#79984). Hoisted by hand, as
+	// alpha's broadcast already is in Axpy and Scal. Retires with #54.
+	m := vec.AbsMask512()
 	for len(x) > step512 {
-		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
-		a1 = vec.Add512(a1, vec.Abs512(vec.Load512(x[16:32])))
-		a2 = vec.Add512(a2, vec.Abs512(vec.Load512(x[32:48])))
-		a3 = vec.Add512(a3, vec.Abs512(vec.Load512(x[48:64])))
+		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
+		a1 = vec.Add512(a1, vec.AbsWith512(vec.Load512(x[16:32]), m))
+		a2 = vec.Add512(a2, vec.AbsWith512(vec.Load512(x[32:48]), m))
+		a3 = vec.Add512(a3, vec.AbsWith512(vec.Load512(x[48:64]), m))
 		x = x[step512:]
 	}
 	if len(x) == step512 {
-		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
-		a1 = vec.Add512(a1, vec.Abs512(vec.Load512(x[16:32])))
-		a2 = vec.Add512(a2, vec.Abs512(vec.Load512(x[32:48])))
-		a3 = vec.Add512(a3, vec.Abs512(vec.Load512(x[48:64])))
+		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
+		a1 = vec.Add512(a1, vec.AbsWith512(vec.Load512(x[16:32]), m))
+		a2 = vec.Add512(a2, vec.AbsWith512(vec.Load512(x[32:48]), m))
+		a3 = vec.Add512(a3, vec.AbsWith512(vec.Load512(x[48:64]), m))
 		x = x[:0]
 	}
 	for len(x) >= lanes512 {
-		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
+		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
 		x = x[lanes512:]
 	}
 	if len(x) > 0 {
-		a0 = vec.Add512(a0, vec.Abs512(vec.LoadPart512(x)))
+		a0 = vec.Add512(a0, vec.AbsWith512(vec.LoadPart512(x), m))
 	}
 	return vec.HSum512(vec.Add512(vec.Add512(a0, a1), vec.Add512(a2, a3)))
 }
@@ -355,26 +359,27 @@ func avx2Scal(alpha float32, x []float32) {
 
 func avx2Asum(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero256(), vec.Zero256(), vec.Zero256(), vec.Zero256()
+	m := vec.AbsMask256() // hoisted by hand; see avx512Asum
 	for len(x) > step256 {
-		a0 = vec.Add256(a0, vec.Abs256(vec.Load256(x[0:8])))
-		a1 = vec.Add256(a1, vec.Abs256(vec.Load256(x[8:16])))
-		a2 = vec.Add256(a2, vec.Abs256(vec.Load256(x[16:24])))
-		a3 = vec.Add256(a3, vec.Abs256(vec.Load256(x[24:32])))
+		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:8]), m))
+		a1 = vec.Add256(a1, vec.AbsWith256(vec.Load256(x[8:16]), m))
+		a2 = vec.Add256(a2, vec.AbsWith256(vec.Load256(x[16:24]), m))
+		a3 = vec.Add256(a3, vec.AbsWith256(vec.Load256(x[24:32]), m))
 		x = x[step256:]
 	}
 	if len(x) == step256 {
-		a0 = vec.Add256(a0, vec.Abs256(vec.Load256(x[0:8])))
-		a1 = vec.Add256(a1, vec.Abs256(vec.Load256(x[8:16])))
-		a2 = vec.Add256(a2, vec.Abs256(vec.Load256(x[16:24])))
-		a3 = vec.Add256(a3, vec.Abs256(vec.Load256(x[24:32])))
+		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:8]), m))
+		a1 = vec.Add256(a1, vec.AbsWith256(vec.Load256(x[8:16]), m))
+		a2 = vec.Add256(a2, vec.AbsWith256(vec.Load256(x[16:24]), m))
+		a3 = vec.Add256(a3, vec.AbsWith256(vec.Load256(x[24:32]), m))
 		x = x[:0]
 	}
 	for len(x) >= lanes256 {
-		a0 = vec.Add256(a0, vec.Abs256(vec.Load256(x[0:8])))
+		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:8]), m))
 		x = x[lanes256:]
 	}
 	if len(x) > 0 {
-		a0 = vec.Add256(a0, vec.Abs256(vec.LoadPart256(x)))
+		a0 = vec.Add256(a0, vec.AbsWith256(vec.LoadPart256(x), m))
 	}
 	return vec.HSum256(vec.Add256(vec.Add256(a0, a1), vec.Add256(a2, a3)))
 }
