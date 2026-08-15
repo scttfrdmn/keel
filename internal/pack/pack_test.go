@@ -404,3 +404,107 @@ func TestEmptyPacksWriteNothing(t *testing.T) {
 		})
 	}
 }
+
+// TestBPanelsPartIsTheSerialPack is the property block.packB relies on: a pack
+// split across goroutines must produce exactly what the serial pack produced.
+//
+// Bit-identical, and by construction rather than by luck — panel ib writes only
+// dst[ib*blk*kc:(ib+1)*blk*kc], so any partition of the panel indices is a partition
+// of the buffer. Checked here without goroutines: what makes the concurrent version
+// correct is the disjointness of the ranges and the order-independence of the result,
+// and both are properties of this function that a sequential test can pin exactly.
+// internal/block's determinism test is the one that runs it concurrently.
+//
+// The partitions include the ragged cases on purpose. A pack whose last panel is
+// partly padding is where a range boundary can silently drop the zero fill, and a
+// dropped zero fill is not a wrong number in the panel — it is whatever the pooled
+// buffer held on a previous call, reaching the microkernel.
+func TestBPanelsPartIsTheSerialPack(t *testing.T) {
+	const ldb = 40
+	b := seq(ldb, ldb, ldb)
+	shapes := []struct{ cols, kc, blk int }{
+		{16, 8, 4},  // exact
+		{9, 8, 4},   // ragged last panel: 3 panels, one of them 1/4 valid
+		{1, 1, 4},   // one element, all padding
+		{17, 3, 4},  // ragged, shallow
+		{12, 5, 32}, // a single panel narrower than blk, as NR=32 gives at small n
+	}
+	for _, s := range shapes {
+		for _, trans := range []bool{false, true} {
+			name := fmt.Sprintf("cols=%d/kc=%d/blk=%d/trans=%v", s.cols, s.kc, s.blk, trans)
+			t.Run(name, func(t *testing.T) {
+				npan := NPanels(s.blk, s.cols)
+				want := poison(BLen(s.blk, s.cols, s.kc))
+				BPanels(want, s.blk, b, ldb, trans, 0, s.kc, 0, s.cols)
+
+				// Every partition into contiguous ranges that a claim loop could
+				// produce, plus the two degenerate ones: one range per panel (what
+				// block.packB actually does) and one empty range at each boundary.
+				cuts := [][]int{{0, npan}}
+				for i := 0; i <= npan; i++ {
+					cuts = append(cuts, []int{0, i, npan})
+				}
+				single := []int{}
+				for i := 0; i <= npan; i++ {
+					single = append(single, i)
+				}
+				cuts = append(cuts, single)
+
+				for _, cut := range cuts {
+					// Poisoned, not zeroed: a range that fails to write a slot has to
+					// be visible, and zero is a value the padding legitimately holds.
+					got := poison(len(want))
+					for i := 0; i+1 < len(cut); i++ {
+						BPanelsPart(got, s.blk, b, ldb, trans, 0, s.kc, 0, s.cols, cut[i], cut[i+1])
+					}
+					for i := range want {
+						if math.Float32bits(got[i]) != math.Float32bits(want[i]) {
+							t.Fatalf("partition %v: slot %d is %v, serial pack wrote %v",
+								cut, i, got[i], want[i])
+						}
+					}
+				}
+			})
+		}
+	}
+}
+
+// TestBPanelsPartRejectsARangeOutsideTheBlock: an off-by-one in a partition is a
+// short pack, and a short pack is a panel holding whatever the pooled buffer held
+// last. It panics rather than writing part of the answer.
+func TestBPanelsPartRejectsARangeOutsideTheBlock(t *testing.T) {
+	const ldb = 16
+	b := seq(ldb, ldb, ldb)
+	dst := make([]float32, BLen(4, 8, 4))
+	for _, r := range []struct{ from, to int }{{-1, 2}, {0, 3}, {2, 4}} {
+		t.Run(fmt.Sprintf("[%d,%d)", r.from, r.to), func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatalf("range [%d,%d) outside [0,2) did not panic", r.from, r.to)
+				}
+			}()
+			BPanelsPart(dst, 4, b, ldb, false, 0, 4, 0, 8, r.from, r.to)
+		})
+	}
+}
+
+// TestNPanelsCountsTheRaggedOne, because BPanelsPart's range is indexed by it and a
+// count that forgot the ragged panel would leave the last one unpacked — with no
+// panic, since the range would be legal.
+func TestNPanelsCountsTheRaggedOne(t *testing.T) {
+	for _, c := range []struct{ blk, count, want int }{
+		{4, 0, 0}, {4, 1, 1}, {4, 4, 1}, {4, 5, 2}, {32, 12, 1}, {32, 33, 2},
+	} {
+		if got := NPanels(c.blk, c.count); got != c.want {
+			t.Errorf("NPanels(%d, %d) = %d, want %d", c.blk, c.count, got, c.want)
+		}
+		// The relation BPanelsPart's bound check uses, stated where it is checked:
+		// the panel count is BLen divided by one panel's size.
+		if c.count > 0 {
+			if n := BLen(c.blk, c.count, 3) / (c.blk * 3); n != c.want {
+				t.Errorf("BLen-derived panel count for blk=%d count=%d is %d, want %d",
+					c.blk, c.count, n, c.want)
+			}
+		}
+	}
+}

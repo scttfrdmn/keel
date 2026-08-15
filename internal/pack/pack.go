@@ -107,7 +107,7 @@ func APanels(dst []float32, mr int, alpha float32, a []float32, lda int, trans b
 	// A's rows are the blocked axis. Untransposed, A is m×k: the depth index is
 	// the contiguous one, so packing transposes. Transposed, A is k×m and the
 	// blocked axis is contiguous, so it copies.
-	panels(dst, mr, alpha, a, lda, !trans, i0, rows, p0, kc)
+	panels(dst, mr, alpha, a, lda, !trans, i0, rows, p0, kc, 0, NPanels(mr, rows))
 }
 
 // BPanels packs depth [p0, p0+kc) and columns [j0, j0+cols) of B into nr-column
@@ -119,7 +119,41 @@ func APanels(dst []float32, mr int, alpha float32, a []float32, lda int, trans b
 func BPanels(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0, cols int) {
 	// The mirror image of APanels: B's columns are the blocked axis, and
 	// untransposed B is k×n, so the blocked axis is the contiguous one.
-	panels(dst, nr, 1, b, ldb, trans, j0, cols, p0, kc)
+	panels(dst, nr, 1, b, ldb, trans, j0, cols, p0, kc, 0, NPanels(nr, cols))
+}
+
+// BPanelsPart packs only panels [from, to) of the same block BPanels packs, and
+// writes nothing outside dst[from*nr*kc : to*nr*kc].
+//
+// # Why this exists
+//
+// So the caller can pack one block of B with several goroutines. The panels are a
+// partition of dst — panel ib is exactly dst[ib*nr*kc:(ib+1)*nr*kc], including the
+// zero padding of a ragged last one — so disjoint ranges need no lock, no ordering
+// and no reduction, and the packed result is bit-identical to the serial pack
+// whatever order the ranges run in, because packing copies and scales rather than
+// accumulating.
+//
+// It takes the WHOLE dst rather than a subslice, and validates it against the whole
+// block's BLen, so that a range call has the same bounds check a serial call has.
+// Handing each worker its own subslice would move that check into the caller, where
+// an off-by-one in the partition would become a silent short pack instead of a panic
+// — and a short pack leaves whatever the pooled buffer held last in the panel the
+// microkernel then reads.
+//
+// A from >= to is legal and packs nothing, so a partition may hand a worker an empty
+// range without the caller special-casing it.
+func BPanelsPart(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0, cols, from, to int) {
+	panels(dst, nr, 1, b, ldb, trans, j0, cols, p0, kc, from, to)
+}
+
+// NPanels returns how many blk-wide panels a count-wide axis packs into: the
+// number of units BPanelsPart's range indexes, and the ragged last one counts.
+func NPanels(blk, count int) int {
+	if blk < 1 || count < 0 {
+		panic(fmt.Sprintf("pack: bad panel geometry blk=%d count=%d", blk, count))
+	}
+	return (count + blk - 1) / blk
 }
 
 // panels is both packs. depthContig says the source's contiguous index is the
@@ -149,7 +183,9 @@ func BPanels(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0
 // memmove has a cheaper entry path would want it lower.
 const memmoveFloor = 16
 
-func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthContig bool, b0, count, p0, kc int) {
+// from and to bound the panel indices this call writes; a serial full pack passes
+// (0, nb). The bound check is against the whole block either way — see BPanelsPart.
+func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthContig bool, b0, count, p0, kc, from, to int) {
 	need := panelsLen(blk, count, kc)
 	if len(dst) < need {
 		panic(fmt.Sprintf("pack: dst has %d floats, need %d", len(dst), need))
@@ -158,7 +194,10 @@ func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthC
 		return // nothing to pack; also what keeps nb's divisor nonzero
 	}
 	nb := need / (blk * kc)
-	for ib := 0; ib < nb; ib++ {
+	if from < 0 || to > nb {
+		panic(fmt.Sprintf("pack: panel range [%d,%d) outside [0,%d)", from, to, nb))
+	}
+	for ib := from; ib < to; ib++ {
 		panel := dst[ib*blk*kc : (ib+1)*blk*kc]
 		// Valid elements in this panel: blk, except in the last one.
 		valid := blk

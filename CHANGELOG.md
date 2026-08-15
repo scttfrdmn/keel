@@ -79,6 +79,25 @@ While the major version is 0, minor versions may contain breaking changes.
   `TestP5TrsmModel` checks the sum against the gate's own n·m·(m+1) at three shapes,
   including a ragged one, before printing either fraction. At 4096, left side, MB=64:
   rank_update=0.98413, diag_solve=0.01587.
+- **`pack.BPanelsPart`/`pack.NPanels`, and `block.packB`: the shared B pack is parallel**
+  (#65). The pack is O(kc·nc) against the region's O(m·nc·kc), which is the argument for
+  leaving it serial and it is wrong — it sits *between* two parallel regions with every
+  worker idle, and Amdahl does not care what fraction of the work it is, only what
+  fraction of the time. At n=k=4096 with NC=4096 and KC=384 the serial version was eleven
+  single-threaded copies of 1.57M floats inside a call whose parallel part takes ~90 ms at
+  eight threads. Panels are a partition of the buffer, so the split needs no lock, no
+  ordering and no reduction, and the result is bit-identical because packing copies and
+  scales rather than accumulating. `BPanelsPart` takes the whole buffer and checks it
+  against the whole block's `BLen`, so a partition off-by-one panics rather than leaving a
+  panel holding whatever the pooled buffer held last.
+
+  The measurement that identified it is the first gate-p5 run on the nest
+  (`build/gate-p5-175098d.log`, `175098d`): **Sgemm, Ssyrk and Ssymm missed the ≥6.0×
+  floor on all three hosts and Strsm cleared it on all three** (6.93–7.12× net of CI) —
+  and Strsm is precisely the routine whose parallel region *encloses* its packing rather
+  than being enclosed by it. The routine ordering inside the miss follows from the same
+  term: Ssyrk pays this pack for half the flops, because the mask discards the tiles above
+  the diagonal after the full kc×nc panel is packed, and Ssyrk was last on every host.
 - **`vec.AbsMask512`/`AbsWith512` and the 256-bit pair**, so a caller can build the abs
   sign-bit mask once and reuse it across a loop. `Abs512` now delegates to
   `AbsWith512(x, AbsMask512())`, which keeps the sign-bit trick written exactly once and

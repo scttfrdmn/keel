@@ -22,6 +22,14 @@
 // that counts them. Per-call goroutines are what "no background threads" means
 // operationally, so that is what this does.
 //
+// The nest's second Run — block.packB, added for #65 — has units three orders of
+// magnitude smaller: one nr x kc panel is a 48 KB copy, a few microseconds. Still far
+// above a goroutine start, and it starts w of them for the 128 units a 4096-column
+// block has, so the starts are ~0.3% of that region. Recorded because it is the first
+// caller whose unit size makes the question worth asking at all; if a future caller's
+// units get much smaller than this, the answer changes and this paragraph is where to
+// come back to.
+//
 // # Why claim() rather than a range per worker
 //
 // A static range per worker is the obvious partition and it is the wrong one for

@@ -310,11 +310,10 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 		}
 		for pc := 0; pc < k; pc += kc {
 			kk := min(kc, k-pc)
-			// Built once per (jc, pc) and then read by every worker below. The
-			// packing itself is serial: it is O(kc·nc) against the region's
-			// O(m·nc·kc), and a parallel pack would need its own partition of a
-			// buffer the workers are about to share.
-			pack.BPanels(bp, nr, b, ldb, transB, pc, kk, jc, jn)
+			// Built once per (jc, pc) and then read by every worker below — and
+			// built BY every worker, because this pack is an Amdahl term rather
+			// than the rounding error its size suggests. See packB.
+			packB(bp, nr, b, ldb, transB, pc, kk, jc, jn, sp)
 
 			body := func(claim func() int) {
 				// Per worker, not per call: this is the "per-worker packed-A
@@ -355,6 +354,55 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 			recordWorkers(par.Run(nic, body))
 		}
 	}
+}
+
+// packB fills the shared packed-B panel for one (jc, pc) block, over the same pool
+// the ic loop below it uses.
+//
+// # Why this is parallel when its cost looks negligible
+//
+// It is O(kc·nc) against the region's O(m·nc·kc), which is the argument for leaving
+// it serial and it is wrong, because this pack sits BETWEEN two parallel regions with
+// every worker idle. Amdahl does not care what fraction of the *work* it is, only
+// what fraction of the *time*. At n=k=4096 with NC=4096 and KC=384 the serial version
+// was eleven single-threaded copies of 1.57M floats — about 69 MB — inside a call
+// whose parallel part takes ~90 ms at eight threads.
+//
+// The first gate-p5 run on the parallel nest measured what that costs (#65,
+// build/gate-p5-175098d.log): Sgemm, Ssyrk and Ssymm missed the >=6.0x floor on all
+// three hosts while Strsm cleared it on all three, and the difference between them is
+// exactly this — Trsm splits its right-hand sides at the top, so its parallel region
+// *encloses* its packing instead of being enclosed by it. The routine ordering within
+// the miss follows too: Ssyrk pays this same pack for half the flops, because the mask
+// discards the tiles above the diagonal after the full kc x nc panel has been packed,
+// and Ssyrk was last on every host.
+//
+// # Why it is safe, and why it is still bit-identical
+//
+// The panels are a partition of bp, so the workers write disjoint ranges: no lock, no
+// ordering, no reduction. And packing copies and scales rather than accumulating, so
+// the packed panel is the same bits whatever order the ranges ran in — the same
+// property that makes the ic split exact, one level down. pack.BPanelsPart takes the
+// whole buffer and checks it against the whole block's BLen so that a partition
+// off-by-one panics instead of leaving a panel holding whatever the pooled buffer
+// held last.
+//
+// The worker count is recorded, because this region is as real as the ic one and
+// WorkersLastCall promises the widest region of the call.
+func packB(bp []float32, nr int, b []float32, ldb int, transB bool, pc, kk, jc, jn int, sp split) {
+	npan := pack.NPanels(nr, jn)
+	body := func(claim func() int) {
+		for u := claim(); u >= 0; u = claim() {
+			pack.BPanelsPart(bp, nr, b, ldb, transB, pc, kk, jc, jn, u, u+1)
+		}
+	}
+	if sp == noSplit {
+		// Trsm's rank updates: serial for the same reason their ic loop is, and
+		// par.Serial rather than par.Run(1, ...) for the same reason too.
+		par.Serial(npan, body)
+		return
+	}
+	recordWorkers(par.Run(npan, body))
 }
 
 // icOrder maps a claim index to an ic block index, heaviest block first.
