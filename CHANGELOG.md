@@ -8,6 +8,65 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **The scaling criterion's two arms now run in one frequency regime, and the boost-on
+  speedup prints beside the verdict** (ruled on #66; `DESIGN.md` §4/P5). As first
+  written, "≥6× single-thread throughput at 8 cores" divided an 8-thread rate by a
+  1-thread rate taken on an idle machine — but one thread runs at a boost clock eight
+  threads physically cannot reach, so the criterion asked the nest to overcome silicon
+  boost policy before it was allowed to demonstrate scaling. **A denominator measured in
+  a regime the numerator cannot legally enter is not a ratio, it is a handicap.**
+
+  The diagnosis came from the shape of the misses rather than from their inconvenience:
+  the two hosts that missed are the two retaining the *most* of their own single-thread
+  peak (Zen 4 92%, Zen 5 59%), while Skylake-X at 35% cleared all four routines twice.
+  Scaling deficits do not sort themselves by single-thread excellence; boost tables do.
+
+  `scripts/gate-p5.sh` now sets `cpufreq/boost` (AMD) or `intel_pstate/no_turbo` (Intel)
+  off per host, **reads the knob back** — unreadable or unmoved counts as *unmet*, never
+  as satisfied, exactly as `scaling_governor` is re-read at measurement time — judges
+  ≥6× there, restores boost, and takes a **second pass boost-on** whose wall-clock
+  speedup against the idle single-thread rate prints at equal prominence as
+  reported-never-judged. That second number is what a caller experiences and no reader
+  gets the pass without it. Hosts are restored on `EXIT INT TERM`, because a gate that
+  dies mid-window must not leave a machine de-boosted for the delegated gate-p4/p3/p2
+  runs, which are boost-on measurements.
+
+  **Stated rather than buried: this makes the criterion easier.** Smoke-measured on the
+  Ryzen 9 7950X3D at n=4096 Sgemm (`-test.count=3 -test.benchtime=0.4s`, a §5 rule 5
+  smoke run informing no gate): 1 thread 152.6/151.7/152.6 → 122.7/122.4/122.3 GFLOP/s,
+  8 threads 905.2/895.0 → 774.6/772.9. So boost off costs the 1-thread arm 19.8% and the
+  8-thread arm 14.0%, and the ratio rises 5.90× → 6.32× — which is enough to move vesta
+  Sgemm's 5.74× miss across the floor, and is *not* obviously enough for the two Ssymm
+  misses at 5.63× and 5.34×. The gate decides that, not this paragraph. The de-boosted
+  regime also lowers the formula cross-check (`cpuinfo_max_freq` 5.76 → 4.20 GHz, peak
+  368.9 → 268.9), so the boost-off pass's percent-of-peak lines are quoted against a
+  de-boosted peak measured in the same pass. The justification is not that the new number is nicer
+  but that the old one was not a ratio — and the honest consequence is that boost-off
+  ratios are **not comparable** to the three boost-on runs already in the record. The
+  README's published rates stay boost-on, since a published row is a claim about what a
+  caller gets, and criterion 9 re-measures them against the boost-on pass accordingly.
+- **`DESIGN.md` §5 gains rule 8: a summary is a cache with no invalidation protocol.**
+  Derived figures are recomputed from the log at the moment of writing, never carried
+  forward from prose. Third documented instance across two authors, which is what makes
+  it a named trap rather than a slip.
+
+### Fixed
+- **`remote_boost_set` wrote nothing and returned success**, in its first form, on all
+  three hosts. `$KEEL_SSH_OPTS` carries `-n`, which redirects ssh's stdin from
+  `/dev/null`, so feeding the remote `sh -s` from a heredoc gave it immediate EOF: it
+  executed nothing and exited 0. Only reading the knob back caught it — the same
+  argument `scripts/remote.sh` already made about the governor, now with a second
+  instance behind it. The value is spliced into the remote script instead, after
+  validation against a two-element allowlist so the interpolation cannot carry shell
+  metacharacters.
+- **`gate-p5.sh` could have checked one host's README rows against another host's
+  rates.** `BENCHCSV_ON` is a fixed path reused across the host loop, and the boost-on
+  pass is allowed to fail without skipping the host, so a stale file would have produced
+  a green with the wrong provenance. It is truncated per host and the README criterion
+  reports *unmeasured* when that pass produced nothing, rather than agreeing with
+  whatever was left behind.
+
 ### Added
 - **The parallel nest (P5).** The Level-3 routines now distribute their work over a
   bounded pool of goroutines sized by `runtime.GOMAXPROCS(0)`, started per call and

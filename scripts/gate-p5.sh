@@ -51,6 +51,26 @@
 #     model is missing, because a deferral is a promise to measure and an
 #     unmeasured deferral is an exemption with better manners.
 #
+#     BOTH ARMS RUN WITH BOOST OFF, AND THE BOOST-ON SPEEDUP PRINTS BESIDE THE
+#     VERDICT (amended by ruling on #66; DESIGN.md §4/P5). Dividing an 8-thread
+#     rate by a 1-thread rate taken on an idle machine is not a ratio: one thread
+#     runs in a frequency regime eight threads physically cannot enter, so the
+#     denominator carries a single-core boost clock and the criterion asks the nest
+#     to beat silicon boost policy before it may demonstrate scaling. The evidence
+#     that this was happening is in the shape of the misses, not in their
+#     inconvenience: the two hosts that missed are the two that retain the MOST of
+#     their own single-thread peak (Zen 4 92%, Zen 5 59%) while Skylake-X at 35%
+#     cleared everything, twice. Scaling deficits do not sort by single-thread
+#     excellence; boost tables do. So this gate SETS boost off on each host for the
+#     judged pass, READS THE KNOB BACK — unreadable or unmoved counts as UNMET, never
+#     as satisfied, exactly as scaling_governor does — measures both arms in that one
+#     regime, restores boost, and measures a SECOND pass boost-on whose wall-clock
+#     speedup is printed at equal prominence as reported-never-judged. That second
+#     number is what a caller experiences and no reader gets the pass without it.
+#     Consequence stated rather than buried: boost-off lowers the 1-thread arm more
+#     than the 8-thread arm, so ratios RISE and are NOT comparable to the three
+#     boost-on runs already in the record.
+#
 #  2. THE TWO RATES COME FROM ONE INVOCATION, SO THE THREAD COUNT IS PART OF THE
 #     BENCHMARK NAME AND NOT PART OF THE FLAGS. `go test -cpu=1,8` looks like the
 #     tool for this and is a trap: it distinguishes the two runs only by the
@@ -391,9 +411,29 @@ BIN="$BINDIR/keel.test"
 BENCHBIN="$BINDIR/bench.test"
 BENCHLOG="$BINDIR/bench.log"
 BENCHCSV="$BINDIR/bench.csv"
+# The boost-on pass (#66): reported beside the verdict, and the regime the README's
+# published wall-clock rates were taken in, so it is what re-measures them.
+BENCHLOG_ON="$BINDIR/bench-boost-on.log"
+BENCHCSV_ON="$BINDIR/bench-boost-on.csv"
 SWEEPLOG="$BINDIR/sweep-avx512.log"
 : >"$SWEEPLOG"
-trap 'rm -rf "$LOG" "$BINDIR"' EXIT
+
+# Hosts whose boost knob this run has written, so the EXIT path can put them back.
+# A gate that dies inside its measurement window must not leave a machine
+# de-boosted: every later measurement on it — including this gate's own delegated
+# gate-p4/p3/p2 runs, which are boost-on measurements — would silently shift regime
+# and nothing downstream would know to ask. INT and TERM are trapped alongside EXIT
+# because bash does not run an EXIT trap on an untrapped fatal signal, and being
+# reaped is the normal way a long run ends here.
+BOOST_TOUCHED=""
+gate_cleanup() {
+  local h
+  for h in $BOOST_TOUCHED; do
+    remote_boost_set "$h" on >/dev/null 2>&1 || true
+  done
+  rm -rf "$LOG" "$BINDIR"
+}
+trap gate_cleanup EXIT INT TERM
 
 # golangci-lint is named by the criterion, so its ABSENCE is unmeasured rather
 # than clean — the same rule a missing OpenBLAS gets in gate-p3. A check that did
@@ -466,6 +506,17 @@ if [[ -n "$HOSTS" ]]; then
     else
       fail "[$host] cpufreq governor is '$hgov', not performance (§5 rule 5): a ramping core produces cold readings that enter the record as measurements"
       info "  [$host] sudo cpupower frequency-set -g performance"
+    fi
+    # The frequency-regime knob, checked here so a host without one fails in the
+    # preamble rather than halfway through its measurement window (#66). Reported as
+    # state + path: the path is provenance, because the polarity differs by vendor
+    # (cpufreq/boost 1 = permitted, intel_pstate/no_turbo 1 = forbidden) and a reader
+    # checking this by hand needs to know which knob was read.
+    bst="$(remote_boost "$host" || true)"
+    if [[ -z "$bst" || "${bst%% *}" == unknown ]]; then
+      fail "[$host] no readable boost/turbo knob (${bst:-no answer}), so the scaling criterion's two arms cannot be asserted to share a frequency regime (#66): unreadable counts as unmet"
+    else
+      info "[$host] boost knob: ${bst%% *} at ${bst#* } — this gate sets it off for the judged pass and restores it"
     fi
     # Topology is provenance, and it is the first thing to look at if a host misses
     # the floor: eight goroutines across four cores and their siblings is a ceiling
@@ -741,16 +792,57 @@ else
       fail "[$host] governor is '${gov:-unknown}' at measurement time, not performance: it changed after this gate's preamble read it, so nothing measured here is covered by §5 rule 5"
       continue
     fi
+    # ---- the frequency regime the judged ratio is taken in (criterion 1, #66)
+    #
+    # Set, then READ BACK. The first version of remote_boost_set piped its value to a
+    # remote `sh -s`, which $KEEL_SSH_OPTS' `-n` fed from /dev/null: the write never
+    # happened and the function returned 0 on all three hosts. Only the readback
+    # caught it. So the readback is the assertion and the return code is a hint.
+    if ! remote_boost_set "$host" off; then
+      fail "[$host] boost could not be set off, so this host cannot produce a same-regime ratio (#66); its scaling is unmeasured, not missed"
+      continue
+    fi
+    BOOST_TOUCHED="$BOOST_TOUCHED $host"
+    bst="$(remote_boost "$host" || true)"
+    if [[ "${bst%% *}" != off ]]; then
+      fail "[$host] boost reads '${bst%% *}' after being set off (${bst#* }): unmoved or unreadable counts as unmet, so the two arms cannot be asserted to share a regime (#66)"
+      remote_boost_set "$host" on >/dev/null 2>&1 || true
+      continue
+    fi
+    pass "[$host] boost is off and read back off at ${bst#* }, so both arms of this host's ratio are taken in one frequency regime (#66)"
+
     # GOMAXPROCS is NOT set here. The thread count belongs to the benchmark row
     # (criterion 2) and the harness sets it per row; pinning it in the environment
     # would cap the eight-thread row at whatever this line happened to say.
     if ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench="$P5_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
-      fail "[$host] the scaling benchmark run failed"
+      fail "[$host] the scaling benchmark run failed (boost-off pass)"
       sed 's/^/        /' "$BENCHLOG" | tail -20
+      remote_boost_set "$host" on >/dev/null 2>&1 || true
       continue
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+
+    # ---- restore, then the boost-on pass: reported beside the verdict, and the
+    # regime the README's published wall-clock rates live in (#66, criterion 9).
+    BOOST_ON_MEASURED=0
+    # Truncated per host, not merely overwritten. This path is reused across the host
+    # loop and the boost-on pass is allowed to fail without skipping the host, so a
+    # stale file here would let one host's README rows be checked against another
+    # host's rates — a green with the wrong provenance, which is worse than the red.
+    : >"$BENCHCSV_ON"
+    remote_boost_set "$host" on >/dev/null 2>&1 || true
+    bon="$(remote_boost "$host" || true)"
+    if [[ "${bon%% *}" != on ]]; then
+      fail "[$host] boost did not come back on (reads '${bon%% *}' at ${bon#* }): this host is left in a modified state, so every later measurement on it — including this gate's delegated gate-p4 run — is suspect"
+    elif ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench="$P5_BENCH_FILTER" >"$BENCHLOG_ON" 2>&1; then
+      fail "[$host] the boost-on benchmark run failed, so the wall-clock speedup a caller experiences is unmeasured for this host (#66) and the README's rows have nothing to be re-measured against"
+      sed 's/^/        /' "$BENCHLOG_ON" | tail -20
+    else
+      bench_csv "$BENCHLOG_ON" >"$BENCHCSV_ON" 2>"$LOG" || true
+      [[ -s "$LOG" ]] && sed 's/^/        benchstat (boost-on): /' "$LOG"
+      BOOST_ON_MEASURED=1
+    fi
 
     WANT_ROWS=()
     for r in $P5_JUDGED $P5_MEASURED; do
@@ -805,7 +897,7 @@ else
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
       fi
-      info "[$host] $r: 1 thread $(bench_describe "$one" "$BENCHCSV" GFLOP/s), $P5_THREADS threads $(bench_describe "$many" "$BENCHCSV" GFLOP/s)"
+      info "[$host] $r: boost off — 1 thread $(bench_describe "$one" "$BENCHCSV" GFLOP/s), $P5_THREADS threads $(bench_describe "$many" "$BENCHCSV" GFLOP/s)"
       # Reported, never judged (criterion 8). A single-thread peak times the thread
       # count is the only ceiling available here, and it assumes a clock that does
       # not drop with core count — which is exactly what it does on these parts. So
@@ -813,7 +905,24 @@ else
       p1="$(bench_gflops "$GATE_PEAK" "$BENCHCSV")"
       m8="$(bench_gflops "$many" "$BENCHCSV")"
       if [[ -n "$p1" && -n "$m8" ]]; then
-        info "[$host] $r: $(awk -v a="$m8" -v b="$p1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread avx512 peak ($p1 GFLOP/s) — reported, not a criterion, and that denominator ignores multi-core frequency drop"
+        info "[$host] $r: $(awk -v a="$m8" -v b="$p1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread avx512 peak ($p1 GFLOP/s, boost off) — reported, not a criterion, and that denominator still ignores multi-core frequency drop within the de-boosted regime"
+      fi
+      # The wall-clock number a caller actually experiences, at equal prominence with
+      # the verdict and judged by nothing (#66). Boost on, so the 1-thread arm gets
+      # the single-core clock it really would get; that is why this ratio is the lower
+      # one and why it is not the criterion. Printed even when it is missing, because
+      # "the pass was not accompanied by the user-visible number" is itself the thing
+      # the ruling forbids happening silently.
+      if [[ "$BOOST_ON_MEASURED" -eq 1 ]]; then
+        onlo="$(bench_ratio_lo "$many" "$one" "$BENCHCSV_ON" GFLOP/s)"
+        onpt="$(bench_ratio "$many" "$one" "$BENCHCSV_ON" GFLOP/s)"
+        if [[ -n "$onlo" ]]; then
+          info "[$host] $r: boost ON, the speedup a caller experiences — ${onpt}x, ${onlo}x net of CI, against an idle single-thread rate of $(bench_describe "$one" "$BENCHCSV_ON" GFLOP/s); reported at equal prominence, judged by nothing (#66)"
+        else
+          info "[$host] $r: boost ON ratio unbounded (benchstat established no interval), so the caller-experienced speedup is unmeasured for this routine rather than absent"
+        fi
+      else
+        info "[$host] $r: boost ON pass did not run on this host, so the caller-experienced speedup is unmeasured — the judged ratio above stands alone, which #66 says it should not"
       fi
 
       if [[ " $P5_MEASURED " == *" $r "* ]]; then
@@ -826,7 +935,7 @@ else
           fail "[$host] $r's declared model does not account for its work: rank_update=$ru + diag_solve=$ds does not sum to 1"
           HOST_MEASURED=0
         elif [[ -z "$STRSM_FLOOR" ]]; then
-          pass "[$host] $r scales ${pt}x, ${lo}x net of CI; model at this shape: rank_update=$ru diag_solve=$ds — measured and reported, no ratified floor yet (#37), and this reading is the input to setting one"
+          pass "[$host] $r scales ${pt}x, ${lo}x net of CI (boost off both arms); model at this shape: rank_update=$ru diag_solve=$ds — measured and reported, no ratified floor yet (#37), and this reading is the input to setting one"
         elif awk -v v="$lo" -v f="$STRSM_FLOOR" 'BEGIN{exit !(v >= f)}'; then
           pass "[$host] $r scales ${pt}x, ${lo}x net of CI (>= ${STRSM_FLOOR}x, the floor ratified for this class from its model)"
         else
@@ -837,9 +946,9 @@ else
       fi
 
       if awk -v v="$lo" -v f="$SCALE_FLOOR" 'BEGIN{exit !(v >= f)}'; then
-        pass "[$host] $r scales ${pt}x at $P5_THREADS threads, ${lo}x net of CI (>= ${SCALE_FLOOR}x)"
+        pass "[$host] $r scales ${pt}x at $P5_THREADS threads, ${lo}x net of CI (>= ${SCALE_FLOOR}x, boost off both arms)"
       else
-        fail "[$host] $r scales only ${pt}x at $P5_THREADS threads, ${lo}x net of CI (< ${SCALE_FLOOR}x)"
+        fail "[$host] $r scales only ${pt}x at $P5_THREADS threads, ${lo}x net of CI (< ${SCALE_FLOOR}x, boost off both arms)"
         HOST_CLEARED=0
       fi
     done
@@ -849,8 +958,16 @@ else
     [[ -n "$rk" ]] && info "[$host] retention (the blocked nest against its own microkernel): $rk — reported, never judged; #26 is a direction to work in, not a threshold invented after the fact"
 
     # ---- the README's published numbers, against this run (criterion 9)
+    #
+    # Checked against the BOOST-ON pass, because that is the regime the published
+    # wall-clock rates were taken in and a README row is a claim about what a caller
+    # gets, not about the gate's judging regime. If that pass did not run there is no
+    # comparison to make, and saying so is the only honest verdict available: a row
+    # checked against nothing must not read as a row that agreed.
     if [[ ! -r README.md ]]; then
       fail "README.md is missing, and DESIGN.md §4/P5 asks for it with honest numbers in it"
+    elif [[ "$BOOST_ON_MEASURED" -ne 1 ]]; then
+      fail "[$host] the boost-on pass produced no rates, so this host's README rows are unmeasured this run rather than agreeing or disagreeing (#66)"
     else
       hcpu="$(remote_probe "$host" | cut -d'|' -f1 | sed 's/ *$//')"
       RROWS="$(awk -v b="$README_BEGIN" -v e="$README_END" '
@@ -876,7 +993,7 @@ else
             RBADN="$RBADN ${rben}/threads=${rthr}(no denominator column: never a number without one, §7 rule 7)"
             continue
           fi
-          mgf="$(bench_gflops "$(scale_name "$rben" "$rthr")" "$BENCHCSV")"
+          mgf="$(bench_gflops "$(scale_name "$rben" "$rthr")" "$BENCHCSV_ON")"
           if [[ -z "$mgf" ]]; then
             RBADN="$RBADN ${rben}/threads=${rthr}(published, but this gate measured no such row)"
           elif ! awk -v a="$rgf" -v b="$mgf" -v t="$README_TOL" 'BEGIN{d=(a-b)/b; if (d<0) d=-d; exit !(d <= t)}'; then
