@@ -42,6 +42,43 @@ remote_hosts() {
   sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$f"
 }
 
+# unmeasured MESSAGE — the gate is not green, and the log says why it is not a
+# miss. Sets FAIL exactly as each gate's own `fail` does, so a criterion that
+# reports this blocks the gate identically; what differs is what the red asserts
+# about its cause.
+#
+# WHY THIS ONE PRIMITIVE LIVES HERE AND pass/fail DO NOT (#72). It is the only one
+# more than one gate needs and none had. It was written for gate-p4's criterion 7
+# under the #67 ruling, and then 21 further sites across gate-p3, gate-p4 and
+# gate-p5 turned out to need it — sites whose own message text already said
+# "unmeasured" while the label printed FAIL. Two of them are worth remembering as
+# the shape of the defect: bench_expect's docs in scripts/bench.sh say an absent
+# measurement has "exactly one verdict available to it — unmeasured" six lines
+# above a caller printing FAIL, and gate-p5's race_verdict header argues that
+# collapsing its states "sends whoever reads it looking for a race that is not
+# there" immediately above the branches that collapse them. The comments knew the
+# answer before the code did.
+#
+# Landing that fix by copying the definition into gate-p5.sh would have made three
+# copies of a verdict primitive, and divergent verdict primitives across gates is
+# how the delegated tally came to count two columns where the log had three. So it
+# lives in the file all six gates already source. pass and fail stay per-gate for
+# now: they are identical in all six and lifting them is a separate change with no
+# defect behind it, which is not the kind of change to make while landing one.
+#
+# RELABELING IS NOT AMENDMENT, and the distinction is exact (ruled 2026-08-15).
+# What makes a criterion green is untouched — there is no bucket here that converts
+# red to not-red, and FAIL=1 is set by construction. What changes is the attributed
+# cause, and DESIGN.md §5.6 is explicit that a gate red for the wrong reason is as
+# untrustworthy as a gate green for the wrong reason. A FAIL on a race criterion
+# asserts a race was found; when the run died before the detector could look, that
+# assertion is false. Red with the right cause attached is *more* faithful to a
+# hard-red criterion, not less.
+#
+# The word FAIL must not appear in the label: the delegating gates count verdict
+# lines by grepping for it (gate-p4.sh:1047, gate-p5.sh:1098).
+unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s\n' "$1"; FAIL=1; }
+
 # worktree_strays — print every registered worktree other than this one, as
 # `PATH REVISION`, and return 1 if there are any.
 #

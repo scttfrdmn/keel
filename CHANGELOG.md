@@ -9,6 +9,41 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **21 gate criteria that already said "unmeasured" in their own message text now say it in
+  their label, and no gate's path to green moved** (ruled 2026-08-15 on #72; `DESIGN.md`
+  §5.6). Auditing every `fail` call across the six gates for what it *asserts* turned up 21
+  whose message says the criterion could not be resolved — no toolchain, no reachable host,
+  a run that died before it measured — under a label that says a check ran and observed a
+  violation. Two of them indict themselves: `bench_expect`'s docs in `scripts/bench.sh` say
+  an absent measurement has "exactly one verdict available to it — unmeasured" six lines
+  above a caller printing FAIL, and `gate-p5`'s `race_verdict` header argues that collapsing
+  its three states "sends whoever reads it looking for a race that is not there" immediately
+  above the branches that collapse them. **Relabeling is not amendment**: `unmeasured()`
+  sets `FAIL=1` exactly as each gate's `fail` does, so every one of these still blocks its
+  gate, and what makes a criterion green is untouched — including the four `-race` criteria,
+  whose non-amendable hard-red ruling of 2026-08-12 stands unchanged. What moves is the
+  attributed cause, and a gate red for the wrong reason is as untrustworthy as one green for
+  the wrong reason. Distribution: 13 in `gate-p5`, 6 in `gate-p3`, 2 in `gate-p4`. The sites
+  are an audited list, not a grep: `gate-p5.sh:595` matches the same pattern and stays a
+  FAIL, because "an unmeasured rung has appeared at Level 3" is a noun phrase about the rung
+  and that check ran and observed a real violation — a blanket substitution would have
+  relabeled a real miss as not-measured, the one direction of this change that *would* have
+  been a weakening. `unmeasured()` is lifted to `scripts/remote.sh`, the file all six gates
+  source; `gate-p5` did not define the primitive at all while 13 of its sites needed it, and
+  minting a third divergent copy of a verdict primitive is how the delegated tally came to
+  count two columns where the log had three. Also fixed in the same commit: `race_verdict`'s
+  citation of #22's edge campaign as the checkptr remediation, which is the wrong address —
+  the fix is upstream CL 761120 shipping in `go1.27`, so the path is #70's floor then #69's
+  port (T23), and a red verdict that cites a campaign which will never resolve it is
+  misattribution's little sibling.
+- **`gate-p4`'s tally of the delegated P3 gate is anchored and has a third column** (#71).
+  It counted with a bare `grep -c 'FAIL'`, which also matches any summary line inside
+  `gate-p3`'s log, so a green delegate could be reported with a FAIL it did not have — the
+  defect `gate-p5`'s tally of `gate-p4` already had fixed, in the file one level down. It
+  now strips colour, anchors on `^  PASS  ` / `^  FAIL  ` / `^  UNMEASURED  `, and prints
+  UNMEASURED as its own column, which it must: six of `gate-p3`'s misses became UNMEASURED
+  above, and a two-column tally would have shown them as neither. The RED excerpt below it
+  quotes both FAIL and UNMEASURED lines for the same reason.
 - **gate-p4's criterion 7 is graded in three states, and the bar did not move** (ruled
   2026-08-15 on #67; `DESIGN.md` §4/P4). `Ssyrk ≥ 85% of Sgemm` was judged net of CI, which
   answers one question — "is the whole interval above the bar?" — and its negative answer

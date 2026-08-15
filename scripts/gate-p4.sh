@@ -236,14 +236,14 @@ source scripts/bench.sh
 FAIL=0
 pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
 fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
-# unmeasured — the gate is not green, and the log says why it is not a miss. Same
-# effect on the verdict as fail (DESIGN.md §5.6: an unmeasured criterion may not
-# resolve as either colour, and this gate's colour is binary), different label, so
-# a reader and a PASS/FAIL tally can tell "Ssyrk is too slow" from "this reading
-# cannot decide". The word FAIL must not appear in the label: the delegating gates
-# count verdict lines by grepping for it (gate-p5.sh:1083).
-unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s\n' "$1"; FAIL=1; }
 info() { printf '        %s\n' "$1"; }
+# `unmeasured` is not defined here. It was, and #72 lifted it to scripts/remote.sh
+# once 21 further sites across three gates turned out to need it: three copies of a
+# verdict primitive is how the delegated tally came to count two columns where the
+# log had three. Same effect on this gate's verdict as `fail` — DESIGN.md §5.6, an
+# unmeasured criterion may not resolve as either colour, and this gate's colour is
+# binary — with a label that distinguishes "Ssyrk is too slow" from "this reading
+# cannot decide".
 
 # require_bench LABEL LOG CSV UNIT NAME... — declare what a criterion is about to
 # read, and give absence exactly one verdict. Same helper, same wording and the
@@ -254,7 +254,7 @@ require_bench() {
   local label miss
   label="$1"; shift
   miss="$(bench_expect "$@")" && return 0
-  fail "$label unmeasured: $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
+  unmeasured "$label $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
   return 1
 }
 
@@ -1026,18 +1026,30 @@ info "the Ssyrk/Sgemm ratio above is a ratio against a number P4 can move, so th
 info "denominator's own bar is carried by running the gate that owns it — not by"
 info "restating a threshold in a second place"
 if [[ "$TREE_CLEAN" -eq 0 ]]; then
-  fail "the delegated P3 gate did not run: this gate refused a dirty tree above, and a gate that cannot run is unmeasured rather than green"
+  unmeasured "the delegated P3 gate did not run: this gate refused a dirty tree above, and a gate that cannot run is unmeasured rather than green"
 else
   mkdir -p "$(dirname "$P3LOG")"
   P3RC=0
   bash scripts/gate-p3.sh >"$P3LOG" 2>&1 || P3RC=$?
   info "full output: $P3LOG ($(grep -c '' "$P3LOG" || true) lines) — paste it verbatim into the umbrella issue beside this gate's own"
-  info "$(grep -c 'PASS' "$P3LOG" || true) PASS / $(grep -c 'FAIL' "$P3LOG" || true) FAIL, verdict: $(grep -E '^gate-p3: (GREEN|RED)' "$P3LOG" | tail -1)"
+  # Count the delegated gate's own verdict lines, anchored, not every line
+  # containing the word (#71): a bare `grep -c FAIL` also matches any summary
+  # line *inside* gate-p3's log, so a green delegate could report a FAIL it did
+  # not have. Colour codes are stripped first because the anchor is at the start
+  # of the line and the escape sequence sits inside the label.
+  #
+  # UNMEASURED is a column of its own, not folded into either neighbour. Six of
+  # gate-p3's misses became UNMEASURED under #72, and a two-column tally would
+  # have shown them as neither — the same disappearing act the unanchored grep
+  # performed, one column over. gate-p5's tally of *this* gate has the identical
+  # shape (gate-p5.sh:1098); they are two readers of one vocabulary.
+  P3_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P3LOG")
+  info "$(printf '%s\n' "$P3_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P3_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P3_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED, verdict: $(grep -E '^gate-p3: (GREEN|RED)' "$P3LOG" | tail -1)"
   if [[ "$P3RC" -eq 0 ]]; then
     pass "gate-p3 is green on this commit ($(git rev-parse --short HEAD)), so P4's denominator is still the Sgemm P3 measured"
   else
     fail "gate-p3 is RED on this commit (exit $P3RC), so nothing above that divides by Sgemm means what it says"
-    grep 'FAIL' "$P3LOG" | sed 's/^/        /' | head -20
+    printf '%s\n' "$P3_STRIP" | grep -E '^  (FAIL|UNMEASURED)  ' | sed 's/^/        /' | head -20
     info "  DESIGN.md §4's one-re-run allowance applies to a failing THROUGHPUT SENTINEL reading inside that gate exactly as it does when it is run directly: one immediate re-run, both outputs archived, never for a correctness criterion"
   fi
 fi

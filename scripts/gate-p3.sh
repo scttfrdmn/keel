@@ -268,7 +268,7 @@ require_bench() {
   local label miss
   label="$1"; shift
   miss="$(bench_expect "$@")" && return 0
-  fail "$label unmeasured: $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
+  unmeasured "$label $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
   return 1
 }
 
@@ -1191,7 +1191,7 @@ if [[ -n "$HOSTS" ]]; then
       if [[ -z "$altkern" || "$altkern" == "$hkern" ]]; then
         info "[$host] KEEL_KERN_CLASS=$alt selects ${altkern:-the same shape} too, so both classes agree here and there is nothing to compare"
       elif [[ -z "$altlo" || -z "$disppt" ]]; then
-        fail "[$host] the KEEL_KERN_CLASS=$alt run established no bounded Sgemm rate, so the shape choice is unmeasured at 2048^3 rather than confirmed"
+        unmeasured "[$host] the KEEL_KERN_CLASS=$alt run established no bounded Sgemm rate, so the shape choice is unmeasured at 2048^3 rather than confirmed"
       elif awk -v a="$altlo" -v b="$disppt" 'BEGIN{exit !(a > b)}'; then
         fail "[$host] at 2048^3 the passed-over $altkern beats the dispatched $hkern: $(printf '%.1f' "$altpt") GFLOP/s, $(printf '%.1f' "$altlo") net of CI, against $(printf '%.1f' "$disppt")"
       else
@@ -1236,7 +1236,7 @@ else
       MISS=""
       [[ "$obgo"  == none || -z "$obgo"  ]] && MISS="a Go toolchain"
       [[ "$oblib" == none || -z "$oblib" ]] && MISS="${MISS:+$MISS and }libopenblas.so"
-      fail "[$host] no same-host OpenBLAS reference: this host is missing $MISS, so its ratio is unmeasured (percent-of-peak is NOT a substitute)"
+      unmeasured "[$host] no same-host OpenBLAS reference: this host is missing $MISS, so its ratio is unmeasured (percent-of-peak is NOT a substitute)"
       ob_provision_help "$host" "$obdistro"
       continue
     fi
@@ -1266,7 +1266,7 @@ else
     # to know whether upstream's selector was wrong here.
     SWEEP="$(ob_coretype_sweep "$host")"
     if [[ -z "$SWEEP" ]]; then
-      fail "[$host] the coretype sweep produced nothing, so the reference's ceiling is unmeasured and the denominator would be whatever DYNAMIC_ARCH happened to pick"
+      unmeasured "[$host] the coretype sweep produced nothing, so the reference's ceiling is unmeasured and the denominator would be whatever DYNAMIC_ARCH happened to pick"
       continue
     fi
     info "[$host] coretype sweep, best of $KEEL_BENCH_COUNT at -benchtime=$KEEL_BENCH_TIME:"
@@ -1367,7 +1367,7 @@ else
       # presenting it as a win over a comparison that never happened.
       read -r OBCT OBCT_CORE OBCT_RATE <<<"$(awk '$3 != "-" && $3 != "norow" && $3 + 0 > m { m = $3 + 0; best = $0 } END { print best }' <<<"$SWEEP")"
       if [[ -z "${OBCT:-}" ]]; then
-        fail "[$host] no candidate coretype produced a rate, so the reference cannot be pinned to its best family and its ceiling is unmeasured"
+        unmeasured "[$host] no candidate coretype produced a rate, so the reference cannot be pinned to its best family and its ceiling is unmeasured"
         continue
       fi
       info "[$host] reference pinned to OPENBLAS_CORETYPE=$OBCT (corename=$OBCT_CORE, $OBCT_RATE GFLOP/s), the fastest candidate; the default selection produced no rate, so there is no baseline this can be called a win over"
@@ -1541,7 +1541,7 @@ else
     fi
   done <<<"$HOSTS"
   if [[ "$OB_MEASURED" -eq 0 ]]; then
-    fail "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed"
+    unmeasured "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed"
   elif [[ "$OB_CLEARED" -eq "$NHOSTS" ]]; then
     pass "every gate host cleared 60% of its own single-thread OpenBLAS ($OB_CLEARED/$NHOSTS)"
   else

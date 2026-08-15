@@ -232,7 +232,7 @@ require_bench() {
   local label miss
   label="$1"; shift
   miss="$(bench_expect "$@")" && return 0
-  fail "$label unmeasured: $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
+  unmeasured "$label $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
   return 1
 }
 
@@ -440,7 +440,7 @@ trap gate_cleanup EXIT INT TERM
 # not run has no colour, and the operator gets the exact install command instead of
 # a green with a hole in it.
 if ! command -v golangci-lint >/dev/null 2>&1; then
-  fail "golangci-lint is not installed, so the criterion that names it is unmeasured rather than clean"
+  unmeasured "golangci-lint is not installed, so the criterion that names it is unmeasured rather than clean"
   info "  brew install golangci-lint"
 elif GOEXPERIMENT=simd golangci-lint run ./... >"$LOG" 2>&1; then
   pass "golangci-lint clean ($(golangci-lint version 2>&1 | head -1))"
@@ -703,14 +703,23 @@ race_verdict() {
     # partial slice ops convert &s[0] to a full-width *[N]T, which checkptr
     # rejects fatally. See docs/toolchain-notes.md T17 and issue #42.
     #
-    # Ruled 2026-08-12: this criterion is not amendable to exclude checkptr, and
-    # the workaround lands inside #22's edge campaign as an admissibility
-    # condition on its candidates. So the message names the fix's address rather
-    # than saying "awaiting a disposition" — the disposition exists.
-    fail "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42, upstream golang/go#80856 — the fix lands in #22's campaign; the criterion is not amendable)"
+    # Ruled 2026-08-12: this criterion is not amendable to exclude checkptr. So
+    # the message names the fix's address rather than saying "awaiting a
+    # disposition" — the disposition exists.
+    #
+    # That address was #22's edge campaign until 2026-08-15, and it was wrong:
+    # #22 ranks edge-handling candidates and cannot clear a checkptr fatal in
+    # archsimd's own helpers. The fix is upstream CL 761120 (30 //go:nocheckptr
+    # on simd's unsafe_helpers.go), which ships in go1.27 — so the remediation
+    # path is #70, the go1.27.0 floor on all three hosts, and then #69, which
+    # ports internal/vec to 1.27's respelled load/store surface (T23) because
+    # keel does not compile under 1.27 until it does. A compiler fix is not yet
+    # a fix in keel's build, and citing the wrong remediation sends the reader
+    # to a campaign that will never resolve this.
+    unmeasured "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42, upstream golang/go#80856, fixed by CL 761120 in go1.27 — the path here is #69's port behind #70's toolchain floor; the criterion is not amendable)"
     sed -n '/checkptr: converted pointer straddles/,/^testing\.tRunner/p' "$log" | sed 's/^/        /' | head -20
   else
-    fail "$label the -race run failed without the detector reporting a race, so the criterion is unmeasured: a test that fails under instrumentation says nothing either way about whether keel has a race"
+    unmeasured "$label the -race run failed without the detector reporting a race, so the criterion is unmeasured: a test that fails under instrumentation says nothing either way about whether keel has a race"
     # head, not tail: on a multi-package failure the `--- FAIL:` lines that name
     # the cause come before the per-package summaries, and a tail dropped them.
     grep -E '^(---|[[:space:]]+---)|\.go:[0-9]+:' "$log" | sed 's/^/        /' | head -20
@@ -725,13 +734,13 @@ RACE_HOSTS=0
 if [[ -z "$HOSTS" ]]; then
   fail "no execution hosts, so the race detector never saw the vector path"
 elif [[ "$TREE_CLEAN" -eq 0 ]]; then
-  fail "the native race build did not run: this gate refused a dirty tree above, and a check that could not run is unmeasured rather than clean"
+  unmeasured "the native race build did not run: this gate refused a dirty tree above, and a check that could not run is unmeasured rather than clean"
 else
   while read -r host; do
     [[ -n "$host" ]] || continue
     hgo="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" 'command -v go >/dev/null 2>&1 && go version || echo none' 2>/dev/null || echo none)"
     if [[ "$hgo" == none || -z "$hgo" ]]; then
-      fail "[$host] no Go toolchain, so -race cannot be built natively here and this host's vector path is unmeasured for races"
+      unmeasured "[$host] no Go toolchain, so -race cannot be built natively here and this host's vector path is unmeasured for races"
       continue
     fi
     # KEEL_SCP_OPTS, not KEEL_SSH_OPTS: the latter carries -n, which would close
@@ -758,7 +767,7 @@ else
     fi
   done <<<"$HOSTS"
   if [[ "$RACE_HOSTS" -eq 0 ]]; then
-    fail "no host produced a race-detector reading on the vector path, so that criterion is unmeasured rather than clean"
+    unmeasured "no host produced a race-detector reading on the vector path, so that criterion is unmeasured rather than clean"
   fi
 fi
 
@@ -799,7 +808,7 @@ else
     # happened and the function returned 0 on all three hosts. Only the readback
     # caught it. So the readback is the assertion and the return code is a hint.
     if ! remote_boost_set "$host" off; then
-      fail "[$host] boost could not be set off, so this host cannot produce a same-regime ratio (#66); its scaling is unmeasured, not missed"
+      unmeasured "[$host] boost could not be set off, so this host cannot produce a same-regime ratio (#66); its scaling is unmeasured, not missed"
       continue
     fi
     BOOST_TOUCHED="$BOOST_TOUCHED $host"
@@ -836,7 +845,7 @@ else
     if [[ "${bon%% *}" != on ]]; then
       fail "[$host] boost did not come back on (reads '${bon%% *}' at ${bon#* }): this host is left in a modified state, so every later measurement on it — including this gate's delegated gate-p4 run — is suspect"
     elif ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench="$P5_BENCH_FILTER" >"$BENCHLOG_ON" 2>&1; then
-      fail "[$host] the boost-on benchmark run failed, so the wall-clock speedup a caller experiences is unmeasured for this host (#66) and the README's rows have nothing to be re-measured against"
+      unmeasured "[$host] the boost-on benchmark run failed, so the wall-clock speedup a caller experiences is unmeasured for this host (#66) and the README's rows have nothing to be re-measured against"
       sed 's/^/        /' "$BENCHLOG_ON" | tail -20
     else
       bench_csv "$BENCHLOG_ON" >"$BENCHCSV_ON" 2>"$LOG" || true
@@ -967,7 +976,7 @@ else
     if [[ ! -r README.md ]]; then
       fail "README.md is missing, and DESIGN.md §4/P5 asks for it with honest numbers in it"
     elif [[ "$BOOST_ON_MEASURED" -ne 1 ]]; then
-      fail "[$host] the boost-on pass produced no rates, so this host's README rows are unmeasured this run rather than agreeing or disagreeing (#66)"
+      unmeasured "[$host] the boost-on pass produced no rates, so this host's README rows are unmeasured this run rather than agreeing or disagreeing (#66)"
     else
       hcpu="$(remote_probe "$host" | cut -d'|' -f1 | sed 's/ *$//')"
       RROWS="$(awk -v b="$README_BEGIN" -v e="$README_END" '
@@ -1014,7 +1023,7 @@ else
     SCALE_HOSTS_OK=$((SCALE_HOSTS_OK + HOST_CLEARED))
   done <<<"$HOSTS"
   if [[ "$SCALE_HOSTS_MEASURED" -eq 0 ]]; then
-    fail "no host produced a complete set of scaling ratios, so the headline criterion is unmeasured rather than missed"
+    unmeasured "no host produced a complete set of scaling ratios, so the headline criterion is unmeasured rather than missed"
   elif [[ "$SCALE_HOSTS_OK" -eq "$NHOSTS" ]]; then
     pass "every gate host cleared ${SCALE_FLOOR}x against its own single-thread rate for $P5_JUDGED ($SCALE_HOSTS_OK/$NHOSTS)"
   else
@@ -1043,7 +1052,7 @@ if [[ -r README.md ]]; then
   # not get to reappear in the last gate. It is also the only place the block's
   # absence is reported at all when the host loop never reached its own check.
   if ! grep -qF "$README_BEGIN" README.md || ! grep -qF "$README_END" README.md; then
-    fail "README.md has no \`keel-numbers\` block ($README_BEGIN ... $README_END), so there is nothing for this gate to re-measure and the criterion is unmeasured rather than met"
+    unmeasured "README.md has no \`keel-numbers\` block ($README_BEGIN ... $README_END), so there is nothing for this gate to re-measure and the criterion is unmeasured rather than met"
   fi
   STRAY="$(awk -v b="$README_BEGIN" -v e="$README_END" '
     index($0, b) { inb = 1 }
@@ -1071,7 +1080,7 @@ info "parallel nest that slowed it would make the bar easier. So the absolute ba
 info "carried by running the gates that own them: gate-p4 runs gate-p3, which carries"
 info "P2's kernel audit — three phases of thresholds, not one of them restated here."
 if [[ "$TREE_CLEAN" -eq 0 ]]; then
-  fail "the delegated P4 gate did not run: this gate refused a dirty tree above, and a gate that could not run is unmeasured rather than green"
+  unmeasured "the delegated P4 gate did not run: this gate refused a dirty tree above, and a gate that could not run is unmeasured rather than green"
 else
   mkdir -p "$(dirname "$P4LOG")"
   P4RC=0
