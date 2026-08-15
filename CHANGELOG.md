@@ -73,7 +73,15 @@ While the major version is 0, minor versions may contain breaking changes.
   well, since `scripts/remote.sh` runs each benchmark synchronously over `ssh` and a dead
   driver `SIGHUP`s a measurement in flight on the far side. `stat` reports `vanished`
   rather than an exit code when no status file was written, because a run that was killed
-  is `unmeasured`, not failed (DESIGN.md §5.6).
+  is `unmeasured`, not failed (DESIGN.md §5.6). `wait` blocks on a `tmux wait-for` channel
+  rather than polling, so noticing a finished run costs neither time nor latency. The
+  channel is signalled on death by signal as well as on normal exit — otherwise a `wait` on
+  a killed run would block forever — and from `kill` itself, which does not depend on the
+  dying shell getting to run its trap. Signalling deliberately does *not* write the status
+  file on signal death, so a killed run still reports `vanished` rather than acquiring an
+  invented exit code. The session sets `exit-empty off`: a recorded `wait-for` signal lives
+  in the tmux server, so letting the server exit with the last session would strand any
+  later `wait` on a channel nobody will ever signal.
 
 ### Fixed
 - **The six `internal/l1` reductions lost 4.5–17.4% at n=256** when the `>` guards landed,

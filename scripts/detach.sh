@@ -30,8 +30,13 @@
 #
 #   scripts/detach.sh run  NAME -- CMD [ARGS...]   start CMD detached
 #   scripts/detach.sh stat NAME                    running, or the exit code
+#   scripts/detach.sh wait NAME                    block until it ends, then stat
 #   scripts/detach.sh log  NAME                    print the log path
 #   scripts/detach.sh kill NAME                    stop it
+#
+# `wait` blocks on a tmux wait-for channel rather than polling, so waiting costs
+# nothing and adds no latency to noticing. It is the sleep-free half of the same
+# rule: a `sleep 60` loop both burns time and reports late.
 #
 # NAME picks the log: build/NAME.log, plus build/NAME.status once it finishes.
 # Include the revision in NAME, as the gates' own logs do:
@@ -74,9 +79,24 @@ cmd_run() {
   # The command is written to a runner script rather than interpolated into
   # tmux's argument, which a shell on the far side would re-expand. Same
   # hazard, and the same fix, as remote_exec's printf %q (scripts/remote.sh).
+  #
+  # The runner signals a wait-for channel on the way out, so `wait` can block
+  # instead of polling. Two properties of the signalling matter:
+  #
+  #   - it fires on death by signal as well as on normal exit, or a `wait` on a
+  #     killed run would block forever;
+  #   - it does NOT write the status file when it dies by signal. A killed run
+  #     has no exit code to report, and manufacturing one is the single failure
+  #     mode this script exists to prevent (DESIGN.md §5.6). `wait` therefore
+  #     hands the verdict to `stat`, which says `vanished`.
   {
     echo '#!/usr/bin/env bash'
     printf 'cd %q || exit 3\n' "$ROOT"
+    printf 'signalled=\n'
+    # shellcheck disable=SC2016  # deliberately unexpanded: this is the runner's source
+    printf 'signal() { [[ -n "$signalled" ]] && return 0; signalled=1; tmux wait-for -S %q 2>/dev/null || true; }\n' "$sess"
+    printf 'trap signal EXIT\n'
+    printf 'trap "signal; exit 143" HUP TERM INT\n'
     local a
     for a in "$@"; do printf '%q ' "$a"; done
     echo
@@ -86,8 +106,28 @@ cmd_run() {
 
   tmux new-session -d -s "$sess" "$(printf '%q > %q 2>&1' "$runner" "$log")"
 
+  # exit-empty defaults on, which would take the server down when this session
+  # is the last one to end -- and a recorded wait-for signal lives in the
+  # server, so it would go with it. A later `wait` would then start a fresh
+  # server and block on a channel nobody will ever signal. Keeping the server
+  # up is what makes `wait` safe to call after the run has already finished.
+  tmux set-option -s exit-empty off 2>/dev/null || true
+
   printf 'detached: session=%s log=%s\n' "$sess" "$log"
   printf 'status:   %s (absent until it finishes)\n' "$status"
+}
+
+cmd_wait() {
+  local name="$1" sess; sess="$(sess_of "$1")"
+  # Both fast paths matter. If it already finished, waiting would block on a
+  # channel whose signal may have been consumed by an earlier `wait`; if it
+  # already vanished, there is nothing left to signal at all.
+  if [[ -r "$DIR/$name.status" ]] || ! tmux has-session -t "=$sess" 2>/dev/null; then
+    cmd_stat "$name"
+    return
+  fi
+  tmux wait-for "$sess" 2>/dev/null || true
+  cmd_stat "$name"
 }
 
 cmd_stat() {
@@ -102,8 +142,9 @@ cmd_stat() {
     return 0
   fi
   # No session and no status file: the runner never wrote one, so the work was
-  # killed rather than finished. Reporting that as an exit code would be a lie.
-  printf 'vanished %s  no status file: killed, not finished  log=%s\n' "$sess" "$log"
+  # killed, or never started. Either way there is no verdict, and reporting one
+  # as an exit code would be a lie.
+  printf 'vanished %s  no status file: killed or never started  log=%s\n' "$sess" "$log"
   return 1
 }
 
@@ -112,9 +153,16 @@ main() {
   case "$sub" in
     run)  [[ $# -ge 1 ]] || die "usage: detach.sh run NAME -- CMD..."; cmd_run "$@" ;;
     stat) [[ $# -eq 1 ]] || die "usage: detach.sh stat NAME"; cmd_stat "$1" ;;
+    wait) [[ $# -eq 1 ]] || die "usage: detach.sh wait NAME"; cmd_wait "$1" ;;
     log)  [[ $# -eq 1 ]] || die "usage: detach.sh log NAME"; printf '%s\n' "$DIR/$1.log" ;;
-    kill) [[ $# -eq 1 ]] || die "usage: detach.sh kill NAME"; tmux kill-session -t "=$(sess_of "$1")" ;;
-    *)    die "usage: detach.sh {run|stat|log|kill} NAME [-- CMD...]" ;;
+    # Signal the channel here as well as from the runner's trap. The trap is the
+    # normal path, but it depends on the killed shell getting to run it; this
+    # does not, and a `wait` that outlives its run is the one bug that cannot be
+    # noticed by looking at the log.
+    kill) [[ $# -eq 1 ]] || die "usage: detach.sh kill NAME"
+          tmux kill-session -t "=$(sess_of "$1")"
+          tmux wait-for -S "$(sess_of "$1")" 2>/dev/null || true ;;
+    *)    die "usage: detach.sh {run|stat|wait|log|kill} NAME [-- CMD...]" ;;
   esac
 }
 
