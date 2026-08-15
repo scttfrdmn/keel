@@ -21,11 +21,56 @@ model, never by hostname.
 <!-- keel-numbers: begin -->
 | CPU | benchmark | threads | GFLOP/s | denominator |
 | --- | --- | --- | --- | --- |
+| AMD Ryzen 9 7950X3D 16-Core Processor | Sgemm | 1 | 153 | 92.1% of 166.05 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD Ryzen 9 7950X3D 16-Core Processor | Sgemm | 8 | 890.9 | 67.1% of 1328.4 GFLOP/s, that same peak x 8 cores |
+| AMD Ryzen 9 7950X3D 16-Core Processor | Ssyrk | 1 | 130.7 | 78.7% of 166.05 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD Ryzen 9 7950X3D 16-Core Processor | Ssyrk | 8 | 902.9 | 68.0% of 1328.4 GFLOP/s, that same peak x 8 cores |
+| AMD Ryzen 9 7950X3D 16-Core Processor | Ssymm | 1 | 144.4 | 87.0% of 166.05 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD Ryzen 9 7950X3D 16-Core Processor | Ssymm | 8 | 826.2 | 62.2% of 1328.4 GFLOP/s, that same peak x 8 cores |
+| AMD Ryzen 9 7950X3D 16-Core Processor | Strsm | 1 | 52.1 | 31.4% of 166.05 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD Ryzen 9 7950X3D 16-Core Processor | Strsm | 8 | 378.1 | 28.5% of 1328.4 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Sgemm | 1 | 76.5 | 35.4% of 216.1 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Sgemm | 8 | 495.2 | 28.6% of 1728.8 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Ssyrk | 1 | 69.49 | 32.2% of 216.1 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Ssyrk | 8 | 490.2 | 28.4% of 1728.8 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Ssymm | 1 | 70.48 | 32.6% of 216.1 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Ssymm | 8 | 463.7 | 26.8% of 1728.8 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Strsm | 1 | 27.1 | 12.5% of 216.1 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Strsm | 8 | 184.8 | 10.7% of 1728.8 GFLOP/s, that same peak x 8 cores |
+| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Sgemm | 1 | 194.8 | 59.4% of 327.8 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Sgemm | 8 | 1116 | 42.5% of 2622.4 GFLOP/s, that same peak x 8 cores |
+| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Ssyrk | 1 | 165.6 | 50.5% of 327.8 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Ssyrk | 8 | 1129 | 43.1% of 2622.4 GFLOP/s, that same peak x 8 cores |
+| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Ssymm | 1 | 182.3 | 55.6% of 327.8 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Ssymm | 8 | 980 | 37.4% of 2622.4 GFLOP/s, that same peak x 8 cores |
+| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Strsm | 1 | 60.02 | 18.3% of 327.8 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Strsm | 8 | 421.6 | 16.1% of 2622.4 GFLOP/s, that same peak x 8 cores |
 <!-- keel-numbers: end -->
 
-The table is empty because no gate-p5 run has produced these rows yet, and an
-unmeasured row is not something to publish and correct later. gate-p5 reports
-this as "publishes no row for &lt;CPU&gt;", which is the state it is in.
+All 24 rows come from one run — `scripts/gate-p5.sh` at rev `083cbdb`, log in
+`build/gate-p5-083cbdb.log` — at n=4096 square, `GOMAXPROCS` pinned to the
+threads column, `performance` governor, hosts otherwise idle. The 1-thread and
+8-thread rows for a routine are the two arms of that run's scaling ratio, so
+they are directly comparable to each other; rows from different CPUs are not,
+because the peaks differ.
+
+**The denominator here is keel's own microkernel, not OpenBLAS.** No OpenBLAS
+reference was taken at these thread counts, so the comparison DESIGN.md §7
+rule 7 asks for is absent rather than unflattering, and the only bar these
+rows are measured against is what keel's own AVX-512 microkernel achieved on
+the same host in the same run. Read the percentages as "how much of its own
+kernel does the blocked nest keep", not as a competitive result.
+
+**Both denominators are measured on an idle machine, which cuts against the
+8-thread column.** The 1-thread peak is taken with one core loaded, so it
+includes a single-core boost clock the 8-thread arm does not get to keep;
+multiplying it by 8 therefore asks the parallel nest to beat a clock it never
+runs at. That is why the 8-thread percentages sit below the 1-thread ones on
+every host, and it is also why the gate's own `>= 6.0x` scaling floor is
+currently missed on the two hosts that keep the *most* of their single-thread
+peak. Issue #66 carries the iso-frequency measurement that would replace this
+denominator; until it is ruled on, these percentages are a floor on the
+parallel nest's efficiency and not an estimate of it.
 
 ## Why
 Go has excellent float64 numerics (Gonum) and no maintained fast float32

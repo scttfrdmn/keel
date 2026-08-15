@@ -95,9 +95,44 @@ While the major version is 0, minor versions may contain breaking changes.
   (`build/gate-p5-175098d.log`, `175098d`): **Sgemm, Ssyrk and Ssymm missed the ≥6.0×
   floor on all three hosts and Strsm cleared it on all three** (6.93–7.12× net of CI) —
   and Strsm is precisely the routine whose parallel region *encloses* its packing rather
-  than being enclosed by it. The routine ordering inside the miss follows from the same
-  term: Ssyrk pays this pack for half the flops, because the mask discards the tiles above
-  the diagonal after the full kc×nc panel is packed, and Ssyrk was last on every host.
+  than being enclosed by it.
+
+  The second run (`build/gate-p5-083cbdb.log`, `083cbdb`) measured the fix. Change in the
+  8-thread scaling ratio, net of CI:
+
+  | routine | Ryzen 9 7950X3D | i9-9960X | Ryzen AI MAX+ 395 |
+  | --- | --- | --- | --- |
+  | Sgemm | +2.0% | +3.2% | +3.5% |
+  | Ssyrk | **+32.6%** | **+21.4%** | **+38.3%** |
+  | Ssymm | +0.8% | +6.2% | +1.2% |
+  | Strsm | +1.0% | −2.6% | −1.1% |
+
+  Ssyrk now clears the floor on all three hosts and Skylake-X clears all four routines;
+  the scaling criterion went from 8 failing rows to 4, and the gate from 51 PASS / 15 FAIL
+  to 54 / 12. **The first explanation written here was wrong and is withdrawn.** It said
+  Ssyrk pays the same pack for half the flops, which predicts Ssyrk gaining ~2× what
+  Sgemm gains; measured, it gained 16.2× / 6.7× / 10.9× as much. The term that does
+  explain that spread is which pack branch each routine takes. A NoTrans Ssyrk is
+  dispatched as `gemm(kn, trans, !trans, …)`, so its B operand is Aᵀ and its B pack runs
+  the transposing element-at-a-time loop, while Sgemm NN and Ssymm pack B contiguously
+  through `copy()`. Parallelising a scalar transpose buys an order of magnitude more than
+  parallelising a memmove — which also means the remaining four misses have a different
+  cause, and #66 rather than this bullet carries it. Strsm's two small regressions are
+  within the run-to-run spread of a ratio whose parallel region this change does not
+  touch.
+- **README publishes its first measured rates** — 24 rows, four Level-3 routines × 1 and 8
+  threads × three CPUs, all from the single `083cbdb` gate-p5 run, keyed by CPU model and
+  never by hostname. The rows live inside the `keel-numbers` block that `gate-p5.sh`
+  re-measures on every host it runs on, so a stale row fails the gate rather than aging
+  quietly; the same criterion also fails on a row with an empty denominator column and on
+  any rate published outside the block.
+
+  Every row's denominator is keel's **own** AVX-512 microkernel peak from the same run,
+  because no OpenBLAS reference was taken at these thread counts — stated in the README
+  rather than left to be inferred from a missing column. And that denominator is measured
+  on an idle machine, so multiplying it by 8 asks the parallel nest to beat a single-core
+  boost clock it never runs at; the 8-thread percentages are therefore a floor on the
+  nest's efficiency, not an estimate of it (#66).
 - **`vec.AbsMask512`/`AbsWith512` and the 256-bit pair**, so a caller can build the abs
   sign-bit mask once and reuse it across a loop. `Abs512` now delegates to
   `AbsWith512(x, AbsMask512())`, which keeps the sign-bit trick written exactly once and
