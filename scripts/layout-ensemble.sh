@@ -49,6 +49,23 @@
 #     actually sampled. A perturbation that failed to move anything is reported
 #     as such instead of silently padding the ensemble with duplicates.
 #
+# # Controls precede the subject in link order
+#
+# The protection is directional. At a fixed pad both arms put the *changed*
+# function at the same address only because everything ahead of it in link order
+# is unchanged; the change's own size delta displaces everything after it. On
+# the e829a61 run the subject shrank 32 bytes and every routine downstream of it
+# moved by 0x20 -- a multiple of 32 but not 64, so the mod-64 class flipped for
+# all of them. That is exactly T22's mechanism, reproduced by the very commit
+# being judged.
+#
+# So a routine downstream of the subject is placement-suspect between the arms
+# no matter how clean its numbers look, and this is a rule of the instrument
+# rather than a lucky property of one run. The script enforces it by grading:
+# any measured routine whose entry address differs between the arms is printed
+# with a `placement-confounded` label and excluded from the verdict set by
+# construction. A warning would leave it citable; a demotion does not.
+#
 # # What it cannot do
 #
 # It samples a handful of placements, not the distribution. A delta that clears
@@ -56,6 +73,17 @@
 # placements' worth of layout. That is a weaker claim than it looks and is the
 # strongest one available without the alignment control golang/go#6752 would
 # give.
+#
+# One confound is irreducible and is not worth chasing: the subject's own
+# *interior* alignment moves with its own code change, since a function that
+# emits fewer instructions lays its hot loop differently against the 64-byte
+# lines. That is part of the change, not a confound to be separated from it.
+# Perfect separation of a function from its own layout does not exist.
+#
+# An instruction-count delta bounds the code change, not its throughput
+# consequence: reasoning from "3 fewer instructions in 25" to a percentage
+# assumes removed instructions are fungible with the remainder, which holds only
+# under uniform issue pressure. Report the count and the time as two facts.
 #
 # usage: scripts/layout-ensemble.sh BASE_REF [PAD_STEPS...]
 #        default PAD_STEPS: 0 3 6 9   (statement counts, not byte counts)
@@ -69,6 +97,20 @@ warn() { printf '  \033[33mWARN\033[0m  %s\n' "$1"; }
 # it must leave byte-identical. Both are read back per build.
 CHANGED_FN='l1\.avx512Asum$'
 CONTROL_FN='l1\.avx512Scal$'
+
+# MEASURED — benchmark-name token -> the symbol that runs it. Grading needs this
+# map because benchstat reports benchmark names while placement is a property of
+# symbols. Only the avx512 symbols are listed: all three hosts dispatch there
+# (gate-p5's matrix), so a KEEL_FORCE arm would need its own map and would get no
+# grading from this one. A token absent from the map is treated as ungraded, and
+# ungraded is demoted rather than cleared.
+MEASURED=(
+  'L1Sasum:l1\.avx512Asum$'
+  'L1Sscal:l1\.avx512Scal$'
+  'L1Sdot:l1\.avx512Dot$'
+  'L1Saxpy:l1\.avx512Axpy$'
+  'L1Snrm2:l1\.avx512SumSq$'
+)
 
 # write_pad DIR N — put an N-statement pad in DIR/internal/l1, or remove it for N=0.
 #
@@ -120,6 +162,46 @@ align_of() {
   a="$(go tool objdump -s "$2" "$1" 2>/dev/null | awk 'NR==2{print $2}')"
   [[ -n "$a" ]] || { echo "?/?"; return; }
   printf '%s/%d\n' "$a" "$((a & 0x3f))"
+}
+
+# entry_of BIN SYM — bare entry address, or the empty string if SYM is absent.
+entry_of() { go tool objdump -s "$2" "$1" 2>/dev/null | awk 'NR==2{print $2}'; }
+
+# grade_pad PAD — the benchmark tokens that are placement-confounded at this pad,
+# one per line: those whose symbol does not sit at the same address in both arms,
+# plus those whose symbol could not be located at all. Unknown placement is not a
+# clearance, so an absent symbol demotes rather than passes.
+grade_pad() {
+  local pad="$1" e tok sym a b
+  for e in "${MEASURED[@]}"; do
+    tok="${e%%:*}"
+    sym="${e#*:}"
+    a="$(entry_of "$BINDIR/base-$pad.bin" "$sym")"
+    b="$(entry_of "$BINDIR/new-$pad.bin" "$sym")"
+    if [[ -z "$a" || -z "$b" || "$a" != "$b" ]]; then
+      printf '%s\n' "$tok"
+    fi
+  done
+}
+
+# grade_rows RE — annotate benchstat rows whose benchmark matches RE. The label
+# is what makes them uncitable; a WARN elsewhere in the output would not, since
+# the row would still read as a result. RE empty means nothing was demoted.
+grade_rows() {
+  awk -v re="$1" '
+    re != "" && $1 ~ re {
+      print $0 "   << placement-confounded: EXCLUDED from the verdict set"
+      next
+    }
+    # A geomean over a set containing a demoted row inherits the demotion. Left
+    # unlabelled it would launder the excluded number back into a citable one,
+    # which is the totals-ratio trap wearing the instrument as clothes.
+    re != "" && $1 == "geomean" {
+      print $0 "   << aggregates a placement-confounded row: EXCLUDED"
+      next
+    }
+    { print }
+  '
 }
 
 # body_of BIN SYM — normalised instruction bytes+mnemonics, for the byte-identity check.
@@ -210,10 +292,37 @@ main() {
     fi
   done
 
+  # Grade the placements before any host time is spent, so the exclusions are
+  # known and printed before the numbers they apply to exist. Doing it after
+  # would invite reading the rows first and the label second.
+  local confounded=() re
+  echo "-- placement grading (link order: only routines at or before the subject are safe) --"
+  for pad in "${PADS[@]}"; do
+    re="$(grade_pad "$pad" | paste -sd'|' -)"
+    confounded+=("$re")
+    if [[ -z "$re" ]]; then
+      info "pad=$pad: nothing demoted"
+    else
+      info "pad=$pad: excluded from the verdict set: ${re//|/ }"
+    fi
+    # The subject sitting at different addresses in the two arms would mean the
+    # ensemble has nothing to hold fixed, so it is a hard stop rather than a
+    # demotion: every pad would be measuring layout and code at once.
+    if [[ "$(entry_of "$BINDIR/base-$pad.bin" "$CHANGED_FN")" \
+       != "$(entry_of "$BINDIR/new-$pad.bin" "$CHANGED_FN")" ]]; then
+      warn "pad=$pad: $CHANGED_FN moved between the arms; this ensemble cannot separate layout from code"
+      exit 1
+    fi
+  done
+  echo
+
+  local i
   for host in $(remote_hosts); do
     echo "-- $host --"
     remote_probe "$host" | sed 's/^/        /'
+    i=-1
     for pad in "${PADS[@]}"; do
+      i=$((i + 1))
       echo "        ---- pad=$pad ----"
       local ok=1
       for arm in base new; do
@@ -228,7 +337,7 @@ main() {
       cp "$BINDIR/base.log" "$BINDIR/$BASE_SHA.txt"
       cp "$BINDIR/new.log" "$BINDIR/$NEW_SHA.txt"
       bench_compare "$BINDIR/$BASE_SHA.txt" "$BINDIR/$NEW_SHA.txt" 2>/dev/null |
-        sed 's/^/        /' ||
+        grade_rows "${confounded[$i]}" | sed 's/^/        /' ||
         warn "[$host] pad=$pad: the two arms were not compared"
     done
   done
@@ -238,6 +347,17 @@ main() {
   echo "every pad AND exceed the spread the control routine shows across the same"
   echo "pads. A control that moves as much as the subject means this ensemble"
   echo "resolves nothing, which is itself the answer."
+  echo
+  echo "rows labelled placement-confounded are not in the verdict set. They are"
+  echo "printed because suppressing them would hide coverage, not because they are"
+  echo "citable; their symbol sits at a different address in the two arms, so the"
+  echo "number conflates the code change with T22's mechanism."
+  echo
+  echo "quote the floor as the control's excursion per host AND per size, with its"
+  echo "shape -- max plus the rest of the distribution. A single excursion is a"
+  echo "range, not a distribution, and a dense band argues differently from an"
+  echo "outlier. The floor bounds cross-binary A/Bs only: same-binary comparisons"
+  echo "(backend ratios, KEEL_FORCE arms) share a layout and are not subject to it."
 }
 
 main "$@"

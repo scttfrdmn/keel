@@ -16,12 +16,54 @@ While the major version is 0, minor versions may contain breaking changes.
   `internal/l1`'s two `Asum` kernels hoist the mask by hand, as `Axpy` and `Scal` already
   do for `alpha`'s broadcast: the compiler will not lift it, because LICM does not lift SIMD
   ops (#54, T18, `golang/go#79984`). Correctness verified on all three hosts across all
-  three backends (12/12 host×backend combinations). **The performance effect is not yet
-  measured** — the delta is ~3 instructions in 25, against a demonstrated 45% layout
-  envelope on Zen 5 (T22), so it is being put to `scripts/layout-ensemble.sh` before any
-  number is claimed for it. Retires with #54 when CL 803220 lands.
+  three backends (12/12 host×backend combinations). The kernel goes 222 → 185 instructions.
+
+  **Measured through `scripts/layout-ensemble.sh` at four link-order placements per host**
+  (`build/layout-ensemble-e829a61.log`), because a ~3-instructions-in-25 change sits inside
+  the 45% layout envelope T22 demonstrated on Zen 5. `Sasum` sec/op at n=4096, base → new,
+  one column per placement:
+
+  | host | pad=0 | pad=3 | pad=6 | pad=9 | floor (control, this size) |
+  | --- | --- | --- | --- | --- | --- |
+  | Ryzen 9 7950X3D (Zen 4) | −18.61% | −18.62% | −18.04% | −17.43% | 1.71% |
+  | i9-9960X (Skylake-X) | −13.52% | −13.45% | −13.05% | −13.42% | 0.20% |
+  | Ryzen AI MAX+ 395 (Zen 5) | −0.53% | **+1.41%** | −0.74% | **+0.95%** | 0.44% |
+
+  So the hoist is worth **−17.4…−18.6% on Zen 4 and −13.1…−13.5% on Skylake-X** at 16 KiB,
+  sign-consistent across every placement and 10× and 67× the floor its own control sets at
+  that size — or 10× and 14× against the host-wide control maxima (1.71% on Zen 4, 0.99% on
+  Skylake-X), which is the conservative denominator. It is **not attributed on Zen 5**,
+  where the sign follows the kernel's
+  entry alignment mod 64 rather than the source change: both mod-64 = 32 placements are
+  negative and both mod-64 = 0 placements are positive, at n=4096 and again at n=256
+  (−3.75/−3.71% against +9.43/+8.26%). The remaining term is the change's own interior
+  geometry — 185 instructions lie differently against the 64-byte lines than 222 do — which
+  is part of the change rather than a confound, but it means the win is not portable to
+  Zen 5 by anything the source can express. By regime on the two hosts where it is
+  attributed: −3.24…−4.40% (Zen 4) and −4.70…−4.86% (Skylake-X) at 1 KiB, the figures above
+  at 16 KiB, −4.7…−9.4% at 256 KiB on Skylake-X but at or below the floor at that size on
+  Zen 4, and nothing at 4 MiB on any host. It pays where issue slots bind, not where
+  bandwidth does. One cell is excluded as unexplained rather than folded in: Skylake-X at
+  4 MiB reads +0.31…+0.63% at three placements and +10.46% at the fourth, with its control
+  at +0.07% in the same cell — that is #60's anomaly territory and this change does not get
+  to annex it.
+
+  For calibration: 222 → 185 bounds the *code change*, not its throughput consequence. The
+  earlier "~3 instructions in 25, so ≤12%" reasoning here was wrong, because it assumed
+  removed instructions are fungible with the remainder — true only under uniform issue
+  pressure. Retires with #54 when CL 803220 lands.
 - **`scripts/layout-ensemble.sh`** decides whether an A/B delta is caused by a code change
-  or by where the change happened to put the code — see the commit and #61.
+  or by where the change happened to put the code — see the commit and #61. It grades
+  placements as well as sampling them: because a code change displaces everything *after*
+  it in link order, only routines at or before the changed function are comparable between
+  the arms, so any measured routine whose entry address differs between the two binaries is
+  labelled `placement-confounded` and **excluded from the verdict set by construction**
+  rather than merely warned about — a warned row is still a citable row. A `geomean` over a
+  demoted row inherits the demotion. A symbol the grader cannot locate demotes rather than
+  clears, and the changed function itself moving between arms is a hard stop. On the
+  e829a61 ensemble this catches `avx512SumSq` (`Snrm2`), the first routine after the
+  subject, which shifts 0x20 — a multiple of 32 but not 64, i.e. T22's mechanism reproduced
+  by the very commit under test.
 - **`scripts/detach.sh`** runs a long gate or benchmark detached under `tmux`, so no run's
   completion depends on the lifetime of the shell that started it. Two `gate-p5` runs had
   been killed 25–28 minutes into the carried p5→p4→p3→p2 chain, and the response at the
