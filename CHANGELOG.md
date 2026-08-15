@@ -9,6 +9,26 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **`docs/toolchain-notes.md` T17 gains a resolution: fixed upstream in go1.27, and the
+  `-race` doubt that would have made the fix useless is measured away.** CL 761120 marks all
+  30 `archsimd` `pa*` helpers `//go:nocheckptr`; the pragma count in
+  `src/simd/archsimd/unsafe_helpers.go` is 30 on `go1.27rc1` and 0 in go1.26.6, so every
+  1.26.x reproduces T17 and 1.27 does not. golang/go#42880 (*"-race does not obey
+  go:nocheckptr"*, open since 2020) appeared to mean the fix silences `-d=checkptr` but not
+  `-race` — which would have left keel's four `-race` criteria blocked on a five-year-old
+  issue rather than on a merged CL. Reading that thread instead of its title settles it the
+  other way: the failing conversion there was inside a *function literal*, where no `//go:`
+  directive can attach, and `-race` was incidental. Measured on a declared cross-package
+  helper carrying T17's exact conversion, the pragma suppresses the fatal under `-race` and
+  under `-d=checkptr`, while the no-pragma control fatals under both — and the mechanism is
+  `inline/inl.go:349-351` refusing to inline a `go:nocheckptr` function under any
+  `Checkptr != 0` build, confirmed by counting `CALL`s in the object code (0 uninstrumented,
+  1 under each instrumented arm). **So the copy-into-a-full-width-array workaround is a
+  1.26.x bridge, not a permanent spelling**, and its price — all ten Level-1 kernels losing
+  `nosplit`, `internal/l1` +15.5% static instructions — is paid only while keel builds on
+  1.26.x. `checkptr`-cleanliness as an admissibility condition on #22's candidates is
+  satisfied by the toolchain rather than by a workaround, so the masked-partial candidate
+  gets measured as written (#42, #22).
 - **The scaling criterion's two arms now run in one frequency regime, and the boost-on
   speedup prints beside the verdict** (ruled on #66; `DESIGN.md` §4/P5). As first
   written, "≥6× single-thread throughput at 8 cores" divided an 8-thread rate by a
@@ -52,6 +72,28 @@ While the major version is 0, minor versions may contain breaking changes.
   it a named trap rather than a slip.
 
 ### Fixed
+- **`DESIGN.md` §5 rule 8 cited the wrong instance, produced by the rule itself.** The rule
+  landed in `2eda333` naming a #65 correction that "took its Sgemm gains from the wrong row
+  (`+2.1 / +6.2 / +5.6%` against the actual `+2.0 / +3.2 / +3.5%`)". Both sets are correct
+  figures of *different quantities*: the first are 8-thread rate deltas, the second are
+  changes in the 8-thread scaling ratio net of CI, which is what the table those cells came
+  from says in its own caption. All twelve published cells were right, the withdrawn
+  `16.2 / 6.7 / 10.9` ratio was right, and the `15.6 / 3.1 / 7.0` that replaced it is
+  withdrawn in its turn — retracted on #21. What supplied the false confirmation was a
+  coincidence: Ssymm/janus's ratio delta is +6.21% and Sgemm/janus's rate delta is +6.22%,
+  so a matching figure read as a copied cell. One pair of logs answers "how much did Sgemm
+  gain on janus" three ways — +6.22% (8-thread rate, 466.2 → 495.2 GFLOP/s), +4.22% (raw
+  ratio, 6.211 → 6.473), +3.20% (ratio net of CI, 6.090 → 6.285) — because the change moved
+  the 1-thread denominator too (75.06 → 76.50, +1.92%). That the serial arm moved at all is
+  itself worth having: parallelising the shared B pack was not expected to touch the
+  1-thread path, and on janus it did. Rule 8 gains the clause naming its own failure mode:
+  **recompute the same quantity, not merely from the same log** — it instructs distrust of
+  the published figure and trust in the fresh recomputation, so a quantity mismatch converts
+  directly into a confident false correction. A disagreement with a published number is a
+  question, not a verdict. The rule's occurrence count stays at three, but the third is now
+  a `gate-p5: 64 PASS / 7 FAIL` tally carried out of a session summary and published in
+  prose against the log's `64 PASS / 5 FAIL` — a genuine instance of the carry-forward trap,
+  found while correcting the misattributed one.
 - **`remote_boost_set` wrote nothing and returned success**, in its first form, on all
   three hosts. `$KEEL_SSH_OPTS` carries `-n`, which redirects ssh's stdin from
   `/dev/null`, so feeding the remote `sh -s` from a heredoc gave it immediate EOF: it

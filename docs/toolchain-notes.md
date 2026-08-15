@@ -23,7 +23,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-11 | go1.26.5 | `archsimd` exposes CPU *features* and nothing else: no vendor, family, model or name, and `internal/cpu` discards the signature word. Per-µarch kernel selection has to fingerprint a feature bundle | [T14](#t14) | candidate (#25) |
 | 2026-08-11 | go1.26.5 | `-bench` splits on top-level `\|` **before** `/`, so `A\|B/c` is `{A}` or `{B,c}` — not `{A,B}` then `{c}`. A gate filter silently ran neither the benchmark it named nor only the ones it named | [T15](#t15) | none — documented behavior |
 | 2026-08-12 | go1.26.5 | On arm64, whether `a*a + c` is FMA-fused depends on whether the compiler **constant-folds** it, and `-race` defeats the folding: the same source line yields `0` in a plain build and `2^-24` under `-race` | [T16](#t16) | none — not a defect |
-| 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | filed: [golang/go#80856](https://github.com/golang/go/issues/80856) (#42) |
+| 2026-08-12 | go1.26.5 | `archsimd`'s partial slice load/store convert `&s[0]` to a full-width `*[N]T` through an `unsafe` helper, so **`checkptr` fatals** — any partial op on a short slice near the end of its heap object aborts under `-race` or `-d=checkptr`. Not a warning: `fatal error` | [T17](#t17) | **fixed upstream in go1.27** ([CL 761120](https://go-review.googlesource.com/c/go/+/761120) marks all 30 `pa*` helpers `nocheckptr`; 0 in go1.26.6, 30 in `go1.27rc1`), so every 1.26.x reproduces it. Filed: [golang/go#80856](https://github.com/golang/go/issues/80856), closed as a duplicate of [#78413](https://github.com/golang/go/issues/78413). keel's copy-based workaround is a **1.26.x bridge** (#42, #22) |
 | 2026-08-12 | go1.26.5 | A **loop-invariant vector constant is re-materialized every iteration**: `BroadcastInt32x16(const)` inside a loop stays inside it (3 insns/iteration), while the same constant written above the loop stays above it. LICM does not lift SIMD ops at all; no helper, inlining or CSE is needed to trigger it. CSE shares it across unrolled uses within one iteration | [T18](#t18) | **pre-existing upstream**: [golang/go#79984](https://github.com/golang/go/issues/79984), fix WIP in [CL 803220](https://go-review.googlesource.com/c/go/+/803220) (#8) |
 | 2026-08-12 | go1.26.5 | `s = s[n:]` in a loop guarded by `len(s) >= n` costs **7 instructions**, not 2: the pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) because the loop may leave the slice exactly empty and the data pointer must not pass the end of the allocation. Guarding with `len(s) > n` collapses it to one `ADDQ` | [T19](#t19) | none — GC-correctness, not a defect; the `>` form is **taken** as of 2026-08-14, all ten `internal/l1` loops |
 | 2026-08-12 | benchstat v0.0.0-20260709024250 | `benchstat A B` **does not compare A and B** when their logs differ in any one `key: value` configuration line — it prints two independent one-column tables, no deltas, no p-values, and **exits 0**. This repo's own provenance markers include a live clock snapshot, so two runs on one host never compare | [T20](#t20) | candidate |
@@ -1316,6 +1316,66 @@ a faster variant that fatals under the pointer checker is disqualified, not rank
 Filed upstream as [golang/go#80856](https://github.com/golang/go/issues/80856) with
 this repro; #42 carries the standing task, so when upstream's helpers go
 `checkptr`-clean, keel's copy-based form retires rather than calcifying.
+
+**Resolution (2026-08-15): fixed upstream in go1.27, and the retirement condition is met.**
+CL 761120 — *`simd/archsimd: mark pa* unsafe helpers as nocheckptr`* — marks all 30 `pa*`
+helpers, `paFloat32x16` among them. Read at the tag rather than from a changelog:
+`go:nocheckptr` appears 30 times in `src/simd/archsimd/unsafe_helpers.go` on `master`,
+`release-branch.go1.27` and **`go1.27rc1`**, and 0 times in go1.26.6. The CL merged
+2026-03-31, after the 1.26 branch point, so **every 1.26.x reproduces this and 1.27 does
+not**. Upstream closed #80856 as a duplicate of #78413; the closure was right about the bug
+and silent about which releases carry the fix, which is the part that decided keel's
+sequencing.
+
+The fix's sufficiency was not obvious, and the doubt is worth recording because it was
+wrong. [golang/go#42880](https://github.com/golang/go/issues/42880) —
+*`cmd/compile: -race does not obey go:nocheckptr`*, open since 2020, `NeedsInvestigation` —
+would have meant CL 761120 silences `-d=checkptr` and not `-race`, i.e. no fix at all for
+the four `-race` criteria this note blocks. **Reading the thread rather than the title
+settles it the other way.** mdempsky, same day it was filed: the reporter's failing
+conversion was inside a *function literal*, and "`//go:` directives only apply to declared
+functions". `-race` is incidental to that issue, and its prescribed workaround is CL 761120's
+exact shape. The title has misdescribed its own maintainer diagnosis for six years.
+
+Measured rather than argued, on go1.26.6 darwin/arm64 — a declared cross-package helper
+carrying this note's exact conversion, against a no-pragma control, on a heap-allocated
+`make([]float32, 4)`:
+
+| helper | no flag | `-race` | `-gcflags=all=-d=checkptr` |
+|---|---|---|---|
+| no pragma (control) | survives | **fatal error: … straddles multiple allocations** | **fatal error: … straddles** |
+| `//go:nocheckptr` | survives | **survives** | **survives** |
+
+The control fires with this note's message verbatim, so the reproducer can fail; the pragma
+suppresses it under `-race`. Property 3 above bit again while building it: the first version
+had all six cells survive because `s := make([]float32, 4)` did not escape, and
+`checkptrStraddles` compares `checkptrBase(ptr)` against `checkptrBase(end)`
+(`runtime/checkptr.go:47`), which for a stack pointer is one base at both ends. **A control
+arm that passes is a broken reproducer, not a result.**
+
+The mechanism, in the compiler and then in the object code. Two checks, both reading
+`base.Debug.Checkptr` and neither reading `Flag.Race` separately, which is why there is no
+`-race`-shaped hole:
+
+- `base/flag.go:351-356` — "`-race`, `-msan` and `-asan` imply `-d=checkptr` for now".
+- `ir/expr.go:1113` — `ShouldCheckPtr` is `base.Debug.Checkptr >= level && fn.Pragma&NoCheckPtr == 0`, so the marked callee is not instrumented.
+- `inline/inl.go:349-351` — under any `Checkptr != 0` build a `go:nocheckptr` function **is
+  not inlined**. This is the load-bearing half: instrumentation is decided on the *enclosing*
+  function (`ssagen/ssa.go:338`), so an inlined helper would be governed by `avx512Dot`'s
+  absence of a pragma. Blocking the inline is what keeps the conversion somewhere clean.
+
+Confirmed in the object code — `CALL`s to the helper in the caller: 0 uninstrumented (inlined),
+1 under `-race`, 1 under `-d=checkptr`. So the pragma costs one real call per partial op **in
+instrumented builds only**; release builds still inline it.
+
+**Consequences for keel.** The copy-into-a-full-width-array workaround above is a **1.26.x
+bridge, not a permanent spelling**, and its price — all ten Level-1 kernels crossing
+`StackSmall` and losing `nosplit`, `internal/l1` +15.5% static instructions — is paid only for
+as long as keel builds on 1.26.x. On 1.27 the four `-race` criteria clear with no keel change
+at all. The admissibility condition on #22's candidates is therefore satisfied by the
+toolchain rather than by a workaround, so the masked-partial candidate is measured **as
+written** instead of in a costume. Still to do, and now confirming rather than deciding: run
+the repro above on go1.27rc1 on a benchmark host.
 
 ---
 
