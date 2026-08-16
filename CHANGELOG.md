@@ -9,6 +9,33 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **`Strsm`'s scaling floor is ratified at 7.0×, and the model the deferral asked for is recorded as
+  *falsified* rather than restated** (#37/#89; `DESIGN.md` §4/P5 carries the grounds). `gate-p5.sh`
+  deferred `STRSM_FLOOR` to "this measurement plus a stated model" for five phases, and the
+  measurement arrived nine times over — three runs × three µarchs, `n=4096`, `threads=8`, boost off
+  both arms, **7.403–7.668× net of CI**, recomputed from the logs rather than carried. The stated
+  model is the work split the gate prints, `rank_update=0.98413 diag_solve=0.01587`; read
+  `diag_solve` as an Amdahl serial fraction, as "state the model behind the number" asks, and at
+  p=8 it implies a ceiling of **7.2001×** that **all nine readings clear** — the lowest by +2.82%.
+  A ceiling the data walks through is a dead premise, not a premise needing adjustment, and **the
+  favourable direction makes it no less a falsification**: §5 rule 7's objection to a check that
+  cannot come out badly applies exactly as well to a bound that cannot come out binding. What the
+  arithmetic says mechanically is a finding about the nest — the implied serial fractions
+  (0.619–1.152%) sit *below* the 1.587% work share, which is the signature of diagonal solves that
+  overlap the rank updates, because `Trsm` splits right-hand sides at the top (`MB=64 < MC=144`
+  leaves the `ic` loop one iteration) and the solves ride that split. The replacement model is
+  #65's per-`(jc, pc)` B-packing residue plus the makespan tail of the last claimed unit, measured
+  at that 0.62–1.15%. **7.0× is a regression bar, not a derived threshold**: derived *from* the
+  falsified ceiling it would be theatre, whereas set 0.403× (5.76%) below the lowest of nine
+  observations it is margin — the same thing the ≥6× floor is. 7.4× was rejected as unshippable at
+  0.04% of headroom. The gate keeps printing the work split, now saying in words that it is a work
+  split and not a serial fraction, and reprints the ceiling it would imply beside the reading that
+  clears it, **recomputed from each run's own declared split** so the comparison is about the
+  current run; judged by nothing, since a future reading *below* that ceiling would refute nothing.
+  One label defect fixed in passing: `HOST_CLEARED` is lowered by a miss against either bar, so
+  typing the constant silently widened what the scaling aggregate covers while its sentence still
+  named only the judged three — both aggregate lines now name both bars, because a pass that
+  credits less than it verified is the same defect as one that credits more.
 - **The host classification is graded in three states, so a class the measurement cannot decide
   reports `UNMEASURED` instead of picking a side** (#86; ruled: *"a verdict cannot be more certain
   than the least certain link in its derivation chain"*, and `DESIGN.md` §4/P3 records the grounds).

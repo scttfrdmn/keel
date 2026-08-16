@@ -36,20 +36,49 @@
 #     per row and could as easily decide per worker — measured by nothing. A
 #     derived routine is not a lesser routine; it is the same code with a mask.
 #
-#     Strsm is a SECOND CLASS and its floor is DEFERRED TO A MEASUREMENT. Its
-#     diagonal solves impose a dependency chain the other three do not have, and
-#     how much parallelism it has left depends on side and shape. Writing 6x on it
-#     here would be inventing a threshold without a model — the move this project
-#     has now refused six times — so this gate REQUIRES Strsm's scaling to be
-#     measured, REQUIRES the parallelism model behind that number to be stated
-#     (what fraction of the work at this shape is rank update versus diagonal
-#     solve), reports both, and judges neither. STRSM_FLOOR below stays empty for
-#     exactly as long as that ratification has not happened; when DESIGN.md records
-#     the ratified floor it is copied into that constant and binds from that commit
-#     forward. The deferral is tracked on issue #37, so it is a named debt rather
-#     than a permanent exemption — and this gate fails when the measurement or the
-#     model is missing, because a deferral is a promise to measure and an
-#     unmeasured deferral is an exemption with better manners.
+#     Strsm is a SECOND CLASS, and its floor is now RATIFIED AT >=7.0x — but the
+#     model this gate spent five phases asking for is the one thing the ratification
+#     THREW AWAY (ruled 2026-08-16, #37/#89). Both halves matter, so both are here.
+#
+#     The deferral, as it stood: Strsm's diagonal solves impose a dependency chain
+#     the other three do not have, and how much parallelism it has left depends on
+#     side and shape. Writing 6x on it without a model would have been inventing a
+#     threshold — the move this project has refused six times — so the gate required
+#     the scaling to be measured, required the parallelism model behind it to be
+#     stated (what fraction of the work at this shape is rank update versus diagonal
+#     solve), reported both and judged neither.
+#
+#     THE MODEL IT REQUIRED IS FALSIFIED, and by its own favourite direction. Read
+#     diag_solve as an Amdahl serial fraction — which is what "state the model behind
+#     the number" was asking for — and s=0.01587 at p=8 gives a hard ceiling of
+#     1/(0.01587 + 0.98413/8) = 7.2001x. Nine readings across three µarchs came in at
+#     7.403–7.668 net of CI, and ALL NINE SIT ABOVE THAT CEILING; the lowest, janus at
+#     7.403, is +2.82% above a number that was supposed to be unreachable. A model
+#     whose ceiling the data clears is not a model needing adjustment, it is a dead
+#     premise: the solves are not serial in effect, they overlap the rank updates,
+#     because Trsm splits its right-hand sides at the top (MB=64 < MC=144 leaves the
+#     ic loop one iteration, so the split had to go elsewhere) and the solves ride
+#     that split. That the falsification points the *favourable* way makes it no less
+#     a falsification, which is why this comment says falsified and not "refined".
+#
+#     THE REPLACEMENT MODEL is the per-(jc,pc) B-packing residue plus the makespan
+#     tail of the last unit claimed — #65's Amdahl term for this nest, measured here
+#     as an implied serial fraction of 0.62–1.15% across the nine readings, strictly
+#     BELOW the 1.587% work share, which is the arithmetic signature of solves that
+#     parallelize. STRSM_FLOOR is 7.0x under that model: a REGRESSION BAR set below
+#     every observation, not a threshold derived from a ceiling. The distinction is
+#     the whole ruling — a floor derived from a ceiling the data refutes would be
+#     theatre, while a floor sitting 0.403x (5.76%) under the lowest of nine readings
+#     is just margin, which is what SCALE_FLOOR is too. 7.4x was the alternative and
+#     is rejected as unshippable: it would leave janus 0.04% of headroom and flake.
+#
+#     The floor binds under the SAME boost-off methodology as its siblings (#66,
+#     below), so it is not comparable to the three boost-on runs in the record. The
+#     work split keeps printing, because it is a true fact about the shape and the
+#     input to the falsification — but the log now says in words that it is a work
+#     split and not the serial fraction, and reprints the ceiling it would imply
+#     beside the reading that clears it, so the dead premise stays visibly dead
+#     rather than becoming folklore. #89 tracks the criterion wording itself.
 #
 #     BOTH ARMS RUN WITH BOOST OFF, AND THE BOOST-ON SPEEDUP PRINTS BESIDE THE
 #     VERDICT (amended by ruling on #66; DESIGN.md §4/P5). Dividing an 8-thread
@@ -247,11 +276,20 @@ SCALE_FLOOR=6.0
 # Strsm, whose diagonal solves carry a dependency chain the others do not.
 P5_JUDGED="Sgemm Ssyrk Ssymm"
 P5_MEASURED="Strsm"
-# Empty until DESIGN.md §4/P5 records a ratified floor for Strsm, derived from the
-# measurement and the model this gate requires below. Fill it in only by way of
-# that ratification: a number typed here without a model in DESIGN.md is exactly
-# the invented threshold the deferral exists to avoid.
-STRSM_FLOOR=""
+# Ratified 2026-08-16 (#37, DESIGN.md §4/P5) as a REGRESSION BAR under the
+# replacement model — the per-(jc,pc) B-packing residue plus the claim tail — after
+# the printed work split failed as an Amdahl model on all nine readings (criterion 1
+# above carries the arithmetic). Set below every observation on purpose: 7.0x is
+# 0.403x under the lowest of nine (7.403x, janus) and above the 6.0x general floor,
+# so Strsm stops being the routine with no threshold at all without pretending the
+# number came from a ceiling. Binds from this commit forward, boost off both arms.
+STRSM_FLOOR=7.0
+# The falsified ceiling, recomputed from each run's own declared work split rather
+# than carried as a constant, and reported beside the reading that clears it. Judged
+# by nothing: a future reading landing BELOW it would refute nothing (the nine
+# readings above it are what killed the model), so this is evidence kept live, not a
+# criterion. Empty disables the line.
+STRSM_AMDAHL_NOTE=1
 
 # Benchmark row names. The thread count is IN THE NAME (criterion 2).
 scale_name() { printf 'Scale/%s/n=%d/threads=%d' "$1" "$P5_SIZE" "$2"; }
@@ -801,7 +839,11 @@ echo "-- scaling at $P5_THREADS cores on ${P5_SIZE}^3 (the headline criterion) -
 info "-test.count=$KEEL_BENCH_COUNT -test.benchtime=$KEEL_BENCH_TIME; one invocation per host with both thread"
 info "counts inside it, and the floor counts as cleared only net of both intervals"
 info "judged at >= ${SCALE_FLOOR}x: $P5_JUDGED — one parallelism class (ruled 2026-08-12)"
-info "measured and reported, floor deferred to this measurement plus a stated model: $P5_MEASURED (#37)"
+if [[ -n "$STRSM_FLOOR" ]]; then
+  info "judged at >= ${STRSM_FLOOR}x: $P5_MEASURED — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)"
+else
+  info "measured and reported, floor deferred to this measurement plus a stated model: $P5_MEASURED (#37)"
+fi
 
 BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
@@ -982,10 +1024,28 @@ else
         elif [[ -z "$STRSM_FLOOR" ]]; then
           pass "[$host] $r scales ${pt}x, ${lo}x net of CI (boost off both arms); model at this shape: rank_update=$ru diag_solve=$ds — measured and reported, no ratified floor yet (#37), and this reading is the input to setting one"
         elif awk -v v="$lo" -v f="$STRSM_FLOOR" 'BEGIN{exit !(v >= f)}'; then
-          pass "[$host] $r scales ${pt}x, ${lo}x net of CI (>= ${STRSM_FLOOR}x, the floor ratified for this class from its model)"
+          pass "[$host] $r scales ${pt}x, ${lo}x net of CI (>= ${STRSM_FLOOR}x, the regression bar ratified for this class 2026-08-16 under the B-packing-residue model, boost off both arms)"
         else
-          fail "[$host] $r scales ${pt}x, ${lo}x net of CI (< ${STRSM_FLOOR}x, the floor ratified for this class)"
+          fail "[$host] $r scales ${pt}x, ${lo}x net of CI (< ${STRSM_FLOOR}x, the regression bar ratified for this class)"
           HOST_CLEARED=0
+        fi
+
+        # What the printed split is, and — the part a reader cannot reconstruct — what
+        # it is NOT. The gate still requires the work accounting above, so it still
+        # prints; but it was once read as this routine's serial fraction, and nine
+        # readings clearing the ceiling that reading implies is what retired the model
+        # (#37/#89). Recomputed here from THIS run's declared split, so if the shape's
+        # work accounting ever moves, the ceiling moves with it and the comparison
+        # stays about the current run rather than about 2026-08-16.
+        if [[ -n "$STRSM_AMDAHL_NOTE" ]]; then
+          amd="$(awk -v s="$ds" -v p="$P5_THREADS" 'BEGIN{ if (s < 0 || s >= 1 || p < 1) exit 1; printf "%.4f", 1/(s + (1-s)/p) }')" || amd=""
+          if [[ -z "$amd" ]]; then
+            info "[$host] $r work split at this shape: rank_update=$ru diag_solve=$ds — a work split, NOT a serial fraction; no Amdahl ceiling computed from it this run (diag_solve out of range)"
+          else
+            rel="$(awk -v v="$lo" -v c="$amd" 'BEGIN{ if (c <= 0) exit 1; printf "%+.2f%%", (v/c - 1)*100 }')" || rel="?"
+            side="$(awk -v v="$lo" -v c="$amd" 'BEGIN{print (v >= c) ? "above" : "below"}')"
+            info "[$host] $r work split at this shape: rank_update=$ru diag_solve=$ds. This is a WORK split, not a serial fraction: read as Amdahl s=$ds at p=$P5_THREADS it implies a ceiling of ${amd}x, and this run's ${lo}x sits $rel $side it. Nine readings above that ceiling are what falsified the model (#37/#89); the bar above rests on the B-packing residue instead. Reported, judged by nothing"
+          fi
         fi
         continue
       fi
@@ -1068,9 +1128,23 @@ else
   if [[ "$SCALE_HOSTS_MEASURED" -eq 0 ]]; then
     unmeasured "no host produced a complete set of scaling ratios, so the headline criterion is unmeasured rather than missed"
   elif [[ "$SCALE_HOSTS_OK" -eq "$NHOSTS" ]]; then
-    pass "every gate host cleared ${SCALE_FLOOR}x against its own single-thread rate for $P5_JUDGED ($SCALE_HOSTS_OK/$NHOSTS)"
+    # TWO BARS IN ONE TALLY, named rather than summarised. HOST_CLEARED is lowered by
+    # a miss against SCALE_FLOOR on any of P5_JUDGED *or* against STRSM_FLOOR on
+    # P5_MEASURED, so once #37's constant was typed this aggregate silently began
+    # covering a routine its own sentence did not mention. A pass line that credits
+    # less than it verified is the same defect as one that credits more; both leave a
+    # reader unable to reconstruct which comparison moved (§5 rule 6).
+    if [[ -n "$STRSM_FLOOR" ]]; then
+      pass "every gate host cleared its class's bar against its own single-thread rate ($SCALE_HOSTS_OK/$NHOSTS): ${SCALE_FLOOR}x for $P5_JUDGED, ${STRSM_FLOOR}x for $P5_MEASURED"
+    else
+      pass "every gate host cleared ${SCALE_FLOOR}x against its own single-thread rate for $P5_JUDGED ($SCALE_HOSTS_OK/$NHOSTS); $P5_MEASURED is reported unjudged (#37)"
+    fi
   else
-    fail "$SCALE_HOSTS_OK of $NHOSTS gate hosts cleared the scaling floor; the criterion is per host, against that host's own single-thread rate"
+    if [[ -n "$STRSM_FLOOR" ]]; then
+      fail "$SCALE_HOSTS_OK of $NHOSTS gate hosts cleared their class's bar (${SCALE_FLOOR}x for $P5_JUDGED, ${STRSM_FLOOR}x for $P5_MEASURED); the criterion is per host and per class, against that host's own single-thread rate — the per-host lines above say which comparison missed"
+    else
+      fail "$SCALE_HOSTS_OK of $NHOSTS gate hosts cleared the scaling floor; the criterion is per host, against that host's own single-thread rate"
+    fi
   fi
 fi
 
