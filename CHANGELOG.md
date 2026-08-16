@@ -25,8 +25,8 @@ While the major version is 0, minor versions may contain breaking changes.
   DHCP-sensitive ordering) was not the mechanism — it was last-writer-wins over the hosts
   that *pass*, with a stable host list — and a canonical-name fix would have left the hole
   exactly as it is.
-- **Six single-witness gate aggregates became three-way over coverage state** (#73 tier C;
-  `gate-p0`, `-p1`, `-p2`, `-p3`). An aggregate whose only state was "did any host clear
+- **Seven single-witness gate aggregates became three-way over coverage state** (#73 tier C;
+  `gate-p0` ×1, `-p1` ×2, `-p2` ×2, `-p3` ×2). An aggregate whose only state was "did any host clear
   this" collapsed two different facts into one FAIL: a fleet that looked and came back short,
   and a fleet with nothing to ask. `fail "no target ran the Sgemm sweep green with the avx512
   backend"` on three hosts that have no AVX-512 is an assertion about *keel* made from the
@@ -40,7 +40,22 @@ While the major version is 0, minor versions may contain breaking changes.
   `vectorKernels()` returns nil unless `vec.HasAVX512()` (`internal/kern/kern_amd64.go:34`).
   A first draft of the `gate-p2` counter used a `keel-kern-available` marker that does not
   exist; it would have made the count always zero, i.e. masked a real FAIL as UNMEASURED,
-  which is the one substitution this taxonomy exists to prevent.
+  which is the one substitution this taxonomy exists to prevent. The count is seven by this
+  rule, stated so it is reproducible: added aggregate-level `unmeasured` branches in the diff
+  — those with no `[$host]` or `[$name]` prefix — one per conversion, 1+2+2+2. It said "Six"
+  in the commit that landed the change, written from the plan instead of from the diff, which
+  is DESIGN.md §5 rule 8's own failure mode inside the batch that was auditing for it.
+  Tally movement in the verified logs at `68fc493`, since an added assertion must be shown
+  non-perturbing: `gate-p0` unchanged at 19/0/0; `gate-p1` 26→29 and `gate-p2` 22→25, each
+  three per-host governor PASS plus one aggregate replaced 1-for-1; delegated `gate-p3` 48→49;
+  delegated `gate-p4` unchanged at 65/0/0; `gate-p5` unchanged at 65/0/4. The p3 delta is the
+  one that needed explaining and it is not a strengthening: that aggregate was previously
+  `[[ -n "$SCALAR_FORCED" ]] || fail ...`, a **fail-only guard, silent on success**, so
+  converting it to a three-way necessarily prints a PASS on a healthy fleet where the other
+  six had a PASS to replace. No blocking power changed — the per-host `fail` at
+  `gate-p3.sh:707` already blocked for a host that failed the forced run — and the old
+  aggregate was satisfiable by any *single* host, which is #77's single-witness shape in a
+  second place, harmless there only because the per-host verdict covered it.
 - **`gate-p0` now reads the backend-availability marker instead of inferring the CPU from the
   run** (#73). Every unexercised backend was reported as `unavailable here` — a claim about
   the silicon deduced from a claim about the test run — so a backend the host *has* and the
