@@ -219,10 +219,26 @@ func TestP5Determinism(t *testing.T) {
 				// there is: it never partitioned anything. That is the same failure the
 				// gate guards the benchmark rows against, and it would be a silent pass
 				// here without this line.
-				if want := Workers(procs); workers != want {
+				//
+				// The expectation is procs itself, not Workers(procs) (#87). Workers takes
+				// a UNIT count, not a thread count, and returns min(GOMAXPROCS(0), units);
+				// called here it was passed procs as the unit count AND evaluated outside
+				// withProcs, so it read the ambient GOMAXPROCS and the expectation became a
+				// function of the host's core count. On a machine with >= 8 cores it
+				// coincidentally equalled procs; on a 2-core CI runner it was 2 against an
+				// actual 3 and 8, and the library was right both times. A test whose
+				// expected value moves with the hardware is not testing the library.
+				//
+				// procs is the right number because par.Workers reads GOMAXPROCS(0) rather
+				// than NumCPU — so an explicitly-set GOMAXPROCS=8 really does start 8
+				// workers on a 2-core box — and because every shape here has more units
+				// than max(p5Threads): m=1200 over MC=144 is 9 ic blocks against 8 threads.
+				// Shrink p5M and this goes red, which is correct: the arm would have
+				// stopped partitioning max-way and its bitwise agreement would prove less.
+				if workers != procs {
 					t.Errorf("%s %s at GOMAXPROCS=%d ran on %d workers, want %d: this arm did not "+
 						"partition, so its agreement with the serial nest proves nothing",
-						c.routine, s.label, procs, workers, want)
+						c.routine, s.label, procs, workers, procs)
 					ok = false
 				}
 				if i, bad := firstBitDiff(serial, got); bad {

@@ -55,4 +55,22 @@ var ReferenceTile = Kernel{Name: AVX512, MR: 6, NR: 32, Unroll: 4, Fn: vec.Kerne
 
 // referenceTiles is what the benchmark adds to Kernels(): shapes that are
 // interesting to measure but not to ship.
-func referenceTiles() []Kernel { return []Kernel{ReferenceTile} }
+//
+// It carries the same HasAVX512 guard as vectorKernels above, and for a harder
+// reason than symmetry: Kernel6x32 is AVX-512 unconditionally, so returning it on
+// a CPU without AVX-512 does not produce a wrong number, it produces SIGILL. This
+// guard was missing for three days (#87). Dispatch was never at risk — Kernels()
+// was guarded, and nothing ships this tile — but Measured() is Kernels() plus this,
+// and six test and benchmark sites iterate Measured(), so `go test ./...` executed
+// EVEX-encoded instructions on any amd64 CPU lacking AVX-512 and died. Every gate
+// host has AVX-512, which is exactly why only CI could see it.
+//
+// The guard belongs here rather than as a t.Skip at those six sites: Measured()'s
+// contract is "the kernels this host can run", and a registry that hands out an
+// unrunnable kernel is the defect, not each caller's failure to re-check.
+func referenceTiles() []Kernel {
+	if !vec.HasAVX512() {
+		return nil
+	}
+	return []Kernel{ReferenceTile}
+}

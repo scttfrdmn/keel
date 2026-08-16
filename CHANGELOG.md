@@ -472,6 +472,32 @@ While the major version is 0, minor versions may contain breaking changes.
   pattern; it has drifted twice.
 
 ### Fixed
+- **`go test ./...` died with `SIGILL` on any amd64 CPU without AVX-512** (#87,
+  `internal/kern/kern_amd64.go`). `vectorKernels()` returns `nil` unless
+  `vec.HasAVX512()`; `referenceTiles()`, fourteen lines below it, carried no such guard,
+  and `ReferenceTile`'s `Fn` is `vec.Kernel6x32` — `archsimd.Float32x16` throughout, with
+  no scalar fallback inside it. `Measured()` is `Kernels()` plus that tile and six test and
+  benchmark sites iterate `Measured()`, so those hosts executed EVEX-encoded instructions
+  (`instruction bytes: 0x62 0xf1 0xfd 0x48 …`) and crashed in `internal/kern` and
+  `internal/block`. **Dispatch was never at risk** — `Kernels()` is guarded, `Preferred`
+  cannot rank a tile whose `InsnsPerFMA` is zero, and nothing ships this tile — but the
+  suites were unrunnable for anyone on pre-Skylake-X Intel or pre-Zen-4 AMD. The guard goes
+  on the registry rather than into six `t.Skip`s: `Measured()`'s contract is *"the kernels
+  this host can run"*, and one that hands out an unrunnable kernel is the defect. Typechecked
+  for `linux/amd64` under `GOEXPERIMENT=simd`; **it cannot be run here** — the dev host is
+  arm64 and all three gate hosts have AVX-512, so CI is the only instrument that can
+  confirm it, which is most of the explanation for how it survived three days.
+- **`TestP5Determinism` expected a worker count that moved with the host's core count**
+  (#87, `p5_test.go`). `Workers` takes a *unit* count and returns
+  `min(GOMAXPROCS(0), units)`; the assertion passed `procs` as the unit count *and*
+  evaluated it outside the `withProcs` closure, so it read the ambient GOMAXPROCS. At ≥ 8
+  cores it coincidentally equals `procs`; on a 2-core runner it was 2 against an actual 3
+  and 8, and the library was right in all ten failing lines. Now asserts `workers == procs`,
+  which is host-independent because `par.Workers` reads `GOMAXPROCS(0)` and not `NumCPU`,
+  and which holds for every shape here because each has more units than `max(p5Threads)`
+  (`m=1200` over `MC=144` is 9 ic blocks against 8 threads). Shrink `p5M` and it goes red
+  correctly — the arm would have stopped partitioning max-way. Reproduced and fixed under
+  `GOMAXPROCS=2`, re-checked at 1 and 4.
 - **`gate-p0` exited 1 with no verdict line at all when a host failed its tests while
   exercising all three backends** (#80; `scripts/gate-p0.sh`). `[[ "$ok" -eq 0 ]] &&
   FULL_COVER_TARGET="$name"` was the last command of `record_target`, so on a failing run the
