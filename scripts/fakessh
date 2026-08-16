@@ -41,51 +41,57 @@
 # a condition no real outage produces.
 set -uo pipefail
 
-MODE="$(basename "$0")"
-case "$MODE" in
-  ssh) REALVAR=KEEL_FAKESSH_REAL ;;
-  scp) REALVAR=KEEL_FAKESCP_REAL ;;
-  *)
-    echo "fakessh: invoked as '$MODE', which is neither ssh nor scp. This shim selects" >&2
-    echo "fakessh: its behaviour by name; an unknown name has no defined behaviour and" >&2
-    echo "fakessh: guessing would silently cover a transport it was never read against." >&2
-    exit 2 ;;
-esac
+main() {
+  local MODE REALVAR REAL arg dead
 
-REAL="${!REALVAR:-}"
-if [[ -z "$REAL" ]]; then
-  echo "fakessh: $REALVAR is unset, so there is no real $MODE to fall through to." >&2
-  echo "fakessh: refusing to guess -- a shim that resolves its own $MODE finds itself." >&2
-  exit 2
-fi
-if [[ -z "${KEEL_FAKESSH_DEAD:-}" ]]; then
-  echo "fakessh: KEEL_FAKESSH_DEAD is unset, so this shim would refuse nothing and be" >&2
-  echo "fakessh: a transparent pass-through. That is a silently useless exercise." >&2
-  exit 2
-fi
+  MODE="$(basename "$0")"
+  case "$MODE" in
+    ssh) REALVAR=KEEL_FAKESSH_REAL ;;
+    scp) REALVAR=KEEL_FAKESCP_REAL ;;
+    *)
+      echo "fakessh: invoked as '$MODE', which is neither ssh nor scp. This shim selects" >&2
+      echo "fakessh: its behaviour by name; an unknown name has no defined behaviour and" >&2
+      echo "fakessh: guessing would silently cover a transport it was never read against." >&2
+      exit 2 ;;
+  esac
 
-# Arguments are matched against each dead host in the four forms a hostname can take
-# on these two command lines, and in NO others -- ssh's option grammar is not parsed.
-# An option's value is never equal to a hostname, and no option value ends in `:` after
-# a hostname, so these patterns cannot misfire; a shim that mis-parsed its way into
-# refusing the WRONG host would corrupt a 25-minute run and look like a finding.
-#
-#   host            ssh's target
-#   host:path       scp's target -- the form the ssh-only first version missed
-#   user@host       either, if a host list ever grows a login
-#   user@host:path  scp with a login
-for arg in "$@"; do
-  for dead in $KEEL_FAKESSH_DEAD; do
-    if [[ "$arg" == "$dead" || "$arg" == "$dead":* || \
-          "$arg" == *"@$dead" || "$arg" == *"@$dead":* ]]; then
-      echo "ssh: connect to host $dead port 22: No route to host" >&2
-      if [[ "$MODE" == scp ]]; then
-        echo "lost connection" >&2
-        exit 1
+  REAL="${!REALVAR:-}"
+  if [[ -z "$REAL" ]]; then
+    echo "fakessh: $REALVAR is unset, so there is no real $MODE to fall through to." >&2
+    echo "fakessh: refusing to guess -- a shim that resolves its own $MODE finds itself." >&2
+    exit 2
+  fi
+  if [[ -z "${KEEL_FAKESSH_DEAD:-}" ]]; then
+    echo "fakessh: KEEL_FAKESSH_DEAD is unset, so this shim would refuse nothing and be" >&2
+    echo "fakessh: a transparent pass-through. That is a silently useless exercise." >&2
+    exit 2
+  fi
+
+  # Arguments are matched against each dead host in the four forms a hostname can take
+  # on these two command lines, and in NO others -- ssh's option grammar is not parsed.
+  # An option's value is never equal to a hostname, and no option value ends in `:` after
+  # a hostname, so these patterns cannot misfire; a shim that mis-parsed its way into
+  # refusing the WRONG host would corrupt a 25-minute run and look like a finding.
+  #
+  #   host            ssh's target
+  #   host:path       scp's target -- the form the ssh-only first version missed
+  #   user@host       either, if a host list ever grows a login
+  #   user@host:path  scp with a login
+  for arg in "$@"; do
+    for dead in $KEEL_FAKESSH_DEAD; do
+      if [[ "$arg" == "$dead" || "$arg" == "$dead":* || \
+            "$arg" == *"@$dead" || "$arg" == *"@$dead":* ]]; then
+        echo "ssh: connect to host $dead port 22: No route to host" >&2
+        if [[ "$MODE" == scp ]]; then
+          echo "lost connection" >&2
+          exit 1
+        fi
+        exit 255
       fi
-      exit 255
-    fi
+    done
   done
-done
 
-exec "$REAL" "$@"
+  exec "$REAL" "$@"
+}
+
+main "$@"

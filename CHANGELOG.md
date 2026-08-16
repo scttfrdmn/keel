@@ -8,6 +8,28 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **gate-p2's criterion 5b aggregate divided by the hosts that answered and never named the fleet it
+  was asked about** (#90), so with `antares.local` unreachable it printed *"every host that produced a
+  judgeable throughput reading cleared its floor (2/2)"* — arithmetically true, and reading as
+  fleet-wide over two thirds of the fleet. `gate-p2.sh` had no `NHOSTS` at all; both counters are grown
+  inside the per-host loop by hosts that answered. **The dead-host exercise found this on its first run,
+  in the line it was built to fire**, which is the argument for the exercise: five green P2 runs could
+  not have found it, because a complete fleet renders that branch identically either way. The new
+  `fleet_shortfall` in `roofline.sh` appends the clause naming how many of the configured hosts produced
+  no judgeable reading and what fraction of the fleet the line therefore covers; six fixtures
+  (31–36, 65 total) cover it, including the case a healthy fleet drives — complete coverage prints
+  *nothing*, so a helper that appended unconditionally would look right until the log that matters. The
+  fraction stays over the survivors: they are the honest numerator of what was judged, and the defect
+  was the missing statement of how many were asked. **The verdict is untouched**, and the run as a whole
+  was never fooled — the absent host tripped three separate criteria, `FAIL=1`, and a real run would
+  have printed `gate-p2: RED`. So this was message-level, not a green certificate over a partial fleet.
+  gate-p3's OpenBLAS aggregate had the identical shape and was fixed at its own call site in `64a05e1`
+  (`OB_NOCOVER`); this is the sibling that fix left standing, and the helper is shared so there cannot
+  be a third. Whether a partial fleet should resolve to **UNMEASURED** here, as criterion 6's aggregate
+  now does, is #90's open question and a change to what a go/no-go criterion asserts — not a wording fix,
+  and not taken unilaterally.
+
 ### Added
 - **`scripts/fakessh` + `scripts/fakessh-test.sh` + `scripts/exercise-dead-host.sh`: a dead host,
   induced environmentally, to fire gate-p2's fleet-incomplete aggregate once on purpose** (ruled
@@ -22,7 +44,7 @@ While the major version is 0, minor versions may contain breaking changes.
   prints a banner, withholds GREEN/RED, exits 2, logs to `build/instrument-exercise-*` (#78), and is
   read nowhere near a comparison, threshold, tally or host list; set it on a healthy fleet and the run
   reports a stamped 3/3, which puts on record that the aggregate cannot be forged from a flag. The shim
-  has 17 fixtures of its own, run before any host time is spent: the substring cases are the ones that
+  has 16 fixtures of its own, run before any host time is spent: the substring cases are the ones that
   matter, since a dead `zen4.local` matched loosely would also kill `zen4.local.backup` and the log
   would still say "one host unreachable". **The shim covers `scp` because the guard made it.** The
   first version shimmed `ssh` only, on the belief that everything crossed the wire through ssh's
@@ -41,6 +63,13 @@ While the major version is 0, minor versions may contain breaking changes.
   four commits. It is annotated as such in place and made true, rather than repointed: a citation to a
   mechanism that does not exist is what the citation lint was built for, occurring in prose the lint
   does not reach.
+  **It ran, and the branch fired** (`build/instrument-exercise-dead-host-5ade3ff.log`, 132 lines):
+  `antares.local` unreachable, vesta and janus genuinely measured and cleared their own floors
+  (96.6% of measured peak FMA-bound; 94.8% of a 48.6% issue roofline), and criterion 5b printed the
+  rendering that had never executed — a PASS crediting `2/2` with the third host reported separately as
+  UNMEASURED. Discipline audited from the log rather than asserted: **25 of 25 verdict lines stamped
+  `[synthetic]`, zero unstamped, the only verdict token printed is `VERDICT WITHHELD`**, `GREEN`/`RED`
+  never emitted, exit 2. And it paid for itself immediately — the line it fired is #90, above.
 
 ### Changed
 - **All four verdict helpers now live in `scripts/remote.sh`, and no gate defines its own.** `remote.sh`

@@ -535,8 +535,16 @@ while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 # that produced a judgeable throughput verdict at all; N_CLEARED how many of
 # those cleared their floor. Two counters because "nobody cleared the floor" and
 # "nobody produced a reading" are different facts.
+#
+# NHOSTS is the third, and this file had no equivalent of it until #90: both counters
+# above are grown inside the loop by hosts that answered, so every fraction they form
+# has the survivors as its denominator. With one host of three unreachable the
+# aggregate printed "(2/2)", which is true and reads as the whole fleet. The dead-host
+# instrument exercise is what printed it; five green runs could not, because a complete
+# fleet renders that branch identically either way.
 N_JUDGED=0
 N_CLEARED=0
+NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   unmeasured "the 55% criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
 else
@@ -748,12 +756,18 @@ else
   # longer names one host on the fleet's behalf. The first branch is the one the
   # old pair could not express: no host producing a reading at all read as two
   # FAILs about a floor nobody measured.
+  #
+  # All three branches now name the fleet they were asked about (#90, fleet_shortfall):
+  # the fraction stays over the survivors, because that is the honest numerator of what
+  # was judged, and the clause states how many were asked. The verdicts are unchanged --
+  # whether a partial fleet should resolve to UNMEASURED here, as criterion 6's OpenBLAS
+  # aggregate already does, is #90's open question and Scott's call, not a wording fix.
   if [[ "$N_JUDGED" -eq 0 ]]; then
-    unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared"
+    unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared$(fleet_shortfall "$NHOSTS" 0)"
   elif [[ "$N_CLEARED" -eq "$N_JUDGED" ]]; then
-    pass "every host that produced a judgeable throughput reading cleared its floor ($N_CLEARED/$N_JUDGED), each under the performance governor asserted per host (§5 rule 5)"
+    pass "every host that produced a judgeable throughput reading cleared its floor ($N_CLEARED/$N_JUDGED), each under the performance governor asserted per host (§5 rule 5)$(fleet_shortfall "$NHOSTS" "$N_JUDGED")"
   else
-    fail "$((N_JUDGED - N_CLEARED)) of $N_JUDGED hosts that produced a judgeable throughput reading did not clear the floor (the per-host lines above say which)"
+    fail "$((N_JUDGED - N_CLEARED)) of $N_JUDGED hosts that produced a judgeable throughput reading did not clear the floor (the per-host lines above say which)$(fleet_shortfall "$NHOSTS" "$N_JUDGED")"
   fi
 fi
 

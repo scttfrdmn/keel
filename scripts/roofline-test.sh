@@ -105,6 +105,21 @@ checkv() {
   fi
 }
 
+# checkfs NAME WANT_SUBSTR nhosts njudged -- fleet_shortfall. WANT_SUBSTR "" asserts
+# the clause is EMPTY, which is the case a healthy fleet produces and therefore the one
+# no green run can distinguish from a broken helper.
+checkfs() {
+  local name="$1" want="$2"; shift 2
+  local got; got="$(fleet_shortfall "$1" "$2")"
+  if { [[ -z "$want" ]] && [[ -z "$got" ]]; } ||
+     { [[ -n "$want" ]] && [[ "$got" == *"$want"* ]]; }; then
+    printf '  ok    %-53s %s\n' "$name" "${got:-<empty: coverage complete>}"
+  else
+    printf '  FAIL  %-53s got "%s", want substring "%s"\n' "$name" "$got" "$want"
+    FAILED=1
+  fi
+}
+
 # checkr NAME EXPECT src rlo pklo roof   (EXPECT "" means "no bound at all")
 checkr() {
   local name="$1" want="$2"; shift 2
@@ -418,6 +433,33 @@ main() {
   #     `pass` — a green certifying three hosts that were never contacted. Same
   #     fail-closed shape as fixture 24, at the aggregate.
   checkv "an empty fleet cannot pass vacuously"              unmeasured 0 0 0 0 0
+
+  echo
+  echo "-- fleet_shortfall: a fraction over survivors must say how many were asked (#90) --"
+  # 31. THE CASE THE DEAD-HOST EXERCISE PRODUCED, and the reason this function exists:
+  #     two of three judged printed "(2/2)" and read as fleet-wide.
+  checkfs "one of three absent: the hole is named"    "1 of the 3 configured hosts" 3 2
+  # 32. And it says what the line actually covers, in the fleet's own denominator, so a
+  #     reader does not have to subtract to learn the claim's size.
+  checkfs "and it restates the claim's true size"     "covers 2 of 3"               3 2
+  # 33. Complete coverage prints NOTHING. This is the only case a green fleet drives, so
+  #     a helper that appended a clause unconditionally would look correct for five runs
+  #     and then be wrong in the log everybody reads.
+  checkfs "a complete fleet appends nothing"          ""                            3 3
+  # 34. Singular, because "1 of the 1 configured hosts" in a gate log is the kind of
+  #     detail that makes a reader wonder what else was generated rather than measured.
+  #     The leading count is the number ABSENT, not the number judged -- my first version
+  #     of this fixture asserted "0 of the 1", having read the clause as reporting
+  #     coverage, and the helper was right.
+  checkfs "a one-host fleet that answered nobody"     "1 of the 1 configured host "  1 0
+  # 35. FAIL-CLOSED ON AN UNREADABLE FLEET SIZE. nhosts=0 with a host judged is
+  #     impossible arithmetic, so the fleet size is what is wrong; silence would assert
+  #     complete coverage, which is the one thing this cannot know.
+  checkfs "an unreadable fleet size is not silence"   "could not read"               0 2
+  # 36. j > n likewise cannot happen, and resolves toward silence rather than a negative
+  #     count -- "-1 of the 2 configured hosts" would read as a defect in the fleet
+  #     rather than in the counter, and there is no hole to report either way.
+  checkfs "more judged than configured: no negative"  ""                            2 3
 
   echo
   if [[ "$FAILED" -eq 0 ]]; then

@@ -500,3 +500,35 @@ p3_coverage() {
     print "partial"
   }'
 }
+
+# fleet_shortfall NHOSTS NJUDGED -- the clause a fleet aggregate appends when it
+# heard from fewer hosts than were configured, and nothing when coverage is complete.
+#
+# WHY THIS EXISTS (#90). gate-p2's criterion 5b counts hosts that produced a judgeable
+# reading and divides by that count, so with one host of three unreachable it printed
+#
+#     PASS  every host that produced a judgeable throughput reading cleared its floor (2/2)
+#
+# which is arithmetically true and reads as fleet-wide. gate-p3's OpenBLAS aggregate had
+# the same shape and got the fix at its own call site (64a05e1, `OB_NOCOVER`); this is
+# the sibling, and putting the clause in one function is what stops there being a third.
+# The survivors are the honest numerator of what WAS judged -- the defect is the missing
+# statement of how many were asked, not the fraction -- so this appends rather than
+# rewriting the fraction, and the verdict is untouched (#90 asks Scott whether a partial
+# fleet should resolve to UNMEASURED as criterion 6's now does; that half is not mine).
+#
+# Fixture-backed because the arithmetic is where an off-by-one would hide and would be
+# invisible on a healthy run: complete coverage is the only case a green fleet produces,
+# and it is the one case that prints nothing.
+fleet_shortfall() {
+  awk -v n="$1" -v j="$2" '
+  BEGIN {
+    n += 0; j += 0
+    # A fleet size that could not be read is not a complete fleet. Saying so is the
+    # fail-closed direction: silence here would mean "coverage complete".
+    if (n <= 0) { print " -- over a fleet whose configured size this run could not read"; exit }
+    if (j >= n) { print ""; exit }
+    printf " -- but %d of the %d configured host%s produced no judgeable reading at all, so this line covers %d of %d (the UNMEASURED lines above say which)\n", \
+      n - j, n, (n == 1 ? "" : "s"), j, n
+  }'
+}
