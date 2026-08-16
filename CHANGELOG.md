@@ -9,6 +9,33 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **CI's `GOEXPERIMENT=simd` job now states the size of its own claim: dispatch is pinned to scalar and
+  the read-back is asserted and published** (#88, ruled 2026-08-16). GitHub's runners have no AVX-512,
+  so that job built keel with the simd toolchain and then ran **the scalar fallback** — while its name
+  implied the vector kernels had run, and nothing in the log said which backend registered. #87's
+  SIGILL was that gap biting. Both obvious fixes were rejected: asserting *"a vector backend
+  registered"* fails spuriously on whatever the runner lottery deals, and merely documenting
+  *"scalar-ish under a simd toolchain"* leaves the green's meaning varying run to run. Instead
+  **determinism plus read-back** — the judged leg runs `KEEL_FORCE=scalar` and then asserts the
+  markers agree (`keel-l1-active` = `scalar`, `keel-sgemm-active` = `*/scalar`), so the claim is
+  identical every run *and* the pin is proven to have taken rather than assumed, which is
+  `dispatch.go`'s no-silent-downgrade property checked from outside. A missing marker fails in its own
+  right, as in the gates: "the tests passed" and "here is what they covered" are two different facts.
+  The job summary spells out what is claimed (all paths compile; correctness verified on scalar,
+  deterministically) and what is not (that any vector kernel executed) — vector-backend evidence
+  stays on the three-host fleet. A second leg runs the suite under default dispatch with the selected
+  backend **reported and not judged**: correctness still counts, but which backend produced it is a
+  fact about the machine, and it is the one path by which a future AVX-512 runner would add real
+  vector coverage and say so unprompted. Two verification details, both found by checking rather than
+  assuming: `go test` shows a passing package's stdout **only under `-v`**, so the read-back comes
+  from a probe whose `-run` pattern deliberately matches nothing (TestMain still speaks, exit 0)
+  rather than from `-v` over tens of thousands of subtests; and `-count=1` is load-bearing, because
+  the test cache **replays a previous run's recorded stdout** and would publish a read-back taken
+  under a different environment. `set -o pipefail` is stated where a status crosses a pipe into
+  `tee`, this repo having shipped that particular swallowed verdict three times in other forms. The
+  assertion was driven through all four of its branches — correct scalar read-back, wrong Level-1
+  backend, wrong Level-3 backend, markers absent — with the passing case as the positive control that
+  proves it discriminates.
 - **`Strsm`'s scaling floor is ratified at 7.0×, and the model the deferral asked for is recorded as
   *falsified* rather than restated** (#37/#89; `DESIGN.md` §4/P5 carries the grounds). `gate-p5.sh`
   deferred `STRSM_FLOOR` to "this measurement plus a stated model" for five phases, and the

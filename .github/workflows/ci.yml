@@ -20,8 +20,23 @@ jobs:
       # toolchain, so it lives in the stock job where it cannot be skipped.
       - run: bash scripts/citation-lint-test.sh
       - run: bash scripts/citation-lint.sh
+  # What this job's green means, exactly (#88, ruled 2026-08-16): "the simd
+  # toolchain compiles all paths, and correctness is verified on scalar,
+  # deterministically." It does NOT mean the AVX-512 kernels ran. GitHub's runners
+  # have no AVX-512, so vectorKernels() returns nil, dispatch falls back, and the
+  # vector path is not exercised here at all — #87's SIGILL was that gap biting.
+  #
+  # Two options were rejected. Asserting "a vector backend registered" would fail
+  # spuriously on whatever hardware the runner lottery deals. Merely documenting
+  # "scalar-ish under a simd toolchain" leaves the green's meaning varying run to
+  # run, which is the passive-honest option. So: DETERMINISM PLUS READ-BACK. The
+  # judged leg pins KEEL_FORCE=scalar and asserts the read-back agrees, so the
+  # claim is identical every run and the pin is proven to have taken effect rather
+  # than assumed — the same no-silent-downgrade property dispatch.go's panic
+  # protects, checked from outside. Vector-backend *evidence* stays where it has
+  # always lived: the three-host gate fleet.
   simd:
-    name: GOEXPERIMENT=simd
+    name: GOEXPERIMENT=simd (build integrity + deterministic scalar smoke)
     runs-on: ubuntu-latest
     env: { GOEXPERIMENT: simd }
     steps:
@@ -29,6 +44,90 @@ jobs:
       - uses: actions/setup-go@v5
         with: { go-version: '1.26.x' }
       - run: go build ./...
-      - run: go test ./...
+      # THE JUDGED LEG. `set -o pipefail` is not decoration: without it the pipe
+      # into tee reports tee's status and a failing test suite reads as a pass.
+      # This repo has shipped that defect three times in other forms, so the rule
+      # is now explicit wherever a status crosses a pipe.
+      - name: tests, dispatch pinned to scalar
+        run: |
+          set -o pipefail
+          KEEL_FORCE=scalar go test ./... 2>&1 | tee simd-scalar.log
+          # The read-back probe, in this step so it demonstrably shares the pin with
+          # the suite above. TestMain prints the dispatch markers unconditionally, but
+          # `go test` shows a passing package's stdout only under -v — checked, not
+          # assumed — and -v over the whole suite is tens of thousands of subtest
+          # lines. So the probe selects NO test (the pattern matches nothing, exit 0)
+          # and exists purely to make TestMain speak. `-count=1` is load-bearing: the
+          # test cache replays a previous run's recorded stdout, which would publish a
+          # read-back taken under a different environment.
+          KEEL_FORCE=scalar go test -count=1 -v -run 'ZZZDispatchReadBackOnly' . 2>&1 | tee simd-scalar.log.readback
+      # The assertion that the pin took. A missing marker is itself a failure — the
+      # gates treat absence the same way, because "the tests passed" and "here is
+      # what they covered" are two different facts.
+      - name: assert the pinned backend, and publish the read-back
+        run: |
+          set -euo pipefail
+          l1="$(sed -n 's/^keel-l1-active: *//p' simd-scalar.log.readback | tail -1)"
+          kern="$(sed -n 's/^keel-sgemm-active: *//p' simd-scalar.log.readback | tail -1)"
+          avail_l1="$(sed -n 's/^keel-l1-available: *//p' simd-scalar.log.readback | tail -1)"
+          avail_k="$(sed -n 's/^keel-sgemm-available: *//p' simd-scalar.log.readback | tail -1)"
+          if [ -z "$l1" ] || [ -z "$kern" ]; then
+            echo "::error::no dispatch read-back in the test output (keel-l1-active / keel-sgemm-active); a run that cannot say what it dispatched to has not reported its coverage" >&2
+            exit 1
+          fi
+          if [ "$l1" != "scalar" ]; then
+            echo "::error::KEEL_FORCE=scalar was set but Level 1 dispatched to '$l1'; the pin did not take, so this leg's determinism claim is void" >&2
+            exit 1
+          fi
+          case "$kern" in
+            */scalar) : ;;
+            *) echo "::error::KEEL_FORCE=scalar was set but the Level-3 microkernel read back as '$kern'" >&2; exit 1 ;;
+          esac
+          {
+            echo "### GOEXPERIMENT=simd — what this green claims"
+            echo
+            echo "**Claimed:** the simd toolchain compiles every path, and correctness is verified"
+            echo "on the scalar backend, deterministically (\`KEEL_FORCE=scalar\`, asserted below)."
+            echo
+            echo "**Not claimed:** that any vector kernel executed. GitHub runners have no AVX-512;"
+            echo "vector-backend evidence comes from the three-host gate fleet, not from CI."
+            echo
+            echo '| read-back | value |'
+            echo '|---|---|'
+            echo "| Level-1 active (asserted \`scalar\`) | \`$l1\` |"
+            echo "| Level-3 microkernel (asserted \`*/scalar\`) | \`$kern\` |"
+            echo "| Level-1 available here | \`${avail_l1:-none reported}\` |"
+            echo "| Level-3 kernels available here | \`${avail_k:-none reported}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+      # THE OPPORTUNISTIC LEG. Same suite under whatever dispatch the runner's own
+      # CPU selects, with the selected backend REPORTED AND NOT JUDGED: asserting a
+      # value here is the runner-lottery failure this design rejects. Correctness is
+      # still judged — a red is a red — but which backend produced it is a fact
+      # about the machine, not a criterion. Cheap, and it is the one way a future
+      # AVX-512 runner would give real vector coverage without anyone noticing to
+      # ask: the summary would simply start saying so.
+      - name: tests, default dispatch (backend reported, not judged)
+        run: |
+          set -o pipefail
+          go test ./... 2>&1 | tee simd-default.log
+          go test -count=1 -v -run 'ZZZDispatchReadBackOnly' . 2>&1 | tee simd-default.log.readback
+      - name: publish the default-dispatch read-back
+        if: always()
+        run: |
+          set -euo pipefail
+          l1="$(sed -n 's/^keel-l1-active: *//p' simd-default.log.readback | tail -1)"
+          kern="$(sed -n 's/^keel-sgemm-active: *//p' simd-default.log.readback | tail -1)"
+          {
+            echo
+            echo "**Default dispatch on this runner** (reported, judged by nothing):"
+            echo "Level 1 \`${l1:-unreported}\`, Level 3 \`${kern:-unreported}\`."
+            if [ "${l1:-}" = "scalar" ]; then
+              echo "Scalar — so this leg duplicated the pinned one, which is the expected"
+              echo "outcome on a runner without AVX-512 and is why it is not the judged leg."
+            else
+              echo "**Not scalar** — this runner exercised a vector path, so the suite has"
+              echo "coverage CI cannot normally offer. Opportunistic: still not a criterion."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
       # Gates are run locally by design (they need real hardware + perf
-      # denominators); CI only proves both build modes stay green.
+      # denominators); CI proves build integrity and a deterministic smoke.
