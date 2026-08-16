@@ -621,7 +621,7 @@ HOSTS="$(remote_hosts)"
 if [[ -n "$HOSTS" ]]; then
   while read -r host; do
     [[ -n "$host" ]] || continue
-    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
+    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
     if [[ "$hgov" == performance ]]; then
       pass "[$host] cpufreq governor is performance (§5.4 rule 5)"
     elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
@@ -1216,8 +1216,8 @@ elif [[ -n "$(git status --porcelain)" ]]; then
 else
   while read -r host; do
     [[ -n "$host" ]] || continue
-    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
-    pre="$(ob_preflight "$host")"
+    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
+    pre="$(ob_preflight "$host" || true)"
     obdistro="$(field distro "$pre")"
     obgo="$(field go "$pre")"
     oblib="$(field lib "$pre")"
@@ -1267,7 +1267,7 @@ else
     # only the family used cannot be checked against the one that was rejected, and
     # the margin over DYNAMIC_ARCH's own choice is the part a reader needs in order
     # to know whether upstream's selector was wrong here.
-    SWEEP="$(ob_coretype_sweep "$host")"
+    SWEEP="$(ob_coretype_sweep "$host" || true)"
     if [[ -z "$SWEEP" ]]; then
       unmeasured "[$host] the coretype sweep produced nothing, so the reference's ceiling is unmeasured and the denominator would be whatever DYNAMIC_ARCH happened to pick"
       continue

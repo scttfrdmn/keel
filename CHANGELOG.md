@@ -221,6 +221,46 @@ While the major version is 0, minor versions may contain breaking changes.
   it a named trap rather than a slip.
 
 ### Fixed
+- **A host that stopped answering mid-loop killed the gate with exit 255 instead of producing
+  a verdict, and the delegating gate reported the death as its delegate's RED** (#76;
+  `scripts/gate-p1.sh`, `-p2`, `-p3`, `-p4`, `-p5`, `scripts/remote.sh`). Ten command
+  substitutions read a value over ssh without guarding the status — `gov="$(remote_probe
+  "$host" | sed -n 's/.*governor=…/\1/p')"` — and every gate runs under `set -euo pipefail`,
+  so an unreachable host terminated the gate at that line: no verdict line, no verdict, exit
+  255. That is the failure mode `DESIGN.md` §5.6 forbids by name — a killed run is
+  unmeasured, never an exit code — and it had two further consequences. The
+  unreadable-value UNMEASURED branches #73 had just finished writing were **unreachable in
+  precisely the case they exist for**, because the gate died two lines above them. And
+  `gate-p4`/`gate-p5` turned the death into `gate-pN is RED (exit 255)`: a red attributed to
+  keel for a host that hung up. Found by the #73 sweep's own positive-exercise probe —
+  `KEEL_REMOTE_HOSTS=keel-no-such-host.invalid ./scripts/gate-p1.sh` stopped after 21 lines
+  with no verdict — which is the argument for exercising a relabel rather than only
+  tally-diffing it: the probe was looking for the new label and found a defect underneath it.
+  Three parts to the fix. **(1)** All ten substitutions guarded with `|| true`, the idiom
+  already in-tree at `gate-p0.sh:189`, so the value comes back empty and empty is a reading
+  nobody got, which each caller already knows how to print: seven governor reads (`gate-p1`,
+  `-p2`, `-p3` ×2, `-p4` ×2, `-p5`), `gate-p5`'s CPU-model read, and `gate-p3`'s
+  `ob_preflight` and `ob_coretype_sweep`. #76 enumerated eight; the two OpenBLAS preflight
+  helpers have the identical shape and were missed in it. The rule is now written on
+  `remote_probe` itself rather than left to each caller to remember. **(2)** The delegating
+  gates read their delegate three ways instead of two: exit 0 *with* a `GREEN` line is PASS,
+  exit 1 *with* a `RED` line is FAIL, and anything else — 255 under a dead ssh, 128+n under a
+  signal — is **UNMEASURED**, because a gate that died before reaching its own verdict has not
+  issued one for this gate to relay. Both witnesses are checked, status and printed line,
+  since a delegate that exits 0 having printed nothing has certified nothing. **(3)** Two
+  sites the guard makes reachable, which #73's sweep could not see: `gate-p5`'s
+  measurement-time governor check printed `'${gov:-unknown}'` inside one collapsed FAIL, so a
+  sweep reading messages had no way to notice it could not look — now split exactly like its
+  `gate-p3`/`gate-p4` twins — and `gate-p5`'s README re-measurement, where an unreadable CPU
+  model matches no published row and would have been reported as `README.md publishes no row
+  for ''`, a claim about the README earned by a host that stopped answering. Verified by
+  re-running the probe: `gate-p0`, `-p1` and `-p2` now each reach `RED` and exit 1 against an
+  unresolvable host, printing UNMEASURED for the target and keeping the aggregate coverage
+  FAIL beneath it; before the fix `-p1` and `-p2` died at 255. The delegated UNMEASURED branch
+  is a backstop and is verified by inspection only — now that the deaths it catches are fixed,
+  no known input produces one, though the pre-fix `gate-p1` produced exactly that condition.
+  Also corrected: four stale line citations in `remote.sh`'s split-site list, which pointed 4
+  to 11 lines above the `if`s they name, and the two delegated-tally cross-references.
 - **`DESIGN.md` §5 rule 8 cited the wrong instance, produced by the rule itself.** The rule
   landed in `2eda333` naming a #65 correction that "took its Sgemm gains from the wrong row
   (`+2.1 / +6.2 / +5.6%` against the actual `+2.0 / +3.2 / +3.5%`)". Both sets are correct

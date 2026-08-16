@@ -561,7 +561,7 @@ HOSTS="$(remote_hosts)"
 if [[ -n "$HOSTS" ]]; then
   while read -r host; do
     [[ -n "$host" ]] || continue
-    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
+    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
     if [[ "$hgov" == performance ]]; then
       pass "[$host] cpufreq governor is performance (§5 rule 5)"
     elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
@@ -857,7 +857,7 @@ else
     # Re-read at the moment of measurement, not merely in the preamble: a governor
     # that changed in between belongs to a machine somebody started using, and the
     # reading it produces is not one §5 rule 5 covers.
-    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
+    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
     if [[ -z "$gov" || "$gov" == unknown ]]; then
       unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed"
       continue
@@ -1045,15 +1045,29 @@ else
   # gate-p3's misses became UNMEASURED under #72, and a two-column tally would
   # have shown them as neither — the same disappearing act the unanchored grep
   # performed, one column over. gate-p5's tally of *this* gate has the identical
-  # shape (gate-p5.sh:1098); they are two readers of one vocabulary.
+  # shape (gate-p5.sh:1133); they are two readers of one vocabulary.
   P3_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P3LOG")
-  info "$(printf '%s\n' "$P3_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P3_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P3_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED, verdict: $(grep -E '^gate-p3: (GREEN|RED)' "$P3LOG" | tail -1)"
-  if [[ "$P3RC" -eq 0 ]]; then
+  P3V="$(grep -E '^gate-p3: (GREEN|RED)' "$P3LOG" | tail -1 || true)"
+  info "$(printf '%s\n' "$P3_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P3_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P3_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED, verdict: ${P3V:-none printed}"
+  # Three-way on the delegate, for the same reason the criteria themselves are
+  # (#76). gate-p3 exits 0 for GREEN and 1 for RED, and prints the matching line;
+  # any other exit status means it died before reaching its own verdict — 255 when
+  # an ssh died under it, 128+n when something signalled it. Reporting that as
+  # "gate-p3 is RED" attributes to keel a red the delegate never issued, and it is
+  # the delegated form of the rule DESIGN.md §5.6 states directly: a killed run is
+  # unmeasured, never an exit code. The verdict LINE is checked alongside the
+  # status because they are two independent witnesses of the same claim, and a
+  # delegate that exits 0 having printed nothing has not certified anything.
+  if [[ "$P3RC" -eq 0 && "$P3V" == *GREEN* ]]; then
     pass "gate-p3 is green on this commit ($(git rev-parse --short HEAD)), so P4's denominator is still the Sgemm P3 measured"
-  else
+  elif [[ "$P3RC" -eq 1 && "$P3V" == *RED* ]]; then
     fail "gate-p3 is RED on this commit (exit $P3RC), so nothing above that divides by Sgemm means what it says"
     printf '%s\n' "$P3_STRIP" | grep -E '^  (FAIL|UNMEASURED)  ' | sed 's/^/        /' | head -20
     info "  DESIGN.md §4's one-re-run allowance applies to a failing THROUGHPUT SENTINEL reading inside that gate exactly as it does when it is run directly: one immediate re-run, both outputs archived, never for a correctness criterion"
+  else
+    unmeasured "gate-p3 reached no verdict on this commit (exit $P3RC, verdict line: ${P3V:-none printed}), so P4's denominator is unverified rather than red: this gate cannot report a delegate's death as the delegate's judgment"
+    printf '%s\n' "$P3_STRIP" | tail -20 | sed 's/^/        /'
+    info "  the delegated log is $P3LOG in full; an exit that is neither 0 nor 1 is the delegate dying, which is a defect to find rather than a threshold to re-run"
   fi
 fi
 

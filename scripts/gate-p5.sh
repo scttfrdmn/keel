@@ -808,9 +808,17 @@ else
     [[ -n "$host" ]] || continue
     # Re-read at the moment of measurement, not only in the preamble: a governor
     # that changed in between belongs to a machine somebody started using.
-    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
-    if [[ "$gov" != performance ]]; then
-      fail "[$host] governor is '${gov:-unknown}' at measurement time, not performance: it changed after this gate's preamble read it, so nothing measured here is covered by §5 rule 5"
+    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
+    # Split the way its two twins are (gate-p3.sh:1231, gate-p4.sh:861): this site
+    # was outside #73's sweep because the collapsed branch printed '${gov:-unknown}'
+    # and so never *said* it could not look. #76's guard makes the empty case
+    # reachable rather than fatal, and a reachable branch that attributes an
+    # unanswered host to a governor that changed is the exact defect #73 named.
+    if [[ -z "$gov" || "$gov" == unknown ]]; then
+      unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed"
+      continue
+    elif [[ "$gov" != performance ]]; then
+      fail "[$host] governor is '$gov' at measurement time, not performance: it changed after this gate's preamble read it, so nothing measured here is covered by §5 rule 5"
       continue
     fi
     # ---- the frequency regime the judged ratio is taken in (criterion 1, #66)
@@ -997,13 +1005,20 @@ else
     elif [[ "$BOOST_ON_MEASURED" -ne 1 ]]; then
       unmeasured "[$host] the boost-on pass produced no rates, so this host's README rows are unmeasured this run rather than agreeing or disagreeing (#66)"
     else
-      hcpu="$(remote_probe "$host" | cut -d'|' -f1 | sed 's/ *$//')"
+      hcpu="$(remote_probe "$host" | cut -d'|' -f1 | sed 's/ *$//' || true)"
       RROWS="$(awk -v b="$README_BEGIN" -v e="$README_END" '
         index($0, b) { inb = 1; next }
         index($0, e) { inb = 0 }
         inb && /^\|/ { print }' README.md)"
       if [[ -z "$RROWS" ]]; then
         fail "[$host] README.md has no \`keel-numbers\` block, so its published numbers cannot be re-measured by the gate that ships them"
+      elif [[ -z "$hcpu" ]]; then
+        # The missing block above is checked first and stays FAIL: that is a fact
+        # about this repository, true whoever asks. This one is a fact about the
+        # host, and an empty CPU model matches no README row at all — which the
+        # RMATCH branch below would have reported as "publishes no row for ''",
+        # a claim about the README earned by a host that stopped answering (#76).
+        unmeasured "[$host] the CPU model is unreadable, so this host's README rows cannot be located: an empty model matches no row, and that is not the README publishing none"
       else
         RMATCH=0; RBADN=""
         while IFS= read -r row; do
@@ -1114,13 +1129,24 @@ else
   # FAIL would show a straddled interval as neither — the same disappearing act
   # this comment's own bug did, one column over.
   P4_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P4LOG")
-  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P4_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED, verdict: $(grep -E '^gate-p4: (GREEN|RED)' "$P4LOG" | tail -1)"
-  if [[ "$P4RC" -eq 0 ]]; then
+  P4V="$(grep -E '^gate-p4: (GREEN|RED)' "$P4LOG" | tail -1 || true)"
+  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P4_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED, verdict: ${P4V:-none printed}"
+  # Three-way on the delegate (#76), the identical shape to gate-p4's reading of
+  # gate-p3 — and this is the deeper of the two chains, so a death inside gate-p3
+  # arrives here twice removed: gate-p4 now reports it as UNMEASURED, and this gate
+  # must not convert that into a RED of its own on the way past. Exit 0 with a GREEN
+  # line, exit 1 with a RED line; anything else is a delegate that did not reach a
+  # verdict, and DESIGN.md §5.6 forbids inventing one for it.
+  if [[ "$P4RC" -eq 0 && "$P4V" == *GREEN* ]]; then
     pass "gate-p4 is green on this commit ($(git rev-parse --short HEAD)), so every rate this gate divided by is still a measured one"
-  else
+  elif [[ "$P4RC" -eq 1 && "$P4V" == *RED* ]]; then
     fail "gate-p4 is RED on this commit (exit $P4RC), so nothing above that divides by a single-thread rate means what it says"
     printf '%s\n' "$P4_STRIP" | grep -E '^  (FAIL|UNMEASURED)  ' | sed 's/^/        /' | head -20
     info "  DESIGN.md §4's one-re-run allowance for a failing throughput sentinel applies inside the delegated gates exactly as it does when they are run directly: one immediate re-run, both outputs archived, never for a correctness criterion"
+  else
+    unmeasured "gate-p4 reached no verdict on this commit (exit $P4RC, verdict line: ${P4V:-none printed}), so the absolute bars this gate's ratio stands on are unverified rather than red"
+    printf '%s\n' "$P4_STRIP" | tail -20 | sed 's/^/        /'
+    info "  the delegated log is $P4LOG in full, and it names gate-p3's in turn; an exit that is neither 0 nor 1 is the delegate dying, which is a defect to find rather than a threshold to re-run"
   fi
 fi
 

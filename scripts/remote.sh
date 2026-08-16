@@ -76,7 +76,7 @@ remote_hosts() {
 # hard-red criterion, not less.
 #
 # The word FAIL must not appear in the label: the delegating gates count verdict
-# lines by grepping for it (gate-p4.sh:1047, gate-p5.sh:1098).
+# lines by grepping for it (gate-p4.sh:1051, gate-p5.sh:1133).
 #
 # WHICH OF THE TWO A SITE GETS (the three-way taxonomy, ruled 2026-08-15 on #73).
 # #72 relabeled the sites whose own message text already said "unmeasured" while
@@ -110,11 +110,14 @@ remote_hosts() {
 #
 # Where one branch of a site was mixed, the sweep split it rather than choosing:
 # an unreadable CPU count and a CPU count that reads short are different facts
-# (gate-p5.sh:527), as are a boost knob that did not move and a boost knob
-# nobody could read (gate-p5.sh:828), a forced run that reported its dispatch
-# before failing and one that never got that far (gate-p5.sh:592), and a governor
+# (gate-p5.sh:531), as are a boost knob that did not move and a boost knob
+# nobody could read (gate-p5.sh:839), a forced run that reported its dispatch
+# before failing and one that never got that far (gate-p5.sh:597), and a governor
 # that changed mid-run and a governor unreadable mid-run (gate-p3.sh:1231,
-# gate-p4.sh:861).
+# gate-p4.sh:861, gate-p5.sh:817). Each citation is the line of the `if`, and the
+# last of them arrived a commit later than the rest: gate-p5's copy printed
+# '${gov:-unknown}' inside one collapsed branch, so a sweep that read messages
+# could not see it, and #76's guard is what made the branch reachable at all.
 unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s\n' "$1"; FAIL=1; }
 
 # worktree_strays — print every registered worktree other than this one, as
@@ -190,6 +193,19 @@ remote_build_test() {
 # has a 48 KB L1d where Zen 4 and Skylake-X have 32 KB, which is exactly the kind of
 # difference a from-memory constant gets wrong. Missing files degrade to "?" rather
 # than to a plausible default.
+#
+# CALLERS MUST GUARD THE SUBSTITUTION (#76). This returns ssh's exit status, which
+# is 255 when the host does not answer, and every gate runs under `set -euo
+# pipefail`. So `gov="$(remote_probe "$host" | sed -n '...')"` *terminates the
+# gate* on an unreachable host — no verdict line, no verdict, exit 255, which
+# DESIGN.md §5.6 forbids by name: a killed run is unmeasured, never an exit code.
+# It also made the unreadable-value UNMEASURED branches that #73 wrote unreachable
+# in precisely the case they exist for, and the delegating gates reported the death
+# as `gate-pN is RED (exit 255)` — a red attributed to keel for a host that hung up.
+# The idiom is `"$(remote_probe "$host" | sed -n '...' || true)"`: the value comes
+# back empty, and empty is a reading nobody got, which the caller already knows how
+# to print. Same for every other ssh-backed reader here and in the gates
+# (remote_boost, gate-p3's ob_preflight and ob_coretype_sweep).
 remote_probe() {
   local host="$1"
   ssh "${KEEL_SSH_OPTS[@]}" "$host" '

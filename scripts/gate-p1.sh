@@ -207,7 +207,7 @@ else
 
   while read -r host; do
     [[ -n "$host" ]] || continue
-    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
+    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
     info "[$host] governor=${gov:-unknown}"
 
     if ! remote_exec "$host" "$BIN" "${BFLAGS[@]}" -test.bench='GateSdot' \
