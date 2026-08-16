@@ -249,6 +249,28 @@ main() {
   check "overlapping intervals are converged, not undecided"  issue pass \
         0.461:0.465 4.625   0.352:6.250:0.340:0.364 0.98:2.250:0.9667:1.0
 
+  # 28. THE COLLAPSE, and its provenance: antares measured [1.077x, 1.100x] against
+  #     the 1.10 bar on 2026-08-16 (build/gate-p3-86-e53f7cc.log:79) while retiring at
+  #     162.2%..165.2% of the roofline that interval implies. One rounding step higher
+  #     and the run would have reported "indeterminate" for a host that falsifies its
+  #     claimed ceiling by 62% — on a comparison whose branches BOTH say fma-bound.
+  #     This fixture is that reading with the upper end pushed past the bar.
+  check "a straddle whose branches agree is decided anyway"    fma   pass \
+        0.631:0.657 6.250   0.532:4.625:0.5247:0.5393 "$PEAK"
+  # ... and the collapse test is reached and DECLINED here, which is the branch that
+  #     keeps it honest: control 25's 1.101x straddle again, with a numerator that does
+  #     not clear the highest ceiling the interval admits (best_lo/roof_hi = 0.86). One
+  #     branch says fma, the other issue, so the class really is undecided. Without the
+  #     over-the-whole-interval form, a midpoint test would have collapsed this one too.
+  check "a straddle whose branches differ stays undecided"     indeterminate unmeasured \
+        0.460:0.470 4.625   0.393:6.250:0.390:0.396360 "$PEAK"
+  # 29. The other collapse: two mixes 1.6% apart in insns/FMA cannot establish a
+  #     ceiling whether or not their rates agree, so a straddling rate spread changes
+  #     nothing. mspread is audited integers and carries no interval, which is why
+  #     "at every reading" is unconditional here.
+  check "a straddle over near-identical mixes is decided too"  fma   fail \
+        0.400 4.625   0.48:4.625:0.46:0.50 0.50:4.700:0.48:0.52
+
   echo
   echo "-- P3's denominator (#23): min(same-host OpenBLAS, roofline x measured peak) --"
   echo "   (the amendment may only ever LOWER a denominator, only on an issue-bound"

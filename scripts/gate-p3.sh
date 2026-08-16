@@ -250,10 +250,65 @@ source scripts/bench.sh
 # shellcheck source=scripts/roofline.sh
 source scripts/roofline.sh
 
+# ------------------------------------------- the instrument exercise (#86)
+# KEEL_INSTRUMENT_WIDEN_CI=<pct> widens every CEILING-SET mix's fraction-of-peak
+# interval to at least +/-pct around its own point estimate, before
+# classification. It exists to DRIVE the three-state verdict renderings on real
+# silicon (authorized 2026-08-16 on #86), because on this fleet they are
+# otherwise unreachable: janus's class-selecting interval is zero-width, so no
+# value of the 1.10 bar can sit inside it, and antares's attainment is 162%,
+# nowhere near 1. A rendering that has never executed is an untested branch in
+# the instrument that issues the certificates.
+#
+# What it does NOT do:
+#   - It does not move a threshold. ISSUE_CONVERGE_MAX stays at its shipped 1.10
+#     and prints in the banner below, because a bar nobody would ship is not a
+#     simulation of anything; a host reading noisily is what happened on
+#     2026-08-15, and that is what this reproduces.
+#   - It does not touch the dispatched shape's own bounds, which feed the
+#     result-deciding comparisons (§4's two-state boundaries). Only the ceiling
+#     set moves, and the widening is monotone: an interval already wider than
+#     +/-pct is left alone.
+#   - It does not touch the register-only peak mix, whose f is 1 by definition
+#     and whose interval is already folded into every other mix's bounds.
+#   - It cannot produce a gate verdict. The run prints no GREEN and no RED, every
+#     verdict line carries a [synthetic] stamp, and the exit code is its own.
+# Artifact discipline (#78): the log belongs at build/instrument-exercise-*, never
+# on a gate-pN-<rev> path where a reference-hungry diff could pick it up.
+INSTRUMENT_WIDEN_CI="${KEEL_INSTRUMENT_WIDEN_CI:-}"
+if [[ -n "$INSTRUMENT_WIDEN_CI" ]]; then
+  if ! awk -v w="$INSTRUMENT_WIDEN_CI" 'BEGIN{exit !(w+0 > 0 && w+0 <= 100 && w ~ /^[0-9]+(\.[0-9]+)?$/)}'; then
+    echo "gate-p3: KEEL_INSTRUMENT_WIDEN_CI must be a percentage in (0,100], got '$INSTRUMENT_WIDEN_CI'" >&2
+    exit 2
+  fi
+  VERDICT_STAMP="[synthetic] "
+fi
+
+# instrument_widen MIX — echo a ceiling-set mix word `f:I[:f_lo[:f_hi]]`, widened
+# iff the exercise is armed. A no-op otherwise, and a no-op always for a mix with
+# no bounds to widen: the register-only peak enters as `1.0:I`, and its f is 1 by
+# definition rather than by measurement, so there is no interval there to make
+# noisy. Monotone — an end already further out than +/-pct stays where it is — so
+# this can only ever widen a reading, never sharpen one.
+instrument_widen() {
+  local mix="$1"
+  [[ -n "$INSTRUMENT_WIDEN_CI" ]] || { printf '%s' "$mix"; return; }
+  awk -v mix="$mix" -v w="$INSTRUMENT_WIDEN_CI" 'BEGIN {
+    n = split(mix, a, ":")
+    if (n < 3 || a[3] == "") { print mix; exit }
+    f = a[1] + 0; lo = a[3] + 0
+    hi = (n >= 4 && a[4] != "") ? a[4] + 0 : f
+    wlo = f * (1 - w / 100); whi = f * (1 + w / 100)
+    if (wlo < lo) lo = wlo
+    if (whi > hi) hi = whi
+    printf "%s:%s:%.6f:%.6f\n", a[1], a[2], lo, hi
+  }'
+}
+
 FAIL=0
-pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
-fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
-info() { printf '        %s\n' "$1"; }
+pass() { printf '  \033[32mPASS\033[0m  %s%s\n' "$VERDICT_STAMP" "$1"; }
+fail() { printf '  \033[31mFAIL\033[0m  %s%s\n' "$VERDICT_STAMP" "$1"; FAIL=1; }
+info() { printf '        %s%s\n' "$VERDICT_STAMP" "$1"; }
 
 # require_bench LABEL LOG CSV UNIT NAME... — declare what a criterion is about to
 # read, and give absence exactly one verdict.
@@ -537,6 +592,19 @@ EOF
 
 echo "== gate-p3: packing + blocking -> full Sgemm =="
 echo
+
+if [[ -n "$INSTRUMENT_WIDEN_CI" ]]; then
+  echo "!! INSTRUMENT EXERCISE -- THIS IS NOT A GATE RUN AND ISSUES NO VERDICT !!"
+  echo "!! KEEL_INSTRUMENT_WIDEN_CI=$INSTRUMENT_WIDEN_CI: every ceiling-set mix's percent-of-peak"
+  echo "!! interval is widened to at least +/-${INSTRUMENT_WIDEN_CI}% around its own point estimate before"
+  echo "!! classification, to drive the three-state renderings added in #86 on real silicon."
+  echo "!! The thresholds are UNTOUCHED and shipped: converge_max=$ISSUE_CONVERGE_MAX,"
+  echo "!! mix_spread_min=$ISSUE_MIX_SPREAD_MIN, roof_floor=$ROOF_FLOOR, peak_floor=$PEAK_FLOOR,"
+  echo "!! openblas_floor=$OPENBLAS_FLOOR. The dispatched shape's own bounds are untouched too;"
+  echo "!! only the ceiling set moves. Every verdict line below is stamped [synthetic] and the"
+  echo "!! run ends with no GREEN and no RED. Authorized on #86, 2026-08-16."
+  echo
+fi
 
 # ------------------------------------------------------------- tree state (#63)
 # `git status` sees uncommitted changes and nothing else. A registered worktree
@@ -1057,7 +1125,7 @@ else
     CEIL=""
     for mx in $MIXES; do
       [[ "${mx%%|*}" == "$ACT_ID" ]] && continue
-      CEIL="$CEIL ${mx#*|}"
+      CEIL="$CEIL $(instrument_widen "${mx#*|}")"
     done
     # shellcheck disable=SC2086  # CEIL is a deliberate list of f:I:f_lo:f_hi words
     read -r CLASS CSPREAD MSPREAD ROOF ATTAIN RESULT WHY CSLO CSHI ATTAINHI <<<"$(
@@ -1674,6 +1742,18 @@ assumed_ledger
 
 # ------------------------------------------------------------------ verdict
 echo
+# An instrument exercise prints neither colour, and this is the load-bearing half
+# of the artifact discipline. #78's lesson is that a stray log gets picked up by
+# whatever is hungry for a reference, and what such a reader greps for is the last
+# line; a synthetic run that could print "gate-p3: GREEN" would be a forgeable
+# certificate no matter what the banner said. So the verdict is WITHHELD rather
+# than computed, with its own exit code (2) so `detach.sh stat` cannot record it
+# as either a pass or a failure of P3. FAIL is reported as a fact about the
+# renderings that fired, which is the only thing this run measures.
+if [[ -n "$INSTRUMENT_WIDEN_CI" ]]; then
+  echo "gate-p3: VERDICT WITHHELD (instrument exercise, KEEL_INSTRUMENT_WIDEN_CI=$INSTRUMENT_WIDEN_CI; FAIL=$FAIL says which renderings fired, not whether P3 holds)"
+  exit 2
+fi
 if [[ "$FAIL" -eq 0 ]]; then
   echo "gate-p3: GREEN"
   exit 0

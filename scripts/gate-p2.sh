@@ -632,7 +632,15 @@ else
       nomixes)
         info "[$host] fewer than two ceiling mixes once $BEST_ID is excluded; no ceiling can be established, holding to the flat floor" ;;
       diverge)
-        info "[$host] ceiling mixes disagree on retirement rate (${csx}x, over $ISSUE_CONVERGE_MAX) -> fma-bound: the front end is not the limit here" ;;
+        # The interval prints here too. This branch used to report the point spread
+        # alone, and it is the branch the 2026-08-15 incident came out of — the one
+        # place a reader most needs to see how far the whole reading sits from the
+        # bar. §5 rule 8's publish-the-pair clause has no per-branch exemption.
+        info "[$host] ceiling mixes disagree on retirement rate (${csx}x, interval [${cslox}x, ${cshix}x], wholly over $ISSUE_CONVERGE_MAX) -> fma-bound: the front end is not the limit here" ;;
+      falsifiedanyway)
+        info "[$host] the ceiling mixes' rate spread interval [${cslox}x, ${cshix}x] crosses the $ISSUE_CONVERGE_MAX bar, so whether they converge is undecided — but $BEST_ID retires at ${attpc}% of the ${roofpc}% roofline the converged reading would imply, above the ceiling at every point of that interval, so both branches say fma-bound and the class is decided anyway" ;;
+      samemixanyway)
+        info "[$host] the ceiling mixes' rate spread interval [${cslox}x, ${cshix}x] crosses the $ISSUE_CONVERGE_MAX bar, but their insns/FMA differ by only ${msx}x (under $ISSUE_MIX_SPREAD_MIN), so no ceiling is established whether they converge or not -> fma-bound, decided anyway" ;;
       samemix)
         info "[$host] ceiling mixes agree to ${csx}x but their insns/FMA differ by only ${msx}x (under $ISSUE_MIX_SPREAD_MIN), so the agreement is not evidence -> fma-bound" ;;
       falsified)

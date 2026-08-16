@@ -118,7 +118,16 @@ remote_hosts() {
 # last of them arrived a commit later than the rest: gate-p5's copy printed
 # '${gov:-unknown}' inside one collapsed branch, so a sweep that read messages
 # could not see it, and #76's guard is what made the branch reachable at all.
-unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s\n' "$1"; FAIL=1; }
+#
+# VERDICT_STAMP prefixes the message of every verdict line, here and in each
+# gate's own pass/fail/info. It is empty in every real run and set only by an
+# instrument exercise -- gate-p3.sh's KEEL_INSTRUMENT_WIDEN_CI (#86) -- so that a
+# synthetic log self-describes line by line and no single line of it can be
+# quoted as a gate result. One shared variable rather than a per-gate override of
+# these helpers, because an overridden copy is a copy and copies drift: the
+# collapsed gate-p5 branch described above is what that costs.
+VERDICT_STAMP="${VERDICT_STAMP:-}"
+unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s%s\n' "$VERDICT_STAMP" "$1"; FAIL=1; }
 
 # assumed MESSAGE — declare a precondition the gate is TRUSTING, and add it to a
 # ledger printed beside the verdict. This is not a fourth verdict. It sets no

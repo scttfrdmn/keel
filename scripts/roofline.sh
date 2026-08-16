@@ -151,10 +151,15 @@
 #            which fails the gate for a failure to measure rather than for a
 #            missed floor.
 #   WHY    in {-, nomixes, diverge, samemix, falsified, shape,
-#              nearconverge, nearceiling}
+#              nearconverge, nearceiling, falsifiedanyway, samemixanyway}
 #            nearconverge = the spread's interval straddles converge_max
 #            nearceiling  = attainment's interval straddles 1, so whether the
 #                           machine exceeds its own claimed ceiling is undecided
+#            *anyway      = the spread's interval straddles converge_max AND both
+#                           branches of that straddle give the same class, so the
+#                           class is decided despite the undecided comparison.
+#                           CSPREAD_LO/HI still show the straddle, so the record
+#                           says "could not decide this, did not need to".
 throughput_verdict() {
   local best_lo="$1" best_hi="$2" best_ipf="$3" peak_floor="$4" roof_floor="$5"
   local converge_max="$6" mix_spread_min="$7" sweep_best="$8" slack="$9"
@@ -228,7 +233,44 @@ throughput_verdict() {
       # of the region where they disagreed with each other.
       if (cspread <= 0 || cspread_hi <= 0)            why = "diverge"
       else if (cspread_lo > converge_max)             why = "diverge"
-      else if (cspread_hi > converge_max) { class = "indeterminate"; why = "nearconverge" }
+      else if (cspread_hi > converge_max) {
+        # THE COLLAPSE CASE, and it is the converse of the law on #86. "No verdict
+        # more certain than the least certain link" has a second edge: no verdict
+        # LESS certain than the derivation requires. An undecided comparison whose
+        # branches lead to the SAME class decides the class anyway, and withholding
+        # it would be the same defect pointed the other way — an UNMEASURED that
+        # the data settles.
+        #
+        # Found by a real reading grazing the bar: on 2026-08-16 antares measured
+        # a ceiling spread interval of [1.077, 1.100] against the 1.10 bar while
+        # retiring at 162.2%..165.2% of the roofline that interval implies. Had
+        # the upper end landed one rounding step higher, a host that falsifies its
+        # claimed ceiling by 62% would have been reported "classification
+        # indeterminate" — on the strength of a comparison whose two branches both
+        # say fma-bound: converged means falsified means fma, and not converged
+        # means no ceiling means fma. Neither branch reads `roof`, and the flat
+        # floor that then applies is the same expression in both.
+        #
+        # The test is over the WHOLE interval, not the point estimate: roof_hi =
+        # pmax_hi / I is the highest ceiling the reading admits, so best_lo/roof_hi
+        # > 1 means the shape retires above the ceiling at every reading in it.
+        # A collapse justified by the midpoint would be exactly the noise-driven
+        # verdict this amendment exists to prevent.
+        roof_hi = (best_ipf > 0) ? pmaxhi / best_ipf : 0
+        if (mspread < mix_spread_min) {
+          # No ceiling either way: a spread this narrow in insns/FMA is not
+          # evidence whether or not the rates agree. mspread is audited integers,
+          # so it carries no interval and "at every reading" is unconditional.
+          why = "samemixanyway"
+        } else if (roof_hi > 0 && best_lo / roof_hi > 1.0) {
+          why = "falsifiedanyway"
+          roof      = (best_ipf > 0) ? pmax / best_ipf : 0
+          attain    = (roof > 0) ? best_lo / roof : 0
+          attain_hi = (roof > 0) ? best_hi / roof : 0
+        } else {
+          class = "indeterminate"; why = "nearconverge"
+        }
+      }
       else if (mspread < mix_spread_min)              why = "samemix"
       else {
         roof      = (best_ipf > 0) ? pmax / best_ipf : 0

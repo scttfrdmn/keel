@@ -31,6 +31,38 @@ While the major version is 0, minor versions may contain breaking changes.
   stay two-state with `DESIGN.md` §4's one archived re-run, because that allowance was priced for
   one verdict and a propagating input spends four. Re-measuring an `indeterminate` is therefore
   not the allowance being spent: there is no verdict to overturn.
+- **A straddle whose two branches agree now decides the class anyway, instead of reporting
+  `indeterminate` on a comparison it did not need** (#86, the converse edge of the same law).
+  The amendment above withheld a class whenever the ceiling spread's interval crossed
+  `converge_max` — including when *both* readings of that crossing led to the same class:
+  converged means the ceiling exists and attainment above it falsifies it (fma-bound), while not
+  converged means no ceiling was established (fma-bound). Neither branch reads `roof`, and the
+  flat floor that applies is the same expression in both. Reported as `why=falsifiedanyway` /
+  `why=samemixanyway` with the straddling interval still printed, so the record says *could not
+  decide this, did not need to*. The collapse is tested over the **whole** interval —
+  `roof_hi = pmax_hi / I` is the highest ceiling the reading admits and falsification must hold
+  at every point of it — never at the midpoint, and it can only move a host from `indeterminate`
+  to a class both branches already gave. Found by a real reading grazing the bar, not by review:
+  on 2026-08-16 antares measured a spread interval of `[1.077, 1.100]` against the 1.10 bar while
+  retiring at 162.2%–165.2% of the roofline that interval implies
+  (`build/gate-p3-86-e53f7cc.log:79-80`). One rounding step higher and a host falsifying its claimed
+  ceiling by 62% would have been reported "classification indeterminate". Three fixtures cover
+  both directions of the collapse and the case that must stay undecided
+  (`scripts/roofline-test.sh`, 43 fixtures).
+- **`gate-p3` can be made to exercise its own three-state renderings, and such a run issues no
+  verdict** (#86). `KEEL_INSTRUMENT_WIDEN_CI=<pct>` widens every ceiling-set mix's
+  percent-of-peak interval to at least ±pct around its own point estimate before classification,
+  leaving every shipped threshold untouched and printed. It exists because on this fleet the
+  `indeterminate` renderings are otherwise unreachable — janus's class-selecting interval is
+  zero-width, so no value of the 1.10 bar can sit inside it — and an unexercised branch in the
+  instrument that issues the certificates is untested code. The synthetic input is therefore on
+  the *measurement* side, reproducing the 2026-08-15 condition of a host reading noisily rather
+  than a bar nobody would ship. Such a run prints a banner naming the override, stamps every
+  verdict line `[synthetic]`, prints **neither `GREEN` nor `RED`**, and exits 2; its log belongs
+  at `build/instrument-exercise-*` and never on a `gate-pN-<rev>` path (#78). `VERDICT_STAMP` is
+  one shared variable read by `unmeasured` in `scripts/remote.sh` and by each gate's own
+  `pass`/`fail`/`info`, rather than a per-gate override of those helpers, because an overridden
+  copy is a copy and copies drift.
 - **`gate-p3` prints the ceiling spread, the mix spread and the attainment interval it decided
   the class on** (#86). It read all three into `_`-prefixed discards, so when the classification
   flipped, the quantity that flipped it was in no log and had to be bounded backwards out of the
