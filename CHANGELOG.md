@@ -220,6 +220,36 @@ While the major version is 0, minor versions may contain breaking changes.
   whatever was left behind.
 
 ### Added
+- **`bench/edge_test.go` and `scripts/edge-bench.sh` — the fixture and harness for #22's
+  edge-handling ranking, landed ahead of the candidate they measure.** Not a gate: the
+  script certifies nothing, moves no criterion and exits 0 whatever it reads; its product
+  is a per-host A/B table. The ordering is forced by the mechanism, not preference —
+  `edge-bench.sh` builds its base arm from a detached `git worktree` at `BASE_REF` and its
+  new arm from the working tree (the same shape as `l1-bench.sh`, and for the same reason: a
+  stash would mutate a tree another measurement may be reading), so the benchmark must
+  already exist at `BASE_REF` before any candidate can be measured against it. Committing
+  the fixture first is what makes the comparison possible at all.
+  **The fixture is the part that could produce a wrong verdict.** At 2048³ the candidates
+  are byte-identical almost everywhere they execute — 2048 is a multiple of both MR (2 or 4)
+  and NR (32), so Sgemm's fringe branch is entered zero times, and an A/B measured there
+  reports the layout floor with the edge code never running, which is #48's tautology trap
+  in a new costume. So: seven ragged gemm shapes straddling MR and NR at large k
+  (31/33/63/65 square, m=3 and m=5 at n=k=2048, and one large ragged 2048×33×2048), plus the
+  **mask-crossing** shapes that are the half of candidate C's coverage a masked microkernel
+  structurally cannot reach — a diagonal tile's live region is a per-row `[lo, hi)`, so
+  Ssyrk and Ssymm take the scratch-tile path at *every* size, including edge-free ones.
+  `Ssyrk n=2048` is therefore an edge-heavy case that looks like an interior one, and it is
+  criterion 7's own numerator, so a C win there moves the 85%-of-Sgemm ratio `gate-p4`
+  grades. Last come the **interior controls at n=2048 and n=4096, which are the named
+  falsifier**: the candidates differ only in a branch those shapes never take, so if they
+  differ there the harness is measuring something else and the run is void — the script says
+  so in its closing line and the controls are read first.
+  Three work declarations are new (`gemmWorkMNK`, `syrkWorkNK`, `symmWorkMN`) rather than
+  widening `gemmWork`, which is the shared declaration that makes `BenchmarkSgemm` and
+  `BenchmarkOpenBLAS` provably one numerator; putting a third caller between those two would
+  cost more than it saves. As everywhere else in this package the flop counts are *useful*
+  flops, not executed ones — counting the discarded half of a diagonal tile would hide the
+  exact cost this fixture exists to measure.
 - **The parallel nest (P5).** The Level-3 routines now distribute their work over a
   bounded pool of goroutines sized by `runtime.GOMAXPROCS(0)`, started per call and
   joined before the call returns. GOMAXPROCS is the only knob; there is no keel-specific
