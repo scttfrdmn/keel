@@ -472,6 +472,19 @@ While the major version is 0, minor versions may contain breaking changes.
   pattern; it has drifted twice.
 
 ### Fixed
+- **The citation lint's pin file was reproducible only on the platform that wrote it**
+  (#87, `scripts/citation-lint.sh`, `docs/citation-targets.txt`). Each pin recorded
+  `substr(text, 1, 56)` of its rule, and `substr` counts *bytes* in BSD awk and
+  *characters* in an awk built against a UTF-8 locale. DESIGN.md §7 rule 2 contains an em
+  dash, so the macOS-generated pin held 54 characters where the runner computed 56, and
+  the very first CI run that ever reached this script failed T1 — on a tree that was
+  clean. `LC_ALL=C` is not the fix: BSD awk is byte-oriented whatever the locale. The lead
+  is now the first ten whitespace-separated words, which is the same number under every
+  implementation and cannot truncate mid-character and commit an invalid byte to a tracked
+  file. Checked by computing all 17 leads under both semantics and diffing them: identical,
+  where the old form differed on the em-dash line. Only BSD awk is installed here, so that
+  equality is a check against character semantics rather than against a second awk — CI is
+  the empirical confirmation.
 - **`go test ./...` died with `SIGILL` on any amd64 CPU without AVX-512** (#87,
   `internal/kern/kern_amd64.go`). `vectorKernels()` returns `nil` unless
   `vec.HasAVX512()`; `referenceTiles()`, fourteen lines below it, carried no such guard,

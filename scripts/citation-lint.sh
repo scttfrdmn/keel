@@ -84,9 +84,20 @@ die() { printf 'citation-lint: %s\n' "$1" >&2; exit 2; }
 
 # ---------------------------------------------------------------- the document
 # Sections are `## N. Title`. Inside a section, a top-level ordered item is a
-# line starting `N. ` at column 0; its lead is the first 56 characters of the
-# item's text with markdown emphasis stripped. Continuation lines and nested
-# lists are not items and must not be counted, or every rule number would shift.
+# line starting `N. ` at column 0; its lead is the first 10 whitespace-separated
+# words of the item's text with markdown emphasis stripped. Continuation lines and
+# nested lists are not items and must not be counted, or every rule number would
+# shift.
+#
+# WORDS, NOT A CHARACTER COUNT, and that is not a style choice (#87). The lead was
+# substr(text, 1, 56), and `substr` is bytes in BSD awk and characters in an awk
+# built against a UTF-8 locale. DESIGN.md §7 rule 2 contains an em dash, so the
+# macOS-generated pin held 54 characters where the CI runner computed 56 -- the
+# pinned file was reproducible only on the platform that wrote it, and the first CI
+# run that ever reached this script failed T1 on a tree that was in fact clean.
+# LC_ALL=C does not fix it: BSD awk is byte-oriented whatever the locale. A word
+# count is the same number under every implementation, and it cannot truncate
+# mid-character and commit an invalid byte to a tracked file the way a byte cut can.
 rules() {
   awk '
     /^## [0-9]+\./ {
@@ -98,7 +109,10 @@ rules() {
       n = $1; sub(/\./, "", n)
       text = $0; sub(/^[0-9]+\. */, "", text)
       gsub(/\*\*/, "", text); gsub(/\*/, "", text); gsub(/`/, "", text)
-      printf "%s\t%s\t%s\n", cursec, n, substr(text, 1, 56)
+      nw = split(text, w, /[ \t]+/)
+      lead = w[1]
+      for (i = 2; i <= nw && i <= 10; i++) lead = lead " " w[i]
+      printf "%s\t%s\t%s\n", cursec, n, lead
     }
   ' "$DESIGN"
 }
