@@ -63,7 +63,14 @@ While the major version is 0, minor versions may contain breaking changes.
   `tee`, this repo having shipped that particular swallowed verdict three times in other forms. The
   assertion was driven through all four of its branches — correct scalar read-back, wrong Level-1
   backend, wrong Level-3 backend, markers absent — with the passing case as the positive control that
-  proves it discriminates.
+  proves it discriminates. **The read-back falsified a claim on its first run.** The job's own comment
+  said the vector path "is not exercised here at all"; the opportunistic leg read back
+  `keel-l1-active: avx2`. GitHub's runners lack AVX-512 but *have* AVX2, so Level 1 selects a vector
+  backend while the Level-3 microkernels fall back — vector code has been running in CI all along, one
+  level below where anyone was looking. The summary now reports each level separately rather than as
+  one vector-or-not bit, since a true "this runner exercised a vector path" would have concealed which.
+  That is the case for printing a read-back instead of reasoning about a dispatch: the reasoning here
+  was wrong, cheaply, in public.
 - **`Strsm`'s scaling floor is ratified at 7.0×, and the model the deferral asked for is recorded as
   *falsified* rather than restated** (#37/#89; `DESIGN.md` §4/P5 carries the grounds). `gate-p5.sh`
   deferred `STRSM_FLOOR` to "this measurement plus a stated model" for five phases, and the

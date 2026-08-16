@@ -23,8 +23,16 @@ jobs:
   # What this job's green means, exactly (#88, ruled 2026-08-16): "the simd
   # toolchain compiles all paths, and correctness is verified on scalar,
   # deterministically." It does NOT mean the AVX-512 kernels ran. GitHub's runners
-  # have no AVX-512, so vectorKernels() returns nil, dispatch falls back, and the
-  # vector path is not exercised here at all — #87's SIGILL was that gap biting.
+  # have no AVX-512, so vectorKernels() returns nil and the Level-3 microkernel
+  # dispatch falls back — #87's SIGILL was that gap biting.
+  #
+  # CORRECTION, measured on this job's first run under the read-back (2026-08-16): the
+  # earlier version of this comment said "the vector path is not exercised here at
+  # all", and that is false. The runners have AVX2, so the *Level 1* backend reads
+  # back as `avx2` under default dispatch — vector code does run in CI, one level
+  # down from where anyone was looking. Precisely the claim the read-back was added to
+  # settle, falsified on contact with the instrument, which is the argument for
+  # printing it rather than reasoning about it.
   #
   # Two options were rejected. Asserting "a vector backend registered" would fail
   # spuriously on whatever hardware the runner lottery deals. Merely documenting
@@ -60,6 +68,11 @@ jobs:
           # and exists purely to make TestMain speak. `-count=1` is load-bearing: the
           # test cache replays a previous run's recorded stdout, which would publish a
           # read-back taken under a different environment.
+          #
+          # One reading note for anyone scanning this step's log: because the probe runs
+          # NO test, its `keel-*-exercised:` markers are empty by construction. That is
+          # the probe reporting nothing ran under it, not the suite above reporting no
+          # coverage — the suite's own markers are simply not printed without -v.
           KEEL_FORCE=scalar go test -count=1 -v -run 'ZZZDispatchReadBackOnly' . 2>&1 | tee simd-scalar.log.readback
       # The assertion that the pin took. A missing marker is itself a failure — the
       # gates treat absence the same way, because "the tests passed" and "here is
@@ -121,13 +134,25 @@ jobs:
             echo
             echo "**Default dispatch on this runner** (reported, judged by nothing):"
             echo "Level 1 \`${l1:-unreported}\`, Level 3 \`${kern:-unreported}\`."
-            if [ "${l1:-}" = "scalar" ]; then
-              echo "Scalar — so this leg duplicated the pinned one, which is the expected"
-              echo "outcome on a runner without AVX-512 and is why it is not the judged leg."
+            # Named per level, not as one "vector or not" bit, because the two levels
+            # gate on different features and the first run of this leg already split
+            # them: GitHub's runners have AVX2 but not AVX-512, so Level 1 selected
+            # `avx2` while the Level-3 microkernels stayed scalar. "This runner
+            # exercised a vector path" would have been true and would have hidden
+            # which one, which is the imprecision #88 exists to remove.
+            if [ "${l1:-}" != "scalar" ] && [ "${l1:-}" != "" ]; then
+              echo "- Level 1 ran the **\`$l1\`** backend: real vector coverage, from"
+              echo "  hardware CI happens to have. Opportunistic — still not a criterion."
             else
-              echo "**Not scalar** — this runner exercised a vector path, so the suite has"
-              echo "coverage CI cannot normally offer. Opportunistic: still not a criterion."
+              echo "- Level 1 was scalar, duplicating the judged leg."
             fi
+            case "${kern:-}" in
+              */scalar|"") echo "- Level 3 was the scalar microkernel: the AVX-512 kernels need a feature"
+                           echo "  this runner lacks, so **no vector kernel executed**. That evidence"
+                           echo "  comes from the three-host fleet." ;;
+              *)           echo "- Level 3 ran **\`$kern\`** — a vector microkernel executed in CI, which"
+                           echo "  has never been true before. Worth acting on, not just noting." ;;
+            esac
           } >> "$GITHUB_STEP_SUMMARY"
       # Gates are run locally by design (they need real hardware + perf
       # denominators); CI proves build integrity and a deterministic smoke.
