@@ -38,9 +38,13 @@
 #     backend; those are superseded here rather than kept for comparison,
 #     because comparing across measurement regimes is how a perf project loses
 #     track of what it knows. Every host that exercised avx512 must clear the
-#     bar, and at least one of them must have done so under the performance
-#     governor: the ratio is within-machine, so a throttled host has no excuse,
-#     but nor does it get to be the only evidence.
+#     bar, and EVERY MEASURING HOST must be under the performance governor,
+#     asserted per host in the preamble and again at the moment of measurement
+#     (#77). The older form of this sentence said "at least one of them" — a
+#     criterion any single host satisfied on the others' behalf, under which two
+#     archived green runs published a rate taken on a `powersave` host (#79).
+#     The ratio is within-machine, so a throttled host has no excuse; it also
+#     does not get to contribute a rate under a governor nobody asserted.
 #
 #  5. THE PEAK DENOMINATOR IS MEASURED HERE TOO, and printed. P1 has no
 #     percent-of-peak criterion, so this is provenance rather than a gate
@@ -98,6 +102,7 @@ BENCHCSV="$BINDIR/bench.csv"
 trap 'rm -rf "$LOG" "$BINDIR"' EXIT
 
 AVX512_GREEN=""
+AVX512_SEEN=0
 
 # score_run NAME LOG OK — check one test run passed, and that it left no
 # compiled-in backend unexercised.
@@ -112,6 +117,15 @@ score_run() {
 
   cover="$(grep -o 'keel-l1-backends-exercised:.*' "$log" | tail -1 || true)"
   avail="$(grep -o 'keel-l1-available:.*' "$log" | tail -1 || true)"
+  # Coverage state for the avx512 aggregate below (#73's tier C): count the runs
+  # that reported the backend *available*, which is the discriminator between a
+  # fleet that could look and came back short and a fleet with nothing to ask.
+  # Counted before the coverage-marker return, because a host whose availability
+  # marker reads avx512 and whose coverage marker is missing still establishes
+  # that the capability was present.
+  if grep -qE "keel-l1-available:.*(^| )avx512( |$)" <<<"$avail"; then
+    AVX512_SEEN=$((AVX512_SEEN + 1))
+  fi
   if [[ -z "$cover" ]]; then
     unmeasured "[$name] no L1 backend-coverage marker in test output, so what this run exercised cannot be read"
     return
@@ -136,6 +150,36 @@ GOEXPERIMENT=simd go test -v -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
 score_run "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK"
 
 HOSTS="$(remote_hosts)"
+# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
+# 2026-08-15). Declared here, where the fleet is named; printed beside the
+# verdict by assumed_ledger below.
+assume_fleet "$HOSTS"
+
+# ---- the measurement precondition, asserted rather than assumed (#77)
+#
+# DESIGN.md §5 rule 5 as amended: EVERY measuring host under the performance
+# governor, asserted per host, never satisfied by one host on behalf of another.
+# This gate used to read the governor, print it as `info`, and assert only that
+# *some* host had cleared the 4x bar under `performance` — a criterion satisfied
+# by any single host, which therefore said nothing about the others. It is not a
+# hypothetical hole: both archived green gate-p1 logs on #2 have the Zen 5 host
+# on `powersave`, and one of their rates is published (#79). The three-way is
+# gate-p4.sh:562's, copied rather than reinvented so the two read alike.
+if [[ -n "$HOSTS" ]]; then
+  while read -r host; do
+    [[ -n "$host" ]] || continue
+    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
+    if [[ "$hgov" == performance ]]; then
+      pass "[$host] cpufreq governor is performance (§5 rule 5)"
+    elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
+      unmeasured "[$host] scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does"
+    else
+      fail "[$host] cpufreq governor is '$hgov', not performance (§5 rule 5): a ramping core produces cold readings that enter the record as measurements"
+      info "  [$host] sudo cpupower frequency-set -g performance"
+    fi
+  done <<<"$HOSTS"
+fi
+
 N_CONF=0
 N_SCORED=0
 if [[ -z "$HOSTS" ]]; then
@@ -183,8 +227,10 @@ fi
 
 if [[ -n "$AVX512_GREEN" ]]; then
   pass "L1 tests green with the avx512 backend exercised (target: $AVX512_GREEN)"
+elif [[ "$AVX512_SEEN" -gt 0 ]]; then
+  fail "no target ran the L1 tests green with the avx512 backend, though $AVX512_SEEN target(s) reported it available"
 else
-  fail "no target ran the L1 tests green with the avx512 backend"
+  unmeasured "no target reported an avx512 backend available, so whether the L1 tests pass on it is unmeasured rather than short: there was no host to ask"
 fi
 
 # -------------------------------------------------------- Sdot >= 4x scalar
@@ -194,7 +240,13 @@ info "-count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME, benchstat median, ba
 BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 
-PERF_GOV_HOST=""
+# Coverage state, not a host name (#77 and #73's tier C). N_RATIO counts hosts
+# that produced a bounded ratio — the reading this criterion is about — and
+# N_CLEARED how many of those cleared the bar. Two counters because "nobody
+# cleared 4x" and "nobody produced a ratio" are different facts and the old
+# single-name variable could not tell them apart.
+N_RATIO=0
+N_CLEARED=0
 if [[ -z "$HOSTS" ]]; then
   unmeasured "the 4x criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
 else
@@ -207,8 +259,19 @@ else
 
   while read -r host; do
     [[ -n "$host" ]] || continue
+    # Re-read at the moment of measurement, not merely in the preamble above: a
+    # governor that changed in between belongs to a machine somebody started
+    # using, and the reading it produces is not one §5 rule 5 covers. Silent on
+    # success — the preamble printed the PASS — which is gate-p4.sh:858's shape.
     gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
     info "[$host] governor=${gov:-unknown}"
+    if [[ -z "$gov" || "$gov" == unknown ]]; then
+      unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed"
+      continue
+    elif [[ "$gov" != performance ]]; then
+      fail "[$host] governor is '$gov' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5 rule 5"
+      continue
+    fi
 
     if ! remote_exec "$host" "$BIN" "${BFLAGS[@]}" -test.bench='GateSdot' \
          >"$BENCHLOG" 2>&1; then
@@ -232,18 +295,27 @@ else
       fi
       continue
     fi
+    N_RATIO=$((N_RATIO + 1))
     if awk -v r="$lo" 'BEGIN{exit !(r >= 4.0)}'; then
       pass "[$host] Sdot n=4096 speedup ${pt}x, ${lo}x net of CI (>= 4x)"
-      [[ "$gov" == "performance" ]] && PERF_GOV_HOST="$host"
+      N_CLEARED=$((N_CLEARED + 1))
     else
       fail "[$host] Sdot n=4096 speedup ${pt}x, only ${lo}x net of CI (< 4x required)"
     fi
   done <<<"$HOSTS"
 
-  if [[ -n "$PERF_GOV_HOST" ]]; then
-    pass "the 4x bar was cleared under the performance governor ($PERF_GOV_HOST)"
+  # The aggregate, three-way over coverage state (#73's tier C). Every host that
+  # got this far is under `performance`, asserted twice above, so this line no
+  # longer names one host on the fleet's behalf. The third branch is the one the
+  # old form could not express: a fleet whose CPUs all lack AVX-512 reaches the
+  # `no avx512 sub-benchmark` info above, produces no ratio at all, and used to
+  # leave this criterion with no verdict line whatsoever.
+  if [[ "$N_RATIO" -eq 0 ]]; then
+    unmeasured "no host produced a bounded Sdot ratio, so the 4x criterion is unmeasured rather than short: #14 requires one host to clear it and none looked"
+  elif [[ "$N_CLEARED" -eq "$N_RATIO" ]]; then
+    pass "every host that produced a bounded ratio cleared 4x ($N_CLEARED/$N_RATIO), each under the performance governor asserted per host (#14 requires one)"
   else
-    fail "no host cleared 4x under the performance governor (issue #14 requires one)"
+    fail "$((N_RATIO - N_CLEARED)) of $N_RATIO hosts that produced a bounded ratio did not clear 4x (the per-host lines above say which)"
   fi
 fi
 
@@ -303,6 +375,8 @@ if [[ -n "$HOSTS" ]]; then
     fi
   done <<<"$HOSTS"
 fi
+
+assumed_ledger
 
 # ------------------------------------------------------------------ verdict
 echo

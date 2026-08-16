@@ -9,6 +9,70 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **Every measuring host must now be under the performance governor, asserted per host, in
+  `gate-p1` and `gate-p2`** (#77; ruled before the green because a criterion that moves
+  between runs for a naming reason is a defect in the instrument). Both gates read the
+  governor and then asserted only that *some* host had cleared its bar under `performance` —
+  a criterion any single machine satisfied on the others' behalf, which therefore said
+  nothing about the others. It is not hypothetical: both archived green `gate-p1` logs have
+  the Zen 5 host on `powersave`, and one of their rates is published at `CHANGELOG.md:2151`
+  (#79). The fix is `gate-p4.sh:562`'s three-way, copied rather than reinvented so the two
+  read alike: PASS per host, FAIL for a wrong governor, UNMEASURED for an unreadable one,
+  in a preamble over the whole fleet — plus a silent re-read at the moment of measurement,
+  because a governor that changed in between belongs to a machine somebody started using.
+  `PERF_GOV_HOST` is deleted from both gates; nothing now records a precondition as a host
+  name. Note that Scott's suggested mechanism (hostname normalization, `.local` drift, a
+  DHCP-sensitive ordering) was not the mechanism — it was last-writer-wins over the hosts
+  that *pass*, with a stable host list — and a canonical-name fix would have left the hole
+  exactly as it is.
+- **Six single-witness gate aggregates became three-way over coverage state** (#73 tier C;
+  `gate-p0`, `-p1`, `-p2`, `-p3`). An aggregate whose only state was "did any host clear
+  this" collapsed two different facts into one FAIL: a fleet that looked and came back short,
+  and a fleet with nothing to ask. `fail "no target ran the Sgemm sweep green with the avx512
+  backend"` on three hosts that have no AVX-512 is an assertion about *keel* made from the
+  absence of a measurement. Each now counts hosts that **produced** the reading beside hosts
+  that **satisfied** it — `N_RATIO`/`N_CLEARED`, `N_JUDGED`, `N_FULLCAP`, `AVX512_SEEN`,
+  `N_FORCED` — so zero readings reads UNMEASURED and readings that came back short read FAIL
+  with the shortfall counted. The discriminators are witnesses the library already prints,
+  verified from source rather than inferred by analogy: `keel-backends-available`
+  (`internal/vec/vec_diff_test.go:82`), `keel-l1-available` (`l1_test.go:144`), and — where
+  no availability marker exists — the *exercised* marker, which is runtime-filtered because
+  `vectorKernels()` returns nil unless `vec.HasAVX512()` (`internal/kern/kern_amd64.go:34`).
+  A first draft of the `gate-p2` counter used a `keel-kern-available` marker that does not
+  exist; it would have made the count always zero, i.e. masked a real FAIL as UNMEASURED,
+  which is the one substitution this taxonomy exists to prevent.
+- **`gate-p0` now reads the backend-availability marker instead of inferring the CPU from the
+  run** (#73). Every unexercised backend was reported as `unavailable here` — a claim about
+  the silicon deduced from a claim about the test run — so a backend the host *has* and the
+  suite *skipped* was indistinguishable from one the host lacks. Available-and-unexercised is
+  now a FAIL, absent is an `info`, and a missing availability marker is UNMEASURED with the
+  wording of the fallthrough branch changed too: without that marker there is nothing to
+  license the word "unavailable", so it no longer restates as a finding the inference the
+  UNMEASURED line one row above says cannot be drawn.
+- **A stated-assumptions ledger, printed beside every gate's verdict** (#73 tier C, ruled
+  2026-08-15; `scripts/remote.sh`, all six gates). A precondition with **no read-back
+  mechanism at all** — nothing to check, as distinct from something unreadable — gets no
+  verdict: three verdicts (PASS/FAIL/UNMEASURED) plus an `assumed, unverifiable:` line, so
+  the certificate enumerates what it is trusting instead of trusting it silently. A fourth
+  verdict category would blur the one distinction UNMEASURED keeps sharp — *could have
+  looked, could not read* — and would blur it in the direction that matters, since
+  UNMEASURED blocks. `assumed()` sets no `FAIL`, prints at the `info` indent, and is
+  invisible to the anchored tallies the delegating gates count with (driven and checked:
+  a log carrying a full ledger tallies 1/0/1 against 1 PASS and 1 UNMEASURED). Two entries
+  qualify, both circular rather than merely inconvenient: the configured host set being the
+  intended fleet, and each name reaching the machine it is meant to reach — every witness of
+  a host's identity is reported *by* the host under test. The admission test is deliberately
+  hard, and two candidates failed it while it was written: machine load (#81) and SMT state
+  (#82) are both readable, therefore both are missing criteria and are filed as such rather
+  than laundered into the ledger.
+- **Delegated gate logs are revision-stamped** (#78, before the green). `gate-p5` wrote its
+  delegated `gate-p4` log to a fixed path and `gate-p4` did the same for `gate-p3`, so each
+  run destroyed the only copy of the previous run's evidence. It bit during #73's own
+  verification: the run being verified overwrote the reference it was to be compared
+  against, and the diff survived only because an unrelated standalone `gate-p4` log happened
+  to exist — which is not an archival strategy. #68 remains orthogonal and open: a stamped
+  filename cannot distinguish a clean tree from a dirty one at the same revision, and a
+  self-describing log that has been overwritten is still gone. Two defects, two fixes.
 - **The converse sweep: 74 gate sites that report a reason the gate could not look now print
   UNMEASURED, under one rule written down where the primitive lives** (ruled 2026-08-15 on
   #73; `scripts/remote.sh`). #72 relabeled the 21 sites whose own message text already said
@@ -221,6 +285,20 @@ While the major version is 0, minor versions may contain breaking changes.
   it a named trap rather than a slip.
 
 ### Fixed
+- **`gate-p0` exited 1 with no verdict line at all when a host failed its tests while
+  exercising all three backends** (#80; `scripts/gate-p0.sh`). `[[ "$ok" -eq 0 ]] &&
+  FULL_COVER_TARGET="$name"` was the last command of `record_target`, so on a failing run the
+  AND-list's non-zero status became the function's return status — and `set -e`, which
+  exempts every command of an AND-OR list but the last, does *not* exempt a function call.
+  The gate died after that host's final PASS, before its verdict section, exiting 1; since
+  RED also exits 1, the log reads as a truncated red gate rather than as a harness that
+  died. It is the #76 family in a different construct, so #76's fix does not cover it. It had
+  never fired because it needs a failing test *and* complete coverage: the dev host never has
+  complete coverage and the remote hosts had not failed. Driven on the extracted function to
+  confirm both the death and the fix, and all seven tail-position `&&` sites in `scripts/`
+  were audited — this was the only one whose status could escape (the other six have code
+  following them in the same body). The five untouched sites stay `&&` on purpose: rewriting
+  them would obscure which one mattered.
 - **A host that stopped answering mid-loop killed the gate with exit 255 instead of producing
   a verdict, and the delegating gate reported the death as its delegate's RED** (#76;
   `scripts/gate-p1.sh`, `-p2`, `-p3`, `-p4`, `-p5`, `scripts/remote.sh`). Ten command

@@ -120,6 +120,70 @@ remote_hosts() {
 # could not see it, and #76's guard is what made the branch reachable at all.
 unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s\n' "$1"; FAIL=1; }
 
+# assumed MESSAGE — declare a precondition the gate is TRUSTING, and add it to a
+# ledger printed beside the verdict. This is not a fourth verdict. It sets no
+# FAIL, it is indented as an `info` line, and the tallies cannot see it.
+#
+# WHY IT IS NOT A VERDICT (ruled 2026-08-15, closing #73's tier C). A precondition
+# with no read-back mechanism *at all* — nothing to check, as opposed to something
+# unreadable — cannot be given a verdict without destroying the distinction
+# UNMEASURED exists to keep sharp. UNMEASURED means the gate could have looked and
+# could not read; a bucket for "we did not look because there is nothing to look
+# at" would blur exactly that, and it would blur it in the direction that matters,
+# because UNMEASURED blocks the gate and an unverifiable assumption cannot without
+# blocking every run forever. So: three verdicts, plus a stated-assumptions ledger
+# that makes the certificate enumerate what it trusts instead of trusting silently.
+#
+# THE ADMISSION TEST, and it is deliberately hard to pass: is there any mechanism,
+# however awkward, by which this gate could read the precondition back? If yes, it
+# is a criterion this gate is missing — file it, do not launder it in here. Two
+# candidates were rejected on exactly that ground while this was written: machine
+# load (readable — /proc/loadavg, #81) and SMT state (readable — the siblings
+# files, #82, which gate-p5.sh:100 already argues its own floor from). Both are
+# checkable, therefore both are absent criteria rather than assumptions, and both
+# are filed as such. A ledger that grows by absorbing checkable things is a way of
+# writing "we did not get around to it" in a font that reads as rigour.
+#
+# The word FAIL/PASS/UNMEASURED must not appear in the label, for the same reason
+# it must not in unmeasured(): the delegating gates count verdict lines by
+# grepping anchored labels (gate-p4.sh:1052, gate-p5.sh:1143). The eight-space
+# indent here is the `info` indent precisely so those anchors cannot match it.
+ASSUMED=""
+assumed() {
+  printf '        assumed, unverifiable: %s\n' "$1"
+  ASSUMED="${ASSUMED}${ASSUMED:+
+}$1"
+}
+
+# assume_fleet HOSTS — the two assumptions every remote-measuring gate makes, in
+# one place so six gates cannot word them six ways. Both survive the admission
+# test above by being circular rather than merely inconvenient: every witness of a
+# host's identity comes from the host itself.
+assume_fleet() {
+  [[ -n "${1:-}" ]] || return 0
+  assumed "the configured host set is the fleet this gate is meant to measure: .keel-hosts (or \$KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against"
+  assumed "each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine"
+}
+
+# assumed_ledger — print the ledger, once, beside the verdict. Prints even when
+# empty: "this gate declared no unverifiable assumption" is a statement a reader
+# should be able to see the gate make, and its absence is indistinguishable from
+# a gate that forgot to call this.
+assumed_ledger() {
+  echo
+  echo "-- stated assumptions (trusted, not verified; not verdicts) --"
+  if [[ -z "$ASSUMED" ]]; then
+    printf '        none declared: every precondition this gate relies on has a read-back it performs above\n'
+    return
+  fi
+  printf '        each line below is a precondition with no read-back mechanism, so it\n'
+  printf '        carries no verdict. What the certificate asserts, it asserts ON these.\n'
+  while IFS= read -r a; do
+    [[ -n "$a" ]] || continue
+    printf '          - %s\n' "$a"
+  done <<<"$ASSUMED"
+}
+
 # worktree_strays — print every registered worktree other than this one, as
 # `PATH REVISION`, and return 1 if there are any.
 #

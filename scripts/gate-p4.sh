@@ -333,7 +333,8 @@ GATE_PEAK="Peak/avx512"
 P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(avx512|n=2048)'
 # The delegated P3 gate's full output. build/ is gitignored; the path is printed
 # because CLAUDE.md wants gate output verbatim in the umbrella issue.
-P3LOG="build/gate-p3-under-p4.log"
+# Revision-stamped for #78's reason — see the same assignment in gate-p5.sh.
+P3LOG="build/gate-p3-under-p4-$(git rev-parse --short HEAD 2>/dev/null || echo unknown).log"
 
 # marker NAME FILE — the value of the last `keel-NAME:` line in FILE. Test output
 # arrives through t.Logf, so the marker may be indented and prefixed.
@@ -549,6 +550,10 @@ else
 fi
 
 HOSTS="$(remote_hosts)"
+# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
+# 2026-08-15). Declared here, where the fleet is named; printed beside the
+# verdict by assumed_ledger below.
+assume_fleet "$HOSTS"
 
 # ---- the measurement precondition, asserted rather than assumed
 #
@@ -1070,6 +1075,8 @@ else
     info "  the delegated log is $P3LOG in full; an exit that is neither 0 nor 1 is the delegate dying, which is a defect to find rather than a threshold to re-run"
   fi
 fi
+
+assumed_ledger
 
 # ------------------------------------------------------------------ verdict
 echo

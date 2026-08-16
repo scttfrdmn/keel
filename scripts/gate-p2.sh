@@ -328,7 +328,37 @@ GOEXPERIMENT=simd go test -v -count=1 ./internal/kern/... >"$LOG" 2>&1 || LOCAL_
 score_run "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK"
 
 HOSTS="$(remote_hosts)"
+# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
+# 2026-08-15). Declared here, where the fleet is named; printed beside the
+# verdict by assumed_ledger below.
+assume_fleet "$HOSTS"
+
+# ---- the measurement precondition, asserted rather than assumed (#77)
+#
+# DESIGN.md §5 rule 5 as amended: EVERY measuring host under the performance
+# governor, asserted per host, never satisfied by one host on behalf of another.
+# This gate used to read the governor, print it as `info`, and assert only that
+# *some* host had cleared the floor under `performance`. Both archived green
+# gate-p1 logs on #2 show what that permits: a host on `powersave` whose rate is
+# published, with the criterion satisfied by a different machine (#79). The
+# three-way is gate-p4.sh:562's, copied rather than reinvented.
+if [[ -n "$HOSTS" ]]; then
+  while read -r host; do
+    [[ -n "$host" ]] || continue
+    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
+    if [[ "$hgov" == performance ]]; then
+      pass "[$host] cpufreq governor is performance (§5 rule 5)"
+    elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
+      unmeasured "[$host] scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does"
+    else
+      fail "[$host] cpufreq governor is '$hgov', not performance (§5 rule 5): a ramping core produces cold readings that enter the record as measurements"
+      info "  [$host] sudo cpupower frequency-set -g performance"
+    fi
+  done <<<"$HOSTS"
+fi
+
 AVX512_GREEN=""
+AVX512_SEEN=0
 if [[ -z "$HOSTS" ]]; then
   unmeasured "P2 needs an amd64 host to execute the AVX-512 kernel and none is configured, so the kernel is unmeasured on real silicon"
 else
@@ -352,11 +382,30 @@ else
     if [[ "$OK" -eq 0 ]] && grep -qE 'keel-kern-backends-exercised:.*(^| )avx512( |$)' "$LOG"; then
       AVX512_GREEN="$host"
     fi
+    # Coverage state for the aggregate below (#73's tier C): the discriminator
+    # between a fleet that could look and came back short, and a fleet with
+    # nothing to ask.
+    #
+    # THE SAME MARKER, WITHOUT THE OK==0 CONDITION, and that is deliberate rather
+    # than a copy of the line above. This gate has no separate availability
+    # marker the way gate-p1 does (`keel-l1-available`); I wrote one into a first
+    # draft of this block from the analogy and it does not exist. What makes the
+    # single marker sufficient here is a fact about the library, checked rather
+    # than assumed: kern.Backends() enumerates Kernels(), and vectorKernels()
+    # returns nil unless vec.HasAVX512() (internal/kern/kern_amd64.go:34-37). So
+    # `avx512` appearing in this marker at all means the host has the ISA, and
+    # AVX512_GREEN's extra OK==0 is what separates "had it and the run failed"
+    # from "had it and the run was green".
+    if grep -qE 'keel-kern-backends-exercised:.*(^| )avx512( |$)' "$LOG"; then
+      AVX512_SEEN=$((AVX512_SEEN + 1))
+    fi
   done <<<"$HOSTS"
   if [[ -n "$AVX512_GREEN" ]]; then
     pass "kernel tests green with the avx512 tile exercised (target: $AVX512_GREEN)"
+  elif [[ "$AVX512_SEEN" -gt 0 ]]; then
+    fail "no target ran the kernel tests green with the avx512 tile, though $AVX512_SEEN target(s) reported it available"
   else
-    fail "no target ran the kernel tests green with the avx512 tile"
+    unmeasured "no target reported the avx512 tile available, so whether the kernel tests pass on it is unmeasured rather than short: there was no host to ask"
   fi
 fi
 
@@ -450,7 +499,11 @@ fi
 BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 
-PERF_GOV_HOST=""
+# Coverage state, not a host name (#77 and #73's tier C). N_JUDGED counts hosts
+# that produced a judgeable throughput verdict at all; N_CLEARED how many of
+# those cleared their floor. Two counters because "nobody cleared the floor" and
+# "nobody produced a reading" are different facts.
+N_JUDGED=0
 N_CLEARED=0
 if [[ -z "$HOSTS" ]]; then
   unmeasured "the 55% criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
@@ -463,8 +516,19 @@ else
   fi
   while read -r host; do
     [[ -n "$host" ]] || continue
+    # Re-read at the moment of measurement, not merely in the preamble above: a
+    # governor that changed in between belongs to a machine somebody started
+    # using, and the reading it produces is not one §5 rule 5 covers. Silent on
+    # success — the preamble printed the PASS — which is gate-p4.sh:858's shape.
     gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
     info "[$host] governor=${gov:-unknown}"
+    if [[ -z "$gov" || "$gov" == unknown ]]; then
+      unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed"
+      continue
+    elif [[ "$gov" != performance ]]; then
+      fail "[$host] governor is '$gov' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5 rule 5"
+      continue
+    fi
     if ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench="$BENCH_FILTER" \
          >"$BENCHLOG" 2>&1; then
       unmeasured "[$host] the benchmark run failed, so this host's percent-of-peak is unmeasured rather than below the floor"
@@ -573,11 +637,13 @@ else
         info "[$host] ceiling mixes converge ${csx}x over a ${msx}x spread in insns/FMA -> ${CLASS}-bound" ;;
     esac
 
+    # Every host reaching here produced a judgeable verdict, including
+    # issue/refuse: a refusal is a reading this gate took and reasoned about.
+    N_JUDGED=$((N_JUDGED + 1))
     case "$CLASS/$RESULT" in
       fma/pass)
         pass "[$host] FMA-bound: best shipped shape $BEST_ID at ${fracpt}% of measured peak, ${frac}% net of CI (>= 55%)"
-        N_CLEARED=$((N_CLEARED + 1))
-        [[ "$gov" == "performance" ]] && PERF_GOV_HOST="$host" ;;
+        N_CLEARED=$((N_CLEARED + 1)) ;;
       fma/fail)
         fail "[$host] FMA-bound: best shipped shape $BEST_ID at ${fracpt}% of measured peak, only ${frac}% net of CI (< 55%)" ;;
       issue/refuse)
@@ -586,8 +652,7 @@ else
         info "[$host] shape guard: $BEST_ID at $(printf '%.3f' "$BEST_IPF") insns/FMA, within $slackpc of the sweep best $SWEEP_BEST_IPF"
         info "[$host] issue roofline for $BEST_ID = ${roofpc}% of measured peak, so the effective floor here is ${floorpc}% (the flat 55% is unreachable: the front end cannot deliver this mix that fast)"
         pass "[$host] issue-bound: $BEST_ID at ${fracpt}% of peak (${frac}% net of CI) = ${attpc}% of its ${roofpc}% issue roofline (>= 90%)"
-        N_CLEARED=$((N_CLEARED + 1))
-        [[ "$gov" == "performance" ]] && PERF_GOV_HOST="$host" ;;
+        N_CLEARED=$((N_CLEARED + 1)) ;;
       issue/fail)
         info "[$host] issue roofline for $BEST_ID = ${roofpc}% of measured peak, effective floor ${floorpc}%"
         fail "[$host] issue-bound: $BEST_ID at ${frac}% net of CI = only ${attpc}% of its ${roofpc}% issue roofline (< 90%)" ;;
@@ -596,15 +661,21 @@ else
     esac
   done <<<"$HOSTS"
 
-  if [[ "$N_CLEARED" -eq 0 ]]; then
-    fail "no host cleared the throughput floor"
-  fi
-  if [[ -n "$PERF_GOV_HOST" ]]; then
-    pass "the throughput floor was cleared under the performance governor ($PERF_GOV_HOST)"
+  # The aggregate, three-way over coverage state (#73's tier C). Every host that
+  # got this far is under `performance`, asserted twice above, so this line no
+  # longer names one host on the fleet's behalf. The first branch is the one the
+  # old pair could not express: no host producing a reading at all read as two
+  # FAILs about a floor nobody measured.
+  if [[ "$N_JUDGED" -eq 0 ]]; then
+    unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared"
+  elif [[ "$N_CLEARED" -eq "$N_JUDGED" ]]; then
+    pass "every host that produced a judgeable throughput reading cleared its floor ($N_CLEARED/$N_JUDGED), each under the performance governor asserted per host (§5.4 rule 5)"
   else
-    fail "no host cleared the floor under the performance governor (§5.4 rule 5 requires one)"
+    fail "$((N_JUDGED - N_CLEARED)) of $N_JUDGED hosts that produced a judgeable throughput reading did not clear the floor (the per-host lines above say which)"
   fi
 fi
+
+assumed_ledger
 
 # ------------------------------------------------------------------ verdict
 echo

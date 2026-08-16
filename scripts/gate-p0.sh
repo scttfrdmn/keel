@@ -124,6 +124,7 @@ mkdir -p "$(dirname "$TESTBIN")"
 # FULL_COVER_TARGET names the machine on which all three backends actually
 # executed. Empty at the end of this section means a red gate.
 FULL_COVER_TARGET=""
+N_FULLCAP=0
 
 # record_target NAME LOG OK — score one execution target's test run.
 #
@@ -132,7 +133,7 @@ FULL_COVER_TARGET=""
 # merely *lacks* a backend is reported, not failed; the aggregate check below
 # is what insists some target had all three.
 record_target() {
-  local name="$1" log="$2" ok="$3" cover missing=""
+  local name="$1" log="$2" ok="$3" cover avail missing="" unexercised=""
   if [[ "$ok" -eq 0 ]]; then
     pass "[$name] internal/vec tests pass"
   else
@@ -147,14 +148,59 @@ record_target() {
     return
   fi
   info "[$name] $cover"
-  local want
+  # The availability marker, which TestBackendCoverage prints beside the coverage
+  # one (internal/vec/vec_diff_test.go:81-82). This gate used to skip it and
+  # report every unexercised backend as `unavailable here` — a claim about the
+  # CPU inferred from a claim about the run, which is the assumption #73's sweep
+  # exists to retire. A backend that is available and was not exercised is a
+  # skipped backend, and that is a FAIL; one the host does not have is neither.
+  avail="$(grep -o 'keel-backends-available:.*' "$log" | tail -1 || true)"
+  local have_avail=1
+  if [[ -z "$avail" ]]; then
+    have_avail=0
+    unmeasured "[$name] no backend-availability marker, so an unexercised backend cannot be told from an absent one"
+  else
+    info "[$name] $avail"
+  fi
+  local want unavailable=""
   for want in scalar avx2 avx512; do
     grep -qE "keel-backends-exercised:.*(^| )$want( |$)" <<<"$cover" \
       || missing="$missing $want"
+    grep -qE "keel-backends-available:.*(^| )$want( |$)" <<<"$avail" \
+      || unavailable="$unavailable $want"
   done
+  for want in $missing; do
+    # `if` rather than `grep -q ... && assign`: the AND-list's status is grep's,
+    # so a no-match would make the enclosing loop return non-zero under set -e.
+    if grep -qE "keel-backends-available:.*(^| )$want( |$)" <<<"$avail"; then
+      unexercised="$unexercised $want"
+    fi
+  done
+  # Coverage state for the aggregate below (#73's tier C): a target with all
+  # three available is one that could exercise all three, which is what separates
+  # a fleet that came back short from a fleet with nothing to ask.
+  [[ -z "$unavailable" ]] && N_FULLCAP=$((N_FULLCAP + 1))
   if [[ -z "$missing" ]]; then
     pass "[$name] exercised all three backends in one binary"
-    [[ "$ok" -eq 0 ]] && FULL_COVER_TARGET="$name"
+    # `if` rather than `[[ ... ]] && assign`, for the same reason as the loop
+    # above but with teeth: this was the LAST command of this function, so when
+    # $ok was non-zero the AND-list's non-zero status became record_target's
+    # return status, and a function call is a simple command that `set -e` acts
+    # on. A host whose tests failed while exercising all three backends
+    # therefore killed the gate here -- after its last PASS, before the verdict
+    # section -- exiting 1 with no `gate-p0: RED` line at all. Since RED also
+    # exits 1, that reads as a truncated red gate rather than a harness fault
+    # (#80, the #76 family in a new construct).
+    if [[ "$ok" -eq 0 ]]; then FULL_COVER_TARGET="$name"; fi
+  elif [[ -n "$unexercised" ]]; then
+    fail "[$name] backends available here but not exercised:$unexercised"
+  elif [[ "$have_avail" -eq 0 ]]; then
+    # Without the availability marker there is nothing to license the word
+    # "unavailable": every backend looks unavailable because the grep had no line
+    # to match, not because the CPU lacks it. Saying `unavailable here` in this
+    # branch would restate, as a finding, the very inference the UNMEASURED line
+    # above says cannot be drawn. The gate is already blocked by that line.
+    info "[$name] not exercised, and whether this host has them is unreadable:$missing"
   else
     info "[$name] backends unavailable here:$missing"
   fi
@@ -168,6 +214,10 @@ record_target "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$TESTLOG" "$LOCAL
 
 # Remote targets: ship a cross-compiled static test binary and run it there.
 HOSTS="$(remote_hosts)"
+# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
+# 2026-08-15). Declared here, where the fleet is named; printed beside the
+# verdict by assumed_ledger below.
+assume_fleet "$HOSTS"
 if [[ -z "$HOSTS" ]]; then
   info "no remote targets configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)"
 else
@@ -212,8 +262,10 @@ fi
 
 if [[ -n "$FULL_COVER_TARGET" ]]; then
   pass "all three backends exercised on real silicon (target: $FULL_COVER_TARGET)"
+elif [[ "$N_FULLCAP" -gt 0 ]]; then
+  fail "no execution target exercised all three backends, though $N_FULLCAP target(s) reported all three available"
 else
-  fail "no execution target exercised all three backends"
+  unmeasured "no execution target reported all three backends available, so exercising them is unmeasured rather than missed: there was no host to ask"
   info "simd/archsimd is amd64-only and the AVX-512 backend needs the"
   info "F/CD/BW/DQ/VL bundle at runtime. Point .keel-hosts at an amd64"
   info "AVX-512 host; see docs/hosts.md and docs/toolchain-notes.md T1."
@@ -263,6 +315,8 @@ else
   check_fused 'github.com/scttfrdmn/keel/internal/vec.FMA512' 'Z[0-9]+'
   check_fused 'github.com/scttfrdmn/keel/internal/vec.FMA256' 'Y[0-9]+'
 fi
+
+assumed_ledger
 
 # ------------------------------------------------------------------ verdict
 echo

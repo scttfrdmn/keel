@@ -602,6 +602,10 @@ else
 fi
 
 HOSTS="$(remote_hosts)"
+# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
+# 2026-08-15). Declared here, where the fleet is named; printed beside the
+# verdict by assumed_ledger below.
+assume_fleet "$HOSTS"
 
 # ---- the measurement precondition, asserted rather than assumed (ruling with #31)
 #
@@ -636,6 +640,20 @@ fi
 
 AVX512_GREEN=""
 SCALAR_FORCED=""
+# Coverage state for the two aggregates at the end of this section (#73's tier C).
+# AVX512_SEEN counts hosts whose sweep reported the avx512 backend exercised at
+# all, which is a capability witness rather than a second marker: gemmRunners()
+# appends one runner per kern.Kernels() entry (gemm_test.go:96-106) and
+# vectorKernels() returns nil unless vec.HasAVX512() (internal/kern/kern_amd64.go
+# :34-37), so `avx512` cannot appear in keel-sgemm-backends-exercised on a host
+# that lacks it. There is no keel-sgemm-available marker and I am not inferring
+# one -- the same check that caught an invented marker name in gate-p2.
+AVX512_SEEN=0
+# N_FORCED counts hosts that attempted the KEEL_FORCE=scalar run; N_FORCED_OK how
+# many passed it. A host that was unreachable `continue`s long before that run, so
+# zero attempts and zero passes are different facts about different fleets.
+N_FORCED=0
+N_FORCED_OK=0
 if [[ -z "$HOSTS" ]]; then
   unmeasured "P3 needs an amd64 host to execute the AVX-512 Sgemm and none is configured, so the vector Sgemm is unmeasured on real silicon"
 else
@@ -667,27 +685,51 @@ else
     else
       info "[$host] backends exercised: $backends"
     fi
+    # Counted without the OK condition: a host that exercised the avx512 kernels
+    # and then failed the sweep is a host that HAD avx512, which is what makes the
+    # aggregate below a FAIL rather than an UNMEASURED.
+    if [[ " $backends " == *" avx512 "* ]]; then
+      AVX512_SEEN=$((AVX512_SEEN + 1))
+    fi
     if [[ "$OK" -eq 0 && " $backends " == *" avx512 "* ]]; then
       AVX512_GREEN="$host"
       cp "$LOG" "$SWEEPLOG"
     fi
     # The fallback, proved by taking it on a machine that has the alternative.
     FOK=0
+    N_FORCED=$((N_FORCED + 1))
     KEEL_REMOTE_ENV="KEEL_FORCE=scalar" remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || FOK=$?
     if [[ "$FOK" -eq 0 ]]; then
       pass "[$host] KEEL_FORCE=scalar: the sweep passes with dispatch overridden"
       SCALAR_FORCED="$host"
+      N_FORCED_OK=$((N_FORCED_OK + 1))
     else
       fail "[$host] KEEL_FORCE=scalar: the sweep passes with dispatch overridden"
       sed 's/^/        /' "$LOG" | tail -20
     fi
   done <<<"$HOSTS"
+  # The two aggregates, three-way over coverage state (#73's tier C). Both used to
+  # collapse "the fleet came back short" into "the fleet had nothing to ask": a set
+  # of hosts with no AVX-512 read as a FAIL saying no target ran it green, which is
+  # an assertion about keel made from the absence of a measurement.
   if [[ -n "$AVX512_GREEN" ]]; then
     pass "the sweep ran green with the avx512 Sgemm live (target: $AVX512_GREEN)"
+  elif [[ "$AVX512_SEEN" -gt 0 ]]; then
+    fail "no target ran the Sgemm sweep green with the avx512 backend, though $AVX512_SEEN host(s) exercised it"
   else
-    fail "no target ran the Sgemm sweep green with the avx512 backend"
+    unmeasured "no host exercised the avx512 Sgemm at all, so whether the sweep passes with it live is unmeasured rather than short: there was no host to ask"
   fi
-  [[ -n "$SCALAR_FORCED" ]] || fail "no host proved the scalar fallback under KEEL_FORCE=scalar"
+  # The old form failed only when NO host proved the fallback. Failing when any
+  # host that tried it failed adds no criterion -- the per-host FAIL above already
+  # blocks the gate for exactly those hosts -- it makes the aggregate a summary of
+  # what was enforced instead of a weaker restatement of it.
+  if [[ "$N_FORCED" -eq 0 ]]; then
+    unmeasured "no host attempted the KEEL_FORCE=scalar run, so the dispatch override is unmeasured rather than unproved: every configured host dropped out before it"
+  elif [[ "$N_FORCED_OK" -eq "$N_FORCED" ]]; then
+    pass "every host that attempted it proved the scalar fallback under KEEL_FORCE=scalar ($N_FORCED_OK/$N_FORCED)"
+  else
+    fail "$((N_FORCED - N_FORCED_OK)) of $N_FORCED hosts that attempted the KEEL_FORCE=scalar run did not pass it (the per-host lines above say which)"
+  fi
 fi
 
 # --------------------------------------------------- what the sweep covered
@@ -1551,6 +1593,8 @@ else
     fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar; ruling #23 asks every host to clear its own reference"
   fi
 fi
+
+assumed_ledger
 
 # ------------------------------------------------------------------ verdict
 echo

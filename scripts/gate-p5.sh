@@ -299,7 +299,18 @@ README_END='<!-- keel-numbers: end -->'
 
 # The delegated gate's full output. build/ is gitignored; the path is printed
 # because CLAUDE.md wants gate output verbatim in the umbrella issue.
-P4LOG="build/gate-p4-under-p5.log"
+#
+# REVISION-STAMPED, like every top-level gate log and for the same reason (#78).
+# A fixed path meant each delegated run destroyed the previous one, and the
+# delegated log is the only copy of that evidence: a delegate's log is never
+# separately archived, its BENCHCSV lives in a mktemp -d that is gone after the
+# run, and build/ is gitignored. That bit during #73's verification — the run
+# being verified overwrote the reference it was to be compared against, and the
+# diff survived only because an unrelated standalone p4 log happened to exist.
+# The tree is frozen for a run's whole life, so HEAD is the run's revision by
+# construction; #68 is what will make a dirty tree at that revision say so, and
+# until it lands the stamp distinguishes revisions but not tree states.
+P4LOG="build/gate-p4-under-p5-$(git rev-parse --short HEAD 2>/dev/null || echo unknown).log"
 
 # Where a native, race-instrumented build lands on a remote host. Deliberately not
 # gate-p3's OpenBLAS tree, so a P5 run cannot overwrite a P3 run's working copy.
@@ -483,6 +494,10 @@ else
 fi
 
 HOSTS="$(remote_hosts)"
+# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
+# 2026-08-15). Declared here, where the fleet is named; printed beside the
+# verdict by assumed_ledger below.
+assume_fleet "$HOSTS"
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 
 # The measurement precondition, asserted rather than assumed (§5 rule 5), and the
@@ -1149,6 +1164,8 @@ else
     info "  the delegated log is $P4LOG in full, and it names gate-p3's in turn; an exit that is neither 0 nor 1 is the delegate dying, which is a defect to find rather than a threshold to re-run"
   fi
 fi
+
+assumed_ledger
 
 # ------------------------------------------------------------------ verdict
 echo
