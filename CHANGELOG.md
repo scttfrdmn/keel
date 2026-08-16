@@ -444,12 +444,15 @@ While the major version is 0, minor versions may contain breaking changes.
   (#85). `sites()` enumerates tracked files only, so a new file's citations are invisible
   until it is committed: both new scripts were untracked while being written, the lint
   could not see its own sources, and **the commit that added them turned a green tree
-  red** — 4 unresolvable mentions of the BLIS `§4.3` appeared the instant they became
+  red** — 4 unresolvable mentions of the BLIS `§4.3` appeared the instant they became <!-- citation-lint:quote(4.3) -->
   tracked. The verification that missed it is worth naming too, because it is a repeat:
   `make lint 2>&1 | tail -2` returns *`tail`'s* exit status, so a failing build read as a
   passing one, the same swallowed-verdict shape as a `permission denied` once read as a
   clean grep. A green from this check means *"every citation in a tracked file"*, and
-  `git status` is part of reading it.
+  `git status` is part of reading it. The commit that recorded all this then repeated the
+  shape a third way: `make lint; git add …` commits whether the lint passed or not, so a
+  second red tree reached `main` and was fixed in the commit after. A verification that
+  does not gate the action it precedes is a report, not a check — `&&`, always.
 - **The quote marker takes a scoped form, `citation-lint:quote(5.4)`** (#85), because
   line granularity is too coarse for this document: `DESIGN.md`'s numbered rules are
   single 2000-character lines, and §5 rule 9 quotes `§5.4` on a line that also carries a <!-- citation-lint:quote(5.4,4.3) -->
