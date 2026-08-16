@@ -622,19 +622,16 @@ assume_fleet "$HOSTS"
 # drifts, and it drifts silently in whichever direction the machine happens to be
 # configured. Unreadable counts as unmet — an unverified precondition is not a met
 # one, and "unknown" is the answer a missing cpufreq sysfs gives on a VM.
+#
+# The check itself now lives in remote.sh's assert_governor (#83). This gate's copy
+# carried two of the five drifts the lift removed: it cited `§5.4 rule 5`, a section
+# DESIGN.md does not have (#85), and it was the only one of the five with the
+# `sudo tee` remediation hint for a host that has no cpupower — the union of the
+# hints is what the lifted version prints.
 if [[ -n "$HOSTS" ]]; then
   while read -r host; do
     [[ -n "$host" ]] || continue
-    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
-    if [[ "$hgov" == performance ]]; then
-      pass "[$host] cpufreq governor is performance (§5.4 rule 5)"
-    elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
-      unmeasured "[$host] scaling_governor is unreadable, so §5.4 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does"
-    else
-      fail "[$host] cpufreq governor is '$hgov', not performance (§5.4 rule 5): a ramping core produces cold readings that enter the record as measurements"
-      info "  [$host] sudo cpupower frequency-set -g performance"
-      info "  [$host] or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
-    fi
+    assert_governor "$host" preamble
   done <<<"$HOSTS"
 fi
 
@@ -1258,23 +1255,22 @@ elif [[ -n "$(git status --porcelain)" ]]; then
 else
   while read -r host; do
     [[ -n "$host" ]] || continue
-    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
+    # Re-read, and re-checked, because the preamble's assertion has to hold at the
+    # moment of measurement and not merely at the start of the gate. A governor that
+    # changed in between belongs to a machine somebody started using, and the reading
+    # it produces is not one §5 rule 5 covers. This replaces the old
+    # "at least one host cleared the bar under the performance governor" tally, which
+    # was satisfied by any single host and therefore said nothing about this one.
+    #
+    # The governor's own provenance line comes from assert_governor; the fields below
+    # are this gate's OpenBLAS preflight, which used to share that line.
+    assert_governor "$host" measured
     pre="$(ob_preflight "$host" || true)"
     obdistro="$(field distro "$pre")"
     obgo="$(field go "$pre")"
     oblib="$(field lib "$pre")"
-    info "[$host] governor=${gov:-unknown} distro=${obdistro:-unknown} go=${obgo:-none} libopenblas=${oblib:-none}"
-    # Re-read, and re-checked, because the preamble's assertion has to hold at the
-    # moment of measurement and not merely at the start of the gate. A governor that
-    # changed in between belongs to a machine somebody started using, and the reading
-    # it produces is not one §5.4 rule 5 covers. This replaces the old
-    # "at least one host cleared the bar under the performance governor" tally, which
-    # was satisfied by any single host and therefore said nothing about this one.
-    if [[ -z "$gov" || "$gov" == unknown ]]; then
-      unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5.4 rule 5 — unmeasured, not a governor that changed"
-      continue
-    elif [[ "$gov" != performance ]]; then
-      fail "[$host] governor is '$gov' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5.4 rule 5"
+    info "[$host] distro=${obdistro:-unknown} go=${obgo:-none} libopenblas=${oblib:-none}"
+    if [[ "$GOV_STATE" != performance ]]; then
       continue
     fi
     if [[ "$obgo" == none || -z "$obgo" || "$oblib" == none || -z "$oblib" ]]; then

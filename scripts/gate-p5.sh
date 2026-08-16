@@ -507,20 +507,17 @@ if [[ -n "$HOSTS" ]]; then
   echo "-- hosts, governors and topology --"
   while read -r host; do
     [[ -n "$host" ]] || continue
+    # This gate's copy of the governor check was the divergent one, and the divergence
+    # was the *correct* version: it established that a reading exists before parsing
+    # for one, so an unreachable host was never reported as an unreadable sysfs file.
+    # That is the shape assert_governor was lifted from (#83). The probe output is
+    # captured here rather than inside the helper because #66's boost check below
+    # needs the same reading, and passing it in means one ssh instead of two.
     prov="$(remote_probe "$host" || true)"
-    if [[ -z "$prov" ]]; then
-      unmeasured "[$host] unreachable, so this target produced no reading"
+    [[ -z "$prov" ]] || info "[$host] $prov"
+    assert_governor "$host" preamble "$prov"
+    if [[ "$GOV_STATE" == unreachable ]]; then
       continue
-    fi
-    info "[$host] $prov"
-    hgov="$(sed -n 's/.*governor=\([^ |]*\).*/\1/p' <<<"$prov")"
-    if [[ "$hgov" == performance ]]; then
-      pass "[$host] cpufreq governor is performance (§5 rule 5)"
-    elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
-      unmeasured "[$host] scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does"
-    else
-      fail "[$host] cpufreq governor is '$hgov', not performance (§5 rule 5): a ramping core produces cold readings that enter the record as measurements"
-      info "  [$host] sudo cpupower frequency-set -g performance"
     fi
     # The frequency-regime knob, checked here so a host without one fails in the
     # preamble rather than halfway through its measurement window (#66). Reported as
@@ -823,17 +820,14 @@ else
     [[ -n "$host" ]] || continue
     # Re-read at the moment of measurement, not only in the preamble: a governor
     # that changed in between belongs to a machine somebody started using.
-    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
-    # Split the way its two twins are (gate-p3.sh:1231, gate-p4.sh:861): this site
-    # was outside #73's sweep because the collapsed branch printed '${gov:-unknown}'
-    # and so never *said* it could not look. #76's guard makes the empty case
-    # reachable rather than fatal, and a reachable branch that attributes an
-    # unanswered host to a governor that changed is the exact defect #73 named.
-    if [[ -z "$gov" || "$gov" == unknown ]]; then
-      unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed"
-      continue
-    elif [[ "$gov" != performance ]]; then
-      fail "[$host] governor is '$gov' at measurement time, not performance: it changed after this gate's preamble read it, so nothing measured here is covered by §5 rule 5"
+    # Split the way its two twins were (#73): this site was outside that sweep
+    # because the collapsed branch printed '${gov:-unknown}' and so never *said* it
+    # could not look. #76's guard makes the empty case reachable rather than fatal,
+    # and a reachable branch that attributes an unanswered host to a governor that
+    # changed is the exact defect #73 named — now one function's problem (#83), which
+    # also retires this copy's lone "preamble read it" wording for "checked it".
+    assert_governor "$host" measured
+    if [[ "$GOV_STATE" != performance ]]; then
       continue
     fi
     # ---- the frequency regime the judged ratio is taken in (criterion 1, #66)

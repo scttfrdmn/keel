@@ -287,6 +287,106 @@ remote_probe() {
   ' 2>/dev/null
 }
 
+# assert_governor HOST PHASE [PROV] — the §5 rule 5 performance-governor
+# precondition, asserted per host, defined once for all five measuring gates.
+#
+# PHASE  preamble | measured. Selects wording, and whether a provenance line is
+#        printed. The preamble prints a verdict on every outcome including PASS, so
+#        a `governor=` info line there would only restate it; at measurement time
+#        the success path is deliberately silent (the preamble already passed that
+#        host), so the info line is the only surviving record of what was read.
+# PROV   pre-captured remote_probe output. Omit it and this probes the host itself;
+#        pass it — gate-p5 needs the same reading for #66's boost knob — and no
+#        second ssh happens. Passing an *empty string* is meaningful and is not the
+#        same as omitting the argument: it says "already probed, and the host
+#        produced nothing", which is the distinction this whole function is about.
+#
+# Sets, for the caller's control flow and its provenance text:
+#   GOV_STATE   performance | wrong | unreadable | unreachable
+#   GOV_VALUE   the parsed value; empty when there is no reading at all
+#   GOV_SHOWN   GOV_VALUE rendered for a log line, never manufacturing a reading
+#
+# IT ALWAYS RETURNS 0, and that is constitutional rather than stylistic. An exit
+# code is an implicit verdict channel, and under `set -euo pipefail` it is a loaded
+# one: a helper returning non-zero to mean "criterion not met" would, called bare in
+# tail position, become the gate's own status and kill the run — and the failure
+# would not be a wrong verdict but an *absent* one, a gate that dies having printed
+# nothing, indistinguishable from a kill (#76, #80). "Always return 0, and state the
+# outcome in a global if a caller needs it" is the correct form. This paragraph is
+# here so that a later cleanup does not simplify it back into an exit code.
+#
+# WHY THIS IS ONE FUNCTION AND NOT FIVE COPIES (ruled 2026-08-16, closing #83).
+# Four gates reported an *unreachable* host as "scaling_governor is unreadable" — a
+# correct verdict, both block, with a false cause — while gate-p5's divergent copy
+# had the guard. "Adopt gate-p5's version in the other four" was ruled insufficient:
+# four better copies are the same failure mode with a better master, and the next
+# labelling defect propagates just as cleanly. The drift inventory taken at the time
+# found five independent divergences across the ten copies (two sites x five gates):
+# a `§5.4` citation naming a section DESIGN.md does not have (#85), an
+# `info "governor=${gov:-unknown}"` that printed a reading for a host which had
+# answered nothing, "preamble checked it" against "preamble read it", a remediation
+# hint present in one gate and absent in four, and p5's better parse. Agreement
+# among four copies was never evidence about any of them.
+#
+# Calling the *gate's* pass/fail/info from here follows unmeasured()'s and
+# assume_fleet()'s precedent rather than inventing an idiom: shell resolves them at
+# call time, so each gate keeps its own primitives and this file keeps the wording.
+GOV_STATE=""
+GOV_VALUE=""
+GOV_SHOWN=""
+assert_governor() {
+  local host="$1" phase="${2:-preamble}" prov
+  if [[ $# -ge 3 ]]; then prov="$3"; else prov="$(remote_probe "$host" || true)"; fi
+
+  GOV_STATE=""; GOV_VALUE=""; GOV_SHOWN=""
+  if [[ -z "$prov" ]]; then
+    # No reading exists. remote_probe's own `|| echo unknown` means a host that
+    # answers always yields a governor= field, so empty output is the host not
+    # answering — the one discriminator the four copies did not have.
+    GOV_STATE=unreachable
+    GOV_SHOWN="none (host produced no reading)"
+  else
+    GOV_VALUE="$(sed -n 's/.*governor=\([^ |]*\).*/\1/p' <<<"$prov")"
+    if [[ "$GOV_VALUE" == performance ]]; then
+      GOV_STATE=performance
+      GOV_SHOWN="$GOV_VALUE"
+    elif [[ -z "$GOV_VALUE" || "$GOV_VALUE" == unknown ]]; then
+      GOV_STATE=unreadable
+      GOV_SHOWN="unknown (host answered; scaling_governor unreadable)"
+    else
+      GOV_STATE=wrong
+      GOV_SHOWN="$GOV_VALUE"
+    fi
+  fi
+
+  if [[ "$phase" == measured ]]; then
+    info "[$host] governor=$GOV_SHOWN"
+    case "$GOV_STATE" in
+      performance) : ;;  # silent on success: the preamble printed the PASS
+      unreachable)
+        unmeasured "[$host] unreachable at measurement time, so this host produced no governor reading and nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured for want of an answer, and not a governor that changed" ;;
+      unreadable)
+        unmeasured "[$host] the host answered but the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed" ;;
+      wrong)
+        fail "[$host] governor is '$GOV_VALUE' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5 rule 5" ;;
+    esac
+  else
+    case "$GOV_STATE" in
+      performance)
+        pass "[$host] cpufreq governor is performance (§5 rule 5)" ;;
+      unreachable)
+        unmeasured "[$host] unreachable, so this target produced no governor reading at all: §5 rule 5 is unverified here for want of an answer, not for want of a readable file" ;;
+      unreadable)
+        unmeasured "[$host] the host answered but scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does" ;;
+      wrong)
+        fail "[$host] cpufreq governor is '$GOV_VALUE', not performance (§5 rule 5): a ramping core produces cold readings that enter the record as measurements"
+        info "  [$host] sudo cpupower frequency-set -g performance"
+        info "  [$host] or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor" ;;
+    esac
+  fi
+  return 0
+}
+
 # remote_exec HOST BIN [ARGS...] — ship BIN to HOST and run it there.
 # stdout/stderr are the remote program's; the return status is its exit code.
 #

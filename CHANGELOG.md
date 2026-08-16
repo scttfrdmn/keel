@@ -9,6 +9,24 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The performance-governor check is now one function, `assert_governor` in `scripts/remote.sh`,
+  called from all five measuring gates** (#83; ruled: *"four better copies are the same failure
+  mode with a better master, and the next labelling defect propagates just as cleanly — the fix
+  for copy-drift is ending the copying"*). Four gates reported an **unreachable** host as
+  `scaling_governor is unreadable`: the right verdict class with a false cause, because a host
+  that answers always yields a `governor=` field, so empty probe output means the host never
+  spoke. `gate-p5`'s copy was the divergent one and also the *correct* one — it established that
+  a reading exists before parsing for one — so the lift's shape came from the outlier, not from
+  the four that agreed. The helper exposes `GOV_STATE` (`performance` | `wrong` | `unreadable` |
+  `unreachable`) and **always returns 0**: an exit code is an implicit verdict channel, and under
+  `set -euo pipefail` a helper returning non-zero for "criterion not met" becomes the gate's own
+  status in tail position and kills the run with *no verdict line at all* — an absent verdict, not
+  a wrong one, indistinguishable from a kill (#76, #80). Enumerated before the lift: **five
+  independent drifts across the ten copies** (two sites × five gates) — a `§5.4` citation naming a
+  section `DESIGN.md` does not have (#85), `info "governor=${gov:-unknown}"` printing a reading for
+  a host that answered nothing, "preamble checked it" vs "preamble read it", a `sudo tee`
+  remediation hint present in one gate and absent in four (the lifted version prints the union),
+  and `gate-p5`'s better parse. Agreement among four copies was never evidence about any of them.
 - **Every measuring host must now be under the performance governor, asserted per host, in
   `gate-p1` and `gate-p2`** (#77; ruled before the green because a criterion that moves
   between runs for a naming reason is a defect in the instrument). Both gates read the

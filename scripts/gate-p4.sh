@@ -562,19 +562,13 @@ assume_fleet "$HOSTS"
 # measurement, never satisfied by one host on behalf of another. This gate takes its
 # own measurements (criterion 7), so it makes its own assertion rather than relying
 # on the delegated P3 gate's. Unreadable counts as unmet: an unverified precondition
-# is not a met one, and "unknown" is what a missing cpufreq sysfs gives on a VM.
+# is not a met one, and "unknown" is what a missing cpufreq sysfs gives on a VM. The
+# check itself now lives in remote.sh's assert_governor: this gate was the master the
+# other three copied, and all four shared a mislabel none of them could reveal (#83).
 if [[ -n "$HOSTS" ]]; then
   while read -r host; do
     [[ -n "$host" ]] || continue
-    hgov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
-    if [[ "$hgov" == performance ]]; then
-      pass "[$host] cpufreq governor is performance (§5 rule 5)"
-    elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
-      unmeasured "[$host] scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does"
-    else
-      fail "[$host] cpufreq governor is '$hgov', not performance (§5 rule 5): a ramping core produces cold readings that enter the record as measurements"
-      info "  [$host] sudo cpupower frequency-set -g performance"
-    fi
+    assert_governor "$host" preamble
   done <<<"$HOSTS"
 fi
 
@@ -861,13 +855,11 @@ else
     [[ -n "$host" ]] || continue
     # Re-read at the moment of measurement, not merely in the preamble: a governor
     # that changed in between belongs to a machine somebody started using, and the
-    # reading it produces is not one §5 rule 5 covers.
-    gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p' || true)"
-    if [[ -z "$gov" || "$gov" == unknown ]]; then
-      unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed"
-      continue
-    elif [[ "$gov" != performance ]]; then
-      fail "[$host] governor is '$gov' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5 rule 5"
+    # reading it produces is not one §5 rule 5 covers. This site used to print no
+    # provenance line at all — the lifted helper prints one, so a passing host's
+    # silent success still leaves a record of the value it passed on.
+    assert_governor "$host" measured
+    if [[ "$GOV_STATE" != performance ]]; then
       continue
     fi
     if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" \
