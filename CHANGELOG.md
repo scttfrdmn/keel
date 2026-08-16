@@ -228,10 +228,12 @@ While the major version is 0, minor versions may contain breaking changes.
   scratch tile are untouched, which is the point: C costs the P2 zero-spill audit nothing,
   where candidate B — a masked C update inside the microkernel — would have doubled the
   audit surface for a coverage subset. B stays unbuilt pending a measured gap.
-  `AddTile`/`AddRow` hang off `kern.Kernel` rather than a package-level var in
-  `internal/block` so that `KEEL_FORCE=scalar` forces the add-back too; nil is a
-  registration bug and panics on the first fringe tile, because a silent scalar fallback
-  would let a shape that forgot to populate them measure as if it had. Two live-region
+  `AddTile`/`AddRow` hung off `kern.Kernel` rather than a package-level var in
+  `internal/block` so that `KEEL_FORCE=scalar` would force the add-back too (nil being a
+  registration bug that panics on the first fringe tile, because a silent scalar fallback
+  would let a shape that forgot to populate them measure as if it had) — **those two fields
+  are gone again now that A ships**, and the requirement they carried is inherited by C′;
+  see the closing note below. Two live-region
   shapes, two call counts: a rectangular fringe takes `AddTile` (one indirect call per tile,
   row loop inside the callee), and a mask-crossing tile takes `AddRow` per row, because a
   diagonal tile's live window is a different `[lo, hi)` on every row and no single rectangle
@@ -260,11 +262,45 @@ While the major version is 0, minor versions may contain breaking changes.
   ones (m=5/n=2048 **+8.19** on Zen 5, +5.69 on Skylake-X; m=2048/n=33 +6.72 on Zen 4).
   That is the risk this file's own header predicted before the run — "for a 4×32 tile the
   whole add-back is at most 8 full-width ops, so an indirect call per row could plausibly
-  cost more than the scalar loop it replaced" — so the indirect call through
-  `kern.Kernel.AddTile`, not the vector arithmetic, is the term to attack next. **No
-  decision is recorded here**: whether C stays, is reshaped to shed the call, or is reverted
-  in favour of A is #22's to rule, and the numbers are posted there. C is on `main` because
-  it is correct and measured, not because it won.
+  cost more than the scalar loop it replaced" — so the indirect call, not the vector
+  arithmetic, is the term to attack.
+- **#22 ruled and closed: A ships, C is archived as measured-correct-and-slower.**
+  `internal/block` goes back to the inlined scalar add-back it had at `757acb8`, and the two
+  `kern.Kernel` function fields are removed rather than repointed at the scalar twins —
+  repointing would have left the *incumbent* paying the per-row indirect call that sank C, so
+  keeping A means keeping A as measured. `internal/vec/edge_amd64.go` and its four
+  differential tests stay in the tree, called by nothing, because C′ starts from that arm and
+  the tests are what keep it from rotting into a wrong starting point (in particular the
+  masked-store guard sentinel: with no caller, nothing else would notice that property
+  breaking).
+  **Ledger, so a future reader need not re-derive it.** A: incumbent, retained. C: correct,
+  measured, loses; mechanism *located* — the per-row indirect call, densest on thin shapes.
+  C′: the named follow-up, this arithmetic with the call removed (monomorphize per backend,
+  or hoist the dispatch out of the row loop so it amortizes per tile), keeping the per-row
+  live window C had and re-establishing `KEEL_FORCE=scalar` forcing the add-back. B (masked
+  C update in the microkernel): still unbuilt, and one rung further back than the first
+  reading of this run suggested — the run localized *C's* loss term, and never isolated A's
+  fringe cost against a fringe-free baseline, so "A leaves resolvable edge cost on the
+  table" is unestablished and B's trigger as worded is **not** met. If C′ wins, B is moot
+  forever (superset coverage, no hot-loop branch); if C′ also loses to a scalar loop, the
+  vector-add-back thesis is dead on its own terms and B is the last live question.
+  Reopening trigger: post-green, or skinny-GEMM performance becoming a criterion someone
+  states. The campaign closes by decision at ±1% geomean on fringe shapes, with the 1.27
+  floor having resolved its original admissibility purpose.
+- **#22's wash criterion amended, on grounds measured before the run it judges** — "controls
+  within the host's between-binary layout floor", not p > 0.05, in `bench/edge_test.go` and
+  `scripts/edge-bench.sh` where the criterion lives. The floors are **1.71% (Zen 4), 0.99%
+  (Skylake-X), 1.32% (Zen 5)**: the largest resolved |sec/op| excursion of the layout
+  ensemble's *control* routine, whose code is byte-identical in both its binaries
+  (`build/layout-ensemble-e829a61.log`, #54/#61) — the same position the interior controls
+  are in here, since at n=2048 and n=4096 neither arm enters the fringe branch. Every
+  control excursion in the A/C run is inside its host's floor, so the run stands. A p-value
+  was the wrong instrument for this question and the project had already shown why:
+  statistical resolution and attribution decoupled under #54/#61, and that campaign measured
+  the size of the gap. The amendment imports a standard that predates the measurement it now
+  judges, which is what distinguishes it from a criterion rewritten around its own result;
+  the corroborating signature is that the sub-floor control deltas **disagree in sign across
+  hosts**, as placement does and a shared-code mechanism would not.
 - **`docs/toolchain-notes.md` T25 — four spellings of the same SIMD loop, 36 instructions
   versus 13** (#74). Found writing the above, whose loop is one vector add and three memory
   ops, small enough that spelling dominates object code. In descending order of size:

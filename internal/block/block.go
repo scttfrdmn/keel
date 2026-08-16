@@ -463,20 +463,29 @@ func macro(kn kern.Kernel, ap, bp []float32, i0, j0, mc, nc, kk int, c []float32
 			// triangular routines need no edge handling of their own.
 			clear(tile)
 			kn.Fn(kk, apanel, bpanel, tile, nr)
-			// Two shapes of live region, and the split is a call-count decision
-			// measured under issue #22, not a taste one. When tri.whole holds,
-			// every row's window is the full [0, jn) — either the mask is off or
-			// this tile lies wholly inside the triangle — so the add-back is one
-			// rectangle and costs one call. A mask-crossing tile's window differs
-			// per row, so it pays a call per row, which is the price of not
-			// having a second kernel family. See internal/vec/edge_amd64.go.
-			if tri.whole(i0+ir, j0+jr, im, jn) {
-				kn.AddTile(ct, ldc, tile, nr, im, jn)
-				continue
-			}
+			// The add-back stays a scalar loop *inlined here*, which is issue #22's
+			// answer and not an omission. Candidate C vectorized it
+			// (internal/vec/edge_amd64.go, still in the tree and still tested) and
+			// was measured to lose: geomean sec/op −0.87% / +0.34% / +1.52% on
+			// Zen 4 / Skylake-X / Zen 5, its losses concentrated on the thin
+			// shapes — most fringe tiles per unit of arithmetic, hence most
+			// add-back *calls* (build/edge-fba229f.log).
+			//
+			// So the loop body is not what this site must protect; the call is.
+			// Dispatching through a kern.Kernel function field would hand this
+			// scalar loop exactly the per-row indirect call that sank C, which is
+			// why the fields were removed rather than repointed at the scalar
+			// twins: keeping A means keeping A as measured. A future C′ that
+			// monomorphizes per backend has to re-establish the property those
+			// fields existed for — KEEL_FORCE=scalar must force the add-back too,
+			// or a forced run stops describing what ran.
 			for i := 0; i < im; i++ {
 				lo, hi := tri.rowRange(i0+ir+i, j0+jr, jn)
-				kn.AddRow(ct[i*ldc+lo:i*ldc+hi], tile[i*nr+lo:i*nr+hi])
+				dst := ct[i*ldc+lo : i*ldc+hi]
+				src := tile[i*nr+lo : i*nr+hi]
+				for j, v := range src {
+					dst[j] += v
+				}
 			}
 		}
 	}

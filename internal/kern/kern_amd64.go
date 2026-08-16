@@ -36,10 +36,8 @@ func vectorKernels() []Kernel {
 		return nil
 	}
 	return []Kernel{
-		{Name: AVX512, MR: 4, NR: 32, Unroll: 1, Fn: vec.Kernel4x32, InsnsPerFMA: 50.0 / 8,
-			AddTile: vec.AddTile512, AddRow: vec.AddRow512},
-		{Name: AVX512, MR: 2, NR: 32, Unroll: 4, Fn: vec.Kernel2x32, InsnsPerFMA: 74.0 / 16,
-			AddTile: vec.AddTile512, AddRow: vec.AddRow512},
+		{Name: AVX512, MR: 4, NR: 32, Unroll: 1, Fn: vec.Kernel4x32, InsnsPerFMA: 50.0 / 8},
+		{Name: AVX512, MR: 2, NR: 32, Unroll: 4, Fn: vec.Kernel2x32, InsnsPerFMA: 74.0 / 16},
 	}
 }
 
@@ -53,8 +51,7 @@ func vectorKernels() []Kernel {
 // number only for the shapes that ship, and a recorded measurement nothing checks
 // is a measurement that drifts; zero also keeps it unrankable by Preferred, so
 // there is no arrangement of classes under which a spilling tile could be chosen.
-var ReferenceTile = Kernel{Name: AVX512, MR: 6, NR: 32, Unroll: 4, Fn: vec.Kernel6x32,
-	AddTile: vec.AddTile512, AddRow: vec.AddRow512}
+var ReferenceTile = Kernel{Name: AVX512, MR: 6, NR: 32, Unroll: 4, Fn: vec.Kernel6x32}
 
 // referenceTiles is what the benchmark adds to Kernels(): shapes that are
 // interesting to measure but not to ship.

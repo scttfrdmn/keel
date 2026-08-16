@@ -23,9 +23,16 @@
 # is a multiple of both MR and NR, so Sgemm's fringe branch is entered zero times.
 # So this script's filter deliberately does NOT include BenchmarkSgemm: it runs
 # bench/edge_test.go's ragged shapes, plus that file's two interior controls, which
-# are the falsifier. **If A and C differ at n=4096, this harness is measuring
-# something other than edge handling and the run is void** — the controls are read
-# first, before any ragged delta is believed.
+# are the falsifier. **A control delta above its host's between-binary layout floor
+# voids the run** — the controls are read first, before any ragged delta is believed.
+#
+# Amended 2026-08-15 on #22: the floor, not a p-value. The floors are 1.71% (Zen 4),
+# 0.99% (Skylake-X), 1.32% (Zen 5) — the largest resolved |sec/op| excursion of the
+# layout ensemble's *control* routine, whose code is identical in both binaries
+# (build/layout-ensemble-e829a61.log, #54/#61). At n=2048 and n=4096 the controls are
+# in exactly that position, so that log is their denominator; a resolved sub-floor
+# delta with signs disagreeing across hosts is placement, which is what the ensemble
+# exists to have measured in advance of runs like this one.
 #
 # The masked shapes (EdgeSsyrk, EdgeSsymm) are in the filter because the fringe
 # branch is shared with triangular masking: a diagonal tile's live region is a
@@ -156,7 +163,9 @@ main() {
   info "into two delta-free halves when they were not ignored (#50, T20)."
   info "shapes are bench/edge_test.go's: ragged m/n around MR=2|4 and NR=32 at large k,"
   info "the triangular routines' mask-crossing tiles, and interior controls at"
-  info "n=2048 and n=4096 that MUST come out a wash or the run is void (#22 ruling)."
+  info "n=2048 and n=4096 that MUST come out a wash or the run is void (#22 ruling),"
+  info "where wash means inside this host's between-binary layout floor -- 1.71/0.99/1.32%"
+  info "on Zen 4/Skylake-X/Zen 5 from build/layout-ensemble-e829a61.log, not p > 0.05."
   echo
 
   local host prov

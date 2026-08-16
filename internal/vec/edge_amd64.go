@@ -7,6 +7,37 @@ package vec
 
 // The AVX-512 fringe add-back: issue #22's candidate C.
 //
+// # Archived: measured, correct, and slower. Nothing in keel calls this.
+//
+// #22 is closed and **A ships** — internal/block inlines a scalar add-back, as it
+// did before this file existed. This file stays because it is the measured arm and
+// because C′ starts from it, and its differential tests keep running so it cannot
+// rot into a wrong starting point.
+//
+// The measurement (build/edge-fba229f.log; three hosts, -count=10, GOMAXPROCS=1,
+// A=757acb8 vs C=fba229f): geomean sec/op −0.87% on Zen 4, +0.34% on Skylake-X,
+// +1.52% on Zen 5 — one host slightly better, two slightly worse, over per-shape
+// swings of −7.92% to +8.19% that agree across hosts on almost nothing. The
+// controls held: every interior excursion sits inside its host's between-binary
+// layout floor (1.71 / 0.99 / 1.32%, build/layout-ensemble-e829a61.log).
+//
+// The loss is *located*, which is the useful part. It concentrates on the thin
+// shapes — m=5/n=2048 at +5.69% and +8.19%, m=2048/n=33 at +6.72% — i.e. the
+// shapes with the most fringe tiles per unit of arithmetic, hence the most add-back
+// **calls**. That is the risk the "What this replaces" section below named *before*
+// the run, and it is a registered risk confirmed rather than a surprise. What the
+// run did **not** establish is that A leaves resolvable edge cost on the table: no
+// arm isolated A's fringe cost against a fringe-free baseline, so A may be
+// near-optimal on thin shapes for all this shows. Candidate B's trigger as worded
+// is therefore *not* met, and B sits one rung behind C′.
+//
+// C′ — the named follow-up — is this arithmetic with the call removed:
+// monomorphize per backend, or hoist the dispatch out of the row loop so it
+// amortizes per tile. It must keep two properties this arm had: the per-row live
+// window (which is the diagonal coverage B structurally cannot reach) and
+// KEEL_FORCE=scalar forcing the add-back too. If C′ still loses to a scalar loop,
+// the vector-add-back thesis is dead on its own terms.
+//
 // # What this replaces and what it does not
 //
 // A fringe or mask-crossing tile in internal/block is computed at full MR×NR
@@ -60,9 +91,10 @@ func AddTile512(c []float32, ldc int, tile []float32, nr, im, jn int) {
 // AddRow512 adds src into dst elementwise, in 16-lane chunks with a masked
 // tail. len(dst) must be at least len(src).
 //
-// AddTile512 calls this per row and so does internal/block for a mask-crossing
-// tile, where each row's live window is its own [lo, hi) and a single
-// rectangular call is not available.
+// AddTile512 calls this per row. internal/block did too, for a mask-crossing tile
+// whose live window is its own [lo, hi) per row with no rectangular call
+// available — that is the coverage C′ has to keep — but as of #22's close nothing
+// outside this package's tests calls either function.
 func AddRow512(dst, src []float32) {
 	n := len(src)
 	j := 0

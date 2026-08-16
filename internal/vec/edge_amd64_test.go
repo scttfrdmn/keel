@@ -53,10 +53,15 @@ func TestDiffAddRow(t *testing.T) {
 }
 
 // TestAddRowLeavesTheTailAlone is the property a masked store could break
-// silently: internal/block hands AddRow512 a destination that runs past the
-// live window (the row of C continues, and beyond it the caller's own memory),
-// so writing a full vector where a partial one was due would clobber somebody
+// silently: a caller hands AddRow512 a destination that runs past the live
+// window (the row of C continues, and beyond it the caller's own memory), so
+// writing a full vector where a partial one was due would clobber somebody
 // else's data rather than fail a comparison. The sentinel is what notices.
+//
+// This is the test that most justifies keeping these tests after #22 closed with
+// A shipping. The functions are called by nothing now, so nothing else would
+// notice a masked store going wrong, and C′ inherits this file as its guarantee
+// that the arm it starts from is the arm that was measured.
 func TestAddRowLeavesTheTailAlone(t *testing.T) {
 	if !HasAVX512() {
 		t.Skip("no AVX-512 on this CPU")

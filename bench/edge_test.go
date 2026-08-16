@@ -20,9 +20,24 @@ import (
 // reports the layout floor with the edge code never entered — the same class of
 // error as #48's tautology trap: a comparison whose arms cannot differ is not a
 // comparison. The ruling on #22 names the falsifier that follows from that, and it
-// is the reason for the last group below: **the interior controls must come out a
-// wash.** If A and C differ at n=4096, this harness is measuring something other
-// than edge handling and the run is void.
+// is the reason for the last group below: the interior controls must come out a
+// wash, or this harness is measuring something other than edge handling.
+//
+// **"Wash" means inside the host's between-binary layout floor, not p > 0.05**
+// (amended 2026-08-15 on #22, having been stated as a p-value criterion when the
+// fixture was written). A p-value is the wrong instrument for this question and the
+// project had already proved so: statistical resolution and attribution decoupled
+// under #54/#61, and the layout ensemble measured the size of the gap on a control
+// routine whose code does *not* change between arms — the controls' own situation
+// here. Those floors are 1.71% (Zen 4), 0.99% (Skylake-X) and 1.32% (Zen 5), the
+// largest resolved |sec/op| excursion of the ensemble's control routine per host
+// (build/layout-ensemble-e829a61.log). A control delta inside its host's floor is
+// placement noise and voids nothing; one above it voids the run. The amendment
+// imports a standard measured *before* the A/C run existed, which is what keeps it
+// from being a criterion rewritten around its own result.
+//
+// The corroborating signature, when it is placement: the signs disagree across
+// hosts. A real shared-code mechanism moves coherently; layout has no reason to.
 //
 // # The two groups measure two different claims
 //
@@ -52,8 +67,9 @@ var (
 		{5, 2048, 2048},
 		{2048, 33, 2048},
 	}
-	// Interior controls: no fringe tile exists at either size, so any delta here
-	// voids the run rather than informing it.
+	// Interior controls: no fringe tile exists at either size, so a delta here
+	// above the host's between-binary layout floor voids the run rather than
+	// informing it. See the floors and why they are not p-values, above.
 	edgeControl = [][3]int{
 		{2048, 2048, 2048},
 		{4096, 4096, 4096},
