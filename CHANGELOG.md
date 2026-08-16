@@ -35,7 +35,13 @@ While the major version is 0, minor versions may contain breaking changes.
   citation of #22's edge campaign as the checkptr remediation, which is the wrong address —
   the fix is upstream CL 761120 shipping in `go1.27`, so the path is #70's floor then #69's
   port (T23), and a red verdict that cites a campaign which will never resolve it is
-  misattribution's little sibling.
+  misattribution's little sibling. **Proven not to weaken anything by rerunning it**, which
+  is the only form of proof this change admits: `gate-p5` went from 65 PASS / 4 FAIL / 0
+  UNMEASURED to 65 PASS / **0 FAIL / 4 UNMEASURED**, both RED, both 215 lines, with the four
+  messages identical line-for-line once the labels are normalised — the sole textual
+  difference being the remediation pointer this commit deliberately corrected. Delegated
+  `gate-p4: GREEN 65/0/0` and `gate-p3: GREEN 48/0/0` on both sides, unchanged.
+  `build/gate-p5-8954f6d.log` against the archived `gate-p5-117b78f`.
 - **`gate-p4`'s tally of the delegated P3 gate is anchored and has a third column** (#71).
   It counted with a bare `grep -c 'FAIL'`, which also matches any summary line inside
   `gate-p3`'s log, so a green delegate could be reported with a FAIL it did not have — the
