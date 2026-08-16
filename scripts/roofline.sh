@@ -427,3 +427,76 @@ p3_ratio_lo() {
     printf "%.6f\n", (v > rlo + 0) ? v : rlo + 0
   }'
 }
+
+# p3_collapse NCAND NCLEAR NMISS — whether an undecidable classification still
+# decides criterion 6, from the tally of how its candidate denominators graded.
+#
+# This is the collapse rule of the class decision above (why=falsifiedanyway,
+# why=samemixanyway) applied at its second site, by ruling 2026-08-16. Same law:
+# UNMEASURED is for verdicts that VARY over the uncertainty, so a doubt whose two
+# resolutions lead to the same verdict is immaterial, and reporting UNMEASURED on
+# it spends the scarcity three-state grading exists to protect. The caller grades
+# each candidate on its own net-of-CI bound — never the point estimate, for the
+# reason the class collapse states at length — and hands the tally here.
+#
+# SYMMETRIC BY DESIGN. Two agreeing misses collapse to `fail`, not to `split`. A
+# host that is below the bar under every reading of every candidate is a host
+# below the bar, and letting an undecidable class shelter it would be the same
+# defect as letting one condemn it: in both directions the verdict would be
+# reported as being about the classification when it is not.
+#
+# AGREEMENT REQUIRES A VERDICT FROM EVERY CANDIDATE. NCLEAR + NMISS < NCAND means
+# some candidate had no bounded ratio (p3_ratio_lo declining, which is a failure to
+# measure and not a value), and a candidate with no verdict cannot agree with one.
+# That is `split`, so the missing bound surfaces as unmeasured rather than being
+# read as assent by omission.
+#
+# Echoes one word: pass | fail | split.
+p3_collapse() {
+  awk -v ncand="$1" -v nclear="$2" -v nmiss="$3" '
+  BEGIN {
+    if (ncand + 0 <= 0)      { print "split"; exit }   # nothing to collapse
+    if (nclear + 0 == ncand + 0) { print "pass";  exit }
+    if (nmiss  + 0 == ncand + 0) { print "fail";  exit }
+    print "split"
+  }'
+}
+
+# p3_coverage NHOSTS NMEASURED NCLEARED NMISSED NINDET — criterion 6's per-fleet
+# aggregate, from the per-host tally.
+#
+# Here for p3_collapse's own stated reason: this if-chain can turn a FAIL into an
+# UNMEASURED and it was previously inline, where nothing drove its branches but a
+# healthy run driving exactly one of them. Two defects were live in the inline form
+# and neither could have been noticed from a green. They sit at different levels, and
+# only one of them is a defect this function can hold:
+#
+#  1. THE CONDITION (fixed here, fixtures 25-30). The unmeasured branch required
+#     cleared + indet == nhosts exactly, so a fleet with one no-coverage host and zero
+#     misses fell through to FAIL and blamed keel's speed for a measurement hole. The
+#     gate is asked whether any host measured BELOW the bar; that is what decides now.
+#     Confirmed discriminating: run against the old inline logic, fixture 26's
+#     (3 hosts, 2 measured, 2 cleared, 0 missed) is FAIL there and `partial` here.
+#  2. THE COUNT IN THE SENTENCE (fixed at the call site, and NO fixture reaches it).
+#     The miss count was DERIVED as `nhosts - ncleared - nindet`, so a fleet with one
+#     slow host and one host that never produced a ratio printed "2 measured below
+#     it". The verdict was right and the claim was false — the label defect ruling
+#     #37 found in P5's scaling aggregate, pointing the other way. The caller now
+#     counts NMISSED as it grades and names the leftover as a leftover. Passing it in
+#     here also stops the derivation from being reintroduced silently, but the printed
+#     sentence is the caller's and is verified only by reading it.
+#
+# Echoes one word: unmeasured | pass | fail | partial. `partial` is the caller's cue
+# to report UNMEASURED naming the split and no-coverage counts separately, since
+# "the two candidate denominators disagreed" and "there was no ratio at all" are
+# different failures to measure and collapsing them would hide which one happened.
+p3_coverage() {
+  awk -v nhosts="$1" -v nmeas="$2" -v nclear="$3" -v nmiss="$4" -v nindet="$5" '
+  BEGIN {
+    if (nmeas  + 0 <= 0)          { print "unmeasured"; exit }
+    if (nhosts + 0 <= 0)          { print "unmeasured"; exit }
+    if (nclear + 0 == nhosts + 0) { print "pass";       exit }
+    if (nmiss  + 0 >  0)          { print "fail";       exit }
+    print "partial"
+  }'
+}

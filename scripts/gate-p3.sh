@@ -1363,10 +1363,22 @@ fi
 # and it says so per host instead of one host standing in for three.
 OB_CLEARED=0
 OB_MEASURED=0
-# Hosts whose denominator could not be chosen because the classification the run
-# derived straddled a bar (#86). Counted separately from a miss, because "did not
-# clear 60%" and "there was no 60% of anything to clear" are different claims and
-# the aggregate below must not collapse them into one.
+# Hosts that produced a bounded ratio and it sat below the bar. Counted, not derived
+# by subtraction from NHOSTS: a host can leave this loop without any verdict at all
+# (no OpenBLAS reference, no confidence interval, no bounded amended ratio), and
+# `NHOSTS - cleared - indet` silently relabels every one of those as a host that
+# measured slow. That is the label defect ruling #37 turned up in P5's scaling
+# aggregate, in the other direction — an aggregate must credit and blame exactly what
+# it verified, so every exit from this loop increments exactly one tally and the
+# leftover is named as a leftover.
+OB_MISSED=0
+# Hosts where the classification the run derived straddled a bar (#86) AND the two
+# candidate denominators then disagreed about the verdict. Post-collapse (ruled
+# 2026-08-16) an undecidable class alone no longer lands here: if both candidates
+# agree, the verdict does not depend on the undecided thing and the host is graded.
+# What remains is genuine split — the classification was worth something. Counted
+# separately from a miss, because "did not clear 60%" and "there was no 60% of
+# anything to clear" are different claims about keel's speed.
 OB_INDET=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
@@ -1671,16 +1683,64 @@ else
     # classification was worth. The candidates come from p3_denominator itself, called
     # once per hypothesis, so nothing here re-derives a denominator by hand.
     if [[ "$obsrc" == indeterminate ]]; then
-      OB_INDET=$((OB_INDET + 1))
       keelr="$(bench_gflops "$GATE_SGEMM" "$BENCHCSV")"
-      unmeasured "[$host] classification indeterminate this run, so criterion 6 has no denominator on this host — keel measured $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s) here and that reading is not in question; the gate declines to pick a denominator by noise"
+      hpklo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
+      # ---- THE COLLAPSE, extended here from roofline.sh's class decision (ruled
+      # 2026-08-16; same law, second site). UNMEASURED is for verdicts that VARY over
+      # the uncertainty. When the class cannot be decided but BOTH candidate
+      # denominators put this host on the same side of the bar, the verdict does not
+      # depend on the undecided thing, and withholding it would make UNMEASURED fire on
+      # immaterial doubt — spending the scarcity the three-state grading exists to
+      # protect. Symmetric on purpose: two agreeing misses collapse to FAIL, so a
+      # genuinely slow host cannot shelter behind a class the run could not derive.
+      #
+      # Judged on hlo, the net-of-CI bound, NOT on the point estimate printed beside
+      # it. That is roofline.sh's hard-won form ("a collapse justified by the midpoint
+      # would be exactly the noise-driven verdict this amendment exists to prevent"):
+      # each hypothesis is graded on the same conservative quantity the decided path
+      # grades, so a collapse says "clears under every reading of every candidate", not
+      # "clears on average".
+      #
+      # An unbounded candidate is not agreement. p3_ratio_lo declines to bound a ratio
+      # its inputs cannot support, and treating a missing bound as either verdict would
+      # be the substitution it exists to refuse, so any unbounded candidate sends this
+      # host to UNMEASURED with both branches still printed.
+      NCAND=0; NCLEAR=0; NMISS=0
       for hypo in issue fma; do
-        read -r hdenom hsrc _hroof hwhy <<<"$(p3_denominator \
+        read -r hdenom hsrc hroof hwhy <<<"$(p3_denominator \
           "$hypo" "$obpmax" "${i_active:-0}" \
           "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" "${ob_rate:-0}" "${peak_rate:-0}")"
-        info "  [$host] had the class been ${hypo}-bound: $hsrc $(printf '%.2f' "$hdenom") GFLOP/s (why=$hwhy) -> $(awk -v k="${keelr:-0}" -v d="$hdenom" 'BEGIN{printf "%.1f", (d > 0) ? k / d * 100 : 0}')% against the 60% bar"
+        hlo="$(p3_ratio_lo "$hsrc" "$rlo" "$hpklo" "$hroof")"
+        hptpc="$(awk -v k="${keelr:-0}" -v d="$hdenom" 'BEGIN{printf "%.1f", (d > 0) ? k / d * 100 : 0}')"
+        NCAND=$((NCAND + 1))
+        if [[ -z "$hlo" ]]; then
+          info "  [$host] had the class been ${hypo}-bound: $hsrc $(printf '%.2f' "$hdenom") GFLOP/s (why=$hwhy) -> ${hptpc}% point estimate, but NO bounded ratio against it, so this candidate has no verdict to agree or disagree with"
+          continue
+        fi
+        hlopc="$(awk -v r="$hlo" 'BEGIN{printf "%.1f", r*100}')"
+        if awk -v r="$hlo" -v f="$OPENBLAS_FLOOR" 'BEGIN{exit !(r >= f)}'; then
+          NCLEAR=$((NCLEAR + 1)); hv="CLEARS"
+        else
+          NMISS=$((NMISS + 1)); hv="MISSES"
+        fi
+        info "  [$host] had the class been ${hypo}-bound: $hsrc $(printf '%.2f' "$hdenom") GFLOP/s (why=$hwhy) -> ${hptpc}%, ${hlopc}% net of CI, which $hv the 60% bar"
       done
-      info "  [$host] that gap is what the classification was worth, and it is why this is unmeasured rather than graded: the run could not say which of the two applies"
+      # The decision itself is p3_collapse, in scripts/roofline.sh with fixtures,
+      # for the reason p3_ratio_lo gives about its own arithmetic: an if-chain read
+      # inline in a gate script is not evidence that it is right, and this one can
+      # turn an UNMEASURED into a PASS.
+      COLLAPSE="$(p3_collapse "$NCAND" "$NCLEAR" "$NMISS")"
+      if [[ "$COLLAPSE" == pass ]]; then
+        pass "[$host] Sgemm at 2048^3 clears the 60% bar under BOTH candidate denominators, so the undecidable classification does not change the verdict (why=agree-anyway; class=indeterminate, both branches printed above, each judged net of CI)"
+        OB_CLEARED=$((OB_CLEARED + 1))
+      elif [[ "$COLLAPSE" == fail ]]; then
+        OB_MISSED=$((OB_MISSED + 1))
+        fail "[$host] Sgemm at 2048^3 misses the 60% bar under BOTH candidate denominators, so the undecidable classification does not change the verdict (why=agree-anyway; class=indeterminate, both branches printed above, each judged net of CI) — the classification is not what is wrong here"
+      else
+        OB_INDET=$((OB_INDET + 1))
+        unmeasured "[$host] classification indeterminate this run and the two candidate denominators DISAGREE (why=split: $NCLEAR clear, $NMISS miss, $((NCAND - NCLEAR - NMISS)) unbounded), so criterion 6 has no denominator on this host — keel measured $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s) here and that reading is not in question; the gate declines to pick a denominator by noise"
+        info "  [$host] that gap is what the classification was worth, and it is why this is unmeasured rather than graded: the run could not say which of the two applies"
+      fi
       continue
     fi
     # A roofline that does not apply is printed as n/a, not as 0.0% (issue #34).
@@ -1726,6 +1786,7 @@ else
       pass "[$host] Sgemm at 2048^3 is ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (>= 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
       OB_CLEARED=$((OB_CLEARED + 1))
     else
+      OB_MISSED=$((OB_MISSED + 1))
       fail "[$host] Sgemm at 2048^3 is only ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (< 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
     fi
   done <<<"$HOSTS"
@@ -1733,15 +1794,20 @@ else
   # the same reason: a host that could not be judged must not be re-reported here as a
   # host that missed the bar. That would be one cause producing two verdicts, the
   # second of them a false claim about keel's speed.
-  if [[ "$OB_MEASURED" -eq 0 ]]; then
-    unmeasured "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed"
-  elif [[ "$OB_CLEARED" -eq "$NHOSTS" ]]; then
-    pass "every gate host cleared 60% of its own single-thread OpenBLAS ($OB_CLEARED/$NHOSTS)"
-  elif [[ $((OB_CLEARED + OB_INDET)) -eq "$NHOSTS" ]]; then
-    unmeasured "$OB_INDET of $NHOSTS gate hosts could not be judged this run (classification indeterminate, so no denominator); the other $OB_CLEARED cleared the bar, and no host measured below it"
-  else
-    fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar, $((NHOSTS - OB_CLEARED - OB_INDET)) measured below it and $OB_INDET could not be judged; ruling #23 asks every host to clear its own reference"
-  fi
+  # Hosts that left the loop with no verdict for a reason that is not the split:
+  # no OpenBLAS reference, no benchstat interval, no bounded amended ratio. Named,
+  # because they are neither cleared nor slow and the sentence must not imply either.
+  OB_NOCOVER=$((NHOSTS - OB_CLEARED - OB_MISSED - OB_INDET))
+  case "$(p3_coverage "$NHOSTS" "$OB_MEASURED" "$OB_CLEARED" "$OB_MISSED" "$OB_INDET")" in
+  unmeasured)
+    unmeasured "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed" ;;
+  pass)
+    pass "every gate host cleared 60% of its own single-thread OpenBLAS ($OB_CLEARED/$NHOSTS)" ;;
+  fail)
+    fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar and $OB_MISSED measured below it ($OB_INDET undecidable-and-split, $OB_NOCOVER produced no ratio); ruling #23 asks every host to clear its own reference" ;;
+  *)
+    unmeasured "$((OB_INDET + OB_NOCOVER)) of $NHOSTS gate hosts could not be judged this run ($OB_INDET had an indeterminate classification whose two candidate denominators disagreed, $OB_NOCOVER produced no bounded ratio at all); the other $OB_CLEARED cleared the bar, and no host measured below it" ;;
+  esac
 fi
 
 assumed_ledger

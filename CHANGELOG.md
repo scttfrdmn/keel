@@ -9,6 +9,34 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The collapse rule now reaches criterion 6: an undecidable Sgemm classification whose two candidate
+  denominators agree yields a verdict, `why=agree-anyway`** (ruled 2026-08-16). #86 gave the gate a
+  three-state grade and a rule for the class decision: `UNMEASURED` is for verdicts that *vary* over
+  the uncertainty, so a doubt whose resolutions all lead to the same verdict is immaterial
+  (`why=falsifiedanyway`, `why=samemixanyway`). Criterion 6 had not inherited it — an indeterminate
+  class went straight to `UNMEASURED` even when both candidate denominators put the host on the same
+  side of the 60% bar, which spends the scarcity three-state grading exists to protect. Now the log
+  prints both candidates side by side, each graded **on its own net-of-CI bound and never the point
+  estimate** (a collapse justified by a midpoint would be exactly the noise-driven verdict the
+  amendment prevents), and agreement decides. **Symmetric**: two agreeing misses collapse to `FAIL`,
+  so a slow host cannot shelter behind a class the run could not derive. A candidate with no bounded
+  ratio supplies no agreement — assent by omission would let a missing measurement buy a pass — so
+  that stays `UNMEASURED` with both branches printed. The decision is `p3_collapse` in
+  `scripts/roofline.sh` with 7 fixtures, not an if-chain inline in a gate.
+- **Criterion 6's fleet aggregate no longer reports a host that produced no measurement as a host that
+  measured slow.** Found while rewording that aggregate for the collapse above, and it is the same
+  label defect ruling #37 turned up in P5's scaling aggregate, pointing the other way: the miss count
+  was **derived** as `nhosts - cleared - indeterminate`, so a fleet with one slow host and one host
+  that never produced a ratio (no OpenBLAS reference, no benchstat interval) printed *"2 measured
+  below it"* — a right verdict carrying a false claim about keel's speed. Worse, the `UNMEASURED`
+  branch required `cleared + indeterminate == nhosts` exactly, so a fleet with a no-coverage host and
+  **zero** misses fell through to `FAIL` and blamed speed for a hole. Every exit from the per-host
+  loop now increments exactly one tally, the leftover is named as a leftover, and the aggregate is
+  `p3_coverage` in `scripts/roofline.sh` with 6 more fixtures — extracted for `p3_collapse`'s stated
+  reason, that an if-chain able to turn a `FAIL` into an `UNMEASURED` is not shown correct by a
+  healthy run driving one of its branches. Confirmed discriminating rather than assumed: replayed
+  against the old inline logic, the no-coverage fixture is `FAIL` there and `partial` here. The
+  printed sentence itself is verified by reading, not by fixture, and the comment says so.
 - **CI's `GOEXPERIMENT=simd` job now states the size of its own claim: dispatch is pinned to scalar and
   the read-back is asserted and published** (#88, ruled 2026-08-16). GitHub's runners have no AVX-512,
   so that job built keel with the simd toolchain and then ran **the scalar fallback** — while its name

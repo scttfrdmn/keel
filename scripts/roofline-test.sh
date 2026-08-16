@@ -80,6 +80,31 @@ checkd() {
   fi
 }
 
+# checkc NAME EXPECT ncand nclear nmiss — the collapse decision (p3_collapse).
+checkc() {
+  local name="$1" want="$2"; shift 2
+  local got; got="$(p3_collapse "$1" "$2" "$3")"
+  if [[ "$got" == "$want" ]]; then
+    printf '  ok    %-53s %s\n' "$name" "$got"
+  else
+    printf '  FAIL  %-53s got "%s", want "%s"\n' "$name" "$got" "$want"
+    FAILED=1
+  fi
+}
+
+# checkv NAME EXPECT nhosts nmeas ncleared nmissed nindet — criterion 6's fleet
+# aggregate (p3_coverage).
+checkv() {
+  local name="$1" want="$2"; shift 2
+  local got; got="$(p3_coverage "$1" "$2" "$3" "$4" "$5")"
+  if [[ "$got" == "$want" ]]; then
+    printf '  ok    %-53s %s\n' "$name" "$got"
+  else
+    printf '  FAIL  %-53s got "%s", want "%s"\n' "$name" "$got" "$want"
+    FAILED=1
+  fi
+}
+
 # checkr NAME EXPECT src rlo pklo roof   (EXPECT "" means "no bound at all")
 checkr() {
   local name="$1" want="$2"; shift 2
@@ -342,6 +367,57 @@ main() {
   #     OpenBLAS bound through here would make the substitution #86 forbids, silently,
   #     inside a helper the caller trusts to fail closed.
   checkr "indeterminate source: no bound at all"         ""    indeterminate 0.641 0.311 0.486486
+
+  echo
+  echo "-- whether an undecidable class still decides criterion 6 (the collapse) --"
+
+  # 21. Both candidates on the same side: the verdict does not depend on the class, so
+  #     it is reported. These two are the branches the ruling added, and they are the
+  #     ones that change a verdict — pass and fail, not merely a relabelled unmeasured.
+  checkc "both candidates clear: the class was immaterial"   pass  2 2 0
+  checkc "both candidates miss: still immaterial, still bad" fail  2 0 2
+  # 22. Disagreement is the case UNMEASURED exists for: the class is exactly what
+  #     decides, so the gate declines to pick one by noise.
+  checkc "candidates disagree: no verdict to collapse to"    split 2 1 1
+  # 23. A candidate with no bounded ratio has no verdict, and cannot supply agreement.
+  #     Assent by omission is the failure mode: one clear + one unbounded must not read
+  #     as "both clear", or a missing measurement would buy a PASS.
+  checkc "one clear, one unbounded: not agreement"           split 2 1 0
+  checkc "one miss, one unbounded: not agreement either"     split 2 0 1
+  checkc "both unbounded: nothing to agree about"            split 2 0 0
+  # 24. Fail closed on a degenerate tally. Zero candidates is not unanimity, though
+  #     `nclear == ncand` would say so to a reader who forgot that 0 == 0.
+  checkc "no candidates at all: split, not vacuous pass"     split 0 0 0
+
+  echo
+  echo "-- what the fleet aggregate claims about criterion 6 (p3_coverage) --"
+
+  # 25. The two branches a real run drives, and the only two the inline form was ever
+  #     observed in: every host cleared, or a host was slow.
+  checkv "every host cleared: the criterion is met"          pass       3 3 3 0 0
+  checkv "one host below the bar: a miss is a FAIL"          fail       3 3 2 1 0
+  # 26. The defect the extraction was done to catch. A host with no OpenBLAS reference
+  #     is not a slow host. Under the old derived count (nhosts - cleared - indet) this
+  #     fleet reported "1 measured below it" with nothing having measured below
+  #     anything, and under the old cleared+indet == nhosts condition it reported FAIL.
+  #     Both branches are asserted here so neither can come back quietly.
+  checkv "a no-coverage host is not a slow host"             partial    3 2 2 0 0
+  checkv "no-coverage plus a genuine miss still FAILS"       fail       3 2 1 1 0
+  # 27. Ruling 2026-08-16's residue: a class that stayed undecidable because its two
+  #     candidate denominators disagreed. Post-collapse this is the only way indet is
+  #     nonzero, and it is a failure to measure, never a miss.
+  checkv "an unresolved split is unmeasured, not a miss"     partial    3 3 2 0 1
+  checkv "a split alongside a miss: the miss decides"        fail       3 3 1 1 1
+  # 28. Unanimity beats everything, including a bogus indet count: if all three cleared
+  #     there is nothing left to be undecided about, and `pass` must not be preempted.
+  checkv "all cleared wins over a stray indet tally"         pass       3 3 3 0 1
+  # 29. Nothing measured at all: unmeasured, and NOT a fail by way of "zero cleared".
+  #     Checked with nhosts > 0 so it is the measurement that is absent, not the fleet.
+  checkv "no host produced a ratio: unmeasured"              unmeasured 3 0 0 0 0
+  # 30. Degenerate: an empty fleet. `nclear == nhosts` is 0 == 0, which would print
+  #     `pass` — a green certifying three hosts that were never contacted. Same
+  #     fail-closed shape as fixture 24, at the aggregate.
+  checkv "an empty fleet cannot pass vacuously"              unmeasured 0 0 0 0 0
 
   echo
   if [[ "$FAILED" -eq 0 ]]; then
