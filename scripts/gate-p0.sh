@@ -51,10 +51,10 @@ cd "$(dirname "$0")/.."
 # shellcheck source=scripts/remote.sh
 source scripts/remote.sh
 
+# pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
+# above: they were copied into all six gates and only one copy applied
+# VERDICT_STAMP. FAIL is this gate's own counter; those helpers only raise it.
 FAIL=0
-pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
-fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
-info() { printf '        %s\n' "$1"; }
 
 echo "== gate-p0: toolchain probe & shim =="
 echo

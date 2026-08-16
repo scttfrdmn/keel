@@ -8,7 +8,45 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **`scripts/fakessh` + `scripts/fakessh-test.sh` + `scripts/exercise-dead-host.sh`: a dead host,
+  induced environmentally, to fire gate-p2's fleet-incomplete aggregate once on purpose** (ruled
+  2026-08-16). Criterion 5b's PASS reads *"every host that produced a judgeable throughput reading
+  cleared its floor (N/M)"*, and on this fleet it has only ever printed 3/3 — so the rendering where a
+  **green line credits a proper subset of the fleet** has never executed. A host will be down someday;
+  its first firing should not double as its first test. `fakessh` goes on `PATH` as `ssh` and refuses
+  one host with ssh's own exit 255 and "No route to host" while the other two genuinely build, run and
+  measure, so the gate discovers the outage through the same machinery a real one would use, unmodified
+  and unaware. **A flag telling the gate to skip a host would have proven only that the flag works.**
+  `KEEL_INSTRUMENT_EXERCISE` exists but is deliberately impotent — it stamps every line `[synthetic]`,
+  prints a banner, withholds GREEN/RED, exits 2, logs to `build/instrument-exercise-*` (#78), and is
+  read nowhere near a comparison, threshold, tally or host list; set it on a healthy fleet and the run
+  reports a stamped 3/3, which puts on record that the aggregate cannot be forged from a flag. The shim
+  has 9 fixtures of its own, run before any host time is spent: the substring cases are the ones that
+  matter, since a dead `zen4.local` matched loosely would also kill `zen4.local.backup` and the log
+  would still say "one host unreachable". The driver also verifies the branch actually fired rather
+  than reporting that the run happened, checks `remote.sh` has not grown an `scp`/`rsync` path the
+  ssh-only shim would miss, and prints whether the dead host is also the sentinel so the collateral
+  scope is computed rather than inferred. Doubles as the fleet's first degraded-mode rehearsal.
+  **`DESIGN.md` has cited "the `fakessh` dead-host arm" as established discipline since `1c3eaca`, and
+  no `fakessh` existed until now** — the comparison was written from intent and read as precedent for
+  four commits. It is annotated as such in place and made true, rather than repointed: a citation to a
+  mechanism that does not exist is what the citation lint was built for, occurring in prose the lint
+  does not reach.
+
 ### Changed
+- **All four verdict helpers now live in `scripts/remote.sh`, and no gate defines its own.** `remote.sh`
+  warned in one breath that `VERDICT_STAMP` applies "in each gate's own pass/fail/info" and in the next
+  that "an overridden copy is a copy and copies drift" — and the drift had already happened:
+  `unmeasured` was shared and stamped, while `pass`/`fail`/`info` were copied into all six gates and
+  **only gate-p3's copy applied the stamp**, because gate-p3 is where the exercise that needed it was
+  written. So gate-p2's first synthetic run would have printed PASS lines indistinguishable from a real
+  certificate — the exact forgery the stamp prevents, in the one place a banner does not help. The five
+  identical copies were **not** corrected in place: uniformity across copies is not correctness, the
+  five agreeing copies were the wrong ones and the odd one out was right, so a sixth good copy would
+  have left the defect available to gate-p6. Verified output-neutral by running gate-p0 either side of
+  the lift and diffing (identical), then verified load-bearing by arming the stamp and confirming zero
+  unstamped verdict lines — a check that was impossible to pass before.
 - **The collapse rule now reaches criterion 6: an undecidable Sgemm classification whose two candidate
   denominators agree yields a verdict, `why=agree-anyway`** (ruled 2026-08-16). #86 gave the gate a
   three-state grade and a rule for the class decision: `UNMEASURED` is for verdicts that *vary* over

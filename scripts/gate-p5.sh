@@ -247,10 +247,10 @@ source scripts/remote.sh
 # shellcheck source=scripts/bench.sh
 source scripts/bench.sh
 
+# pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
+# above: they were copied into all six gates and only one copy applied
+# VERDICT_STAMP. FAIL is this gate's own counter; those helpers only raise it.
 FAIL=0
-pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
-fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
-info() { printf '        %s\n' "$1"; }
 
 # require_bench LABEL LOG CSV UNIT NAME... — declare what a criterion is about to
 # read, and give absence exactly one verdict. Same helper, same wording and the

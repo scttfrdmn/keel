@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Copyright 2026 The keel Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# fakessh -- an `ssh` that refuses named hosts and passes everything else through.
+#
+# Installed as `ssh` on PATH (a symlink; see scripts/exercise-dead-host.sh) so that a
+# gate discovers a host unreachable through its ordinary machinery, from the ordinary
+# cause, with no gate code modified and nothing in the gate aware of it. That is the
+# point: a flag telling the judge to skip a host would prove the flag works, whereas
+# this proves the GATE works.
+#
+# A NOTE ON THIS FILE'S PROVENANCE, since it bears on how much its name is worth.
+# DESIGN.md has cited "the `fakessh` dead-host arm" as established discipline since
+# 1c3eaca (2026-08-16), and no fakessh existed in the tree until this commit. The
+# reference was written from intent, not from an artifact. It is being made true
+# rather than quietly repointed, because a citation to a mechanism that does not
+# exist is the failure mode the citation lint was built for, appearing in prose the
+# lint does not reach.
+#
+# Configuration, both required, both from the environment because this file is a
+# fixture and must have no host knowledge of its own:
+#   KEEL_FAKESSH_DEAD -- space-separated hosts to refuse
+#   KEEL_FAKESSH_REAL -- absolute path to the real ssh, resolved by the caller
+#     BEFORE this shim went on PATH. Resolving it here would find this shim.
+#
+# Refusal mimics a down machine exactly: exit 255, with ssh's own "No route to host"
+# on stderr. Inventing a novel error would test the caller against a condition no
+# real outage produces.
+set -uo pipefail
+
+if [[ -z "${KEEL_FAKESSH_REAL:-}" ]]; then
+  echo "fakessh: KEEL_FAKESSH_REAL is unset, so there is no real ssh to fall through to." >&2
+  echo "fakessh: refusing to guess -- a shim that resolves its own ssh finds itself." >&2
+  exit 2
+fi
+if [[ -z "${KEEL_FAKESSH_DEAD:-}" ]]; then
+  echo "fakessh: KEEL_FAKESSH_DEAD is unset, so this shim would refuse nothing and be" >&2
+  echo "fakessh: a transparent pass-through. That is a silently useless exercise." >&2
+  exit 2
+fi
+
+# Every argument is compared as a WHOLE WORD against each dead host, rather than
+# parsing ssh's option grammar. An option's value is never equal to a hostname, so an
+# exact match cannot misfire; a shim that mis-parsed its way into refusing the wrong
+# host would corrupt a 25-minute run and look like a finding.
+for arg in "$@"; do
+  for dead in $KEEL_FAKESSH_DEAD; do
+    if [[ "$arg" == "$dead" ]]; then
+      echo "ssh: connect to host $dead port 22: No route to host" >&2
+      exit 255
+    fi
+  done
+done
+
+exec "$KEEL_FAKESSH_REAL" "$@"

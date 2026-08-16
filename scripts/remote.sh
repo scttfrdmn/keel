@@ -119,15 +119,33 @@ remote_hosts() {
 # '${gov:-unknown}' inside one collapsed branch, so a sweep that read messages
 # could not see it, and #76's guard is what made the branch reachable at all.
 #
-# VERDICT_STAMP prefixes the message of every verdict line, here and in each
-# gate's own pass/fail/info. It is empty in every real run and set only by an
-# instrument exercise -- gate-p3.sh's KEEL_INSTRUMENT_WIDEN_CI (#86) -- so that a
-# synthetic log self-describes line by line and no single line of it can be
-# quoted as a gate result. One shared variable rather than a per-gate override of
-# these helpers, because an overridden copy is a copy and copies drift: the
-# collapsed gate-p5 branch described above is what that costs.
+# VERDICT_STAMP prefixes the message of every verdict line. It is empty in every
+# real run and set only by an instrument exercise -- gate-p3.sh's
+# KEEL_INSTRUMENT_WIDEN_CI (#86), gate-p2.sh's KEEL_INSTRUMENT_EXERCISE -- so that
+# a synthetic log self-describes line by line and no single line of it can be
+# quoted as a gate result.
+#
+# ALL FOUR VERDICT HELPERS LIVE HERE, AND NO GATE DEFINES ITS OWN (2026-08-16).
+# The comment above used to say "here and in each gate's own pass/fail/info", and
+# warned in the next breath that "an overridden copy is a copy and copies drift".
+# Both halves were true, and the drift had already happened: `unmeasured` was
+# shared and stamped, while pass/fail/info were copied into all six gates and only
+# gate-p3's copy -- the one written alongside the exercise that needed it -- ever
+# applied the stamp. So gate-p2's first synthetic run would have printed a PASS
+# line indistinguishable from a real certificate, which is the exact forgery the
+# stamp exists to prevent, in the exact place a banner does not help.
+#
+# The five identical copies were NOT corrected in place. Uniformity across copies
+# is not correctness: five agreeing copies were the wrong ones and the odd one out
+# was right, so making a sixth good copy would leave the same defect available to
+# gate-p6. Lifted instead, which is why every gate sources this file before it
+# would have defined these. FAIL stays per-gate: it is a counter the gate owns,
+# and these helpers only ever raise it.
 VERDICT_STAMP="${VERDICT_STAMP:-}"
-unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s%s\n' "$VERDICT_STAMP" "$1"; FAIL=1; }
+pass()       { printf '  \033[32mPASS\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; }
+fail()       { printf '  \033[31mFAIL\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; FAIL=1; }
+unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s%s\n'  "$VERDICT_STAMP" "$1"; FAIL=1; }
+info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$1"; }
 
 # assumed MESSAGE — declare a precondition the gate is TRUSTING, and add it to a
 # ledger printed beside the verdict. This is not a fourth verdict. It sets no

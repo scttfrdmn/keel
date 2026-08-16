@@ -152,10 +152,10 @@ source scripts/bench.sh
 # shellcheck source=scripts/roofline.sh
 source scripts/roofline.sh
 
+# pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
+# above: they were copied into all six gates and only one copy applied
+# VERDICT_STAMP. FAIL is this gate's own counter; those helpers only raise it.
 FAIL=0
-pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
-fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
-info() { printf '        %s\n' "$1"; }
 
 # audit_ipf FUNC FILE -> that function's audited instructions per FMA.
 #
@@ -253,6 +253,45 @@ SSADIR="build/ssa"
 
 echo "== gate-p2: microkernel + spill audit (GO/NO-GO) =="
 echo
+
+# ------------------------------------------- the instrument exercise (2026-08-16)
+# KEEL_INSTRUMENT_EXERCISE=<reason> marks this run as synthetic. It exists so that
+# criterion 5b's "2 judged, 1 not" aggregate -- the PASS that reads
+# "every host that produced a judgeable throughput reading cleared its floor
+# (2/2)" while a third host produced none -- can be driven on purpose. On a healthy
+# fleet that sentence has only ever printed 3/3, so the fleet-incomplete rendering
+# of a *green-issuing* line has never executed, and its first execution should not
+# be the day a host is actually down.
+#
+# WHAT THIS VARIABLE DOES: sets VERDICT_STAMP, prints this banner, and withholds
+# the verdict with its own exit code. That is the whole list.
+#
+# WHAT IT CANNOT DO, BY CONSTRUCTION: induce the branch. It is read at exactly the
+# three places above and nowhere near a comparison, a threshold, a tally, or a host
+# list. Set it on a healthy fleet and the run reports 3/3 with a stamp on it --
+# which is worth knowing, because it means the aggregate cannot be forged from a
+# flag. The induction has to come from OUTSIDE: scripts/exercise-dead-host.sh puts
+# an `ssh` shim on PATH that refuses one host, so the gate finds that host
+# unreachable through its ordinary machinery, from its natural cause, while the
+# other two genuinely measure. A knob in the judging code would have proven only
+# that the knob works (ruled 2026-08-16).
+#
+# Artifact discipline (#78): the log belongs at build/instrument-exercise-*, and
+# the verdict is WITHHELD rather than computed, because what a reference-hungry
+# reader greps for is the last line -- a synthetic run able to print "gate-p2:
+# GREEN" would be a forgeable certificate no matter what this banner said.
+INSTRUMENT_EXERCISE="${KEEL_INSTRUMENT_EXERCISE:-}"
+if [[ -n "$INSTRUMENT_EXERCISE" ]]; then
+  VERDICT_STAMP="[synthetic] "
+  echo "  ############################################################"
+  echo "  ##  SYNTHETIC RUN -- NOT A GATE RESULT                    ##"
+  echo "  ##  reason: $INSTRUMENT_EXERCISE"
+  echo "  ##  Every verdict line below carries a [synthetic] stamp. ##"
+  echo "  ##  No GREEN and no RED is printed; the exit code is 2.   ##"
+  echo "  ##  This run judges the instrument, never P2.             ##"
+  echo "  ############################################################"
+  echo
+fi
 
 # ------------------------------------------------------------- tree state (#63)
 # `git status` sees uncommitted changes and nothing else. A registered worktree
@@ -722,6 +761,15 @@ assumed_ledger
 
 # ------------------------------------------------------------------ verdict
 echo
+# An instrument exercise prints neither colour, exactly as gate-p3.sh does for
+# KEEL_INSTRUMENT_WIDEN_CI and for the reason given there: the last line is what a
+# reader greps, so a synthetic run must not be able to emit one that reads as a
+# certificate. Exit 2 keeps `detach.sh stat` from recording it as either a pass or a
+# failure of P2. FAIL is reported as a fact about which renderings fired.
+if [[ -n "$INSTRUMENT_EXERCISE" ]]; then
+  echo "gate-p2: VERDICT WITHHELD (instrument exercise, KEEL_INSTRUMENT_EXERCISE=$INSTRUMENT_EXERCISE; FAIL=$FAIL says which renderings fired, not whether P2 holds)"
+  exit 2
+fi
 if [[ "$FAIL" -eq 0 ]]; then
   echo "gate-p2: GREEN"
   exit 0

@@ -233,10 +233,10 @@ source scripts/remote.sh
 # shellcheck source=scripts/bench.sh
 source scripts/bench.sh
 
+# pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
+# above: they were copied into all six gates and only one copy applied
+# VERDICT_STAMP. FAIL is this gate's own counter; those helpers only raise it.
 FAIL=0
-pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
-fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
-info() { printf '        %s\n' "$1"; }
 # `unmeasured` is not defined here. It was, and #72 lifted it to scripts/remote.sh
 # once 21 further sites across three gates turned out to need it: three copies of a
 # verdict primitive is how the delegated tally came to count two columns where the
