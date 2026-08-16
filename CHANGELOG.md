@@ -247,6 +247,24 @@ While the major version is 0, minor versions may contain breaking changes.
   T17's `-race`/`-d=checkptr` fatal now reaches Level 3 as well. No gate moves — those four
   criteria are already unmeasured on all three hosts for exactly this reason (#42, fixed
   upstream by CL 761120 in go1.27) — but the surface is wider.
+  **Measured, and it does not win** (`build/edge-fba229f.log`, 180 lines, three hosts,
+  `-count=10`, `GOMAXPROCS=1`, A=`757acb8` vs C=`fba229f`): geomean −0.87% on Zen 4,
+  **+0.34% on Skylake-X and +1.52% on Zen 5**, i.e. one host slightly better and two
+  slightly worse, over per-shape swings of −7.92% to +8.19% that agree across hosts on
+  almost nothing. The interior controls bound the unreadable band at 1.14%: five of the six
+  control readings resolve statistically and **disagree in sign across hosts**
+  (2048³ wash/+0.69/+0.10, 4096³ −0.69/−0.39/+1.14), which is T22's function-alignment
+  signature rather than a harness defect, since at those sizes m and n are multiples of MR
+  and NR and neither arm can enter the fringe branch at all. Read above that band, C wins
+  the small square fringes (m=31 −3.83/−2.26, m=63 **−7.92** on Zen 4) and loses the thin
+  ones (m=5/n=2048 **+8.19** on Zen 5, +5.69 on Skylake-X; m=2048/n=33 +6.72 on Zen 4).
+  That is the risk this file's own header predicted before the run — "for a 4×32 tile the
+  whole add-back is at most 8 full-width ops, so an indirect call per row could plausibly
+  cost more than the scalar loop it replaced" — so the indirect call through
+  `kern.Kernel.AddTile`, not the vector arithmetic, is the term to attack next. **No
+  decision is recorded here**: whether C stays, is reshaped to shed the call, or is reverted
+  in favour of A is #22's to rule, and the numbers are posted there. C is on `main` because
+  it is correct and measured, not because it won.
 - **`docs/toolchain-notes.md` T25 — four spellings of the same SIMD loop, 36 instructions
   versus 13** (#74). Found writing the above, whose loop is one vector add and three memory
   ops, small enough that spelling dominates object code. In descending order of size:
