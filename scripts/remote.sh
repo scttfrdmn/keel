@@ -77,6 +77,44 @@ remote_hosts() {
 #
 # The word FAIL must not appear in the label: the delegating gates count verdict
 # lines by grepping for it (gate-p4.sh:1047, gate-p5.sh:1098).
+#
+# WHICH OF THE TWO A SITE GETS (the three-way taxonomy, ruled 2026-08-15 on #73).
+# #72 relabeled the sites whose own message text already said "unmeasured" while
+# the label printed FAIL. #73 is the converse: every site that reports a *reason
+# it could not look* and prints FAIL anyway. One rule decides all of them, and it
+# is not the wording of the message:
+#
+#   FAIL        the gate obtained the reading the criterion asks for, and the
+#               reading is wrong. A test that ran and failed. A build that ran
+#               and failed. A value that was read and is out of bounds. A set
+#               that was enumerated and is short. A count that was taken and
+#               disagrees. A governor that answered 'powersave'.
+#   UNMEASURED  the reading the criterion asks for does not exist. The host did
+#               not answer. The run died. The marker is absent. The value is
+#               unreadable. benchstat established no interval. There was no host
+#               to ask.
+#
+# Tie-break for a site that could be argued either way: does the sentence it
+# prints assert something about *keel*, or about the *measurement*? Only the
+# first may be FAIL. "keel does not reach 60% of OpenBLAS" is a claim about keel,
+# and a run with no hosts has not earned it.
+#
+# Neither is an exemption and neither is softer: both set FAIL=1 on the same
+# line above, so a criterion reporting either blocks the gate identically. This
+# is what "an unchecked precondition is not a met one" means once UNMEASURED
+# exists as a first-class verdict — the older governor rule said "unreadable
+# counts as unmet", written before there was a third column, and its intent was
+# that unreadability is not an exemption. That intent is preserved exactly: an
+# unreadable governor still stops the gate, and stops asserting the governor was
+# wrong when the truth is nobody could look.
+#
+# Where one branch of a site was mixed, the sweep split it rather than choosing:
+# an unreadable CPU count and a CPU count that reads short are different facts
+# (gate-p5.sh:527), as are a boost knob that did not move and a boost knob
+# nobody could read (gate-p5.sh:828), a forced run that reported its dispatch
+# before failing and one that never got that far (gate-p5.sh:592), and a governor
+# that changed mid-run and a governor unreadable mid-run (gate-p3.sh:1231,
+# gate-p4.sh:861).
 unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s\n' "$1"; FAIL=1; }
 
 # worktree_strays — print every registered worktree other than this one, as

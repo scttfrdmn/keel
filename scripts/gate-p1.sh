@@ -113,7 +113,7 @@ score_run() {
   cover="$(grep -o 'keel-l1-backends-exercised:.*' "$log" | tail -1 || true)"
   avail="$(grep -o 'keel-l1-available:.*' "$log" | tail -1 || true)"
   if [[ -z "$cover" ]]; then
-    fail "[$name] no L1 backend-coverage marker in test output"
+    unmeasured "[$name] no L1 backend-coverage marker in test output, so what this run exercised cannot be read"
     return
   fi
   info "[$name] $cover"
@@ -152,7 +152,7 @@ else
     N_CONF=$((N_CONF + 1))
     prov="$(remote_probe "$host" || true)"
     if [[ -z "$prov" ]]; then
-      fail "[$host] unreachable"
+      unmeasured "[$host] unreachable, so this target produced no reading"
       continue
     fi
     info "[$host] $prov"
@@ -196,7 +196,7 @@ while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 
 PERF_GOV_HOST=""
 if [[ -z "$HOSTS" ]]; then
-  fail "the 4x criterion needs an amd64 host; none configured"
+  unmeasured "the 4x criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
 else
   if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
     pass "cross-compiled linux/amd64 bench binary"
@@ -212,7 +212,7 @@ else
 
     if ! remote_exec "$host" "$BIN" "${BFLAGS[@]}" -test.bench='GateSdot' \
          >"$BENCHLOG" 2>&1; then
-      fail "[$host] benchmark run failed"
+      unmeasured "[$host] the GateSdot benchmark run failed, so this host's speedup is unmeasured rather than short of 4x"
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
@@ -226,7 +226,7 @@ else
     if [[ -z "$lo" ]]; then
       if [[ -n "$(bench_stat GateSdot/avx512 "$BENCHCSV")" ]]; then
         # A median with no interval is not a measurement this gate can use.
-        fail "[$host] no bounded ratio: benchstat established no confidence interval"
+        unmeasured "[$host] no bounded ratio: benchstat established no confidence interval, which is a failure to measure rather than a pass"
       else
         info "[$host] no avx512 sub-benchmark (CPU lacks it); not counted"
       fi
@@ -257,7 +257,7 @@ if [[ -n "$HOSTS" ]]; then
          >"$BENCHLOG" 2>&1; then
       # Not a P1 criterion, but a failure here is either a collapsed accumulator
       # chain or an unmeasurable host, and both must stop P2 from starting.
-      fail "[$host] BenchmarkPeak failed; P2's denominator cannot be measured here"
+      unmeasured "[$host] BenchmarkPeak failed, so P2's denominator is unmeasured here"
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi

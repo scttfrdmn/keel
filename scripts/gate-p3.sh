@@ -625,7 +625,7 @@ if [[ -n "$HOSTS" ]]; then
     if [[ "$hgov" == performance ]]; then
       pass "[$host] cpufreq governor is performance (§5.4 rule 5)"
     elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
-      fail "[$host] scaling_governor is unreadable, so §5.4 rule 5 cannot be verified; an unchecked precondition is not a met one"
+      unmeasured "[$host] scaling_governor is unreadable, so §5.4 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does"
     else
       fail "[$host] cpufreq governor is '$hgov', not performance (§5.4 rule 5): a ramping core produces cold readings that enter the record as measurements"
       info "  [$host] sudo cpupower frequency-set -g performance"
@@ -637,7 +637,7 @@ fi
 AVX512_GREEN=""
 SCALAR_FORCED=""
 if [[ -z "$HOSTS" ]]; then
-  fail "P3 needs an amd64 host to execute the AVX-512 Sgemm; none configured"
+  unmeasured "P3 needs an amd64 host to execute the AVX-512 Sgemm and none is configured, so the vector Sgemm is unmeasured on real silicon"
 else
   if remote_build_test . "$BIN" >"$LOG" 2>&1; then
     pass "cross-compiled linux/amd64 test binary (root package: Sgemm vs oracle)"
@@ -649,7 +649,7 @@ else
     [[ -n "$host" ]] || continue
     prov="$(remote_probe "$host" || true)"
     if [[ -z "$prov" ]]; then
-      fail "[$host] unreachable"
+      unmeasured "[$host] unreachable, so this target produced no reading"
       continue
     fi
     info "[$host] $prov"
@@ -663,7 +663,7 @@ else
     fi
     backends="$(marker sgemm-backends-exercised "$LOG")"
     if [[ -z "$backends" ]]; then
-      fail "[$host] no keel-sgemm-backends-exercised marker: coverage unknown is coverage unestablished"
+      unmeasured "[$host] no keel-sgemm-backends-exercised marker, so what this host exercised cannot be read: coverage unknown is coverage unestablished"
     else
       info "[$host] backends exercised: $backends"
     fi
@@ -694,21 +694,21 @@ fi
 echo
 echo "-- sweep extent (criteria 1 and 2: coverage is enforced, not trusted) --"
 if [[ ! -s "$SWEEPLOG" ]]; then
-  fail "no avx512 sweep log to audit; the sweep's extent is unverified"
+  unmeasured "no avx512 sweep log to audit, so the sweep's extent is unmeasured rather than short"
 else
   cfg="$(marker sgemm-config "$SWEEPLOG")"
   if [[ -z "$cfg" ]]; then
-    fail "no keel-sgemm-config marker (blocking params, edge strategy, beta variants, packing backend)"
+    unmeasured "no keel-sgemm-config marker (blocking params, edge strategy, beta variants, packing backend), so what the sweep configured cannot be read"
   else
     info "config: $cfg"
     for k in mr nr kc mc nc edge beta-variants pack; do
-      [[ -n "$(field "$k" "$cfg")" ]] || fail "keel-sgemm-config is missing $k="
+      [[ -n "$(field "$k" "$cfg")" ]] || unmeasured "keel-sgemm-config is missing $k=, so that part of the configuration cannot be read"
     done
   fi
 
   sizes="$(marker sgemm-sizes-exercised "$SWEEPLOG")"
   if [[ -z "$sizes" ]]; then
-    fail "no keel-sgemm-sizes-exercised marker"
+    unmeasured "no keel-sgemm-sizes-exercised marker, so the sizes the sweep ran cannot be read"
   else
     MISSING=""
     for n in $SWEEP_SIZES; do
@@ -723,7 +723,7 @@ else
 
   combos="$(marker sgemm-combos-exercised "$SWEEPLOG")"
   if [[ -z "$combos" ]]; then
-    fail "no keel-sgemm-combos-exercised marker"
+    unmeasured "no keel-sgemm-combos-exercised marker, so the transpose combinations the sweep ran cannot be read"
   else
     info "combinations: $combos"
     trans="$(field trans "$combos")"
@@ -766,7 +766,7 @@ else
         fail "combination count $ncombo does not match the enumerated sets ($expect): the marker claims combinations it did not run"
       fi
     else
-      fail "keel-sgemm-combos-exercised has no combos= count"
+      unmeasured "keel-sgemm-combos-exercised has no combos= count, so its enumeration cannot be checked against what it ran"
     fi
   fi
 
@@ -798,7 +798,7 @@ else
     pass "every size declares its oracle verification mode: exact up to $SWEEP_EXACT_MAX, >= $SWEEP_SAMPLE_MIN seeded exact entries above it"
     marker_all sgemm-verify "$SWEEPLOG" | tail -6 | sed 's/^/        /'
   else
-    [[ -n "$VMISS" ]] && fail "no keel-sgemm-verify line for size(s):$VMISS"
+    [[ -n "$VMISS" ]] && unmeasured "no keel-sgemm-verify line for size(s):$VMISS — how those sizes were verified cannot be read"
     [[ -n "$VBAD" ]] && fail "oracle verification too weak for size(s):$VBAD"
   fi
 
@@ -821,7 +821,7 @@ else
   if [[ -n "$packm" ]]; then
     pass "packing differential-tested against its scalar reference ($packm)"
   else
-    fail "no keel-pack-combos-exercised marker: packing is not differential-tested"
+    unmeasured "no keel-pack-combos-exercised marker, so whether packing is differential-tested cannot be read"
   fi
 fi
 
@@ -872,7 +872,7 @@ IPF_PEAK="$(audit_ipf "$GATE_PEAK_FUNC" "$AUDITPEAK")"
 if [[ -n "$IPF_2x32" && -n "$IPF_4x32" && -n "$IPF_PEAK" ]]; then
   info "audited insns/FMA: 2x32 $(printf '%.3f' "$IPF_2x32"), 4x32 $(printf '%.3f' "$IPF_4x32"), $GATE_PEAK_FUNC $(printf '%.3f' "$IPF_PEAK")"
 else
-  fail "could not read insns/FMA from the audits; the sentinel cannot classify its host"
+  unmeasured "could not read insns/FMA from the audits, so the sentinel cannot classify its host"
 fi
 BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
@@ -893,7 +893,7 @@ CLASSIFY="$(printf '%s\n%s\n' "$SENTINELS" "$HOSTS" | sed '/^[[:space:]]*$/d' | 
 # more than one. Empty after the loop means it never ran, which fails.
 DRIFT_CHECKED=""
 if [[ -z "$SENTINELS" ]]; then
-  fail "no sentinel host and no hosts at all; P2's floor cannot be re-checked"
+  unmeasured "no sentinel host and no hosts at all, so P2's floor is unmeasured on this run rather than missed"
 else
   if [[ -z "${KEEL_SENTINEL_HOST:-}" && ! -r .keel-sentinel ]]; then
     info "no sentinel configured, so every host is one: $(tr '\n' ' ' <<<"$SENTINELS")"
@@ -912,7 +912,7 @@ else
     [[ $'\n'"$SENTINELS"$'\n' == *$'\n'"$host"$'\n'* ]] && JUDGED=1
     if ! remote_exec "$host" "$KERNBIN" "${BFLAGS[@]}" -test.bench="$KERN_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
       if [[ "$JUDGED" -eq 1 ]]; then
-        fail "[$host] sentinel: kernel benchmark run failed"
+        unmeasured "[$host] sentinel: the kernel benchmark run failed, so this sentinel's classification is unmeasured"
         sed 's/^/        /' "$BENCHLOG" | tail -20
       else
         info "[$host] kernel benchmark run failed; unclassified, so criterion 6b treats it as FMA-bound (the strict reading)"
@@ -993,7 +993,7 @@ else
     [[ -n "$IPF_PEAK" ]] && MIXES="$MIXES $GATE_PEAK_FUNC|1.0:$IPF_PEAK"
     if [[ -z "$BEST_LO" ]]; then
       if [[ "$JUDGED" -eq 1 ]]; then
-        fail "[$host] sentinel: no bounded percent-of-peak for any shipped shape"
+        unmeasured "[$host] sentinel: no bounded percent-of-peak for any shipped shape, so this sentinel decides nothing either way"
       else
         info "[$host] no bounded percent-of-peak; unclassified, so criterion 6b treats it as FMA-bound"
       fi
@@ -1029,7 +1029,7 @@ else
     # because no microarchitecture is readable from pure Go (T14, #25); this is the
     # measurement that says whether the fingerprint was right on this machine.
     if [[ -z "$hclass" ]]; then
-      fail "[$host] no keel-bench-kern-class marker: the shape was chosen by a classification this gate cannot check"
+      unmeasured "[$host] no keel-bench-kern-class marker, so the classification the shape was chosen by cannot be read"
     elif [[ "$hclass" == "$CLASS" ]]; then
       pass "[$host] the library's ${hclass}-bound classification matches this gate's measured verdict — ${hclassline#* }"
     else
@@ -1097,7 +1097,7 @@ else
   done <<<"$CLASSIFY"
   # No host produced the marker at all: the ranking's inputs are then unverified,
   # which is a failure to check rather than a check that passed.
-  [[ -n "$DRIFT_CHECKED" ]] || fail "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA were never checked against the object code"
+  [[ -n "$DRIFT_CHECKED" ]] || unmeasured "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA are unchecked against the object code — unmeasured, not drifted"
 fi
 
 # ----------------------------------------------- Sgemm at 2048^3 vs OpenBLAS
@@ -1117,7 +1117,7 @@ if [[ -n "$HOSTS" ]]; then
     [[ -n "$host" ]] || continue
     if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" \
          -test.bench="$SGEMM_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
-      fail "[$host] Sgemm benchmark run failed"
+      unmeasured "[$host] the Sgemm benchmark run failed, so this host's rates are unmeasured"
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
@@ -1179,7 +1179,7 @@ if [[ -n "$HOSTS" ]]; then
       fail "[$host] the bench run reports kernel class '${hclass:-<none>}', which is not a class this gate knows, so the shape choice cannot be cross-checked at 2048^3"
     elif ! KEEL_REMOTE_ENV="GOMAXPROCS=1 KEEL_KERN_CLASS=$alt" remote_exec "$host" "$BENCHBIN" \
            "${BFLAGS[@]}" -test.bench="$SGEMM_SHAPE_FILTER" >"$ALTLOG" 2>&1; then
-      fail "[$host] the KEEL_KERN_CLASS=$alt Sgemm run failed, so the shape choice is uncorroborated at 2048^3"
+      unmeasured "[$host] the KEEL_KERN_CLASS=$alt Sgemm run failed, so the shape choice is uncorroborated at 2048^3 — unmeasured, not refuted (the no-interval branch below already says so)"
       sed 's/^/        /' "$ALTLOG" | tail -20
     else
       altkern="$(marker bench-kern "$ALTLOG")"; altkern="${altkern%% *}"
@@ -1210,7 +1210,7 @@ OB_CLEARED=0
 OB_MEASURED=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
-  fail "no execution hosts, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute)"
+  unmeasured "no execution hosts, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute): unmeasured, not missed"
 elif [[ -n "$(git status --porcelain)" ]]; then
   fail "the working tree is dirty, so \`git archive HEAD\` would measure something other than what is here; commit first"
 else
@@ -1228,8 +1228,11 @@ else
     # it produces is not one §5.4 rule 5 covers. This replaces the old
     # "at least one host cleared the bar under the performance governor" tally, which
     # was satisfied by any single host and therefore said nothing about this one.
-    if [[ "$gov" != performance ]]; then
-      fail "[$host] governor is '${gov:-unknown}' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5.4 rule 5"
+    if [[ -z "$gov" || "$gov" == unknown ]]; then
+      unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5.4 rule 5 — unmeasured, not a governor that changed"
+      continue
+    elif [[ "$gov" != performance ]]; then
+      fail "[$host] governor is '$gov' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5.4 rule 5"
       continue
     fi
     if [[ "$obgo" == none || -z "$obgo" || "$oblib" == none || -z "$oblib" ]]; then
@@ -1248,7 +1251,7 @@ else
     # shellcheck disable=SC2029
     if ! git archive --format=tar HEAD | ssh "${KEEL_SCP_OPTS[@]}" "$host" \
          "rm -rf '$OPENBLAS_REMOTE_DIR' && mkdir -p '$OPENBLAS_REMOTE_DIR' && tar -x -C '$OPENBLAS_REMOTE_DIR'" >"$LOG" 2>&1; then
-      fail "[$host] could not ship the source tree for a native build"
+      unmeasured "[$host] could not ship the source tree for a native build, so this host has no reference reading"
       sed 's/^/        /' "$LOG" | tail -20
       continue
     fi
@@ -1393,7 +1396,7 @@ else
     # shellcheck disable=SC2029  # client-side expansion of a client-side path
     if ! ssh "${KEEL_SSH_OPTS[@]}" "$host" \
          "cd '$OPENBLAS_REMOTE_DIR' && env ${OBENV[*]} ./bench-ob.test$OBARGS" >"$BENCHLOG" 2>&1; then
-      fail "[$host] the openblas-tagged benchmark run failed"
+      unmeasured "[$host] the openblas-tagged benchmark run failed, so this host has no reference reading"
       sed 's/^/        /' "$BENCHLOG" | tail -30
       continue
     fi
@@ -1417,7 +1420,7 @@ else
     # low denominator flatters keel — see $OPENBLAS_OK_CORES above.
     obcore="$(field corename "$obm" | tr '[:upper:]' '[:lower:]')"
     if [[ -z "$obcore" ]]; then
-      fail "[$host] the OpenBLAS marker carries no corename=, so the reference's kernel family is unknown and a generic kernel cannot be ruled out"
+      unmeasured "[$host] the OpenBLAS marker carries no corename=, so the reference's kernel family cannot be read and a generic kernel cannot be ruled out"
       continue
     fi
     CORE_OK=0
@@ -1470,7 +1473,7 @@ else
     rlo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)"
     rpt="$(bench_ratio "$GATE_SGEMM" "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)"
     if [[ -z "$rlo" ]]; then
-      fail "[$host] no bounded keel/OpenBLAS ratio: benchstat established no confidence interval, which is a failure to measure rather than a pass"
+      unmeasured "[$host] no bounded keel/OpenBLAS ratio: benchstat established no confidence interval, which is a failure to measure rather than a pass"
       continue
     fi
     rlopc="$(awk -v r="$rlo" 'BEGIN{printf "%.1f", r*100}')"
@@ -1519,7 +1522,7 @@ else
       pklo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
       alo="$(p3_ratio_lo roofline "$rlo" "$pklo" "$obroof")"
       if [[ -z "$alo" ]]; then
-        fail "[$host] no bounded Sgemm/peak ratio, so the amended denominator cannot be bounded either; that is a failure to measure, not a pass"
+        unmeasured "[$host] no bounded Sgemm/peak ratio, so the amended denominator cannot be bounded either; that is a failure to measure, not a pass"
         continue
       fi
       apt="$(awk -v k="$(bench_gflops "$GATE_SGEMM" "$BENCHCSV")" -v d="$obdenom" 'BEGIN{printf "%.4f", k / d}')"

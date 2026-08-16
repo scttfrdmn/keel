@@ -142,7 +142,7 @@ record_target() {
 
   cover="$(grep -o 'keel-backends-exercised:.*' "$log" | tail -1 || true)"
   if [[ -z "$cover" ]]; then
-    fail "[$name] no backend-coverage marker in test output"
+    unmeasured "[$name] no backend-coverage marker in test output, so what this run exercised cannot be read"
     info "expected a line 'keel-backends-exercised: ...' from TestBackendCoverage"
     return
   fi
@@ -188,9 +188,12 @@ else
     N_CONFIGURED=$((N_CONFIGURED + 1))
     provenance="$(remote_probe "$host" || true)"
     if [[ -z "$provenance" ]]; then
-      # Unreachable is a failure, never a silent skip: a configured target
-      # that quietly vanishes is how a gate starts lying.
-      fail "[$host] unreachable, or /proc/cpuinfo unreadable"
+      # Unreachable blocks the gate, never a silent skip: a configured target
+      # that quietly vanishes is how a gate starts lying. It reads UNMEASURED
+      # rather than FAIL because nothing about this target was learned — the
+      # count below is what turns a vanished target into a coverage failure,
+      # and it is a number the gate did take (#73).
+      unmeasured "[$host] unreachable, or /proc/cpuinfo unreadable: this target answered nothing, so its coverage is unmeasured rather than failed"
       continue
     fi
     info "[$host] $provenance"

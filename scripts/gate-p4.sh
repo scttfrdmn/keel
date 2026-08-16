@@ -565,7 +565,7 @@ if [[ -n "$HOSTS" ]]; then
     if [[ "$hgov" == performance ]]; then
       pass "[$host] cpufreq governor is performance (§5 rule 5)"
     elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
-      fail "[$host] scaling_governor is unreadable, so §5 rule 5 cannot be verified; an unchecked precondition is not a met one"
+      unmeasured "[$host] scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does"
     else
       fail "[$host] cpufreq governor is '$hgov', not performance (§5 rule 5): a ramping core produces cold readings that enter the record as measurements"
       info "  [$host] sudo cpupower frequency-set -g performance"
@@ -575,7 +575,7 @@ fi
 
 AVX512_GREEN=""
 if [[ -z "$HOSTS" ]]; then
-  fail "P4 needs an amd64 host to execute the AVX-512 paths; none configured"
+  unmeasured "P4 needs an amd64 host to execute the AVX-512 paths and none is configured, so they are unmeasured on real silicon"
 else
   if remote_build_test . "$BIN" >"$LOG" 2>&1; then
     pass "cross-compiled linux/amd64 test binary (root package: P4 routines vs oracle)"
@@ -587,7 +587,7 @@ else
     [[ -n "$host" ]] || continue
     prov="$(remote_probe "$host" || true)"
     if [[ -z "$prov" ]]; then
-      fail "[$host] unreachable"
+      unmeasured "[$host] unreachable, so this target produced no reading"
       continue
     fi
     info "[$host] $prov"
@@ -608,7 +608,7 @@ else
   if [[ -n "$AVX512_GREEN" ]]; then
     pass "the lattices ran green with the avx512 microkernel live (target: $AVX512_GREEN)"
   else
-    fail "no host ran the P4 lattices green with the avx512 microkernel; their extent is unauditable"
+    unmeasured "no avx512-green lattice run to audit, so every extent check below it is unmeasured (a fleet that ran green without avx512 is a separate verdict, and the per-host lines above carry it)"
   fi
 fi
 
@@ -616,19 +616,19 @@ fi
 echo
 echo "-- lattice extent (criteria 1, 2, 3, 5 and 6: coverage is enforced, not trusted) --"
 if [[ ! -s "$SWEEPLOG" ]]; then
-  fail "no avx512 lattice log to audit; every routine's coverage is unverified"
+  unmeasured "no avx512 lattice log to audit, so every routine's coverage is unmeasured"
 else
   L3_KERN="$(marker sgemm-active "$SWEEPLOG")"
   L3_CFG="$(marker sgemm-config "$SWEEPLOG")"
   L1_ACTIVE="$(marker l1-active "$SWEEPLOG")"
   info "P3's dispatched microkernel on this host: ${L3_KERN:-<no keel-sgemm-active marker>}"
-  [[ -n "$L3_KERN" ]] || fail "no keel-sgemm-active marker in the lattice log, so the derived routines' shape cannot be compared against Sgemm's (criterion 5)"
+  [[ -n "$L3_KERN" ]] || unmeasured "no keel-sgemm-active marker in the lattice log, so the derived routines' shape cannot be compared against Sgemm's (criterion 5)"
 
   for r in $P4_ROUTINES; do
     # ---- the flag lattice (criterion 1)
     lat="$(p4_line p4-lattice "$SWEEPLOG" "$r")"
     if [[ -z "$lat" ]]; then
-      fail "$r: no keel-p4-lattice marker, so the flags it swept are unknown — coverage unknown is coverage unestablished"
+      unmeasured "$r: no keel-p4-lattice marker, so the flags it swept cannot be read — coverage unknown is coverage unestablished"
     else
       info "$r lattice: ${lat#routine="$r" }"
       LBAD=""
@@ -660,7 +660,7 @@ else
       ncombo="$(field combos "$lat")"
       read -r LPROD LSETS <<<"$(lattice_product "$lat")"
       if [[ -z "$ncombo" ]]; then
-        fail "$r: keel-p4-lattice has no combos= count, so its enumeration cannot be checked against what it ran"
+        unmeasured "$r: keel-p4-lattice has no combos= count, so its enumeration cannot be checked against what it ran"
       elif [[ "${LSETS:-0}" -eq 0 ]]; then
         fail "$r: keel-p4-lattice enumerates no flag sets at all"
       elif [[ "$ncombo" -eq "$LPROD" ]]; then
@@ -674,7 +674,7 @@ else
     szline="$(p4_line p4-sizes "$SWEEPLOG" "$r")"
     sizes="$(field sizes "$szline")"
     if [[ -z "$sizes" ]]; then
-      fail "$r: no keel-p4-sizes marker"
+      unmeasured "$r: no keel-p4-sizes marker, so the sizes it ran cannot be read"
     else
       SMISS=""
       for n in $P4_SIZES; do
@@ -712,14 +712,14 @@ else
     if [[ -z "$VMISS" && -z "$VBAD" ]]; then
       pass "$r: every size declares its oracle verification mode (exact up to $P4_EXACT_MAX, >= $P4_SAMPLE_MIN seeded exact entries above it)"
     else
-      [[ -n "$VMISS" ]] && fail "$r: no keel-p4-verify line for size(s):$VMISS"
+      [[ -n "$VMISS" ]] && unmeasured "$r: no keel-p4-verify line for size(s):$VMISS — how those sizes were verified cannot be read"
       [[ -n "$VBAD" ]] && fail "$r: oracle verification too weak for size(s):$VBAD"
     fi
 
     # ---- differential across backends (criterion 3)
     bk="$(field backends "$(p4_line p4-backends "$SWEEPLOG" "$r")")"
     if [[ -z "$bk" ]]; then
-      fail "$r: no keel-p4-backends marker, so the routine was compared against the oracle but not against another backend (§5 rule 2)"
+      unmeasured "$r: no keel-p4-backends marker, so whether it was compared against another backend and not only the oracle cannot be read (§5 rule 2)"
     else
       BMISS=""
       for b in $P4_BACKENDS; do
@@ -735,7 +735,7 @@ else
     # ---- the edge coverage no lattice contains (criterion 6)
     ex="$(field extras "$(p4_line p4-extra "$SWEEPLOG" "$r")")"
     if [[ -z "$ex" ]]; then
-      fail "$r: no keel-p4-extra marker"
+      unmeasured "$r: no keel-p4-extra marker, so its edge coverage cannot be read"
     else
       EMISS=""
       while read -r e; do
@@ -752,13 +752,13 @@ else
     # ---- derived from P3's GEMM, not reimplemented beside it (criterion 5)
     cfg="$(p4_line p4-config "$SWEEPLOG" "$r")"
     if [[ -z "$cfg" ]]; then
-      fail "$r: no keel-p4-config marker, so what it derives from is unrecorded"
+      unmeasured "$r: no keel-p4-config marker, so what it derives from cannot be read"
       continue
     fi
     if [[ " $P4_DERIVED_L3 " == *" $r "* ]]; then
       rk="$(field kern "$cfg")"
       if [[ -z "$rk" ]]; then
-        fail "$r: keel-p4-config has no kern=, so this gate cannot tell a blocked derivation from a reimplementation"
+        unmeasured "$r: keel-p4-config has no kern=, so this gate cannot tell a blocked derivation from a reimplementation"
       elif [[ -n "$L3_KERN" && "$rk" != "$L3_KERN" ]]; then
         fail "$r: runs microkernel $rk where Sgemm in the same run dispatched $L3_KERN — a second kernel family, or a shape chosen by something other than the classification P3's gate checks"
       else
@@ -781,7 +781,7 @@ else
     else
       rl1="$(field l1 "$cfg")"
       if [[ -z "$rl1" ]]; then
-        fail "$r: keel-p4-config has no l1=, so what its inner loop derives from is unrecorded"
+        unmeasured "$r: keel-p4-config has no l1=, so what its inner loop derives from cannot be read"
       elif [[ -n "$L1_ACTIVE" && "$rl1" != "$L1_ACTIVE" ]]; then
         fail "$r: runs Level-1 backend $rl1 where this run's dispatched backend is $L1_ACTIVE"
       else
@@ -843,7 +843,7 @@ SYRK_MISSED=0
 SYRK_INDET=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
-  fail "no execution hosts, so the Ssyrk/Sgemm ratio cannot be evaluated"
+  unmeasured "no execution hosts, so the Ssyrk/Sgemm ratio cannot be evaluated: unmeasured, not missed"
 else
   if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
     pass "cross-compiled linux/amd64 bench binary (Sgemm + Ssyrk + peak)"
@@ -858,13 +858,16 @@ else
     # that changed in between belongs to a machine somebody started using, and the
     # reading it produces is not one §5 rule 5 covers.
     gov="$(remote_probe "$host" | sed -n 's/.*governor=\([^ |]*\).*/\1/p')"
-    if [[ "$gov" != performance ]]; then
-      fail "[$host] governor is '${gov:-unknown}' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5 rule 5"
+    if [[ -z "$gov" || "$gov" == unknown ]]; then
+      unmeasured "[$host] the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed"
+      continue
+    elif [[ "$gov" != performance ]]; then
+      fail "[$host] governor is '$gov' at measurement time, not performance: it changed after this gate's preamble checked it, so nothing measured here is covered by §5 rule 5"
       continue
     fi
     if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" \
          -test.bench="$P4_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
-      fail "[$host] the Ssyrk/Sgemm benchmark run failed"
+      unmeasured "[$host] the Ssyrk/Sgemm benchmark run failed, so this host's ratio is unmeasured"
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
@@ -1001,7 +1004,7 @@ else
         ;;
     esac
   done <<<"$HOSTS"
-  [[ -n "$DRIFT_CHECKED" ]] || fail "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA were never checked against the object code"
+  [[ -n "$DRIFT_CHECKED" ]] || unmeasured "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA are unchecked against the object code — unmeasured, not drifted"
   # The aggregate inherits the three states, in the order that keeps a real miss
   # from hiding behind a noisy host: one host below the bar is a red whatever the
   # others did, and only when nothing is below the bar does indeterminacy become

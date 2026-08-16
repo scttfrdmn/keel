@@ -330,7 +330,7 @@ score_run "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK"
 HOSTS="$(remote_hosts)"
 AVX512_GREEN=""
 if [[ -z "$HOSTS" ]]; then
-  fail "P2 needs an amd64 host to execute the AVX-512 kernel; none configured"
+  unmeasured "P2 needs an amd64 host to execute the AVX-512 kernel and none is configured, so the kernel is unmeasured on real silicon"
 else
   if remote_build_test ./internal/kern "$BIN" >"$LOG" 2>&1; then
     pass "cross-compiled linux/amd64 kernel test binary"
@@ -342,7 +342,7 @@ else
     [[ -n "$host" ]] || continue
     prov="$(remote_probe "$host" || true)"
     if [[ -z "$prov" ]]; then
-      fail "[$host] unreachable"
+      unmeasured "[$host] unreachable, so this target produced no reading"
       continue
     fi
     info "[$host] $prov"
@@ -380,7 +380,7 @@ for f in ${KERN_FUNCS//,/ }; do
   if [[ -s "$SSADIR/$f.html" ]]; then
     info "ssa.html archived: $SSADIR/$f.html ($(wc -c <"$SSADIR/$f.html" | tr -d ' ') bytes; gitignored, see KERNEL.md)"
   else
-    fail "no ssa.html archived for $f — the 'why' behind any spill would be unavailable"
+    unmeasured "no ssa.html archived for $f — the 'why' behind any spill would be unavailable, so this audit has nothing to read"
   fi
 done
 
@@ -445,7 +445,7 @@ IPF_PEAK="$(audit_ipf "$GATE_PEAK_FUNC" "$AUDITPEAK")"
 if [[ -n "$IPF_2x32" && -n "$IPF_4x32" && -n "$IPF_PEAK" ]]; then
   info "audited insns/FMA: 2x32 $(printf '%.3f' "$IPF_2x32"), 4x32 $(printf '%.3f' "$IPF_4x32"), $GATE_PEAK_FUNC $(printf '%.3f' "$IPF_PEAK") (roofline inputs)"
 else
-  fail "could not read insns/FMA from the audits (2x32='$IPF_2x32' 4x32='$IPF_4x32' peak='$IPF_PEAK'); hosts cannot be classified"
+  unmeasured "could not read insns/FMA from the audits (2x32='$IPF_2x32' 4x32='$IPF_4x32' peak='$IPF_PEAK'), so hosts cannot be classified"
 fi
 BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
@@ -453,7 +453,7 @@ while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 PERF_GOV_HOST=""
 N_CLEARED=0
 if [[ -z "$HOSTS" ]]; then
-  fail "the 55% criterion needs an amd64 host; none configured"
+  unmeasured "the 55% criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
 else
   if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
     pass "cross-compiled linux/amd64 bench binary"
@@ -467,7 +467,7 @@ else
     info "[$host] governor=${gov:-unknown}"
     if ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench="$BENCH_FILTER" \
          >"$BENCHLOG" 2>&1; then
-      fail "[$host] benchmark run failed"
+      unmeasured "[$host] the benchmark run failed, so this host's percent-of-peak is unmeasured rather than below the floor"
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
@@ -527,7 +527,7 @@ else
       continue
     fi
     if [[ -z "$BEST_LO" ]]; then
-      fail "[$host] no bounded percent-of-peak: benchstat established no confidence interval for${UNBOUNDED}"
+      unmeasured "[$host] no bounded percent-of-peak: benchstat established no confidence interval for${UNBOUNDED}"
       continue
     fi
     frac="$(awk -v r="$BEST_LO" 'BEGIN{printf "%.1f", r * 100}')"

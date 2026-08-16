@@ -9,6 +9,45 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The converse sweep: 74 gate sites that report a reason the gate could not look now print
+  UNMEASURED, under one rule written down where the primitive lives** (ruled 2026-08-15 on
+  #73; `scripts/remote.sh`). #72 relabeled the 21 sites whose own message text already said
+  "unmeasured" under a FAIL label. This is the other direction — every site whose message
+  gives a *reason it could not measure* and prints FAIL anyway — and it lands before the
+  first green rather than after, because unlike #72 it is not verdict-neutral by
+  construction: it checks preconditions that were previously assumed, and a certificate
+  issued by a gate carrying unchecked preconditions is a green with an asterisk. The rule,
+  and it is a rule and not a phrase list: **FAIL when the gate obtained the reading the
+  criterion asks for and the reading is wrong** — a test that ran and failed, a set that was
+  enumerated and is short, a governor that answered `powersave`; **UNMEASURED when the
+  reading does not exist** — the host did not answer, the run died, the marker is absent,
+  benchstat established no interval, there was no host to ask. Tie-break for an arguable
+  site: does the sentence assert something about *keel* or about the *measurement*? Only the
+  first may be FAIL, and "keel does not reach 60% of OpenBLAS" is a claim about keel that a
+  run with no hosts has not earned. **This harmonises the older governor rule rather than
+  weakening it**: "unreadable counts as unmet" was written before UNMEASURED existed as a
+  third column, and its intent — unreadability is not an exemption — is preserved exactly,
+  since `unmeasured()` sets `FAIL=1` on the same line `fail` does. An unreadable governor
+  still stops the gate; it stops *asserting the governor was wrong* when the truth is nobody
+  could look. Distribution: 2 in `gate-p0`, 6 in `gate-p1`, 7 in `gate-p2`, 27 in `gate-p3`,
+  19 in `gate-p4`, 13 in `gate-p5`. **Four of them were split rather than relabeled**, because
+  one branch was two facts wearing one label: a boost knob nobody could read against one that
+  did not move (`gate-p5`), a forced run that failed before reporting its dispatch against one
+  that reported it and failed anyway (`gate-p5` — the marker is the discriminator), and a
+  governor unreadable at measurement time against one that changed mid-run (`gate-p3`,
+  `gate-p4`). Both branches of each still block. What **stays** FAIL is the audited residue,
+  not what the grep missed: every "missing from the sweep", "lattice is incomplete", "does
+  not match its own enumeration", "not on the allowlist", "below the bar", "governor is
+  `powersave`", "only N of M configured targets ran" and every failed build or failed test —
+  all readings the gate has. `gate-p5.sh:534` is the paired case worth reading beside its
+  twin: **$ncpu CPUs were read** and the criterion names more, so the environment is wrong
+  and the label says so, two lines below the unreadable-count branch that now says
+  UNMEASURED. The sweep was audited in two batches: #73's own 37-site population, then the 37
+  sites in the same *conditions* whose wording had kept them out of it — a phrase-defined
+  population is not condition-closed, and relabeling `no execution hosts, so the scaling
+  criterion cannot be evaluated` while leaving `P5 needs an amd64 host … none configured`
+  three hundred lines up would have replaced one same-event-opposite-label defect with
+  another.
 - **21 gate criteria that already said "unmeasured" in their own message text now say it in
   their label, and no gate's path to green moved** (ruled 2026-08-15 on #72; `DESIGN.md`
   §5.6). Auditing every `fail` call across the six gates for what it *asserts* turned up 21

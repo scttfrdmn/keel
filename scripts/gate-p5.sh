@@ -494,7 +494,7 @@ if [[ -n "$HOSTS" ]]; then
     [[ -n "$host" ]] || continue
     prov="$(remote_probe "$host" || true)"
     if [[ -z "$prov" ]]; then
-      fail "[$host] unreachable"
+      unmeasured "[$host] unreachable, so this target produced no reading"
       continue
     fi
     info "[$host] $prov"
@@ -502,7 +502,7 @@ if [[ -n "$HOSTS" ]]; then
     if [[ "$hgov" == performance ]]; then
       pass "[$host] cpufreq governor is performance (§5 rule 5)"
     elif [[ -z "$hgov" || "$hgov" == unknown ]]; then
-      fail "[$host] scaling_governor is unreadable, so §5 rule 5 cannot be verified; an unchecked precondition is not a met one"
+      unmeasured "[$host] scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does"
     else
       fail "[$host] cpufreq governor is '$hgov', not performance (§5 rule 5): a ramping core produces cold readings that enter the record as measurements"
       info "  [$host] sudo cpupower frequency-set -g performance"
@@ -514,7 +514,7 @@ if [[ -n "$HOSTS" ]]; then
     # checking this by hand needs to know which knob was read.
     bst="$(remote_boost "$host" || true)"
     if [[ -z "$bst" || "${bst%% *}" == unknown ]]; then
-      fail "[$host] no readable boost/turbo knob (${bst:-no answer}), so the scaling criterion's two arms cannot be asserted to share a frequency regime (#66): unreadable counts as unmet"
+      unmeasured "[$host] no readable boost/turbo knob (${bst:-no answer}), so the scaling criterion's two arms cannot be asserted to share a frequency regime (#66): unreadable is not an exemption — it blocks this gate exactly as an unmet knob does, and stops claiming the knob was wrong when nobody could read it"
     else
       info "[$host] boost knob: ${bst%% *} at ${bst#* } — this gate sets it off for the judged pass and restores it"
     fi
@@ -524,10 +524,14 @@ if [[ -n "$HOSTS" ]]; then
     topo="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" 'lscpu 2>/dev/null | sed -n "s/^Thread(s) per core: *//p;s/^Core(s) per socket: *//p;s/^Socket(s): *//p" | tr "\n" " "' 2>/dev/null || true)"
     ncpu="$(sed -n 's/.*| \([0-9]*\) cpus |.*/\1/p' <<<"$prov")"
     info "[$host] threads-per-core / cores-per-socket / sockets: ${topo:-unreadable}; nothing is pinned, placement is the scheduler's (#15)"
+    # The two branches are the three-way taxonomy's pair, and #73 rules them
+    # apart deliberately: an unreadable count is a reading nobody got, a count
+    # that reads short is a reading the gate has and the environment fails. Both
+    # block; only the attribution differs.
     if [[ -z "$ncpu" ]]; then
-      fail "[$host] CPU count unreadable, so \"at $P5_THREADS cores\" cannot be verified here"
+      unmeasured "[$host] CPU count unreadable, so \"at $P5_THREADS cores\" cannot be verified here"
     elif [[ "$ncpu" -lt "$P5_THREADS" ]]; then
-      fail "[$host] $ncpu CPUs, fewer than the $P5_THREADS the criterion names: this host cannot produce a reading of it"
+      fail "[$host] $ncpu CPUs were read and the criterion names $P5_THREADS: this host is too small to produce a reading of it"
     else
       pass "[$host] $ncpu CPUs, enough for the $P5_THREADS the criterion names"
     fi
@@ -543,7 +547,7 @@ info "from a host that ran it with the avx512 microkernel live (toolchain-notes 
 
 AVX512_GREEN=""
 if [[ -z "$HOSTS" ]]; then
-  fail "P5 needs an amd64 host with $P5_THREADS cores to execute the AVX-512 paths; none configured"
+  unmeasured "P5 needs an amd64 host with $P5_THREADS cores to execute the AVX-512 paths and none is configured, so they are unmeasured on real silicon"
 else
   if remote_build_test . "$BIN" >"$LOG" 2>&1; then
     pass "cross-compiled linux/amd64 test binary (root package: parallel correctness)"
@@ -585,8 +589,16 @@ else
       # run that quietly produced an avx2 microkernel would now fail here, which
       # is the point: the ruling narrowed what is claimed, and a claim that grows
       # back silently is exactly what this gate exists to catch.
-      if [[ "$FOK" -ne 0 ]]; then
-        fail "[$host] KEEL_FORCE=$want: the forced run failed"
+      # A failed forced run splits two ways under #73's taxonomy, and the marker
+      # is the discriminator: no dispatch line at all means the binary never got
+      # far enough to say what it selected, so the override is unmeasured here;
+      # a dispatch line plus a nonzero exit means the binary ran and something it
+      # asserts about its own dispatch is untrue, which is a FAIL about keel.
+      if [[ "$FOK" -ne 0 && -z "$got$gotk" ]]; then
+        unmeasured "[$host] KEEL_FORCE=$want: the forced run failed before reporting any dispatch, so what the override selects is unmeasured here rather than wrong"
+        sed 's/^/        /' "$LOG" | tail -20
+      elif [[ "$FOK" -ne 0 ]]; then
+        fail "[$host] KEEL_FORCE=$want: the forced run failed with dispatch reporting l1='${got:-none}' kern='${gotk:-none}', so the binary ran and something it asserts is untrue"
         sed 's/^/        /' "$LOG" | tail -20
       elif [[ "$got" != "$want" ]]; then
         fail "[$host] KEEL_FORCE=$want was asked for and the L1 dispatcher selected '${got:-none}': the override is not wired to what dispatch actually selects"
@@ -615,13 +627,13 @@ else
   if [[ -n "$AVX512_GREEN" ]]; then
     pass "the suite ran green with the avx512 microkernel live (audited from $AVX512_GREEN)"
   else
-    fail "no host ran the suite green with the avx512 microkernel, so the parallel markers below are unauditable"
+    unmeasured "no avx512-green suite run to audit, so the parallel markers below are unmeasured (a fleet that ran green without avx512 is a separate verdict, and the per-host lines above carry it)"
   fi
 fi
 
 # ---- what the parallel tests declared they proved
 if [[ ! -s "$SWEEPLOG" ]]; then
-  fail "no avx512 test log to audit, so determinism, no-state and the declared dispatch chain are all unverified"
+  unmeasured "no avx512 test log to audit, so determinism, no-state and the declared dispatch chain are all unmeasured"
 else
   for r in $P5_JUDGED $P5_MEASURED; do
     det="$(p5_line p5-determinism "$SWEEPLOG" "$r")"
@@ -732,7 +744,7 @@ race_verdict "[local $(go env GOHOSTOS)/$(go env GOHOSTARCH), scalar path]" "$RA
 
 RACE_HOSTS=0
 if [[ -z "$HOSTS" ]]; then
-  fail "no execution hosts, so the race detector never saw the vector path"
+  unmeasured "no execution hosts, so the race detector never saw the vector path: unmeasured, not clean and not raced"
 elif [[ "$TREE_CLEAN" -eq 0 ]]; then
   unmeasured "the native race build did not run: this gate refused a dirty tree above, and a check that could not run is unmeasured rather than clean"
 else
@@ -784,7 +796,7 @@ while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 SCALE_HOSTS_OK=0
 SCALE_HOSTS_MEASURED=0
 if [[ -z "$HOSTS" ]]; then
-  fail "no execution hosts, so the scaling criterion cannot be evaluated"
+  unmeasured "no execution hosts, so the scaling criterion cannot be evaluated: unmeasured, not missed"
 else
   if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
     pass "cross-compiled linux/amd64 bench binary (Scale + Peak)"
@@ -813,8 +825,15 @@ else
     fi
     BOOST_TOUCHED="$BOOST_TOUCHED $host"
     bst="$(remote_boost "$host" || true)"
-    if [[ "${bst%% *}" != off ]]; then
-      fail "[$host] boost reads '${bst%% *}' after being set off (${bst#* }): unmoved or unreadable counts as unmet, so the two arms cannot be asserted to share a regime (#66)"
+    # The read-back, split by #73: the old single branch collapsed "the knob was
+    # read and did not move" with "nobody could read the knob", and only the
+    # first is a statement about the environment.
+    if [[ -z "$bst" || "${bst%% *}" == unknown ]]; then
+      unmeasured "[$host] boost is unreadable after being set off (${bst:-no answer}), so this host's two arms cannot be asserted to share a regime (#66): unreadable is not an exemption, it is a reading nobody got"
+      remote_boost_set "$host" on >/dev/null 2>&1 || true
+      continue
+    elif [[ "${bst%% *}" != off ]]; then
+      fail "[$host] boost reads '${bst%% *}' after being set off (${bst#* }): the knob was read and did not move, so the two arms cannot be asserted to share a regime (#66)"
       remote_boost_set "$host" on >/dev/null 2>&1 || true
       continue
     fi
@@ -824,7 +843,7 @@ else
     # (criterion 2) and the harness sets it per row; pinning it in the environment
     # would cap the eight-thread row at whatever this line happened to say.
     if ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench="$P5_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
-      fail "[$host] the scaling benchmark run failed (boost-off pass)"
+      unmeasured "[$host] the scaling benchmark run failed (boost-off pass), so this host's judged ratio is unmeasured — the same event the boost-on pass below already called unmeasured"
       sed 's/^/        /' "$BENCHLOG" | tail -20
       remote_boost_set "$host" on >/dev/null 2>&1 || true
       continue
@@ -902,7 +921,7 @@ else
       lo="$(bench_ratio_lo "$many" "$one" "$BENCHCSV" GFLOP/s)"
       pt="$(bench_ratio "$many" "$one" "$BENCHCSV" GFLOP/s)"
       if [[ -z "$lo" ]]; then
-        fail "[$host] $r: no bounded scaling ratio — benchstat established no interval, which is a failure to measure rather than a pass"
+        unmeasured "[$host] $r: no bounded scaling ratio — benchstat established no interval, which is a failure to measure rather than a pass"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
       fi
