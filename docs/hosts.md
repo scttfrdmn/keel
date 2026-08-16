@@ -33,7 +33,7 @@ checked in.
 | AVX2 + FMA | the AVX2 backend; `archsimd.X86.AVX2() && .FMA()` |
 | AVX-512 F/CD/BW/DQ/VL | the bundle `archsimd.X86.AVX512()` gates on — all five, or the backend does not register |
 | key-based ssh from the dev host | `remote.sh` uses `BatchMode=yes`; it never prompts and never handles credentials |
-| `performance` governor | for gate numbers, not correctness. DESIGN.md §5.4 rule 5 requires at least one host to clear a perf bar under it; every host must still clear the bar |
+| `performance` governor | for gate numbers, not correctness. DESIGN.md §5 rule 5 requires at least one host to clear a perf bar under it; every host must still clear the bar |
 
 ## Current targets
 
@@ -195,9 +195,19 @@ vesta) that could host any future reduced-precision parking-lot work.
 
   What is not in question: the register-only peak measurement was unaffected (0.4%
   across three runs), so whatever this is, it appears only once a benchmark touches
-  memory. The net-of-CI rule absorbed it correctly either way, reporting 9.14×,
-  8.96× and 8.79× across three runs, which is the rule doing its job rather than a
-  reason to trust the point estimate.
+  memory. The net-of-CI rule absorbed it correctly either way, reporting 9.13×,
+  9.29× and 10.37× across the three runs above, which is the rule doing its job
+  rather than a reason to trust the point estimate.
+
+  > **Correction, 2026-08-16 (#79).** This paragraph previously read "reporting
+  > 9.14×, 8.96× and 8.79× across three runs". That trio is not from these runs: it
+  > was published on 2026-08-11 by `4643b63`, *before* the governor fix, and the
+  > three runs tabled immediately above report 9.13× / 9.29× / 10.37×. The
+  > misattribution also reversed the paragraph's own point — the trio it quoted
+  > spans 4.0%, the runs it was describing span 13.6%, so it cited a tight spread as
+  > evidence while the data in front of it was the loose one. The 2026-08-11 trio has
+  > no surviving derivation at all (see the note at the summary table below); the
+  > figures here are the ones this section actually measured.
 
 Also worth noting for P3 rather than P2: this is an APU with unified LPDDR5X
 rather than separate DIMM channels, so its bandwidth and cache hierarchy differ
@@ -320,7 +330,7 @@ loop is not evidence about the AVX-512 kernel P3's criterion is actually about.
 
 Two of the longer local runs of the *identical* pinned configuration also came in
 at 119 and 712 GFLOP/s — up to 12× run-to-run — which is what a laptop with no
-governor to pin and an aggressive QoS scheduler looks like. DESIGN.md §5.4's
+governor to pin and an aggressive QoS scheduler looks like. DESIGN.md §5 rule 5's
 methodology exists to exclude exactly this, and it is a second, independent reason
 no number from this machine is reportable.
 
@@ -378,6 +388,28 @@ Sdot column in particular is not directly comparable with a re-run today. The
 measurements stand as records of what was measured; they are not restated as
 current.
 
+> **Provenance of antares's Sdot trio, audited 2026-08-16 (#79).** Stronger than
+> "dated": the trio is **unprovenanced**. No archived log in this tree contains
+> `8.96×` as an Sdot ratio at all, so the derivation of at least one of its three
+> entries no longer exists — DESIGN.md §5 rule 8's terminal case, a derived figure
+> whose log is gone. Readings of the same quantity under the same methodology with
+> the governor read back as `performance` are consistently higher: four archived
+> `gate-p1` logs give 9.626× / 9.716× / 9.728× / 9.740× net of CI, and this
+> document's own 2026-08-12 re-measurement gives 9.13× / 9.29× / 10.37×. Against
+> those, the published `8.79×` is 9–10% low.
+>
+> The leading explanation for the trio's shape is arithmetic rather than physical:
+> `9.14` is, to three significant figures, the **raw** ratio of the run whose
+> net-of-CI is `8.79`, so a list captioned "net of CI" may hold one raw value and
+> "three runs" may be two. That is a hypothesis, not a finding.
+>
+> The governor is **not** credited with causing the gap. #44 established that it was
+> a suspect *removed*, not a cause *shown*, and inferring here what that
+> investigation declined to infer from data would repeat the error one document
+> later. The figures are marked, not rewritten (#79's ruling): the gap is real, the
+> direction is consistent across seven independent readings, and the cause is
+> unestablished.
+
 GFLOP/s, float32. The width ratio is the useful column: it is a direct
 measurement of the datapath, requiring no clock estimate, port count or
 frequency-license assumption, because both halves were measured on the same host
@@ -389,7 +421,9 @@ between a register-only kernel and one that touches memory.
 Three gate runs over a few hours reported the same Sdot ratio as **8.71×, 7.18×
 and 8.57×** net of CI, while benchstat's within-run interval was 0–2% every
 time. janus reproduced to 0.9% across the three (7.55×, 7.48×, 7.53×) and
-antares to 4% (9.14×, 8.96×, 8.79×). So this is specific to vesta, and the
+antares to 4% (9.14×, 8.96×, 8.79× — but see the provenance note below; the
+`performance`-era readings of that host span 13.6%, not 4%). So this is specific to
+vesta, and the
 *shape* is informative: two runs agree to 1.6% and one sits 17% below them.
 Thermal drift would be monotonic in run order; a bimodal distribution with a
 tight upper cluster is what core placement looks like. The 7950X3D has two CCDs,

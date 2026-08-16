@@ -82,7 +82,7 @@ While the major version is 0, minor versions may contain breaking changes.
   `set -euo pipefail` a helper returning non-zero for "criterion not met" becomes the gate's own
   status in tail position and kills the run with *no verdict line at all* — an absent verdict, not
   a wrong one, indistinguishable from a kill (#76, #80). Enumerated before the lift: **five
-  independent drifts across the ten copies** (two sites × five gates) — a `§5.4` citation naming a
+  independent drifts across the ten copies** (two sites × five gates) — a `§5.4` citation <!-- citation-lint:quote --> naming a
   section `DESIGN.md` does not have (#85), `info "governor=${gov:-unknown}"` printing a reading for
   a host that answered nothing, "preamble checked it" vs "preamble read it", a `sudo tee`
   remediation hint present in one gate and absent in four (the lifted version prints the union),
@@ -376,6 +376,87 @@ While the major version is 0, minor versions may contain breaking changes.
   Derived figures are recomputed from the log at the moment of writing, never carried
   forward from prose. Third documented instance across two authors, which is what makes
   it a named trap rather than a slip.
+- **`DESIGN.md` §5 gains rule 9: a citation is a claim about where the grounds are, and
+  it is checked like any other claim** (#85). Every gate cites `DESIGN.md` for its
+  authority, so a citation landing on the wrong rule misdirects every reader who follows
+  it while looking exactly like a correct one. The rule names three non-interchangeable
+  instruments — **resolution** (does it land), **pinning** (has it moved), and
+  **mint-verification** (was it ever right, which cannot be automated) — and legislates
+  the forward convention: new citations use the explicit `§5 rule 5` form; audited-correct
+  `§X.Y` shorthand stays byte-for-byte; a citation naming another document is declared,
+  not guessed at.
+- **`make lint` and CI's stock job now run `scripts/citation-lint.sh`** (#85), which
+  resolves every `DESIGN.md` rule citation in the tree against `DESIGN.md`'s actual
+  structure and pins each distinct form beside the first words of the item it lands on
+  (`docs/citation-targets.txt`). It lives in the stock job because it needs a git
+  checkout but no toolchain, so it cannot be skipped.
+  - **The premise the check was opened on was false, and that changed the law rather
+    than the sweep.** The 18 `§5.4` citations were assumed to be a *renumbering* casualty. <!-- citation-lint:quote -->
+    They are not: `git show 4643b63:DESIGN.md` shows the methodology rule was already
+    item **5** in the same commit that wrote the first `§5.4`, and §7's eight leads are <!-- citation-lint:quote -->
+    byte-identical from `6a862d7` to `HEAD`. Nothing was ever renumbered — the ordinals
+    were **mis-minted at birth**. So a pin certifies *stability*, never
+    *birth-correctness*, and would have frozen all 18 defects with perfect fidelity while
+    passing forever. The baseline is therefore **audited**, once, at the meaning level:
+    every citation's ordinal read against the content the citing site actually invokes,
+    with the audit's date and census recorded in the pin file so a later reader knows the
+    freeze rested on a reading rather than an assumption.
+  - **Census: 120 sites; 8 naming another document; 112 `DESIGN`-bound, of which 92 land
+    on the content they invoke and 20 were mis-minted.** Sixteen were rewritten to the
+    explicit form (14 × `§5.4`, plus two found *inside* populations that resolved <!-- citation-lint:quote -->
+    perfectly: `DESIGN.md`'s own §7 citation of the tolerances rule where it argued the
+    denominator rule, and `l1_test.go`'s §5 citation of the differential rule where it
+    argued the tolerance-model rule). Four are deliberate quotations of the bad form and
+    are **marked, never normalised** — the record of the defect is the point, same law as
+    #79. The 25 audited-correct shorthand sites were left untouched: rewriting a correct
+    citation in the document the gates cite as grounds is churn dressed as rigour.
+  - **The two mis-minted sites outside the `§5.4` population were found by an instrument <!-- citation-lint:quote -->
+    the other two cannot supply: cross-site argument identity.** `scripts/gate-p5.sh` and
+    `DESIGN.md` made the *same* argument — "an advertised chain whose middle link no gate
+    can back is a claim, not a measurement" — under two different rule numbers, and
+    reading the rule bodies picked the denominator rule over the tolerances rule. Content
+    adjudicates, not majority.
+  - **Scoping to the document a citation actually names is the check's load-bearing
+    feature, and it was proven by near-miss.** An earlier draft condemned `§X.Y` *by form*,
+    on the true observation that `DESIGN.md` has no subsections. That draft would have
+    demanded 25 zero-semantic edits to correct citations **and** filed a peer-reviewed
+    paper's section numbering (Van Zee & van de Geijn, TOMS 2015 §4.3) as a defect in
+    keel's constitution — the false-defect class #63's near-filing established the norm
+    against. Such references are now **declared** in the pin file, each declaration
+    carrying **the number of sites it covers**, so an exemption cannot silently widen:
+    fewer means it is stale, more means it has grown to cover a citation nobody read,
+    and the fix is to read the new site and bump the count deliberately. The invariant
+    is not "exactly one site" — `CHANGELOG.md` legitimately cites the paper twice — it
+    is *exactly the number someone read*. That check caught its own documentation: this
+    entry added two more `§4.3` references, the count went red, and reading them found <!-- citation-lint:quote(4.3) -->
+    one that does not cite the paper at all (it names the notation while explaining the
+    marker) and so belonged in a quote marker rather than the exemption.
+- **`scripts/citation-lint-test.sh` drives all ten of the lint's branches on purpose**
+  (#85). A healthy tree reaches exactly one of them, so a green from the lint alone is
+  not evidence that any check but the clean path works — and three of these controls guard
+  a *silent* failure rather than a loud one. Two defects were caught by running it rather
+  than reading it: rewrapping a comment moved a `citation-lint:quote` marker one line off
+  its citation, which stops suppression with no diff to notice; and the harness's own
+  `EXIT` trap referenced a `local` variable out of scope, leaking its temp directory. An
+  earlier draft also restored with `git checkout --`, which reverted two files to `HEAD`
+  and discarded uncommitted work — file backups cannot do that.
+- **The quote marker takes a scoped form, `citation-lint:quote(5.4)`** (#85), because
+  line granularity is too coarse for this document: `DESIGN.md`'s numbered rules are
+  single 2000-character lines, and §5 rule 9 quotes `§5.4` on a line that also carries a <!-- citation-lint:quote(5.4,4.3) -->
+  live `§5 rule 5` and an external `§4.3`. A bare marker there would have stopped <!-- citation-lint:quote(4.3,5 rule 5) -->
+  checking all three while printing nothing — over-suppression by construction, the same
+  failure the declaration-narrowness check guards on the other side.
+- **Every `gate-p2` classification branch now publishes the measured interval beside the
+  point estimate, or states why it has none** (#86, `scripts/gate-p2.sh`). Three branches
+  still reported the point spread alone — `samemix`, `falsified` and `nearceiling` — and
+  `falsified`/`falsifiedanyway` reported a point attainment where an interval was
+  available. §5 rule 8's publish-the-pair clause has no per-branch exemption, and the
+  branch a reader reaches is exactly the branch whose numbers they need: a pair present
+  in eight renderings and absent in the ninth reads as *"this one had no interval"*
+  rather than *"this one forgot"*. `nomixes` is the one true exemption — no ceiling was
+  established, so there is no spread to bracket — and now says so in its own text. The
+  invariant is recorded above the `case` so the next reader sees a rule rather than a
+  pattern; it has drifted twice.
 
 ### Fixed
 - **`gate-p0` exited 1 with no verdict line at all when a host failed its tests while
@@ -1105,7 +1186,7 @@ While the major version is 0, minor versions may contain breaking changes.
   enforced per-backend coverage on every host, the whole suite re-run under
   `KEEL_FORCE=scalar` on machines that *have* AVX-512 (a scalar pass on arm64
   would not prove the override works), and the ≥4× Sdot ratio measured
-  within-machine under the §5.4 methodology — benchstat median, cleared net of
+  within-machine under the §5 rule 5 methodology — benchstat median, cleared net of
   its confidence interval, on every host, with at least one clearing it under the
   `performance` governor. It also measures and prints each host's FMA peak and
   512/256 width ratio: not a P1 criterion, but P2 divides by that number, so both
@@ -2152,7 +2233,7 @@ While the major version is 0, minor versions may contain breaking changes.
     with the vendors reversed, which the allowlist structurally cannot catch
     because it contains both the right and the wrong answer for every gate host.
     Selection is best-of-N; the number that enters the record is still measured
-    under the full §5.4 methodology with the winner pinned. antares and janus
+    under the full §5 rule 5 methodology with the winner pinned. antares and janus
     default correctly (Cooperlake 297.2, SkylakeX 193.5) and the sweep confirms it
     by measurement rather than by assumption.
   - **The performance governor is asserted on every host in a preamble, not
@@ -2275,12 +2356,15 @@ While the major version is 0, minor versions may contain breaking changes.
   reproduce to within 0.4% between runs — a register-only kernel has no cache or
   placement to be lucky about.
 - **Gate benchmarks: `-count=10 -benchtime=1s`, benchstat medians, thresholds
-  cleared net of CI** (DESIGN.md §5.4 rule 5, issue #14). `-benchtime=3x` is now
+  cleared net of CI** (DESIGN.md §5 rule 5, issue #14). `-benchtime=3x` is now
   for smoke runs only.
 - **P1's Sdot ratios are re-derived under that methodology and supersede the
   first ones**, which came from `-benchtime=3x -count=5` reduced by
   min-of-samples. Net of CI, over three gate runs: 8.71×/7.18×/8.57× on Zen 4,
-  7.55×/7.48×/7.53× on Skylake-X, 9.14×/8.96×/8.79× on Zen 5. The old numbers —
+  7.55×/7.48×/7.53× on Skylake-X, 9.14×/8.96×/8.79× on Zen 5 (**the Zen 5 trio is
+  unprovenanced — no archived log contains `8.96×`, and `performance`-era readings
+  of the same quantity run 9.13×–10.37×; see #79 and the provenance note in
+  `docs/hosts.md`**). The old numbers —
   4.28×, 5.91×, 4.09× — were not merely noisy but biased low by roughly 2×: three
   iterations of a 4096-element kernel measure cold caches and frequency ramp,
   both of which cost the vector path proportionally more. The remaining
@@ -2320,7 +2404,11 @@ While the major version is 0, minor versions may contain breaking changes.
   scalar on machines that have AVX-512, and clear the ≥4× Sdot floor at n=4096
   on every host, net of benchstat's confidence interval: 8.57× on Zen 4 (Ryzen 9
   7950X3D), 7.53× on Skylake-X (i9-9960X), 8.79× on Zen 5 (Ryzen AI MAX+ 395),
-  with at least one host clearing it under the `performance` governor.
+  with at least one host clearing it under the `performance` governor. (**The Zen 5
+  figure is unprovenanced and reads 9–10% low against `performance`-era
+  measurements of the same quantity; #79, and the provenance note in
+  `docs/hosts.md`. It is marked rather than restated — the gate it cleared, it
+  cleared.**)
 - **Gate P2 was RED on the flat 55%-of-peak floor, and P2 is a go/no-go rather
   than a hurdle, so work stopped there and the decision went to Scott (issue
   #19).** Every compile-time criterion passed on both shipped shapes — 0

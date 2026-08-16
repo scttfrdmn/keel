@@ -13,6 +13,13 @@ jobs:
       - run: go build ./...
       - run: go vet ./...
       - run: go test ./...
+      # #85: every DESIGN.md rule citation must resolve against DESIGN.md's actual
+      # structure. Self-test first — the lint reaches only its clean path on a
+      # healthy tree, so a green from the lint alone leaves seven branches untested.
+      # It needs a git checkout (it enumerates sites with `git ls-files`) but no
+      # toolchain, so it lives in the stock job where it cannot be skipped.
+      - run: bash scripts/citation-lint-test.sh
+      - run: bash scripts/citation-lint.sh
   simd:
     name: GOEXPERIMENT=simd
     runs-on: ubuntu-latest

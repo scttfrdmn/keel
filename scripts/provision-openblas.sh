@@ -257,7 +257,7 @@ install_go() {
 # This is the check that matters, and it is deliberately the gate's own: same build
 # tag, same GOMAXPROCS=1 and OPENBLAS_NUM_THREADS=1 environment, same marker. A
 # short -benchtime, because the question here is what the reference IS, not how fast
-# it is; the gate measures the rate under §5.4's methodology.
+# it is; the gate measures the rate under §5 rule 5's methodology.
 verify() {
   local host="$1" out
   if [[ -n "$(git status --porcelain)" ]]; then
@@ -365,7 +365,7 @@ main() {
     lib="$(fieldof lib "$p")";       gov="$(fieldof governor "$p")"
     note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib governor=$gov"
     # A non-performance governor is now a failure, not a note (ruling with issue #31).
-    # It used to say "§5.4 rule 5 needs at least one gate host on performance", which
+    # It used to say (citation-lint:quote) "§5.4 rule 5 needs at least one gate host on performance", which
     # was true of the old gate and let antares sit on `powersave` while contributing
     # numbers: its first OpenBLAS reading was 245.0 GFLOP/s against a 296-297 steady
     # state. gate-p3.sh now fails any host that is not on performance, so a host in
@@ -378,7 +378,7 @@ main() {
     GOV_OK=1
     if [[ "$gov" != performance ]]; then
       GOV_OK=0
-      bad "governor is $gov, and the gate fails any host not on performance (DESIGN.md §5.4 rule 5)"
+      bad "governor is $gov, and the gate fails any host not on performance (DESIGN.md §5 rule 5)"
       note "this script does not change a machine's power policy. To set it:"
       note "  sudo cpupower frequency-set -g performance"
       note "  or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"

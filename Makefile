@@ -19,8 +19,14 @@ test-scalar:
 bench:
 	$(GOEXP) go test -run=NONE -bench=. -benchtime=3x ./bench/...
 
+# The citation lint resolves every DESIGN.md rule citation in the tree against
+# DESIGN.md's actual structure (#85). Its self-test runs first, because the lint
+# reaches only its clean path on a healthy tree and a green from it would otherwise
+# say nothing about the seven branches that matter.
 lint:
 	go vet ./...
+	bash scripts/citation-lint-test.sh
+	bash scripts/citation-lint.sh
 
 gate-p%:
 	scripts/gate-p$*.sh

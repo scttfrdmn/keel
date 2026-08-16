@@ -23,7 +23,7 @@ import (
 // per backend the machine can actually execute, with the allowed error coming
 // only from oracle.Tolerance. There are no epsilons in this file — if a
 // comparison needs more slack, the tolerance *model* is what gets argued about
-// (DESIGN.md §5.2), not one test's constant.
+// (DESIGN.md §5 rule 1), not one test's constant.
 //
 // The per-backend loop reassigns the package-level activeL1 rather than calling
 // internal/l1 kernels directly. That is deliberate: it puts the public routine,

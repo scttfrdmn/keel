@@ -284,7 +284,7 @@ memory-bandwidth measurement with a kernel attached.
 
 Both numerator and denominator come out of the *same* benchmark invocation on each
 host, so they share a frequency and thermal state. Both go through benchstat under
-the §5.4 methodology (issue #14): `-count=10 -benchtime=1s`, medians, and the bar
+the §5 rule 5 methodology (issue #14): `-count=10 -benchtime=1s`, medians, and the bar
 counts as cleared only net of both confidence intervals.
 
 The bar applies to the **best shipped shape per host**, since P3 will dispatch to

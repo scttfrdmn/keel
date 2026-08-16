@@ -331,7 +331,10 @@ remote_probe() {
 # four better copies are the same failure mode with a better master, and the next
 # labelling defect propagates just as cleanly. The drift inventory taken at the time
 # found five independent divergences across the ten copies (two sites x five gates):
-# a `§5.4` citation naming a section DESIGN.md does not have (#85), an
+# a `§5.4` citation (citation-lint:quote) — inventoried then as naming "a section
+# DESIGN.md does not have", which #85's audit corrected to a mis-minted item number:
+# read as the shorthand "§5, item 4" the form resolves, to the benchmarks-are-tests
+# rule rather than the methodology rule it meant — an
 # `info "governor=${gov:-unknown}"` that printed a reading for a host which had
 # answered nothing, "preamble checked it" against "preamble read it", a remediation
 # hint present in one gate and absent in four, and p5's better parse. Agreement

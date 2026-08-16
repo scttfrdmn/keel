@@ -68,7 +68,7 @@
 #     measured in the *same* benchmark invocation on each host, so they share a
 #     frequency and thermal state; a ratio of two numbers taken hours apart on
 #     one machine would be a worse measurement than either of them. Both come
-#     out of benchstat under the §5.4 methodology (issue #14): -count=10
+#     out of benchstat under the §5 rule 5 methodology (issue #14): -count=10
 #     -benchtime=1s, medians, and the 55% bar counts as cleared only net of
 #     both confidence intervals. Every host that can run the kernel must clear
 #     it, and at least one must do so under the performance governor.
@@ -628,9 +628,21 @@ else
     floorpc="$(awk -v r="$ROOF" -v f="$ROOF_FLOOR" 'BEGIN{printf "%.1f", r * f * 100}')"
     slackpc="$(awk -v s="$ROOF_SHAPE_SLACK" 'BEGIN{printf "%.0f%%", (s-1)*100}')"
 
+    # INVARIANT, and it has drifted twice: every branch below publishes the measured
+    # interval alongside the point estimate, or states why it has none. §5 rule 8's
+    # publish-the-pair clause has no per-branch exemption, and the branch a reader
+    # reaches is exactly the branch whose numbers they need — a pair present in eight
+    # renderings and absent in the ninth is worse than uniform absence, because it
+    # reads as "this one had no interval" rather than "this one forgot". `nomixes` is
+    # the only true exemption and says so in its own text.
     case "$WHY" in
       nomixes)
-        info "[$host] fewer than two ceiling mixes once $BEST_ID is excluded; no ceiling can be established, holding to the flat floor" ;;
+        # The one branch with no interval to publish, and it is exempt for a reason
+        # rather than by oversight: no ceiling was established, so there is no
+        # ceiling-spread reading to bracket. Naming that here keeps the exemption
+        # auditable — a future reader comparing branches sees a stated reason
+        # instead of the gap §5 rule 8's publish-the-pair clause exists to close.
+        info "[$host] fewer than two ceiling mixes once $BEST_ID is excluded; no ceiling can be established (so there is no spread to bracket), holding to the flat floor" ;;
       diverge)
         # The interval prints here too. This branch used to report the point spread
         # alone, and it is the branch the 2026-08-15 incident came out of — the one
@@ -638,17 +650,17 @@ else
         # bar. §5 rule 8's publish-the-pair clause has no per-branch exemption.
         info "[$host] ceiling mixes disagree on retirement rate (${csx}x, interval [${cslox}x, ${cshix}x], wholly over $ISSUE_CONVERGE_MAX) -> fma-bound: the front end is not the limit here" ;;
       falsifiedanyway)
-        info "[$host] the ceiling mixes' rate spread interval [${cslox}x, ${cshix}x] crosses the $ISSUE_CONVERGE_MAX bar, so whether they converge is undecided — but $BEST_ID retires at ${attpc}% of the ${roofpc}% roofline the converged reading would imply, above the ceiling at every point of that interval, so both branches say fma-bound and the class is decided anyway" ;;
+        info "[$host] the ceiling mixes' rate spread interval [${cslox}x, ${cshix}x] crosses the $ISSUE_CONVERGE_MAX bar, so whether they converge is undecided — but $BEST_ID retires at an attainment interval of [${attpc}%, ${atthipc}%] of the ${roofpc}% roofline the converged reading would imply, above the ceiling at every point of that interval, so both branches say fma-bound and the class is decided anyway" ;;
       samemixanyway)
         info "[$host] the ceiling mixes' rate spread interval [${cslox}x, ${cshix}x] crosses the $ISSUE_CONVERGE_MAX bar, but their insns/FMA differ by only ${msx}x (under $ISSUE_MIX_SPREAD_MIN), so no ceiling is established whether they converge or not -> fma-bound, decided anyway" ;;
       samemix)
-        info "[$host] ceiling mixes agree to ${csx}x but their insns/FMA differ by only ${msx}x (under $ISSUE_MIX_SPREAD_MIN), so the agreement is not evidence -> fma-bound" ;;
+        info "[$host] ceiling mixes agree to ${csx}x (interval [${cslox}x, ${cshix}x]) but their insns/FMA differ by only ${msx}x (under $ISSUE_MIX_SPREAD_MIN), so the agreement is not evidence -> fma-bound" ;;
       falsified)
-        info "[$host] ceiling mixes converge (${csx}x over a ${msx}x spread) but $BEST_ID retires *above* the ceiling they set — ${attpc}% of a ${roofpc}% roofline — so the issue-bound hypothesis is falsified by its own data -> fma-bound" ;;
+        info "[$host] ceiling mixes converge (${csx}x, interval [${cslox}x, ${cshix}x], over a ${msx}x spread) but $BEST_ID retires *above* the ceiling they set — attainment interval [${attpc}%, ${atthipc}%] of a ${roofpc}% roofline — so the issue-bound hypothesis is falsified by its own data -> fma-bound" ;;
       nearconverge)
         info "[$host] the ceiling mixes' rate spread is ${csx}x with an interval of [${cslox}x, ${cshix}x], which crosses the $ISSUE_CONVERGE_MAX bar: whether this host has a front-end ceiling is not decidable from this run's measurements" ;;
       nearceiling)
-        info "[$host] ceiling mixes converge (${csx}x over a ${msx}x spread), but $BEST_ID's attainment interval reaches [${attpc}%, ${atthipc}%] of the ${roofpc}% roofline, crossing 100%: whether the machine exceeds the ceiling its own mixes set is not decidable from this run" ;;
+        info "[$host] ceiling mixes converge (${csx}x, interval [${cslox}x, ${cshix}x], over a ${msx}x spread), but $BEST_ID's attainment interval reaches [${attpc}%, ${atthipc}%] of the ${roofpc}% roofline, crossing 100%: whether the machine exceeds the ceiling its own mixes set is not decidable from this run" ;;
       *)
         info "[$host] ceiling mixes converge ${csx}x (interval [${cslox}x, ${cshix}x], clear of $ISSUE_CONVERGE_MAX) over a ${msx}x spread in insns/FMA -> ${CLASS}-bound" ;;
     esac
@@ -700,7 +712,7 @@ else
   if [[ "$N_JUDGED" -eq 0 ]]; then
     unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared"
   elif [[ "$N_CLEARED" -eq "$N_JUDGED" ]]; then
-    pass "every host that produced a judgeable throughput reading cleared its floor ($N_CLEARED/$N_JUDGED), each under the performance governor asserted per host (§5.4 rule 5)"
+    pass "every host that produced a judgeable throughput reading cleared its floor ($N_CLEARED/$N_JUDGED), each under the performance governor asserted per host (§5 rule 5)"
   else
     fail "$((N_JUDGED - N_CLEARED)) of $N_JUDGED hosts that produced a judgeable throughput reading did not clear the floor (the per-host lines above say which)"
   fi
