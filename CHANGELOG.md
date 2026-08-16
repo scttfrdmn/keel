@@ -440,6 +440,16 @@ While the major version is 0, minor versions may contain breaking changes.
   `EXIT` trap referenced a `local` variable out of scope, leaking its temp directory. An
   earlier draft also restored with `git checkout --`, which reverted two files to `HEAD`
   and discarded uncommitted work — file backups cannot do that.
+- **The check's coverage is bounded by `git ls-files`, and that bound bit immediately**
+  (#85). `sites()` enumerates tracked files only, so a new file's citations are invisible
+  until it is committed: both new scripts were untracked while being written, the lint
+  could not see its own sources, and **the commit that added them turned a green tree
+  red** — 4 unresolvable mentions of the BLIS `§4.3` appeared the instant they became
+  tracked. The verification that missed it is worth naming too, because it is a repeat:
+  `make lint 2>&1 | tail -2` returns *`tail`'s* exit status, so a failing build read as a
+  passing one, the same swallowed-verdict shape as a `permission denied` once read as a
+  clean grep. A green from this check means *"every citation in a tracked file"*, and
+  `git status` is part of reading it.
 - **The quote marker takes a scoped form, `citation-lint:quote(5.4)`** (#85), because
   line granularity is too coarse for this document: `DESIGN.md`'s numbered rules are
   single 2000-character lines, and §5 rule 9 quotes `§5.4` on a line that also carries a <!-- citation-lint:quote(5.4,4.3) -->

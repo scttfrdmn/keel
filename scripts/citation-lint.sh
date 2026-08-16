@@ -12,8 +12,8 @@
 # so read the limits before trusting a green:
 #
 #   1. RESOLVE, by meaning and not by spelling. Two notations are in use and both
-#      are legitimate: the explicit `§5 rule 5` (83 sites) and the shorthand
-#      `§5.5` (29 DESIGN-bound sites), which means "§5, item 5". An earlier draft
+#      are legitimate: the explicit `§5 rule 5` (83 sites) and the shorthand citation-lint:quote
+#      `§5.5` (29 DESIGN-bound sites), which means "§5, item 5". An earlier draft citation-lint:quote
 #      of this script condemned the shorthand *by form* — DESIGN.md has no
 #      subsections, so `§X.Y` looked incoherent on its face. That draft would have
 #      demanded 25 zero-semantic edits to correct citations in the document the
@@ -24,7 +24,7 @@
 #
 #   2. SCOPE to the document the citation actually names. Four `§5.x` references
 #      in this tree point at `docs/spill-report.md`, not DESIGN.md, and two point
-#      at the BLIS paper's own §4.3 (Van Zee & van de Geijn, TOMS 2015). They are
+#      at the BLIS paper's own §4.3 (Van Zee & van de Geijn, TOMS 2015). They are citation-lint:quote
 #      indistinguishable from the DESIGN shorthand by form. A form-based rule
 #      would have filed a peer-reviewed paper's section numbering as a defect in
 #      keel's constitution — a false defect, which costs more than a missed one.
@@ -40,11 +40,11 @@
 # # What a green from this script does NOT mean
 #
 # It does not mean the citations are correct. A pin certifies STABILITY, never
-# BIRTH-CORRECTNESS, and this is not a hypothetical: keel's 18 `§5.4` citations
+# BIRTH-CORRECTNESS, and this is not a hypothetical: keel's 18 `§5.4` citations citation-lint:quote
 # were minted wrong in the same commit that appended the rule as item 5
 # (4643b63) — no renumbering ever happened, so every pin would have passed
 # forever while 18 sites misdirected every reader. Two more sites (DESIGN.md:129
-# citing §7 rule 6 for rule 7's denominator clause, l1_test.go:26 citing §5.2 for
+# citing §7 rule 6 for rule 7's denominator clause, l1_test.go:26 citing §5.2 for citation-lint:quote
 # rule 1's tolerance clause) were mis-minted inside populations that resolve
 # perfectly.
 #
@@ -128,7 +128,16 @@ is_external() { # FILE FORM
 }
 
 # ------------------------------------------------------------- the citations
-# Both notations, in one pass: `§5 rule 5` and `§5.5`. The pin file is a .txt and
+# NOTE, learned the hard way: `git ls-files` sees only TRACKED files, so a new file's
+# citations are invisible to this check until it is committed. These two scripts were
+# untracked while being written, the lint could not see its own sources, and the commit
+# that added them turned a green tree red. A green here means "every citation in a
+# tracked file", and `git status` is part of reading it. (A second self-reference to
+# watch: a line that documents the marker by naming it is thereby suppressed. Benign
+# where such lines only mention forms, which is the only place they occur, but it is a
+# property of a substring match rather than a decision anyone made.)
+#
+# Both notations, in one pass: `§5 rule 5` and `§5.5`. The pin file is a .txt and citation-lint:quote
 # so is not matched by these globs, but exclude it explicitly anyway -- a lint
 # that lints its own baseline reports its pins as sites.
 sites() {
@@ -150,7 +159,7 @@ sites() {
 #
 # The scoped form exists because line granularity is too coarse for this document:
 # DESIGN.md's numbered rules are single lines of two thousand characters, so a bare
-# marker on §5 rule 9 -- which quotes `§5.4` to explain the defect -- would stop
+# marker on §5 rule 9 -- which quotes `§5.4` to explain the defect -- would stop citation-lint:quote
 # checking every other citation in the same rule. That is over-suppression by
 # construction, and it is exactly the failure mode the EXTERNAL narrowness check
 # guards against on the other side, so it gets the same treatment: an exemption is
@@ -206,13 +215,13 @@ PINNED="$(sort -u <<<"$RESOLVED" | sed '/^$/d')"
 
 # ------------------------------------------------- the declarations themselves
 # An EXTERNAL line is keyed by (file, form), which is not intrinsically unique: if
-# KERNEL.md ever cites DESIGN.md's §5 rule 2 in the shorthand, the declaration that
+# KERNEL.md ever cites DESIGN.md's §5 rule 2 in the shorthand, the declaration that citation-lint:quote
 # exempts KERNEL.md's `docs/spill-report.md` reference would silently exempt it too,
 # and a real DESIGN citation would leave the pinned set without a word.
 #
 # So a declaration states HOW MANY sites it covers, and must match exactly that many.
 # The invariant is not "exactly one site" -- CHANGELOG.md legitimately cites the BLIS
-# paper's §4.3 three times -- it is "exactly the number of sites someone read". Fewer
+# paper's §4.3 three times -- it is "exactly the number of sites someone read". Fewer citation-lint:quote
 # means the declaration is stale; more means it has silently grown to cover a citation
 # no one checked, and the fix is to read the new site and bump the count deliberately.
 # An exemption is only trustworthy while it is as narrow as it claims to be.
@@ -259,7 +268,7 @@ case "$MODE" in
       echo "# wrong-from-birth ordinal with perfect fidelity. Census BEFORE the sweep:"
       echo "#   120 sites; 8 naming another document; 112 DESIGN-bound, of which 92"
       echo "#   land on the content the citing site invokes and 20 were mis-minted"
-      echo "#   (18 x '§5.4' + DESIGN.md:129 '§7 rule 6' + l1_test.go:26 '§5.2')."
+      echo "#   (18 x '§5.4' + DESIGN.md:129 '§7 rule 6' + l1_test.go:26 '§5.2')."  # citation-lint:quote
       echo "# The sweep rewrote 16 of the 20 to the explicit form and marked the other"
       echo "# 4 citation-lint:quote -- they are deliberate quotations of the bad form,"
       echo "# and normalizing them would erase the defect they document. Of the 92 that"

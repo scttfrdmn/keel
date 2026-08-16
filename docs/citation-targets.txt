@@ -56,13 +56,11 @@ docs/spill-report.md	§5.3	1	docs/spill-report.md's own §5.3 — self-reference
 §5 rule 8	A summary is a cache with no invalidation protocol. Ever
 §5 rule 9	A citation is a claim about where the grounds are, and i
 §5.2	Differential across backends: avx512 vs avx2 vs scalar o
-§5.4	Benchmarks are tests: perf gates run in CI-mode locally 
 §5.5	Gate benchmark methodology (revised 2026-08-11, decision
 §5.6	A gate red for the wrong reason is as untrustworthy as a
 §5.7	A check that could not have come out otherwise is not ev
 §5.8	A summary is a cache with no invalidation protocol. Ever
 §7 rule 2	Never recall the simd API — read it. Before writing or
 §7 rule 4	Phase 2 is a go/no-go, not a hurdle. If the spill audit 
-§7 rule 6	Tolerances come from the helper, nowhere else. One toler
 §7 rule 7	Honesty in benchmarks. Every benchmark result you report
 §7 rule 8	When the toolchain surprises you (missing intrinsic, une

@@ -20,17 +20,17 @@
 #        rejoins the pinned set. (This caught a real break: rewrapping a comment in
 #        gate-p3.sh moved a marker one line off its citation.)
 #   T7 — an EXTERNAL declaration is keyed by (file, form), which is not intrinsically
-#        unique. If KERNEL.md ever cites DESIGN.md's §5 rule 2 in the shorthand, the
+#        unique. If KERNEL.md ever cites DESIGN.md's §5 rule 2 in the shorthand, the citation-lint:quote
 #        declaration exempting KERNEL.md's `docs/spill-report.md` reference would
 #        exempt the DESIGN citation too, and a real citation would leave the pinned
 #        set unremarked. T7 induces exactly that and asserts BROAD EXT. This check
 #        earned its keep immediately: writing the CHANGELOG entry for it added two
-#        more BLIS `§4.3` references and the check caught its own documentation
+#        more BLIS `§4.3` references and the check caught its own documentation citation-lint:quote
 #        widening an exemption by two sites — one of which, on reading, turned out not
 #        to cite the paper at all.
 #   T9 — a scoped marker (`citation-lint:quote(5.4)`) must suppress only the form it
 #        names. Line granularity is too coarse for DESIGN.md, whose rules are single
-#        2000-character lines; a bare marker on §5 rule 9 would have stopped checking
+#        2000-character lines; a bare marker on §5 rule 9 would have stopped checking citation-lint:quote
 #        two live citations while printing nothing at all.
 #
 # T10 re-runs the clean path last: a restore that silently failed would otherwise let
@@ -108,16 +108,16 @@ main() {
 
   perl -i -pe 's{the \xc2\xa75 rule 5 methodology}{the \xc2\xa75.2 differential rule and the \xc2\xa75 rule 5 methodology}' \
     KERNEL.md
-  run 'BROAD EXT' "T7 a second KERNEL.md shorthand '§5.2' — the exemption silently widens to cover it"
+  run 'BROAD EXT' "T7 a second KERNEL.md shorthand '§5.2' — the exemption silently widens to cover it"  # citation-lint:quote
   restore
 
   perl -i -pe 's/DESIGN\.md \xc2\xa75 rule 1\)/DESIGN.md \xc2\xa75 rule 99)/' l1_test.go
   run 'NO ITEM' "T8 a citation of an ordinal its section does not have"
   restore
 
-  # A scoped marker must suppress ONLY the form it names. DESIGN.md's §5 rule 9 is a
-  # single 2000-character line carrying three forms: a quoted `§5.4`, an EXTERNAL
-  # `§4.3` naming the BLIS paper, and a live `§5 rule 5`. A bare marker there would
+  # A scoped marker must suppress ONLY the form it names. DESIGN.md's §5 rule 9 is a citation-lint:quote
+  # single 2000-character line carrying three forms: a quoted `§5.4`, an EXTERNAL citation-lint:quote
+  # `§4.3` naming the BLIS paper, and a live `§5 rule 5`. A bare marker there would citation-lint:quote
   # have stopped checking all three, printing nothing and looking identical to a pass
   # -- which is why the scoped form exists at all. Drive it: break the live citation
   # on that same line and assert the lint still catches it.
