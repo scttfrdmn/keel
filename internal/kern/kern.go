@@ -116,6 +116,24 @@ type Kernel struct {
 	Unroll int    // k-steps per pass of the steady-state loop
 	Fn     func(kc int, a, b, c []float32, ldc int)
 
+	// AddTile and AddRow are the fringe add-back: C += the live part of the
+	// scratch tile, for the tiles Fn computed at full MR×NR because they cross
+	// the edge of the matrix or the edge of a triangle. AddTile takes a whole
+	// im×jn rectangle in one call; AddRow takes one row, for a mask-crossing
+	// tile whose live window differs per row. See internal/vec/edge_amd64.go.
+	//
+	// They live on the Kernel rather than in a package-level var in
+	// internal/block for one reason that is not style: KEEL_FORCE=scalar must
+	// force the add-back too. A dispatch override that changed the microkernel
+	// and left a vector add-back running would stop describing what ran, and
+	// every gate that forces a backend reads the marker rather than the source.
+	//
+	// Nil is a registration bug and panics on the first fringe tile, which is
+	// deliberate: a silent scalar fallback would make a shape that forgot to
+	// populate these measure as if it had.
+	AddTile func(c []float32, ldc int, tile []float32, nr, im, jn int)
+	AddRow  func(dst, src []float32)
+
 	// InsnsPerFMA is this shape's audited instructions per FMA in the
 	// steady-state K-loop: the spill audit's own integer counts, divided.
 	//
@@ -229,6 +247,8 @@ func ScalarKernel(mr, nr int) Kernel {
 		Fn: func(kc int, a, b, c []float32, ldc int) {
 			ScalarTile(mr, nr, kc, a, b, c, ldc)
 		},
+		AddTile: vec.ScalarAddTile,
+		AddRow:  vec.ScalarAddRow,
 	}
 }
 

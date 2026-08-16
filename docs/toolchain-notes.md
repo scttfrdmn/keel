@@ -31,6 +31,7 @@ a minimal repro *before* any workaround lands. Entries feed upstream issues.
 | 2026-08-14 | go1.26.6 | A commit that changes **no instruction byte** of a function can still make it **45% slower**; function-entry alignment mod 64 is the discriminator, and the magnitude is a property of the µarch (~0% Skylake-X, ~7% Zen 4, ~45% Zen 5) | [T22](#t22) | none — long-standing ([golang/go#8717](https://github.com/golang/go/issues/8717), [#18977](https://github.com/golang/go/issues/18977), [#6752](https://github.com/golang/go/issues/6752)) |
 | 2026-08-15 | go1.27rc3 | `archsimd`'s load/store are **renamed with a swap**: the slice forms take over the bare names (`LoadFloat32x16Slice`→`LoadFloat32x16`, `StoreSlice`→`Store`) while the array forms gain an `Array` suffix, and the `…SlicePart` forms become `…Part` *and grow a return value*. keel does not compile under 1.27: 51 errors in 3 files, all of them type errors | [T23](#t23) | none — pre-GA API churn, expected (T5) |
 | 2026-08-15 | go1.27rc3 | The portable `simd` package **ships** (T5's guess was right), with arm64, wasm and a pure-Go emulated fallback — but its vector length is a **runtime** quantity (`VectorBitSize()`, `Len()`), so it cannot express a register-blocked microkernel's compile-time tile, and has no `GetLo`/`GetHi` for `HSum`'s fold tree | [T24](#t24) | none — as designed |
+| 2026-08-15 | go1.26.6, go1.26.5, go1.27rc3 | Four ways the *spelling* of an equivalent SIMD loop changes its object code, worth **36 vs 13 instructions** per iteration in keel's fringe add-back: `Load512(x[j:])` keeps `archsimd`'s own `CMPQ $16` **and** T19's conditional pointer advance where `Load512(x[j:j+Lanes])` folds both; the natural guard `j+16 <= len(x)` keeps a bounds check where the identical `j < len(x)-15` does not (a **second remedy [T19](#t19) missed**, and one that keeps the loop indexed); `dst = dst[:len(src)]` *moves* the surviving check onto the resliced operand rather than removing it; and hoisting one invariant limit is free while hoisting both into a `min` puts both checks back | [T25](#t25) | none — known class ([#17370](https://github.com/golang/go/issues/17370), [#25197](https://github.com/golang/go/issues/25197), [#28941](https://github.com/golang/go/issues/28941), fix in flight [#80146](https://github.com/golang/go/issues/80146)); keel #74 |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -2262,3 +2263,157 @@ here: it would mean a third backend behind the shim, with its own differential
 test obligations and its own bit-exactness argument (an emulated FMA that fuses
 where hardware does not would be a *worse* oracle than no oracle). Filed as a
 question rather than acted on.
+
+---
+
+## T25 — the bounds check on a strided slice-expression loop depends on how the *same* bound is spelled, and a reslice moves the check rather than removing it
+
+**Toolchain.** `go1.26.6 darwin/arm64` (host compiler), and confirmed
+byte-for-byte identical on `go1.26.5 linux/amd64` and `go1.27rc3 linux/amd64`.
+Not simd-specific: the repro imports nothing. Found while writing #22's candidate
+C, whose inner loop is one vector add and three memory ops, so a surviving
+per-iteration check is a double-digit percentage of the body.
+
+**Relation to T19, which owns half of this.** T19 recorded that a loop guarded by
+`i+4 <= len(x)` does not discharge the sub-slice bounds, and prescribed the
+slice-advancing rewrite (`x = x[4:]`), whose own cost T19 then measured — seven
+instructions, or one with `>` instead of `>=`. That prescription was adopted in
+all ten `internal/l1` loops. **T19 missed a second remedy**: the indexed loop is
+clean too if the identical bound is spelled `i < len(x)-3` instead of
+`i+4 <= len(x)`. Nothing else changes — same arithmetic, same iteration set, same
+body. So a keel loop that wants to stay indexed never had to advance its slices.
+
+**Observation, as a table of measured variants.** Each row is a loop with stride
+16 over 16-element sub-slices; the last column is `-gcflags=-d=ssa/check_bce`
+output for the slice expressions *in the loop body*.
+
+| # | guard | slices touched | checks left in body |
+|---|---|---|---|
+| B | `j+16 <= len(dst)` | dst | **1** |
+| G | `j < len(dst)-15` | dst | 0 |
+| O | `n := len(dst)`, `j < n-15` | dst | 0 |
+| E | `j+16 <= len(dst)`, element access `dst[j+15]` | dst | **1** |
+| H | `j+16 <= len(dst)`, three-index `dst[j:j+16:j+16]` | dst | **1** |
+| I | `c < len(dst)/16`, `dst[c*16:c*16+16]` | dst | **1** |
+| J | unsigned `j`, `j+16 <= uint(len(dst))` | dst | **1** |
+| F | `for len(dst) >= 16 { dst[:16]; dst = dst[16:] }` | dst | 0 — T19's remedy |
+| M | `j < len(dst)-15 && j < len(src)-15` | dst, src | 0 |
+| K | `dst = dst[:len(src)]`, `j < len(dst)-15` | dst, src | **1 — on dst** |
+| L | `src = src[:len(dst)]`, `j < len(dst)-15` | dst, src | **1 — on src** |
+| P | `if len(dst) != len(src) { return }`, `j < len(src)-15` | dst, src | **1 — on dst** |
+| R | as P with `j+16 <= len(src)` | dst, src | **1 — on dst** |
+| T | `lim := min(len(dst), len(src)) - 15`, `j < lim` | dst, src | **2 — both** |
+| U | `lim := len(src)-15`, `j < lim && j < len(dst)-15` | dst, src | 0 |
+
+Three things in that table are worth stating separately.
+
+1. **A reslice moves the check to the operand it resliced** (K vs L). `dst =
+   dst[:len(src)]` is the idiom for establishing that two slices have the same
+   length, and after it the *other* slice verifies clean while the resliced one
+   does not — swap which one is resliced and the surviving check swaps with it.
+   The reslice is not merely insufficient; it is where the check ends up.
+2. **An explicit length comparison does not help either** (P, R). `if len(dst) !=
+   len(src) { return }` is the exact shape [CL 699155](https://go-review.googlesource.com/c/go/+/699155)
+   (`519ae51`, closing [golang/go#75144](https://github.com/golang/go/issues/75144))
+   taught `prove` to propagate, and that commit is an ancestor of both
+   `release-branch.go1.26` and `release-branch.go1.27`. It does not reach this
+   loop shape: the CL's own case is element indexing under `for i := range
+   len(a)`, and a strided slice-expression loop still keeps one check.
+3. **Hoisting the loop-invariant limit is only free once** (U vs T). `len(src)-15`
+   is loop-invariant and is recomputed every iteration — LICM does not lift it,
+   a scalar-integer sibling of T18. Hoisting it into a local keeps every check
+   eliminated and saves an `LEAQ` per iteration. Hoisting *both* limits into one
+   `min` local puts **both** checks back. The second `LEAQ` is therefore the
+   price of the elimination, and keel pays it deliberately.
+
+**Repro.** Fifteen functions, one file, no imports; the variants above are
+verbatim. `sink` is a package-level `[]float32` so the slice expressions are not
+dead.
+
+```go
+package bce
+
+var sink []float32
+
+func B(dst []float32) {                       // 1 check
+	for j := 0; j+16 <= len(dst); j += 16 {
+		sink = dst[j : j+16]
+	}
+}
+
+func G(dst []float32) {                       // 0 checks — same iteration set
+	for j := 0; j < len(dst)-15; j += 16 {
+		sink = dst[j : j+16]
+	}
+}
+
+func K(dst, src []float32) {                  // 1 check, and it is on dst
+	dst = dst[:len(src)]
+	for j := 0; j < len(dst)-15; j += 16 {
+		sink = dst[j : j+16]
+		sink = src[j : j+16]
+	}
+}
+
+func U(dst, src []float32) {                  // 0 checks — the shape keel ships
+	lim := len(src) - 15
+	for j := 0; j < lim && j < len(dst)-15; j += 16 {
+		sink = dst[j : j+16]
+		sink = src[j : j+16]
+	}
+}
+```
+
+```
+$ go build -gcflags=-d=ssa/check_bce ./...
+./a.go:6:13:  Found IsSliceInBounds        <- B
+./a.go:19:13: Found IsSliceInBounds        <- K, on dst
+                                           <- G and U print nothing
+```
+
+**A fourth finding, and the largest of them: the slice-form intrinsic carries its
+own length check, and only a statically-sized slice expression folds it away.**
+`Load512(x[j:])` and `Load512(x[j:j+Lanes])` are the same load. The first keeps
+two things per iteration that the second does not: `archsimd`'s internal
+`CMPQ …, $16` / `JCS →panic` (`slice_gen_amd64.go:291`, the wrapper's own "is this
+slice at least 16 long" test), and T19's five-instruction conditional pointer
+advance — twice, once per operand, because an open-ended slice expression produces
+a slice *value* whose data pointer must not be allowed to pass the end of its
+allocation. Measured on `AddRow512`, holding the body and the iteration set fixed
+and varying only how the four slice expressions and the guard are spelled:
+
+| spelling | checks in file | loop body |
+|---|---|---|
+| `j+Lanes <= n`, `dst[j:]` — the natural way to write it | 7 | **36 instructions** |
+| `j+Lanes <= n`, `dst[j:j+Lanes]` | 4 | 16 |
+| `j < len(dst)-Lanes+1 && j < len(src)-Lanes+1` | 3 | 15 |
+| the same with `len(src)-Lanes+1` hoisted — variant U, shipped | 3 | **13** |
+
+Three of the file's checks are irreducible and are the same in every row
+(`AddTile512`'s two row slices, and the masked tail's store); the differences are
+all in the loop. So the add-back's steady-state body is **2.8× larger written the
+obvious way**, for 16 elements of `C += tile` either way, with no difference in
+semantics — and `internal/l1` was already immune to the largest part of it, having
+used `x[0:16]` from the start.
+
+**What keel does.** `internal/vec.AddRow512` takes the last row: 13 instructions
+per 16 elements, no bounds check and no panic block in the loop. Two of the 13 are
+`XCHGL AX, AX` — T9's NOP per inlined non-intrinsic call, one each for `Load512`
+and `Store512` — and the load of `src` is folded into the add
+(`VADDPS (R11), Z0, Z0`), which the source does not show.
+
+**Upstream.** Nothing is filed and nothing should be. The class is known and
+open: [#17370](https://github.com/golang/go/issues/17370) is the umbrella,
+[#25197](https://github.com/golang/go/issues/25197) is arithmetic in the guard
+(with `martisch`'s overflow argument for why the natural form is not a trivial
+miss), [#28941](https://github.com/golang/go/issues/28941) is `prove` and slice
+expressions, and [#80146](https://github.com/golang/go/issues/80146) (eSSA for
+`prove`) is the general fix in flight. The two asymmetries above are not on any
+of them, but the standing rule is that a second repro of a known miss is not
+worth an upstream comment — a *measured delta on a real kernel* would be, and
+keel has a static instruction count and not a time. 36→13 is large enough that
+it is hard to see it costing nothing, but a bounds check and a guard comparison
+are both a well-predicted compare-and-branch, and this loop is memory-bound: the
+36-instruction body may be entirely hidden behind the stores. Tracked as keel #74,
+which is where the timing would land, and only that would be worth an upstream
+comment.

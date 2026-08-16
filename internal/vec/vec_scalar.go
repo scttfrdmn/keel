@@ -210,3 +210,41 @@ func ScalarHSum(x Block) float32 {
 	}
 	return acc[0]
 }
+
+// ---------------------------------------------- the fringe add-back (#22 C)
+//
+// C = C + tile for the live sub-rectangle of a fringe or mask-crossing tile,
+// the operation internal/block performed inline with a `for j, v := range src`
+// loop until #22's candidate C moved it here. Two entry points, because the
+// two shapes of live region have different call counts (see AddTile512's
+// comment in edge_amd64.go for the measurement that decides between them):
+// a rectangle, and a single row.
+//
+// Numerics: exact, not merely within tolerance. One add per element in the
+// same order as any backend's, no reassociation available to a vector form
+// because each output element is the sum of exactly two inputs. So the
+// differential test demands bit-equality, and a backend that reassociated
+// anything here would be a bug rather than a tolerance question.
+
+// ScalarAddTile adds the im×jn top-left sub-rectangle of tile into c.
+//
+// tile's rows are nr apart and c's are ldc apart; both are the strides the
+// caller already has, so no copy and no per-row slicing happens above this.
+func ScalarAddTile(c []float32, ldc int, tile []float32, nr, im, jn int) {
+	for i := 0; i < im; i++ {
+		dst := c[i*ldc : i*ldc+jn]
+		src := tile[i*nr : i*nr+jn]
+		for j, v := range src {
+			dst[j] += v
+		}
+	}
+}
+
+// ScalarAddRow adds src into dst elementwise. len(dst) must be at least
+// len(src); the extra is untouched, which is what lets a masked row pass the
+// live [lo, hi) window of a row whose destination continues past it.
+func ScalarAddRow(dst, src []float32) {
+	for j, v := range src {
+		dst[j] += v
+	}
+}

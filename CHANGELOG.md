@@ -220,6 +220,50 @@ While the major version is 0, minor versions may contain breaking changes.
   whatever was left behind.
 
 ### Added
+- **Issue #22's candidate C: the fringe add-back is vectorized, behind the kernel's own
+  dispatch.** A tile that crosses the edge of the matrix or the edge of a triangle is
+  computed at full MR×NR into a scratch tile, and only its live sub-rectangle is added back
+  into C; that add-back was a scalar loop and is now `vec.AddTile512` / `vec.AddRow512`, with
+  `vec.ScalarAddTile` / `vec.ScalarAddRow` as their executable spec. The kernel and the
+  scratch tile are untouched, which is the point: C costs the P2 zero-spill audit nothing,
+  where candidate B — a masked C update inside the microkernel — would have doubled the
+  audit surface for a coverage subset. B stays unbuilt pending a measured gap.
+  `AddTile`/`AddRow` hang off `kern.Kernel` rather than a package-level var in
+  `internal/block` so that `KEEL_FORCE=scalar` forces the add-back too; nil is a
+  registration bug and panics on the first fringe tile, because a silent scalar fallback
+  would let a shape that forgot to populate them measure as if it had. Two live-region
+  shapes, two call counts: a rectangular fringe takes `AddTile` (one indirect call per tile,
+  row loop inside the callee), and a mask-crossing tile takes `AddRow` per row, because a
+  diagonal tile's live window is a different `[lo, hi)` on every row and no single rectangle
+  covers it. Differential tests are **bit-equality, not `oracle.Tolerance`** — every output
+  element is the sum of exactly two inputs, so there is no association to choose and a
+  disagreement would be about one IEEE add — and they cover a guard sentinel past the live
+  window (the property a full-width store would break silently), non-finite inputs including
+  the ±Inf/NaN a zero-padded panel produces, and `ldc > jn` always, since a helper ignoring
+  `ldc` would pass any test with `ldc == jn`. Green on AVX-512 hardware (Zen 4), along with
+  the root, `internal/block` and `internal/kern` suites; the scalar twins are exercised by
+  every Level-3 oracle test on the dev host. One consequence stated rather than discovered:
+  the masked tail puts an `archsimd` partial op on a Level-3 path for the first time, so
+  T17's `-race`/`-d=checkptr` fatal now reaches Level 3 as well. No gate moves — those four
+  criteria are already unmeasured on all three hosts for exactly this reason (#42, fixed
+  upstream by CL 761120 in go1.27) — but the surface is wider.
+- **`docs/toolchain-notes.md` T25 — four spellings of the same SIMD loop, 36 instructions
+  versus 13** (#74). Found writing the above, whose loop is one vector add and three memory
+  ops, small enough that spelling dominates object code. In descending order of size:
+  `Load512(x[j:])` keeps `archsimd`'s own `CMPQ $16`/panic *and* a five-instruction
+  conditional pointer advance per operand where `Load512(x[j:j+Lanes])` folds both; the
+  guard `j+Lanes <= len(x)` keeps a bounds check where the identical `j < len(x)-Lanes+1`
+  does not; `dst = dst[:len(src)]` does not remove the survivor but **moves it onto the
+  resliced operand**, and reslicing `src` instead swaps which one keeps it; and hoisting one
+  loop-invariant limit is free while hoisting both into a `min` local puts both checks back.
+  Identical on go1.26.6, go1.26.5 and go1.27rc3. This **partly corrects T19**, which recorded
+  the `i+4 <= len(x)` miss, prescribed the slice-advancing rewrite, and was adopted by all
+  ten `internal/l1` loops: the strict-`<` guard is a second remedy that keeps the loop
+  indexed. No l1 loop is wrong — they use `x[0:16]` and so never paid the largest property —
+  but the note read as if its prescription were the only one. Nothing is filed upstream and
+  nothing should be: the class is known and open (golang/go#17370, #25197, #28941, with
+  #80146 the fix in flight), a second repro of a known miss earns no comment, and the number
+  that would — a *time*, not a static count on a memory-bound loop — is what #74 is open for.
 - **`bench/edge_test.go` and `scripts/edge-bench.sh` — the fixture and harness for #22's
   edge-handling ranking, landed ahead of the candidate they measure.** Not a gate: the
   script certifies nothing, moves no criterion and exits 0 whatever it reads; its product

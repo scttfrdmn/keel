@@ -463,13 +463,20 @@ func macro(kn kern.Kernel, ap, bp []float32, i0, j0, mc, nc, kk int, c []float32
 			// triangular routines need no edge handling of their own.
 			clear(tile)
 			kn.Fn(kk, apanel, bpanel, tile, nr)
+			// Two shapes of live region, and the split is a call-count decision
+			// measured under issue #22, not a taste one. When tri.whole holds,
+			// every row's window is the full [0, jn) — either the mask is off or
+			// this tile lies wholly inside the triangle — so the add-back is one
+			// rectangle and costs one call. A mask-crossing tile's window differs
+			// per row, so it pays a call per row, which is the price of not
+			// having a second kernel family. See internal/vec/edge_amd64.go.
+			if tri.whole(i0+ir, j0+jr, im, jn) {
+				kn.AddTile(ct, ldc, tile, nr, im, jn)
+				continue
+			}
 			for i := 0; i < im; i++ {
 				lo, hi := tri.rowRange(i0+ir+i, j0+jr, jn)
-				dst := ct[i*ldc+lo : i*ldc+hi]
-				src := tile[i*nr+lo : i*nr+hi]
-				for j, v := range src {
-					dst[j] += v
-				}
+				kn.AddRow(ct[i*ldc+lo:i*ldc+hi], tile[i*nr+lo:i*nr+hi])
 			}
 		}
 	}
