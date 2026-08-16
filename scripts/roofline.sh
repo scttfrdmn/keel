@@ -76,62 +76,133 @@
 # so the amendment can lower the bar from 55% of peak to no less than 43.5% of
 # peak, and only for a host that has independently demonstrated a front-end
 # ceiling. That is the number the amendment costs; it is not unbounded.
+#
+# WHEN THE CLASSIFICATION CANNOT BE DECIDED (the ruling on issue #86). Two of the
+# comparisons below select the CLASS, and both consume measured fractions of peak:
+# the convergence test (cspread vs converge_max) and the falsification test
+# (attain vs 1). The class then chooses P2's floor for this host *and* P3's
+# denominator for it, so one noisy measurement three steps upstream can move four
+# verdicts at once. On 2026-08-15 it did: janus's ceiling mixes read ~7% low in one
+# classify invocation, the spread crossed 1.10, the host reclassified fma-bound,
+# and P3's criterion 7 divided an unchanged 76.8 GFLOP/s by OpenBLAS 194.4 instead
+# of by the 105.4 roofline. 72.9% PASS became 39.5% FAIL with the numerator steady
+# to 0.1%, and the log dispatched the operator to repair a fingerprint that was
+# right.
+#
+# The ruling: *a verdict cannot be more certain than the least certain link in its
+# derivation chain.* So each class-selecting comparison is made against the
+# INTERVAL rather than the point estimate, and has three outcomes instead of two —
+# clear of the bar, clear on the wrong side, or straddling it. Straddling is
+# CLASS=indeterminate, RESULT=unmeasured, and every criterion that consumes the
+# class reports UNMEASURED naming that one cause. This is #67's third state
+# (bench_ratio_grade in scripts/bench.sh) applied one link further upstream, at the
+# derivation instead of at the criterion.
+#
+# WHY THE §4 RE-RUN ALLOWANCE IS NOT THE REMEDY HERE, AND STAYS WHERE IT IS.
+# DESIGN.md §4 grants a throughput sentinel reading red exactly one archived
+# re-run. That allowance is priced for a self-contained red: one verdict, one
+# deliberate re-run, friction as the feature, both outputs archived. A class
+# straddle spends four verdicts per exercise, which is not the purchase §4
+# authorised. So the RESULT boundaries — attain vs roof_floor, best_lo vs
+# peak_floor — are deliberately NOT interval-tested here and keep the allowance;
+# the CLASS boundaries get the straddle test instead.
+#
+# The spread's interval is the worst case over both ends:
+#
+#       cspread_hi = max_i p_i_hi / min_j p_j_lo
+#       cspread_lo = max(1, max_i p_i_lo / min_j p_j_hi)
+#
+# When one very wide mix supplies both ends the interval widens and the verdict is
+# indeterminate, which is the right answer rather than a defect: a mix that wide
+# has not established a ceiling. Bounds arrive from the caller as measurements
+# (bench_ratio_lo / bench_ratio_hi), not from a symmetry assumption about the
+# point estimate; a mix given no bounds is treated as zero-width, so a fixture
+# written before this amendment means exactly what it meant then.
 
 # throughput_verdict — the whole decision, as a pure function.
 #
 # Arguments, in order:
 #   1 best_lo         fraction of peak of the shape under test, net of CI
-#   2 best_ipf        that shape audited instructions per FMA
-#   3 peak_floor      flat floor for an FMA-bound host (0.55)
-#   4 roof_floor      fraction of roofline required of an issue-bound host (0.90)
-#   5 converge_max    max rate spread across ceiling mixes to call a host issue-bound
-#   6 mix_spread_min  min insns/FMA spread required for that call to mean anything
-#   7 sweep_best_ipf  best zero-spill insns/FMA in the recorded sweep
-#   8 shape_slack     how far above it a shape may be and still get a roofline
-#   9.. ceiling mixes as f:I pairs, EXCLUDING the shape under test. The
-#       register-only peak kernel is one of these, entered as 1.0:I_peak.
+#   2 best_hi         the upper end of that same interval (bench_ratio_hi)
+#   3 best_ipf        that shape audited instructions per FMA
+#   4 peak_floor      flat floor for an FMA-bound host (0.55)
+#   5 roof_floor      fraction of roofline required of an issue-bound host (0.90)
+#   6 converge_max    max rate spread across ceiling mixes to call a host issue-bound
+#   7 mix_spread_min  min insns/FMA spread required for that call to mean anything
+#   8 sweep_best_ipf  best zero-spill insns/FMA in the recorded sweep
+#   9 shape_slack     how far above it a shape may be and still get a roofline
+#  10.. ceiling mixes as f:I[:f_lo[:f_hi]], EXCLUDING the shape under test. The
+#       register-only peak kernel is one of these, entered as 1.0:I_peak — its
+#       f is 1 exactly by definition, and its own interval is already folded into
+#       every other mix's bounds, which are ratios against it. An absent f_lo or
+#       f_hi defaults to f, i.e. to a zero-width interval.
 #
-# Echoes one line: CLASS CSPREAD MSPREAD ROOF ATTAIN RESULT WHY
-#   CLASS  in {fma, issue}
+# Echoes one line:
+#   CLASS CSPREAD MSPREAD ROOF ATTAIN RESULT WHY CSPREAD_LO CSPREAD_HI ATTAIN_HI
+#   CLASS  in {fma, issue, indeterminate}
 #   ROOF   fraction of peak the front end permits (0 if not computed)
-#   ATTAIN best_lo / ROOF (0 if not computed)
-#   RESULT in {pass, fail, refuse}
+#   ATTAIN best_lo / ROOF (0 if not computed), and ATTAIN_HI is best_hi / ROOF
+#   RESULT in {pass, fail, refuse, unmeasured}
 #            refuse = classified issue-bound but denied a roofline, because the
 #            shape is too far off the sweep best for its own instruction count
 #            to be a fair denominator. A refusal is a gate failure, not a pass.
-#   WHY    in {-, nomixes, diverge, samemix, falsified, shape}
+#            unmeasured = the class straddled a bar, so no floor applies to this
+#            host this run. Not a pass either: the caller reports it UNMEASURED,
+#            which fails the gate for a failure to measure rather than for a
+#            missed floor.
+#   WHY    in {-, nomixes, diverge, samemix, falsified, shape,
+#              nearconverge, nearceiling}
+#            nearconverge = the spread's interval straddles converge_max
+#            nearceiling  = attainment's interval straddles 1, so whether the
+#                           machine exceeds its own claimed ceiling is undecided
 throughput_verdict() {
-  local best_lo="$1" best_ipf="$2" peak_floor="$3" roof_floor="$4"
-  local converge_max="$5" mix_spread_min="$6" sweep_best="$7" slack="$8"
-  shift 8
-  awk -v best_lo="$best_lo" -v best_ipf="$best_ipf" \
+  local best_lo="$1" best_hi="$2" best_ipf="$3" peak_floor="$4" roof_floor="$5"
+  local converge_max="$6" mix_spread_min="$7" sweep_best="$8" slack="$9"
+  shift 9
+  awk -v best_lo="$best_lo" -v best_hi="$best_hi" -v best_ipf="$best_ipf" \
       -v peak_floor="$peak_floor" -v roof_floor="$roof_floor" \
       -v converge_max="$converge_max" -v mix_spread_min="$mix_spread_min" \
       -v sweep_best="$sweep_best" -v slack="$slack" \
       -v mixes="$*" '
   BEGIN {
-    # Reduce the ceiling set. Any pair with a non-positive I is dropped rather
-    # than silently contributing a zero rate.
+    # Reduce the ceiling set. Any mix with a non-positive I is dropped rather
+    # than silently contributing a zero rate. Each mix carries three products:
+    # the point estimate, and the two ends of its interval. A mix given no
+    # bounds is zero-width, so pre-#86 fixtures reduce to exactly what they did.
     n = split(mixes, m, /[ \t]+/)
     cnt = 0
     for (k = 1; k <= n; k++) {
       if (m[k] == "") continue
-      if (split(m[k], fi, ":") != 2) continue
+      nf = split(m[k], fi, ":")
+      if (nf < 2) continue
       f = fi[1] + 0; ii = fi[2] + 0
       if (ii <= 0) continue
-      p = f * ii
-      if (cnt == 0) { pmin = p; pmax = p; imin = ii; imax = ii }
-      else {
+      flo = (nf >= 3 && fi[3] != "") ? fi[3] + 0 : f
+      fhi = (nf >= 4 && fi[4] != "") ? fi[4] + 0 : f
+      p = f * ii; plo = flo * ii; phi = fhi * ii
+      if (cnt == 0) {
+        pmin = p; pmax = p; imin = ii; imax = ii
+        pminlo = plo; pminhi = phi; pmaxlo = plo; pmaxhi = phi
+      } else {
         if (p  < pmin) pmin = p
         if (p  > pmax) pmax = p
         if (ii < imin) imin = ii
         if (ii > imax) imax = ii
+        # The interval ends are taken over the whole set, independently of which
+        # mix is the point argmax or argmin: the worst case for the ratio is the
+        # highest any mix could be over the lowest any mix could be. When one
+        # wide mix supplies both, the interval widens and the verdict goes
+        # indeterminate, which is the honest reading of a mix that wide.
+        if (plo < pminlo) pminlo = plo
+        if (phi < pminhi) pminhi = phi
+        if (plo > pmaxlo) pmaxlo = plo
+        if (phi > pmaxhi) pmaxhi = phi
       }
       cnt++
     }
 
-    class = "fma"; roof = 0; attain = 0; why = "-"
-    cspread = 0; mspread = 0
+    class = "fma"; roof = 0; attain = 0; attain_hi = 0; why = "-"
+    cspread = 0; mspread = 0; cspread_lo = 0; cspread_hi = 0
 
     if (cnt < 2) {
       # One mix cannot establish a ceiling: nothing to converge with.
@@ -139,20 +210,42 @@ throughput_verdict() {
     } else {
       cspread = (pmin > 0) ? pmax / pmin : 0
       mspread = (imin > 0) ? imax / imin : 0
+      # A spread cannot be below 1 -- fully overlapping intervals mean "as
+      # converged as a measurement can show", not "converged by -3%".
+      cspread_lo = (pminhi > 0) ? pmaxlo / pminhi : 0
+      if (cspread_lo < 1.0) cspread_lo = 1.0
+      cspread_hi = (pminlo > 0) ? pmaxhi / pminlo : 0
 
       # Issue-bound requires BOTH: the ceiling mixes agree on a retirement rate,
       # AND they were different enough for that agreement to be evidence rather
       # than a coincidence between two similar loops.
-      if (cspread <= 0 || cspread > converge_max)     why = "diverge"
+      #
+      # The convergence test is the first of the two class-selecting comparisons
+      # and it is graded three ways (#86). Note that with zero-width intervals
+      # `cspread_hi <= converge_max` and `cspread_lo > converge_max` partition
+      # the outcomes exactly as the single `cspread > converge_max` test did, so
+      # the third state is carved out of neither of the old two: it is carved out
+      # of the region where they disagreed with each other.
+      if (cspread <= 0 || cspread_hi <= 0)            why = "diverge"
+      else if (cspread_lo > converge_max)             why = "diverge"
+      else if (cspread_hi > converge_max) { class = "indeterminate"; why = "nearconverge" }
       else if (mspread < mix_spread_min)              why = "samemix"
       else {
-        roof   = (best_ipf > 0) ? pmax / best_ipf : 0
-        attain = (roof > 0) ? best_lo / roof : 0
+        roof      = (best_ipf > 0) ? pmax / best_ipf : 0
+        attain    = (roof > 0) ? best_lo / roof : 0
+        attain_hi = (roof > 0) ? best_hi / roof : 0
 
         if (attain > 1.0) {
           # A ceiling the machine exceeds is not a ceiling. The issue-bound
           # hypothesis is falsified by the data offered in its support.
           why = "falsified"
+        } else if (attain_hi > 1.0) {
+          # ... but whether it exceeds the ceiling is itself a measurement, and
+          # this reading cannot say. Second class-selecting comparison, same
+          # three-way grading. It precedes the shape guard for the same reason
+          # falsification does: a hypothesis whose status is unknown cannot be
+          # "issue-bound but refused a roofline".
+          class = "indeterminate"; why = "nearceiling"
         } else if (best_ipf > sweep_best * slack) {
           # A roofline built from the instruction count of the kernel under test
           # rises as that kernel gets worse. Without this guard, "90% of
@@ -164,11 +257,15 @@ throughput_verdict() {
       }
     }
 
-    if (class == "issue" && why == "shape") result = "refuse"
-    else if (class == "issue")             result = (attain  >= roof_floor) ? "pass" : "fail"
-    else                                   result = (best_lo >= peak_floor) ? "pass" : "fail"
+    # RESULT boundaries stay two-state on purpose; see the §4 pricing note above.
+    if (class == "indeterminate")           result = "unmeasured"
+    else if (class == "issue" && why == "shape") result = "refuse"
+    else if (class == "issue")              result = (attain  >= roof_floor) ? "pass" : "fail"
+    else                                    result = (best_lo >= peak_floor) ? "pass" : "fail"
 
-    printf "%s %.4f %.4f %.6f %.6f %s %s\n", class, cspread, mspread, roof, attain, result, why
+    printf "%s %.4f %.4f %.6f %.6f %s %s %.4f %.4f %.6f\n", \
+      class, cspread, mspread, roof, attain, result, why, \
+      cspread_lo, cspread_hi, attain_hi
   }'
 }
 
@@ -208,8 +305,18 @@ throughput_verdict() {
 # NO HIDDEN DENOMINATOR. The caller is handed SOURCE and ROOF so it can print both
 # ratios; §7 rule 7 applies to the gate's own arithmetic.
 #
+# NO DENOMINATOR CHOSEN BY NOISE (#86). `class` is a derived quantity, and when its
+# derivation straddled a bar it arrives here as "indeterminate". That is neither
+# branch: it takes the fourth exit below, which yields no denominator at all, and
+# the caller must report UNMEASURED rather than divide. The failure this closes is
+# specific — an indeterminate class used to reach the `class != "issue"` test and
+# come out of it as a confident `fma-bound`, which is the strict direction and so
+# could never flatter keel, but did produce a FAIL naming a floor on the strength
+# of a classification the run could not make.
+#
 # Arguments, in order:
-#   1 class        "issue" or anything else, from throughput_verdict on this host
+#   1 class        "issue", "indeterminate", or anything else, from
+#                  throughput_verdict on this host
 #   2 pmax         max_i p_i for this host (ROOF * I_b from that same verdict)
 #   3 i_active     audited insns/FMA of the shape Sgemm ran
 #   4 sweep_best   best zero-spill insns/FMA in the recorded sweep
@@ -218,13 +325,17 @@ throughput_verdict() {
 #   7 peak_rate    same-host measured peak GFLOP/s
 #
 # Echoes one line: DENOM SOURCE ROOF WHY
-#   SOURCE in {openblas, roofline}
+#   SOURCE in {openblas, roofline, indeterminate}
 #   ROOF   the roofline fraction used (0 when the denominator is OpenBLAS)
-#   WHY    in {fma-bound, shape, reference, issue-capped, nopeak}
+#   DENOM  0 when SOURCE is indeterminate -- there is no denominator, and the
+#          caller must branch on SOURCE before dividing by it
+#   WHY    in {fma-bound, shape, reference, issue-capped, nopeak,
+#              classindeterminate}
 p3_denominator() {
   awk -v class="$1" -v pmax="$2" -v i_active="$3" -v sweep_best="$4" \
       -v slack="$5" -v ob="$6" -v peak="$7" '
   BEGIN {
+    if (class == "indeterminate") { print "0.000000 indeterminate 0.000000 classindeterminate"; exit }
     if (class != "issue")                { print_ob("fma-bound"); exit }
     if (i_active <= 0 || pmax <= 0)      { print_ob("nopeak");    exit }
     if (peak <= 0)                       { print_ob("nopeak");    exit }
@@ -261,9 +372,13 @@ p3_denominator() {
 #
 # Echoes the bound, or nothing if the inputs cannot support one (empty $PKLO on the
 # roofline branch is a failure to measure, and the caller must treat it as one).
+# SOURCE=indeterminate is one of those: there is no denominator to bound a ratio
+# against, and passing the plain OpenBLAS bound through would be the very
+# substitution #86 forbids, made silently by a helper.
 p3_ratio_lo() {
   awk -v src="$1" -v rlo="$2" -v pklo="$3" -v roof="$4" '
   BEGIN {
+    if (src == "indeterminate") exit
     if (src != "roofline") { if (rlo != "") printf "%.6f\n", rlo; exit }
     if (pklo == "" || roof + 0 <= 0) exit
     v = pklo / roof

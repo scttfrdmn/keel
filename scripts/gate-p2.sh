@@ -538,21 +538,30 @@ else
     # The floor applies to the shape that wins here (criterion 5). Every shape's
     # number is printed either way, and "measured but unbounded" is a failure to
     # measure rather than a shape that lost.
-    BEST_LO=""; BEST_PT=""; BEST_ID=""; BEST_IPF=""; UNBOUNDED=""; MEASURED=""
-    # Mixes, collected as ID:f:I. p_i = f_i * I_i is the observed retirement rate
-    # divided by the host's FMA/cycle, and that common factor cancels out of both
-    # the classifier and the roofline, so no clock measurement is needed (see
-    # ROOF_FLOOR above). They are reduced to spreads only after the winner is
-    # known, because the ceiling must be established by the mixes OTHER than the
-    # shape under test — otherwise attain >= 1/cspread holds identically and the
-    # roofline floor decides nothing (scripts/roofline.sh, INDEPENDENCE).
+    BEST_LO=""; BEST_PT=""; BEST_HI=""; BEST_ID=""; BEST_IPF=""; UNBOUNDED=""; MEASURED=""
+    # Mixes, collected as ID:f:I:f_lo:f_hi. p_i = f_i * I_i is the observed
+    # retirement rate divided by the host's FMA/cycle, and that common factor
+    # cancels out of both the classifier and the roofline, so no clock measurement
+    # is needed (see ROOF_FLOOR above). They are reduced to spreads only after the
+    # winner is known, because the ceiling must be established by the mixes OTHER
+    # than the shape under test — otherwise attain >= 1/cspread holds identically
+    # and the roofline floor decides nothing (scripts/roofline.sh, INDEPENDENCE).
+    #
+    # Each mix carries both ends of its interval, because the spread it feeds is a
+    # class-selecting comparison and #86 grades those three ways. The bounds are
+    # measurements (bench_ratio_lo / bench_ratio_hi), not a symmetry assumption
+    # about the point estimate.
     MIXES=""
     for kname in $GATE_KERNELS; do
       [[ -n "$(bench_stat "$kname" "$BENCHCSV" GFLOP/s)" ]] || continue
       MEASURED=yes
       klo="$(bench_ratio_lo "$kname" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
       kpt="$(bench_ratio "$kname" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
-      if [[ -z "$klo" ]]; then
+      khi="$(bench_ratio_hi "$kname" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
+      # Both ends or neither: a fraction bounded below but not above cannot take
+      # part in a ceiling, and defaulting its upper end to the point estimate
+      # would narrow an interval that was never measured.
+      if [[ -z "$klo" || -z "$khi" ]]; then
         UNBOUNDED="$UNBOUNDED $kname"
         info "[$host] ${kname##Kernel/} $(bench_describe "$kname" "$BENCHCSV" GFLOP/s) — no CI, not counted"
         continue
@@ -563,9 +572,9 @@ else
         *)      kipf="" ;;
       esac
       info "[$host] ${kname##Kernel/} $(bench_describe "$kname" "$BENCHCSV" GFLOP/s) = $(awk -v r="$kpt" 'BEGIN{printf "%.1f", r * 100}')% of peak, $(awk -v r="$klo" 'BEGIN{printf "%.1f", r * 100}')% net of CI"
-      [[ -n "$kipf" ]] && MIXES="$MIXES ${kname##Kernel/}|$kpt:$kipf"
+      [[ -n "$kipf" ]] && MIXES="$MIXES ${kname##Kernel/}|$kpt:$kipf:$klo:$khi"
       if [[ -z "$BEST_LO" ]] || awk -v a="$klo" -v b="$BEST_LO" 'BEGIN{exit !(a > b)}'; then
-        BEST_LO="$klo"; BEST_PT="$kpt"; BEST_ID="${kname##Kernel/}"; BEST_IPF="$kipf"
+        BEST_LO="$klo"; BEST_PT="$kpt"; BEST_HI="$khi"; BEST_ID="${kname##Kernel/}"; BEST_IPF="$kipf"
       fi
     done
     # The peak kernel is always a ceiling mix, and its fraction is 1 by
@@ -573,6 +582,10 @@ else
     # can never be excluded below — which is what pins the ceiling from beneath
     # and makes sandbagging an alternate shape break convergence instead of
     # lowering the roofline.
+    #
+    # It carries no interval, and that is not an omission: f = 1 exactly, and the
+    # peak's own confidence interval is already inside every other mix's bounds,
+    # which are ratios against it. Giving it one would double-count the same noise.
     [[ -n "$IPF_PEAK" ]] && MIXES="$MIXES $GATE_PEAK_FUNC|1.0:$IPF_PEAK"
 
     if [[ -z "$MEASURED" ]]; then
@@ -602,12 +615,14 @@ else
     if [[ -z "$BEST_IPF" ]]; then
       info "[$host] no audited insns/FMA for $BEST_ID; the host cannot be classified"
     fi
-    # shellcheck disable=SC2086  # CEIL is a deliberate list of f:I words
-    read -r CLASS CSPREAD MSPREAD ROOF ATTAIN RESULT WHY <<<"$(
-      throughput_verdict "$BEST_LO" "${BEST_IPF:-0}" \
+    # shellcheck disable=SC2086  # CEIL is a deliberate list of f:I:f_lo:f_hi words
+    read -r CLASS CSPREAD MSPREAD ROOF ATTAIN RESULT WHY CSLO CSHI ATTAINHI <<<"$(
+      throughput_verdict "$BEST_LO" "$BEST_HI" "${BEST_IPF:-0}" \
         "$PEAK_FLOOR" "$ROOF_FLOOR" "$ISSUE_CONVERGE_MAX" \
         "$ISSUE_MIX_SPREAD_MIN" "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" $CEIL)"
     csx="$(printf '%.3f' "$CSPREAD")"; msx="$(printf '%.3f' "$MSPREAD")"
+    cslox="$(printf '%.3f' "$CSLO")"; cshix="$(printf '%.3f' "$CSHI")"
+    atthipc="$(awk -v a="$ATTAINHI" 'BEGIN{printf "%.1f", a * 100}')"
     roofpc="$(awk -v r="$ROOF" 'BEGIN{printf "%.1f", r * 100}')"
     attpc="$(awk -v a="$ATTAIN" 'BEGIN{printf "%.1f", a * 100}')"
     floorpc="$(awk -v r="$ROOF" -v f="$ROOF_FLOOR" 'BEGIN{printf "%.1f", r * f * 100}')"
@@ -622,9 +637,28 @@ else
         info "[$host] ceiling mixes agree to ${csx}x but their insns/FMA differ by only ${msx}x (under $ISSUE_MIX_SPREAD_MIN), so the agreement is not evidence -> fma-bound" ;;
       falsified)
         info "[$host] ceiling mixes converge (${csx}x over a ${msx}x spread) but $BEST_ID retires *above* the ceiling they set — ${attpc}% of a ${roofpc}% roofline — so the issue-bound hypothesis is falsified by its own data -> fma-bound" ;;
+      nearconverge)
+        info "[$host] the ceiling mixes' rate spread is ${csx}x with an interval of [${cslox}x, ${cshix}x], which crosses the $ISSUE_CONVERGE_MAX bar: whether this host has a front-end ceiling is not decidable from this run's measurements" ;;
+      nearceiling)
+        info "[$host] ceiling mixes converge (${csx}x over a ${msx}x spread), but $BEST_ID's attainment interval reaches [${attpc}%, ${atthipc}%] of the ${roofpc}% roofline, crossing 100%: whether the machine exceeds the ceiling its own mixes set is not decidable from this run" ;;
       *)
-        info "[$host] ceiling mixes converge ${csx}x over a ${msx}x spread in insns/FMA -> ${CLASS}-bound" ;;
+        info "[$host] ceiling mixes converge ${csx}x (interval [${cslox}x, ${cshix}x], clear of $ISSUE_CONVERGE_MAX) over a ${msx}x spread in insns/FMA -> ${CLASS}-bound" ;;
     esac
+
+    # A classification the run could not make is not a floor this host missed
+    # (#86). It comes before N_JUDGED because the aggregate below counts hosts that
+    # produced a judgeable reading, and this host did not: no class means no floor
+    # to judge against. One cause, one label — and the label names the cause rather
+    # than reporting a miss against whichever floor the noise happened to select.
+    if [[ "$CLASS" == indeterminate ]]; then
+      unmeasured "[$host] classification indeterminate this run (why=$WHY), so P2's floor is unmeasured here rather than missed — $BEST_ID read ${fracpt}% of measured peak, ${frac}% net of CI, and that reading is not in question"
+      # Deliberately NOT "spend DESIGN.md §4's one archived re-run". That allowance
+      # lets a red verdict be overturned by a second reading, and there is no verdict
+      # here to overturn — so re-measuring an UNMEASURED is the ordinary response to a
+      # missing measurement, uncapped, rather than an allowance being drawn down.
+      info "  [$host] the remedy is precision, never a wider bar: re-measure (this is not §4's re-run being spent — there is no verdict to overturn), and if this host is chronically indeterminate here, raise KEEL_BENCH_COUNT for it"
+      continue
+    fi
 
     # Every host reaching here produced a judgeable verdict, including
     # issue/refuse: a refusal is a reading this gate took and reasoned about.

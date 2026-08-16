@@ -9,6 +9,34 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The host classification is graded in three states, so a class the measurement cannot decide
+  reports `UNMEASURED` instead of picking a side** (#86; ruled: *"a verdict cannot be more certain
+  than the least certain link in its derivation chain"*, and `DESIGN.md` §4/P3 records the grounds).
+  The class is an *input* four criteria divide by, and on 2026-08-15 one noisy reading of it moved
+  all four: janus's ceiling spread crossed `converge_max` (1.10), the convergence test returned
+  `why=diverge`, the host reclassified fma-bound, and the gate then (a) failed the class-agreement
+  check telling the operator to fix `internal/kern.HostClass`'s fingerprint, which was right;
+  (b) faced the sentinel with the flat 55% instead of 90% of its roofline, failing at 42.7% of
+  peak; (c) switched criterion 6b's denominator from `roofline 105.52` to `openblas 194.35`,
+  turning **75.1% PASS into 39.5% FAIL**; and (d) followed with criterion 6's aggregate. Against a
+  *fixed* denominator those same two readings differ by **1.3 points** (39.5% vs 40.8% of plain
+  OpenBLAS, `build/gate-p3-under-p4-708ddbb-run1.log:131` and `-708ddbb.log:130`). The 35-point
+  swing was the denominator. So the two comparisons that *select* the class — ceiling spread vs
+  `converge_max`, and attainment vs 1.0, the falsification test — now consume `bench_ratio_lo`
+  and `bench_ratio_hi` (#67's measured bounds, not a symmetry assumption) and grade three ways:
+  clear on either side keeps its verdict, an interval spanning the bar yields class
+  `indeterminate` and `RESULT=unmeasured`. `p3_denominator` gained a fourth exit
+  (`classindeterminate`) so an undecided class cannot fall through to a confident `fma-bound`,
+  and `p3_ratio_lo` fails closed on it. The *result* boundaries — 90% of roofline, the flat 55% —
+  stay two-state with `DESIGN.md` §4's one archived re-run, because that allowance was priced for
+  one verdict and a propagating input spends four. Re-measuring an `indeterminate` is therefore
+  not the allowance being spent: there is no verdict to overturn.
+- **`gate-p3` prints the ceiling spread, the mix spread and the attainment interval it decided
+  the class on** (#86). It read all three into `_`-prefixed discards, so when the classification
+  flipped, the quantity that flipped it was in no log and had to be bounded backwards out of the
+  threshold — which is how the first reconstruction of the incident above blamed the 90%
+  attainment floor rather than the convergence test three fields earlier. §5 rule 8's "publish the
+  underlying pair beside the derived figure", applied to a class instead of a percentage.
 - **The performance-governor check is now one function, `assert_governor` in `scripts/remote.sh`,
   called from all five measuring gates** (#83; ruled: *"four better copies are the same failure
   mode with a better master, and the next labelling defect propagates just as cleanly — the fix

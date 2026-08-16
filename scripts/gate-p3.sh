@@ -1007,21 +1007,25 @@ else
     hclassline="$(marker bench-kern-class "$BENCHLOG")"
     hclass="${hclassline%% *}"
 
-    ACT_LO=""; ACT_PT=""; ACT_ID=""; ACT_IPF=""
+    ACT_LO=""; ACT_PT=""; ACT_HI=""; ACT_ID=""; ACT_IPF=""
     BEST_LO=""; BEST_PT=""; BEST_ID=""; MIXES=""; RIVALS=""
     for kname in $GATE_KERNELS; do
       [[ -n "$(bench_stat "$kname" "$BENCHCSV" GFLOP/s)" ]] || continue
       klo="$(bench_ratio_lo "$kname" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
       kpt="$(bench_ratio "$kname" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
-      if [[ -z "$klo" ]]; then
+      # Both ends, because the spread these feed is a class-selecting comparison
+      # and #86 grades those against the interval; see scripts/roofline.sh. A
+      # fraction bounded below but not above cannot take part in a ceiling.
+      khi="$(bench_ratio_hi "$kname" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
+      if [[ -z "$klo" || -z "$khi" ]]; then
         info "[$host] ${kname##Kernel/}: no CI, not counted"
         continue
       fi
       kid="${kname##Kernel/}"
       kipf="$(audit_ipf_tile "${kid%%/*}" "$AUDITKERN")"
-      [[ -n "$kipf" ]] && MIXES="$MIXES $kid|$kpt:$kipf"
+      [[ -n "$kipf" ]] && MIXES="$MIXES $kid|$kpt:$kipf:$klo:$khi"
       if [[ "${kid%%/*}" == "$htile" ]]; then
-        ACT_LO="$klo"; ACT_PT="$kpt"; ACT_ID="$kid"; ACT_IPF="$kipf"
+        ACT_LO="$klo"; ACT_PT="$kpt"; ACT_HI="$khi"; ACT_ID="$kid"; ACT_IPF="$kipf"
       else
         RIVALS="$RIVALS $kid|$klo|$kpt"
       fi
@@ -1055,20 +1059,41 @@ else
       [[ "${mx%%|*}" == "$ACT_ID" ]] && continue
       CEIL="$CEIL ${mx#*|}"
     done
-    # shellcheck disable=SC2086  # CEIL is a deliberate list of f:I words
-    read -r CLASS _CSPREAD _MSPREAD ROOF ATTAIN RESULT WHY <<<"$(
-      throughput_verdict "$ACT_LO" "${ACT_IPF:-0}" \
+    # shellcheck disable=SC2086  # CEIL is a deliberate list of f:I:f_lo:f_hi words
+    read -r CLASS CSPREAD MSPREAD ROOF ATTAIN RESULT WHY CSLO CSHI ATTAINHI <<<"$(
+      throughput_verdict "$ACT_LO" "$ACT_HI" "${ACT_IPF:-0}" \
         "$PEAK_FLOOR" "$ROOF_FLOOR" "$ISSUE_CONVERGE_MAX" \
         "$ISSUE_MIX_SPREAD_MIN" "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" $CEIL)"
     frac="$(awk -v r="$ACT_LO" 'BEGIN{printf "%.1f", r * 100}')"
     fracpt="$(awk -v r="$ACT_PT" 'BEGIN{printf "%.1f", r * 100}')"
+    # The spread and its interval are PRINTED here, not just consumed. This gate
+    # used to discard both (`_CSPREAD _MSPREAD`), and on 2026-08-15 that cost a
+    # day: janus reclassified fma-bound with why=diverge, four verdicts moved, and
+    # the quantity that decided it was nowhere in the log — the reconstruction had
+    # to be bounded backwards out of the threshold. A gate that will not say what
+    # its verdict divided by is the defect #86 is about, one level down.
+    info "[$host] ceiling spread $(printf '%.3f' "$CSPREAD")x, interval [$(printf '%.3f' "$CSLO")x, $(printf '%.3f' "$CSHI")x] against the $ISSUE_CONVERGE_MAX bar, over a $(printf '%.3f' "$MSPREAD")x insns/FMA spread -> ${CLASS}-bound (why=$WHY)"
+    # The second class-selecting comparison, printed on the same terms whenever it was
+    # reached: attainment against the ceiling its own mixes set, as an interval, so a
+    # why=nearceiling verdict is legible from the numbers rather than from its label.
+    if awk -v r="$ROOF" 'BEGIN{exit !(r>0)}'; then
+      info "[$host] attainment $(awk -v a="$ATTAIN" 'BEGIN{printf "%.1f", a*100}')%..$(awk -v a="$ATTAINHI" 'BEGIN{printf "%.1f", a*100}')% of the $(awk -v r="$ROOF" 'BEGIN{printf "%.1f", r*100}')% roofline (a whole interval above 100% falsifies the ceiling; one that crosses it cannot decide)"
+    fi
 
     # ---- criterion 5b, part 3: the classification that chose the shape, checked
     # against the one this gate measured. The library fingerprints a feature bundle
     # because no microarchitecture is readable from pure Go (T14, #25); this is the
     # measurement that says whether the fingerprint was right on this machine.
+    # Three states, because this comparison has two arms and only one of them is a
+    # fingerprint (#86). The library's arm is CPUID-derived and fixed per host; this
+    # gate's arm is measured, and a measured arm can fail to decide. Reporting a
+    # disagreement in that case would accuse the fixed arm on the strength of the
+    # noisy one — which is exactly what happened on 2026-08-15, down to the log line
+    # dispatching the operator to repair a fingerprint that was right.
     if [[ -z "$hclass" ]]; then
       unmeasured "[$host] no keel-bench-kern-class marker, so the classification the shape was chosen by cannot be read"
+    elif [[ "$CLASS" == indeterminate ]]; then
+      unmeasured "[$host] classification indeterminate this run (why=$WHY), so this gate's arm of the comparison cannot decide and the library's ${hclass}-bound fingerprint is neither confirmed nor contradicted — ${hclassline#* }"
     elif [[ "$hclass" == "$CLASS" ]]; then
       pass "[$host] the library's ${hclass}-bound classification matches this gate's measured verdict — ${hclassline#* }"
     else
@@ -1099,7 +1124,10 @@ else
     # What this host's sentinel measurement tells the later sections, in one file so
     # neither of them re-derives it from a second set of measurements:
     #
-    #   CLASS  the verdict, for criterion 6b's denominator
+    #   CLASS  the verdict, for criterion 6b's denominator — and "indeterminate" is
+    #          one of its values, carried forward deliberately so criterion 6b reports
+    #          the same one cause instead of receiving a class the run could not make
+    #          and dividing by whichever denominator it implies (#86)
     #   pmax   = max_i f_i·I_i, recovered from the verdict's own two outputs so that
     #          criterion 6b's roofline is built from the same ceiling this one judged
     #          against
@@ -1118,6 +1146,11 @@ else
       # would read as leniency that this host does not get.
       if [[ "$CLASS" == issue ]]; then
         info "[$host] classified issue-bound (roofline ${roofpc}%) for criterion 6b; not a sentinel, so P2's floor is not judged here"
+      elif [[ "$CLASS" == indeterminate ]]; then
+        # Not judged here either way, so this is an info line and not a verdict — but
+        # criterion 6b below WILL be unmeasured on this host, and it should be readable
+        # from here why, rather than as a surprise 400 lines later.
+        info "[$host] classification indeterminate this run (why=$WHY), so criterion 6b has no denominator for this host and will report it unmeasured; not a sentinel, so P2's floor is not judged here"
       else
         info "[$host] classified ${CLASS}-bound for criterion 6b, so no roofline applies and it faces the unmodified bar; not a sentinel, so P2's floor is not judged here"
       fi
@@ -1128,6 +1161,15 @@ else
         pass "[$host] sentinel: dispatched $ACT_ID holds P2's floor — ${fracpt}% of peak (${frac}% net of CI) = ${attpc}% of its ${roofpc}% issue roofline (>= 90%)" ;;
       */pass)
         pass "[$host] sentinel: dispatched $ACT_ID holds P2's floor — ${fracpt}% of peak, ${frac}% net of CI, ${CLASS}-bound (>= 55%)" ;;
+      indeterminate/*)
+        # One cause, one label. The floor this host would be held to depends on the
+        # class, so with no class there is no floor to be under or over — and the
+        # reading itself is fine, which the line says so nobody re-measures the wrong
+        # thing. Both floors are named because the gap between them IS the stake: on
+        # janus it is 43.8% of peak against 55%.
+        unmeasured "[$host] sentinel: classification indeterminate this run (why=$WHY), so P2's floor is unmeasured on this host rather than held or missed — dispatched $ACT_ID read ${fracpt}% of measured peak, ${frac}% net of CI, and that reading is not in question"
+        info "  [$host] which floor applies is what could not be decided: 55% of peak if fma-bound, ${ROOF_FLOOR}x this run's roofline if issue-bound"
+        info "  [$host] the remedy is precision, never a wider bar: re-measure (not §4's re-run being spent — there is no verdict to overturn), and raise KEEL_BENCH_COUNT for a host that is chronically indeterminate here" ;;
       */refuse)
         fail "[$host] sentinel: dispatched $ACT_ID at $(printf '%.3f' "${ACT_IPF:-0}") insns/FMA is outside the shape guard — P3 fattened the K-loop (why=$WHY)" ;;
       *)
@@ -1247,6 +1289,11 @@ fi
 # and it says so per host instead of one host standing in for three.
 OB_CLEARED=0
 OB_MEASURED=0
+# Hosts whose denominator could not be chosen because the classification the run
+# derived straddled a bar (#86). Counted separately from a miss, because "did not
+# clear 60%" and "there was no 60% of anything to clear" are different claims and
+# the aggregate below must not collapse them into one.
+OB_INDET=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute): unmeasured, not missed"
@@ -1535,6 +1582,33 @@ else
     read -r obdenom obsrc obroof obwhy <<<"$(p3_denominator \
       "$obclass" "$obpmax" "${i_active:-0}" \
       "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" "${ob_rate:-0}" "${peak_rate:-0}")"
+
+    # ---- the class this criterion divides by is itself derived (#86). When its
+    # derivation straddled a bar there is no denominator, and the numerator is not the
+    # thing in doubt: on 2026-08-15 keel's rate here was 76.81 GFLOP/s +/- 1.0%, the
+    # healthiest link in the chain, and it was reported as a 39.5% FAIL because a peak
+    # probe three steps upstream had moved the classification and with it the
+    # denominator. A verdict cannot be more certain than the least certain link in its
+    # derivation chain.
+    #
+    # Both candidate ratios are printed, which is the only place in this gate that a
+    # ratio is shown against a denominator the run did not choose — and it is the one
+    # place that must, because the quantity under discussion is exactly how much the
+    # classification was worth. The candidates come from p3_denominator itself, called
+    # once per hypothesis, so nothing here re-derives a denominator by hand.
+    if [[ "$obsrc" == indeterminate ]]; then
+      OB_INDET=$((OB_INDET + 1))
+      keelr="$(bench_gflops "$GATE_SGEMM" "$BENCHCSV")"
+      unmeasured "[$host] classification indeterminate this run, so criterion 6 has no denominator on this host — keel measured $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s) here and that reading is not in question; the gate declines to pick a denominator by noise"
+      for hypo in issue fma; do
+        read -r hdenom hsrc _hroof hwhy <<<"$(p3_denominator \
+          "$hypo" "$obpmax" "${i_active:-0}" \
+          "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" "${ob_rate:-0}" "${peak_rate:-0}")"
+        info "  [$host] had the class been ${hypo}-bound: $hsrc $(printf '%.2f' "$hdenom") GFLOP/s (why=$hwhy) -> $(awk -v k="${keelr:-0}" -v d="$hdenom" 'BEGIN{printf "%.1f", (d > 0) ? k / d * 100 : 0}')% against the 60% bar"
+      done
+      info "  [$host] that gap is what the classification was worth, and it is why this is unmeasured rather than graded: the run could not say which of the two applies"
+      continue
+    fi
     # A roofline that does not apply is printed as n/a, not as 0.0% (issue #34).
     # p3_denominator returns 0 as its sentinel and that stays its contract; it is
     # only the rendering that must not dress a not-applicable as a measured zero.
@@ -1581,12 +1655,18 @@ else
       fail "[$host] Sgemm at 2048^3 is only ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (< 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
     fi
   done <<<"$HOSTS"
+  # Three-way over coverage state, the same shape as criterion 5b's aggregate and for
+  # the same reason: a host that could not be judged must not be re-reported here as a
+  # host that missed the bar. That would be one cause producing two verdicts, the
+  # second of them a false claim about keel's speed.
   if [[ "$OB_MEASURED" -eq 0 ]]; then
     unmeasured "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed"
   elif [[ "$OB_CLEARED" -eq "$NHOSTS" ]]; then
     pass "every gate host cleared 60% of its own single-thread OpenBLAS ($OB_CLEARED/$NHOSTS)"
+  elif [[ $((OB_CLEARED + OB_INDET)) -eq "$NHOSTS" ]]; then
+    unmeasured "$OB_INDET of $NHOSTS gate hosts could not be judged this run (classification indeterminate, so no denominator); the other $OB_CLEARED cleared the bar, and no host measured below it"
   else
-    fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar; ruling #23 asks every host to clear its own reference"
+    fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar, $((NHOSTS - OB_CLEARED - OB_INDET)) measured below it and $OB_INDET could not be judged; ruling #23 asks every host to clear its own reference"
   fi
 fi
 

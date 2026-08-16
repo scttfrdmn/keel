@@ -32,19 +32,28 @@ set -euo pipefail
 # three check functions see them however they are reached. They are constants of
 # the file, not state threaded between calls.
 
-# check NAME EXPECT_CLASS EXPECT_RESULT best_lo best_ipf ceiling_mix...
+# check NAME EXPECT_CLASS EXPECT_RESULT best_lo[:best_hi] best_ipf ceiling_mix...
+#
+# The shape under test's reading is `lo` for a point fixture and `lo:hi` for one
+# that carries an interval; a ceiling mix is `f:I` or `f:I:f_lo:f_hi`. Absent
+# bounds mean a zero-width interval, which is what every fixture written before
+# the #86 amendment asserted, so all of those keep their exact verdicts — and that
+# they still pass unchanged is the regression check on the third state.
 check() {
   local name="$1" xclass="$2" xresult="$3"; shift 3
-  local best_lo="$1" best_ipf="$2"; shift 2
-  local out; out="$(throughput_verdict "$best_lo" "$best_ipf" \
+  local best="$1" best_ipf="$2"; shift 2
+  local best_lo="${best%%:*}" best_hi="${best#*:}"
+  [[ "$best_hi" == "$best" ]] && best_hi="$best_lo"
+  local out; out="$(throughput_verdict "$best_lo" "$best_hi" "$best_ipf" \
                       "$PF" "$RF" "$CM" "$MM" "$SB" "$SL" "$@")"
-  local class cspread mspread roof attain result why
-  read -r class cspread mspread roof attain result why <<<"$out"
+  local class cspread mspread roof attain result why cslo cshi attainhi
+  read -r class cspread mspread roof attain result why cslo cshi attainhi <<<"$out"
   if [[ "$class" == "$xclass" && "$result" == "$xresult" ]]; then
-    printf '  ok    %-53s %-5s/%-6s cspread=%.3fx mspread=%.3fx roof=%5.1f%% attain=%6.1f%% why=%s\n' \
-      "$name" "$class" "$result" "$cspread" "$mspread" \
+    printf '  ok    %-53s %-13s/%-10s cspread=%.3fx [%.3f,%.3f] mspread=%.3fx roof=%5.1f%% attain=%6.1f%%..%.1f%% why=%s\n' \
+      "$name" "$class" "$result" "$cspread" "$cslo" "$cshi" "$mspread" \
       "$(awk -v r="$roof" 'BEGIN{print r*100}')" \
-      "$(awk -v a="$attain" 'BEGIN{print a*100}')" "$why"
+      "$(awk -v a="$attain" 'BEGIN{print a*100}')" \
+      "$(awk -v a="$attainhi" 'BEGIN{print a*100}')" "$why"
   else
     printf '  FAIL  %-53s got %s/%s (why=%s), want %s/%s\n' \
       "$name" "$class" "$result" "$why" "$xclass" "$xresult"
@@ -176,6 +185,71 @@ main() {
         0.437 4.7000   0.352:6.250 "$PEAK"
 
   echo
+  echo "-- the third state (#86): a class-selecting comparison the reading cannot decide --"
+  echo "   (CLASS and RESULT are graded differently on purpose: a class straddle moves"
+  echo "    four verdicts, a result miss moves one and keeps DESIGN.md §4's re-run)"
+
+  # 20. THE INCIDENT, as close as the log supports. On 2026-08-15 janus's classify
+  #     invocation read both microkernels ~7% low against the peak kernel in the same
+  #     run; the spread crossed 1.10, the host reclassified fma-bound, and criterion 7
+  #     switched denominators under an unchanged numerator. The exact f for 4x32 is NOT
+  #     recoverable from that log -- gate-p3 discarded the spread it decided on, which
+  #     is the reporting defect this commit also fixes -- but `why=diverge` bounds it:
+  #     f*6.25 < 2.25/1.10, so f < 0.3273 against 0.352 on the two adjacent runs. At
+  #     f=0.327 the point spread is 1.101, just over the bar, and the interval reaches
+  #     1.068 on the other side of it. Two states used to share that reading.
+  check "janus 2026-08-15: the spread cannot decide the class"  indeterminate unmeasured \
+        0.411:0.443 4.625   0.327:6.250:0.317:0.337 "$PEAK"
+
+  # 21. Real divergence is still divergence. Tight intervals on a 2.5x spread: the
+  #     third state must not become a way for a wide front end to escape the flat
+  #     floor, which is negative control 2 with the intervals switched on.
+  check "a 2.5x spread with tight CIs still diverges"        fma   fail \
+        0.300:0.305 4.625   0.900:6.250:0.890:0.910 "$PEAK"
+
+  # 22. Real convergence is still convergence: janus as it healthily reads, with its
+  #     measured intervals attached. The third state is carved out of the region where
+  #     the two old outcomes disagreed with each other, not out of either of them.
+  check "janus healthy, intervals attached: still issue/pass" issue pass \
+        0.461:0.465 4.625   0.352:6.250:0.348:0.356 "$PEAK"
+
+  # 23. It takes PASSes away too, which is what makes it a measurement rule and not
+  #     leniency. Attainment 98.7% would sail past the 90% floor, but its interval
+  #     crosses 1.0, so whether this host exceeds its own claimed ceiling -- the
+  #     falsification test -- is undecided, and a host cannot be judged against a
+  #     roofline it may have already beaten.
+  check "attainment straddling the ceiling withholds a PASS"  indeterminate unmeasured \
+        0.480:0.500 4.625   0.352:6.250 "$PEAK"
+
+  # 24. Falsified beats undecided: antares clears its claimed ceiling by 53%, and an
+  #     interval on the reading does not make that a close call.
+  check "clearly falsified stays falsified, not indeterminate" fma  pass \
+        0.600:0.620 6.250   0.531:4.625 "$PEAK"
+
+  # 25. Where the bar is, checked from both sides. Tested at +-1e-3 of a 1.10 spread
+  #     rather than at the exact tie, for the same reason as control 9: a tie between
+  #     two doubles is unreachable in practice and pinning it would test the FPU. The
+  #     lower end is held at 1.083 in both, so it is the upper end doing the work.
+  check "spread interval reaching 1.099x: converged"          issue pass \
+        0.500:0.510 4.625   0.393:6.250:0.390:0.395640 "$PEAK"
+  check "spread interval reaching 1.101x: cannot decide"      indeterminate unmeasured \
+        0.500:0.510 4.625   0.393:6.250:0.390:0.396360 "$PEAK"
+
+  # 26. One mix wide enough to supply both ends of the spread. Its own interval spans
+  #     1.35x, so the set cannot show a ceiling however well the point estimates line
+  #     up; reporting indeterminate here is the honest reading of a mix that wide, not
+  #     an artifact of taking the ends over the whole set.
+  check "a single very wide mix establishes no ceiling"       indeterminate unmeasured \
+        0.461:0.465 4.625   0.352:6.250:0.300:0.404 "$PEAK"
+
+  # 27. The clamp at 1. Two heavily overlapping mixes give pmax_lo < pmin_hi, so the
+  #     raw lower end of the spread is 0.967 -- a spread below 1 is not a thing, and
+  #     without the clamp it would read as "converged by -3%". Clamped, this is what it
+  #     should be: as converged as a measurement can show, and judged.
+  check "overlapping intervals are converged, not undecided"  issue pass \
+        0.461:0.465 4.625   0.352:6.250:0.340:0.364 0.98:2.250:0.9667:1.0
+
+  echo
   echo "-- P3's denominator (#23): min(same-host OpenBLAS, roofline x measured peak) --"
   echo "   (the amendment may only ever LOWER a denominator, only on an issue-bound"
   echo "    host, and only for a shape inside the guard)"
@@ -219,6 +293,13 @@ main() {
   checkd "no audited insns/FMA: no cap, plain OpenBLAS"      openblas nopeak 175.00 \
          issue 2.25 0 175.00 216.90
 
+  # 15b. An indeterminate class is neither branch (#86). It used to fall through the
+  #      `class != "issue"` test and come out as a confident fma-bound, which is the
+  #      strict direction -- but it produced a FAIL against a floor on the strength of
+  #      a classification the run could not make. There is no denominator here.
+  checkd "an indeterminate class yields no denominator"      indeterminate classindeterminate 0.00 \
+         indeterminate 2.25 4.625 175.00 216.90
+
   echo
   echo "-- P3's ratio, net of CI, against whichever denominator was chosen --"
 
@@ -235,6 +316,10 @@ main() {
   #     unbounded pass.
   checkr "no bounded keel/peak: no amended bound at all" ""    roofline 0.390 ""    0.486486
   checkr "no roofline: no amended bound at all"          ""    roofline 0.390 0.311 0
+  # 20. And no bound against a denominator that was never chosen: passing the plain
+  #     OpenBLAS bound through here would make the substitution #86 forbids, silently,
+  #     inside a helper the caller trusts to fail closed.
+  checkr "indeterminate source: no bound at all"         ""    indeterminate 0.641 0.311 0.486486
 
   echo
   if [[ "$FAILED" -eq 0 ]]; then
