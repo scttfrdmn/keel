@@ -22,9 +22,17 @@ While the major version is 0, minor versions may contain breaking changes.
   prints a banner, withholds GREEN/RED, exits 2, logs to `build/instrument-exercise-*` (#78), and is
   read nowhere near a comparison, threshold, tally or host list; set it on a healthy fleet and the run
   reports a stamped 3/3, which puts on record that the aggregate cannot be forged from a flag. The shim
-  has 9 fixtures of its own, run before any host time is spent: the substring cases are the ones that
+  has 17 fixtures of its own, run before any host time is spent: the substring cases are the ones that
   matter, since a dead `zen4.local` matched loosely would also kill `zen4.local.backup` and the log
-  would still say "one host unreachable". The driver also verifies the branch actually fired rather
+  would still say "one host unreachable". **The shim covers `scp` because the guard made it.** The
+  first version shimmed `ssh` only, on the belief that everything crossed the wire through ssh's
+  stdin; `remote.sh:440` copies the bench binary with `scp`, so the dead host would have answered that
+  call and the exercise would have been a fiction with a green-looking log. The driver's transport
+  assertion caught it on the first launch, before any host time was spent -- which is the argument for
+  asserting a premise you are confident about. The guard now enumerates what is covered rather than
+  asserting an absence, so a transport added later fails loudly instead of quietly reaching a host
+  declared dead, and refusal is per-transport (ssh exits 255; scp exits 1 after "lost connection", so
+  a caller checking for 255 cannot read a dead host as a copy that merely failed). The driver also verifies the branch actually fired rather
   than reporting that the run happened, checks `remote.sh` has not grown an `scp`/`rsync` path the
   ssh-only shim would miss, and prints whether the dead host is also the sentinel so the collateral
   scope is computed rather than inferred. Doubles as the fleet's first degraded-mode rehearsal.

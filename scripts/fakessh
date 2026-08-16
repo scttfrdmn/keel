@@ -2,13 +2,22 @@
 # Copyright 2026 The keel Authors
 # SPDX-License-Identifier: Apache-2.0
 #
-# fakessh -- an `ssh` that refuses named hosts and passes everything else through.
+# fakessh -- an `ssh`/`scp` that refuses named hosts and passes everything else
+# through.
 #
-# Installed as `ssh` on PATH (a symlink; see scripts/exercise-dead-host.sh) so that a
-# gate discovers a host unreachable through its ordinary machinery, from the ordinary
-# cause, with no gate code modified and nothing in the gate aware of it. That is the
-# point: a flag telling the judge to skip a host would prove the flag works, whereas
-# this proves the GATE works.
+# Installed as BOTH `ssh` and `scp` on PATH (symlinks; see
+# scripts/exercise-dead-host.sh) so that a gate discovers a host unreachable through
+# its ordinary machinery, from the ordinary cause, with no gate code modified and
+# nothing in the gate aware of it. That is the point: a flag telling the judge to skip
+# a host would prove the flag works, whereas this proves the GATE works.
+#
+# IT COVERS scp BECAUSE IT HAD TO BE TOLD. The first version shimmed ssh only, on the
+# belief that everything crosses the wire through ssh's stdin. remote.sh:440 copies
+# the bench binary with `scp`, so the dead host would have been reachable by that path
+# and the exercise would have been a fiction with a green-looking log. The driver's
+# transport guard caught it before any host time was spent, which is the whole reason
+# that guard asserts rather than trusts. Behaviour is selected by the name it is
+# invoked as, so the two arms cannot drift apart.
 #
 # A NOTE ON THIS FILE'S PROVENANCE, since it bears on how much its name is worth.
 # DESIGN.md has cited "the `fakessh` dead-host arm" as established discipline since
@@ -18,20 +27,35 @@
 # exist is the failure mode the citation lint was built for, appearing in prose the
 # lint does not reach.
 #
-# Configuration, both required, both from the environment because this file is a
-# fixture and must have no host knowledge of its own:
-#   KEEL_FAKESSH_DEAD -- space-separated hosts to refuse
-#   KEEL_FAKESSH_REAL -- absolute path to the real ssh, resolved by the caller
-#     BEFORE this shim went on PATH. Resolving it here would find this shim.
+# Configuration, all from the environment because this file is a fixture and must have
+# no host knowledge of its own:
+#   KEEL_FAKESSH_DEAD -- space-separated hosts to refuse (required)
+#   KEEL_FAKESSH_REAL -- absolute path to the real ssh (required when invoked as ssh)
+#   KEEL_FAKESCP_REAL -- absolute path to the real scp (required when invoked as scp)
+# The caller resolves those paths BEFORE this shim goes on PATH. Resolving them here
+# would find this shim.
 #
-# Refusal mimics a down machine exactly: exit 255, with ssh's own "No route to host"
-# on stderr. Inventing a novel error would test the caller against a condition no
-# real outage produces.
+# Refusal mimics a down machine exactly, per transport: ssh exits 255, scp exits 1
+# after "lost connection", both with ssh's own "No route to host" on stderr. Inventing
+# a novel error, or one transport's error for the other, would test the caller against
+# a condition no real outage produces.
 set -uo pipefail
 
-if [[ -z "${KEEL_FAKESSH_REAL:-}" ]]; then
-  echo "fakessh: KEEL_FAKESSH_REAL is unset, so there is no real ssh to fall through to." >&2
-  echo "fakessh: refusing to guess -- a shim that resolves its own ssh finds itself." >&2
+MODE="$(basename "$0")"
+case "$MODE" in
+  ssh) REALVAR=KEEL_FAKESSH_REAL ;;
+  scp) REALVAR=KEEL_FAKESCP_REAL ;;
+  *)
+    echo "fakessh: invoked as '$MODE', which is neither ssh nor scp. This shim selects" >&2
+    echo "fakessh: its behaviour by name; an unknown name has no defined behaviour and" >&2
+    echo "fakessh: guessing would silently cover a transport it was never read against." >&2
+    exit 2 ;;
+esac
+
+REAL="${!REALVAR:-}"
+if [[ -z "$REAL" ]]; then
+  echo "fakessh: $REALVAR is unset, so there is no real $MODE to fall through to." >&2
+  echo "fakessh: refusing to guess -- a shim that resolves its own $MODE finds itself." >&2
   exit 2
 fi
 if [[ -z "${KEEL_FAKESSH_DEAD:-}" ]]; then
@@ -40,17 +64,28 @@ if [[ -z "${KEEL_FAKESSH_DEAD:-}" ]]; then
   exit 2
 fi
 
-# Every argument is compared as a WHOLE WORD against each dead host, rather than
-# parsing ssh's option grammar. An option's value is never equal to a hostname, so an
-# exact match cannot misfire; a shim that mis-parsed its way into refusing the wrong
-# host would corrupt a 25-minute run and look like a finding.
+# Arguments are matched against each dead host in the four forms a hostname can take
+# on these two command lines, and in NO others -- ssh's option grammar is not parsed.
+# An option's value is never equal to a hostname, and no option value ends in `:` after
+# a hostname, so these patterns cannot misfire; a shim that mis-parsed its way into
+# refusing the WRONG host would corrupt a 25-minute run and look like a finding.
+#
+#   host            ssh's target
+#   host:path       scp's target -- the form the ssh-only first version missed
+#   user@host       either, if a host list ever grows a login
+#   user@host:path  scp with a login
 for arg in "$@"; do
   for dead in $KEEL_FAKESSH_DEAD; do
-    if [[ "$arg" == "$dead" ]]; then
+    if [[ "$arg" == "$dead" || "$arg" == "$dead":* || \
+          "$arg" == *"@$dead" || "$arg" == *"@$dead":* ]]; then
       echo "ssh: connect to host $dead port 22: No route to host" >&2
+      if [[ "$MODE" == scp ]]; then
+        echo "lost connection" >&2
+        exit 1
+      fi
       exit 255
     fi
   done
 done
 
-exec "$KEEL_FAKESSH_REAL" "$@"
+exec "$REAL" "$@"

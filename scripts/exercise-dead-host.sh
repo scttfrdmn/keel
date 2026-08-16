@@ -64,8 +64,9 @@ fi
 # ssh is resolved BEFORE its directory goes on PATH. Resolving it inside the shim
 # would find the shim.
 REAL_SSH="$(command -v ssh)"
-if [[ -z "$REAL_SSH" ]]; then
-  echo "exercise-dead-host: no ssh on PATH to shim" >&2
+REAL_SCP="$(command -v scp)"
+if [[ -z "$REAL_SSH" || -z "$REAL_SCP" ]]; then
+  echo "exercise-dead-host: need both ssh and scp on PATH to shim (ssh='$REAL_SSH' scp='$REAL_SCP')" >&2
   exit 2
 fi
 
@@ -83,18 +84,37 @@ fi
 echo
 
 # The shim itself is scripts/fakessh -- committed, reviewed and fixtured, not a
-# heredoc written at launch. Installed as `ssh` by symlink so PATH resolution finds
-# it, with its two inputs in the environment: it has no host knowledge of its own.
+# heredoc written at launch. Installed under BOTH transport names by symlink so PATH
+# resolution finds it either way, with its inputs in the environment: it has no host
+# knowledge of its own.
 SHIMDIR="$(mktemp -d "${TMPDIR:-/tmp}/keel-deadhost.XXXXXX")"
 trap 'rm -rf "$SHIMDIR"' EXIT
 ln -s "$PWD/scripts/fakessh" "$SHIMDIR/ssh"
+ln -s "$PWD/scripts/fakessh" "$SHIMDIR/scp"
 
-# scp is not used by remote.sh (everything crosses the wire through ssh's stdin),
-# but assert that rather than trust it: a future file copy would silently bypass the
-# shim and the dead host would come back to life mid-exercise.
-if grep -qE '(^|[^[:alnum:]_])(scp|rsync)([^[:alnum:]_]|$)' scripts/remote.sh; then
-  echo "exercise-dead-host: remote.sh now uses scp/rsync, which this ssh-only shim does not cover;" >&2
-  echo "  the dead host would be reachable by that path and the exercise would be a fiction" >&2
+# EVERY TRANSPORT remote.sh USES MUST BE SHIMMED, and this asserts it rather than
+# trusting a reading of the file. The first version of this exercise trusted: it
+# shimmed ssh only, on the belief that everything crossed the wire through ssh's
+# stdin. remote.sh:440 copies the bench binary with `scp`, so the dead host would have
+# answered that call and the exercise would have been a fiction with a green-looking
+# log. This guard is what caught it, before any host time was spent, which is the
+# argument for asserting a premise you are confident about.
+#
+# It now enumerates what is covered instead of asserting an absence, so a transport
+# added later fails here loudly rather than quietly reaching a host declared dead.
+UNCOVERED=""
+while read -r transport; do
+  case "$transport" in
+    ssh|scp) : ;;             # shimmed above
+    *) UNCOVERED="$UNCOVERED $transport" ;;
+  esac
+done < <(grep -oE '(^|[^[:alnum:]_./-])(ssh|scp|sftp|rsync|rcp)([^[:alnum:]_-]|$)' scripts/remote.sh \
+         | grep -oE '(ssh|scp|sftp|rsync|rcp)' | sort -u)
+if [[ -n "$UNCOVERED" ]]; then
+  echo "exercise-dead-host: remote.sh uses transports this shim does not cover:$UNCOVERED" >&2
+  echo "  The dead host would be reachable by that path and the exercise would be a" >&2
+  echo "  fiction. Teach scripts/fakessh the new transport (and give it a fixture)" >&2
+  echo "  before spending host time here." >&2
   exit 2
 fi
 
@@ -120,6 +140,7 @@ mkdir -p build
   echo "   rev:            $REV"
   echo "   unreachable:    $DEAD  (via an ssh shim on PATH, exit 255 'No route to host')"
   echo "   ssh underneath: $REAL_SSH"
+  echo "   scp underneath: $REAL_SCP  (shimmed too: remote.sh:440 copies the bench binary)"
   echo "   shim dir:       $SHIMDIR"
   echo "   scope:          $SCOPE"
   echo "   target:         the fleet-incomplete rendering of criterion 5b's PASS,"
@@ -131,7 +152,7 @@ mkdir -p build
 
 set +e
 PATH="$SHIMDIR:$PATH" \
-KEEL_FAKESSH_REAL="$REAL_SSH" KEEL_FAKESSH_DEAD="$DEAD" \
+KEEL_FAKESSH_REAL="$REAL_SSH" KEEL_FAKESCP_REAL="$REAL_SCP" KEEL_FAKESSH_DEAD="$DEAD" \
 KEEL_INSTRUMENT_EXERCISE="dead-host:$DEAD" \
   bash scripts/gate-p2.sh 2>&1 | tee -a "$LOG"
 RC="${PIPESTATUS[0]}"

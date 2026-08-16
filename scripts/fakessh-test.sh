@@ -30,15 +30,39 @@ echo "PASSTHROUGH: $*"
 exit 0
 EOF
 chmod +x "$STUB/realssh"
+cp "$STUB/realssh" "$STUB/realscp"
 
-# check NAME WANT_RC WANT_SUBSTR -- args... : run fakessh and assert both its exit
-# status and something about what it emitted. Status alone is not enough: 255 with the
-# wrong message would not resemble an outage to anyone reading the log.
+# The shim selects its behaviour from the name it is invoked as, so the fixtures must
+# invoke it through both names rather than calling the file directly.
+ln -s "$FAKESSH" "$STUB/ssh"
+ln -s "$FAKESSH" "$STUB/scp"
+
+# check NAME WANT_RC WANT_SUBSTR -- args... : run fakessh AS ssh and assert both its
+# exit status and something about what it emitted. Status alone is not enough: 255 with
+# the wrong message would not resemble an outage to anyone reading the log.
 check() {
   local name="$1" wantrc="$2" wantsub="$3"; shift 3
   [[ "$1" == "--" ]] && shift
   local out rc
-  out="$("$FAKESSH" "$@" 2>&1)"; rc=$?
+  out="$("$STUB/ssh" "$@" 2>&1)"; rc=$?
+  if [[ "$rc" == "$wantrc" ]] && [[ "$out" == *"$wantsub"* ]]; then
+    printf '  ok    %-56s rc=%s\n' "$name" "$rc"
+  else
+    printf '  FAIL  %-56s rc=%s (want %s), out=%q (want substring %q)\n' \
+      "$name" "$rc" "$wantrc" "$out" "$wantsub"
+    FAILED=1
+  fi
+}
+
+# checkscp -- the same, through the scp name. A separate helper rather than a mode
+# argument because the two transports differ in what a refusal looks like, and a
+# fixture that could not tell them apart would not have caught the miss that made this
+# arm necessary.
+checkscp() {
+  local name="$1" wantrc="$2" wantsub="$3"; shift 3
+  [[ "$1" == "--" ]] && shift
+  local out rc
+  out="$("$STUB/scp" "$@" 2>&1)"; rc=$?
   if [[ "$rc" == "$wantrc" ]] && [[ "$out" == *"$wantsub"* ]]; then
     printf '  ok    %-56s rc=%s\n' "$name" "$rc"
   else
@@ -53,6 +77,7 @@ main() {
   echo
 
   export KEEL_FAKESSH_REAL="$STUB/realssh"
+  export KEEL_FAKESCP_REAL="$STUB/realscp"
   export KEEL_FAKESSH_DEAD="dead.example"
 
   echo "-- refusal looks like a real outage --"
@@ -96,6 +121,49 @@ main() {
   echo "          wherever it appears. remote.sh never passes a hostname as a remote"
   echo "          command, and the alternative is parsing ssh's option grammar, whose"
   echo "          failure mode is refusing the WRONG host silently. Reported, not hidden."
+
+  echo
+  echo "-- scp is covered too, because it had to be told --"
+  # 7. THE MISS THAT MADE THIS ARM EXIST. The first version shimmed ssh only, on the
+  #    belief that everything crossed the wire through ssh's stdin. remote.sh:440 copies
+  #    the bench binary with scp, so the dead host would have answered that call and the
+  #    exercise would have been a fiction with a green-looking log. The `host:path` form
+  #    is the one a bare-hostname comparison misses.
+  checkscp "scp to the dead host, host:path form, is refused"  1 "No route to host" \
+    -- -q /tmp/bench dead.example:/tmp/keel/bench
+  # 8. scp's failure is not ssh's. It reports the connection error and then "lost
+  #    connection", exiting 1 -- so a caller checking for 255 would read a dead host as
+  #    a copy that merely failed, and vice versa.
+  checkscp "and it exits 1 after 'lost connection', as scp does" 1 "lost connection" \
+    -- -q /tmp/bench dead.example:/tmp/keel/bench
+  # 9. Pass-through matters more here than for ssh: the two surviving hosts cannot run
+  #    the benchmark at all if the binary does not land.
+  checkscp "scp to a live host still copies"                   0 "PASSTHROUGH" \
+    -- -q /tmp/bench live.example:/tmp/keel/bench
+  # 10. A login on the host list would be an ordinary configuration, and the `user@host`
+  #     forms have to refuse too or the exercise would quietly half-work.
+  check    "user@dead is refused (ssh)"                        255 "No route to host" \
+    -- -n scott@dead.example 'echo hi'
+  checkscp "user@dead:path is refused (scp)"                     1 "No route to host" \
+    -- -q /tmp/bench scott@dead.example:/tmp/keel/bench
+  # 11. And the substring guard has to survive the new forms: a `:`-suffixed near-miss
+  #     must still live, or fixture 5's protection would have been undone by fixture 7.
+  checkscp "a host containing the dead name still copies"        0 "PASSTHROUGH" \
+    -- -q /tmp/bench dead.example.backup:/tmp/keel/bench
+
+  echo
+  echo "-- an unknown invocation name has no behaviour --"
+  # 12. Invoked as anything but ssh or scp, the shim exits 2 rather than guessing. If a
+  #     third transport ever appears, this is the line that says so instead of the shim
+  #     silently passing it through to a host it was told was dead.
+  ln -sf "$FAKESSH" "$STUB/sftp"
+  out="$("$STUB/sftp" dead.example 2>&1)"; rc=$?
+  if [[ "$rc" == 2 && "$out" == *"neither ssh nor scp"* ]]; then
+    printf '  ok    %-56s rc=%s\n' "invoked as sftp: exits 2, does not guess" "$rc"
+  else
+    printf '  FAIL  %-56s rc=%s out=%q\n' "invoked as sftp: exits 2, does not guess" "$rc" "$out"
+    FAILED=1
+  fi
 
   echo
   echo "-- a misconfigured shim refuses to run rather than lie --"
