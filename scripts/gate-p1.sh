@@ -38,9 +38,10 @@
 #     backend; those are superseded here rather than kept for comparison,
 #     because comparing across measurement regimes is how a perf project loses
 #     track of what it knows. Every host that exercised avx512 must clear the
-#     bar, and EVERY MEASURING HOST must be under the performance governor,
+#     bar, and EVERY MEASURING HOST must have its clock established stable,
 #     asserted per host in the preamble and again at the moment of measurement
-#     (#77). The older form of this sentence said "at least one of them" — a
+#     (#77) — by the performance governor where `cpufreq` is readable, which is
+#     what this gate asserts and what every host it has run against has. The older form of this sentence said "at least one of them" — a
 #     criterion any single host satisfied on the others' behalf, under which two
 #     archived green runs published a rate taken on a `powersave` host (#79).
 #     The ratio is within-machine, so a throttled host has no excuse; it also
@@ -157,8 +158,15 @@ assume_fleet "$HOSTS"
 
 # ---- the measurement precondition, asserted rather than assumed (#77)
 #
-# DESIGN.md §5 rule 5 as amended: EVERY measuring host under the performance
-# governor, asserted per host, never satisfied by one host on behalf of another.
+# DESIGN.md §5 rule 5 as amended: EVERY measuring host's clock established stable,
+# per host, never satisfied by one host on behalf of another. The rule names the
+# instrument by what the host has; where `cpufreq` is readable — which is every host
+# this gate has ever run against — that instrument is the `performance` governor, so
+# what the code below asserts is the rule as it applies here, not the whole rule. A
+# guest, where there is no `cpufreq` directory at all, takes rule 5's other branch
+# (`BenchmarkPeak` sampled head/middle/tail) and is not yet implemented in this
+# harness; it blocks at remote.sh's assert_governor as `unmeasured` rather than
+# greening on an unasserted precondition.
 # This gate used to read the governor, print it as `info`, and assert only that
 # *some* host had cleared the 4x bar under `performance` — a criterion satisfied
 # by any single host, which therefore said nothing about the others. It is not a

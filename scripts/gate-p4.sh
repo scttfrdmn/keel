@@ -557,12 +557,19 @@ assume_fleet "$HOSTS"
 
 # ---- the measurement precondition, asserted rather than assumed
 #
-# DESIGN.md §5 rule 5 as amended: EVERY measuring host under the performance
-# governor, asserted per host at the start of the gate and again at the moment of
-# measurement, never satisfied by one host on behalf of another. This gate takes its
-# own measurements (criterion 7), so it makes its own assertion rather than relying
-# on the delegated P3 gate's. Unreadable counts as unmet: an unverified precondition
-# is not a met one, and "unknown" is what a missing cpufreq sysfs gives on a VM. The
+# DESIGN.md §5 rule 5 as amended: EVERY measuring host's clock established stable,
+# per host at the start of the gate and again at the moment of measurement, never
+# satisfied by one host on behalf of another. This gate takes its own measurements
+# (criterion 7), so it makes its own assertion rather than relying on the delegated
+# P3 gate's. Which instrument establishes it is a property of the host: a readable
+# `cpufreq` — every host this gate has run against — means the `performance`
+# governor, asserted below. Unreadable still counts as unmet, an unverified
+# precondition not being a met one. What the amendment changed is that a VM is no
+# longer the same case: rule 5 now sends a guest, which has no `cpufreq` directory at
+# all, to `BenchmarkPeak` sampled head/middle/tail, and rule 6 forbids "no interface"
+# and "present but unreadable" sharing one verdict — the first is a guest, the second
+# is a defect. That branch is not yet implemented here, so a guest blocks as
+# `unmeasured`; the sentence this replaced read the two as one and called both unmet. The
 # check itself now lives in remote.sh's assert_governor: this gate was the master the
 # other three copied, and all four shared a mislabel none of them could reveal (#83).
 if [[ -n "$HOSTS" ]]; then

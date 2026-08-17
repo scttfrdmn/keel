@@ -71,7 +71,9 @@
 #     out of benchstat under the §5 rule 5 methodology (issue #14): -count=10
 #     -benchtime=1s, medians, and the 55% bar counts as cleared only net of
 #     both confidence intervals. Every host that can run the kernel must clear
-#     it, and at least one must do so under the performance governor.
+#     it, and at least one must do so on a host whose clock rule 5 counts as
+#     established stable — the performance governor here, that being what every
+#     host this gate has run against exposes.
 #
 #     Note what this bar is not: it is not 55% of a formula, and it is not the
 #     best of N hosts. See docs/hosts.md and issue #15 for the one host whose
@@ -381,8 +383,13 @@ assume_fleet "$HOSTS"
 
 # ---- the measurement precondition, asserted rather than assumed (#77)
 #
-# DESIGN.md §5 rule 5 as amended: EVERY measuring host under the performance
-# governor, asserted per host, never satisfied by one host on behalf of another.
+# DESIGN.md §5 rule 5 as amended: EVERY measuring host's clock established stable,
+# per host, never satisfied by one host on behalf of another. Rule 5 picks the
+# instrument by what the host has; on a host with a readable `cpufreq` — every host
+# this gate has run against — that is the `performance` governor, so the assertion
+# below is the rule as it applies here rather than the rule entire. The guest branch
+# (`BenchmarkPeak` at head/middle/tail) is not yet in this harness; a guest blocks as
+# `unmeasured` in assert_governor instead of greening unasserted.
 # This gate used to read the governor, print it as `info`, and assert only that
 # *some* host had cleared the floor under `performance`. Both archived green
 # gate-p1 logs on #2 show what that permits: a host on `powersave` whose rate is

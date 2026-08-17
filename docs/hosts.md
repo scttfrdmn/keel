@@ -33,7 +33,7 @@ checked in.
 | AVX2 + FMA | the AVX2 backend; `archsimd.X86.AVX2() && .FMA()` |
 | AVX-512 F/CD/BW/DQ/VL | the bundle `archsimd.X86.AVX512()` gates on — all five, or the backend does not register |
 | key-based ssh from the dev host | `remote.sh` uses `BatchMode=yes`; it never prompts and never handles credentials |
-| `performance` governor | for gate numbers, not correctness. DESIGN.md §5 rule 5 requires at least one host to clear a perf bar under it; every host must still clear the bar |
+| a clock established stable | for gate numbers, not correctness. DESIGN.md §5 rule 5 (as amended 2026-08-16) requires it of every measuring host, by whichever instrument the host has: the `performance` governor where `cpufreq` is readable, which is the case for every target listed below, else `BenchmarkPeak` sampled at head/middle/tail. The second branch exists for virtualized guests and is not yet implemented in the harness, so a guest currently blocks as `unmeasured` |
 
 ## Current targets
 

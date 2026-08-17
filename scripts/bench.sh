@@ -4,8 +4,11 @@
 # WHY THIS EXISTS. P1's first perf numbers came from `-benchtime=3x -count=5`
 # reduced by min-of-samples, and the raw samples spread by up to 3.08x within a
 # single backend. A 4.28x result standing on that is not a measurement, it is a
-# draw. Decision on issue #14: gate benchmarks run -count=10 -benchtime=1s under
-# the performance governor, are aggregated by benchstat, and a threshold counts
+# draw. Decision on issue #14: gate benchmarks run -count=10 -benchtime=1s on a
+# host whose clock has been established stable (DESIGN.md §5 rule 5 as amended
+# 2026-08-16 — the `performance` governor where `cpufreq` is readable, else
+# `BenchmarkPeak` sampled head/middle/tail), are aggregated by benchstat, and a
+# threshold counts
 # as cleared only if the *median net of benchstat's reported confidence interval*
 # clears it. A lucky run can no longer turn a gate green.
 #

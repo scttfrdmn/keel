@@ -266,6 +266,11 @@ While the major version is 0, minor versions may contain breaking changes.
   but it makes the pivot impossible rather than merely awkward. Where `cpufreq` is readable the governor
   assertion is unchanged; where it is absent, stability comes from `BenchmarkPeak` sampled at head, middle
   and tail. Same benchmark, no new bar. The harness half is not written yet — see the follow-up tasks.
+- **Nine sites that stated rule 5 as "the performance governor" now state it as the rule reads**, each
+  saying which instrument applies to the hosts it actually describes (`gate-p1/p2/p3/p4`, `bench.sh`,
+  `provision-openblas.sh`, `docs/hosts.md`, and §4's own #31 ruling record). The two *printed* pass lines
+  are deliberately left claiming the governor: they must name the instrument that ran, so they change with
+  the harness, not before it.
 - **Every GitHub Action in both workflows moved to a Node 24 major**, in one sweep and outside any feature
   work: `checkout@v4→v7`, `setup-go@v5→v7`, `setup-python@v5→v7`, `upload-artifact@v4→v7`,
   `configure-pages@v5→v6`, `upload-pages-artifact@v3→v5`, `deploy-pages@v4→v5`. Node 20 was deprecated on

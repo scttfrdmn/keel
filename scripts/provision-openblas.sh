@@ -375,6 +375,14 @@ main() {
     # Still reported rather than changed: a power policy is a standing property of
     # somebody's machine, not a thing a provisioning script should quietly flip and
     # leave flipped.
+    #
+    # Scope, since §5 rule 5 was amended on 2026-08-16: the rule now asks for a clock
+    # *established stable* by whichever instrument the host has, and the governor is
+    # that instrument only where `cpufreq` is readable. This script provisions hosts
+    # where it is, so the check below is unchanged and still right for them. It is not
+    # the rule's whole verdict, and on a guest it would be the wrong question — a
+    # guest has no `cpufreq` directory, which rule 6 says may not share a verdict with
+    # a readable-but-broken one. Reprovisioning this for the AWS fleet is its own job.
     GOV_OK=1
     if [[ "$gov" != performance ]]; then
       GOV_OK=0

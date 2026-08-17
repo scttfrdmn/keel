@@ -185,9 +185,12 @@
 #         option never available.
 #
 #     EVERY gate host must produce a reference and clear the bar, and every host
-#     must be on the performance governor to be measured at all — asserted in a
+#     must have its clock established stable to be measured at all — asserted in a
 #     preamble before any benchmark runs, not assumed and not noted afterwards
-#     (DESIGN.md §5 rule 5, tightened by the ruling with #31). The old wording
+#     (DESIGN.md §5 rule 5, tightened by the ruling with #31, amended 2026-08-16 to
+#     name the instrument by what the host has: the performance governor where
+#     `cpufreq` is readable, which is every host this gate has run against and what
+#     the preamble below asserts). The old wording
 #     here was "at least one must clear it under the performance governor", which
 #     let antares contribute numbers from `powersave`: its first OpenBLAS reading
 #     of the sweep was 245.0 GFLOP/s against a 296-297 steady state, i.e. an 18%
@@ -677,7 +680,9 @@ assume_fleet "$HOSTS"
 
 # ---- the measurement precondition, asserted rather than assumed (ruling with #31)
 #
-# DESIGN.md §5 rule 5 asks for the performance governor. Until this ruling the gate
+# DESIGN.md §5 rule 5 asks for a clock established stable, which on a host with a
+# readable `cpufreq` — every host this gate runs against — means the performance
+# governor. Until this ruling the gate
 # READ scaling_governor and used it only to label criterion 6's pass line, so a host
 # on `powersave` still contributed numbers to the record. antares did exactly that:
 # its first OpenBLAS reading was 245.0 GFLOP/s against a 296-297 GFLOP/s steady
