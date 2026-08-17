@@ -654,9 +654,7 @@ else
     # changed is the exact defect #73 named — now one function's problem (#83), which
     # also retires this copy's lone "preamble read it" wording for "checked it".
     assert_governor "$host" measured
-    if [[ "$GOV_STATE" != performance ]]; then
-      continue
-    fi
+    clock_gate "$host" || continue
     # ---- the frequency regime the judged ratio is taken in (criterion 1, #66)
     #
     # Set, then READ BACK. The first version of remote_boost_set piped its value to a
@@ -683,6 +681,12 @@ else
     fi
     pass "[$host] boost is off and read back off at ${bst#* }, so both arms of this host's ratio are taken in one frequency regime (#66)"
 
+    # HERE, not up at clock_gate, and this is the reason clock_head is its own call: the
+    # boost knob above changes the regime the sweep will run in, so a head window taken
+    # before it would be the first point of a three-point trend with an intervention
+    # between it and the other two — a declining series this gate caused (§5 rule 5, #23).
+    clock_head "$host" "$BENCHBIN" || { remote_boost_set "$host" on >/dev/null 2>&1 || true; continue; }
+
     # GOMAXPROCS is NOT set here. The thread count belongs to the benchmark row
     # (criterion 2) and the harness sets it per row; pinning it in the environment
     # would cap the eight-thread row at whatever this line happened to say.
@@ -694,6 +698,12 @@ else
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    # Closed here, before the restore below, so all three windows sit inside the one
+    # boost-off regime the judged ratio is taken in (§5 rule 5, #23). It brackets the
+    # boost-off sweep only; the boost-on pass below is a second window this series says
+    # nothing about, which costs nothing today because a host with no governor to assert
+    # is also a host with no boost knob to set, and remote_boost_set refuses it above.
+    clock_post "$host" "$BENCHBIN" "$BENCHCSV" || { remote_boost_set "$host" on >/dev/null 2>&1 || true; continue; }
 
     # ---- restore, then the boost-on pass: reported beside the verdict, and the
     # regime the README's published wall-clock rates live in (#66, criterion 9).

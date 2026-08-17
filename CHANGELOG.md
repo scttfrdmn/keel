@@ -14,6 +14,12 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Added
+- **A host with no governor now has a clock instrument instead of an exemption** (#23, §5 rule 5 as amended):
+  `clock_gate`/`clock_head`/`clock_post` sample `BenchmarkPeak` in three separate invocations either side of a
+  sweep — `-count` is Go's inner loop, so a sweep's own peak rows are one contiguous window and are the *middle*
+  only. Threshold-free by construction: every window bounded, and the three medians not monotonically declining.
+  Live on the AWS guests, where `assert_governor` reads `absent`. gate-p1 is the one gate it cannot reach and
+  says so — its sweep runs the root package's binary, which has no `BenchmarkPeak`.
 - **The measurement fleet is AWS spot, launched by `scripts/aws-fleet.sh up|wire|status|down`** (#24): three
   right-sized guests (`c7a`/`c8a`/`c7i`, 8 physical cores each, read from `describe-instance-types` rather than
   inferred from vCPUs) with a boot-time `shutdown -h` dead-man switch, `down` selecting by tag rather than by a

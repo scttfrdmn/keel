@@ -451,9 +451,8 @@ else
     # success — the preamble printed the PASS — and the provenance info line is
     # therefore the only record of what was read on a passing host.
     assert_governor "$host" measured
-    if [[ "$GOV_STATE" != performance ]]; then
-      continue
-    fi
+    clock_gate "$host" || continue
+    clock_head "$host" "$BENCHBIN" || continue
     if ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench="$BENCH_FILTER" \
          >"$BENCHLOG" 2>&1; then
       unmeasured "[$host] the benchmark run failed, so this host's percent-of-peak is unmeasured rather than below the floor"
@@ -462,6 +461,9 @@ else
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    # Before any criterion reads this sweep: on a host with no governor, the clock the
+    # sweep ran on is established here or not at all (§5 rule 5, #23).
+    clock_post "$host" "$BENCHBIN" "$BENCHCSV" || continue
 
     info "[$host] peak   $(bench_describe "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
     # DESIGN.md's tile, printed on every host so the cost of the T10 register

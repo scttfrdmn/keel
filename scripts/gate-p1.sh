@@ -269,7 +269,17 @@ else
     # success — the preamble printed the PASS — and the provenance info line is
     # therefore the only record of what was read on a passing host.
     assert_governor "$host" measured
-    if [[ "$GOV_STATE" != performance ]]; then
+    clock_gate "$host" || continue
+    # The one gate §5 rule 5's substitute instrument does not reach, said out loud
+    # rather than worked around (#23). It needs a BenchmarkPeak window inside the
+    # sweep to be the middle of its series; this gate's sweep runs the ROOT package's
+    # test binary, and BenchmarkPeak lives in ./bench. Sampling it from a second
+    # binary would put two compilers in a three-point trend, and the 4x criterion is
+    # a ratio of two ADJACENT windows — `-count` is the inner loop, so scalar's
+    # samples all precede avx512's — which a clock that moved between them shifts
+    # rather than widens. So: unmeasured on a host with no governor, not assumed steady.
+    if [[ "$GOV_STATE" == nocpufreq ]]; then
+      unmeasured "[$host] no governor to assert and no peak window inside this gate's sweep to substitute for one, so the Sdot speedup is unmeasured on this host (§5 rule 5, #23)"
       continue
     fi
 

@@ -355,3 +355,143 @@ bench_gflops_lo() {
   bench_stat "$1" "$2" GFLOP/s |
     awk '{ if ($2 == "inf") exit; printf "%.4f", $1 * (1 - $2) }'
 }
+
+# ---------------------------------------------------------------------------
+# §5 rule 5's substitute clock instrument, for a host with no governor to assert.
+#
+# WHAT THE RULE ASKS FOR, AND NOTHING MORE. §5 rule 5 as amended 2026-08-16 names the
+# instrument and both of its verdicts itself: BenchmarkPeak sampled at the head, middle
+# and tail of a sweep, where "a declining series is throttling while a wide one is
+# contention", and it says in terms that this "adds no benchmark and no new bar" —
+# peak is already the sweep's own denominator, and "too wide for benchstat to bound is a
+# failure to measure" above it already refuses the wide case. So there is no threshold
+# in this section to tune, and there must not be one: a bar chosen after meeting the
+# fleet it judges is not a criterion, it is a result. The two tests are therefore
+# `benchstat established an interval for each window` and `the three medians are not
+# monotonically decreasing`, both of which are threshold-free.
+#
+# THREE INVOCATIONS, NOT ONE, which is the part that is easy to get wrong and was
+# nearly got wrong here. `-count` is Go's INNER loop — measured rather than read:
+# `-bench='Aaa|Zzz' -count=3` prints Aaa three times and then Zzz three times — so
+# BenchmarkPeak's ten rows inside a sweep occupy ONE contiguous window of wall clock.
+# Their spread is the spread of ten adjacent seconds and says nothing about the twenty
+# minutes around them. Reusing them as "head, middle and tail" would be an instrument
+# that reads a real number and answers a different question, which is exactly the
+# `cpu MHz` failure the rule warns about one layer up. So the sweep's own rows are the
+# MIDDLE, and the head and tail are separate invocations either side of it.
+#
+# WHY THE VERDICT IS unmeasured AND NEVER fail. A throttling or contended host says
+# nothing about keel. §5.6 forbids one verdict standing for two causes, and "this
+# kernel is slow" and "this machine would not hold still" are two causes.
+# THREE CALLS, BECAUSE THE THREE POINTS ARE NOT ALWAYS ADJACENT. clock_gate says
+# whether the host may be measured, clock_head opens the series, clock_post closes and
+# judges it. gate-p5 is why that is three functions and not one: between its governor
+# check and its sweep it sets boost off, so a head window taken at the guard would be
+# taken in a different frequency regime from the middle — a trend test with an
+# intervention inside it. Every one of the three returns non-zero to refuse, and every
+# call site is `... || continue`; called bare, the refusal would take `set -e` with it.
+CLOCK_STATE=""       # ok | stable | declining | unbounded | incomplete | <GOV_STATE>
+CLOCK_HEAD=""        # median GFLOP/s of the head window, empty if there was none
+CLOCK_TAIL=""
+
+# peak_window HOST BIN TAG — one BenchmarkPeak-only invocation. Prints its median
+# GFLOP/s, or nothing if the window did not fully arrive; TAG names the files so the
+# head and tail windows cannot overwrite each other. Guarded like every other reader
+# here: an unreachable host must not become the gate's own exit status (#76).
+#
+# BIN is normally a local binary, shipped and supervised by remote_exec like every other
+# measurement here. Written `@DIR/NAME` it is one that already exists on the far side and
+# is run in place, which gate-p3's OpenBLAS section needs: its middle window comes from a
+# harness built natively on the host, and three windows from two different compilers is a
+# trend test with a build in it. That form forgoes #62's supervision, which is the right
+# way round — a lost peak window resolves to `incomplete`, the verdict a lost measurement
+# is supposed to get, and it is a seconds-long run rather than the twenty-minute sweep
+# supervision exists for.
+#
+# GOMAXPROCS is not set: BenchmarkPeak is a single-goroutine register loop, so its rate
+# cannot depend on it, and the callers disagree (p4 pins it to 1, p5 deliberately does
+# not). Setting it would make the window differ from the middle on one of them.
+peak_window() {
+  local host="$1" bin="$2" tag="$3" log csv flags=() args="" f
+  log="$BINDIR/peak-$tag.log"; csv="$BINDIR/peak-$tag.csv"
+  while read -r f; do flags+=("$f"); done < <(bench_flags)
+  if [[ "$bin" == @* ]]; then
+    local rbin="${bin#@}"
+    for f in "${flags[@]}" "-test.bench=$GATE_PEAK"; do args+=" $(printf '%q' "$f")"; done
+    # shellcheck disable=SC2029  # client-side expansion of this script's own values
+    ssh "${KEEL_SSH_OPTS[@]}" "$host" "cd '${rbin%/*}' && ./'${rbin##*/}'$args" >"$log" 2>&1 || return 0
+  elif ! remote_exec "$host" "$bin" "${flags[@]}" -test.bench="$GATE_PEAK" >"$log" 2>&1; then
+    return 0
+  fi
+  bench_csv "$log" >"$csv" 2>/dev/null || return 0
+  bench_expect "$log" "$csv" GFLOP/s "$GATE_PEAK" >/dev/null || return 0
+  bench_gflops "$GATE_PEAK" "$csv"
+}
+
+# clock_gate HOST — may this host be measured at all. Call immediately after
+# `assert_governor HOST measured`.
+#
+# It absorbs the `GOV_STATE != performance` branch that stood at this point in all five
+# gates rather than sitting beside it, because two consecutive guards on one question is
+# how a host comes to be refused by one and admitted by the other.
+clock_gate() {
+  CLOCK_STATE=""; CLOCK_HEAD=""; CLOCK_TAIL=""
+  case "$GOV_STATE" in
+    performance|nocpufreq) CLOCK_STATE=ok; return 0 ;;
+  esac
+  # assert_governor has already printed the verdict and the cause for every other
+  # state; restating it here would be the second place a reason lives.
+  CLOCK_STATE="$GOV_STATE"
+  return 1
+}
+
+# clock_head HOST BIN — open the peak series, on a host whose clock is established by
+# peak rather than by a governor. Call immediately before the sweep, after any
+# intervention the sweep will run under.
+clock_head() {
+  local host="$1" bin="$2"
+  [[ "$CLOCK_STATE" == ok ]] || return 1
+  [[ "$GOV_STATE" != performance ]] || return 0
+  CLOCK_HEAD="$(peak_window "$host" "$bin" head)"
+  [[ -n "$CLOCK_HEAD" ]] && return 0
+  unmeasured "[$host] the head peak window did not produce a result, so §5 rule 5's substitute clock instrument has nothing to start from and this host's readings are unestablished rather than bad"
+  CLOCK_STATE=incomplete
+  return 1
+}
+
+# clock_post HOST BIN SWEEPCSV — take the tail window and judge the series. Returns 0
+# when the host's readings may be used. A `performance` host passes straight through: its
+# clock was established by the governor, at both times, and running two more windows on
+# it would spend minutes a run to re-establish something already asserted by a cheaper
+# instrument the rule still prefers.
+clock_post() {
+  local host="$1" bin="$2" csv="$3" mid
+  [[ "$CLOCK_STATE" == ok ]] || return 1
+  if [[ "$GOV_STATE" == performance ]]; then CLOCK_STATE=stable; return 0; fi
+  mid="$(bench_gflops "$GATE_PEAK" "$csv")"
+  CLOCK_TAIL="$(peak_window "$host" "$bin" tail)"
+  if [[ -z "$mid" || -z "$CLOCK_TAIL" ]]; then
+    unmeasured "[$host] the peak series is incomplete (head=${CLOCK_HEAD:-none} middle=${mid:-none} tail=${CLOCK_TAIL:-none}), so the clock is unestablished on a host that has no governor to fall back on"
+    CLOCK_STATE=incomplete
+    return 1
+  fi
+  info "[$host] peak series GFLOP/s: head $CLOCK_HEAD, middle $mid, tail $CLOCK_TAIL (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)"
+  # The wide case, refused by the rule that already existed: bench_stat reports `inf`
+  # for a distribution benchstat could not bound, and bench_gflops_lo prints nothing
+  # for it. Checked on all three windows, because contention in any one of them is a
+  # sweep that ran on a machine somebody else was using.
+  local t
+  for t in "$BINDIR/peak-head.csv" "$csv" "$BINDIR/peak-tail.csv"; do
+    [[ -n "$(bench_gflops_lo "$GATE_PEAK" "$t")" ]] && continue
+    unmeasured "[$host] benchstat established no interval for one peak window, which §5 rule 5 reads as contention rather than as a rate: too wide to bound is a failure to measure"
+    CLOCK_STATE=unbounded
+    return 1
+  done
+  if awk -v h="$CLOCK_HEAD" -v m="$mid" -v t="$CLOCK_TAIL" 'BEGIN { exit !(h > m && m > t) }'; then
+    unmeasured "[$host] the peak series declines monotonically ($CLOCK_HEAD > $mid > $CLOCK_TAIL GFLOP/s), which §5 rule 5 names as throttling: the sweep between these windows ran on a clock that was falling, so its rates are not this host's"
+    CLOCK_STATE=declining
+    return 1
+  fi
+  pass "[$host] the peak series does not decline and every window is bounded, so the clock is established by §5 rule 5's substitute instrument on a host with no governor"
+  CLOCK_STATE=stable
+}

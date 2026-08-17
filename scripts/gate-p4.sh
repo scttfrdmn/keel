@@ -653,9 +653,8 @@ else
     # provenance line at all — the lifted helper prints one, so a passing host's
     # silent success still leaves a record of the value it passed on.
     assert_governor "$host" measured
-    if [[ "$GOV_STATE" != performance ]]; then
-      continue
-    fi
+    clock_gate "$host" || continue
+    clock_head "$host" "$BENCHBIN" || continue
     if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" \
          -test.bench="$P4_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
       unmeasured "[$host] the Ssyrk/Sgemm benchmark run failed, so this host's ratio is unmeasured"
@@ -701,6 +700,11 @@ else
     # missing info line rather than into a verdict (DESIGN.md §5 rule 6).
     require_bench "[$host] the Ssyrk/Sgemm ratio's inputs" \
       "$BENCHLOG" "$BENCHCSV" GFLOP/s "$GATE_SSYRK" "$GATE_SGEMM" "$GATE_PEAK" || continue
+    # Before any criterion divides by a rate: on a host with no governor, the clock this
+    # sweep ran on is established here or not at all (§5 rule 5, #23). After require_bench
+    # rather than before, so an absent peak is named as the missing row it is instead of
+    # reaching the series as middle=none.
+    clock_post "$host" "$BENCHBIN" "$BENCHCSV" || continue
 
     # ---- the numerator, checked (criterion 7)
     FBAD=""; SGD=""; SYD=""

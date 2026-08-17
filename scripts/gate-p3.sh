@@ -1180,9 +1180,7 @@ else
     obgo="$(field go "$pre")"
     oblib="$(field lib "$pre")"
     info "[$host] distro=${obdistro:-unknown} go=${obgo:-none} libopenblas=${oblib:-none}"
-    if [[ "$GOV_STATE" != performance ]]; then
-      continue
-    fi
+    clock_gate "$host" || continue
     if [[ "$obgo" == none || -z "$obgo" || "$oblib" == none || -z "$oblib" ]]; then
       MISS=""
       [[ "$obgo"  == none || -z "$obgo"  ]] && MISS="a Go toolchain"
@@ -1341,6 +1339,13 @@ else
     # Pinned only when the sweep chose something other than what the library picks
     # unaided, so the common case runs exactly the command it always did.
     [[ "$OBCT" != default ]] && OBENV+=("OPENBLAS_CORETYPE=$OBCT")
+    # Opened here rather than at clock_gate above, and against the NATIVE harness: this
+    # section's middle window is the Peak row inside the run below, which was built by the
+    # host's own toolchain, so head and tail have to come from the same binary or the
+    # trend test has a compiler in it. The bracket is deliberately tight — the coretype
+    # sweep above is minutes of benchmarking, and a wider bracket would be answering a
+    # question about a window the judged run does not occupy (§5 rule 5, #23).
+    clock_head "$host" "@$OPENBLAS_REMOTE_DIR/bench-ob.test" || continue
     # shellcheck disable=SC2029  # client-side expansion of a client-side path
     if ! ssh "${KEEL_SSH_OPTS[@]}" "$host" \
          "cd '$OPENBLAS_REMOTE_DIR' && env ${OBENV[*]} ./bench-ob.test$OBARGS" >"$BENCHLOG" 2>&1; then
@@ -1417,6 +1422,10 @@ else
       info "  [$host] -test.bench=$SGEMM_BENCH_FILTER returned: $(awk -F, '/^Benchmark/ { n = $1; sub(/-[0-9]+$/, "", n); print n }' "$BENCHCSV" | sort -u | tr '\n' ' ')"
       continue
     fi
+    # Closed before the mission ratio is formed: both of its halves came out of the run
+    # this series brackets, so on a host with no governor this is where the clock they
+    # were measured on is established or the ratio is unmeasured (§5 rule 5, #23).
+    clock_post "$host" "@$OPENBLAS_REMOTE_DIR/bench-ob.test" "$BENCHCSV" || continue
     info "[$host] keel $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s) vs OpenBLAS $(bench_describe "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s), one invocation"
     rlo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)"
     rpt="$(bench_ratio "$GATE_SGEMM" "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)"

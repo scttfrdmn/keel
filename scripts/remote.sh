@@ -560,7 +560,13 @@ assert_governor() {
       unreachable)
         unmeasured "[$host] unreachable at measurement time, so this host produced no governor reading and nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured for want of an answer, and not a governor that changed" ;;
       nocpufreq)
-        unmeasured "[$host] no cpufreq interface at measurement time, so §5 rule 5's governor instrument does not exist on this host and its substitute — BenchmarkPeak sampled head/middle/tail — is not built yet (#23): unmeasured for want of an instrument, not a governor that changed" ;;
+        # No verdict here, deliberately, and this is the one branch in this case that
+        # prints nothing at all. §5 rule 5 gives a host with no governor a different
+        # instrument, not a worse one, and clock_post is what reads it — three peak
+        # windows either side of the sweep, which cannot be judged until the sweep has
+        # run. A verdict at this point would be a second one about the same host, and
+        # the first to print is the one that would be believed.
+        : ;;
       unreadable)
         unmeasured "[$host] the host answered but the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed" ;;
       wrong)
@@ -573,18 +579,19 @@ assert_governor() {
       unreachable)
         unmeasured "[$host] unreachable, so this target produced no governor reading at all: §5 rule 5 is unverified here for want of an answer, not for want of a readable file" ;;
       nocpufreq)
-        # STILL BLOCKS, and that is the point of landing this half first. §5 rule 5
-        # licenses a substitute instrument for a guest, not an exemption; until
-        # BenchmarkPeak's head/middle/tail dispersion is actually read (#23), a guest
-        # has no stability instrument at all and every gate's `!= performance` skip
-        # keeps it out of the record. Opening the path before the replacement exists
-        # would be weakening a gate to pass it, which is the one move with no override.
+        # NO LONGER BLOCKS, and what changed is that the substitute exists: clock_post
+        # in scripts/bench.sh reads BenchmarkPeak at the head, middle and tail of the
+        # sweep and refuses a declining or unbounded series (#23). §5 rule 5 licensed a
+        # different instrument for a guest, never an exemption, and until the instrument
+        # was written the honest state was `unmeasured` — opening the path first would
+        # have been weakening a gate to pass it.
+        #
         # Says what was observed, not what the host is. "No cpufreq directory" is the
         # reading; "a virtualized guest" is the usual explanation for it and is not
         # the only one — this fires on macOS too — so the inference is labelled as an
         # inference. A verdict line that names a cause it did not establish is the
         # same defect as the four gates that called an unreachable host unreadable.
-        unmeasured "[$host] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Its ruled substitute (BenchmarkPeak sampled head/middle/tail) is not built yet, so stability is unestablished here and this blocks the gate (#23)"
+        info "[$host] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs"
         info "  [$host] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none" ;;
       unreadable)
         unmeasured "[$host] the host answered but scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does" ;;
