@@ -225,6 +225,17 @@ stage_citations() {
     fail "citation-lint failed:"
     sed 's/^/        /' <<<"$out"
   fi
+  # WARN lines are relayed on a GREEN run, which is the only run they can appear on:
+  # the lint's dead-scope audit reports without failing, so filtering the output down
+  # to the summary line -- which this stage did until the audit existed -- would hide
+  # every warning the lint can emit behind a passing gate. A warning nobody sees is
+  # not a lighter check than a failure, it is an absent one.
+  local warns
+  warns="$(grep -E '^WARN ' <<<"$out" || true)"
+  if [[ -n "$warns" ]]; then
+    info "citation-lint warnings — sound, but the attribution is not; fix or drop each:"
+    sed 's/^/        /' <<<"$warns"
+  fi
   # The site's own pages are hand-written and tracked, so they are in scope for
   # the lint above. The generated ones are not, by construction -- said out loud
   # here so a future page's citation is not written into a file nothing reads.

@@ -1,3 +1,10 @@
+# ACTION VERSIONS: every action here runs on Node 24, and that is a pin with a reason
+# rather than a habit of taking the newest thing. GitHub deprecated the Node 20 runtime
+# (changelog 2025-09-19) and was already FORCING the previous v4/v5 majors onto Node 24
+# with a warning annotation on every run — read off run 31986295744, not assumed. A
+# deprecated runtime becomes broken CI eventually, and the tag window is the worst
+# possible time for that, so the sweep happened in the quiet. Both workflows moved
+# together: half a sweep is an inconsistency with no gate benefit.
 name: ci
 on:
   push: { branches: [main] }
@@ -7,9 +14,16 @@ jobs:
     name: scalar path on stock toolchain
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with: { go-version: '1.26.x' }
+      # setup-go v6 set GOTOOLCHAIN=local (actions/setup-go#460), which is the one thing
+      # in the Node-24 sweep that changes what a green MEANS: `go` can no longer quietly
+      # download a newer toolchain to satisfy go.mod, it errors instead. That is the
+      # behaviour this project wants — a silent toolchain substitution would make the Go
+      # version a fact about the runner rather than about the pin — so it is printed and
+      # not assumed. go.mod says `go 1.26` and this job installs 1.26.x, so local suffices.
+      - run: go version && go env GOTOOLCHAIN
       - run: go build ./...
       - run: go vet ./...
       - run: go test ./...
@@ -48,9 +62,13 @@ jobs:
     runs-on: ubuntu-latest
     env: { GOEXPERIMENT: simd }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with: { go-version: '1.26.x' }
+      # Printed here too, and for a sharper reason than in the stock job: this leg's
+      # whole claim is "the simd toolchain compiles every path", and which toolchain
+      # that was is the subject of the sentence.
+      - run: go version && go env GOTOOLCHAIN
       - run: go build ./...
       # THE JUDGED LEG. `set -o pipefail` is not decoration: without it the pipe
       # into tee reports tee's status and a failing test suite reads as a pass.
