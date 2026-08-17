@@ -34,6 +34,16 @@ While the major version is 0, minor versions may contain breaking changes.
   had and `unmeasured`s below a **512 MiB floor — measured**, at 3.8× a cold run's ~135 MiB demand, whose
   dominant term is a 76 MiB cold cross-compile cache and not the binaries. That is what makes the 137 MiB
   volume that filled a fit rather than a coincidence. A live peak is still owed; the printed line collects it.
+- **First measurement of the AWS fleet: gate-p2 is RED, and P2's 55% floor has met Intel silicon for the first
+  time** (#104, `blocked`). `keel-spr` (Xeon 8488C, Sapphire Rapids) puts 4x32 at 34.2% of a 228.9 GFLOP/s
+  measured peak; `keel-zen4` 96.8%, `keel-zen5` 65.3%. Not a regression — retired `janus.local` measured 35.2%
+  and passed because it classified `issue-bound` (43.8% floor); spr classifies `fma-bound`, so the flat 55%
+  applies. Single reading: the repeat was **reclaimed by spot mid-run**, the first real reclamation here, and it
+  landed inside a measurement exactly as `vanished`/`unmeasured` were built for.
+- **gate-p5 cannot measure this fleet at all** (#66): a guest has neither `cpufreq/boost` nor
+  `intel_pstate/no_turbo`, verified by ssh on two arms, so `remote_boost_set` exits 3 and `gate-p5.sh:664`
+  skips every host. The `continue` is inside the loop holding criterion 9, so re-measuring the README rate
+  block — the ruled precondition for the v0.1.0 tag — is dark until criterion 1's boost precondition is ruled on.
 
 ### Changed
 - **Every gate's provenance line now records cores, SMT width and sockets, not just `nproc`** (#82): read from
