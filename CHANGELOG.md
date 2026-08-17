@@ -47,6 +47,21 @@ While the major version is 0, minor versions may contain breaking changes.
   outcomes were driven before this landed, by extracting the verdict lines from `gate-p2.sh`'s own bytes
   and feeding them to the read-back — the call-site half is what a fixture cannot reach, and it is where
   the previous fix was verified by reading alone.
+  **The branch fired in a real gate** (`build/instrument-exercise-dead-host-73c40c8.log`, 128 lines):
+  `antares.local` unreachable, vesta and janus genuinely measuring and clearing their own floors
+  (4×32 at 96.7% of measured peak FMA-bound; 2×32 at 94.6% of a 48.6% issue roofline), and criterion 5b
+  printed `UNMEASURED … 2 of 3 configured hosts cleared it and none measured below it, but 1 produced no
+  floor verdict (0 indeterminate, 1 with no judgeable reading at all)`. The driver's read-back reports
+  **YES** against three independent checks: the configured count matches `.keel-hosts`, at least one host
+  is reported absent, and cleared + indeterminate + absent accounts for the whole fleet. Discipline
+  audited from the log rather than asserted: **25 of 25 verdict lines stamped `[synthetic]`, zero
+  unstamped**, `GREEN`/`RED` never emitted, `VERDICT WITHHELD` the only verdict token, exit 2. Reproducible
+  against the first run at `5ade3ff`: vesta 96.6% → 96.7% of peak, janus 94.8% → 94.6% of its roofline.
+  **One defect found by that audit and fixed here:** the read-back's own YES prose wrapped so a line
+  *began* with `UNMEASURED`, and a verdict-line count over the log read 26 where the gate emitted 25 — the
+  driver's commentary about a verdict counted as a verdict. Rewrapped, with the constraint stated: no line
+  of a synthetic log's own report may begin with a verdict token. Same class as the `GREEN`/`RED` grep that
+  hit the banner's promise text, in the one file where a log being mistakable for certification matters most.
 
 ### Added
 - **`scripts/fakessh` + `scripts/fakessh-test.sh` + `scripts/exercise-dead-host.sh`: a dead host,

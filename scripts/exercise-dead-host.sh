@@ -236,10 +236,19 @@ main() {
         echo "   reading = $((c + ind + nocov)), not the $nhosts configured. A host is"
         echo "   unaccounted for in the very line that claims to account for them."
       else
+        # No line of this report may BEGIN with a verdict token. The first run of this
+        # branch wrapped "the verdict is / UNMEASURED rather than a PASS ..." across two
+        # lines, and the stamped-line audit afterwards counted 26 verdict lines where the
+        # gate emitted 25 -- the driver's commentary about a verdict read as a verdict.
+        # Harmless here (it inflated the denominator of a discipline check, and the tight
+        # form `^  (PASS|FAIL|UNMEASURED)  ` resolved it), but a synthetic log whose own
+        # prose can be miscounted as certification is the wrong shape for this file in
+        # particular. Same class as the GREEN/RED grep that hit the banner's promise text.
         echo "   YES: $c of $nhosts configured hosts cleared their floor, $ind were"
-        echo "   indeterminate, $nocov produced no judgeable reading, and the verdict is"
-        echo "   UNMEASURED rather than a PASS over the survivors. This is the branch that"
-        echo "   replaced the one this exercise first drove (#90), and the counts add up."
+        echo "   indeterminate, and $nocov produced no judgeable reading, so the verdict"
+        echo "   reads as unmeasured rather than as a PASS over the survivors. This is"
+        echo "   the branch that replaced the one this exercise first drove (#90), and"
+        echo "   the counts add up."
       fi
     elif [[ -n "$OTHER" ]]; then
       echo "   aggregate line: $OTHER"
