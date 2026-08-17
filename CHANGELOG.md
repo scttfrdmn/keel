@@ -14,6 +14,11 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Added
+- **The measurement fleet is AWS spot, launched by `scripts/aws-fleet.sh up|wire|status|down`** (#24): three
+  right-sized guests (`c7a`/`c8a`/`c7i`, 8 physical cores each, read from `describe-instance-types` rather than
+  inferred from vCPUs) with a boot-time `shutdown -h` dead-man switch, `down` selecting by tag rather than by a
+  written list, and `up` refusing while a tagged fleet is alive. Measured on the live guests: `governor=absent`,
+  AVX-512 on all three, and #82's premise real — AMD reports `smt=1`, Intel `smt=2`.
 - **A remote measurement now outlives its ssh connection** (#62): `remote_exec` scp's a generated runner and
   supervises it with tmux on the far side, recovering the exit status from a status file. An unfinished run
   returns `vanished` (125), never a program code, and a missing supervisor is reported as `tmux=` in every

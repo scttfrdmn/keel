@@ -3,20 +3,20 @@
 # Copy to .keel-hosts (gitignored) and edit. Requirements per host:
 #   - amd64 with AVX2+FMA, and for the AVX-512 backend the F/CD/BW/DQ/VL
 #     bundle that archsimd.X86.AVX512() gates on
-#   - sshd with key auth from this machine; no Go toolchain needed
-#   - for P2/P3 benchmark numbers, a fixed frequency governor
+#   - sshd with key auth from this machine
+#   - a Go toolchain and OpenBLAS: the P3 reference is built and run natively on
+#     every gate host, so both halves of the ratio come from one invocation on
+#     one machine (the ruling on issue #23 retired the separate reference-host
+#     list, which is why there is no .keel-openblas-hosts any more)
+#   - for P2/P3 benchmark numbers, a clock established stable by whichever
+#     instrument the host has: the `performance` governor where `cpufreq` is
+#     readable, else BenchmarkPeak sampled head/middle/tail (§5 rule 5 as
+#     amended 2026-08-16 — a virtualized guest has no governor to set)
 #
 # Or set KEEL_REMOTE_HOSTS="host-a host-b", which takes precedence.
 # See docs/hosts.md.
 #
-# Two more machine-local lists, same format, both read by scripts/gate-p3.sh:
-#
-#   .keel-openblas-hosts  ($KEEL_OPENBLAS_HOSTS) — hosts that can produce the
-#     OpenBLAS reference for P3's >=60% criterion. Unlike the list above, these
-#     DO need a Go toolchain, plus OpenBLAS, because the comparison is built
-#     natively there so both halves of the ratio run in one invocation on one
-#     machine. Empty means the criterion cannot be evaluated, which is a gate
-#     failure, not a skip.
+# One more machine-local list, same format, read by scripts/gate-p3.sh:
 #
 #   .keel-sentinel  ($KEEL_SENTINEL_HOST) — the host P2's throughput floor is
 #     re-checked on, to notice a K-loop that P3 made fatter. Should be the host
