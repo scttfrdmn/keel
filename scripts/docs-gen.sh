@@ -49,6 +49,7 @@ note() { echo "  $*"; }
 records() {
   cat <<'EOF'
 DESIGN.md:design.md
+docs/rulings.md:rulings.md
 docs/toolchain-notes.md:toolchain-notes.md
 KERNEL.md:kernel.md
 CHANGELOG.md:changelog.md

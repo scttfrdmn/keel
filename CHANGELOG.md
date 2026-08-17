@@ -13,7 +13,15 @@ While the major version is 0, minor versions may contain breaking changes.
   (declarations only); `DESIGN.md` §5 rule 9 and §7 amended, because they mandated the instrument; control `T3`
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
+### Changed
+- **A rule and a ruling are now different files.** `DESIGN.md` §5 rules 6–9 keep their operative clauses at
+  their existing ordinals — no citation moved — and their incident histories move to `docs/rulings.md`,
+  published as a record page rather than dropped off the site. §5 falls from 2,275 words to 1,530.
+
 ### Fixed
+- **Adding a record page needed four hand-kept copies of one list, and two failed silently.** `fake_tree` and
+  the gitignore-coverage check now derive from `docs-gen.sh`'s own `records()` table; the missing `.gitignore`
+  entry staged a symlink to `DESIGN.md` clean, which is how it was found.
 - **The pre-public audit's `.local`-hostname enumeration named three files and there are six** (#95).
   Conclusion unchanged — non-routable LAN names, no IP or key — but `DESIGN.md:73`'s `janus.local` is
   hand-written prose, not a pasted log, so the don't-falsify-the-evidence argument never covered it and

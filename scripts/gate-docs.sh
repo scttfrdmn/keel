@@ -161,10 +161,18 @@ fake_tree() {
   local t="$1"
   mkdir -p "$t/scripts" "$t/doc-site/records" "$t/docs"
   cp scripts/docs-gen.sh "$t/scripts/"
-  printf '# f\n\n## 5. Testing\n\n1. A rule.\n\n## 6. Next\n' > "$t/DESIGN.md"
-  for f in KERNEL.md CHANGELOG.md CONTRIBUTING.md docs/toolchain-notes.md; do
+  # DERIVED from docs-gen's own records() table, not restated. A hand-kept copy of that
+  # list silently omits a newly added record page, and the generator then dies on the
+  # POSITIVE control -- so the gate reports "well-formed input was REJECTED" and blames
+  # the generator for a defect in the fixture. That happened, on docs/rulings.md.
+  local f
+  while IFS= read -r f; do
+    mkdir -p "$t/$(dirname "$f")"
     printf '# f\n' > "$t/$f"
-  done
+  done < <(awk '/^records\(\)/{i=1} i&&/^EOF$/{exit} i&&/^[^ #(].*:.*\.md$/ {sub(/:.*/,""); print}' scripts/docs-gen.sh)
+  # DESIGN.md last: it needs a real section 5, being the page that is extracted rather
+  # than linked, and the loop above has just stubbed it.
+  printf '# f\n\n## 5. Testing\n\n1. A rule.\n\n## 6. Next\n' > "$t/DESIGN.md"
 }
 
 stage_extraction() {
@@ -254,12 +262,22 @@ stage_citations() {
   # The site's own pages are hand-written and tracked, so they are in scope for
   # the lint above. The generated ones are not, by construction -- said out loud
   # here so a future page's citation is not written into a file nothing reads.
-  local ungated
-  ungated="$(git check-ignore doc-site/numbers.md doc-site/records/methodology.md 2>/dev/null | wc -l | tr -d ' ')"
-  if [[ "$ungated" == "2" ]]; then
-    pass "the 2 extracted pages are gitignored, hence out of citation-lint's reach by design"
+  # The linked record pages are covered too, and derived from records() for the same
+  # reason fake_tree is: .gitignore is a hand-kept copy of that table, and an omission
+  # there does not fail -- `git add -A` commits a SYMLINK to a repository file, putting a
+  # second path to DESIGN.md in the tree and a second population into the lint. Nearly
+  # landed on docs/rulings.md, whose symlink staged clean.
+  local want pages ungated p
+  pages="doc-site/numbers.md doc-site/records/methodology.md $(
+    awk '/^records\(\)/{i=1} i&&/^EOF$/{exit} i&&/^[^ #(].*:.*\.md$/ {sub(/.*:/,""); print "doc-site/records/" $0}' \
+      scripts/docs-gen.sh | tr '\n' ' ')"
+  want="$(wc -w <<<"$pages" | tr -d ' ')"
+  ungated="$(git check-ignore $pages 2>/dev/null | wc -l | tr -d ' ')"
+  if [[ "$ungated" == "$want" ]]; then
+    pass "all $want generated pages are gitignored, hence out of citation-lint's reach by design"
   else
-    fail "expected both extracted pages to be gitignored; $ungated of 2 are"
+    fail "expected every generated page to be gitignored; $ungated of $want are"
+    for p in $pages; do git check-ignore -q "$p" || printf '        NOT ignored: %s\n' "$p"; done
   fi
 }
 

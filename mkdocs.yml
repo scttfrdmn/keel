@@ -119,6 +119,7 @@ nav:
       - What these are: records/index.md
       - Design document: records/design.md
       - Testing methodology: records/methodology.md
+      - Rulings behind the rules: records/rulings.md
       - Toolchain field notes: records/toolchain-notes.md
       - Microkernel notes: records/kernel.md
       - Changelog: records/changelog.md
