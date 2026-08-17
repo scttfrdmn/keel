@@ -386,6 +386,8 @@ else
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
     if [[ "$OK" -eq 0 ]]; then
       pass "[$host] the full test suite passes with the vector backend live"
+    elif remote_vanished; then
+      unmeasured "[$host] the test suite did not finish (#62), so this host says nothing about the vector backend either way"
     else
       fail "[$host] the full test suite passes with the vector backend live"
       sed 's/^/        /' "$LOG" | tail -60
@@ -443,7 +445,15 @@ else
     done
     IOK=0
     KEEL_REMOTE_ENV="KEEL_FORCE=nonsense" remote_exec "$host" "$BIN" -test.run TestNothingMatchesThis >"$LOG" 2>&1 || IOK=$?
-    if [[ "$IOK" -ne 0 ]]; then
+    # VANISHED IS CHECKED FIRST, and this is the one site in the tree where that
+    # ordering is the difference between a check and a forgery: nonzero means PASS
+    # here, so any status that is not the program's own certifies a refusal that was
+    # never observed. It predates #62 — ssh returned 255 for a dead host and this
+    # printed PASS for it — and #62 only made the class nameable.
+    if remote_vanished; then
+      unmeasured "[$host] the KEEL_FORCE=nonsense run did not finish (#62), so whether an unrecognized value is refused was never observed: a run that never happened is not a refusal, and a nonzero status is what this check reads as success"
+      sed 's/^/        /' "$LOG" | tail -20
+    elif [[ "$IOK" -ne 0 ]]; then
       pass "[$host] KEEL_FORCE=nonsense refuses to run rather than falling back silently"
     else
       fail "[$host] KEEL_FORCE=nonsense was accepted: an unrecognized force value must fail loudly, or a typo in somebody's harness measures the wrong backend for a year"

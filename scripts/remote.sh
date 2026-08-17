@@ -365,6 +365,27 @@ remote_build_test() {
 # the state be recorded and unchanged between runs, is not settled here — #82 says
 # it is a decision, and this is the reading half.
 #
+# NO SHELL GLOB CROSSES THE WIRE, and the reason is a defect this returned nothing
+# for. sshd runs the *user's login shell*, not sh. Under zsh a pattern that matches
+# nothing is an ERROR that aborts the whole remote command — not the sh behaviour of
+# passing the pattern through for the next `[ -r ... ]` to reject — so on a host whose
+# login shell is zsh this function printed nothing at all, and assert_governor read
+# that empty output as `unreachable`: a host that answered perfectly, reported as one
+# that never answered. Found because localhost became a legitimate far side for #62's
+# exercise and localhost here is zsh. Every enumeration therefore goes through `find`
+# with a QUOTED pattern, which no shell expands. The fleet's AMIs default to bash so
+# this was not firing, which is the point — it would have fired on one contributor's
+# host, once, as an unattributable UNMEASURED.
+#
+# `tmux=` is here because #62's supervisor can be absent, and an absent supervisor
+# must not be a silent one. remote_exec degrades to an unsupervised run on a host
+# without a usable tmux — the pre-#62 behaviour, still measured — so the fact that
+# a measurement's lifetime was the ssh link's belongs in the archived record beside
+# the governor, not in a variable nobody prints. Note it is read here with
+# `command -v` under sshd's own PATH, which is not the login shell's: tmux is at
+# /opt/homebrew/bin on the dev machine and invisible to `ssh host 'command -v tmux'`
+# for exactly that reason. On Linux hosts it is /usr/bin/tmux and on the PATH.
+#
 # The private cache sizes are here for the same reason, added when #48's feed
 # decomposition turned out to depend on one: several benchmarks hold a buffer they
 # describe as L1-resident, whose size follows from the blocking parameters, and
@@ -392,21 +413,25 @@ remote_probe() {
     cpu=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2- | sed "s/^ *//")
     gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
     ncpu=$(nproc)
-    cores=$(cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list 2>/dev/null | sort -u | wc -l | tr -d " ")
-    [ "${cores:-0}" -gt 0 ] || cores=$(cat /sys/devices/system/cpu/cpu*/topology/core_cpus_list 2>/dev/null | sort -u | wc -l | tr -d " ")
+    T=/sys/devices/system/cpu
+    uniq_lines() { find "$T" -maxdepth 3 -name "$1" -exec cat {} + 2>/dev/null | sort -u | wc -l | tr -d " "; }
+    cores=$(uniq_lines thread_siblings_list)
+    [ "${cores:-0}" -gt 0 ] || cores=$(uniq_lines core_cpus_list)
     if [ "${cores:-0}" -gt 0 ] && [ $((ncpu % cores)) -eq 0 ]; then smt=$((ncpu / cores)); else smt="?"; fi
     [ "${cores:-0}" -gt 0 ] || cores="?"
-    sockets=$(cat /sys/devices/system/cpu/cpu*/topology/physical_package_id 2>/dev/null | sort -u | wc -l | tr -d " ")
+    sockets=$(uniq_lines physical_package_id)
     [ "${sockets:-0}" -gt 0 ] || sockets="?"
     cache=""
-    for d in /sys/devices/system/cpu/cpu0/cache/index*; do
+    for d in $(find "$T/cpu0/cache" -maxdepth 1 -name "index*" 2>/dev/null); do
       [ -r "$d/level" ] || continue
       lvl=$(cat "$d/level"); typ=$(cat "$d/type"); sz=$(cat "$d/size")
       case "$typ" in Instruction) continue ;; Data) tag="L${lvl}d" ;; *) tag="L${lvl}" ;; esac
       cache="$cache${cache:+ }$tag=$sz"
     done
-    printf "%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | %s | %s\n" \
-      "$cpu" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$(uname -sr)" "${cache:-caches=?}"
+    tmux=no
+    command -v tmux >/dev/null 2>&1 && tmux=yes
+    printf "%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | tmux=%s | %s | %s\n" \
+      "$cpu" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$tmux" "$(uname -sr)" "${cache:-caches=?}"
   ' 2>/dev/null
 }
 
@@ -527,15 +552,140 @@ assert_governor() {
 # bash as a pipeline and tried to execute B as a command. That failure was loud
 # here, but the same expansion applied to a glob or a `$` would have silently
 # altered what got measured.
+#
+# THE MEASUREMENT NO LONGER LIVES INSIDE THE SSH CONNECTION (#62). It runs in a
+# detached remote tmux session, so the ssh carries control messages and the
+# program's lifetime is not the link's. The trigger for building this was the
+# fleet leaving the LAN: on a billed cloud instance a transient drop is a real
+# event class, and it used to SIGHUP a benchmark mid-flight and cost the run.
+#
+# THE COMMAND CROSSES AS DATA, NOT AS SHELL WORDS, and that is the whole defence
+# against the hazard #62 named. Wrapping the existing command string in a tmux
+# argument would give the far side a SECOND expansion on top of printf %q, and
+# the failure mode of getting that wrong is not a loud error — it is a benchmark
+# that measured something adjacent to what was asked for. So the command is
+# written to a runner script LOCALLY, shipped by the scp that already ships the
+# binary, and tmux is handed one quoted path. The bytes the far side executes are
+# the bytes the old single-ssh form would have handed to its shell.
+#
+# THREE OUTCOMES, AND ONLY ONE OF THEM IS AN EXIT CODE. The runner writes the
+# program's status to a status file after it exits — detach.sh's design, one hop
+# out — so "finished badly" and "never finished" stay distinguishable:
+#
+#   REMOTE_STATE=ok        a status file exists; the return value is the
+#                          program's own exit code, exactly as before.
+#   REMOTE_STATE=vanished  the session is gone and no status was written. The
+#                          return value is $REMOTE_EXIT_VANISHED, which is NOT a
+#                          program exit code and must not be read as one — see
+#                          remote_vanished below, and DESIGN.md §5.6.
+#   REMOTE_SUPERVISED=no   there was no usable tmux, so the run was unsupervised
+#                          (the pre-#62 behaviour). Not a failure and not an
+#                          exemption: still measured, still reported, and the
+#                          fact is in every gate's provenance line as `tmux=`
+#                          because a supervisor that is silently absent is worse
+#                          than one that is absent loudly.
+#
+# THE SUPERVISOR IS SILENT ON THE WIRE, deliberately and load-bearingly. This
+# function's stdout IS the program's output: every caller redirects `2>&1` into a
+# log that benchstat and anchored marker greps then parse, so one chatty line
+# from the supervisor would land in the parsed data. Hence state travels in
+# variables and never in output, and the log comes back through its own `cat`
+# whose stdout is passed straight through — not through `$(...)`, which strips
+# trailing newlines and would edit every log by a byte.
+#
+# The runner is shipped rather than fed on stdin because $KEEL_SSH_OPTS carries
+# `-n`. remote_boost_set's header documents where that leads: a heredoc-fed
+# remote shell reads EOF, executes nothing, and exits 0 — a command that
+# silently did not run, reported as success.
+REMOTE_EXIT_VANISHED=125
+REMOTE_STATE=""
+REMOTE_SUPERVISED=""
+REMOTE_WAIT_RETRIES="${REMOTE_WAIT_RETRIES:-12}"
+REMOTE_EXEC_SEQ=0
+
+# remote_vanished — true when the last remote_exec's measurement did not finish.
+# The clause every caller needs BEFORE it interprets a nonzero status, because
+# "the binary exited nonzero" and "nobody saw the binary exit" are different
+# facts and only the first is a claim about keel.
+remote_vanished() { [[ "$REMOTE_STATE" == vanished ]]; }
+
 remote_exec() {
   local host="$1" bin="$2"; shift 2
   local base; base="$(basename "$bin")"
   local args="" a
   for a in "$@"; do args+=" $(printf '%q' "$a")"; done
+
+  REMOTE_STATE=""
+  REMOTE_SUPERVISED=""
+  REMOTE_EXEC_SEQ=$((REMOTE_EXEC_SEQ + 1))
+  local id="keel-$$-$REMOTE_EXEC_SEQ"
+  local runner="$KEEL_REMOTE_DIR/$id.sh" log="$KEEL_REMOTE_DIR/$id.log" st="$KEEL_REMOTE_DIR/$id.status"
+
+  local tmpd; tmpd="$(mktemp -d)"
+  # `\$?` is escaped so the status is read on the far side, at the far side's
+  # moment; expanded here it would freeze this shell's last exit code into the
+  # script and report it as the measurement's.
+  cat > "$tmpd/$id.sh" <<EOF
+#!/bin/sh
+# Generated by remote_exec (keel #62). Not edited by hand and not reused: one
+# runner per measurement, named for the tmux session that supervises it.
+cd '$KEEL_REMOTE_DIR' || exit 127
+{ env ${KEEL_REMOTE_ENV:-} ./'$base'$args; printf '%s\n' "\$?" > '$st'; } > '$log' 2>&1
+EOF
+
   ssh "${KEEL_SSH_OPTS[@]}" "$host" "mkdir -p '$KEEL_REMOTE_DIR'" >/dev/null
-  scp -q "${KEEL_SCP_OPTS[@]}" "$bin" "$host:$KEEL_REMOTE_DIR/$base"
-  ssh "${KEEL_SSH_OPTS[@]}" "$host" \
-    "cd '$KEEL_REMOTE_DIR' && env ${KEEL_REMOTE_ENV:-} ./'$base'$args"
+  scp -q "${KEEL_SCP_OPTS[@]}" "$bin" "$tmpd/$id.sh" "$host:$KEEL_REMOTE_DIR/"
+  rm -rf "$tmpd"
+
+  # One launch, which also decides supervision on the far side — a separate
+  # `command -v tmux` probe would be a third round trip to learn what the launch
+  # already knows. tmux present but unable to start a server (no writable $HOME,
+  # no /tmp) falls through to the unsupervised arm rather than losing the
+  # measurement: that arm is exactly the behaviour every gate had before #62.
+  local supervision
+  supervision="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" "
+    if command -v tmux >/dev/null 2>&1 && tmux new-session -d -s '$id' \"sh '$runner'\" 2>/dev/null; then
+      echo supervised
+    else
+      echo unsupervised
+      sh '$runner'
+    fi" 2>/dev/null || true)"
+  case "$supervision" in
+    supervised*) REMOTE_SUPERVISED=yes ;;
+    *)           REMOTE_SUPERVISED=no ;;
+  esac
+
+  # Wait on the far side, in one connection rather than a poll from here: a
+  # 25-minute benchmark polled from the driver is 300 ssh handshakes, each of
+  # which is a chance to fail at a moment when nothing was wrong. Retried
+  # because a dropped link during the wait is now survivable — the session is
+  # still running, and `has-session` makes reconnecting idempotent.
+  local tok="" tries=0
+  if [[ "$REMOTE_SUPERVISED" == yes ]]; then
+    while :; do
+      tok="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" "
+        while tmux has-session -t '$id' 2>/dev/null; do sleep 3; done
+        if [ -f '$st' ]; then cat '$st'; else echo vanished; fi" 2>/dev/null || true)"
+      [[ -z "$tok" ]] || break
+      tries=$((tries + 1))
+      [[ "$tries" -lt "$REMOTE_WAIT_RETRIES" ]] || break
+      sleep 5
+    done
+  else
+    tok="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" \
+      "if [ -f '$st' ]; then cat '$st'; else echo vanished; fi" 2>/dev/null || true)"
+  fi
+
+  # The log, byte-exact, on the caller's stdout. Emitted even when the run
+  # vanished: a truncated log is evidence about where it stopped, and the
+  # caller has REMOTE_STATE to keep it from being read as a complete one.
+  ssh "${KEEL_SSH_OPTS[@]}" "$host" "cat '$log' 2>/dev/null" || true
+  ssh "${KEEL_SSH_OPTS[@]}" "$host" "rm -f '$runner' '$log' '$st'" >/dev/null 2>&1 || true
+
+  case "$tok" in
+    *[!0-9]* | "") REMOTE_STATE=vanished; return "$REMOTE_EXIT_VANISHED" ;;
+    *)             REMOTE_STATE=ok; return "$tok" ;;
+  esac
 }
 
 # ---------------------------------------------------------------------------

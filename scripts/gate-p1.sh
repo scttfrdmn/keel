@@ -214,6 +214,8 @@ else
     if [[ "$OK" -eq 0 ]]; then
       pass "[$host] KEEL_FORCE=scalar: tests pass with dispatch overridden"
       info "[$host] $(grep -o 'keel-l1-active:.*' "$LOG" | tail -1 || echo 'no active marker')"
+    elif remote_vanished; then
+      unmeasured "[$host] KEEL_FORCE=scalar: the forced run did not finish (#62), so the overridden dispatch is unmeasured here rather than broken"
     else
       fail "[$host] KEEL_FORCE=scalar: tests pass with dispatch overridden"
       sed 's/^/        /' "$LOG" | tail -30

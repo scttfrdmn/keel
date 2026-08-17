@@ -14,6 +14,11 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Added
+- **A remote measurement now outlives its ssh connection** (#62): `remote_exec` scp's a generated runner and
+  supervises it with tmux on the far side, recovering the exit status from a status file. An unfinished run
+  returns `vanished` (125), never a program code, and a missing supervisor is reported as `tmux=` in every
+  gate's provenance instead of being assumed away. `scripts/remote-exec-test.sh` drives all four branches
+  against `ssh localhost`, so none of it waited on a fleet.
 - **Every gate reads free disk rather than assuming it** (#84): `require_disk` prints the headroom each run
   had and `unmeasured`s below a **512 MiB floor — measured**, at 3.8× a cold run's ~135 MiB demand, whose
   dominant term is a 76 MiB cold cross-compile cache and not the binaries. That is what makes the 137 MiB
@@ -34,6 +39,14 @@ While the major version is 0, minor versions may contain breaking changes.
   published as a record page rather than dropped off the site. §5 falls from 2,275 words to 1,530.
 
 ### Fixed
+- **gate-p5's `KEEL_FORCE=nonsense` check certified a refusal it never observed.** It reads *nonzero* as PASS,
+  so ssh's 255 for a dead host printed PASS; #62 only made the class nameable. `vanished` is now tested first
+  there and beside the existing `else` at four more sites, printing UNMEASURED — same verdict, right cause.
+- **A non-matching glob aborted the entire remote probe under zsh**, so a host that answered perfectly was
+  reported `unreachable`: sshd runs the *login* shell, and `ssh h 'for d in /nope/*; do :; done; echo B'`
+  never reaches `echo B`. Every enumeration in `remote_probe` now goes through `find` with a quoted `-name`.
+  The fleet's AMIs default to bash, which is why this had not fired — one contributor's host, once, as an
+  unattributable UNMEASURED.
 - **Seven of the eleven `gate-pN.sh:<line>` citations in other files were already stale, by 4 to 273 lines.**
   Exposed because relocating the headers shifted every line: re-pointing by arithmetic landed one on
   `done <<<"$HOSTS"`, so all eleven were resolved by content instead. No checker follows — a line-existence

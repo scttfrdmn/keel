@@ -386,6 +386,8 @@ else
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
     if [[ "$OK" -eq 0 ]]; then
       pass "[$host] the P4 lattices pass against the oracle"
+    elif remote_vanished; then
+      unmeasured "[$host] the P4 lattices did not finish (#62), so this host says nothing about them either way"
     else
       fail "[$host] the P4 lattices pass against the oracle"
       sed 's/^/        /' "$LOG" | tail -60

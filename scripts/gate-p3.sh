@@ -519,6 +519,8 @@ else
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
     if [[ "$OK" -eq 0 ]]; then
       pass "[$host] Sgemm sweep passes"
+    elif remote_vanished; then
+      unmeasured "[$host] the Sgemm sweep did not finish (#62), so this host says nothing about the sweep either way"
     else
       fail "[$host] Sgemm sweep passes"
       sed 's/^/        /' "$LOG" | tail -40
@@ -547,6 +549,8 @@ else
       pass "[$host] KEEL_FORCE=scalar: the sweep passes with dispatch overridden"
       SCALAR_FORCED="$host"
       N_FORCED_OK=$((N_FORCED_OK + 1))
+    elif remote_vanished; then
+      unmeasured "[$host] KEEL_FORCE=scalar: the sweep did not finish (#62), so the overridden dispatch is unmeasured here rather than broken"
     else
       fail "[$host] KEEL_FORCE=scalar: the sweep passes with dispatch overridden"
       sed 's/^/        /' "$LOG" | tail -20
