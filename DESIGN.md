@@ -188,13 +188,11 @@ Every phase ends in an executable gate: a command that exits 0 or 1. No narrativ
 | Perf numbers flattering on one machine | Bench harness records CPU model, frequency governor, and the host's *measured* peak alongside every result (§4/P2) |
 | A wrong percent-of-peak denominator | Peak is measured by a register-only FMA-saturation kernel whose accumulator chains are verified to survive compilation (arithmetic witness) and whose loop is verified free of memory operands (disassembly); the formula is a printed cross-check only |
 
-## 7. Claude Code kickoff prompt
+## 7. Standing orders
 
-Paste below into a fresh CC session in an empty repo. It is self-contained; it does not assume this document is present (but commit this document as `DESIGN.md` in the repo root first — the prompt tells CC to read it).
+Eight rules of engagement for anyone — human or agent — writing code in this repo. **Every ordinal below is frozen**: rules 2, 4, 7 and 8 are cited from outside this document (`README.md`, `bench/`, `internal/vec/`, `docs/`, and about twenty-five sites across `scripts/`), and four of them are pinned in `docs/citation-targets.txt`. Renumbering is therefore not a formatting choice; add at the end or not at all.
 
----
-
-You are building **keel**, a pure-Go float32 BLAS subset using Go's experimental SIMD support. Read `DESIGN.md` in the repo root completely before writing any code — it defines architecture, phases, and gates. Rules of engagement:
+*Retitled 2026-08-16.* This section was headed "Claude Code kickoff prompt" and opened *"Paste below into a fresh CC session in an empty repo… It is self-contained; it does not assume this document is present."* Neither clause has been true for a long time: the repo is not empty, the prompt is inside the document it said it did not assume, and `CLAUDE.md` is what a session actually reads first. The framing is gone; the rules it wrapped are unchanged and stay here, because **here is where the gates cite them.** Where `CLAUDE.md` restates one of these, this is the authority and that is the operational reminder.
 
 1. **Toolchain:** Go 1.27rc (or newest 1.26.x) with `GOEXPERIMENT=simd`. Verify with a smoke build before anything else. All Makefile targets must set the env var; the scalar path must additionally build on a stock toolchain without it.
 2. **Never recall the simd API — read it.** Before writing or editing anything in `internal/vec`, run `go doc simd/archsimd`, `go doc simd` and read the sources under `$(go env GOROOT)/src/simd/`. The package is experimental and has had breaking renames between releases; any identifier you remember from training is presumptively wrong. Copy exact names from `go doc` output.
@@ -204,10 +202,6 @@ You are building **keel**, a pure-Go float32 BLAS subset using Go's experimental
 6. **Tolerances come from the helper, nowhere else.** One `tolerance(n int, scale float32) float32` function per the model in DESIGN.md §5. If a test needs a looser bound, change the model with a comment explaining the numerics, never the individual test.
 7. **Honesty in benchmarks.** Every benchmark result you report includes: CPU model, the rate against the host's *measured* peak (§4/P2 — never a formula-derived one), and the OpenBLAS reference number from the same machine when the cgo dev-harness is available. If OpenBLAS is not installed, say so and report percent-of-measured-peak only. Never present a number without its denominator, and never present two denominators for the same quantity.
 8. **When the toolchain surprises you** (missing intrinsic, unexpected lowering, compiler bug), document it in `docs/toolchain-notes.md` with a minimal repro before working around it. These notes are a deliverable — this project is partly a field report on `GOEXPERIMENT=simd`.
-
-Session cadence: P0 and P1 in the first session if they go smoothly. Start now with the toolchain probe.
-
----
 
 ## 8. After v0 (parking lot, not scope)
 

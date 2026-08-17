@@ -264,6 +264,11 @@ While the major version is 0, minor versions may contain breaking changes.
   owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
 ### Changed
+- **DESIGN.md §7 is no longer titled "Claude Code kickoff prompt"** (H4). It opened *"Paste below into a
+  fresh CC session in an empty repo… it does not assume this document is present"* — a prompt living inside
+  the document it disclaimed, for a repo that is not empty. Framing deleted, eight rules kept verbatim at
+  frozen ordinals: rules 2/4/7/8 are pinned and cited from ~40 sites, so renumbering is not a formatting
+  choice. Verified by diffing all eight parsed rule leads against HEAD — byte-identical.
 - **Two standing rules amended rather than obeyed literally** (2026-08-16 ruling: *retire any rules we do not
   really need*). The issue-per-discovery rule (`CONTRIBUTING.md`, `CLAUDE.md`) now says a discovery whose fix
   is smaller than its issue gets **fixed** and recorded — the word carrying the intent was always *silent*,
