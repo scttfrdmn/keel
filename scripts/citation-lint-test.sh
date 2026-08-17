@@ -4,13 +4,17 @@
 #
 # Transition exercise for scripts/citation-lint.sh: drive every branch on purpose.
 #
-# A healthy tree reaches exactly one of the ten cases below — the clean path. So a
-# green `make lint` says nothing whatever about the other nine, and an unchanged tally
+# A healthy tree reaches exactly one of the twelve cases below — the clean path. So a
+# green `make lint` says nothing whatever about the other eleven, and an unchanged tally
 # on a healthy run is not evidence that a newly added check works.
 # Each case here induces the condition it names, asserts the branch that must fire,
 # and restores the tree.
 #
-# Three of these controls exist because the checks they drive were added *after* the
+# Controls are numbered in the order they were WRITTEN, not the order they run: T10 is
+# last on purpose (see below) and T11-T12 were added after it. Renumbering would silently
+# invalidate every reference to a control by name, here and in CHANGELOG.md.
+#
+# Five of these controls exist because the checks they drive were added *after* the
 # audit that established the baseline, and each guards a silent failure rather than a
 # loud one:
 #
@@ -32,6 +36,12 @@
 #        names. Line granularity is too coarse for DESIGN.md, whose rules are single
 #        2000-character lines; a bare marker on §5 rule 9 would have stopped checking citation-lint:quote
 #        two live citations while printing nothing at all.
+#   T11 — a scope token is matched literally, so one that names no form on its line
+#        suppresses nothing. This does not fail the lint, which is why it needs a
+#        control of the `clean:PATTERN` kind: the whole risk is a warning that stops
+#        being printed and is therefore indistinguishable from a tree with nothing to
+#        warn about. The mutation reproduces a defect the tree actually carried, and T12
+#        continues from it to drive `citation-lint:nomarker`, the audit's one escape.
 #
 # T10 re-runs the clean path last: a restore that silently failed would otherwise let
 # every later run inherit a tree this script broke. It is a control on the harness,
@@ -57,8 +67,17 @@ main() {
   restore() { local f; for f in "${FILES[@]}"; do cp "$BAK/${f//\//_}" "$f"; done; }
 
   FAILED=0
-  # run WANT LABEL [ARGS...] -- WANT is a grep -E pattern the output must match, or
-  # the literal `clean` for the success line with rc 0.
+  # run WANT LABEL [ARGS...] -- three forms of WANT, because the lint has three kinds
+  # of outcome and collapsing them loses the distinction that matters:
+  #
+  #   clean            rc 0, nothing asserted about the text
+  #   clean:PATTERN    rc 0 AND the output matches PATTERN -- for a WARN, which by
+  #                    design does not fail. Asserting only rc here would pass on a
+  #                    build where the warning was never emitted at all.
+  #   PATTERN          rc non-zero AND the output matches PATTERN
+  #
+  # Each outcome is keyed to its own phrase, and a WANT that matches nothing fails:
+  # a check anchored to what the script prints *today* would certify the past.
   run() {
     local want="$1" label="$2"; shift 2
     local out rc
@@ -68,6 +87,11 @@ main() {
     printf 'rc=%s\n' "$rc"
     if [[ "$want" == clean ]]; then
       if [[ "$rc" -ne 0 ]]; then printf '  UNEXPECTED: wanted a clean pass\n'; FAILED=1; fi
+    elif [[ "$want" == clean:* ]]; then
+      if [[ "$rc" -ne 0 ]]; then printf '  UNEXPECTED: wanted a clean pass\n'; FAILED=1
+      elif ! grep -qE "${want#clean:}" <<<"$out"; then
+        printf '  UNEXPECTED: passed, but without %s\n' "${want#clean:}"; FAILED=1
+      fi
     else
       if [[ "$rc" -eq 0 ]]; then printf '  UNEXPECTED: wanted a failure\n'; FAILED=1
       elif ! grep -qE "$want" <<<"$out"; then
@@ -80,7 +104,10 @@ main() {
   printf 'citation-lint transition exercise — every branch driven on purpose.\n'
   printf 'An unchanged healthy tree reaches only T1.\n'
 
-  run clean "T1 clean path — the ONLY branch an unchanged healthy tree reaches"
+  # The count is asserted, not just the rc. A dozen lines in this tree NAME the quote
+  # marker while citing nothing, and the marker audit must read them as mentions; if it
+  # ever starts counting them, this line is where that shows up.
+  run 'clean:0 dead marker scope' "T1 clean path — the ONLY branch an unchanged healthy tree reaches"
 
   perl -i -pe 's/ <!-- citation-lint:quote -->//' CHANGELOG.md
   run 'MOVED' "T2 quote marker removed from CHANGELOG.md — proves the marker is load-bearing"
@@ -125,11 +152,33 @@ main() {
   run 'NO ITEM' "T9 a broken citation sharing a line with a scoped quote marker — proves the scope is narrow"
   restore
 
-  run clean "T10 clean path again — a control on this harness, not on the lint"
+  # A scope token is matched literally, so a mis-spelled or outdated one suppresses
+  # nothing -- and does not fail: the citation it was meant to exempt is simply checked.
+  # That is sound but MISATTRIBUTING, because the resulting red line (when the citation
+  # is also broken) says "bad citation" about a citation that is fine. Hence a WARN, and
+  # hence a control that asserts rc 0 alongside the warning: a WARN nobody can see is
+  # the same as no check. The mutation below restores a defect that was real in this
+  # tree until the commit that added the audit -- `4.3` on a line whose `§4.3` had moved citation-lint:quote
+  # to the next one when the prose was rewrapped, which is the same wrapping hazard T2
+  # covers for bare markers.
+  perl -i -pe 's{<!-- citation-lint:quote\(5\.4\) -->}{<!-- citation-lint:quote(5.4,4.3) -->}' CHANGELOG.md
+  run "clean:WARN MARKER CHANGELOG.md.*'4\.3' suppresses nothing" \
+    "T11 a scope token naming a form not on its line — warns, and does NOT fail"
+
+  # T12 continues from T11's mutated tree on purpose: the escape hatch is only meaningful
+  # against a line that WOULD warn, and asserting it on a quiet line would prove nothing.
+  # `citation-lint:nomarker` exists for the one reachable false positive -- a line that
+  # cites a rule and also quotes a scoped marker verbatim -- and an escape nobody drives
+  # is exactly the dead configuration this audit was added to report.
+  perl -i -pe 's{(<!-- citation-lint:quote\(5\.4,4\.3\) -->)}{$1 <!-- citation-lint:nomarker -->}' CHANGELOG.md
+  run 'clean:0 dead marker scope' "T12 the same dead token, declared with citation-lint:nomarker — silent"
+  restore
+
+  run 'clean:0 dead marker scope' "T10 clean path again — a control on this harness, not on the lint"
 
   echo
   if [[ "$FAILED" -eq 0 ]]; then
-    echo "citation-lint controls: all 10 transitions fired as specified"
+    echo "citation-lint controls: all 12 transitions fired as specified"
   else
     echo "citation-lint controls: FAILED" >&2
     exit 1

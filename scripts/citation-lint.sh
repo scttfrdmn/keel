@@ -66,6 +66,18 @@
 # line carries both a quotation and real citations, scope the marker to the quoted
 # form: `citation-lint:quote(5.4)`. See the `quoted` helper for why.
 #
+# A SCOPE TOKEN IS THE CITATION'S EXACT SPELLING MINUS THE SECTION SIGN. To suppress
+# `§7 rule 7` the token is `7 rule 7`, not `7.7` — the two notations resolve to the citation-lint:quote
+# same rule for *checking* but a scope is matched literally, so the shorthand does not
+# suppress the explicit form. This is stated here because it cost a confusing tally
+# once, and because it does NOT fail in the safe direction. A mis-spelled scope fails
+# loudly with the WRONG ATTRIBUTION: the exemption misses, the site lints as a real
+# citation, and if it happens to be unresolvable the red line reads "bad citation"
+# when the truth is "bad marker". So the loop under "the markers, audited" below WARNs
+# on any scope token that suppresses nothing, which is what turns that misattribution
+# back into the right one — and closes the class rather than this instance, since a
+# token can also go dead later, when the text it named is reworded.
+#
 # Usage:
 #   citation-lint.sh            check against docs/citation-targets.txt
 #   citation-lint.sh --write    regenerate that file from the tree
@@ -259,6 +271,62 @@ if [[ -n "$EXTERNAL" ]]; then
   done <<<"$EXTERNAL"
 fi
 
+# ------------------------------------------------- the markers, audited
+# The mirror image of the EXTERNAL narrowness check, applied to the other exemption
+# mechanism. A scope token is matched LITERALLY (see `quoted` and the header note on
+# spelling); and unlike a stale EXTERNAL declaration, a dead scope token
+# cannot make this script green when it should be red. What it does instead is worse
+# to debug: the exemption misses, the site is checked as a live citation, and the
+# resulting red line says "bad citation" about a citation that is fine. The report is
+# a WARN rather than a failure for exactly that reason -- nothing is unsound, but the
+# next person's attribution is -- and because a token also goes dead with no edit at
+# all, when the quoted text it named is later reworded. That is the
+# exclusion-outliving-its-defect shape #93 closed on the mkdocs side.
+#
+# TWO DELIBERATE LIMITS.
+#
+# Only SCOPED markers are audited. A bare `citation-lint:quote` has no spelling to get
+# wrong -- `7.7` cannot fail to suppress `§7 rule 7` if it is never written down -- and citation-lint:quote
+# once the citations on its line are deleted a bare marker is indistinguishable from a
+# line that merely NAMES the marker -- of which this tree has a dozen, in this file's
+# own header, in CHANGELOG.md and in the test fixtures. So a bare marker orphaned by a
+# deleted citation is not caught, and saying so here is cheaper than a check that
+# reports twelve non-defects on the day it lands.
+#
+# A marker on a line with NO citations is a mention, not a marker, and is skipped for
+# the same reason. That leaves one reachable false positive: a line that both cites a
+# rule AND quotes a scoped marker verbatim, argument included, whose quoted scope the
+# audit reads as the line's real one. `citation-lint:nomarker` opts such a line out.
+#
+# It opts out of THIS AUDIT ONLY, and cannot do more: `quoted` parses the FIRST scoped
+# marker on a line, so a genuine marker written after a quoted one is unreachable --
+# measured, not assumed. Such a line therefore cannot suppress its own citations at all,
+# and the honest fix is to wrap it so the quotation and the citation are on separate
+# lines. `nomarker` exists for the case where they must share one anyway.
+markers() {
+  git ls-files -z -- '*.go' '*.sh' '*.md' \
+    | xargs -0 grep -nH 'citation-lint:quote(' 2>/dev/null \
+    | grep -v "^${PINS}:" || true
+}
+
+N_WARN=0
+while IFS= read -r hit; do
+  [[ -n "$hit" ]] || continue
+  mfile="${hit%%:*}"; mrest="${hit#*:}"; mline="${mrest%%:*}"
+  mtext="$(sed -n "${mline}p" "$mfile" 2>/dev/null)" || continue
+  [[ "$mtext" == *citation-lint:nomarker* ]] && continue
+  mcites="$(grep -oE '§[0-9]+(\.[0-9]+| rule [0-9]+)' <<<"$mtext" || true)"
+  [[ -n "$mcites" ]] || continue
+  mscope="${mtext#*citation-lint:quote(}"; mscope="${mscope%%)*}"
+  IFS=, read -ra mtoks <<<"$mscope"
+  for tok in "${mtoks[@]}"; do
+    if ! grep -qxF "§$tok" <<<"$mcites"; then
+      REPORT+=("WARN MARKER $mfile:$mline  scope token '$tok' suppresses nothing on this line — a scope is matched literally, so check its spelling against the citation, or drop it")
+      N_WARN=$((N_WARN + 1))
+    fi
+  done
+done < <(markers)
+
 case "$MODE" in
   --write)
     { echo "# Copyright 2026 Scott Friedman"
@@ -310,7 +378,8 @@ case "$MODE" in
     ;;
   --list)
     if [[ "${#REPORT[@]}" -gt 0 ]]; then printf '%s\n' "${REPORT[@]}"; fi
-    printf '%s DESIGN-bound sites, %s declared external, %s quoted\n' "$N_SITES" "$N_EXT" "$N_QUOTE"
+    printf '%s DESIGN-bound sites, %s declared external, %s quoted, %s dead marker scope(s)\n' \
+      "$N_SITES" "$N_EXT" "$N_QUOTE" "$N_WARN"
     ;;
   *)
     if [[ ! -f "$PINS" ]]; then
@@ -331,8 +400,10 @@ esac
 if [[ "$MODE" != "--list" && "$MODE" != "--write" ]]; then
   if [[ "${#REPORT[@]}" -gt 0 ]]; then printf '%s\n' "${REPORT[@]}"; fi
   if [[ "$FAIL" -eq 0 ]]; then
-    printf 'citation-lint: %s sites over %s forms resolve and match %s (%s external, %s quoted)\n' \
-      "$N_SITES" "$(wc -l <<<"$PINNED" | tr -d ' ')" "$PINS" "$N_EXT" "$N_QUOTE"
+    # The warn count is printed even when it is zero. A tally that appears only when
+    # nonzero is indistinguishable from a check that did not run.
+    printf 'citation-lint: %s sites over %s forms resolve and match %s (%s external, %s quoted, %s dead marker scope(s))\n' \
+      "$N_SITES" "$(wc -l <<<"$PINNED" | tr -d ' ')" "$PINS" "$N_EXT" "$N_QUOTE" "$N_WARN"
   fi
 fi
 exit "$FAIL"

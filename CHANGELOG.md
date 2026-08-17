@@ -82,6 +82,36 @@ While the major version is 0, minor versions may contain breaking changes.
   hit the banner's promise text, in the one file where a log being mistakable for certification matters most.
 
 ### Added
+- **`citation-lint.sh` now WARNs when a scoped quote marker names a form that is not on its line**, and
+  the one dead token in the tree is gone. A scope is matched *literally*: the token `7.7` is a string,
+  not a notation, so it does not suppress §7 rule 7 even though both spellings resolve to the same rule <!-- citation-lint:quote -->
+  when the citation itself is checked. The header now says so in as many words. **The check is the point,
+  though, not the note:** a mis-spelled or outdated token does not fail quietly in the safe direction, it fails *loudly
+  with the wrong attribution* — the exemption misses, the site is checked as a live citation, and when
+  that citation is itself broken the red line reads "bad citation" about a citation that is fine. Ruling
+  of 2026-08-16: *"one loop over the markers, and the class closes instead of the instance."* The real
+  finding was `CHANGELOG.md:801`, whose scope carried `4.3` after the `§4.3` it named was pushed to the <!-- citation-lint:quote(4.3) -->
+  next line by a rewrap — the same wrapping hazard `T2` covers for bare markers, and the same
+  exclusion-outliving-its-defect shape #93 closed on the mkdocs side, since a token also goes dead with
+  no edit at all when the quoted text is reworded.
+  **Reported, not failed, and therefore relayed:** nothing is unsound when a scope is dead, so this is a
+  WARN — which made `gate-docs.sh`'s citation stage a hiding place, because it filtered the lint's output
+  down to the summary line and every warning the lint can emit appears only on a run that passes. It now
+  relays `WARN` lines, driven on purpose: with the `4.3` token reinstated the gate prints the warning and
+  still reports GREEN. `T11` is the control (`0 dead marker scope` asserted on the clean path, so the
+  dozen lines in this tree that merely *name* the marker are pinned as mentions), and it needed a third
+  assertion form in the harness, `clean:PATTERN` — rc 0 **and** the text present, because a control that
+  checked only the exit status would pass on a build where the warning was never printed at all.
+  **Two limits, stated rather than discovered later:** only *scoped* markers are audited, since a bare
+  one has no spelling to get wrong and, once the citations on its line are deleted, is indistinguishable
+  from a line naming the marker; and a marker on a citation-free line is read as a mention. The one
+  reachable false positive — a line that both cites a rule and quotes a scoped marker verbatim, argument
+  included — opts out with `citation-lint:nomarker`, whose scope is the audit and nothing else: `quoted`
+  parses only the *first* scoped marker on a line, so a genuine marker written after a quoted one is
+  unreachable, which was measured rather than assumed. Such a line cannot suppress its own citations by
+  any spelling, and the fix is to wrap it. Both branches are driven — `T11` asserts the warning fires,
+  `T12` appends the declaration to the same line and asserts it goes quiet — because a `nomarker` nobody
+  exercises is the dead configuration this whole check exists to report.
 - **A documentation site, and a gate that will not let it publish a number nobody measured** (#92).
   `mkdocs.yml` + five user pages under `doc-site/` (Home, Usage, Capabilities & limits, Numbers,
   Troubleshooting) and **one** nav entry at the end for the project records. The ruling that shapes it,
@@ -798,7 +828,7 @@ While the major version is 0, minor versions may contain breaking changes.
   does not gate the action it precedes is a report, not a check — `&&`, always.
 - **The quote marker takes a scoped form, `citation-lint:quote(5.4)`** (#85), because
   line granularity is too coarse for this document: `DESIGN.md`'s numbered rules are
-  single 2000-character lines, and §5 rule 9 quotes `§5.4` on a line that also carries a <!-- citation-lint:quote(5.4,4.3) -->
+  single 2000-character lines, and §5 rule 9 quotes `§5.4` on a line that also carries a <!-- citation-lint:quote(5.4) -->
   live `§5 rule 5` and an external `§4.3`. A bare marker there would have stopped <!-- citation-lint:quote(4.3,5 rule 5) -->
   checking all three while printing nothing — over-suppression by construction, the same
   failure the declaration-narrowness check guards on the other side.
