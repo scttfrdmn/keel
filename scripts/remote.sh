@@ -353,6 +353,18 @@ remote_build_test() {
 # just as host-specific as a benchmark (which microarchitecture confirmed the
 # NaN operand order?).
 #
+# Cores, SMT width and sockets are here because `nproc` alone means two different
+# things on the two arms of a cross-vendor comparison (#82): an Intel virtualized
+# size gives 2 threads/core, AMD and Graviton give 1, so `GOMAXPROCS=8` is 8 cores
+# on one arm and 4 on the other. Read from `thread_siblings_list` — one line per
+# physical core, deduplicated — because that is the fact, where `nproc` is a
+# consequence of it. `core_cpus_list` is the fallback (the newer name for the same
+# file); SMT width is derived rather than read, and reports "?" unless it divides
+# the CPU count exactly, since a non-integer ratio means the assumption behind the
+# division is wrong on that host. Whether P5 then *requires* SMT off, or only that
+# the state be recorded and unchanged between runs, is not settled here — #82 says
+# it is a decision, and this is the reading half.
+#
 # The private cache sizes are here for the same reason, added when #48's feed
 # decomposition turned out to depend on one: several benchmarks hold a buffer they
 # describe as L1-resident, whose size follows from the blocking parameters, and
@@ -379,6 +391,13 @@ remote_probe() {
   ssh "${KEEL_SSH_OPTS[@]}" "$host" '
     cpu=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2- | sed "s/^ *//")
     gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
+    ncpu=$(nproc)
+    cores=$(cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list 2>/dev/null | sort -u | wc -l | tr -d " ")
+    [ "${cores:-0}" -gt 0 ] || cores=$(cat /sys/devices/system/cpu/cpu*/topology/core_cpus_list 2>/dev/null | sort -u | wc -l | tr -d " ")
+    if [ "${cores:-0}" -gt 0 ] && [ $((ncpu % cores)) -eq 0 ]; then smt=$((ncpu / cores)); else smt="?"; fi
+    [ "${cores:-0}" -gt 0 ] || cores="?"
+    sockets=$(cat /sys/devices/system/cpu/cpu*/topology/physical_package_id 2>/dev/null | sort -u | wc -l | tr -d " ")
+    [ "${sockets:-0}" -gt 0 ] || sockets="?"
     cache=""
     for d in /sys/devices/system/cpu/cpu0/cache/index*; do
       [ -r "$d/level" ] || continue
@@ -386,8 +405,8 @@ remote_probe() {
       case "$typ" in Instruction) continue ;; Data) tag="L${lvl}d" ;; *) tag="L${lvl}" ;; esac
       cache="$cache${cache:+ }$tag=$sz"
     done
-    printf "%s | %s cpus | governor=%s | %s | %s\n" \
-      "$cpu" "$(nproc)" "$gov" "$(uname -sr)" "${cache:-caches=?}"
+    printf "%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | %s | %s\n" \
+      "$cpu" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$(uname -sr)" "${cache:-caches=?}"
   ' 2>/dev/null
 }
 

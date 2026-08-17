@@ -342,10 +342,13 @@ if [[ -n "$HOSTS" ]]; then
     fi
     # Topology is provenance, and it is the first thing to look at if a host misses
     # the floor: eight goroutines across four cores and their siblings is a ceiling
-    # that is not keel's (criterion 4, issue #15).
-    topo="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" 'lscpu 2>/dev/null | sed -n "s/^Thread(s) per core: *//p;s/^Core(s) per socket: *//p;s/^Socket(s): *//p" | tr "\n" " "' 2>/dev/null || true)"
+    # that is not keel's (criterion 4, issue #15). Read out of the provenance line
+    # printed above, not from a second ssh running lscpu — same facts, one round
+    # trip fewer, and no dependency on a package that is not installed everywhere
+    # (#82). It is also now in every gate's archived record, not just this one's.
     ncpu="$(sed -n 's/.*| \([0-9]*\) cpus |.*/\1/p' <<<"$prov")"
-    info "[$host] threads-per-core / cores-per-socket / sockets: ${topo:-unreadable}; nothing is pinned, placement is the scheduler's (#15)"
+    smt="$(sed -n 's/.*| smt=\([0-9?]*\) |.*/\1/p' <<<"$prov")"
+    info "[$host] smt=${smt:-?} threads/core, so the criterion's $P5_THREADS goroutines can span as few as $P5_THREADS/${smt:-?} physical cores; nothing is pinned either way, placement is the scheduler's (#15)"
     # The two branches are the three-way taxonomy's pair, and #73 rules them
     # apart deliberately: an unreadable count is a reading nobody got, a count
     # that reads short is a reading the gate has and the environment fails. Both

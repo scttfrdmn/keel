@@ -20,6 +20,11 @@ While the major version is 0, minor versions may contain breaking changes.
   volume that filled a fit rather than a coincidence. A live peak is still owed; the printed line collects it.
 
 ### Changed
+- **Every gate's provenance line now records cores, SMT width and sockets, not just `nproc`** (#82): read from
+  `thread_siblings_list` (with `core_cpus_list` as the fallback), because `GOMAXPROCS=8` is 8 cores on a
+  1-thread/core arm and 4 on a 2-thread/core one. Replaces gate-p5's private `lscpu` ssh — one round trip
+  fewer, one fewer package assumed present, and the fact reaches every gate's archive rather than one. Whether
+  P5 *requires* SMT off, or only that the state be recorded, is still open on #82.
 - **The four phase gates' front matter moved to `docs/gates.md`, verbatim.** 855 comment lines standing above
   zero lines of code — `gate-p4.sh` ran 226 of them before its first statement — become one page plus a
   ~12-line pointer per script; every gate body below `set -euo pipefail` is byte-identical to its predecessor.
