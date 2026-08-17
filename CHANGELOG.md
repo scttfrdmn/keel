@@ -9,6 +9,10 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Removed
+- **The boost apparatus is retired and gate-p5 can measure the fleet again** (#66, ruled 2026-08-17 —
+  *"the cloud does not have that"*): `remote_boost`/`remote_boost_set`, the second boost-on pass, and the
+  precondition that refused every guest are gone; criterion 9 now reads the one sweep there is. The 2026-08-15
+  finding stands and the handicap is disclosed beside the ratio instead of removed. **−167 lines in `scripts/`.**
 - **Citation *pinning* is retired; resolution stays.** `docs/citation-targets.txt` → `docs/citation-externals.txt`
   (declarations only); `DESIGN.md` §5 rule 9 and §7 amended, because they mandated the instrument; control `T3`
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
@@ -43,7 +47,7 @@ While the major version is 0, minor versions may contain breaking changes.
 - **gate-p5 cannot measure this fleet at all** (#66): a guest has neither `cpufreq/boost` nor
   `intel_pstate/no_turbo`, verified by ssh on two arms, so `remote_boost_set` exits 3 and `gate-p5.sh:664`
   skips every host. The `continue` is inside the loop holding criterion 9, so re-measuring the README rate
-  block — the ruled precondition for the v0.1.0 tag — is dark until criterion 1's boost precondition is ruled on.
+  block — the ruled precondition for the v0.1.0 tag — went dark. Fixed below.
 
 ### Changed
 - **Every gate's provenance line now records cores, SMT width and sockets, not just `nproc`** (#82): read from

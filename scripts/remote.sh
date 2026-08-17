@@ -110,8 +110,7 @@ remote_hosts() {
 #
 # Where one branch of a site was mixed, the sweep split it rather than choosing:
 # an unreadable CPU count and a CPU count that reads short are different facts
-# (gate-p5.sh:352), as are a boost knob that did not move and a boost knob
-# nobody could read (gate-p5.sh:337), a forced run that reported its dispatch
+# (gate-p5.sh:352), as are a forced run that reported its dispatch
 # before failing and one that never got that far (gate-p5.sh:418), and a governor
 # that changed mid-run and a governor unreadable mid-run (gate-p3.sh:1178,
 # gate-p4.sh:653, gate-p5.sh:643). Each citation is the line of the `if`, and the
@@ -406,7 +405,7 @@ remote_build_test() {
 # The idiom is `"$(remote_probe "$host" | sed -n '...' || true)"`: the value comes
 # back empty, and empty is a reading nobody got, which the caller already knows how
 # to print. Same for every other ssh-backed reader here and in the gates
-# (remote_boost, gate-p3's ob_preflight and ob_coretype_sweep).
+# (gate-p3's ob_preflight and ob_coretype_sweep).
 # KEEL_GOV_PROBE_SH — the far-side governor reading, sh, sets `gov`. Shared by every
 # prober in the tree by concatenation into their ssh argument, because two independent
 # readings of one knob is not redundancy, it is a pair that can disagree — and it did:
@@ -472,8 +471,7 @@ remote_probe() {
 #        the success path is deliberately silent (the preamble already passed that
 #        host), so the info line is the only surviving record of what was read.
 # PROV   pre-captured remote_probe output. Omit it and this probes the host itself;
-#        pass it — gate-p5 needs the same reading for #66's boost knob — and no
-#        second ssh happens. Passing an *empty string* is meaningful and is not the
+#        pass it and no second ssh happens. Passing an *empty string* is meaningful and is not the
 #        same as omitting the argument: it says "already probed, and the host
 #        produced nothing", which is the distinction this whole function is about.
 #
@@ -660,9 +658,10 @@ assert_governor() {
 # trailing newlines and would edit every log by a byte.
 #
 # The runner is shipped rather than fed on stdin because $KEEL_SSH_OPTS carries
-# `-n`. remote_boost_set's header documents where that leads: a heredoc-fed
-# remote shell reads EOF, executes nothing, and exits 0 — a command that
-# silently did not run, reported as success.
+# `-n`, which redirects stdin from /dev/null: a heredoc-fed remote shell reads EOF,
+# executes nothing, and exits 0 — a command that silently did not run, reported as
+# success. Observed on all three hosts of the desktop fleet; only reading the effect
+# back caught it.
 REMOTE_EXIT_VANISHED=125
 REMOTE_STATE=""
 REMOTE_SUPERVISED=""
@@ -754,66 +753,3 @@ EOF
   esac
 }
 
-# ---------------------------------------------------------------------------
-# Boost / turbo, the frequency regime the scaling ratio's two arms must share
-# (DESIGN.md §4/P5, issue #66).
-#
-# Two knobs, because the polarity is inverted between vendors and nothing above
-# this line should have to remember which vendor a host is:
-#
-#   amd-pstate / acpi-cpufreq  cpufreq/boost        1 = boost permitted
-#   intel_pstate               intel_pstate/no_turbo 1 = turbo FORBIDDEN
-#
-# So both are normalised to off|on here. A host exposing neither reports
-# `unknown`, and the gate treats unknown as unmet rather than as satisfied: a
-# frequency regime that cannot be read cannot be asserted to be shared.
-
-# remote_boost HOST — print "<off|on|unknown> <path-or-none>".
-remote_boost() {
-  ssh "${KEEL_SSH_OPTS[@]}" "$1" '
-    a=/sys/devices/system/cpu/cpufreq/boost
-    i=/sys/devices/system/cpu/intel_pstate/no_turbo
-    if [ -r "$a" ]; then
-      p=$a
-      case "$(cat "$a")" in 0) s=off ;; 1) s=on ;; *) s=unknown ;; esac
-    elif [ -r "$i" ]; then
-      p=$i
-      case "$(cat "$i")" in 1) s=off ;; 0) s=on ;; *) s=unknown ;; esac
-    else
-      s=unknown; p=none
-    fi
-    printf "%s %s\n" "$s" "$p"
-  ' 2>/dev/null
-}
-
-# remote_boost_set HOST off|on — write the knob, normalising polarity. Returns
-# nonzero if no knob exists or the write failed; says nothing on success. The
-# caller must still read the state back with remote_boost: a write that returns 0
-# and a knob that took the value are different facts, and this project asserts the
-# second one (same reason the governor is re-read at measurement time).
-# The value is spliced into the remote script rather than piped to `sh -s` on
-# stdin, and that is not a style choice. $KEEL_SSH_OPTS carries `-n`, which
-# redirects ssh's stdin from /dev/null, so a heredoc-fed remote shell reads EOF
-# immediately, executes nothing, and **exits 0** — a write that silently did not
-# happen, reported as success. The first version of this function did exactly that
-# on all three hosts; only reading the knob back caught it, which is the same
-# argument this file already makes about the governor. `want` is validated against
-# a two-element allowlist before it is spliced, so the interpolation cannot carry
-# shell metacharacters.
-remote_boost_set() {
-  local host="$1" want="$2"
-  case "$want" in off | on) ;; *) return 4 ;; esac
-  ssh "${KEEL_SSH_OPTS[@]}" "$host" '
-    want='"$want"'
-    a=/sys/devices/system/cpu/cpufreq/boost
-    i=/sys/devices/system/cpu/intel_pstate/no_turbo
-    if [ -r "$a" ]; then
-      p=$a; case "$want" in off) v=0 ;; on) v=1 ;; esac
-    elif [ -r "$i" ]; then
-      p=$i; case "$want" in off) v=1 ;; on) v=0 ;; esac
-    else
-      exit 3
-    fi
-    printf "%s\n" "$v" | sudo -n tee "$p" >/dev/null
-  ' 2>/dev/null
-}

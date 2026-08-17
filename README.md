@@ -70,9 +70,11 @@ multiplying it by 8 therefore asks the parallel nest to beat a clock it never
 runs at. That is why the 8-thread percentages sit below the 1-thread ones on
 every host, and it is also why the gate's own `>= 6.0x` scaling floor was
 missed, in this same run at rev `083cbdb` on 2026-08-15, on the two hosts that
-keep the *most* of their single-thread peak. Issue #66 carries the iso-frequency measurement that would replace this
-denominator; until it is ruled on, these percentages are a floor on the
-parallel nest's efficiency and not an estimate of it.
+keep the *most* of their single-thread peak. Ruled 2026-08-17 (#66): the clock is
+now measured rather than set, because the AWS fleet that replaced these three
+desktops exposes no boost knob at all — so this handicap is disclosed rather than
+removed, and these percentages stay a floor on the parallel nest's efficiency and
+not an estimate of it.
 
 ## Why
 Go has excellent float64 numerics (Gonum) and no maintained fast float32

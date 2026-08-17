@@ -746,33 +746,29 @@ HOW THOSE BECOME CHECKS, and every judgement call involved:
     is just margin, which is what SCALE_FLOOR is too. 7.4x was the alternative and
     is rejected as unshippable: it would leave janus 0.04% of headroom and flake.
 
-    The floor binds under the SAME boost-off methodology as its siblings (#66,
-    below), so it is not comparable to the three boost-on runs in the record. The
+    Its nine readings are boost-off desktop measurements and are not comparable to
+    a virtualized reading (#66, below). The
     work split keeps printing, because it is a true fact about the shape and the
     input to the falsification — but the log now says in words that it is a work
     split and not the serial fraction, and reprints the ceiling it would imply
     beside the reading that clears it, so the dead premise stays visibly dead
     rather than becoming folklore. #89 tracks the criterion wording itself.
 
-    BOTH ARMS RUN WITH BOOST OFF, AND THE BOOST-ON SPEEDUP PRINTS BESIDE THE
-    VERDICT (amended by ruling on #66; DESIGN.md §4/P5). Dividing an 8-thread
-    rate by a 1-thread rate taken on an idle machine is not a ratio: one thread
-    runs in a frequency regime eight threads physically cannot enter, so the
-    denominator carries a single-core boost clock and the criterion asks the nest
-    to beat silicon boost policy before it may demonstrate scaling. The evidence
-    that this was happening is in the shape of the misses, not in their
-    inconvenience: the two hosts that missed are the two that retain the MOST of
-    their own single-thread peak (Zen 4 92%, Zen 5 59%) while Skylake-X at 35%
-    cleared everything, twice. Scaling deficits do not sort by single-thread
-    excellence; boost tables do. So this gate SETS boost off on each host for the
-    judged pass, READS THE KNOB BACK — unreadable or unmoved counts as UNMET, never
-    as satisfied, exactly as scaling_governor does — measures both arms in that one
-    regime, restores boost, and measures a SECOND pass boost-on whose wall-clock
-    speedup is printed at equal prominence as reported-never-judged. That second
-    number is what a caller experiences and no reader gets the pass without it.
-    Consequence stated rather than buried: boost-off lowers the 1-thread arm more
-    than the 8-thread arm, so ratios RISE and are NOT comparable to the three
-    boost-on runs already in the record.
+    THE CLOCK IS MEASURED, NOT SET (amended by ruling 2026-08-17 on #66,
+    superseding the boost-off methodology; DESIGN.md §4/P5). The 2026-08-15
+    finding stands: dividing an 8-thread rate by a 1-thread rate taken on an idle
+    machine is not a ratio, because one thread runs in a frequency regime eight
+    threads physically cannot enter — and the evidence was in the shape of the
+    misses, not their inconvenience (the two hosts that missed retained the MOST
+    of their own single-thread peak, Zen 4 92% and Zen 5 59%, while Skylake-X at
+    35% cleared everything twice; scaling deficits do not sort by single-thread
+    excellence, boost tables do). But its remedy — set the knob off on both arms
+    and read it back — is unavailable on a virtualized fleet, which exposes
+    neither cpufreq/boost nor intel_pstate/no_turbo, so the precondition refused
+    every host and took criterion 9 with it. This gate now sets nothing: criterion
+    1's substitute instrument measures the clock both arms shared, and the
+    residual handicap is disclosed beside the ratio rather than removed. It is
+    also what a caller on the same instance type gets.
 
  2. THE TWO RATES COME FROM ONE INVOCATION, SO THE THREAD COUNT IS PART OF THE
     BENCHMARK NAME AND NOT PART OF THE FLAGS. `go test -cpu=1,8` looks like the

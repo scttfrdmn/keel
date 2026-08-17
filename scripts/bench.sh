@@ -385,10 +385,10 @@ bench_gflops_lo() {
 # kernel is slow" and "this machine would not hold still" are two causes.
 # THREE CALLS, BECAUSE THE THREE POINTS ARE NOT ALWAYS ADJACENT. clock_gate says
 # whether the host may be measured, clock_head opens the series, clock_post closes and
-# judges it. gate-p5 is why that is three functions and not one: between its governor
-# check and its sweep it sets boost off, so a head window taken at the guard would be
-# taken in a different frequency regime from the middle — a trend test with an
-# intervention inside it. Every one of the three returns non-zero to refuse, and every
+# judges it. gate-p3 is why that is three functions and not one: its middle window comes
+# from the natively built OpenBLAS harness, so `clock_head` has to open at a deliberately
+# tight bracket around the judged run and exclude the minutes-long coretype sweep that
+# precedes it. Every one of the three returns non-zero to refuse, and every
 # call site is `... || continue`; called bare, the refusal would take `set -e` with it.
 CLOCK_STATE=""       # ok | stable | declining | unbounded | incomplete | <GOV_STATE>
 CLOCK_HEAD=""        # median GFLOP/s of the head window, empty if there was none
