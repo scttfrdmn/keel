@@ -124,9 +124,16 @@ While the major version is 0, minor versions may contain breaking changes.
   **Format is chosen by who consumes the file, and the bytes were counted because they ship in the module
   zip.** Everything tracked in the module root is downloaded by every `go get`, which is not true of a
   normal site's images, so the hero is webp at 78 KB against 745 KB for the same pixels as a truecolour
-  PNG — only browsers ever fetch it, and both GitHub's markdown pipeline and MkDocs render webp.
-  `keel-social.jpg` is JPEG for the opposite reason: GitHub's social-preview upload and most Open Graph
-  consumers reject webp. The four images are 183 KB together.
+  PNG. `keel-social.jpg` is JPEG. The four images are 183 KB together.
+  **GitHub has two image paths that do not accept the same formats, which is the whole reason those two
+  files differ**, and checking a claim already written down is what surfaced it. A file *committed* and
+  embedded by relative path is fetched from `raw.githubusercontent.com`, which serves `.webp` as
+  `image/webp` — verified against a public repo's tracked webp, because this repo is private and its own
+  rendering cannot be read yet — so the hero renders. A file *uploaded* through the web UI goes through
+  the attachment allowlist, which `docs.github.com` states as PNG, GIF, JPEG and SVG, **no webp**; the
+  social-preview upload is that path. The trap is that "GitHub supports webp" and "GitHub does not" are
+  both true of one path and false of the other, so either sentence applied to both is wrong in one
+  direction. The first draft of this entry asserted the permissive half for both.
   **PSNR picked the wrong encoding, and looking at the pixels overruled it.** A 256-colour PNG measured
   *better* than webp q92 (40.3 dB against 39.2 dB) and was visibly worse: this artwork is mostly a
   near-white gradient field, where palette quantisation spends its error on dither speckle that the eye

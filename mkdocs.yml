@@ -29,10 +29,20 @@ site_dir: build/site
 # as doc-site/assets/..., the pages as assets/... -- no second copy, no symlink, no
 # gitignore entry, so rule 1 above holds for images too. Formats are chosen by who
 # consumes the file, not by preference: the hero is webp (78 KB against 745 KB as a
-# truecolour PNG, and only browsers ever fetch it) while keel-social.jpg is JPEG,
-# because GitHub's social-preview upload and most Open Graph consumers reject webp.
+# truecolour PNG, and only browsers ever fetch it) while keel-social.jpg is JPEG.
 # Bytes are worth counting here in a way they are not on a normal site: everything
 # tracked in the module root ships in the zip that every `go get` downloads.
+#
+# GitHub has TWO image paths and they do not accept the same formats, which is the
+# whole reason those two files differ. A file COMMITTED to the repo and embedded by
+# relative path is fetched from raw.githubusercontent.com, which serves `.webp` as
+# `image/webp` (verified against a public repo's tracked webp, since this one is
+# private and its own rendering cannot be read yet) -- so the hero renders. A file
+# UPLOADED through the web UI goes through the attachment allowlist, which
+# docs.github.com states as PNG, GIF, JPEG and SVG, no webp; the social-preview
+# upload is that path. Hence JPEG for the social card, and hence the trap: reading
+# "GitHub supports webp" or "GitHub does not" and applying it to both paths is wrong
+# in one direction either way.
 #
 # keel-social.jpg is referenced by no page on purpose. It is the source for the
 # repo's social-preview image, and uploading it is Scott's action at tag time, like
