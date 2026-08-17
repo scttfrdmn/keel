@@ -27,15 +27,15 @@
 #      INVISIBLE to it -- they are gitignored. A citation that needs to be linted
 #      therefore belongs in the tracked generator, not in the page it emits.
 #
-# WHAT THIS GATE DOES NOT CATCH, as of 2026-08-16: broken in-page anchors on the
-# Project records pages. All 25 `[Tn](#tn)` links in docs/toolchain-notes.md point
-# at anchors that do not exist -- a defect in the record itself, dead in GitHub's
-# rendering too, filed as issue #93 rather than fixed here. mkdocs reports those at
-# INFO, so raising `validation.links.anchors` to `warn` in mkdocs.yml would make
-# this gate red on a defect that predates it. Instead the check below fails on a
-# broken anchor on any USER page and prints the records-page ones as a counted
-# exclusion, so the hole appears in the log rather than hiding behind a green.
-# When #93 lands: raise `anchors` to `warn` and delete the exclusion.
+# ANCHORS ARE IN SCOPE EVERYWHERE, since #93. They were not, for one commit: all 25
+# `[Tn](#tn)` links in docs/toolchain-notes.md pointed at anchors that did not
+# exist, so this gate failed on a broken anchor on any USER page and reported the
+# records-page ones as a counted exclusion. The ruling that ended that state, and
+# the reason the fix and the un-exclusion are one commit: "an exclusion that
+# outlives its defect becomes a permanent blind spot with a good excuse." So the
+# check below now has no exempt page, and mkdocs.yml validates anchors at `warn`.
+# Both, deliberately: `warn` + `strict` fails the build, and the grep fails on the
+# INFO-level lines that appear if that setting is ever lowered back to the default.
 set -euo pipefail
 
 SITE="doc-site"
@@ -90,24 +90,16 @@ stage_build() {
     return
   fi
 
-  # Anchors, scoped. mkdocs reports these at INFO, so --strict passed over them.
-  local anchors user records
+  # Anchors, every page, no exemption. Redundant with mkdocs.yml's
+  # `validation.links.anchors: warn` on a normally-configured build, and that is
+  # the point: this one reads the log, so it still fails if the setting is lowered.
+  local anchors
   anchors="$(grep -oE "Doc file '[^']+' contains a link '#[^']+', but there is no such anchor" "$LOG" || true)"
   if [[ -z "$anchors" ]]; then
-    pass "no broken in-page anchors anywhere on the site"
-    return
-  fi
-  user="$(grep -v "Doc file 'records/" <<<"$anchors" || true)"
-  records="$(grep -c "Doc file 'records/" <<<"$anchors" || true)"
-  if [[ -n "$user" ]]; then
-    fail "broken in-page anchor(s) on user pages:"
-    sed 's/^/        /' <<<"$user"
+    pass "no broken in-page anchors on any page, user or record"
   else
-    pass "no broken in-page anchors on any user page"
-  fi
-  if [[ "$records" -gt 0 ]]; then
-    info "excluded: $records broken anchor(s) on Project records pages, which are"
-    info "served as the repository's own files -- issue #93, not fixed here"
+    fail "broken in-page anchor(s), $(wc -l <<<"$anchors" | tr -d ' ') of them:"
+    sed 's/^/        /' <<<"$anchors"
   fi
 }
 

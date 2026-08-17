@@ -9,6 +9,24 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **All 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` pointed at anchors that do not
+  exist, and the gate's exclusion for them came out in the same commit** (#93). The headings carry their
+  titles (`## T1 — simd/archsimd is amd64-only; …`), so both renderers slugify the whole line and the
+  anchor that exists is `#t1--simdarchsimd-is-amd64-only-…`. Clicking `T18` in the summary table reloaded
+  the page. **Dead in GitHub's rendering of the file too**, since before there was a site — the site build
+  is only what surfaced it, which is the render-don't-assume rule reaching prose. Fixed with an explicit
+  `<a name="tn" id="tn"></a>` before each heading rather than by rewriting the links, because GitHub and
+  the `toc` extension slugify the em dash differently and no single spelling of the link satisfies both;
+  `attr_list`'s `{ #t1 }` is unsuitable for the same reason, MkDocs honouring it and GitHub not. The form
+  was verified through GitHub's own markdown pipeline before 25 of them were written (`gh api /markdown`
+  returns `<a name="user-content-t1" id="user-content-t1">` beside `href="#t1"`, the pair GitHub's
+  fragment remapping resolves), and through a site build afterwards.
+  **The un-exclusion is the other half of this commit, by ruling:** *"an exclusion that outlives its
+  defect becomes a permanent blind spot with a good excuse."* `gate-docs.sh`'s anchor check no longer
+  exempts the records pages, and `mkdocs.yml` raises `validation.links.anchors` to `warn` so `strict`
+  errors on one. Both branches were driven on purpose before either was trusted: with `warn`, mkdocs
+  fails the build; with the setting lowered back to `info`, the gate's grep over the build log is what
+  fails. Lowering it does not buy silence, it moves which check goes red.
 - **gate-p2's criterion 5b aggregate divided by the hosts that answered and never named the fleet it
   was asked about** (#90), so with `antares.local` unreachable it printed *"every host that produced a
   judgeable throughput reading cleared its floor (2/2)"* — arithmetically true, and reading as
@@ -90,12 +108,10 @@ While the major version is 0, minor versions may contain breaking changes.
   **Two defects found by rendering rather than by reading.** The home page's card grid needed
   `md_in_html`; without it `<div markdown>` was emitted verbatim and the markdown inside it served as
   literal text — and `--strict` said nothing, because links it never parses are links it cannot validate.
-  And every one of the 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` points at an anchor
-  that does not exist, dead in GitHub's rendering of that file today and not a site-only problem; filed as
-  #93 rather than drive-by fixed, so the gate fails on a broken anchor on any **user** page and prints
-  the records-page ones as a counted exclusion naming the issue. `validation.links.anchors` stays at its
-  default until #93 lands, because raising it would make this gate red on a defect that predates it — and
-  the count is in the log rather than implied by a green.
+  And every one of the 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` pointed at an anchor
+  that does not exist — a defect in the record, not in the site, fixed below (#93). `mkdocs.yml` now sets
+  `validation.links.anchors: warn`, which is **not** mkdocs' default: the default is `info`, printed and
+  passed, and a message with no verdict attached is why 25 dead links survived to a site build.
   **The deploy job is written and not enabled**: it is gated to `workflow_dispatch` or a `v*` tag, so it
   is skipped on every push and pull request, and it will fail rather than publish until Pages is turned
   on — enabling Pages and flipping the repository public remain Scott's actions at tag time.

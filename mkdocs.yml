@@ -30,6 +30,20 @@ site_dir: build/site
 # means a local build cannot be more permissive than the gate.
 strict: true
 
+# Anchors are validated too, at `warn` — which `strict` turns into an error. This
+# is NOT mkdocs' default (`info`, i.e. printed and passed), and the default is why
+# 25 dead `[Tn](#tn)` links lived in docs/toolchain-notes.md long enough to reach a
+# site build: a message with no verdict attached is a message nobody acts on. The
+# links were fixed in the commit that raised this setting, per the ruling that an
+# exclusion outliving its defect becomes a permanent blind spot with a good excuse
+# (#93). Both halves were driven on purpose before this line was trusted: with
+# `warn`, mkdocs fails the build; with it lowered to `info`, scripts/gate-docs.sh's
+# grep over the build log is what fails. Lowering this line does not buy silence,
+# it just moves which check goes red.
+validation:
+  links:
+    anchors: warn
+
 theme:
   name: material
   palette:
