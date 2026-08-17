@@ -10,9 +10,16 @@ both kinds of contributor.
   (`scripts/gate-pN.sh`) is written at the start of the phase and must exit
   0 before the next phase begins. No overrides.
 - **Issues are the source of truth.** Each phase has an umbrella issue with
-  its task checklist. Discoveries become new issues with the right labels
-  (`toolchain-report`, `perf`, `correctness`, `blocked`, `upstream`) rather
-  than drive-by fixes.
+  its task checklist. Discoveries get **recorded**, and the record is a
+  CHANGELOG line plus a commit message that says what surprised you — filing
+  an issue is one way to record, not the only one. A discovery whose fix is
+  smaller than the issue describing it gets **fixed**; file it when it is
+  blocked, contested, needs a decision, or is too large for the session, with
+  the right labels (`toolchain-report`, `perf`, `correctness`, `blocked`,
+  `upstream`). The thing forbidden is a **silent** fix, never a small one.
+  *(Amended 2026-08-16. Read literally, the old wording produced five
+  gate-apparatus issues against one library defect in a single session, each
+  issue longer than the fix it described.)*
 - **Commits.** Small, single-purpose, present tense. Gate-closing commits
   use `PN: <summary> [gate green]`.
 

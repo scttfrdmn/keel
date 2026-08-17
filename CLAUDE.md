@@ -67,9 +67,15 @@ and current using `gh`:
    and read new comments on the umbrella issue — Scott's course corrections
    arrive there. Treat unresolved questions from him as blocking input.
 2. **During work:** check off items on the phase umbrella issue's task list
-   as they land (edit the issue body). New discoveries become their own
-   issues, properly labeled (`toolchain-report`, `perf`, `correctness`,
-   `upstream`, `blocked`) — never silent drive-by fixes.
+   as they land (edit the issue body). Every discovery gets **recorded** — a
+   CHANGELOG line plus a commit message naming the surprise is a record, and
+   so is an issue. A discovery whose fix is smaller than its issue gets
+   **fixed**; file it when it is blocked, contested, needs a decision, or is
+   too large for the session, properly labeled (`toolchain-report`, `perf`,
+   `correctness`, `upstream`, `blocked`). The word that carries the intent is
+   *silent* — small fixes were never the objection, unrecorded ones were.
+   Amended 2026-08-16: read literally, this rule produced five
+   gate-apparatus issues against one library defect in one session.
 3. **Session end (mandatory):** comment on the umbrella issue with (a) what
    landed, with commit hashes; (b) gate status, pasting the gate script
    output verbatim; (c) open questions for Scott, each phrased so it can be
@@ -79,7 +85,12 @@ and current using `gh`:
    closing comment, update `CHANGELOG.md` under `[Unreleased]`, and open
    nothing in the next milestone until the commit is pushed.
 5. Toolchain surprises additionally get a row in `docs/toolchain-notes.md`
-   with a minimal repro before any workaround lands.
+   with a minimal repro before any workaround lands. The repro is never
+   abridged; the prose is capped (2026-08-16) — three lines of observation,
+   the repro verbatim, three lines of what changed in the tree. Causal
+   analysis and rejected hypotheses go in the issue the entry cites. Same cap
+   as `CHANGELOG.md` entries, and for the same reason: those two files are 70%
+   of all markdown here.
 6. **Search the upstream tracker before any upstream filing, always.** Before
    opening anything on `golang/go` or another external tracker, search it —
    `gh api '/search/issues?q=repo:golang/go+<terms>'`, plus label and keyword

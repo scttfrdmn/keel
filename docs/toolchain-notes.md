@@ -5,6 +5,16 @@ experimental simd packages — missing intrinsics, unexpected lowerings,
 allocator behavior, API changes between releases — gets an entry here with
 a minimal repro *before* any workaround lands. Entries feed upstream issues.
 
+**Shape of a new entry, capped 2026-08-16.** The repro is the deliverable and is
+never abridged; the prose around it is. A new entry is one table row, an
+**Observation** of at most three lines, the repro verbatim, and at most three
+lines of **Consequence for keel** — what changed in the tree, not why. Extended
+causal analysis, rejected hypotheses and the forensics that got there belong in
+the issue this entry cites, which is where they can be argued with. §7 rule 8
+asks for a repro before a workaround and sets no length, so this narrows nothing
+it requires. Existing entries are left as written: they are dated records, and
+rewriting them would cost real reasoning to buy back lines already spent.
+
 | Date | Toolchain | Observation | Repro | Upstream issue |
 |---|---|---|---|---|
 | 2026-08-10 | go1.26.5 | `simd/archsimd` is amd64-only; no vector type exists on other GOARCHes | [T1](#t1) | none — documented upstream |

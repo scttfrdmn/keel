@@ -260,6 +260,11 @@ While the major version is 0, minor versions may contain breaking changes.
   owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
 ### Changed
+- **Two standing rules amended rather than obeyed literally** (2026-08-16 ruling: *retire any rules we do not
+  really need*). The issue-per-discovery rule (`CONTRIBUTING.md`, `CLAUDE.md`) now says a discovery whose fix
+  is smaller than its issue gets **fixed** and recorded — the word carrying the intent was always *silent*,
+  never *small*. `docs/toolchain-notes.md` entries get the CHANGELOG's 1–3-line cap on prose, with the repro
+  never abridged and the causal analysis in the issue; existing entries stay as dated records.
 - **DESIGN.md §5 rule 5 now demands a stable clock rather than a `performance` governor** (amended
   2026-08-16, forced by the ruling to measure on AWS instances). No guest can satisfy the old wording: there
   is no `cpufreq` directory, so `remote.sh:410` resolves to `unmeasured` and blocks every gate — correctly,
