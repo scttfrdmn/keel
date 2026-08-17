@@ -125,7 +125,19 @@ remote_hosts() {
 # a synthetic log self-describes line by line and no single line of it can be
 # quoted as a gate result.
 #
-# ALL FOUR VERDICT HELPERS LIVE HERE, AND NO GATE DEFINES ITS OWN (2026-08-16).
+# ALL FOUR VERDICT HELPERS LIVE HERE, AND NO GATE THAT SOURCES THIS FILE DEFINES
+# ITS OWN (2026-08-16; scoped 2026-08-16 after the sentence was checked).
+#
+# The sentence used to read "no gate defines its own", which gate-docs.sh
+# falsifies: it sources nothing and defines pass/fail/info itself. That is not the
+# drift this lift was about, and it was checked rather than assumed. gate-docs
+# prints a different vocabulary on purpose (`ok`, not a colored `PASS`), contacts
+# no host, is delegated by nothing — the Makefile and both docs.yml jobs run the
+# whole script and read its exit status — and has no instrument-exercise mode, so
+# no synthetic gate-docs log exists for a line to be quoted out of and there is
+# nothing for a stamp to mark. Sourcing this file there would import the ssh
+# machinery into the one gate that needs none, and change output CI reads. Left
+# alone deliberately; the precondition is recorded at its own definition site.
 # The comment above used to say "here and in each gate's own pass/fail/info", and
 # warned in the next breath that "an overridden copy is a copy and copies drift".
 # Both halves were true, and the drift had already happened: `unmeasured` was

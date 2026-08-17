@@ -41,6 +41,20 @@ set -euo pipefail
 SITE="doc-site"
 LOG="build/docs-gate.log"
 
+# These are this gate's own, and it is the only gate for which that is true --
+# remote.sh holds the shared four and the other six gates source them. Deliberate:
+# the vocabulary here is `ok`, not a colored `PASS`, this gate contacts no host,
+# and nothing delegates to it (the Makefile and both docs.yml jobs run the whole
+# script and read its exit status), so there are no verdict lines for another gate
+# to count. What it therefore also has none of is remote.sh's VERDICT_STAMP, and
+# that is only safe while the premise holds: the stamp exists so a line from a
+# SYNTHETIC run cannot be quoted as a certificate, and this gate has no
+# instrument-exercise mode, hence no synthetic run. STANDING PRECONDITION: if an
+# instrument exercise is ever added here -- anything that makes this script emit a
+# verdict line about fabricated input -- source remote.sh or add the stamp in the
+# same commit, before the exercise. Otherwise the first synthetic run prints an
+# `ok` indistinguishable from a real one, which is the forgery remote.sh:128
+# documents gate-p2 having been one commit away from.
 FAILS=0
 pass() { printf '  ok    %s\n' "$*"; }
 fail() { printf '  FAIL  %s\n' "$*"; FAILS=$((FAILS + 1)); }

@@ -9,6 +9,10 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **`remote.sh`'s "no gate defines its own" verdict helpers was a universal claim `gate-docs.sh` falsifies.**
+  Scoped to the six gates that source it, with the reason gate-docs is legitimately outside (own vocabulary, no
+  host, delegated by nothing, no instrument-exercise mode so no `VERDICT_STAMP` to honour) — and the standing
+  precondition recorded at gate-docs' own definition site, where adding an exercise would make the hole real.
 - **Four statements in the docs were false against the code**, each fixed rather than filed: `parallel.go`
   and `p5_test.go` claimed every published number was measured at `GOMAXPROCS=1` (README publishes an
   8-thread arm per Level-3 routine), `DESIGN.md` §2's heading said 15 routines over a table summing to 12,
