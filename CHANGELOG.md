@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **The pre-public audit's `.local`-hostname enumeration named three files and there are six** (#95).
+  Conclusion unchanged — non-routable LAN names, no IP or key — but `DESIGN.md:73`'s `janus.local` is
+  hand-written prose, not a pasted log, so the don't-falsify-the-evidence argument never covered it and
+  it broke keel's own key-by-CPU-model convention; fixed to `janus`. The first search greened because
+  `git grep -E '\.local\b'` matches nothing (`\b` is not POSIX ERE).
 - **`remote.sh`'s "no gate defines its own" verdict helpers was a universal claim `gate-docs.sh` falsifies.**
   Scoped to the six gates that source it, with the reason gate-docs is legitimately outside (own vocabulary, no
   host, delegated by nothing, no instrument-exercise mode so no `VERDICT_STAMP` to honour) — and the standing
