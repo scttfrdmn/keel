@@ -9,6 +9,12 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **Four statements in the docs were false against the code**, each fixed rather than filed: `parallel.go`
+  and `p5_test.go` claimed every published number was measured at `GOMAXPROCS=1` (README publishes an
+  8-thread arm per Level-3 routine), `DESIGN.md` §2's heading said 15 routines over a table summing to 12,
+  and `doc.go` promised the two backend prints always agree — on AVX2-only silicon, which is what CI runs,
+  it prints `avx2 scalar` (#40). README's undated "currently missed" scaling floor is now dated to the run
+  it describes.
 - **A kernel emitting `NaN` passed the two tests whose job is to catch a wrong kernel** (#98):
   `math.Abs(got-want) > tol` is false against NaN. Non-finite results are now rejected before the
   magnitude comparison, and a *matched* NaN/`Inf` pair no longer counts as backend agreement. The two

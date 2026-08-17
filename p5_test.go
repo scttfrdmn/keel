@@ -34,8 +34,9 @@ import (
 // off-by-one hides perfectly at 1, 2, 4 and 8, because every one of those divides
 // both the block count and the core count of the machines here. 3 divides neither.
 // 1 is there because it is the denominator of the headline ratio and the path
-// every published keel number was measured on, so "the parallel nest agrees with
-// the serial one" is only meaningful if the serial one is one of the arms.
+// every published 1-thread row was measured on — the arm the published 8-thread
+// rows are scaled against — so "the parallel nest agrees with the serial one" is
+// only meaningful if the serial one is one of the arms.
 //
 // # Why bitwise and not a tolerance
 //

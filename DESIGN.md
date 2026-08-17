@@ -12,7 +12,7 @@ A pure-Go, cgo-free float32 BLAS subset whose hot kernels are written against th
 
 **Non-goals (v0):** float64 (Gonum owns it), complex types, full BLAS coverage, banded/packed storage, ARM64 (later; the architecture must make it a second microkernel, not a second library), float16 (no element type exists in the simd packages).
 
-## 2. Scope: 15 routines, one keystone
+## 2. Scope: 12 routines, one keystone
 
 | Level | Routines | Notes |
 |---|---|---|

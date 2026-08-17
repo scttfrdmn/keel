@@ -19,7 +19,9 @@ import (
 // The caller-facing consequences — serial in the calling goroutine at
 // GOMAXPROCS=1, no goroutine outliving a call, a bit-identical result at every
 // GOMAXPROCS, and Level 1 unparallelized — are stated once in doc.go and not
-// restated here. Every published keel number was measured at GOMAXPROCS=1.
+// restated here. Every published keel number carries the GOMAXPROCS it was
+// measured at in its own row: README's table publishes a 1-thread and an
+// 8-thread arm for each Level-3 routine, each against its own denominator.
 
 // Workers reports how many goroutines a Level-3 call would distribute n units of
 // independent work over at the current GOMAXPROCS. It is exported as documentation
