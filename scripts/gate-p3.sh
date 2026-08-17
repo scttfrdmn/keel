@@ -444,6 +444,7 @@ HOSTS="$(remote_hosts)"
 # 2026-08-15). Declared here, where the fleet is named; printed beside the
 # verdict by assumed_ledger below.
 assume_fleet "$HOSTS"
+require_disk
 
 # ---- the measurement precondition, asserted rather than assumed (ruling with #31)
 #

@@ -204,6 +204,71 @@ assume_fleet() {
   assumed "each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine"
 }
 
+# require_disk — the free-space precondition, read rather than assumed (#84).
+#
+# WHY A GATE OWNS THIS. The dev host's data volume filled during the 68fc493 batch
+# and the gates printed `FAIL cross-compile of linux/amd64 bench binary` — a verdict
+# about keel's build, for a build that was fine and a harness with nowhere to write.
+# gate-p3 then died with no verdict line at all, and the delegating gates reported
+# that death as the delegate's judgment. Free space is `df`, so this fails
+# assumed()'s admission test above: readable and unread is a missing criterion.
+#
+# THE FLOOR IS MEASURED, and the dominant term is not the artifacts (measured on the
+# dev host 2026-08-16, cold): a cold linux/amd64 build cache is 76 MiB for the first
+# cross-compiled package and +1 MiB for the second, against 4.3–5.7 MiB per test
+# binary — nine of them across the p5→p4→p3 chain, each gate holding its own
+# `mktemp -d` — and 4.2–10.7 MiB per archived ssa.html, three of which gate-p2 keeps
+# in build/ssa. Cold demand is therefore ~135 MiB, which is what makes the single
+# reading known to be insufficient (137 MiB free, the run that failed) a fit rather
+# than a coincidence. The floor is 512 MiB, 3.8x measured cold demand.
+#
+# What is NOT measured is a live peak: peak needs a run, and a run that ends with
+# headroom may have passed near zero. So the reading is printed on every gate, green
+# or not, which is how the fleet collects the distribution this floor was set without.
+# There is deliberately no environment override — a knob that lowers a floor is a way
+# to pass a gate by weakening it.
+#
+# ALWAYS RETURNS 0, for assert_governor's reason: an exit code is an implicit verdict
+# channel, and under `set -euo pipefail` a loaded one (#80). Sets DISK_STATE to
+# ok | low | unreadable.
+DISK_FLOOR_MB=512
+DISK_STATE=""
+require_disk() {
+  DISK_STATE=ok
+  local t p label avail mnt seen=""
+  t="$(mktemp -d 2>/dev/null || true)"
+  # Both filesystems, because on darwin the gates' scratch is /var/folders/... —
+  # neither /tmp nor the repo — and only one of the two is where build/ssa lands.
+  # Deduplicated by mount point, so the usual case of one volume prints one line.
+  for p in "${t:-}" "$PWD"; do
+    [[ -n "$p" && -d "$p" ]] || continue
+    [[ "$p" == "$PWD" ]] && label="repo, incl. build/" || label="scratch (mktemp -d)"
+    # GUARDED, and the guard is the whole point (#76's idiom, remote_probe's header).
+    # The first version read the two fields with `avail="$(df ... | awk ...)"`: under
+    # `pipefail` an unreadable df makes that assignment fail, and under `set -e` the
+    # gate then exits mid-preamble having printed no verdict line — which is #84's own
+    # failure mode, reintroduced by #84's fix. Driving the unreadable branch on purpose
+    # is what caught it; the ok and low branches passed either way.
+    avail=""; mnt=""
+    read -r avail mnt < <(df -Pk "$p" 2>/dev/null | awk 'NR==2 { print $(NF-2), $NF }') || true
+    if [[ -z "$avail" || -z "$mnt" ]]; then
+      DISK_STATE=unreadable
+      unmeasured "free space behind $p ($label) is unreadable, so \"the harness can write\" stays an unchecked precondition: unreadable is not an exemption, and a volume that fills mid-run arrives as a FAIL about keel's build (#84)"
+      continue
+    fi
+    case ",$seen," in *",$mnt,"*) continue ;; esac
+    seen="$seen${seen:+,}$mnt"
+    if [[ "$avail" -lt $((DISK_FLOOR_MB * 1024)) ]]; then
+      DISK_STATE=low
+      unmeasured "$((avail / 1024)) MiB free on $mnt ($label) is under this gate's $DISK_FLOOR_MB MiB floor: measured cold demand is ~135 MiB and the volume that filled had 137 MiB, so what this run would measure is its own scratch space (#84)"
+    else
+      info "disk headroom: $((avail / 1024)) MiB free on $mnt ($label), floor $DISK_FLOOR_MB MiB"
+    fi
+  done
+  [[ -z "$t" ]] || rmdir "$t" 2>/dev/null || true
+  return 0
+}
+
 # assumed_ledger — print the ledger, once, beside the verdict. Prints even when
 # empty: "this gate declared no unverifiable assumption" is a statement a reader
 # should be able to see the gate make, and its absence is indistinguishable from

@@ -13,6 +13,12 @@ While the major version is 0, minor versions may contain breaking changes.
   (declarations only); `DESIGN.md` §5 rule 9 and §7 amended, because they mandated the instrument; control `T3`
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
+### Added
+- **Every gate reads free disk rather than assuming it** (#84): `require_disk` prints the headroom each run
+  had and `unmeasured`s below a **512 MiB floor — measured**, at 3.8× a cold run's ~135 MiB demand, whose
+  dominant term is a 76 MiB cold cross-compile cache and not the binaries. That is what makes the 137 MiB
+  volume that filled a fit rather than a coincidence. A live peak is still owed; the printed line collects it.
+
 ### Changed
 - **The four phase gates' front matter moved to `docs/gates.md`, verbatim.** 855 comment lines standing above
   zero lines of code — `gate-p4.sh` ran 226 of them before its first statement — become one page plus a

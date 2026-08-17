@@ -307,6 +307,7 @@ HOSTS="$(remote_hosts)"
 # 2026-08-15). Declared here, where the fleet is named; printed beside the
 # verdict by assumed_ledger below.
 assume_fleet "$HOSTS"
+require_disk
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 
 # The measurement precondition, asserted rather than assumed (§5 rule 5), and the
