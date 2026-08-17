@@ -47,14 +47,22 @@ exactly this reason: the shape is a measurement result. Tests pack panels for
 whatever shape they are handed, and the benchmark compares shapes against each
 other in GFLOP/s.
 
-## 2. Two departures from DESIGN.md, both forced
+## 2. Two departures from DESIGN.md, both forced — the first since ratified into the doc
 
-### 2.1 The tile is reflected: MR rows × NR columns
+### 2.1 The tile is reflected: MR rows × NR columns (now DESIGN.md's own spec)
 
-DESIGN.md §4/P2 specifies MR=32, NR=6 — vectors along M, six scalar columns. This
-implementation exchanges M and N. The reason is that DESIGN.md §3 makes keel's
-public API **row-major**, and in a row-major C, sixteen consecutive elements of a
-*column* are `ldc` floats apart.
+**No longer a departure, as of 2026-08-16: DESIGN.md §4/P2 was amended to the shipped
+orientation by ruling on issue #16, and now specifies MR=6, NR=32 with the convention
+stated in the same sentence** (a tile `MR`×`NR` is MR rows × NR columns of row-major C,
+vectors along N). What follows is kept as the reason the reflection was forced, because
+that reason is a measured property of `archsimd` and outlives the discrepancy it settled.
+
+DESIGN.md §4/P2 *originally* specified MR=32, NR=6 — vectors along M, six scalar
+columns — which was a pre-implementation fossil in BLIS's column-major orientation,
+written before §3's row-major decision propagated. There was never an intended
+column-major internal C. This implementation exchanges M and N. The reason is that
+DESIGN.md §3 makes keel's public API **row-major**, and in a row-major C, sixteen
+consecutive elements of a *column* are `ldc` floats apart.
 
 An M-vectorized tile would therefore have to write each accumulator lane to a
 different cache line: 192 scalar stores per tile, each needing a lane extracted

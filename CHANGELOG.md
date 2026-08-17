@@ -18,7 +18,7 @@ While the major version is 0, minor versions may contain breaking changes.
   not have found it, because a complete fleet renders that branch identically either way. The new
   `fleet_shortfall` in `roofline.sh` appends the clause naming how many of the configured hosts produced
   no judgeable reading and what fraction of the fleet the line therefore covers; six fixtures
-  (31–36, 65 total) cover it, including the case a healthy fleet drives — complete coverage prints
+  (36–41, 70 total) cover it, including the case a healthy fleet drives — complete coverage prints
   *nothing*, so a helper that appended unconditionally would look right until the log that matters. The
   fraction stays over the survivors: they are the honest numerator of what was judged, and the defect
   was the missing statement of how many were asked. **The verdict is untouched**, and the run as a whole
@@ -26,9 +26,27 @@ While the major version is 0, minor versions may contain breaking changes.
   have printed `gate-p2: RED`. So this was message-level, not a green certificate over a partial fleet.
   gate-p3's OpenBLAS aggregate had the identical shape and was fixed at its own call site in `64a05e1`
   (`OB_NOCOVER`); this is the sibling that fix left standing, and the helper is shared so there cannot
-  be a third. Whether a partial fleet should resolve to **UNMEASURED** here, as criterion 6's aggregate
-  now does, is #90's open question and a change to what a go/no-go criterion asserts — not a wording fix,
-  and not taken unilaterally.
+  be a third.
+- **And then the verdict itself: a partial fleet now resolves to `UNMEASURED`, and both fleet aggregates
+  decide absence in one place** (#90, ruled 2026-08-16 — the open question the entry above left for
+  Scott). *"A PASS reading `(2/2)` over a three-host fleet is a message-level truth carrying a
+  fleet-level assertion — the criterion's claim is about the fleet, and a fleet with an absent member
+  hasn't measured that claim."* §5 rule 6 gives the absent measurement its one available verdict;
+  criterion 6's aggregate already spoke this way, and **two aggregates with different absence semantics
+  is the divergent-copies defect relocated to the verdict layer** — the thing `fleet_shortfall` had just
+  been built to end. So `p3_coverage` is renamed `fleet_coverage` (the phase prefix was the invitation to
+  grow a p2 twin) and criterion 5b calls it instead of its own inline three-branch `if`. gate-p2 gained
+  the `N_INDET` counter it never had: its indeterminate branch used to `continue` without counting, so
+  "the run could not classify this host" and "this host never answered" were one invisible leftover, and
+  the new UNMEASURED names them separately. **Not a weakening** — `unmeasured()` sets `FAIL`, so
+  UNMEASURED blocks green identically; a partial fleet simply stops being *describable* as a whole one,
+  and per-host PASSes stand as measured. Five p2-shaped fixtures added (31–35, 70 total) because the two
+  callers feed the function different shapes — p2 excludes an indeterminate host from the measured count
+  where criterion 6 includes it, so the same fleet arrives as `3 2 2 0 1` from one and `3 3 2 0 1` from
+  the other. All five of criterion 5b's renderings and all nine of the exercise driver's read-back
+  outcomes were driven before this landed, by extracting the verdict lines from `gate-p2.sh`'s own bytes
+  and feeding them to the read-back — the call-site half is what a fixture cannot reach, and it is where
+  the previous fix was verified by reading alone.
 
 ### Added
 - **`scripts/fakessh` + `scripts/fakessh-test.sh` + `scripts/exercise-dead-host.sh`: a dead host,
@@ -70,8 +88,34 @@ While the major version is 0, minor versions may contain breaking changes.
   UNMEASURED. Discipline audited from the log rather than asserted: **25 of 25 verdict lines stamped
   `[synthetic]`, zero unstamped, the only verdict token printed is `VERDICT WITHHELD`**, `GREEN`/`RED`
   never emitted, exit 2. And it paid for itself immediately — the line it fired is #90, above.
+  **The target then moved, because the ruling deleted the branch.** The PASS quoted above no longer
+  exists; a partial fleet resolves to UNMEASURED, so the driver's read-back now looks for that rendering
+  and treats the old `(2/2)` PASS as a finding — post-#90 it is unreachable, so seeing it would mean
+  either the outage was not induced or `fleet_coverage` is wrong. The read-back keys each of criterion
+  5b's four branches on a phrase of its own and reports NO when nothing matches, which is the fail-closed
+  direction: the previous version keyed on the exact wording the ruling removed and would have reported
+  INDETERMINATE on the very run meant to prove the fix. A second exercise run at the new revision is
+  owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
 ### Changed
+- **`DESIGN.md` §4/P2 now specifies the tile orientation that shipped, and states the naming convention
+  in the same sentence** (#16, ruled 2026-08-16). The doc had said `MR=32, NR=6` — *"a pre-implementation
+  fossil in BLIS's column-major orientation, written before the row-major decision propagated through the
+  design"*, and **there is no intended column-major internal C**. It now reads MR=6, NR=32 with the
+  convention inline (a tile `MR`×`NR` is MR rows × NR columns of row-major C, vectors along N), because
+  stating the convention is what stops the question recurring: the discrepancy had been re-derived by a
+  reader at least twice, and both times the doc gave an orientation instead of a rule. **The amendment
+  falsified three sibling sites, found by sweeping on purpose rather than by anything reporting them:**
+  `KERNEL.md` §2 called the reflection a departure that DESIGN.md had just ratified; `internal/spill/README.md`
+  documented a spill-audit invocation in which **not one of four tokens was real** (`cmd/spillaudit`,
+  `-fn`, `./internal/kern`, `Kernel32x6` — the command is `spill-audit -func`, the package is
+  `./internal/vec`, and no kernel ever bore that name), so the documented command could not run and was
+  corrected and then *executed* to confirm; `docs/spill-report.md` described DESIGN.md's planned tile and
+  the spilling kernel as if they were different tiles. They are the same tile, now named consistently.
+  One more correction landed in the amendment itself: the reflected 12-accumulator tile **is** `Kernel6x32`
+  and **is not** comfortable for the allocator — 90 vector stack refs, 50 register copies, 5.62 insns per
+  arithmetic op, 30.5% of measured peak on Zen 4 against 96.6% for `Kernel4x32` — so the doc's tile is a
+  falsified prediction and now reads as one instead of as description.
 - **All four verdict helpers now live in `scripts/remote.sh`, and no gate defines its own.** `remote.sh`
   warned in one breath that `VERDICT_STAMP` applies "in each gate's own pass/fail/info" and in the next
   that "an overridden copy is a copy and copies drift" — and the drift had already happened:

@@ -93,10 +93,10 @@ checkc() {
 }
 
 # checkv NAME EXPECT nhosts nmeas ncleared nmissed nindet — criterion 6's fleet
-# aggregate (p3_coverage).
+# aggregate (fleet_coverage).
 checkv() {
   local name="$1" want="$2"; shift 2
-  local got; got="$(p3_coverage "$1" "$2" "$3" "$4" "$5")"
+  local got; got="$(fleet_coverage "$1" "$2" "$3" "$4" "$5")"
   if [[ "$got" == "$want" ]]; then
     printf '  ok    %-53s %s\n' "$name" "$got"
   else
@@ -405,7 +405,7 @@ main() {
   checkc "no candidates at all: split, not vacuous pass"     split 0 0 0
 
   echo
-  echo "-- what the fleet aggregate claims about criterion 6 (p3_coverage) --"
+  echo "-- what the fleet aggregate claims about criterion 6 and 5b (fleet_coverage) --"
 
   # 25. The two branches a real run drives, and the only two the inline form was ever
   #     observed in: every host cleared, or a host was slow.
@@ -434,29 +434,52 @@ main() {
   #     fail-closed shape as fixture 24, at the aggregate.
   checkv "an empty fleet cannot pass vacuously"              unmeasured 0 0 0 0 0
 
+  # 31-35. THE SECOND CALLER'S INPUT SHAPE (gate-p2 criterion 5b, #90's ruling). The
+  #     numbers matter because p2 feeds this function differently from criterion 6: an
+  #     indeterminate host there is EXCLUDED from nmeas (gate-p2 counts N_INDET and
+  #     `continue`s before N_JUDGED++), whereas criterion 6 counts a split-denominator
+  #     host inside nmeas. So the same fleet reaches this function as `3 2 2 0 1` from
+  #     p2 and `3 3 2 0 1` from criterion 6, and asserting only one of the two would
+  #     leave the other caller verified by reading alone -- which is exactly how p2's
+  #     aggregate came to disagree with p3's in the first place.
+  checkv "p2 shape: indet outside nmeas is still partial"    partial    3 2 2 0 1
+  # 32. p2's compound absence: one cleared, one unclassifiable, one that never answered.
+  #     N_NOCOVER = 3 - 1 - 1 = 1, and the verdict must not turn on which kind of hole
+  #     it was -- both are failures to measure, and neither is a miss.
+  checkv "p2 shape: an indet and a dead host together"       partial    3 1 1 0 1
+  # 33. A real miss still decides over both kinds of hole: UNMEASURED never masks a FAIL.
+  checkv "p2 shape: a miss outranks an indet host"           fail       3 2 1 1 1
+  # 34. Every host indeterminate. Distinct in cause from fixture 29 (nobody answered) but
+  #     identical in verdict, because in both cases nothing was judged against a floor.
+  checkv "p2 shape: a wholly indeterminate fleet"            unmeasured 3 0 0 0 3
+  # 35. The dead-host exercise's own numbers, as p2 now feeds them: two hosts judged and
+  #     cleared out of three configured, no indeterminates. This is the fixture that
+  #     pins the ruling -- it used to be a PASS printing "(2/2)".
+  checkv "p2 shape: the dead-host exercise is not a PASS"    partial    3 2 2 0 0
+
   echo
   echo "-- fleet_shortfall: a fraction over survivors must say how many were asked (#90) --"
-  # 31. THE CASE THE DEAD-HOST EXERCISE PRODUCED, and the reason this function exists:
+  # 36. THE CASE THE DEAD-HOST EXERCISE PRODUCED, and the reason this function exists:
   #     two of three judged printed "(2/2)" and read as fleet-wide.
   checkfs "one of three absent: the hole is named"    "1 of the 3 configured hosts" 3 2
-  # 32. And it says what the line actually covers, in the fleet's own denominator, so a
+  # 37. And it says what the line actually covers, in the fleet's own denominator, so a
   #     reader does not have to subtract to learn the claim's size.
   checkfs "and it restates the claim's true size"     "covers 2 of 3"               3 2
-  # 33. Complete coverage prints NOTHING. This is the only case a green fleet drives, so
+  # 38. Complete coverage prints NOTHING. This is the only case a green fleet drives, so
   #     a helper that appended a clause unconditionally would look correct for five runs
   #     and then be wrong in the log everybody reads.
   checkfs "a complete fleet appends nothing"          ""                            3 3
-  # 34. Singular, because "1 of the 1 configured hosts" in a gate log is the kind of
+  # 39. Singular, because "1 of the 1 configured hosts" in a gate log is the kind of
   #     detail that makes a reader wonder what else was generated rather than measured.
   #     The leading count is the number ABSENT, not the number judged -- my first version
   #     of this fixture asserted "0 of the 1", having read the clause as reporting
   #     coverage, and the helper was right.
   checkfs "a one-host fleet that answered nobody"     "1 of the 1 configured host "  1 0
-  # 35. FAIL-CLOSED ON AN UNREADABLE FLEET SIZE. nhosts=0 with a host judged is
+  # 40. FAIL-CLOSED ON AN UNREADABLE FLEET SIZE. nhosts=0 with a host judged is
   #     impossible arithmetic, so the fleet size is what is wrong; silence would assert
   #     complete coverage, which is the one thing this cannot know.
   checkfs "an unreadable fleet size is not silence"   "could not read"               0 2
-  # 36. j > n likewise cannot happen, and resolves toward silence rather than a negative
+  # 41. j > n likewise cannot happen, and resolves toward silence rather than a negative
   #     count -- "-1 of the 2 configured hosts" would read as a defect in the fleet
   #     rather than in the counter, and there is no hole to report either way.
   checkfs "more judged than configured: no negative"  ""                            2 3

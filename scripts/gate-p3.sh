@@ -1798,7 +1798,7 @@ else
   # no OpenBLAS reference, no benchstat interval, no bounded amended ratio. Named,
   # because they are neither cleared nor slow and the sentence must not imply either.
   OB_NOCOVER=$((NHOSTS - OB_CLEARED - OB_MISSED - OB_INDET))
-  case "$(p3_coverage "$NHOSTS" "$OB_MEASURED" "$OB_CLEARED" "$OB_MISSED" "$OB_INDET")" in
+  case "$(fleet_coverage "$NHOSTS" "$OB_MEASURED" "$OB_CLEARED" "$OB_MISSED" "$OB_INDET")" in
   unmeasured)
     unmeasured "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed" ;;
   pass)

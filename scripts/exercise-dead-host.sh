@@ -5,20 +5,31 @@
 # exercise-dead-host.sh [HOST] -- drive gate-p2's fleet-incomplete aggregate by
 # making one host genuinely unreachable, and nothing else.
 #
-# WHAT IS BEING EXERCISED. Criterion 5b's aggregate has three branches. Two fire
-# routinely: nobody produced a reading (UNMEASURED) and somebody missed the floor
-# (FAIL). The third is the PASS
+# WHAT IS BEING EXERCISED -- AND THE TARGET HAS MOVED ONCE ALREADY. This script was
+# written to drive criterion 5b's PASS in its fleet-INCOMPLETE rendering:
 #
 #     "every host that produced a judgeable throughput reading cleared its floor
-#      (N_CLEARED/N_JUDGED) ..."
+#      (2/2) ..."      <-- a green line crediting two thirds of the fleet
 #
-# and on this fleet it has only ever printed 3/3. Its fleet-INCOMPLETE rendering --
-# 2/2 with a third host absent -- has never executed, and that is the rendering
-# where a green line credits two thirds of the fleet. An unexecuted branch in the
-# instrument that issues the certificates is the thing this whole apparatus exists
-# to distrust, and "a host will be down someday" means the branch will fire live
-# eventually. Its first firing should not double as its first test (ruled
-# 2026-08-16).
+# It fired, printed exactly that, and the reading of it produced #90: a fraction over
+# survivors is arithmetically true and reads as fleet-wide. Scott's ruling of
+# 2026-08-16 then DELETED that branch -- a fleet with an absent member has not
+# measured a claim about the fleet, so a partial fleet resolves to UNMEASURED, as
+# criterion 6's aggregate already did. The branch this exercise was built to test no
+# longer exists, and the thing that replaced it is now the target:
+#
+#     "the fleet's floor is unmeasured: 2 of 3 configured hosts cleared it and none
+#      measured below it, but 1 produced no floor verdict (0 indeterminate, 1 with no
+#      judgeable reading at all) ..."
+#
+# So the read-back below looks for the UNMEASURED rendering, not the PASS. That is not
+# a weakening of what the exercise proves: UNMEASURED sets FAIL, so the induced state
+# still blocks green, and the branch under test is still one no complete fleet can
+# reach. An unexecuted branch in the instrument that issues the certificates is the
+# thing this whole apparatus exists to distrust, and "a host will be down someday"
+# means the branch will fire live eventually. Its first firing should not double as
+# its first test -- which is exactly why the target moved: the first firing found a
+# defect, so a second run is owed to the code that replaced it (ruled 2026-08-16).
 #
 # WHY A PATH SHIM AND NOT A FLAG. The ruling's first condition: the induction is
 # environmental, not a knob in the judging code. A flag that told the gate to skip a
@@ -144,8 +155,11 @@ main() {
     echo "   scp underneath: $REAL_SCP  (shimmed too: remote.sh:440 copies the bench binary)"
     echo "   shim dir:       $SHIMDIR"
     echo "   scope:          $SCOPE"
-    echo "   target:         the fleet-incomplete rendering of criterion 5b's PASS,"
-    echo "                   i.e. N_CLEARED/N_JUDGED reading 2/2 rather than 3/3."
+    echo "   target:         criterion 5b's partial-fleet UNMEASURED (#90's ruling), i.e."
+    echo "                   '2 of 3 configured hosts cleared it ... 1 produced no floor"
+    echo "                   verdict'. The PASS this exercise first drove -- '(2/2)' -- is"
+    echo "                   the branch that ruling deleted; seeing it again would be a"
+    echo "                   finding, not a success."
     echo "   NOT a gate run: the verdict is withheld, exit code 2, every verdict"
     echo "                   line stamped [synthetic]."
     echo
@@ -161,38 +175,97 @@ main() {
 
   # The read-back on the exercise itself: did the branch actually fire? An exercise
   # that reports only "it ran" is the unfired-branch problem one level up, so the
-  # aggregate line is extracted and its two counts compared. Colour codes are stripped
+  # aggregate line is extracted and its counts checked. Colour codes are stripped
   # because the log carries them.
+  #
+  # Each of criterion 5b's four branches is matched by a phrase of its own rather than
+  # by one loose pattern over all of them, and an unmatched log reports NO. That is the
+  # fail-closed direction: if the gate's wording is changed again without this read-back
+  # being updated, the exercise says the branch did not fire -- it cannot mistake a
+  # different branch for the target. The previous version keyed on "hosts that produced
+  # a judgeable throughput reading" and a `(c/j)` fraction, both of which the ruling
+  # removed from the target branch; it would have reported INDETERMINATE on the very run
+  # meant to prove the fix.
+  #
+  # ALL NINE OUTCOMES BELOW WERE DRIVEN before this landed, by rendering criterion 5b's
+  # five verdict lines out of gate-p2.sh's own bytes (awk over the case block, eval'd with
+  # `pass`/`fail`/`unmeasured` stubbed) and feeding each to this block -- so the read-back
+  # was tested against the gate's text rather than against my memory of it, which is the
+  # failure this whole file documents. The accounting check is redundant on the shipped
+  # gate: on the partial branch nmiss == 0, so N_CLEARED == N_JUDGED and
+  # N_CLEARED + N_INDET + N_NOCOVER == NHOSTS identically. That is the point of asserting
+  # it -- it is a check on the construction staying true, not on this run's arithmetic,
+  # and it had to be driven with hand-made counts because the gate cannot produce it.
   echo | tee -a "$LOG"
-  AGG="$(sed 's/\x1b\[[0-9;]*m//g' "$LOG" \
-         | grep -E 'hosts? that produced a judgeable throughput reading' | tail -1 || true)"
+  CLEAN="$(sed 's/\x1b\[[0-9;]*m//g' "$LOG")"
+  nhosts="$(grep -v '^[[:space:]]*#' .keel-hosts 2>/dev/null | grep -c . || echo 0)"
+  AGG="$(grep -F 'has not measured a claim about the fleet' <<<"$CLEAN" | tail -1 || true)"
+  OTHER="$(grep -E 'did not clear the floor|configured gate hosts cleared its floor|no host produced a judgeable throughput reading|could not read how many hosts were configured' <<<"$CLEAN" | tail -1 || true)"
   {
     echo "-- did the target branch fire? --"
-    if [[ -z "$AGG" ]]; then
+    if [[ -n "$AGG" ]]; then
+      echo "   aggregate line: $AGG"
+      # Two independent readings of the same line: the cleared/configured pair, and the
+      # breakdown of what went unjudged. Both are asserted because the accounting is the
+      # part that was wrong before -- a line naming the right verdict over the wrong
+      # counts would be the same class of defect one layer in.
+      if [[ "$AGG" =~ ([0-9]+)\ of\ ([0-9]+)\ configured\ hosts\ cleared\ it ]]; then
+        c="${BASH_REMATCH[1]}"; n="${BASH_REMATCH[2]}"
+      else
+        c=""; n=""
+      fi
+      if [[ "$AGG" =~ \(([0-9]+)\ indeterminate,\ ([0-9]+)\ with\ no\ judgeable ]]; then
+        ind="${BASH_REMATCH[1]}"; nocov="${BASH_REMATCH[2]}"
+      else
+        ind=""; nocov=""
+      fi
+      if [[ -z "$c" || -z "$ind" ]]; then
+        echo "   INDETERMINATE: the target verdict fired but its counts could not be read"
+        echo "   back (cleared/configured='$c/$n', unjudged breakdown='$ind/$nocov'), so"
+        echo "   this run does not establish that the accounting is right."
+      elif [[ "$n" != "$nhosts" ]]; then
+        echo "   NOT the target rendering: the line says $n configured hosts, .keel-hosts"
+        echo "   says $nhosts. The verdict is right and its denominator is not, which is"
+        echo "   the defect this branch exists to prevent. Treat as unmeasured."
+      elif [[ "$nocov" -lt 1 ]]; then
+        echo "   NOT the target rendering: no host is reported as having produced no"
+        echo "   judgeable reading, so whatever made this fleet partial, it was not the"
+        echo "   induced outage. Treat as unmeasured."
+      elif [[ $((c + ind + nocov)) -ne "$nhosts" ]]; then
+        echo "   NOT the target rendering: $c cleared + $ind indeterminate + $nocov with no"
+        echo "   reading = $((c + ind + nocov)), not the $nhosts configured. A host is"
+        echo "   unaccounted for in the very line that claims to account for them."
+      else
+        echo "   YES: $c of $nhosts configured hosts cleared their floor, $ind were"
+        echo "   indeterminate, $nocov produced no judgeable reading, and the verdict is"
+        echo "   UNMEASURED rather than a PASS over the survivors. This is the branch that"
+        echo "   replaced the one this exercise first drove (#90), and the counts add up."
+      fi
+    elif [[ -n "$OTHER" ]]; then
+      echo "   aggregate line: $OTHER"
+      case "$OTHER" in
+        *"did not clear the floor"*)
+          echo "   NO: the aggregate took its FAIL branch -- a surviving host missed its"
+          echo "   floor. That branch already fires routinely, so the target rendering is"
+          echo "   still unexercised, AND a real floor miss on a real host is a finding"
+          echo "   that outranks this exercise. Read the per-host lines before re-running." ;;
+        *"configured gate hosts cleared its floor"*)
+          echo "   NO, AND THIS IS A FINDING: the aggregate PASSED over a fleet with an"
+          echo "   induced outage. Post-#90 that is unreachable -- a partial fleet cannot"
+          echo "   pass -- so either the outage was not induced (the dead host answered)"
+          echo "   or fleet_coverage is wrong. Do not read this as a green branch." ;;
+        *"no host produced a judgeable throughput reading"*)
+          echo "   NO: no host produced a judgeable reading at all, so the fleet was not"
+          echo "   partial, it was empty of measurements. The induction hit more than the"
+          echo "   one host it was aimed at; check the shim's dead-host match." ;;
+        *)
+          echo "   NO: the aggregate could not read the fleet's configured size, so it had"
+          echo "   no denominator to judge coverage against. Fix .keel-hosts before"
+          echo "   spending another run here." ;;
+      esac
+    else
       echo "   NO: no criterion 5b aggregate line in the log at all. The run did not"
       echo "   reach the aggregate, so this exercise established nothing about it."
-    else
-      echo "   aggregate line: $AGG"
-      if [[ "$AGG" == *"did not clear the floor"* ]]; then
-        echo "   NO: the aggregate took its FAIL branch -- a surviving host missed its"
-        echo "   floor. That branch already fires routinely, so the target rendering is"
-        echo "   still unexercised, AND a real floor miss on a real host is a finding"
-        echo "   that outranks this exercise. Read the per-host lines before re-running."
-      elif [[ "$AGG" =~ \(([0-9]+)/([0-9]+)\) ]]; then
-        c="${BASH_REMATCH[1]}"; j="${BASH_REMATCH[2]}"
-        nhosts="$(grep -v '^[[:space:]]*#' .keel-hosts 2>/dev/null | grep -c . || echo 0)"
-        if [[ "$c" == "$j" && "$j" -lt "$nhosts" ]]; then
-          echo "   YES: judged $j of $nhosts configured hosts and credited $c of them."
-          echo "   This is the rendering that had never executed: a PASS crediting a"
-          echo "   proper subset of the fleet, with the absent host reported separately."
-        else
-          echo "   NOT the target rendering: cleared=$c judged=$j configured=$nhosts."
-          echo "   The exercise ran but did not put the aggregate in the state it was"
-          echo "   meant to test; treat this as unmeasured, not as a green branch."
-        fi
-      else
-        echo "   INDETERMINATE: could not read the two counts out of that line."
-      fi
     fi
     echo
     echo "instrument exercise: COMPLETE, verdict withheld (gate-p2 exited $RC; 2 is the"

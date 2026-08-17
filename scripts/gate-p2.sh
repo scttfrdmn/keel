@@ -256,12 +256,19 @@ echo
 
 # ------------------------------------------- the instrument exercise (2026-08-16)
 # KEEL_INSTRUMENT_EXERCISE=<reason> marks this run as synthetic. It exists so that
-# criterion 5b's "2 judged, 1 not" aggregate -- the PASS that reads
-# "every host that produced a judgeable throughput reading cleared its floor
-# (2/2)" while a third host produced none -- can be driven on purpose. On a healthy
-# fleet that sentence has only ever printed 3/3, so the fleet-incomplete rendering
-# of a *green-issuing* line has never executed, and its first execution should not
-# be the day a host is actually down.
+# criterion 5b's "2 judged, 1 not" aggregate can be driven on purpose: on a healthy
+# fleet that branch never executes, and its first execution should not be the day a
+# host is actually down.
+#
+# WHAT IT DROVE, AND WHAT IT NOW DRIVES. As written this targeted the PASS reading
+# "every host that produced a judgeable throughput reading cleared its floor (2/2)"
+# while a third host produced none -- a green line crediting two thirds of the fleet.
+# The exercise printed exactly that, the reading of it became #90, and the ruling of
+# 2026-08-16 deleted the branch: a partial fleet now resolves to UNMEASURED (see the
+# aggregate below). So the target is the UNMEASURED that replaced it, and seeing the
+# old PASS again would be a finding rather than a success. The branch is still one no
+# complete fleet can reach, and UNMEASURED still blocks green, so what the exercise is
+# for has not changed -- only which rendering it is aimed at.
 #
 # WHAT THIS VARIABLE DOES: sets VERDICT_STAMP, prints this banner, and withholds
 # the verdict with its own exit code. That is the whole list.
@@ -542,8 +549,13 @@ while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 # aggregate printed "(2/2)", which is true and reads as the whole fleet. The dead-host
 # instrument exercise is what printed it; five green runs could not, because a complete
 # fleet renders that branch identically either way.
+# N_INDET is the fourth, added with #90's ruling: criterion 6 counts its indeterminate
+# hosts explicitly so the aggregate can say WHICH failure to measure happened, and the
+# shared decision takes it. Without it, "classification undecidable" and "host never
+# answered" would collapse into one leftover and the log would not say which.
 N_JUDGED=0
 N_CLEARED=0
+N_INDET=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   unmeasured "the 55% criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
@@ -724,6 +736,12 @@ else
       # here to overturn — so re-measuring an UNMEASURED is the ordinary response to a
       # missing measurement, uncapped, rather than an allowance being drawn down.
       info "  [$host] the remedy is precision, never a wider bar: re-measure (this is not §4's re-run being spent — there is no verdict to overturn), and if this host is chronically indeterminate here, raise KEEL_BENCH_COUNT for it"
+      # Counted, then skipped. Before #90 this branch continued without counting, so
+      # the aggregate could see only survivors and had no way to distinguish "the run
+      # could not classify this host" from "this host never answered" -- both were the
+      # same invisible leftover. The aggregate names them separately now, which it can
+      # only do if the two are tallied separately here.
+      N_INDET=$((N_INDET + 1))
       continue
     fi
 
@@ -751,24 +769,49 @@ else
     esac
   done <<<"$HOSTS"
 
-  # The aggregate, three-way over coverage state (#73's tier C). Every host that
-  # got this far is under `performance`, asserted twice above, so this line no
-  # longer names one host on the fleet's behalf. The first branch is the one the
-  # old pair could not express: no host producing a reading at all read as two
-  # FAILs about a floor nobody measured.
+  # The aggregate, over ONE coverage decision shared with criterion 6 (`fleet_coverage`,
+  # #90's ruling of 2026-08-16). Every host that got this far is under `performance`,
+  # asserted twice above, so this line no longer names one host on the fleet's behalf.
   #
-  # All three branches now name the fleet they were asked about (#90, fleet_shortfall):
-  # the fraction stays over the survivors, because that is the honest numerator of what
-  # was judged, and the clause states how many were asked. The verdicts are unchanged --
-  # whether a partial fleet should resolve to UNMEASURED here, as criterion 6's OpenBLAS
-  # aggregate already does, is #90's open question and Scott's call, not a wording fix.
-  if [[ "$N_JUDGED" -eq 0 ]]; then
-    unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared$(fleet_shortfall "$NHOSTS" 0)"
-  elif [[ "$N_CLEARED" -eq "$N_JUDGED" ]]; then
-    pass "every host that produced a judgeable throughput reading cleared its floor ($N_CLEARED/$N_JUDGED), each under the performance governor asserted per host (§5 rule 5)$(fleet_shortfall "$NHOSTS" "$N_JUDGED")"
-  else
-    fail "$((N_JUDGED - N_CLEARED)) of $N_JUDGED hosts that produced a judgeable throughput reading did not clear the floor (the per-host lines above say which)$(fleet_shortfall "$NHOSTS" "$N_JUDGED")"
-  fi
+  # The ruling: a PASS reading "(2/2)" over a three-host fleet is a message-level truth
+  # carrying a fleet-level assertion, and a fleet with an absent member has not measured
+  # a claim about the fleet. So a partial fleet resolves to UNMEASURED here, exactly as
+  # criterion 6's OpenBLAS aggregate already resolves it -- §5 rule 6 giving the absent
+  # measurement its one available verdict. Two aggregates with different absence
+  # semantics would be the divergent-copies defect relocated to the verdict layer, which
+  # is what `fleet_shortfall` had just been built to end, so both now call one function.
+  #
+  # NOT A WEAKENING, and the same argument as in roofline.sh's header: `unmeasured` sets
+  # FAIL=1, so UNMEASURED blocks green identically to FAIL. Nothing that was red can
+  # become green by this change; a partial fleet simply stops being *describable* as a
+  # whole one. Per-host PASSes above stay as measured -- only the aggregate refuses.
+  #
+  # The pass branch's fraction is over NHOSTS, not N_JUDGED: `fleet_coverage` returns
+  # `pass` only when N_CLEARED == NHOSTS, so on that branch the two are equal and the
+  # denominator is the fleet either way. Naming NHOSTS makes the claim's scope explicit
+  # instead of leaving it to coincide, and `fleet_shortfall` stays appended as a
+  # fail-closed belt: if the two ever diverge, the line says so rather than reading whole.
+  N_NOCOVER=$((NHOSTS - N_JUDGED - N_INDET))
+  case "$(fleet_coverage "$NHOSTS" "$N_JUDGED" "$N_CLEARED" "$((N_JUDGED - N_CLEARED))" "$N_INDET")" in
+    unmeasured)
+      # Two ways to land here, and they are not the same fact: no host produced a
+      # judgeable reading, or the fleet's configured size could not be read (in which
+      # case there is no denominator to judge coverage against at all).
+      if [[ "$N_JUDGED" -eq 0 ]]; then
+        unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared$(fleet_shortfall "$NHOSTS" 0)"
+      else
+        unmeasured "$N_CLEARED of $N_JUDGED judged hosts cleared their floor, but this run could not read how many hosts were configured, so it cannot say whether that is the fleet$(fleet_shortfall "$NHOSTS" "$N_JUDGED")"
+      fi ;;
+    pass)
+      pass "every one of the $NHOSTS configured gate hosts cleared its floor ($N_CLEARED/$NHOSTS), each under the performance governor asserted per host (§5 rule 5)$(fleet_shortfall "$NHOSTS" "$N_JUDGED")" ;;
+    fail)
+      fail "$((N_JUDGED - N_CLEARED)) of $N_JUDGED hosts that produced a judgeable throughput reading did not clear the floor (the per-host lines above say which)$(fleet_shortfall "$NHOSTS" "$N_JUDGED")" ;;
+    *)
+      # `partial`: nobody measured below the floor, but the fleet is not covered. The
+      # counts are named separately because they are different failures to measure --
+      # a host the run could not classify is not a host that never answered.
+      unmeasured "the fleet's floor is unmeasured: $N_CLEARED of $NHOSTS configured hosts cleared it and none measured below it, but $((NHOSTS - N_CLEARED)) produced no floor verdict ($N_INDET indeterminate, $N_NOCOVER with no judgeable reading at all), and a fleet with an absent member has not measured a claim about the fleet (#90) — the per-host PASSes above stand as measured" ;;
+  esac
 fi
 
 assumed_ledger

@@ -462,8 +462,25 @@ p3_collapse() {
   }'
 }
 
-# p3_coverage NHOSTS NMEASURED NCLEARED NMISSED NINDET — criterion 6's per-fleet
-# aggregate, from the per-host tally.
+# fleet_coverage NHOSTS NMEASURED NCLEARED NMISSED NINDET — the per-fleet aggregate of
+# BOTH gates' throughput criteria (gate-p3 criterion 6, gate-p2 criterion 5b), from the
+# per-host tally.
+#
+# NAMED `p3_coverage` UNTIL 2026-08-16, when the ruling on #90 made it shared. Criterion
+# 5b had its own inline aggregate that resolved a partial fleet to PASS while this one
+# resolved it to UNMEASURED, and "two aggregates with different absence semantics is the
+# divergent-copies defect relocated to the verdict layer — the exact thing fleet_shortfall
+# was just built to end." Absence semantics are now stated once, here, and the rename is
+# what stops the p3- prefix from inviting a p2- twin. The grounds, in the ruling's words:
+# a PASS reading "(2/2)" over a three-host fleet "is a message-level truth carrying a
+# fleet-level assertion — the criterion's claim is about the fleet, and a fleet with an
+# absent member hasn't measured that claim." §5 rule 6 gives the absent measurement its
+# one available verdict. Per-host PASSes stand as measured; only the aggregate refuses.
+#
+# NOT A WEAKENING, and worth being explicit since P2 is the go/no-go: UNMEASURED blocks
+# green identically to FAIL (`unmeasured()` sets FAIL), so nothing that used to be red can
+# become green through this. What changes is only that a partial fleet stops being
+# describable as a whole one.
 #
 # Here for p3_collapse's own stated reason: this if-chain can turn a FAIL into an
 # UNMEASURED and it was previously inline, where nothing drove its branches but a
@@ -471,7 +488,11 @@ p3_collapse() {
 # and neither could have been noticed from a green. They sit at different levels, and
 # only one of them is a defect this function can hold:
 #
-#  1. THE CONDITION (fixed here, fixtures 25-30). The unmeasured branch required
+#  1. THE CONDITION (fixed here, fixtures 25-35; 31-35 are gate-p2's input shape,
+#     which differs -- p2 excludes an indeterminate host from nmeas where criterion 6
+#     includes it, so the same fleet arrives as `3 2 2 0 1` from one caller and
+#     `3 3 2 0 1` from the other, and only asserting both keeps either from being
+#     verified by reading alone). The unmeasured branch required
 #     cleared + indet == nhosts exactly, so a fleet with one no-coverage host and zero
 #     misses fell through to FAIL and blamed keel's speed for a measurement hole. The
 #     gate is asked whether any host measured BELOW the bar; that is what decides now.
@@ -484,13 +505,18 @@ p3_collapse() {
 #     #37 found in P5's scaling aggregate, pointing the other way. The caller now
 #     counts NMISSED as it grades and names the leftover as a leftover. Passing it in
 #     here also stops the derivation from being reintroduced silently, but the printed
-#     sentence is the caller's and is verified only by reading it.
+#     sentence is the caller's. gate-p3's is still verified only by reading it.
+#     gate-p2's five renderings are not, as of #90: they are extracted from the case
+#     block with awk and eval'd with the verdict functions stubbed, so the counts in
+#     the sentence are checked against the sentence's own bytes. The mechanism is
+#     described in scripts/exercise-dead-host.sh; gate-p3's aggregate is owed the
+#     same treatment and does not have it yet.
 #
 # Echoes one word: unmeasured | pass | fail | partial. `partial` is the caller's cue
 # to report UNMEASURED naming the split and no-coverage counts separately, since
 # "the two candidate denominators disagreed" and "there was no ratio at all" are
 # different failures to measure and collapsing them would hide which one happened.
-p3_coverage() {
+fleet_coverage() {
   awk -v nhosts="$1" -v nmeas="$2" -v nclear="$3" -v nmiss="$4" -v nindet="$5" '
   BEGIN {
     if (nmeas  + 0 <= 0)          { print "unmeasured"; exit }

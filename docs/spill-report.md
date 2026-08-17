@@ -320,7 +320,11 @@ is the one the source asked for. The evidence for this failure is the instructio
 count, which is §5.
 
 The dumps do carry the evidence for the other P2 finding — DESIGN.md's own
-12-accumulator 32×6 tile, kept as `Kernel6x32` and never dispatched:
+12-accumulator tile, kept as `Kernel6x32` and never dispatched. (Written "32×6"
+here and in DESIGN.md at the time; the doc was amended to the shipped orientation,
+**MR=6, NR=32**, by ruling on #16 on 2026-08-16, so DESIGN.md's planned starting
+tile and this spilling kernel are the same tile named consistently. Nothing
+measured below changes — only the axis names it was recorded under.)
 
 ```
 Kernel6x32: steady-state loop [152,1870] 270 insns for 48 arith (5.62 per arith):
