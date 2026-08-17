@@ -4,15 +4,19 @@
 #
 # Transition exercise for scripts/citation-lint.sh: drive every branch on purpose.
 #
-# A healthy tree reaches exactly one of the twelve cases below — the clean path. So a
-# green `make lint` says nothing whatever about the other eleven, and an unchanged tally
-# on a healthy run is not evidence that a newly added check works.
+# A healthy tree reaches exactly one of the cases below — the clean path. So a green
+# `make lint` says nothing whatever about the others, and an unchanged tally on a healthy
+# run is not evidence that a newly added check works.
 # Each case here induces the condition it names, asserts the branch that must fire,
 # and restores the tree.
 #
 # Controls are numbered in the order they were WRITTEN, not the order they run: T10 is
 # last on purpose (see below) and T11-T12 were added after it. Renumbering would silently
-# invalidate every reference to a control by name, here and in CHANGELOG.md.
+# invalidate every reference to a control by name, here and in CHANGELOG.md — which is
+# not hypothetical: CHANGELOG.md:116, :123, :134 and :135 each name one. **T3's ordinal
+# is therefore left vacant**, not closed up, when pinning was retired 2026-08-16: it
+# reworded a pinned rule and asserted MOVED, and with no pins there is nothing left for
+# it to observe. It is the one control this tree lost rather than adapted.
 #
 # Five of these controls exist because the checks they drive were added *after* the
 # audit that established the baseline, and each guards a silent failure rather than a
@@ -20,9 +24,13 @@
 #
 #   T2 — the `citation-lint:quote` marker must share a line with the citation it
 #        suppresses. Wrapping prose can separate them, and the marker then stops
-#        working with no diff to notice. T2 removes a marker and asserts the site
-#        rejoins the pinned set. (This caught a real break: rewrapping a comment in
-#        gate-p3.sh moved a marker one line off its citation.)
+#        working with no diff to notice. (This caught a real break: rewrapping a comment
+#        in gate-p3.sh moved a marker one line off its citation.) The condition is now
+#        INDUCED rather than found, because retiring pinning cost this control its
+#        natural subject: every quoted mention in the tree names a form that happens to
+#        resolve, so stripping a real marker went from a red to a silent tally change.
+#        Measured on the day, not assumed — the old mutation was run against the new
+#        script and printed `rc=0`, 143 sites where the clean path has 136.
 #   T7 — an EXTERNAL declaration is keyed by (file, form), which is not intrinsically
 #        unique. If KERNEL.md ever cites DESIGN.md's §5 rule 2 in the shorthand, the citation-lint:quote
 #        declaration exempting KERNEL.md's `docs/spill-report.md` reference would
@@ -59,7 +67,7 @@ main() {
   # FILES and BAK are deliberately NOT `local`: the EXIT trap runs after main returns,
   # so a local BAK is out of scope by then and `set -u` turns the cleanup into an
   # error that leaks the temp directory. Caught by running this file, not by reading it.
-  FILES=(docs/citation-targets.txt DESIGN.md CHANGELOG.md KERNEL.md l1_test.go)
+  FILES=(docs/citation-externals.txt DESIGN.md CHANGELOG.md KERNEL.md l1_test.go)
   BAK="$(mktemp -d)"
   trap 'restore; rm -rf "$BAK"' EXIT
 
@@ -109,27 +117,33 @@ main() {
   # ever starts counting them, this line is where that shows up.
   run 'clean:0 dead marker scope' "T1 clean path — the ONLY branch an unchanged healthy tree reaches"
 
-  perl -i -pe 's/ <!-- citation-lint:quote -->//' CHANGELOG.md
-  run 'MOVED' "T2 quote marker removed from CHANGELOG.md — proves the marker is load-bearing"
+  # Driven both ways, which the pin-era T2 could not be: the marker must suppress, and its
+  # absence must be *loud*. The induced mention names an ordinal §5 does not have, because
+  # a mention of a form that resolves is indistinguishable from a citation once the marker
+  # is gone -- which is exactly why no site in the tree can play this role.
+  printf -- '- a mention of \xc2\xa75 rule 99, which does not exist <!-- citation-lint:quote -->\n' >>CHANGELOG.md
+  run 'clean' "T2 a quoted mention of a non-existent ordinal — suppressed, as a mention must be"
+  perl -i -pe 's/ <!-- citation-lint:quote -->$// if /rule 99/' CHANGELOG.md
+  run 'NO ITEM' "T2b the same mention with its marker stripped — proves the bare marker is load-bearing"
   restore
 
-  perl -i -pe 's/^8\. \*\*A summary is a cache/8. **A summary is a CACHE/' DESIGN.md
-  run 'MOVED' "T3 a pinned DESIGN.md rule reworded — the drift the pin exists to catch"
-  restore
+  # T3 was here. Retired with pinning; ordinal left vacant on purpose (see the header).
 
-  perl -i -ne 'print unless m{^internal/block/tri\.go\t}' docs/citation-targets.txt
+  perl -i -ne 'print unless m{^internal/block/tri\.go\t}' docs/citation-externals.txt
   run 'NO SECTION' "T4 tri.go's BLIS declaration deleted — an undeclared other-document citation"
   restore
 
-  perl -i -pe 's{^## PINS}{docs/hosts.md\t\xc2\xa79.9\t1\ta citation that does not exist\n\n## PINS}' \
-    docs/citation-targets.txt
+  # Appended rather than inserted: the `## PINS` heading this used to anchor on went with
+  # the pinning block, and an anchor that no longer matches makes `perl -i -pe` a no-op —
+  # a mutation that silently does nothing turns a control into a second clean run.
+  printf -- 'docs/hosts.md\t\xc2\xa79.9\t1\ta citation that does not exist\n' >>docs/citation-externals.txt
   run 'STALE EXT' "T5 a declaration for a citation not in the tree — a stale exemption"
   restore
 
   # A declaration without a site count cannot be checked for narrowness at all, so it
   # is rejected rather than defaulted: a silently-assumed count is the thing the count
   # column exists to prevent.
-  perl -i -pe 's{^(internal/block/tri\.go\t\xc2\xa74\.3)\t1\t}{$1\t}' docs/citation-targets.txt
+  perl -i -pe 's{^(internal/block/tri\.go\t\xc2\xa74\.3)\t1\t}{$1\t}' docs/citation-externals.txt
   run 'BAD EXT' "T6 a declaration missing its site count — rejected, not defaulted"
   restore
 
@@ -178,7 +192,7 @@ main() {
 
   echo
   if [[ "$FAILED" -eq 0 ]]; then
-    echo "citation-lint controls: all 12 transitions fired as specified"
+    echo "citation-lint controls: all 12 transitions fired as specified (11 controls; T2 drives two, T3 retired)"
   else
     echo "citation-lint controls: FAILED" >&2
     exit 1

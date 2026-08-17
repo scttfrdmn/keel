@@ -20,9 +20,10 @@
 #      case failed" is also what a generator broken in some unrelated way looks
 #      like.
 #
-#   3. THE CITATIONS RESOLVE. scripts/citation-lint.sh, unchanged, because a
-#      DESIGN.md citation written on a documentation page is a citation like any
-#      other. Note the property that shapes where such a citation may live: the
+#   3. THE CITATIONS RESOLVE. scripts/citation-lint.sh, whose pinning half was
+#      retired 2026-08-16 (DESIGN.md §5 rule 9 as amended) -- resolution is the
+#      half that can fail, and it is run here because a DESIGN.md citation written
+#      on a documentation page is a citation like any other. Note the property that shapes where such a citation may live: the
 #      lint enumerates sites with `git ls-files`, so the generated pages are
 #      INVISIBLE to it -- they are gitignored. A citation that needs to be linted
 #      therefore belongs in the tracked generator, not in the page it emits.
@@ -234,7 +235,7 @@ stage_citations() {
   local out
   if out="$(./scripts/citation-lint.sh 2>&1)"; then
     pass "$(grep -iE '^[0-9]+ site|site\(s\)|sites over' <<<"$out" | tail -1)"
-    pass "every DESIGN.md citation resolves and matches its pin"
+    pass "every DESIGN.md citation resolves; whether it resolves to the RIGHT rule is a reading, not a check"
   else
     fail "citation-lint failed:"
     sed 's/^/        /' <<<"$out"

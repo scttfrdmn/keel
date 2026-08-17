@@ -8,6 +8,11 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Removed
+- **Citation *pinning* is retired; resolution stays.** `docs/citation-targets.txt` → `docs/citation-externals.txt`
+  (declarations only); `DESIGN.md` §5 rule 9 and §7 amended, because they mandated the instrument; control `T3`
+  removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
+
 ### Fixed
 - **The pre-public audit's `.local`-hostname enumeration named three files and there are six** (#95).
   Conclusion unchanged — non-routable LAN names, no IP or key — but `DESIGN.md:73`'s `janus.local` is

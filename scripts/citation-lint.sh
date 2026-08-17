@@ -2,194 +2,103 @@
 # Copyright 2026 Scott Friedman
 # SPDX-License-Identifier: Apache-2.0
 #
-# citation-lint.sh — resolve every DESIGN.md rule citation in the tree against
-# DESIGN.md's actual structure, and pin what each one lands on.
+# citation-lint.sh — every DESIGN.md rule citation in the tree names a section and an
+# item that exist. That is the entire claim; the limits below are the point of the file.
 #
-# # Why this exists, and the three things it does not do
+# PINNING WAS RETIRED 2026-08-16, and this is the one paydown item that removed a
+# check, so it is recorded rather than quietly dropped. The script also used to record
+# each distinct form beside the first ten words of the item it resolved to, so a
+# renumber or a rewording went red. That bought drift detection for a document that has
+# never been renumbered, at 663 lines across three files run on every push — while the
+# failure that actually happened was 18 citations MINTED wrong (`§5.4` written for the # citation-lint:quote(5.4)
+# rule appended as item 5, `4643b63`), which DESIGN.md §5 rule 9 says "every pin would
+# therefore have passed forever" over. A renumber is now caught by review. §5 rule 9 is
+# amended to match, because a rule mandating an instrument that no longer exists is
+# worse than either the rule or the instrument alone.
 #
-# #85 began as a spelling problem and turned out to be three different problems
-# wearing one costume. What survives is a check with a deliberately narrow claim,
-# so read the limits before trusting a green:
+# WHAT A GREEN DOES NOT MEAN — unchanged by the retirement, and now the only caveat
+# left, so read it. Resolution is not mint-correctness. A citation that lands on a real
+# item can still be the wrong item, and that check is a human or model reading the cited
+# ordinal against the content the citing site actually invokes. It was run once, over
+# all 112 DESIGN-bound sites on 2026-08-16; the census is in the externals file's
+# header. Nothing here re-establishes it, and a sweep of that size needs reading again.
 #
-#   1. RESOLVE, by meaning and not by spelling. Two notations are in use and both
-#      are legitimate: the explicit `§5 rule 5` (83 sites) and the shorthand citation-lint:quote
-#      `§5.5` (29 DESIGN-bound sites), which means "§5, item 5". An earlier draft citation-lint:quote
-#      of this script condemned the shorthand *by form* — DESIGN.md has no
-#      subsections, so `§X.Y` looked incoherent on its face. That draft would have
-#      demanded 25 zero-semantic edits to correct citations in the document the
-#      gates cite as grounds, which is minting rot in the name of style. Both
-#      forms now resolve to (section, item) and are checked identically. #85's
-#      sweep moved 15 sites from shorthand to explicit — the ones it found
-#      MIS-MINTED — and left the 25 correct shorthand sites byte-for-byte.
+# TWO NOTATIONS ARE LEGITIMATE and both resolve to (section, item): the explicit
+# `§5 rule 5` and the shorthand `§5.5`, which means "§5, item 5". Stated because an # citation-lint:quote(5.5)
+# earlier draft condemned the shorthand *by form* — DESIGN.md has no subsections, so
+# `§X.Y` looks incoherent on its face — and would have demanded 25 zero-semantic edits
+# to correct citations in the document the gates cite as grounds. New citations use the
+# explicit form; the audited shorthand sites stay byte-for-byte.
 #
-#   2. SCOPE to the document the citation actually names. Four `§5.x` references
-#      in this tree point at `docs/spill-report.md`, not DESIGN.md, and two point
-#      at the BLIS paper's own §4.3 (Van Zee & van de Geijn, TOMS 2015). They are citation-lint:quote
-#      indistinguishable from the DESIGN shorthand by form. A form-based rule
-#      would have filed a peer-reviewed paper's section numbering as a defect in
-#      keel's constitution — a false defect, which costs more than a missed one.
-#      Non-DESIGN references are therefore DECLARED in the pin file's EXTERNAL
-#      block, keyed by file and form and carrying the number of sites the declaration
-#      covers, and an undeclared one is an error rather than a guess:
-#      declared-then-checked, per DESIGN.md §5 rule 6.
+# A CITATION OF ANOTHER DOCUMENT IS NOT A DEFECT IN THIS ONE. Some sites use this
+# notation for `docs/spill-report.md` or for the BLIS paper's own §4.3, and they are # citation-lint:quote(4.3)
+# indistinguishable from DESIGN shorthand by form. They are DECLARED in the externals
+# file, keyed by file and form and carrying the number of sites the declaration covers;
+# an undeclared one is an error rather than a guess. Note that five of the nine
+# declarations are load-bearing for resolution (their forms do not exist in DESIGN.md at
+# all) and four cover forms that WOULD resolve — those four are declarations of meaning,
+# unenforceable here, and #91 is the open issue that a self-reference resolving against
+# the wrong document passes either way.
 #
-#   3. PIN the audited baseline. Each distinct form is recorded beside the first
-#      words of the rule it lands on. Renumbering or rewording DESIGN.md breaks
-#      the match and this goes red.
+# A MENTION OF A FORM IS NOT A CITATION: prose showing a bad form to explain a defect
+# invokes no rule's content. Mark those lines `citation-lint:quote`, scoped as
+# `citation-lint:quote(5.4)` where the line also carries real citations. Normalizing # citation-lint:quote(5.4)
+# them would erase the record of the defect they document. The marker must sit on the
+# citation's OWN line — wrapping prose separates them and it silently stops working.
 #
-# # What a green from this script does NOT mean
-#
-# It does not mean the citations are correct. A pin certifies STABILITY, never
-# BIRTH-CORRECTNESS, and this is not a hypothetical: keel's 18 `§5.4` citations citation-lint:quote
-# were minted wrong in the same commit that appended the rule as item 5
-# (4643b63) — no renumbering ever happened, so every pin would have passed
-# forever while 18 sites misdirected every reader. Two more sites (DESIGN.md:129
-# citing §7 rule 6 for rule 7's denominator clause, l1_test.go:26 citing §5.2 for citation-lint:quote
-# rule 1's tolerance clause) were mis-minted inside populations that resolve
-# perfectly.
-#
-# Drift-detection, sameness-checking and mint-verification are three different
-# instruments. This script is the first. The second is `make lint`'s other
-# checks. The third cannot be automated: it is a human or model reading each
-# cited ordinal against the content the citing site actually invokes, and it was
-# run once over all 112 DESIGN-bound sites (see the pin file header for the
-# census and date). The mechanical check below guarantees what it appears to only
-# because that audit established mint-correctness upstream of it.
-#
-# A MENTION of a citation form is not a citation: a comment explaining a drift by
-# showing the bad form, or prose naming a notation while describing this very check,
-# invokes no rule's content and must not be resolved against one. (This file's own
-# CHANGELOG entry tripped the narrowness check twice for exactly that reason — writing
-# about `§4.3` is not citing `§4.3`.) Mark those lines `citation-lint:quote`
-# and they are skipped; normalizing them would erase the record of the defect
-# they document (same law as #79: history gets marked, never rewritten). Where a
-# line carries both a quotation and real citations, scope the marker to the quoted
-# form: `citation-lint:quote(5.4)`. See the `quoted` helper for why.
-#
-# A SCOPE TOKEN IS THE CITATION'S EXACT SPELLING MINUS THE SECTION SIGN. To suppress
-# `§7 rule 7` the token is `7 rule 7`, not `7.7` — the two notations resolve to the citation-lint:quote
-# same rule for *checking* but a scope is matched literally, so the shorthand does not
-# suppress the explicit form. This is stated here because it cost a confusing tally
-# once, and because it does NOT fail in the safe direction. A mis-spelled scope fails
-# loudly with the WRONG ATTRIBUTION: the exemption misses, the site lints as a real
-# citation, and if it happens to be unresolvable the red line reads "bad citation"
-# when the truth is "bad marker". So the loop under "the markers, audited" below WARNs
-# on any scope token that suppresses nothing, which is what turns that misattribution
-# back into the right one — and closes the class rather than this instance, since a
-# token can also go dead later, when the text it named is reworded.
-#
-# Usage:
-#   citation-lint.sh            check against docs/citation-targets.txt
-#   citation-lint.sh --write    regenerate that file from the tree
-#   citation-lint.sh --list     print every citation site, resolved
-
+# Usage:  citation-lint.sh          check
+#         citation-lint.sh --list   print every citation site, resolved
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 DESIGN="DESIGN.md"
-PINS="docs/citation-targets.txt"
+EXT_FILE="docs/citation-externals.txt"
 MODE="${1:-check}"
 
 die() { printf 'citation-lint: %s\n' "$1" >&2; exit 2; }
 [[ -f "$DESIGN" ]] || die "no $DESIGN to resolve against"
 
-# ---------------------------------------------------------------- the document
-# Sections are `## N. Title`. Inside a section, a top-level ordered item is a
-# line starting `N. ` at column 0; its lead is the first 10 whitespace-separated
-# words of the item's text with markdown emphasis stripped. Continuation lines and
-# nested lists are not items and must not be counted, or every rule number would
-# shift.
-#
-# WORDS, NOT A CHARACTER COUNT, and that is not a style choice (#87). The lead was
-# substr(text, 1, 56), and `substr` is bytes in BSD awk and characters in an awk
-# built against a UTF-8 locale. DESIGN.md §7 rule 2 contains an em dash, so the
-# macOS-generated pin held 54 characters where the CI runner computed 56 -- the
-# pinned file was reproducible only on the platform that wrote it, and the first CI
-# run that ever reached this script failed T1 on a tree that was in fact clean.
-# LC_ALL=C does not fix it: BSD awk is byte-oriented whatever the locale. A word
-# count is the same number under every implementation, and it cannot truncate
-# mid-character and commit an invalid byte to a tracked file the way a byte cut can.
-rules() {
+# Sections are `## N. Title`; inside one, a top-level ordered item is `N. ` at column 0.
+# Continuation lines and nested lists are not items and must not be counted, or every
+# rule number below them would shift.
+items() {
   awk '
-    /^## [0-9]+\./ {
-      sec = $2; sub(/\./, "", sec)
-      cursec = sec
-      next
-    }
-    /^[0-9]+\. / && cursec != "" {
-      n = $1; sub(/\./, "", n)
-      text = $0; sub(/^[0-9]+\. */, "", text)
-      gsub(/\*\*/, "", text); gsub(/\*/, "", text); gsub(/`/, "", text)
-      nw = split(text, w, /[ \t]+/)
-      lead = w[1]
-      for (i = 2; i <= nw && i <= 10; i++) lead = lead " " w[i]
-      printf "%s\t%s\t%s\n", cursec, n, lead
-    }
+    /^## [0-9]+\./ { sec = $2; sub(/\./, "", sec); cursec = sec; next }
+    /^[0-9]+\. / && cursec != "" { n = $1; sub(/\./, "", n); printf "%s\t%s\n", cursec, n }
   ' "$DESIGN"
 }
+ITEMS="$(items)"
+[[ -n "$ITEMS" ]] || die "parsed no numbered items out of $DESIGN"
 
-RULES="$(rules)"
-[[ -n "$RULES" ]] || die "parsed no numbered rules out of $DESIGN"
+section_exists() { awk -F'\t' -v s="$1" '$1 == s { f = 1 } END { exit !f }' <<<"$ITEMS"; }
+item_exists() { awk -F'\t' -v s="$1" -v r="$2" '$1 == s && $2 == r { f = 1 } END { exit !f }' <<<"$ITEMS"; }
 
-lookup() { # SECTION ITEM -> lead, empty if absent
-  awk -F'\t' -v s="$1" -v r="$2" '$1 == s && $2 == r { print $3; exit }' <<<"$RULES"
-}
-section_exists() { awk -F'\t' -v s="$1" '$1 == s { f = 1 } END { exit !f }' <<<"$RULES"; }
-
-# --------------------------------------------------------- declared externals
-# Lines of the form `FILE<TAB>FORM<TAB>COUNT<TAB>document it actually cites` in the
-# pin file's EXTERNAL block. Keyed by file and form rather than line number, so an
-# edit that moves a line does not invalidate the declaration -- but COUNT is what
-# keeps the exemption honest. See the narrowness check below.
+# `FILE<TAB>FORM<TAB>COUNT<TAB>the document it actually cites`, keyed by file and form so
+# an edit that moves a line does not invalidate the declaration. COUNT is what keeps the
+# exemption honest.
 externals() {
-  [[ -f "$PINS" ]] || return 0
-  awk '/^## EXTERNAL/ { e = 1; next } /^## PINS/ { e = 0 } e && !/^#/ && NF' "$PINS"
+  [[ -f "$EXT_FILE" ]] || return 0
+  awk '!/^#/ && NF' "$EXT_FILE"
 }
 EXTERNAL="$(externals)"
-
-is_external() { # FILE FORM
+is_external() {
   [[ -n "$EXTERNAL" ]] || return 1
-  awk -F'\t' -v f="$1" -v c="$2" '$1 == f && $2 == c { found = 1 } END { exit !found }' <<<"$EXTERNAL"
+  awk -F'\t' -v f="$1" -v c="$2" '$1 == f && $2 == c { g = 1 } END { exit !g }' <<<"$EXTERNAL"
 }
 
-# ------------------------------------------------------------- the citations
 # NOTE, learned the hard way: `git ls-files` sees only TRACKED files, so a new file's
-# citations are invisible to this check until it is committed. These two scripts were
-# untracked while being written, the lint could not see its own sources, and the commit
-# that added them turned a green tree red. A green here means "every citation in a
-# tracked file", and `git status` is part of reading it. (A second self-reference to
-# watch: a line that documents the marker by naming it is thereby suppressed. Benign
-# where such lines only mention forms, which is the only place they occur, but it is a
-# property of a substring match rather than a decision anyone made.)
-#
-# Both notations, in one pass: `§5 rule 5` and `§5.5`. The pin file is a .txt and citation-lint:quote
-# so is not matched by these globs, but exclude it explicitly anyway -- a lint
-# that lints its own baseline reports its pins as sites.
+# citations are invisible until it is committed — a green here means "every citation in a
+# tracked file", and `git status` is part of reading it.
 sites() {
   git ls-files -z -- '*.go' '*.sh' '*.md' \
     | xargs -0 grep -nHoE '§[0-9]+(\.[0-9]+| rule [0-9]+)' 2>/dev/null \
-    | grep -v "^${PINS}:" || true
+    | grep -v "^${EXT_FILE}:" || true
 }
 
-# A marker suppresses the line it sits on, and it MUST sit on the citation's own line
-# -- a marker one line off silently stops working, which is control T2's job. Two forms:
-#
-#   citation-lint:quote           suppress every citation on this line
-#   citation-lint:quote(5.4,7.9)  suppress only these forms on this line
-#
-# The scope list omits the section sign deliberately: with it, the marker's own
-# argument is a citation-shaped string on the line and the scanner counts it as a
-# site it then suppresses, inflating the quoted tally by one per marker and leaving a
-# reader unable to reconcile "four quotations" with "five quoted".
-#
-# The scoped form exists because line granularity is too coarse for this document:
-# DESIGN.md's numbered rules are single lines of two thousand characters, so a bare
-# marker on §5 rule 9 -- which quotes `§5.4` to explain the defect -- would stop citation-lint:quote
-# checking every other citation in the same rule. That is over-suppression by
-# construction, and it is exactly the failure mode the EXTERNAL narrowness check
-# guards against on the other side, so it gets the same treatment: an exemption is
-# only trustworthy while it is as narrow as it claims.
+# The scope list omits the section sign deliberately: with it, the marker's own argument
+# is a citation-shaped string the scanner would count as a site and then suppress,
+# inflating the quoted tally by one per marker.
 quoted() { # FILE LINE CITE
   local ln
   ln="$(sed -n "${2}p" "$1" 2>/dev/null)" || return 1
@@ -204,7 +113,6 @@ quoted() { # FILE LINE CITE
 
 FAIL=0
 declare -a REPORT=()
-RESOLVED=""
 N_SITES=0 N_EXT=0 N_QUOTE=0
 EXTHIT=""
 
@@ -223,90 +131,51 @@ while IFS= read -r hit; do
   num="${cite##*[. ]}"
 
   if ! section_exists "$sec"; then
-    REPORT+=("NO SECTION  $file:$line  '$cite' — $DESIGN has no §$sec, and this site is not declared EXTERNAL in $PINS")
+    REPORT+=("NO SECTION  $file:$line  '$cite' — $DESIGN has no §$sec, and this site is not declared in $EXT_FILE")
     FAIL=1
-    continue
-  fi
-  tgt="$(lookup "$sec" "$num")"
-  if [[ -z "$tgt" ]]; then
-    REPORT+=("NO ITEM     $file:$line  '$cite' — §$sec has no item $num, and this site is not declared EXTERNAL in $PINS")
+  elif ! item_exists "$sec" "$num"; then
+    REPORT+=("NO ITEM     $file:$line  '$cite' — §$sec has no item $num, and this site is not declared in $EXT_FILE")
     FAIL=1
-    continue
+  elif [[ "$MODE" == "--list" ]]; then
+    REPORT+=("ok          $file:$line  '$cite' -> §$sec item $num")
   fi
-  RESOLVED="$RESOLVED$cite"$'\t'"$tgt"$'\n'
-  if [[ "$MODE" == "--list" ]]; then REPORT+=("ok          $file:$line  '$cite' -> $tgt"); fi
 done < <(sites)
 
-PINNED="$(sort -u <<<"$RESOLVED" | sed '/^$/d')"
-
-# ------------------------------------------------- the declarations themselves
-# An EXTERNAL line is keyed by (file, form), which is not intrinsically unique: if
-# KERNEL.md ever cites DESIGN.md's §5 rule 2 in the shorthand, the declaration that citation-lint:quote
-# exempts KERNEL.md's `docs/spill-report.md` reference would silently exempt it too,
-# and a real DESIGN citation would leave the pinned set without a word.
-#
-# So a declaration states HOW MANY sites it covers, and must match exactly that many.
-# The invariant is not "exactly one site" -- CHANGELOG.md legitimately cites the BLIS
-# paper's §4.3 three times -- it is "exactly the number of sites someone read". Fewer citation-lint:quote
-# means the declaration is stale; more means it has silently grown to cover a citation
-# no one checked, and the fix is to read the new site and bump the count deliberately.
-# An exemption is only trustworthy while it is as narrow as it claims to be.
+# An exemption is only trustworthy while it is as narrow as it claims. Fewer sites than
+# declared means the declaration is stale; more means it has silently grown to cover a
+# citation nobody read, and the fix is to read the new site and bump the count.
 if [[ -n "$EXTERNAL" ]]; then
   while IFS= read -r decl; do
     [[ -n "$decl" ]] || continue
     IFS=$'\t' read -r dfile dform dwant _ <<<"$decl"
     if ! [[ "$dwant" =~ ^[0-9]+$ ]]; then
-      REPORT+=("BAD EXT     $PINS declares '$dform' in $dfile without a site count in its third column")
+      REPORT+=("BAD EXT     $EXT_FILE declares '$dform' in $dfile without a site count in its third column")
       FAIL=1
       continue
     fi
     n="$(awk -F'\t' -v f="$dfile" -v c="$dform" '$1 == f && $2 == c { n++ } END { print n + 0 }' <<<"$EXTHIT")"
     if [[ "$n" -lt "$dwant" ]]; then
-      REPORT+=("STALE EXT   $PINS declares $dwant site(s) of '$dform' in $dfile, but the tree has $n — the reference it named is gone")
+      REPORT+=("STALE EXT   $EXT_FILE declares $dwant site(s) of '$dform' in $dfile, but the tree has $n — the reference it named is gone")
       FAIL=1
     elif [[ "$n" -gt "$dwant" ]]; then
-      REPORT+=("BROAD EXT   $PINS declares $dwant site(s) of '$dform' in $dfile, but the tree now has $n — the exemption has grown to cover a citation it was never read against; read the new site and bump the count")
+      REPORT+=("BROAD EXT   $EXT_FILE declares $dwant site(s) of '$dform' in $dfile, but the tree now has $n — the exemption has grown to cover a citation it was never read against; read the new site and bump the count")
       FAIL=1
     fi
   done <<<"$EXTERNAL"
 fi
 
-# ------------------------------------------------- the markers, audited
-# The mirror image of the EXTERNAL narrowness check, applied to the other exemption
-# mechanism. A scope token is matched LITERALLY (see `quoted` and the header note on
-# spelling); and unlike a stale EXTERNAL declaration, a dead scope token
-# cannot make this script green when it should be red. What it does instead is worse
-# to debug: the exemption misses, the site is checked as a live citation, and the
-# resulting red line says "bad citation" about a citation that is fine. The report is
-# a WARN rather than a failure for exactly that reason -- nothing is unsound, but the
-# next person's attribution is -- and because a token also goes dead with no edit at
-# all, when the quoted text it named is later reworded. That is the
-# exclusion-outliving-its-defect shape #93 closed on the mkdocs side.
-#
-# TWO DELIBERATE LIMITS.
-#
-# Only SCOPED markers are audited. A bare `citation-lint:quote` has no spelling to get
-# wrong -- `7.7` cannot fail to suppress `§7 rule 7` if it is never written down -- and citation-lint:quote
-# once the citations on its line are deleted a bare marker is indistinguishable from a
-# line that merely NAMES the marker -- of which this tree has a dozen, in this file's
-# own header, in CHANGELOG.md and in the test fixtures. So a bare marker orphaned by a
-# deleted citation is not caught, and saying so here is cheaper than a check that
-# reports twelve non-defects on the day it lands.
-#
-# A marker on a line with NO citations is a mention, not a marker, and is skipped for
-# the same reason. That leaves one reachable false positive: a line that both cites a
-# rule AND quotes a scoped marker verbatim, argument included, whose quoted scope the
-# audit reads as the line's real one. `citation-lint:nomarker` opts such a line out.
-#
-# It opts out of THIS AUDIT ONLY, and cannot do more: `quoted` parses the FIRST scoped
-# marker on a line, so a genuine marker written after a quoted one is unreachable --
-# measured, not assumed. Such a line therefore cannot suppress its own citations at all,
-# and the honest fix is to wrap it so the quotation and the citation are on separate
-# lines. `nomarker` exists for the case where they must share one anyway.
+# A dead scope token cannot make this script green when it should be red. What it does
+# instead is worse to debug: the exemption misses, the site is checked as a live
+# citation, and if that citation is also broken the red line says "bad citation" about
+# one that is fine. Hence a WARN — nothing is unsound, but the next reader's attribution
+# is. Only SCOPED markers are audited: a bare marker has no spelling to get wrong, and
+# once its line's citations are deleted it is indistinguishable from a line that merely
+# NAMES the marker, of which this tree has a dozen. `citation-lint:nomarker` opts out a
+# line that both cites a rule and quotes a scoped marker verbatim.
 markers() {
   git ls-files -z -- '*.go' '*.sh' '*.md' \
     | xargs -0 grep -nH 'citation-lint:quote(' 2>/dev/null \
-    | grep -v "^${PINS}:" || true
+    | grep -v "^${EXT_FILE}:" || true
 }
 
 N_WARN=0
@@ -327,83 +196,17 @@ while IFS= read -r hit; do
   done
 done < <(markers)
 
-case "$MODE" in
-  --write)
-    { echo "# Copyright 2026 Scott Friedman"
-      echo "# SPDX-License-Identifier: Apache-2.0"
-      echo "#"
-      echo "# Generated by scripts/citation-lint.sh --write (#85). Two blocks."
-      echo "#"
-      echo "# PINS: one line per distinct DESIGN.md citation form in the tree, beside the"
-      echo "# first words of the item it resolves to. A changed line means DESIGN.md"
-      echo "# renumbered or an item was reworded; read the diff before regenerating."
-      echo "#"
-      echo "# EXTERNAL: citations in DESIGN.md's own notation that name a DIFFERENT"
-      echo "# document, declared per file and form -- with the number of sites each"
-      echo "# declaration covers, so it cannot silently grow -- and so exempted knowingly"
-      echo "# rather than guessed at. An undeclared unresolvable citation is an error."
-      echo "#"
-      echo "# AUTHORITY. This baseline is AUDITED, not assumed. On 2026-08-16 every"
-      echo "# DESIGN-bound citation site was read at the meaning level -- cited ordinal"
-      echo "# against the content the citing site actually invokes -- because a pin"
-      echo "# certifies stability, never birth-correctness, and would freeze a"
-      echo "# wrong-from-birth ordinal with perfect fidelity. Census BEFORE the sweep:"
-      echo "#   120 sites; 8 naming another document; 112 DESIGN-bound, of which 92"
-      echo "#   land on the content the citing site invokes and 20 were mis-minted"
-      echo "#   (18 x '§5.4' + DESIGN.md:129 '§7 rule 6' + l1_test.go:26 '§5.2')."  # citation-lint:quote
-      echo "# The sweep rewrote 16 of the 20 to the explicit form and marked the other"
-      echo "# 4 citation-lint:quote -- they are deliberate quotations of the bad form,"
-      echo "# and normalizing them would erase the defect they document. Of the 92 that"
-      echo "# were already right, the 25 using the §X.Y shorthand were left byte-for-byte:"
-      echo "# rewriting a correct citation in the document the gates cite as grounds is"
-      echo "# churn dressed as rigour."
-      echo "#"
-      echo "# The CURRENT tally is deliberately not recorded here. It changes every time"
-      echo "# anyone cites a rule, and a hardcoded copy of it would be a cache with no"
-      echo "# invalidation protocol -- the trap DESIGN.md §5 rule 8 names. The script"
-      echo "# prints it on every run; the census above is a dated historical fact about"
-      echo "# one audit and does not go stale."
-      echo "# A pin failure therefore means a reference MOVED off an audited target. It"
-      echo "# does not re-establish that the target was ever right: that took reading,"
-      echo "# once, and a later sweep of this size needs reading again."
-      echo ""
-      echo "## EXTERNAL"
-      if [[ -n "$EXTERNAL" ]]; then printf '%s\n' "$EXTERNAL"; fi
-      echo ""
-      echo "## PINS"
-      echo "$PINNED"
-    } > "$PINS"
-    printf 'citation-lint: wrote %s (%s forms, %s external declarations)\n' \
-      "$PINS" "$(wc -l <<<"$PINNED" | tr -d ' ')" "$(printf '%s' "$EXTERNAL" | grep -c . || true)"
-    ;;
-  --list)
-    if [[ "${#REPORT[@]}" -gt 0 ]]; then printf '%s\n' "${REPORT[@]}"; fi
-    printf '%s DESIGN-bound sites, %s declared external, %s quoted, %s dead marker scope(s)\n' \
-      "$N_SITES" "$N_EXT" "$N_QUOTE" "$N_WARN"
-    ;;
-  *)
-    if [[ ! -f "$PINS" ]]; then
-      REPORT+=("NO PINS     $PINS is missing; run citation-lint.sh --write and commit it")
-      FAIL=1
-    else
-      DIFF="$(diff <(awk '/^## PINS/ { p = 1; next } p && !/^#/ && NF' "$PINS") \
-                   <(printf '%s\n' "$PINNED") || true)"
-      if [[ -n "$DIFF" ]]; then
-        REPORT+=("MOVED       a citation now resolves to different text than $PINS pins:")
-        while IFS= read -r d; do REPORT+=("            $d"); done <<<"$DIFF"
-        FAIL=1
-      fi
-    fi
-    ;;
-esac
-
-if [[ "$MODE" != "--list" && "$MODE" != "--write" ]]; then
-  if [[ "${#REPORT[@]}" -gt 0 ]]; then printf '%s\n' "${REPORT[@]}"; fi
-  if [[ "$FAIL" -eq 0 ]]; then
-    # The warn count is printed even when it is zero. A tally that appears only when
-    # nonzero is indistinguishable from a check that did not run.
-    printf 'citation-lint: %s sites over %s forms resolve and match %s (%s external, %s quoted, %s dead marker scope(s))\n' \
-      "$N_SITES" "$(wc -l <<<"$PINNED" | tr -d ' ')" "$PINS" "$N_EXT" "$N_QUOTE" "$N_WARN"
-  fi
+if [[ "${#REPORT[@]}" -gt 0 ]]; then printf '%s\n' "${REPORT[@]}"; fi
+if [[ "$FAIL" -eq 0 ]]; then
+  # The warn count is printed even when it is zero: a tally that appears only when
+  # nonzero is indistinguishable from a check that did not run.
+  # The denominator is what was PARSED, not what exists: two sections is correct because
+  # only §5 and §7 have top-level numbered items, and every §3/§4 citation is externally
+  # declared or a marked mention. A parser that silently stopped early would also print a
+  # small number here, so it is printed rather than asserted.
+  printf 'citation-lint: %s sites over %s item(s) in %s section(s) resolve against %s (%s declared external, %s quoted, %s dead marker scope(s))\n' \
+    "$N_SITES" "$(wc -l <<<"$ITEMS" | tr -d ' ')" \
+    "$(awk -F'\t' '{print $1}' <<<"$ITEMS" | sort -u | wc -l | tr -d ' ')" \
+    "$DESIGN" "$N_EXT" "$N_QUOTE" "$N_WARN"
 fi
 exit "$FAIL"
