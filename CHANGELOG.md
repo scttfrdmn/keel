@@ -18,6 +18,11 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Fixed
+- **The spill parser silently moved a function's body onto the one before it** (#99, *not* dormant as filed —
+  `type:.eq.[2]interface {}` and `type:.eq.[4]interface {}` are unmatched headers in the audited packages today):
+  `^(\S+) STEXT` cannot match a symbol holding a space, which every generic instantiated over a struct shape does.
+  Headers now parse in full, an unparsable one is an error rather than a skip, and `Find` resolves a short name
+  through an instantiation's type-argument list. Re-audited: gate-p2's `0 vector stack refs` is unchanged.
 - **The P4 sweeps' large-size arm never ran a right-side solve, on any host** (#64): `cs[ri%len(cs)]` aliased
   every runner into the front of a corner list that varies `side` slowest, and `max(ri)` is 2 on a scalar host
   and 4 on an AVX-512 one. `cornerFor` spreads them instead, so `Strsm`/`Ssymm` `side=R` and `Ssyrk` `uplo=L`

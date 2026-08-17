@@ -104,7 +104,20 @@ var (
 	// 0x0116 00278 (file.go:42)	VFMADD213PS	Z1, Z0, Z2
 	insnRE = regexp.MustCompile(`^\t0x[0-9a-f]+ (\d+) \((.*)\)\t(\S+)\t?(.*)$`)
 	// github.com/x/y.Fn STEXT size=538 args=0x8 locals=0x28 ...
-	funcRE = regexp.MustCompile(`^(\S+) STEXT`)
+	//
+	// `.*`, not `\S+`: a symbol name contains spaces whenever a type in it does,
+	// which is true of every generic instantiated over a struct shape and true
+	// today of `type:.eq.[2]interface {}` in internal/kern's listing. `\S+` did not
+	// match those, and Parse's skip-what-you-don't-know rule then credited the
+	// unmatched function's whole body to the last one it did recognize — so the
+	// failure mode was misattribution, not omission (#99). stextRE is the
+	// fail-closed half: a line naming STEXT that funcRE cannot parse is an error,
+	// because an unparsed header is otherwise indistinguishable from no header.
+	funcRE  = regexp.MustCompile(`^(.*) STEXT(?: |$)`)
+	// Anchored off column 0 because only a header starts there: an instruction or a
+	// data dump begins with a tab, and a `go:string` dump can carry any bytes at all
+	// in its ASCII column, including these seven.
+	stextRE = regexp.MustCompile(`^[^\t]*[\t ]STEXT(?:[\t ]|$)`)
 	// A branch whose operand is a bare instruction offset.
 	targetRE = regexp.MustCompile(`^(\d+)$`)
 	// Memory operands: (SP), 8(SP), sym+8(SP), (AX), (AX)(CX*4), $f32.0(SB).
@@ -131,6 +144,12 @@ var pseudo = map[string]bool{
 // insisted on understanding all of it would break on the next toolchain release
 // for no gain. What matters is that an *instruction* line is never
 // misinterpreted, which is why insnRE is anchored on the offset column.
+//
+// A *header* is the exception, and is rejected (#99). Skipping one is not the
+// benign miss the rule above describes: every instruction that follows it is
+// appended to the previous function, so an unparsed header does not lose a body,
+// it moves it — and the audit then reports another function's spills as this
+// one's. There is no reading of that as "no header", so it is an error.
 func Parse(r io.Reader) ([]Func, error) {
 	var (
 		out  []Func
@@ -140,10 +159,13 @@ func Parse(r io.Reader) ([]Func, error) {
 	scan.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scan.Scan() {
 		line := scan.Text()
-		if m := funcRE.FindStringSubmatch(line); m != nil {
+		if m := funcRE.FindStringSubmatch(line); m != nil && m[1] != "" {
 			out = append(out, Func{Name: m[1]})
 			cur = &out[len(out)-1]
 			continue
+		}
+		if stextRE.MatchString(line) {
+			return nil, fmt.Errorf("unparsed symbol header %q: its body would be credited to the function before it", line)
 		}
 		m := insnRE.FindStringSubmatch(line)
 		if m == nil || cur == nil {
@@ -172,10 +194,17 @@ func Parse(r io.Reader) ([]Func, error) {
 // out a fully qualified symbol, at the cost of ambiguity if two packages in one
 // build have same-named functions — so ambiguity is an error rather than a
 // silent first-match.
+//
+// A generic's symbol ends in its type-argument list, so `G` is matched against
+// the name with that list cut off (#99); an instantiated kernel was otherwise
+// unfindable by any name a caller would type. Two instantiations of one generic
+// then collide, and that is reported as the ambiguity it is — the exact symbol
+// still matches exactly.
 func Find(fns []Func, short string) (Func, error) {
 	var hits []Func
 	for _, f := range fns {
-		if f.Name == short || strings.HasSuffix(f.Name, "."+short) {
+		b := baseName(f.Name)
+		if f.Name == short || b == short || strings.HasSuffix(b, "."+short) {
 			hits = append(hits, f)
 		}
 	}
@@ -191,6 +220,17 @@ func Find(fns []Func, short string) (Func, error) {
 		}
 		return Func{}, fmt.Errorf("%q is ambiguous: %s", short, strings.Join(names, ", "))
 	}
+}
+
+// baseName drops a generic instantiation's type-argument list. The first `[` is
+// enough: a Go identifier holds none, and a package path holds none either, so
+// everything from it onwards is type arguments — however deeply the shape types
+// inside nest their own brackets.
+func baseName(name string) string {
+	if i := strings.IndexByte(name, '['); i >= 0 {
+		return name[:i]
+	}
+	return name
 }
 
 // isArith reports whether an instruction does the floating-point work this
