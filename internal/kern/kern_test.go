@@ -64,6 +64,32 @@ func panels(rng *rand.Rand, mr, nr, kc, ldc, rows int) (a, b, c []float32) {
 	return a, b, c
 }
 
+// finite gates the tolerance comparisons below, and it has to run before them
+// rather than beside them.
+//
+// `math.Abs(got-want) > tol` is false when either side is NaN, because every
+// ordering comparison against NaN is false. So a kernel emitting NaN passed both
+// the oracle test and the differential test — silently, and in exactly the two
+// tests whose whole purpose is to catch a kernel producing the wrong bits (#98).
+// panels() generates only ordinary values in [-1, 1) and kc never exceeds 130, so
+// neither the inputs nor the float64 oracle can reach a non-finite value: one here
+// can only have come from the kernel under test.
+//
+// This is the reason the check is a separate statement instead of a wider
+// tolerance. "Is this a NaN" is not an approximation, and a bound loose enough to
+// notice one would be loose enough to hide a real numerical fault.
+func finite(t *testing.T, what string, vals ...float64) bool {
+	t.Helper()
+	for _, v := range vals {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			t.Fatalf("%s: non-finite value %v from finite inputs — the kernel produced it, "+
+				"since panels() generates only values in [-1, 1)", what, v)
+			return false
+		}
+	}
+	return true
+}
+
 // kcs covers the three things kc can be: shorter than one unrolled pass, an
 // exact multiple of the unroll, and a multiple plus a remainder. Every kernel's
 // remainder loop is reached by at least one of them, and kc=0 has to leave C
@@ -106,6 +132,7 @@ func TestKernelsAgainstOracle(t *testing.T) {
 							got := float64(c[i*ldc+j])
 							w := want[i*k.NR+j]
 							tol := oracle.Tolerance(kc+1, scale[i*k.NR+j])
+							finite(t, fmt.Sprintf("C[%d][%d]", i, j), got, w)
 							if math.Abs(got-w) > tol {
 								t.Fatalf("C[%d][%d] = %v, want %v (|diff| %g > tol %g)",
 									i, j, got, w, math.Abs(got-w), tol)
@@ -161,6 +188,7 @@ func TestVectorAgainstScalarTile(t *testing.T) {
 						// Both paths round; the bound has to admit both, so it
 						// is the same model applied twice.
 						tol := 2 * oracle.Tolerance(kc+1, scale[i*k.NR+j])
+						finite(t, fmt.Sprintf("%s vs %s: C[%d][%d]", k.ID(), ref.ID(), i, j), got, want)
 						if math.Abs(got-want) > tol {
 							t.Fatalf("%s vs %s: C[%d][%d] = %v, scalar %v (|diff| %g > tol %g)",
 								k.ID(), ref.ID(), i, j, got, want, math.Abs(got-want), tol)

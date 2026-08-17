@@ -542,13 +542,22 @@ func TestBackendsAgree(t *testing.T) {
 	}
 }
 
+// agree compares two backends' results for the same call.
+//
+// Unlike checkScalar, neither side here is the float64 oracle: both are keel
+// backends, and every generator above is bounded by 1e6 with n at most 4096, so
+// no reduction can legitimately reach a non-finite value. A NaN or an infinity
+// is therefore a defect in whichever backend produced it, and it is rejected
+// whether or not the other backend produced the same one — a matched pair is two
+// backends wrong identically, not two backends agreeing. This replaces a
+// match-is-agreement NaN arm that would have passed such a pair, and it also
+// closes the case a bare `math.Abs(af-bf) > tol` swallows on its own: `Inf-Inf`
+// is NaN and every ordering against NaN is false (#98).
 func agree(t *testing.T, what string, n int, a, b float32, scale float64) {
 	t.Helper()
 	af, bf := float64(a), float64(b)
-	if math.IsNaN(af) || math.IsNaN(bf) {
-		if !(math.IsNaN(af) && math.IsNaN(bf)) {
-			t.Errorf("%s: %v vs %v (NaN mismatch)", what, a, b)
-		}
+	if math.IsNaN(af) || math.IsInf(af, 0) || math.IsNaN(bf) || math.IsInf(bf, 0) {
+		t.Errorf("%s: %v vs %v — non-finite result from bounded inputs", what, a, b)
 		return
 	}
 	if tol := 2 * oracle.Tolerance(n, scale); math.Abs(af-bf) > tol {
