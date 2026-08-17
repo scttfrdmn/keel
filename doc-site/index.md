@@ -1,3 +1,5 @@
+![keel — pure-Go float32 BLAS, SIMD-accelerated linear algebra for Go](assets/keel-hero.webp)
+
 # keel
 
 keel is a float32 BLAS subset in pure Go. Levels 1 and 2, and a GEMM-centered

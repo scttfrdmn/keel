@@ -25,6 +25,19 @@ copyright: Copyright 2026 Scott Friedman — Apache-2.0
 docs_dir: doc-site
 site_dir: build/site
 
+# doc-site/assets/ holds ONE copy of each graphic, tracked. README.md points at it
+# as doc-site/assets/..., the pages as assets/... -- no second copy, no symlink, no
+# gitignore entry, so rule 1 above holds for images too. Formats are chosen by who
+# consumes the file, not by preference: the hero is webp (78 KB against 745 KB as a
+# truecolour PNG, and only browsers ever fetch it) while keel-social.jpg is JPEG,
+# because GitHub's social-preview upload and most Open Graph consumers reject webp.
+# Bytes are worth counting here in a way they are not on a normal site: everything
+# tracked in the module root ships in the zip that every `go get` downloads.
+#
+# keel-social.jpg is referenced by no page on purpose. It is the source for the
+# repo's social-preview image, and uploading it is Scott's action at tag time, like
+# enabling Pages.
+
 # A broken link or a nav entry with no page is red, here as well as on the
 # command line. CI runs `mkdocs build --strict`; setting it in the config too
 # means a local build cannot be more permissive than the gate.
@@ -46,20 +59,29 @@ validation:
 
 theme:
   name: material
+  # The mark, as a white silhouette, over the navy set in doc-site/assets/extra.css.
+  # `primary: custom` is what selects that stylesheet's block; the palette below has
+  # no named colour that is this navy, and inventing one by eye would have put the
+  # brand's ink in two places.
+  logo: assets/keel-mark-white.png
+  favicon: assets/keel-favicon.png
   palette:
     - scheme: default
-      primary: blue grey
-      accent: indigo
+      primary: custom
+      accent: teal
       toggle: { icon: material/weather-night, name: Switch to dark mode }
     - scheme: slate
-      primary: blue grey
-      accent: indigo
+      primary: custom
+      accent: teal
       toggle: { icon: material/weather-sunny, name: Switch to light mode }
   features:
     - navigation.sections
     - navigation.top
     - content.code.copy
     - toc.follow
+
+extra_css:
+  - assets/extra.css
 
 markdown_extensions:
   - admonition

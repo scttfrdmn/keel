@@ -1,3 +1,5 @@
+![keel — pure-Go float32 BLAS, SIMD-accelerated linear algebra for Go](doc-site/assets/keel-hero.webp)
+
 # keel
 
 A pure-Go float32 BLAS subset built on Go's experimental SIMD support

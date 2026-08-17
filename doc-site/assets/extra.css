@@ -1,0 +1,48 @@
+/* Copyright 2026 Scott Friedman
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The only stylesheet, and it exists for one reason: the header logo is a white
+ * silhouette of the mark, and a white silhouette needs a dark header to be a
+ * silhouette rather than an absence. Material's named palettes have no navy, so
+ * mkdocs.yml sets `primary: custom` and the colour lives here -- which is
+ * Material's documented mechanism for a brand colour, not a workaround.
+ *
+ * The values are sampled from the artwork rather than chosen: #04274C and
+ * #0B3C6A are the two most common inks in the mark, and #1FA9B2 is its teal.
+ * Nothing else about the theme is overridden. */
+
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color: #04274c;
+  --md-primary-fg-color--light: #0b3c6a;
+  --md-primary-fg-color--dark: #021a33;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+
+  /* Link colour has to be stated, not inherited, and this is the one place the
+   * navy leaks somewhere it does not belong. Material derives
+   * --md-typeset-a-color from --md-primary-fg-color, so links would come out
+   * #04274c: 15:1 against white, and therefore perfectly READABLE while being
+   * almost exactly as dark as the body text it has to be distinguishable FROM.
+   * Contrast was never the failing quantity. #19608c is the artwork's mid-blue,
+   * 6.8:1, and unmistakably a link. */
+  --md-typeset-a-color: #19608c;
+}
+
+/* The dark scheme is where the inherited value is an outright defect, and it is
+ * invisible from the page source: palette.css sets
+ * `--md-typeset-a-color: var(--md-primary-fg-color)` for slate and then overrides
+ * it per NAMED primary -- pink, blue, teal, and so on. `custom` matches none of
+ * those overrides, so slate keeps the navy: 1.07:1 against slate's 14%-lightness
+ * background, i.e. links that cannot be seen at all. Found by reading the theme's
+ * built stylesheet, since a build is green either way. The brand teal is 5.7:1
+ * there. */
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: #1fa9b2;
+}
+
+/* The hero is a wide, near-white banner. On the dark scheme it sits against a
+ * dark page and its own light background reads as a bright slab, so take the
+ * edge off -- the same treatment Material gives images in dark mode. */
+[data-md-color-scheme="slate"] img[src$="keel-hero.webp"] {
+  filter: brightness(0.88) saturate(1.05);
+}

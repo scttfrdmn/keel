@@ -115,6 +115,40 @@ While the major version is 0, minor versions may contain breaking changes.
   **The deploy job is written and not enabled**: it is gated to `workflow_dispatch` or a `v*` tag, so it
   is skipped on every push and pull request, and it will fail rather than publish until Pages is turned
   on — enabling Pages and flipping the repository public remain Scott's actions at tag time.
+- **The project graphics, folded into the README, the site's home page and the site's chrome** (#92).
+  `doc-site/assets/` holds one copy of each: `keel-hero.webp` (1600×533, the logo and tagline banner) at
+  the top of both `README.md` and `doc-site/index.md`, `keel-mark-white.png` as the header logo,
+  `keel-favicon.png`, and `keel-social.jpg`. **One copy, per the site's own law** — README points at
+  `doc-site/assets/…` and the pages at `assets/…`, so there is no second path to an image and no symlink
+  or gitignore entry to keep in step.
+  **Format is chosen by who consumes the file, and the bytes were counted because they ship in the module
+  zip.** Everything tracked in the module root is downloaded by every `go get`, which is not true of a
+  normal site's images, so the hero is webp at 78 KB against 745 KB for the same pixels as a truecolour
+  PNG — only browsers ever fetch it, and both GitHub's markdown pipeline and MkDocs render webp.
+  `keel-social.jpg` is JPEG for the opposite reason: GitHub's social-preview upload and most Open Graph
+  consumers reject webp. The four images are 183 KB together.
+  **PSNR picked the wrong encoding, and looking at the pixels overruled it.** A 256-colour PNG measured
+  *better* than webp q92 (40.3 dB against 39.2 dB) and was visibly worse: this artwork is mostly a
+  near-white gradient field, where palette quantisation spends its error on dither speckle that the eye
+  reads as grain, while webp spends it on a softening of a faint dot grid that is invisible at display
+  size. Two encodings with the same error budget are not equally wrong, and a single scalar cannot say
+  which — the decision was made from a 300%-magnified crop of the smoothest region of both.
+  **A white silhouette needs a dark header, so the header is now the artwork's navy** (`#04274c`, the
+  most common ink in the mark) via `primary: custom` and `doc-site/assets/extra.css`, which is Material's
+  documented mechanism for a brand colour rather than a workaround; the accent moves from indigo to teal
+  to match. **That override introduced a defect visible only in the theme's built stylesheet.** Material
+  derives `--md-typeset-a-color` from the primary colour, so links became navy — 15:1 against white and
+  therefore perfectly readable while being almost exactly as dark as the body text they must be
+  distinguishable *from*; contrast was never the failing quantity. Worse, `palette.css` sets slate's link
+  colour to the primary and then overrides it per *named* primary (pink, blue, teal, …), none of which
+  `custom` matches, so **dark mode inherited the navy at 1.07:1 — links that cannot be seen at all.** A
+  build is green either way and no page source shows it. Both are now stated explicitly: `#19608c` at
+  6.8:1 in light mode, the brand teal at 5.7:1 in slate.
+  **The gate already covers this, and was made to prove it**: `mkdocs build --strict` fails on an image
+  path that resolves to nothing, driven on purpose by typo'ing the hero's filename (`FAIL mkdocs build
+  --strict failed`, naming the link) before the assets were trusted. `keel-social.jpg` is referenced by
+  no page deliberately — it is the source for the repository's social-preview image, and uploading it is
+  Scott's action at tag time, like enabling Pages.
 - **`example_test.go`: five runnable `Example` functions, which is how this project will document a call
   from now on** (#92). `ExampleSgemm`, `ExampleSgemm_submatrix`, `ExampleSaxpy`, `ExampleSaxpy_stride`,
   `ExampleTranspose`. The rule behind the form is §5 rule 8 — *a summary is a cache with no invalidation
