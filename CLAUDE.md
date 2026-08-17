@@ -119,6 +119,22 @@ and current using `gh`:
 - New files carry the two-line copyright/SPDX header. Every user-visible
   change lands in `CHANGELOG.md` `[Unreleased]` in the same commit.
 
+## The apparatus pays its own way (2026-08-16)
+The measuring apparatus outgrew the thing measured: `scripts/` is 1.63× the whole
+shipping library, `gate-p3.sh` alone is 5.7× the microkernel file it checks, and
+one recent session filed five gate issues against one library defect. The gates
+are not the problem — they produced the mission number and caught a ratio
+measured under `powersave` — the *marginal* line is.
+
+- **A session may not add net lines to `scripts/` unless it also lands a
+  routine, a kernel, or a library fix.** Process work is paid for out of the same
+  budget as the work it serves, not out of a separate one.
+- Enforced by review, not by a check: `gate-docs.sh` prints
+  `shell N / library M / ratio R` on every push, as a *report*. It cannot fail,
+  deliberately — a red ratio would reward paying down shell instead of shipping.
+- The cap is on `scripts/`, so a fix whose honest form is a comment is still
+  allowed; it just spends budget. Prefer deleting a line to explaining one.
+
 ## Honesty over momentum
 When something surprises you — a lowering, a spill, a flaky benchmark — the
 deliverable is the documented surprise, not a quiet workaround. This project

@@ -264,6 +264,10 @@ While the major version is 0, minor versions may contain breaking changes.
   owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
 ### Changed
+- **`gate-docs.sh` now prints `shell N / library M / ratio R` on every push, and a standing order in
+  `CLAUDE.md` caps net additions to `scripts/`**: a session may not grow the apparatus unless it also lands
+  a routine, a kernel, or a library fix. Reported, never a verdict — a red ratio would reward paying down
+  shell instead of shipping. The instrument costs 20 shell lines and says so: 1.63× → **1.64×**.
 - **DESIGN.md §7 is no longer titled "Claude Code kickoff prompt"** (H4). It opened *"Paste below into a
   fresh CC session in an empty repo… it does not assume this document is present"* — a prompt living inside
   the document it disclaimed, for a repo that is not empty. Framing deleted, eight rules kept verbatim at

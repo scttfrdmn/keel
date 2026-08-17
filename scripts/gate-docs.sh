@@ -262,6 +262,25 @@ stage_citations() {
   fi
 }
 
+# --------------------------------------- the ratio: reported, never a verdict
+#
+# NOT a fourth check: the charter above still reads three, and this cannot fail. A
+# ratio is not a correctness property, and a red one would create the incentive the
+# cap exists to remove -- pay down shell to clear a gate rather than to ship a
+# routine. Printed here because this is the only gate that contacts no host, hence
+# the only one that runs on every push. Definitions printed beside the figure per
+# §7 rule 7; the library side includes bench/ and internal/spill, flattering the
+# ratio by ~100 lines, kept so it matches what the published counts counted.
+stage_ratio() {
+  head_ "apparatus ratio (reported, never a verdict)"
+  local sh lib ratio
+  sh="$(git ls-files '*.sh' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  lib="$(git ls-files '*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  ratio="$(awk -v a="$sh" -v b="$lib" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
+  info "shell ${sh} / library ${lib} / ratio ${ratio}x"
+  info "shell = tracked *.sh; library = tracked *.go less *_test.go"
+}
+
 main() {
   cd "$(dirname "$0")/.."
   echo "gate-docs: the documentation site"
@@ -269,6 +288,7 @@ main() {
   stage_build
   stage_extraction
   stage_citations
+  stage_ratio
   head_ "verdict"
   if [[ "$FAILS" -eq 0 ]]; then
     echo "  GREEN -- the site builds strictly, the numbers page cannot be hand-written,"
