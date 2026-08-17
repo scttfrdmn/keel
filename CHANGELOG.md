@@ -17,6 +17,15 @@ While the major version is 0, minor versions may contain breaking changes.
   (declarations only); `DESIGN.md` §5 rule 9 and §7 amended, because they mandated the instrument; control `T3`
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
+### Fixed
+- **The P4 sweeps' large-size arm never ran a right-side solve, on any host** (#64): `cs[ri%len(cs)]` aliased
+  every runner into the front of a corner list that varies `side` slowest, and `max(ri)` is 2 on a scalar host
+  and 4 on an AVX-512 one. `cornerFor` spreads them instead, so `Strsm`/`Ssymm` `side=R` and `Ssyrk` `uplo=L`
+  now run at n=500 — the only size where the blocked path runs at all. **`Ssyrk` was affected too**, contrary to
+  the issue: 4 corners varying `uplo` slowest leave `uplo=L` unreached below 4 runners, and its own comment
+  claimed all four were covered. `TestSweepCornerCoverage` asserts the index space spans the leading flag at
+  every runner count from 2 to 8, and names the corners a given host does not reach.
+
 ### Added
 - **A host with no governor now has a clock instrument instead of an exemption** (§5 rule 5 as amended 2026-08-16):
   `clock_gate`/`clock_head`/`clock_post` sample `BenchmarkPeak` in three separate invocations either side of a

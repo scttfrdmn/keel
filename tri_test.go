@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -116,8 +117,9 @@ func syrkCombos() []syrkCombo {
 // run one of these, chosen by the runner's index, for the reason P3's sweep gives
 // for its own rotation — the large sizes are here to exercise the loop nest, and
 // running 36 combinations of it costs a gate run and buys nothing. Rotating over
-// the runner index rather than fixing one combination means all four corners are
-// covered at the large size, just not all four per kernel.
+// the runner index rather than fixing one combination spreads the corners across
+// the kernels; how many are reached depends on how many runners the host has, and
+// TestSweepCornerCoverage names the ones that are not.
 func syrkCorners() []syrkCombo {
 	var out []syrkCombo
 	for _, lo := range []bool{false, true} {
@@ -136,7 +138,8 @@ func TestSsyrkSweep(t *testing.T) {
 	c.dim("beta", f32set(p4Betas)...)
 	c.l3config("keel.Ssyrk->internal/block.Syrk->block.gemm(triMask)")
 
-	for ri, rn := range l3Runners() {
+	rns := l3Runners()
+	for ri, rn := range rns {
 		c.backend(rn.backend)
 		t.Run(rn.name, func(t *testing.T) {
 			for _, sz := range p4Sizes {
@@ -144,7 +147,7 @@ func TestSsyrkSweep(t *testing.T) {
 				combos := syrkCombos()
 				if sz > p4ExactMax {
 					cs := syrkCorners()
-					combos = []syrkCombo{cs[ri%len(cs)]}
+					combos = []syrkCombo{cs[cornerFor(ri, len(rns), len(cs))]}
 				}
 				t.Run("n="+strconv.Itoa(sz), func(t *testing.T) {
 					for _, cb := range combos {
@@ -320,7 +323,8 @@ func TestSsymmSweep(t *testing.T) {
 	c.dim("beta", f32set(p4Betas)...)
 	c.l3config("keel.Ssymm->internal/block.Symm->expand+block.gemm")
 
-	for ri, rn := range l3Runners() {
+	rns := l3Runners()
+	for ri, rn := range rns {
 		c.backend(rn.backend)
 		t.Run(rn.name, func(t *testing.T) {
 			for _, sz := range p4Sizes {
@@ -328,7 +332,7 @@ func TestSsymmSweep(t *testing.T) {
 				combos := symmCombos()
 				if sz > p4ExactMax {
 					cs := symmCorners()
-					combos = []symmCombo{cs[ri%len(cs)]}
+					combos = []symmCombo{cs[cornerFor(ri, len(rns), len(cs))]}
 				}
 				t.Run("n="+strconv.Itoa(sz), func(t *testing.T) {
 					for _, cb := range combos {
@@ -503,6 +507,87 @@ func trsmCorners() []trsmCombo {
 	return out
 }
 
+// cornerFor picks runner ri's corner out of n, spread across the whole list
+// rather than walking its front. `ri % n` was the bug (#64): the corner lists vary
+// `side` slowest, and max(ri) is 1 on the dev host and 4 on an AVX-512 one, so no
+// host this project runs on ever reached a right-side corner at a size where the
+// blocked path runs. The miss was already cashed — `par.Run(1, body)` passed a
+// unit count where a block count belonged, and right-side Strsm at 500 was wrong
+// by 4.2e-2 against the float64 oracle at GOMAXPROCS<=2 and right at 8.
+func cornerFor(ri, nr, n int) int { return ri * n / nr % n }
+
+// TestSweepCornerCoverage asserts on the sweeps' index space rather than on a
+// kernel, because no assertion inside a case could have caught #64: the sweep
+// passed, and passed correctly, on every case it ran. A parameter sweep whose
+// index space is smaller than its parameter space has a hole, and the hole is
+// invisible from inside the test.
+//
+// What is asserted is the property that was lost, not one the host cannot meet.
+// With nr runners and n corners only nr of them can run, so "all corners" is
+// unassertable at nr < n and asserting it would be theatre. The leading flag —
+// `side` for Ssymm and Strsm, `uplo` for Ssyrk — is what selects a distinct code
+// path through the nest, and every corner list varies it slowest, so it is exactly
+// the flag `ri % n` aliased away.
+//
+// Asserted for every plausible runner count and not only this host's, because the
+// count varies with the silicon: 3 on a scalar-only build, 5 on an AVX-512 host,
+// and CI is the one machine here without AVX-512. A host-local check would leave
+// the shapes that matter most unasserted. The live host's own reduction is logged
+// beside it, since a reduction nobody can see reads as coverage.
+func TestSweepCornerCoverage(t *testing.T) {
+	nr := len(l3Runners())
+	if nr < 2 {
+		t.Fatalf("l3Runners() returned %d runner(s): the large-size arm reaches one corner per runner, so a single runner cannot span any flag", nr)
+	}
+	for _, s := range []struct {
+		name  string
+		lead  string
+		heads []string
+	}{
+		{"Ssyrk", "uplo", cornerHeads(syrkCorners(), func(c syrkCombo) string { return uploStr(c.lower) })},
+		{"Ssymm", "side", cornerHeads(symmCorners(), func(c symmCombo) string { return sideStr(c.left) })},
+		{"Strsm", "side", cornerHeads(trsmCorners(), func(c trsmCombo) string { return sideStr(c.left) })},
+	} {
+		n := len(s.heads)
+		for k := 2; k <= 8; k++ {
+			hit, reached := map[int]bool{}, map[string]bool{}
+			for ri := 0; ri < k; ri++ {
+				i := cornerFor(ri, k, n)
+				hit[i] = true
+				reached[s.heads[i]] = true
+			}
+			for _, v := range s.heads {
+				if !reached[v] {
+					t.Errorf("%s's large-size sweep never runs %s=%s at %d runners: it reaches indices %v, and the corner list varies %s slowest, so an unreached half is a code path no host of that shape exercises above p4ExactMax (#64)",
+						s.name, s.lead, v, k, sortedKeys(hit), s.lead)
+					break
+				}
+			}
+			if k == nr && len(hit) < n {
+				t.Logf("%s on this host (%d runners): %d of %d corners run at the large size, at indices %v — a stated reduction, not a silent one",
+					s.name, nr, len(hit), n, sortedKeys(hit))
+			}
+		}
+	}
+}
+
+func cornerHeads[T any](cs []T, lead func(T) string) []string {
+	out := make([]string, len(cs))
+	for i, c := range cs {
+		out[i] = lead(c)
+	}
+	return out
+}
+
+func sortedKeys(m map[int]bool) []int {
+	out := make([]int, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Ints(out)
+	return out
+}
+
 func TestStrsmSweep(t *testing.T) {
 	c := p4("Strsm")
 	c.dim("side", "L", "R")
@@ -512,7 +597,8 @@ func TestStrsmSweep(t *testing.T) {
 	c.dim("alpha", f32set(p4Alphas)...)
 	c.l3config("keel.Strsm->internal/block.Trsm->block.gemm+unblocked diagonal solve")
 
-	for ri, rn := range l3Runners() {
+	rns := l3Runners()
+	for ri, rn := range rns {
 		c.backend(rn.backend)
 		t.Run(rn.name, func(t *testing.T) {
 			for _, sz := range p4Sizes {
@@ -520,7 +606,7 @@ func TestStrsmSweep(t *testing.T) {
 				combos := trsmCombos()
 				if sz > p4ExactMax {
 					cs := trsmCorners()
-					combos = []trsmCombo{cs[ri%len(cs)]}
+					combos = []trsmCombo{cs[cornerFor(ri, len(rns), len(cs))]}
 				}
 				t.Run("n="+strconv.Itoa(sz), func(t *testing.T) {
 					for _, cb := range combos {
