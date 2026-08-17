@@ -265,10 +265,39 @@ assert_governor "$H" preamble "$prov"
 [[ -n "$GOV_STATE" ]] && pass_ "assert_governor still reads the line (GOV_STATE=$GOV_STATE)" ||
   fail_ "assert_governor read nothing from the line"
 
+# ------------------------------------- 7. every governor state, driven on purpose
+#
+# §5 rule 5 forbids "no cpufreq interface" and "the file is present and unreadable"
+# sharing a verdict, so the two must be shown to LAND DIFFERENTLY -- and this machine
+# can only produce one of them. PROV is a documented parameter of assert_governor
+# precisely so a caller that has already probed need not probe twice; handing it a
+# synthetic reading drives every branch with no host and no test-only code path. What
+# it does not prove is that a real guest emits `governor=absent`, which is a claim
+# about the probe and is checked above only for THIS machine's shape (also absent).
+head_ "7. the five governor states are distinguishable"
+gov_case() {
+  local want="$1" line="$2"
+  assert_governor fixture preamble "$line" >/dev/null 2>&1
+  [[ "$GOV_STATE" == "$want" ]] && pass_ "'$line' -> $GOV_STATE" ||
+    fail_ "'$line' -> $GOV_STATE, expected $want"
+}
+gov_case performance "x | governor=performance | y"
+gov_case wrong       "x | governor=powersave | y"
+gov_case nocpufreq   "x | governor=absent | y"
+gov_case unreadable  "x | governor=unreadable | y"
+gov_case unreadable  "x | governor=unknown | y"
+gov_case unreachable ""
+# The one that would silently undo the split: `absent` must not survive into a log
+# line as though it were a value somebody read off the host.
+assert_governor fixture preamble "x | governor=absent | y" >/dev/null 2>&1
+[[ -z "$GOV_VALUE" ]] && pass_ "a guest reports no governor VALUE, only a state" ||
+  fail_ "GOV_VALUE='$GOV_VALUE' would print as a reading nobody took"
+
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"
-  echo "  vanished, a severed link costs nothing, and a missing supervisor is loud."
+  echo "  vanished, a severed link costs nothing, a missing supervisor is loud, and"
+  echo "  a host with no cpufreq is told apart from one whose knob will not read."
   exit 0
 fi
 echo "  RED -- $FAILS check(s) failed."

@@ -411,7 +411,26 @@ remote_probe() {
   local host="$1"
   ssh "${KEEL_SSH_OPTS[@]}" "$host" '
     cpu=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2- | sed "s/^ *//")
-    gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
+    # THREE TOKENS, NOT TWO, because DESIGN section 5 rule 5 (amended 2026-08-16) rules
+    # that "no cpufreq interface at all" and "the file is present and unreadable" are
+    # different causes and may not share one verdict: the first is a virtualized guest,
+    # which does not own the knob, and the second is a defect on a host that has it.
+    # Both still block. Neither is read from "cpu MHz", which is present, plausible and
+    # a fixed nominal constant, so a harness sampling it would certify stability
+    # forever, where an absent directory at least fails closed.
+    #
+    # NO APOSTROPHES BELOW THIS LINE, and none above it either: this whole snippet is
+    # one single-quoted argument to ssh, so a possessive in a COMMENT terminates the
+    # string and the far side receives a fragment. shellcheck catches it (SC1011),
+    # which is the only reason this is a comment and not an outage.
+    if [ -r /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
+      gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
+      [ -n "$gov" ] || gov=unknown
+    elif [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
+      gov=unreadable
+    else
+      gov=absent
+    fi
     ncpu=$(nproc)
     T=/sys/devices/system/cpu
     uniq_lines() { find "$T" -maxdepth 3 -name "$1" -exec cat {} + 2>/dev/null | sort -u | wc -l | tr -d " "; }
@@ -450,7 +469,13 @@ remote_probe() {
 #        produced nothing", which is the distinction this whole function is about.
 #
 # Sets, for the caller's control flow and its provenance text:
-#   GOV_STATE   performance | wrong | unreadable | unreachable
+#   GOV_STATE   performance | wrong | nocpufreq | unreadable | unreachable
+#               nocpufreq and unreadable are separate by ruling, not by taste: §5
+#               rule 5 (amended 2026-08-16) forbids them sharing a verdict, because a
+#               guest with no cpufreq directory and a host whose knob is present and
+#               unreadable are a platform fact and a defect respectively. Every gate
+#               branches on `!= performance`, so a new state is refused by default and
+#               nothing here can open a path by being added.
 #   GOV_VALUE   the parsed value; empty when there is no reading at all
 #   GOV_SHOWN   GOV_VALUE rendered for a log line, never manufacturing a reading
 #
@@ -501,7 +526,16 @@ assert_governor() {
     if [[ "$GOV_VALUE" == performance ]]; then
       GOV_STATE=performance
       GOV_SHOWN="$GOV_VALUE"
-    elif [[ -z "$GOV_VALUE" || "$GOV_VALUE" == unknown ]]; then
+    elif [[ "$GOV_VALUE" == absent ]]; then
+      # A guest, not a defect. GOV_VALUE is cleared because `absent` is the probe's
+      # word for "there was nothing to read", and leaving it in GOV_VALUE would put
+      # the string `absent` into log lines that read as governor *values* — which is
+      # how "governor is 'absent', not performance" would have been printed, a
+      # sentence asserting a reading nobody took.
+      GOV_STATE=nocpufreq
+      GOV_VALUE=""
+      GOV_SHOWN="none (no cpufreq interface — a virtualized guest does not own the knob)"
+    elif [[ -z "$GOV_VALUE" || "$GOV_VALUE" == unknown || "$GOV_VALUE" == unreadable ]]; then
       GOV_STATE=unreadable
       GOV_SHOWN="unknown (host answered; scaling_governor unreadable)"
     else
@@ -516,6 +550,8 @@ assert_governor() {
       performance) : ;;  # silent on success: the preamble printed the PASS
       unreachable)
         unmeasured "[$host] unreachable at measurement time, so this host produced no governor reading and nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured for want of an answer, and not a governor that changed" ;;
+      nocpufreq)
+        unmeasured "[$host] no cpufreq interface at measurement time, so §5 rule 5's governor instrument does not exist on this host and its substitute — BenchmarkPeak sampled head/middle/tail — is not built yet (#23): unmeasured for want of an instrument, not a governor that changed" ;;
       unreadable)
         unmeasured "[$host] the host answered but the governor is unreadable at measurement time, so nothing measured here can be asserted to be covered by §5 rule 5 — unmeasured, not a governor that changed" ;;
       wrong)
@@ -527,6 +563,20 @@ assert_governor() {
         pass "[$host] cpufreq governor is performance (§5 rule 5)" ;;
       unreachable)
         unmeasured "[$host] unreachable, so this target produced no governor reading at all: §5 rule 5 is unverified here for want of an answer, not for want of a readable file" ;;
+      nocpufreq)
+        # STILL BLOCKS, and that is the point of landing this half first. §5 rule 5
+        # licenses a substitute instrument for a guest, not an exemption; until
+        # BenchmarkPeak's head/middle/tail dispersion is actually read (#23), a guest
+        # has no stability instrument at all and every gate's `!= performance` skip
+        # keeps it out of the record. Opening the path before the replacement exists
+        # would be weakening a gate to pass it, which is the one move with no override.
+        # Says what was observed, not what the host is. "No cpufreq directory" is the
+        # reading; "a virtualized guest" is the usual explanation for it and is not
+        # the only one — this fires on macOS too — so the inference is labelled as an
+        # inference. A verdict line that names a cause it did not establish is the
+        # same defect as the four gates that called an unreachable host unreadable.
+        unmeasured "[$host] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Its ruled substitute (BenchmarkPeak sampled head/middle/tail) is not built yet, so stability is unestablished here and this blocks the gate (#23)"
+        info "  [$host] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none" ;;
       unreadable)
         unmeasured "[$host] the host answered but scaling_governor is unreadable, so §5 rule 5 cannot be verified: an unchecked precondition is not a met one, and this blocks the gate exactly as a wrong governor does" ;;
       wrong)

@@ -39,6 +39,13 @@ While the major version is 0, minor versions may contain breaking changes.
   published as a record page rather than dropped off the site. §5 falls from 2,275 words to 1,530.
 
 ### Fixed
+- **"No cpufreq interface" and "the governor will not read" shared one verdict**, which §5 rule 5's
+  2026-08-16 amendment forbids: the first is a virtualized guest that does not own the knob, the second a
+  defect on a host that has it. `remote_probe` now emits three tokens and `assert_governor` has a fifth
+  state, `nocpufreq`. It still blocks — the amendment licenses a substitute instrument, not an exemption,
+  and that instrument (`BenchmarkPeak` head/middle/tail) is #23's other half and unbuilt. Proven by a
+  *changed* reading: this dev machine moved `unreadable` → `nocpufreq`, and the other four states are
+  driven from synthetic probe lines because no one host can produce them all.
 - **gate-p5's `KEEL_FORCE=nonsense` check certified a refusal it never observed.** It reads *nonzero* as PASS,
   so ssh's 255 for a dead host printed PASS; #62 only made the class nameable. `vanished` is now tested first
   there and beside the existing `else` at four more sites, printing UNMEASURED — same verdict, right cause.
