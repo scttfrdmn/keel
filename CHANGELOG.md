@@ -260,6 +260,12 @@ While the major version is 0, minor versions may contain breaking changes.
   owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
 ### Changed
+- **DESIGN.md §5 rule 5 now demands a stable clock rather than a `performance` governor** (amended
+  2026-08-16, forced by the ruling to measure on AWS instances). No guest can satisfy the old wording: there
+  is no `cpufreq` directory, so `remote.sh:410` resolves to `unmeasured` and blocks every gate — correctly,
+  but it makes the pivot impossible rather than merely awkward. Where `cpufreq` is readable the governor
+  assertion is unchanged; where it is absent, stability comes from `BenchmarkPeak` sampled at head, middle
+  and tail. Same benchmark, no new bar. The harness half is not written yet — see the follow-up tasks.
 - **Every GitHub Action in both workflows moved to a Node 24 major**, in one sweep and outside any feature
   work: `checkout@v4→v7`, `setup-go@v5→v7`, `setup-python@v5→v7`, `upload-artifact@v4→v7`,
   `configure-pages@v5→v6`, `upload-pages-artifact@v3→v5`, `deploy-pages@v4→v5`. Node 20 was deprecated on
