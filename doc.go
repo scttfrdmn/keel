@@ -2,21 +2,60 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package keel is a pure-Go float32 BLAS subset whose hot kernels are written
-against the experimental simd/archsimd packages (GOEXPERIMENT=simd).
+Package keel is a float32 BLAS subset in pure Go: Levels 1, 2 and a
+GEMM-centered Level 3, with amd64 AVX-512 kernels written against the
+experimental simd/archsimd packages and a scalar path that builds on an ordinary
+toolchain. There is no cgo, no assembly, no code generation and no background
+goroutine — it deploys as a normal Go module and respects GOMAXPROCS.
 
-There is no cgo, no assembly and no build-time code generation: the vector code
-is Go, and on a toolchain or a machine without the vector backend the same Go
-compiles and runs through a scalar path. DESIGN.md is the full contract; this
-comment is what a caller needs.
+# Two build modes
 
-# Build requirements
+	GOEXPERIMENT=simd go build ./...   # vector kernels on amd64, Go 1.26+
+	go build ./...                     # scalar path, any Go 1.26+ toolchain
 
-The vector path needs a Go toolchain built with GOEXPERIMENT=simd on amd64. The
-scalar path needs neither, and is not a stub — it is the reference the vector
-kernels are differentially tested against, and it builds on a stock toolchain.
-That is a gated property, not an aspiration: gate-p1 runs the whole suite twice,
-once with the vector backend forced off.
+Both modes compile the same source and produce the same answers. The vector
+kernels are compiled only in the first, so a build without GOEXPERIMENT=simd is
+correct and slow. Nothing warns you, so ask:
+
+	fmt.Println(keel.ActiveL1Backend(), keel.ActiveKernBackend())
+
+That prints avx512 twice on a machine and toolchain that have it, and scalar
+twice otherwise.
+
+# Matrices are row-major
+
+Every matrix argument is one []float32 in row-major order plus a leading
+dimension: the element count from the start of one row to the start of the next.
+For an m×n matrix A with leading dimension lda,
+
+	A[i][j] == a[i*lda+j]
+
+lda may exceed n, which is how a submatrix is passed without copying it. Here a
+2×3 matrix sits inside a 5-wide array:
+
+	      col 0   1   2   3   4        m = 2, n = 3, lda = 5
+	row 0   [ 1   2   3   ·   · ]      A[1][2] is a[1*5+2], which is 6
+	row 1   [ 4   5   6   ·   · ]      the · elements are never read
+
+Reference BLAS is column-major and keel is not a translation of it, so there is
+no order argument to get wrong. A leading dimension always describes the array as
+stored, before any [Transpose] flag is applied.
+
+Vectors take a stride instead: incX of 1 is contiguous, 2 reads every other
+element, and a negative stride walks backwards. [Sdot], [Saxpy], [Sgemv] and
+[Sger] accept a negative stride; [Sscal], [Sasum], [Snrm2] and [Isamax] require
+incX > 0, as reference BLAS defines them.
+
+# A minimal call
+
+	// C = A·B, A 2×3, B 3×2, C 2×2, each tightly packed so ld is the row length.
+	a := []float32{1, 2, 3, 4, 5, 6}
+	b := []float32{7, 8, 9, 10, 11, 12}
+	c := make([]float32, 4)
+	keel.Sgemm(keel.NoTrans, keel.NoTrans, 2, 2, 3, 1, a, 3, b, 2, 0, c, 2)
+	// c is now {58, 64, 139, 154}
+
+Each routine carries a runnable example; run `go test` to check them.
 
 # What is here
 
@@ -26,94 +65,83 @@ Level 2: [Sgemv], [Sger].
 
 Level 3: [Sgemm], [Ssyrk], [Ssymm], [Strsm].
 
-The Level-3 routines are one blocked GEMM nest and three reductions to it — a
-triangular C mask for Ssyrk, a symmetric expansion for Ssymm, a block-solve
-recurrence for Strsm — rather than four independent implementations. What that
-buys is that all four inherit one packing strategy, one set of blocking
-parameters, one edge strategy and, the part that took two phases to establish,
-one audited K-loop.
+Flags are [Transpose], [Uplo], [Side] and [Diag], each holding reference BLAS's
+own letter.
 
-Row-major, and the leading dimension is the row stride. Reference BLAS is
-column-major and Fortran-ordered; keel is not a translation of it and does not
-pretend to be, so there is no `order` argument to get wrong.
+# Invalid arguments panic
 
-# Errors are panics
+A negative dimension, a zero stride, an unrecognized flag, a leading dimension
+narrower than the row it describes, or a slice too short for the shape it was
+given panics at the call. Reference BLAS returns silently from several of these
+and leaves a message with XERBLA; in Go there is nothing to consult afterwards,
+so keel reports it where it happened.
 
-Argument errors panic instead of returning quietly. Reference SSCAL's
-`IF (n.LE.0 .OR. incx.LE.0) RETURN` turns a caller's off-by-one into a no-op
-that looks like success, and in Go there is no XERBLA to consult afterwards. A
-bad n, a zero stride, or a slice too short for the stride it was given is a
-program bug and says so, at the call.
+n == 0 is not an error. It is the empty vector or the empty matrix, the call does
+nothing, and the slices may be nil. A matrix whose declared shape is not empty
+must be long enough for that shape even on a call that will not read it.
 
-n == 0 is not an error. It is the empty vector or the empty matrix, and the
-slices may be nil.
+Where reference BLAS skips work for a zero multiplier, keel skips exactly the
+same work, because those rules are observable: alpha == 0 must not pull a NaN out
+of an operand nobody wanted read, and beta == 0 must not read an uninitialized
+destination. Each routine's own comment states its case.
 
-# Numerics
+# Numerics you can rely on
 
-Results are float32 and the accumulation order is the active backend's, so a
-result is not bit-stable across backends. It is bit-stable within one, and every
-backend is checked against a float64 oracle under one shared error model
-(internal/oracle) rather than against per-test epsilons. The tolerance is a
-function of the shape and the operation, derived once; a routine that needs a
-wider one has a numerics question, not a test question.
+Results are float32, computed in the active backend's summation order. So:
 
-Special values follow reference BLAS rather than convenience. 0·Inf propagates
-NaN, the unreferenced triangle of a symmetric or triangular argument is never
-read, and no routine takes a fast path for a zero multiplier — a "fast path" for
-a zero in a factored matrix would silently return a different matrix on an input
-that is both legal and common.
+  - A result is bit-stable for a given backend, and bit-identical at every
+    GOMAXPROCS — exactly, not within a tolerance. The parallel axis splits the
+    output, never a single output element's sum, so the answer does not move with
+    the core count.
+  - A result is not bit-identical across backends, or to a textbook triple loop.
+    Blocked accumulation and vector reduction add in a different order.
+  - Special values follow reference BLAS rather than convenience. 0·Inf
+    propagates NaN, the unreferenced triangle of a symmetric or triangular
+    argument is never read, and no routine takes a fast path on a zero it was not
+    told to expect.
 
-# Backend dispatch
+# Choosing a backend
 
-Chosen once at init from CPU feature detection. Level 1 dispatches avx512 →
-avx2 → scalar; Level 3 dispatches avx512 → scalar, because there is no AVX2
-microkernel and no host this project measures on is AVX2-only silicon — a middle
-rung with no evidence behind it would be a claim rather than a fallback.
-[L1Chain] and [KernChain] report the advertised chains; [AvailableL1Backends]
-and [AvailableKernels] report what is runnable here, which on a machine without
-AVX-512 is properly shorter.
+The backend is chosen once, at init, from CPU feature detection: Level 1 tries
+avx512, then avx2, then scalar; Level 3 tries avx512, then scalar.
 
-Set KEEL_FORCE=scalar|avx2|avx512 to pin the choice. It exists for testing — it
-is how the suite is run scalar-only on a machine that has AVX-512, which is the
-only way to prove the fallback works rather than assume it. An unavailable value
-panics at init rather than downgrading silently: a run that believed it was
-measuring AVX-512 and quietly measured scalar is worse than a crash.
+Set KEEL_FORCE to scalar, avx2 or avx512 to pin it. This is a testing knob — it
+is how a machine with AVX-512 runs the suite scalar-only — and naming a backend
+the machine cannot run panics at init rather than quietly downgrading. There is
+no AVX2 microkernel, so KEEL_FORCE=avx2 gives an AVX2 Level 1 and a scalar Level
+3, with [ActiveKernBackend] reporting scalar so that no measurement can believe
+otherwise.
 
-The microkernel shape is also chosen per host, from a measured classification of
-what binds the K-loop on this part. [ActiveKernTile], [ActiveKernClass] and
-[ActiveKernClassEvidence] report the choice and its grounds.
+[L1Chain] and [KernChain] report those two chains. [AvailableL1Backends] and
+[AvailableKernels] report what is runnable on this machine, which is properly
+shorter without AVX-512, and [ActiveKernTile] reports which microkernel shape was
+selected for this host.
 
 # Parallelism
 
-The Level-3 routines distribute work over a bounded pool of goroutines sized by
+The Level-3 routines spread their work over goroutines sized by
 runtime.GOMAXPROCS(0), started per call and joined before the call returns.
-GOMAXPROCS is the only knob, because it is the knob a caller already has and
-already expects a Go library to respect.
+GOMAXPROCS is the only knob.
 
-Three consequences a caller can rely on:
+At GOMAXPROCS=1 the nest runs in the calling goroutine, with no goroutine and no
+atomic in the path. No goroutine outlives a call, so repeated calls leak nothing
+and keel is safe to call from code that counts goroutines. [Workers] reports the
+sizing rule.
 
-  - At GOMAXPROCS=1 the nest runs in the calling goroutine, with no goroutine,
-    no atomic and no scheduling in the path.
-  - No goroutine outlives a call, so keel is safe to call from inside something
-    that counts them, and repeated calls leak nothing.
-  - The result is bit-identical at every GOMAXPROCS. The parallel axis
-    partitions the output rather than any single output element's sum, so this
-    is exact equality and not a tolerance. A float32 BLAS whose answer moved
-    with the core count would be a different library on every machine.
+Level 1 is not parallelized: those routines are memory-bound at every size where
+a thread would pay for itself, so reach Level-1 parallelism by calling from
+parallel code.
 
-Level 1 is deliberately not parallelized: those routines are memory-bound at
-every size where a thread would pay for itself, and a caller reaches Level-1
-parallelism by calling from parallel code rather than by having each call fan
-out. [Workers], [WorkersLastCall] and [GOMAXPROCS] report the sizing rule, what
-the last Level-3 call actually used, and GOMAXPROCS as the nest reads it.
+# Performance numbers, and the rest of the documentation
 
-# Numbers
+Measured rates, each with the CPU model it was measured on and the denominator it
+was divided by, are published on the site rather than here. A doc comment is a
+contract, and contracts do not go stale the way numbers do:
 
-Every performance figure keel publishes carries its denominator: the CPU model,
-the peak measured on that same host in that same run, and the OpenBLAS reference
-where one was available — and says so explicitly where one was not. The README's
-published rates live in a block that the phase gate re-measures on the hosts it
-runs on and fails on a 5% disagreement, so a stale number cannot survive a gate
-run. Nothing here reports a rate divided by a peak taken from a formula.
+	https://scttfrdmn.github.io/keel/numbers/
+
+The site's user pages cover installing, calling and troubleshooting keel; its
+Project records section carries the design document, the testing methodology, the
+toolchain field notes and the changelog, for anyone who wants why rather than how.
 */
 package keel

@@ -36,18 +36,19 @@ import (
 // measured scalar is worse than a crash.
 const envForce = "KEEL_FORCE"
 
-// L1Chain and KernChain report the *advertised* dispatch chains: the claim the
-// documentation makes about what this library will try, in order, on a machine
-// that has everything. AvailableL1Backends and AvailableKernels answer a
-// different question — what is runnable *here* — and on a host without AVX-512
-// they are properly shorter. The gate checks the advertised chains against
-// DESIGN.md §4/P5 and checks that neither one advertises a rung with no
-// implementation behind it, which is how #40 was found: keeping the claim in a
-// function means a gate can read it, where a claim in prose can only be believed.
+// Why the advertised chains are functions and not prose: the gate checks them
+// against DESIGN.md §4/P5, and checks that neither advertises a rung with no
+// implementation behind it. That is how #40 was found. A claim in a function can
+// be read by a gate; a claim in a paragraph can only be believed.
+
+// L1Chain reports the advertised Level-1 dispatch chain: the backends keel tries,
+// in that order, on a machine that has all of them.
+//
+// AvailableL1Backends answers the different question of what is runnable here.
 func L1Chain() []string { return []string{l1.AVX512, l1.AVX2, l1.Scalar} }
 
-// KernChain reports the advertised Level-3 chain. Two rungs by ruling; see the
-// envForce comment above for why the middle one is absent.
+// KernChain reports the advertised Level-3 dispatch chain. It has two rungs, not
+// three: there is no AVX2 microkernel, so KEEL_FORCE=avx2 runs a scalar Level 3.
 func KernChain() []string { return []string{kern.AVX512, kern.Scalar} }
 
 // activeL1 is the Level-1 kernel set every public L1 routine calls through.

@@ -64,6 +64,18 @@ While the major version is 0, minor versions may contain breaking changes.
   hit the banner's promise text, in the one file where a log being mistakable for certification matters most.
 
 ### Added
+- **`example_test.go`: five runnable `Example` functions, which is how this project will document a call
+  from now on** (#92). `ExampleSgemm`, `ExampleSgemm_submatrix`, `ExampleSaxpy`, `ExampleSaxpy_stride`,
+  `ExampleTranspose`. The rule behind the form is §5 rule 8 — *a summary is a cache with no invalidation
+  protocol* — applied to documentation: a prose code block is a cache of the API and nothing invalidates
+  it, while an `Example` is compiled and run by `go test` and cannot silently stop matching the package.
+  It collected immediately: `ExampleSaxpy`'s hand-computed `// Output:` was wrong in the last element
+  (44 for 40 + 2·4) and the first run said so. Every example uses small integer-valued matrices, because
+  integers in that range are exact in float32 and so is any sum of them that stays in range — an example
+  whose expected output depended on the summation order would be an example that fails on one backend.
+  Two of the five go past the three that were asked for: `_submatrix` makes the `lda > n` contract
+  runnable rather than pictorial, and `_stride` does the same for `n` versus `len(x)`. Those are the two
+  parts of this API a caller gets wrong first, and both were prose-only before.
 - **`scripts/fakessh` + `scripts/fakessh-test.sh` + `scripts/exercise-dead-host.sh`: a dead host,
   induced environmentally, to fire gate-p2's fleet-incomplete aggregate once on purpose** (ruled
   2026-08-16). Criterion 5b's PASS reads *"every host that produced a judgeable throughput reading
@@ -113,6 +125,22 @@ While the major version is 0, minor versions may contain breaking changes.
   owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
 ### Changed
+- **`doc.go` rewritten for someone with a matrix to multiply, and `types.go`'s four flag types documented
+  at all** (#92, ruled 2026-08-16: *"users will not care about the design notes. They want straight usable
+  information"*). The test each paragraph now has to pass is **"would a person with a matrix to multiply
+  still be reading?"** — so the package comment leads with the two build modes, the row-major/`ld`
+  convention as a picture of an actual array, and a minimal `Sgemm` call, and it no longer contains the
+  paragraphs about what took two phases to establish or why the Level-3 chain has two rungs. Nothing was
+  deleted from the project's account of itself; the reasoning that had accumulated in godoc moved to
+  comments that `go doc` does not render (`L1Chain`, `WorkersLastCall`), which is where a gate's grounds
+  belong. `types.go` had **no doc comments whatsoever** on `Transpose`, `Uplo`, `Side`, `Diag` or their
+  eight constants — the flags every call site passes were the least documented part of the API.
+  **No performance number appears in godoc any more.** A doc comment is a contract and a rate is a
+  measurement; the `# Numbers` section became one link to the site's numbers page, which is generated
+  from the block gate-p5 re-measures. Read back rather than assumed: `go doc` rendered for all 38
+  exported symbols, 38 leading with their own name (const groups checked for naming each member), and the
+  read-back's matcher was self-tested against a non-matching lead first, because a checker that cannot
+  say CHECK proves nothing when it says ok.
 - **`DESIGN.md` §4/P2 now specifies the tile orientation that shipped, and states the naming convention
   in the same sentence** (#16, ruled 2026-08-16). The doc had said `MR=32, NR=6` — *"a pre-implementation
   fossil in BLIS's column-major orientation, written before the row-major decision propagated through the
