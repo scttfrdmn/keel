@@ -462,7 +462,7 @@ else
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
     # Before any criterion reads this sweep: on a host with no governor, the clock the
-    # sweep ran on is established here or not at all (§5 rule 5, #23).
+    # sweep ran on is established here or not at all (§5 rule 5 as amended 2026-08-16).
     clock_post "$host" "$BENCHBIN" "$BENCHCSV" || continue
 
     info "[$host] peak   $(bench_describe "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"

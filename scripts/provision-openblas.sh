@@ -425,7 +425,7 @@ main() {
     GOV_OK=1
     if [[ "$GOV_STATE" == nocpufreq ]]; then
       note "no cpufreq interface, so there is no governor to set and none to check: this"
-      note "  host's clock is established by the gate's peak dispersion instead (#23), which"
+      note "  host's clock is established by the gate's peak dispersion instead, which"
       note "  needs a sweep and so cannot be read from here. Deferred, not passed."
     elif [[ "$GOV_STATE" != performance ]]; then
       GOV_OK=0

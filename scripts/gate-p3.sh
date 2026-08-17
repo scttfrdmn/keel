@@ -1344,7 +1344,7 @@ else
     # host's own toolchain, so head and tail have to come from the same binary or the
     # trend test has a compiler in it. The bracket is deliberately tight — the coretype
     # sweep above is minutes of benchmarking, and a wider bracket would be answering a
-    # question about a window the judged run does not occupy (§5 rule 5, #23).
+    # question about a window the judged run does not occupy (§5 rule 5 as amended 2026-08-16).
     clock_head "$host" "@$OPENBLAS_REMOTE_DIR/bench-ob.test" || continue
     # shellcheck disable=SC2029  # client-side expansion of a client-side path
     if ! ssh "${KEEL_SSH_OPTS[@]}" "$host" \
@@ -1424,7 +1424,7 @@ else
     fi
     # Closed before the mission ratio is formed: both of its halves came out of the run
     # this series brackets, so on a host with no governor this is where the clock they
-    # were measured on is established or the ratio is unmeasured (§5 rule 5, #23).
+    # were measured on is established or the ratio is unmeasured (§5 rule 5 as amended 2026-08-16).
     clock_post "$host" "@$OPENBLAS_REMOTE_DIR/bench-ob.test" "$BENCHCSV" || continue
     info "[$host] keel $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s) vs OpenBLAS $(bench_describe "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s), one invocation"
     rlo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_OPENBLAS" "$BENCHCSV" GFLOP/s)"

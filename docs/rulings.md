@@ -13,7 +13,7 @@ confirmation. That reasoning has independent value and is not deleted; it was in
 wrong file, because a reader looking up an operative constraint had to read a case
 report to find it. **Every ordinal in §5 is unchanged**, so no citation moved. Rules 1–5
 have no entry here: 1–4 are one line each and have held for the whole project, and rule
-5's ruling is still inside it because its 2026-08-16 amendment is live work (#23).
+5's ruling is still inside it because its 2026-08-16 amendment is live work.
 
 What an entry here is *not*: authority. A gate cites `DESIGN.md`, never this file. If an
 entry and its rule disagree, the rule governs and the entry is stale — which is the

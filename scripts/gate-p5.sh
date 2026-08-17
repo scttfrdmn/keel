@@ -684,7 +684,7 @@ else
     # HERE, not up at clock_gate, and this is the reason clock_head is its own call: the
     # boost knob above changes the regime the sweep will run in, so a head window taken
     # before it would be the first point of a three-point trend with an intervention
-    # between it and the other two — a declining series this gate caused (§5 rule 5, #23).
+    # between it and the other two — a declining series this gate caused (§5 rule 5 as amended 2026-08-16).
     clock_head "$host" "$BENCHBIN" || { remote_boost_set "$host" on >/dev/null 2>&1 || true; continue; }
 
     # GOMAXPROCS is NOT set here. The thread count belongs to the benchmark row
@@ -699,7 +699,7 @@ else
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
     # Closed here, before the restore below, so all three windows sit inside the one
-    # boost-off regime the judged ratio is taken in (§5 rule 5, #23). It brackets the
+    # boost-off regime the judged ratio is taken in (§5 rule 5 as amended 2026-08-16). It brackets the
     # boost-off sweep only; the boost-on pass below is a second window this series says
     # nothing about, which costs nothing today because a host with no governor to assert
     # is also a host with no boost knob to set, and remote_boost_set refuses it above.

@@ -581,7 +581,7 @@ assert_governor() {
       nocpufreq)
         # NO LONGER BLOCKS, and what changed is that the substitute exists: clock_post
         # in scripts/bench.sh reads BenchmarkPeak at the head, middle and tail of the
-        # sweep and refuses a declining or unbounded series (#23). §5 rule 5 licensed a
+        # sweep and refuses a declining or unbounded series. §5 rule 5 licensed a
         # different instrument for a guest, never an exemption, and until the instrument
         # was written the honest state was `unmeasured` — opening the path first would
         # have been weakening a gate to pass it.

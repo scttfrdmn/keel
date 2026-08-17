@@ -2,7 +2,7 @@
 # Copyright 2026 Scott Friedman
 # SPDX-License-Identifier: Apache-2.0
 #
-# aws-fleet.sh -- launch, list and terminate keel's spot measurement fleet (#24).
+# aws-fleet.sh -- launch, list and terminate keel's spot measurement fleet (#12).
 #
 #   scripts/aws-fleet.sh up       # launch, wait for sshd, write .keel-hosts
 #   scripts/aws-fleet.sh status   # what is running, and what it has cost so far
@@ -174,7 +174,7 @@ cmd_wire() {
   # .keel-hosts holds ROLE names, never addresses: they land in gate logs, and gate
   # logs get pasted into issues. Same convention as keying published numbers by CPU
   # model -- the address lives in ~/.ssh/config, which is not this repo.
-  { echo "# written by scripts/aws-fleet.sh -- the AWS spot measurement fleet (#24)"
+  { echo "# written by scripts/aws-fleet.sh -- the AWS spot measurement fleet (#12)"
     for spec in "${FLEET[@]}"; do IFS=: read -r role _ _ <<<"$spec"; echo "keel-$role"; done
   } > .keel-hosts
   say "wrote .keel-hosts and ~/.ssh/config block"

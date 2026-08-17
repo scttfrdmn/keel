@@ -271,7 +271,7 @@ else
     assert_governor "$host" measured
     clock_gate "$host" || continue
     # The one gate §5 rule 5's substitute instrument does not reach, said out loud
-    # rather than worked around (#23). It needs a BenchmarkPeak window inside the
+    # rather than worked around. It needs a BenchmarkPeak window inside the
     # sweep to be the middle of its series; this gate's sweep runs the ROOT package's
     # test binary, and BenchmarkPeak lives in ./bench. Sampling it from a second
     # binary would put two compilers in a three-point trend, and the 4x criterion is
@@ -279,7 +279,7 @@ else
     # samples all precede avx512's — which a clock that moved between them shifts
     # rather than widens. So: unmeasured on a host with no governor, not assumed steady.
     if [[ "$GOV_STATE" == nocpufreq ]]; then
-      unmeasured "[$host] no governor to assert and no peak window inside this gate's sweep to substitute for one, so the Sdot speedup is unmeasured on this host (§5 rule 5, #23)"
+      unmeasured "[$host] no governor to assert and no peak window inside this gate's sweep to substitute for one, so the Sdot speedup is unmeasured on this host (§5 rule 5 as amended 2026-08-16)"
       continue
     fi
 

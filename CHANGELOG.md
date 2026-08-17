@@ -14,13 +14,13 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Added
-- **A host with no governor now has a clock instrument instead of an exemption** (#23, §5 rule 5 as amended):
+- **A host with no governor now has a clock instrument instead of an exemption** (§5 rule 5 as amended 2026-08-16):
   `clock_gate`/`clock_head`/`clock_post` sample `BenchmarkPeak` in three separate invocations either side of a
   sweep — `-count` is Go's inner loop, so a sweep's own peak rows are one contiguous window and are the *middle*
   only. Threshold-free by construction: every window bounded, and the three medians not monotonically declining.
   Live on the AWS guests, where `assert_governor` reads `absent`. gate-p1 is the one gate it cannot reach and
   says so — its sweep runs the root package's binary, which has no `BenchmarkPeak`.
-- **The measurement fleet is AWS spot, launched by `scripts/aws-fleet.sh up|wire|status|down`** (#24): three
+- **The measurement fleet is AWS spot, launched by `scripts/aws-fleet.sh up|wire|status|down`** (#12): three
   right-sized guests (`c7a`/`c8a`/`c7i`, 8 physical cores each, read from `describe-instance-types` rather than
   inferred from vCPUs) with a boot-time `shutdown -h` dead-man switch, `down` selecting by tag rather than by a
   written list, and `up` refusing while a tagged fleet is alive. Measured on the live guests: `governor=absent`,
@@ -50,11 +50,15 @@ While the major version is 0, minor versions may contain breaking changes.
   published as a record page rather than dropped off the site. §5 falls from 2,275 words to 1,530.
 
 ### Fixed
+- **Fourteen `#23`/`#24` citations named the wrong issue**: they were local task ids, and GitHub #23 (same-host
+  OpenBLAS ruling) and #24 (the 2×32/4×32 dispatch class) both exist and are *also* cited correctly in this
+  tree, so one number carried two meanings. Clock sites now cite `§5 rule 5 as amended 2026-08-16`, the fleet
+  cites #12. `citation-lint` resolves only `§N`, so nothing could have caught this.
 - **"No cpufreq interface" and "the governor will not read" shared one verdict**, which §5 rule 5's
   2026-08-16 amendment forbids: the first is a virtualized guest that does not own the knob, the second a
   defect on a host that has it. `remote_probe` now emits three tokens and `assert_governor` has a fifth
   state, `nocpufreq`. It still blocks — the amendment licenses a substitute instrument, not an exemption,
-  and that instrument (`BenchmarkPeak` head/middle/tail) is #23's other half and unbuilt. Proven by a
+  and that instrument (`BenchmarkPeak` head/middle/tail) was unbuilt as this shipped. Proven by a
   *changed* reading: this dev machine moved `unreadable` → `nocpufreq`, and the other four states are
   driven from synthetic probe lines because no one host can produce them all.
 - **gate-p5's `KEEL_FORCE=nonsense` check certified a refusal it never observed.** It reads *nonzero* as PASS,
