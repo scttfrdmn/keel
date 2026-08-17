@@ -16,22 +16,10 @@ import (
 // knob, because it is the knob a caller already has and already expects a Go
 // library to respect.
 //
-// What that means for a caller:
-//
-//   - GOMAXPROCS=1 runs the serial nest in the calling goroutine, with no
-//     goroutine, no atomic and no scheduling in the path. Every published keel
-//     number was measured that way.
-//   - No goroutine outlives a call, so keel is safe to call from inside something
-//     that counts them, and repeated calls leak nothing.
-//   - The result does not depend on the thread count. It is BIT-IDENTICAL at every
-//     GOMAXPROCS, because the parallel axis partitions the output rather than any
-//     single output element's sum. A float32 BLAS whose answer moved with the core
-//     count would be a different library on every machine.
-//
-// Level 1 is not parallelized. Sdot and its neighbours are memory-bound at every
-// size where a thread would pay for itself, and BLAS callers reach Level-1
-// parallelism by calling from parallel code rather than by having each call
-// fan out.
+// The caller-facing consequences — serial in the calling goroutine at
+// GOMAXPROCS=1, no goroutine outliving a call, a bit-identical result at every
+// GOMAXPROCS, and Level 1 unparallelized — are stated once in doc.go and not
+// restated here. Every published keel number was measured at GOMAXPROCS=1.
 
 // Workers reports how many goroutines a Level-3 call would distribute n units of
 // independent work over at the current GOMAXPROCS. It is exported as documentation
@@ -39,24 +27,20 @@ import (
 // min(GOMAXPROCS(0), n), and the only way to change it is to change GOMAXPROCS.
 func Workers(n int) int { return par.Workers(n) }
 
+// Why a library exposes WorkersLastCall at all: a benchmark row that believes it
+// ran on eight workers and silently ran on one reports a 1.0x scaling ratio, which
+// reads as a performance problem when it is a measurement failure — and the two
+// want opposite responses. Only the library can settle it, so gate-p5 criterion 3
+// requires every Scale row to declare this value and refuses any row that
+// disagrees with the thread count in its own name. See block.WorkersLastCall for
+// why exposing it does not violate P5's "no state between calls".
+
 // WorkersLastCall reports how many workers the most recently completed Level-3
-// call in this process actually distributed work to, counting the calling
-// goroutine as a worker. It is 0 before the first such call.
+// call in this process distributed work to, counting the calling goroutine as a
+// worker. It is 0 before the first such call.
 //
-// # Why a library exposes this at all
-//
-// Because scripts/gate-p5.sh criterion 3 requires a benchmark row named
-// threads=8 to declare the number of workers it ran on. A row that silently ran
-// on one worker produces a 1.0× scaling ratio, which reads as a performance
-// problem when it is really a measurement failure — and the two want opposite
-// responses. Only the library can answer the question, so the library answers it,
-// and the gate refuses any Scale row whose declared worker count disagrees with
-// the thread count in its own name.
-//
-// It is instrumentation, not configuration and not state that anything computes
-// from: see block.WorkersLastCall for the precise argument that it does not
-// violate P5's "no state between calls", and for its one limitation — under
-// concurrent Level-3 calls the value belongs to whichever finished last.
+// It is instrumentation for a benchmark harness, not configuration: under
+// concurrent Level-3 calls the value belongs to whichever call finished last.
 func WorkersLastCall() int { return block.WorkersLastCall() }
 
 // GOMAXPROCS reports runtime.GOMAXPROCS(0): the pool's size bound, read the same

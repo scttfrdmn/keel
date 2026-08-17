@@ -9,6 +9,24 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **All 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` pointed at anchors that do not
+  exist, and the gate's exclusion for them came out in the same commit** (#93). The headings carry their
+  titles (`## T1 — simd/archsimd is amd64-only; …`), so both renderers slugify the whole line and the
+  anchor that exists is `#t1--simdarchsimd-is-amd64-only-…`. Clicking `T18` in the summary table reloaded
+  the page. **Dead in GitHub's rendering of the file too**, since before there was a site — the site build
+  is only what surfaced it, which is the render-don't-assume rule reaching prose. Fixed with an explicit
+  `<a name="tn" id="tn"></a>` before each heading rather than by rewriting the links, because GitHub and
+  the `toc` extension slugify the em dash differently and no single spelling of the link satisfies both;
+  `attr_list`'s `{ #t1 }` is unsuitable for the same reason, MkDocs honouring it and GitHub not. The form
+  was verified through GitHub's own markdown pipeline before 25 of them were written (`gh api /markdown`
+  returns `<a name="user-content-t1" id="user-content-t1">` beside `href="#t1"`, the pair GitHub's
+  fragment remapping resolves), and through a site build afterwards.
+  **The un-exclusion is the other half of this commit, by ruling:** *"an exclusion that outlives its
+  defect becomes a permanent blind spot with a good excuse."* `gate-docs.sh`'s anchor check no longer
+  exempts the records pages, and `mkdocs.yml` raises `validation.links.anchors` to `warn` so `strict`
+  errors on one. Both branches were driven on purpose before either was trusted: with `warn`, mkdocs
+  fails the build; with the setting lowered back to `info`, the gate's grep over the build log is what
+  fails. Lowering it does not buy silence, it moves which check goes red.
 - **gate-p2's criterion 5b aggregate divided by the hosts that answered and never named the fleet it
   was asked about** (#90), so with `antares.local` unreachable it printed *"every host that produced a
   judgeable throughput reading cleared its floor (2/2)"* — arithmetically true, and reading as
@@ -64,6 +82,92 @@ While the major version is 0, minor versions may contain breaking changes.
   hit the banner's promise text, in the one file where a log being mistakable for certification matters most.
 
 ### Added
+- **A documentation site, and a gate that will not let it publish a number nobody measured** (#92).
+  `mkdocs.yml` + five user pages under `doc-site/` (Home, Usage, Capabilities & limits, Numbers,
+  Troubleshooting) and **one** nav entry at the end for the project records. The ruling that shapes it,
+  2026-08-16: *"users will not care about the design notes. They want straight usable information"* — so
+  DESIGN.md, the §5 methodology, the toolchain field notes, KERNEL.md, CHANGELOG and CONTRIBUTING are
+  present, linked once, and never in the user path, and nothing on a user page summarises them.
+  **The records are served by symlink, not copy** (verified empirically that mkdocs reads through a
+  symlink inside `docs_dir` before the design depended on it): the page *is* the file, so there is no
+  second copy to drift, and they are gitignored so the tree does not gain a second path to DESIGN.md.
+  **The numbers page is an extraction, not a transcription** — `scripts/docs-gen.sh` lifts the table out
+  of README.md's `keel-numbers` block, the same block gate-p5 criterion 9 re-measures on all three
+  benchmark hosts against `README_TOL=0.05`, which is what puts the site's figures under that gate; a
+  rate typed onto the page by hand would be under nothing. Its context lines are *counted* from the block
+  (24 rows, 3 CPU models, rev `083cbdb`) rather than typed, and it carries exactly one link out, to the
+  methodology.
+  **The generator fails closed on nine malformations and the gate drives all nine on purpose**
+  (`scripts/gate-docs.sh`): missing or reversed markers, an empty block, no table, no header separator, a
+  row whose cell count disagrees with the header, a `[synthetic]` stamp anywhere in the block, and a
+  missing provenance rev — plus a well-formed positive control, because "everything was rejected" is also
+  what a generator broken in some unrelated way looks like, and two more for the methodology extraction
+  (no §5; a §5 with no numbered rules). A fail-closed check nobody has watched fail is a claim, not a
+  check. The gate is those checks plus `mkdocs build --strict` plus `citation-lint.sh`, and CI's
+  `docs.yml` calls the script rather than restating it, on hosted runners only.
+  **Two defects found by rendering rather than by reading.** The home page's card grid needed
+  `md_in_html`; without it `<div markdown>` was emitted verbatim and the markdown inside it served as
+  literal text — and `--strict` said nothing, because links it never parses are links it cannot validate.
+  And every one of the 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` pointed at an anchor
+  that does not exist — a defect in the record, not in the site, fixed below (#93). `mkdocs.yml` now sets
+  `validation.links.anchors: warn`, which is **not** mkdocs' default: the default is `info`, printed and
+  passed, and a message with no verdict attached is why 25 dead links survived to a site build.
+  **The deploy job is written and not enabled**: it is gated to `workflow_dispatch` or a `v*` tag, so it
+  is skipped on every push and pull request, and it will fail rather than publish until Pages is turned
+  on — enabling Pages and flipping the repository public remain Scott's actions at tag time.
+- **The project graphics, folded into the README, the site's home page and the site's chrome** (#92).
+  `doc-site/assets/` holds one copy of each: `keel-hero.webp` (1600×533, the logo and tagline banner) at
+  the top of both `README.md` and `doc-site/index.md`, `keel-mark-white.png` as the header logo,
+  `keel-favicon.png`, and `keel-social.jpg`. **One copy, per the site's own law** — README points at
+  `doc-site/assets/…` and the pages at `assets/…`, so there is no second path to an image and no symlink
+  or gitignore entry to keep in step.
+  **Format is chosen by who consumes the file, and the bytes were counted because they ship in the module
+  zip.** Everything tracked in the module root is downloaded by every `go get`, which is not true of a
+  normal site's images, so the hero is webp at 78 KB against 745 KB for the same pixels as a truecolour
+  PNG. `keel-social.jpg` is JPEG. The four images are 183 KB together.
+  **GitHub has two image paths that do not accept the same formats, which is the whole reason those two
+  files differ**, and checking a claim already written down is what surfaced it. A file *committed* and
+  embedded by relative path is fetched from `raw.githubusercontent.com`, which serves `.webp` as
+  `image/webp` — verified against a public repo's tracked webp, because this repo is private and its own
+  rendering cannot be read yet — so the hero renders. A file *uploaded* through the web UI goes through
+  the attachment allowlist, which `docs.github.com` states as PNG, GIF, JPEG and SVG, **no webp**; the
+  social-preview upload is that path. The trap is that "GitHub supports webp" and "GitHub does not" are
+  both true of one path and false of the other, so either sentence applied to both is wrong in one
+  direction. The first draft of this entry asserted the permissive half for both.
+  **PSNR picked the wrong encoding, and looking at the pixels overruled it.** A 256-colour PNG measured
+  *better* than webp q92 (40.3 dB against 39.2 dB) and was visibly worse: this artwork is mostly a
+  near-white gradient field, where palette quantisation spends its error on dither speckle that the eye
+  reads as grain, while webp spends it on a softening of a faint dot grid that is invisible at display
+  size. Two encodings with the same error budget are not equally wrong, and a single scalar cannot say
+  which — the decision was made from a 300%-magnified crop of the smoothest region of both.
+  **A white silhouette needs a dark header, so the header is now the artwork's navy** (`#04274c`, the
+  most common ink in the mark) via `primary: custom` and `doc-site/assets/extra.css`, which is Material's
+  documented mechanism for a brand colour rather than a workaround; the accent moves from indigo to teal
+  to match. **That override introduced a defect visible only in the theme's built stylesheet.** Material
+  derives `--md-typeset-a-color` from the primary colour, so links became navy — 15:1 against white and
+  therefore perfectly readable while being almost exactly as dark as the body text they must be
+  distinguishable *from*; contrast was never the failing quantity. Worse, `palette.css` sets slate's link
+  colour to the primary and then overrides it per *named* primary (pink, blue, teal, …), none of which
+  `custom` matches, so **dark mode inherited the navy at 1.07:1 — links that cannot be seen at all.** A
+  build is green either way and no page source shows it. Both are now stated explicitly: `#19608c` at
+  6.8:1 in light mode, the brand teal at 5.7:1 in slate.
+  **The gate already covers this, and was made to prove it**: `mkdocs build --strict` fails on an image
+  path that resolves to nothing, driven on purpose by typo'ing the hero's filename (`FAIL mkdocs build
+  --strict failed`, naming the link) before the assets were trusted. `keel-social.jpg` is referenced by
+  no page deliberately — it is the source for the repository's social-preview image, and uploading it is
+  Scott's action at tag time, like enabling Pages.
+- **`example_test.go`: five runnable `Example` functions, which is how this project will document a call
+  from now on** (#92). `ExampleSgemm`, `ExampleSgemm_submatrix`, `ExampleSaxpy`, `ExampleSaxpy_stride`,
+  `ExampleTranspose`. The rule behind the form is §5 rule 8 — *a summary is a cache with no invalidation
+  protocol* — applied to documentation: a prose code block is a cache of the API and nothing invalidates
+  it, while an `Example` is compiled and run by `go test` and cannot silently stop matching the package.
+  It collected immediately: `ExampleSaxpy`'s hand-computed `// Output:` was wrong in the last element
+  (44 for 40 + 2·4) and the first run said so. Every example uses small integer-valued matrices, because
+  integers in that range are exact in float32 and so is any sum of them that stays in range — an example
+  whose expected output depended on the summation order would be an example that fails on one backend.
+  Two of the five go past the three that were asked for: `_submatrix` makes the `lda > n` contract
+  runnable rather than pictorial, and `_stride` does the same for `n` versus `len(x)`. Those are the two
+  parts of this API a caller gets wrong first, and both were prose-only before.
 - **`scripts/fakessh` + `scripts/fakessh-test.sh` + `scripts/exercise-dead-host.sh`: a dead host,
   induced environmentally, to fire gate-p2's fleet-incomplete aggregate once on purpose** (ruled
   2026-08-16). Criterion 5b's PASS reads *"every host that produced a judgeable throughput reading
@@ -113,6 +217,22 @@ While the major version is 0, minor versions may contain breaking changes.
   owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
 ### Changed
+- **`doc.go` rewritten for someone with a matrix to multiply, and `types.go`'s four flag types documented
+  at all** (#92, ruled 2026-08-16: *"users will not care about the design notes. They want straight usable
+  information"*). The test each paragraph now has to pass is **"would a person with a matrix to multiply
+  still be reading?"** — so the package comment leads with the two build modes, the row-major/`ld`
+  convention as a picture of an actual array, and a minimal `Sgemm` call, and it no longer contains the
+  paragraphs about what took two phases to establish or why the Level-3 chain has two rungs. Nothing was
+  deleted from the project's account of itself; the reasoning that had accumulated in godoc moved to
+  comments that `go doc` does not render (`L1Chain`, `WorkersLastCall`), which is where a gate's grounds
+  belong. `types.go` had **no doc comments whatsoever** on `Transpose`, `Uplo`, `Side`, `Diag` or their
+  eight constants — the flags every call site passes were the least documented part of the API.
+  **No performance number appears in godoc any more.** A doc comment is a contract and a rate is a
+  measurement; the `# Numbers` section became one link to the site's numbers page, which is generated
+  from the block gate-p5 re-measures. Read back rather than assumed: `go doc` rendered for all 38
+  exported symbols, 38 leading with their own name (const groups checked for naming each member), and the
+  read-back's matcher was self-tested against a non-matching lead first, because a checker that cannot
+  say CHECK proves nothing when it says ok.
 - **`DESIGN.md` §4/P2 now specifies the tile orientation that shipped, and states the naming convention
   in the same sentence** (#16, ruled 2026-08-16). The doc had said `MR=32, NR=6` — *"a pre-implementation
   fossil in BLIS's column-major orientation, written before the row-major decision propagated through the

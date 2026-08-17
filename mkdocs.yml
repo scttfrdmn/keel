@@ -1,0 +1,125 @@
+# Copyright 2026 Scott Friedman
+# SPDX-License-Identifier: Apache-2.0
+#
+# The documentation site (#92). Two rules shape this file more than any taste
+# question:
+#
+# 1. NAV CONFIG AND EXTRACTION ONLY. Nothing here may be a hand-maintained
+#    duplicate of something the repo already holds. The project records are not
+#    copied into doc-site/ by hand — scripts/docs-gen.sh puts them there, and
+#    they are gitignored so no editor can drift them from the originals.
+# 2. THE USER PATH COMES FIRST. Primary nav is user pages only; the records get
+#    exactly one entry, at the end. The ruling of 2026-08-16: "users will not
+#    care about the design notes. They want straight usable information."
+#
+# Build it with `make docs`, which runs the generator first. `mkdocs build` on
+# its own fails on the generated pages being absent, which is the intended
+# failure: a site missing its numbers page is not a site with one page fewer.
+site_name: keel
+site_description: A float32 BLAS subset in pure Go, with AVX-512 kernels and a scalar fallback.
+site_url: https://scttfrdmn.github.io/keel/
+repo_url: https://github.com/scttfrdmn/keel
+repo_name: scttfrdmn/keel
+copyright: Copyright 2026 Scott Friedman — Apache-2.0
+
+docs_dir: doc-site
+site_dir: build/site
+
+# doc-site/assets/ holds ONE copy of each graphic, tracked. README.md points at it
+# as doc-site/assets/..., the pages as assets/... -- no second copy, no symlink, no
+# gitignore entry, so rule 1 above holds for images too. Formats are chosen by who
+# consumes the file, not by preference: the hero is webp (78 KB against 745 KB as a
+# truecolour PNG, and only browsers ever fetch it) while keel-social.jpg is JPEG.
+# Bytes are worth counting here in a way they are not on a normal site: everything
+# tracked in the module root ships in the zip that every `go get` downloads.
+#
+# GitHub has TWO image paths and they do not accept the same formats, which is the
+# whole reason those two files differ. A file COMMITTED to the repo and embedded by
+# relative path is fetched from raw.githubusercontent.com, which serves `.webp` as
+# `image/webp` (verified against a public repo's tracked webp, since this one is
+# private and its own rendering cannot be read yet) -- so the hero renders. A file
+# UPLOADED through the web UI goes through the attachment allowlist, which
+# docs.github.com states as PNG, GIF, JPEG and SVG, no webp; the social-preview
+# upload is that path. Hence JPEG for the social card, and hence the trap: reading
+# "GitHub supports webp" or "GitHub does not" and applying it to both paths is wrong
+# in one direction either way.
+#
+# keel-social.jpg is referenced by no page on purpose. It is the source for the
+# repo's social-preview image, and uploading it is Scott's action at tag time, like
+# enabling Pages.
+
+# A broken link or a nav entry with no page is red, here as well as on the
+# command line. CI runs `mkdocs build --strict`; setting it in the config too
+# means a local build cannot be more permissive than the gate.
+strict: true
+
+# Anchors are validated too, at `warn` — which `strict` turns into an error. This
+# is NOT mkdocs' default (`info`, i.e. printed and passed), and the default is why
+# 25 dead `[Tn](#tn)` links lived in docs/toolchain-notes.md long enough to reach a
+# site build: a message with no verdict attached is a message nobody acts on. The
+# links were fixed in the commit that raised this setting, per the ruling that an
+# exclusion outliving its defect becomes a permanent blind spot with a good excuse
+# (#93). Both halves were driven on purpose before this line was trusted: with
+# `warn`, mkdocs fails the build; with it lowered to `info`, scripts/gate-docs.sh's
+# grep over the build log is what fails. Lowering this line does not buy silence,
+# it just moves which check goes red.
+validation:
+  links:
+    anchors: warn
+
+theme:
+  name: material
+  # The mark, as a white silhouette, over the navy set in doc-site/assets/extra.css.
+  # `primary: custom` is what selects that stylesheet's block; the palette below has
+  # no named colour that is this navy, and inventing one by eye would have put the
+  # brand's ink in two places.
+  logo: assets/keel-mark-white.png
+  favicon: assets/keel-favicon.png
+  palette:
+    - scheme: default
+      primary: custom
+      accent: teal
+      toggle: { icon: material/weather-night, name: Switch to dark mode }
+    - scheme: slate
+      primary: custom
+      accent: teal
+      toggle: { icon: material/weather-sunny, name: Switch to light mode }
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+
+extra_css:
+  - assets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  # Required by the card grid on the home page: without it, `<div markdown>` is
+  # emitted verbatim and the markdown inside it is served as literal text — which
+  # is how the home page rendered on the first build, and --strict said nothing,
+  # because links it never parsed are links it cannot validate. Found by reading
+  # the built HTML rather than the source.
+  - md_in_html
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.details
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Usage: usage.md
+  - Capabilities & limits: limits.md
+  - Numbers: numbers.md
+  - Troubleshooting: troubleshooting.md
+  # One entry, at the end, for a different audience. Generated from the repo's
+  # own markdown by scripts/docs-gen.sh — never summarised, never rewritten.
+  - Project records:
+      - What these are: records/index.md
+      - Design document: records/design.md
+      - Testing methodology: records/methodology.md
+      - Toolchain field notes: records/toolchain-notes.md
+      - Microkernel notes: records/kernel.md
+      - Changelog: records/changelog.md
+      - Contributing: records/contributing.md

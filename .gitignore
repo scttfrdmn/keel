@@ -9,6 +9,20 @@ ssa.html
 # Not committed — the gate regenerates it on every run, and a stale copy would be
 # worse than none when writing docs/spill-report.md.
 /build/
+# generated documentation-site pages (scripts/docs-gen.sh, run by `make docs`).
+# Two reasons they are not committed, one per generation mechanism: the records
+# are symlinks into the repository, so committing them would put a second path to
+# DESIGN.md in the tree; numbers.md and methodology.md are extractions, so a
+# committed copy could disagree with the file it was extracted from and nothing
+# would notice. The tracked artifacts are mkdocs.yml, the hand-written user
+# pages, and the generator.
+/doc-site/numbers.md
+/doc-site/records/design.md
+/doc-site/records/methodology.md
+/doc-site/records/toolchain-notes.md
+/doc-site/records/kernel.md
+/doc-site/records/changelog.md
+/doc-site/records/contributing.md
 # bench scratch
 bench/results/*.local.*
 # machine-local remote execution targets (see .keel-hosts.example, docs/hosts.md)
