@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **Four statements in the docs were false against the code**, each fixed rather than filed: `parallel.go`
+  and `p5_test.go` claimed every published number was measured at `GOMAXPROCS=1` (README publishes an
+  8-thread arm per Level-3 routine), `DESIGN.md` §2's heading said 15 routines over a table summing to 12,
+  and `doc.go` promised the two backend prints always agree — on AVX2-only silicon, which is what CI runs,
+  it prints `avx2 scalar` (#40). README's undated "currently missed" scaling floor is now dated to the run
+  it describes.
+- **A kernel emitting `NaN` passed the two tests whose job is to catch a wrong kernel** (#98):
+  `math.Abs(got-want) > tol` is false against NaN. Non-finite results are now rejected before the
+  magnitude comparison, and a *matched* NaN/`Inf` pair no longer counts as backend agreement. The two
+  differential tests stay unexercised on arm64, which has no vector backend to differentiate against.
+- **`Snrm2` returned up to 24.78% relative error for small inputs** (#97): gradual underflow leaves a
+  *subnormal*, so the `s > 0` rescue guard let a sum that had lost significance take the fast path.
+  Now guarded by `s >= n·2^-126`. The AVX-512/AVX2 accumulations of this path are unexercised on arm64.
 - **All 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` pointed at anchors that do not
   exist, and the gate's exclusion for them came out in the same commit** (#93). The headings carry their
   titles (`## T1 — simd/archsimd is amd64-only; …`), so both renderers slugify the whole line and the
@@ -247,6 +260,12 @@ While the major version is 0, minor versions may contain breaking changes.
   owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
 ### Changed
+- **DESIGN.md §5 rule 5 now demands a stable clock rather than a `performance` governor** (amended
+  2026-08-16, forced by the ruling to measure on AWS instances). No guest can satisfy the old wording: there
+  is no `cpufreq` directory, so `remote.sh:410` resolves to `unmeasured` and blocks every gate — correctly,
+  but it makes the pivot impossible rather than merely awkward. Where `cpufreq` is readable the governor
+  assertion is unchanged; where it is absent, stability comes from `BenchmarkPeak` sampled at head, middle
+  and tail. Same benchmark, no new bar. The harness half is not written yet — see the follow-up tasks.
 - **Every GitHub Action in both workflows moved to a Node 24 major**, in one sweep and outside any feature
   work: `checkout@v4→v7`, `setup-go@v5→v7`, `setup-python@v5→v7`, `upload-artifact@v4→v7`,
   `configure-pages@v5→v6`, `upload-pages-artifact@v3→v5`, `deploy-pages@v4→v5`. Node 20 was deprecated on

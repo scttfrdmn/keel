@@ -19,8 +19,16 @@ correct and slow. Nothing warns you, so ask:
 
 	fmt.Println(keel.ActiveL1Backend(), keel.ActiveKernBackend())
 
-That prints avx512 twice on a machine and toolchain that have it, and scalar
-twice otherwise.
+That prints avx512 twice on an amd64 machine with AVX-512 built under
+GOEXPERIMENT=simd, and scalar twice wherever no vector backend is compiled in or
+detected — a stock-toolchain build, and also any non-amd64 host, which prints
+scalar twice even under GOEXPERIMENT=simd.
+
+The two do not always agree, because the chains have a different number of rungs:
+Level 1 dispatches avx512 → avx2 → scalar, while the Level-3 microkernel
+dispatches avx512 → scalar. On AVX2-only silicon it therefore prints "avx2
+scalar" — a vector Level 1 over a scalar SGEMM. See dispatch.go for why the
+middle rung is deliberately absent at Level 3 (issue #40).
 
 # Matrices are row-major
 
