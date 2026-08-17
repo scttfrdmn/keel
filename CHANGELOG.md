@@ -64,6 +64,41 @@ While the major version is 0, minor versions may contain breaking changes.
   hit the banner's promise text, in the one file where a log being mistakable for certification matters most.
 
 ### Added
+- **A documentation site, and a gate that will not let it publish a number nobody measured** (#92).
+  `mkdocs.yml` + five user pages under `doc-site/` (Home, Usage, Capabilities & limits, Numbers,
+  Troubleshooting) and **one** nav entry at the end for the project records. The ruling that shapes it,
+  2026-08-16: *"users will not care about the design notes. They want straight usable information"* — so
+  DESIGN.md, the §5 methodology, the toolchain field notes, KERNEL.md, CHANGELOG and CONTRIBUTING are
+  present, linked once, and never in the user path, and nothing on a user page summarises them.
+  **The records are served by symlink, not copy** (verified empirically that mkdocs reads through a
+  symlink inside `docs_dir` before the design depended on it): the page *is* the file, so there is no
+  second copy to drift, and they are gitignored so the tree does not gain a second path to DESIGN.md.
+  **The numbers page is an extraction, not a transcription** — `scripts/docs-gen.sh` lifts the table out
+  of README.md's `keel-numbers` block, the same block gate-p5 criterion 9 re-measures on all three
+  benchmark hosts against `README_TOL=0.05`, which is what puts the site's figures under that gate; a
+  rate typed onto the page by hand would be under nothing. Its context lines are *counted* from the block
+  (24 rows, 3 CPU models, rev `083cbdb`) rather than typed, and it carries exactly one link out, to the
+  methodology.
+  **The generator fails closed on nine malformations and the gate drives all nine on purpose**
+  (`scripts/gate-docs.sh`): missing or reversed markers, an empty block, no table, no header separator, a
+  row whose cell count disagrees with the header, a `[synthetic]` stamp anywhere in the block, and a
+  missing provenance rev — plus a well-formed positive control, because "everything was rejected" is also
+  what a generator broken in some unrelated way looks like, and two more for the methodology extraction
+  (no §5; a §5 with no numbered rules). A fail-closed check nobody has watched fail is a claim, not a
+  check. The gate is those checks plus `mkdocs build --strict` plus `citation-lint.sh`, and CI's
+  `docs.yml` calls the script rather than restating it, on hosted runners only.
+  **Two defects found by rendering rather than by reading.** The home page's card grid needed
+  `md_in_html`; without it `<div markdown>` was emitted verbatim and the markdown inside it served as
+  literal text — and `--strict` said nothing, because links it never parses are links it cannot validate.
+  And every one of the 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` points at an anchor
+  that does not exist, dead in GitHub's rendering of that file today and not a site-only problem; filed as
+  #93 rather than drive-by fixed, so the gate fails on a broken anchor on any **user** page and prints
+  the records-page ones as a counted exclusion naming the issue. `validation.links.anchors` stays at its
+  default until #93 lands, because raising it would make this gate red on a defect that predates it — and
+  the count is in the log rather than implied by a green.
+  **The deploy job is written and not enabled**: it is gated to `workflow_dispatch` or a `v*` tag, so it
+  is skipped on every push and pull request, and it will fail rather than publish until Pages is turned
+  on — enabling Pages and flipping the repository public remain Scott's actions at tag time.
 - **`example_test.go`: five runnable `Example` functions, which is how this project will document a call
   from now on** (#92). `ExampleSgemm`, `ExampleSgemm_submatrix`, `ExampleSaxpy`, `ExampleSaxpy_stride`,
   `ExampleTranspose`. The rule behind the form is §5 rule 8 — *a summary is a cache with no invalidation

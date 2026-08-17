@@ -1,0 +1,79 @@
+# Copyright 2026 Scott Friedman
+# SPDX-License-Identifier: Apache-2.0
+#
+# The documentation site (#92). Two rules shape this file more than any taste
+# question:
+#
+# 1. NAV CONFIG AND EXTRACTION ONLY. Nothing here may be a hand-maintained
+#    duplicate of something the repo already holds. The project records are not
+#    copied into doc-site/ by hand — scripts/docs-gen.sh puts them there, and
+#    they are gitignored so no editor can drift them from the originals.
+# 2. THE USER PATH COMES FIRST. Primary nav is user pages only; the records get
+#    exactly one entry, at the end. The ruling of 2026-08-16: "users will not
+#    care about the design notes. They want straight usable information."
+#
+# Build it with `make docs`, which runs the generator first. `mkdocs build` on
+# its own fails on the generated pages being absent, which is the intended
+# failure: a site missing its numbers page is not a site with one page fewer.
+site_name: keel
+site_description: A float32 BLAS subset in pure Go, with AVX-512 kernels and a scalar fallback.
+site_url: https://scttfrdmn.github.io/keel/
+repo_url: https://github.com/scttfrdmn/keel
+repo_name: scttfrdmn/keel
+copyright: Copyright 2026 Scott Friedman — Apache-2.0
+
+docs_dir: doc-site
+site_dir: build/site
+
+# A broken link or a nav entry with no page is red, here as well as on the
+# command line. CI runs `mkdocs build --strict`; setting it in the config too
+# means a local build cannot be more permissive than the gate.
+strict: true
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue grey
+      accent: indigo
+      toggle: { icon: material/weather-night, name: Switch to dark mode }
+    - scheme: slate
+      primary: blue grey
+      accent: indigo
+      toggle: { icon: material/weather-sunny, name: Switch to light mode }
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  # Required by the card grid on the home page: without it, `<div markdown>` is
+  # emitted verbatim and the markdown inside it is served as literal text — which
+  # is how the home page rendered on the first build, and --strict said nothing,
+  # because links it never parsed are links it cannot validate. Found by reading
+  # the built HTML rather than the source.
+  - md_in_html
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.details
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Usage: usage.md
+  - Capabilities & limits: limits.md
+  - Numbers: numbers.md
+  - Troubleshooting: troubleshooting.md
+  # One entry, at the end, for a different audience. Generated from the repo's
+  # own markdown by scripts/docs-gen.sh — never summarised, never rewritten.
+  - Project records:
+      - What these are: records/index.md
+      - Design document: records/design.md
+      - Testing methodology: records/methodology.md
+      - Toolchain field notes: records/toolchain-notes.md
+      - Microkernel notes: records/kernel.md
+      - Changelog: records/changelog.md
+      - Contributing: records/contributing.md

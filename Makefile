@@ -2,7 +2,7 @@
 # scalar path builds on an unmodified toolchain (release requirement, P5).
 GOEXP := GOEXPERIMENT=simd
 
-.PHONY: build stock test test-scalar bench gate-p0 gate-p1 gate-p2 gate-p3 gate-p4 gate-p5 lint
+.PHONY: build stock test test-scalar bench gate-p0 gate-p1 gate-p2 gate-p3 gate-p4 gate-p5 lint docs docs-serve
 
 build:
 	$(GOEXP) go build ./...
@@ -30,3 +30,15 @@ lint:
 
 gate-p%:
 	scripts/gate-p$*.sh
+
+# The documentation site. `docs` is the whole gate — the same script CI runs, so
+# there is one definition of what green means rather than a copy of the check list
+# in a workflow file. It generates the extracted and linked pages first; the site
+# does not build without them.
+docs:
+	scripts/gate-docs.sh
+
+# Local preview. Generates first for the same reason, and serves the same tree the
+# gate builds. Not part of any gate.
+docs-serve:
+	scripts/docs-gen.sh && mkdocs serve

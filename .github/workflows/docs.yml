@@ -1,0 +1,79 @@
+# The documentation site (#92). Hosted runners only — this workflow never touches
+# the three benchmark hosts, and there is nothing here that would want to: a site
+# build has no measurement in it, so it has no reason to run anywhere the numbers
+# are taken. The rates it publishes are extracted from README.md's keel-numbers
+# block, which the P5 gate re-measures on those hosts; this job copies, and never
+# measures.
+name: docs
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # THE GATE. One step, deliberately: scripts/gate-docs.sh is the definition of
+  # green, and the workflow calls it rather than restating its checks — a copy of
+  # the check list here could pass while the script it was copied from fails.
+  site:
+    name: mkdocs build --strict + numbers extraction + citations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # citation-lint enumerates sites with `git ls-files`, so it needs the
+      # checkout it gets here and no toolchain at all. A shallow clone is fine:
+      # the lint reads the index, not history.
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      # Pinned to what the site was written against. An unpinned theme means the
+      # green says "it built against whatever was on PyPI this morning", which is
+      # a different claim on every run.
+      - run: pip install 'mkdocs-material==9.6.22'
+      - run: scripts/gate-docs.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: build/site
+          retention-days: 7
+
+  # THE DEPLOY, WRITTEN AND NOT ENABLED. The repository is private until v0.1.0,
+  # and enabling Pages and flipping visibility are Scott's actions, not this
+  # workflow's. So the steps exist, reviewed and ready, behind a condition that is
+  # false on every push and every pull request: only a manual dispatch or a v* tag
+  # reaches them.
+  #
+  # This job will FAIL rather than publish until Pages is enabled for the
+  # repository (Settings -> Pages -> Source: GitHub Actions). That is the intended
+  # order: a deploy that quietly succeeded before anyone decided to publish would
+  # be the outward-facing act happening by default, which is the one thing the
+  # gating is for.
+  deploy:
+    name: publish to GitHub Pages (manual / on tag only)
+    needs: site
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: pip install 'mkdocs-material==9.6.22'
+      # Rebuilt rather than downloaded from the gate job: the artifact above is for
+      # a human to look at, and a deploy should publish a tree it just produced
+      # from the commit it is deploying.
+      - run: scripts/gate-docs.sh
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: build/site }
+      - id: deployment
+        uses: actions/deploy-pages@v4
