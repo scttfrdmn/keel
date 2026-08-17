@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **`Snrm2` returned up to 24.78% relative error for small inputs** (#97). The rescue guard tested
+  `s > 0`, but gradual underflow leaves a *subnormal* — neither `0` nor `+Inf` — so a sum that had lost
+  significance took the fast path. Replaced with the bound `s >= n·2^-126`, which is where per-term
+  subnormal rounding can no longer reach float32's eps. Only the AVX-512 and AVX2 accumulations of this
+  path stay unexercised locally: the dev host is arm64, which has no vector L1 backend.
 - **All 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` pointed at anchors that do not
   exist, and the gate's exclusion for them came out in the same commit** (#93). The headings carry their
   titles (`## T1 — simd/archsimd is amd64-only; …`), so both renderers slugify the whole line and the

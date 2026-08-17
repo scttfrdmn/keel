@@ -119,16 +119,41 @@ func Sasum(n int, x []float32, incX int) float32 {
 // that loop has a branch per element and would drag the vector kernel down to
 // scalar speed for the 99% of inputs that never come near either limit.
 //
-// Instead the fast kernel runs unguarded and its *result* is inspected. A sum
-// of squares is monotonically non-decreasing, so overflow can only end at +Inf
-// and total underflow can only end at exactly 0 — one check after the loop sees
-// everything a per-element check would. Either outcome (plus NaN, which the
-// same check catches) reruns the whole vector in float64, where no rescaling is
-// needed at all: the largest float32 squared is ~1.2e77 and float64 reaches
-// ~1.8e308, so float32 inputs cannot overflow a float64 accumulator until
-// n exceeds 1e230 elements. The rescue is therefore exact-by-construction
-// rather than clever, which is the property worth having in a path that runs
-// only on inputs nobody tested.
+// Instead the fast kernel runs unguarded and its *result* is inspected. Either
+// outcome (plus NaN, which the same check catches) reruns the whole vector in
+// float64, where no rescaling is needed at all: the largest float32 squared is
+// ~1.2e77 and float64 reaches ~1.8e308, so float32 inputs cannot overflow a
+// float64 accumulator until n exceeds 1e230 elements. The rescue is therefore
+// exact-by-construction rather than clever, which is the property worth having
+// in a path that runs only on inputs nobody tested.
+//
+// # Why the underflow test is a threshold and not s == 0
+//
+// This comment used to claim that "total underflow can only end at exactly 0, so
+// one check after the loop sees everything a per-element check would". That was
+// wrong, and it was wrong in a way that made the fast path silently inaccurate
+// rather than merely slow (#97). Underflow is gradual: a term v*v below ~1.2e-38
+// rounds to a *subnormal*, which is neither 0 nor +Inf, so a partially
+// underflowed sum sails through a `s > 0 && !IsInf(s)` guard carrying whatever
+// relative error the rounding committed. Measured before the fix,
+// Snrm2(1, []float32{3e-23}, 1) was off by 24.78%, and the damage decays
+// smoothly rather than at an edge — 0.96% at 1e-22, 0.026% at 1e-21.
+//
+// The replacement guard is a bound, not a probe. Every term v*v is rounded to a
+// multiple of the smallest subnormal eta = 2^-149, so it carries an absolute
+// error of at most eta/2, and n terms carry at most n·eta/2 between them. The
+// relative error in s is therefore at most n·eta/(2s), which is below float32's
+// eps = 2^-23 exactly when s >= n·eta/(2·eps) = n·2^-127. Taking the guard one
+// binade stricter at n·2^-126 — the smallest *normal* float32 times n — bounds
+// the error at eps/2 and keeps the constant recognisable.
+//
+// Two properties worth stating because they are what make this cheap. It is an
+// absolute-error argument, so it holds for any distribution of magnitudes: one
+// ordinary element among subnormal ones dominates s and the tiny terms' rounding
+// is correctly judged irrelevant, with no per-element test. And the threshold is
+// minuscule — a vector of a million elements takes the fast path whenever its
+// norm exceeds ~1e-16 — so the rescue stays rare, which was the whole reason for
+// inspecting the result instead of guarding each element.
 func Snrm2(n int, x []float32, incX int) float32 {
 	checkVectorPos("Snrm2", "x", n, x, incX)
 	if n == 0 {
@@ -151,10 +176,13 @@ func Snrm2(n int, x []float32, incX int) float32 {
 		}
 		s = a0 + a1
 	}
-	// s == 0 with a nonzero input means underflow; a non-finite s means overflow
-	// or a NaN in the data. Both go to the float64 path. s == 0 for a genuinely
-	// zero vector also lands there and costs one pass to confirm 0.
-	if s > 0 && !math.IsInf(float64(s), 1) {
+	// An s below n·2^-126 may have lost significance to gradual underflow (see
+	// the derivation above); a non-finite s means overflow or a NaN in the data.
+	// Both go to the float64 path, as does s == 0 — whether from a genuinely zero
+	// vector, which costs one pass to confirm, or from total underflow. NaN fails
+	// the comparison rather than passing it, which is the direction that matters:
+	// every ordering against NaN is false, so NaN lands in the rescue.
+	if s >= float32(n)*0x1p-126 && !math.IsInf(float64(s), 1) {
 		return float32(math.Sqrt(float64(s)))
 	}
 	var sum float64

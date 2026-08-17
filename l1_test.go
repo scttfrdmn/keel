@@ -103,12 +103,29 @@ var patterns = []struct {
 		}
 		return v
 	}},
-	// Subnormals and values whose squares underflow. Snrm2's rescue path exists
-	// for these; Sdot and Sasum must simply not blow up on them.
+	// Subnormals and values whose squares underflow *to zero*. Snrm2's rescue
+	// path exists for these; Sdot and Sasum must simply not blow up on them.
 	{"tiny", func(r *rand.Rand, n int) []float32 {
 		v := make([]float32, n)
 		for i := range v {
 			v[i] = float32(float64(r.Float32()+0.5) * 1e-25)
+		}
+		return v
+	}},
+	// Values whose squares land in the subnormal band — nonzero, finite, and
+	// carrying lost significance. `tiny` above does not reach this band: its
+	// squares round all the way to zero, which is the one case a `s > 0` guard
+	// does catch, and that is why #97 survived a suite that had a tiny pattern
+	// and a dedicated rescue test. The range spans the severity gradient, from
+	// ~25% relative error at the bottom to ~0.0003% at the top.
+	{"subnormal-squares", func(r *rand.Rand, n int) []float32 {
+		v := make([]float32, n)
+		for i := range v {
+			// 3e-23 · 10^u for u uniform on [0, 2.5]: |v| in [3e-23, 9.5e-21].
+			v[i] = float32(3e-23 * math.Pow(10, 2.5*float64(r.Float32())))
+			if r.Intn(2) == 0 {
+				v[i] = -v[i]
+			}
 		}
 		return v
 	}},
@@ -668,17 +685,31 @@ func isPoisoned(v float32) bool {
 	return math.IsNaN(f) || math.IsInf(f, 0)
 }
 
-// TestSnrm2Rescue exercises the two paths keel.Snrm2's comment promises: an
-// input whose sum of squares overflows float32, and one whose squares all
-// underflow to zero. Both would be silently wrong without the rescue — 1e-30
-// is exactly representable in float32 and its square is not — so this test is
-// the only evidence the check after the loop is doing anything.
+// TestSnrm2Rescue exercises the three paths keel.Snrm2's comment promises: an
+// input whose sum of squares overflows float32, one whose squares all underflow
+// to zero, and one whose squares land in the *subnormal* band between them.
+// All three would be silently wrong without the rescue — 1e-30 is exactly
+// representable in float32 and its square is not — so this test is the only
+// evidence the check after the loop is doing anything.
+//
+// The subnormal cases are the ones this test originally missed (#97). The first
+// version was written from Snrm2's comment, which asserted that underflow "can
+// only end at exactly 0"; it cannot, because a partially-underflowed sum is a
+// subnormal, which is neither 0 nor +Inf. The old guard passed those to the fast
+// path and Snrm2 returned up to 24.78% relative error. Note that the band is a
+// continuum rather than a cliff — measured on this tree, the error decays
+// smoothly from 24.78% at 3e-23 through 0.96% at 1e-22 and 0.026% at 1e-21 to
+// 0.0003% at 1e-20 — so the cases below sample it rather than probing an edge,
+// and `checkScalar` (not a hand-picked epsilon) decides each one.
 func TestSnrm2Rescue(t *testing.T) {
 	forEachBackend(t, func(t *testing.T) {
 		for _, tc := range []struct {
 			name string
 			n    int
 			val  float32
+			// head, when nonzero, replaces x[0] only — for mixing one
+			// ordinary element in among tiny ones.
+			head float32
 			// wantInf marks the cases where the *norm itself* is not
 			// representable in float32, only the ones where the intermediate
 			// sum of squares overflows. +Inf is then the correct answer and the
@@ -691,12 +722,33 @@ func TestSnrm2Rescue(t *testing.T) {
 			{name: "underflow-single", n: 1, val: 1e-30},
 			{name: "underflow-many", n: 100, val: 1e-25},
 			{name: "underflow-tail", n: 70, val: 1e-30},
+			// The subnormal band: v*v is nonzero, finite, and carries a
+			// relative error that the fast path would keep. One case per
+			// decade of severity, at n = 1 and in bulk.
+			{name: "subnormal-worst-single", n: 1, val: 3e-23},
+			{name: "subnormal-worst-many", n: 100, val: 3e-23},
+			{name: "subnormal-worst-tail", n: 70, val: 3e-23},
+			{name: "subnormal-mid-single", n: 1, val: 1e-22},
+			{name: "subnormal-mid-many", n: 100, val: 3e-22},
+			{name: "subnormal-shallow-many", n: 100, val: 1e-21},
+			{name: "subnormal-faint-many", n: 100, val: 1e-20},
+			// The first value whose square is a normal float32, so the fast
+			// path is correct here and must stay taken.
+			{name: "normal-boundary-many", n: 100, val: 1e-19},
+			// A large element beside subnormal ones: the sum is dominated by
+			// the big term, so the fast path is safe and the tiny terms'
+			// rounding is irrelevant. Guards against a fix that rescues on
+			// the presence of small elements rather than on the accumulator.
+			{name: "mixed-magnitude", n: 100, val: 3e-23, head: 1},
 			{name: "all-zero", n: 33, val: 0},
 			{name: "norm-itself-overflows", n: 70, val: 3e38, wantInf: true},
 		} {
 			x := make([]float32, tc.n)
 			for i := range x {
 				x[i] = tc.val
+			}
+			if tc.head != 0 {
+				x[0] = tc.head
 			}
 			want, scale := oracle.Nrm2(tc.n, x, 1)
 			got := Snrm2(tc.n, x, 1)
