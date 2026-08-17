@@ -10,7 +10,7 @@ Spill-audit tooling (built at start of P2):
   `spill-audit`, the flag is `-func`, the kernels live in `./internal/vec`, and
   `Kernel32x6` never existed under that name (the tile is `MR`×`NR` = rows ×
   columns, so it is `Kernel6x32`, which spills and does not ship). The invocation
-  gate-p2 actually runs is at `scripts/gate-p2.sh:448`; `KERN_PKG` and
-  `KERN_FUNCS` at lines 180–181 are the single statement of what is audited.
+  gate-p2 actually runs is at `scripts/gate-p2.sh:331`; `KERN_PKG` and
+  `KERN_FUNCS` at lines 51–52 are the single statement of what is audited.
 - The same run archives `GOSSAFUNC` output (`ssa.html`) so a failed audit
   ships with evidence of *why* the allocator spilled.

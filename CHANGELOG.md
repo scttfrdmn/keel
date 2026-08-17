@@ -14,11 +14,19 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Changed
+- **The four phase gates' front matter moved to `docs/gates.md`, verbatim.** 855 comment lines standing above
+  zero lines of code — `gate-p4.sh` ran 226 of them before its first statement — become one page plus a
+  ~12-line pointer per script; every gate body below `set -euo pipefail` is byte-identical to its predecessor.
+  **−809 lines in `scripts/`**, 1.61× → 1.50×. Not published: the prose was repo-only before the move.
 - **A rule and a ruling are now different files.** `DESIGN.md` §5 rules 6–9 keep their operative clauses at
   their existing ordinals — no citation moved — and their incident histories move to `docs/rulings.md`,
   published as a record page rather than dropped off the site. §5 falls from 2,275 words to 1,530.
 
 ### Fixed
+- **Seven of the eleven `gate-pN.sh:<line>` citations in other files were already stale, by 4 to 273 lines.**
+  Exposed because relocating the headers shifted every line: re-pointing by arithmetic landed one on
+  `done <<<"$HOSTS"`, so all eleven were resolved by content instead. No checker follows — a line-existence
+  check would have passed on all seven, which is the argument that retired pinning.
 - **Adding a record page needed four hand-kept copies of one list, and two failed silently.** `fake_tree` and
   the gitignore-coverage check now derive from `docs-gen.sh`'s own `records()` table; the missing `.gitignore`
   entry staged a symlink to `DESIGN.md` clean, which is how it was found.

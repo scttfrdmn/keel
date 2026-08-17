@@ -76,7 +76,7 @@ remote_hosts() {
 # hard-red criterion, not less.
 #
 # The word FAIL must not appear in the label: the delegating gates count verdict
-# lines by grepping for it (gate-p4.sh:1051, gate-p5.sh:1133).
+# lines by grepping for it (gate-p4.sh:839, gate-p5.sh:987).
 #
 # WHICH OF THE TWO A SITE GETS (the three-way taxonomy, ruled 2026-08-15 on #73).
 # #72 relabeled the sites whose own message text already said "unmeasured" while
@@ -110,11 +110,11 @@ remote_hosts() {
 #
 # Where one branch of a site was mixed, the sweep split it rather than choosing:
 # an unreadable CPU count and a CPU count that reads short are different facts
-# (gate-p5.sh:531), as are a boost knob that did not move and a boost knob
-# nobody could read (gate-p5.sh:839), a forced run that reported its dispatch
-# before failing and one that never got that far (gate-p5.sh:597), and a governor
-# that changed mid-run and a governor unreadable mid-run (gate-p3.sh:1231,
-# gate-p4.sh:861, gate-p5.sh:817). Each citation is the line of the `if`, and the
+# (gate-p5.sh:352), as are a boost knob that did not move and a boost knob
+# nobody could read (gate-p5.sh:337), a forced run that reported its dispatch
+# before failing and one that never got that far (gate-p5.sh:418), and a governor
+# that changed mid-run and a governor unreadable mid-run (gate-p3.sh:1178,
+# gate-p4.sh:653, gate-p5.sh:643). Each citation is the line of the `if`, and the
 # last of them arrived a commit later than the rest: gate-p5's copy printed
 # '${gov:-unknown}' inside one collapsed branch, so a sweep that read messages
 # could not see it, and #76's guard is what made the branch reachable at all.
@@ -178,14 +178,14 @@ info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$
 # is a criterion this gate is missing — file it, do not launder it in here. Two
 # candidates were rejected on exactly that ground while this was written: machine
 # load (readable — /proc/loadavg, #81) and SMT state (readable — the siblings
-# files, #82, which gate-p5.sh:100 already argues its own floor from). Both are
+# files, #82, which gate-p5.sh:343 already argues its own floor from). Both are
 # checkable, therefore both are absent criteria rather than assumptions, and both
 # are filed as such. A ledger that grows by absorbing checkable things is a way of
 # writing "we did not get around to it" in a font that reads as rigour.
 #
 # The word FAIL/PASS/UNMEASURED must not appear in the label, for the same reason
 # it must not in unmeasured(): the delegating gates count verdict lines by
-# grepping anchored labels (gate-p4.sh:1052, gate-p5.sh:1143). The eight-space
+# grepping anchored labels (gate-p4.sh:839, gate-p5.sh:987). The eight-space
 # indent here is the `info` indent precisely so those anchors cannot match it.
 ASSUMED=""
 assumed() {

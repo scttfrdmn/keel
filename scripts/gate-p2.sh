@@ -1,149 +1,18 @@
 #!/usr/bin/env bash
-# Gate P2 — see DESIGN.md §4/P2. Written at the START of phase P2, then made
-# green. Exits 0 only when every criterion for the phase holds. A red gate
-# blocks the next phase; there is no override flag on purpose.
+# Gate P2 — DESIGN.md §4/P2. Exits 0 only when every criterion for the phase
+# holds; a red gate blocks the next phase, and there is no override flag.
 #
-# THIS GATE IS A GO/NO-GO, NOT A HURDLE (CLAUDE.md). If it stays red after the
-# documented kernel-shaping steps and one tile shrink, the deliverable is
-# docs/spill-report.md and a blocked issue — not a weakened check and not a
-# switch to hand-written assembly.
+# A GO/NO-GO, NOT A HURDLE (CLAUDE.md): if this stays red after the documented
+# kernel-shaping steps and one tile shrink, the deliverable is
+# docs/spill-report.md and a blocked issue, never a weakened check.
 #
-# Criteria (verbatim from DESIGN.md §4/P2):
-#   "`spill-audit` reports 0 accumulator spills in the steady-state K-loop,
-#    AND the raw microkernel (packed inputs, no blocking) hits >=55% of
-#    measured peak."
-#
-# How those are mechanized, and every judgement call involved:
-#
-#  1. CORRECTNESS FIRST. A fast wrong kernel is not a P2 pass. The microkernel
-#     is differential-tested against a scalar reference for the same tile, under
-#     internal/oracle.Tolerance, on every backend each machine can execute —
-#     locally (scalar only, stock toolchain) and on every amd64 host in
-#     .keel-hosts, by the same cross-compile-and-ship path as P0/P1.
-#
-#  2. THE SPILL AUDIT IS A COMPILE-TIME PROPERTY, so it runs here on the dev
-#     host, against the linux/amd64 object code the remote hosts will execute.
-#     internal/spill parses `go build -gcflags=-S`, finds the steady-state
-#     K-loop (the innermost loop carrying the arithmetic), and reports every
-#     stack-relative reference inside it. "0 accumulator spills" is mechanized
-#     as: no instruction in that loop body has both a vector register operand
-#     and an (SP)-relative memory operand. Register-to-register copies are
-#     counted and printed but are NOT spills — they cost issue slots, not
-#     memory traffic, and DESIGN.md's criterion is about the latter. That
-#     distinction decides this phase's verdict, so it is stated here rather
-#     than left implied.
-#
-#     It is audited on the SHIPPED shapes only. DESIGN.md's own 12-accumulator
-#     tile cannot be allocated on go1.26.5 (docs/toolchain-notes.md T10, issue
-#     #18) and is kept as kern.ReferenceTile — audited and benchmarked, never
-#     dispatched. Its audit runs below as evidence and is explicitly non-fatal,
-#     because a gate that failed on a shape nothing ships would be measuring the
-#     evidence instead of the product. Everything in kern.Kernels() is held to
-#     zero.
-#
-#  3. THE OTHER SHAPING RULES ARE CHECKED ON THE LOOP BODY, NOT ON THE FILE.
-#     DESIGN.md §4/P2 lists pre-sliced panels (bounds-check elimination), no
-#     calls in the K-loop, and pointer-free data. All three are properties of the
-#     steady-state loop, so all three are checked by the audit tool that already
-#     identifies it: a call is a CALL in the body, and a surviving bounds check
-#     is a branch out of the body to a block that calls runtime.panic*.
-#
-#     `-d=ssa/check_bce` is printed as provenance and is NOT the criterion. It
-#     reports every bounds check in the package, and a kernel legitimately has
-#     dozens outside the K-loop — `a[:kc*MR]` in the prologue and
-#     `c[i*ldc:i*ldc+NR]` in the write-out both report one, and both cost nothing
-#     amortized over K. Failing on those would make the criterion unsatisfiable
-#     for reasons unrelated to what P2 is asking, so the count is printed and the
-#     loop body is enforced.
-#
-#  4. THE PEAK KERNEL'S NO-MEMORY PROPERTY IS CHECKED HERE (issue #11).
-#     internal/vec/peak.go rests on four properties; three are guarded by an
-#     exact arithmetic witness that runs on every host, and the fourth —
-#     nothing in the loop touches memory — cannot be seen by arithmetic. The
-#     same audit tool checks it in -mode=nomemory, so the denominator P2
-#     divides by is verified in the run that divides by it.
-#
-#  5. PERCENT OF PEAK IS MEASURED AGAINST A MEASURED PEAK, IN ONE RUN. The
-#     numerator (the microkernel) and the denominator (BenchmarkPeak) are
-#     measured in the *same* benchmark invocation on each host, so they share a
-#     frequency and thermal state; a ratio of two numbers taken hours apart on
-#     one machine would be a worse measurement than either of them. Both come
-#     out of benchstat under the §5 rule 5 methodology (issue #14): -count=10
-#     -benchtime=1s, medians, and the 55% bar counts as cleared only net of
-#     both confidence intervals. Every host that can run the kernel must clear
-#     it, and at least one must do so on a host whose clock rule 5 counts as
-#     established stable — the performance governor here, that being what every
-#     host this gate has run against exposes.
-#
-#     Note what this bar is not: it is not 55% of a formula, and it is not the
-#     best of N hosts. See docs/hosts.md and issue #15 for the one host whose
-#     memory-touching benchmarks are bimodal between runs.
-#
-#  5b. THE BAR IS ROOFLINE-RELATIVE ON AN ISSUE-BOUND HOST (DESIGN.md §4/P2 as
-#     amended by the ruling on #19). The flat 55% has one denominator and so
-#     assumes the front end can deliver the kernel's instruction mix at 55% of
-#     FMA peak. On a host retiring two full-width FMAs per cycle from a ~4-wide
-#     front end it cannot, and the flat bar becomes a demand that the kernel beat
-#     the decode stage. Such a host is instead held to 90% of its issue roofline,
-#     computed from the spill audit's own instruction counts.
-#
-#     Four things keep that from being a weaker gate rather than a differently
-#     expressed one. None is asserted here: the decision is a pure function in
-#     scripts/roofline.sh, and scripts/roofline-test.sh drives it with fixtures
-#     that attempt each abuse and asserts each is refused. Those controls run at
-#     the top of this gate, before any benchmarking.
-#       - Classification uses evidence independent of the fraction being gated.
-#         The naive test — measured rate < the rate 55% would require — reduces
-#         algebraically to f < 0.55, i.e. "the host failed", and would make the
-#         amendment self-granting. What is tested instead is whether an issue
-#         *ceiling* exists: do structurally different instruction mixes converge
-#         on one retirement rate? Only a machine property does that.
-#       - The ceiling is established by the mixes OTHER than the shape under test.
-#         With that shape included, attain reduces to p_best / max_i p_i >=
-#         1/cspread >= 1/1.10 = 0.909, which already clears the 0.90 floor: every
-#         host the classifier admits would pass by construction. The first draft
-#         of this gate had exactly that hole, and it was widest in the binding
-#         case — on janus the shape under test *is* the argmin of p_i, so
-#         1/cspread and attain agreed to four places (0.9476).
-#       - A ceiling the machine exceeds is not a ceiling. If the shape under test
-#         retires above the rate the ceiling mixes converged on, the issue-bound
-#         hypothesis is falsified by its own data and the host reverts to the flat
-#         floor. This is also what stops the mirror abuse of understating the
-#         ceiling, and it is what correctly returns antares (Zen 5) to FMA-bound.
-#       - The roofline branch requires the shape to be near the sweep's best
-#         insns/FMA, because a roofline computed from the instruction count of the
-#         kernel under test rises as that kernel gets worse.
-#     A merely-slow kernel produces divergent rates, classifies FMA-bound, and
-#     faces the full 55%.
-#
-#     WHAT THE AMENDMENT COSTS, AS A NUMBER. The peak kernel is always in the
-#     ceiling set with f = 1, so max_i p_i >= I_peak, and the shape guard caps the
-#     denominator at SWEEP_BEST_IPF * ROOF_SHAPE_SLACK. The effective floor for an
-#     issue-bound host is therefore never below
-#         ROOF_FLOOR * I_peak / (SWEEP_BEST_IPF * ROOF_SHAPE_SLACK)
-#         = 0.90 * 2.25 / 4.659 = 43.5% of measured peak.
-#     That is the whole of the slack granted: from 55% to no less than 43.5%, and
-#     only to a host that has independently demonstrated a front-end ceiling.
-#
-#     THE AMENDMENT RATCHETS; IT DOES NOT RETIRE. An earlier draft claimed it was
-#     self-retiring — that when the lowering improves (T12/#20) the host would stop
-#     classifying issue-bound and the flat floor would resume. The arithmetic says
-#     otherwise, and better: with I falling 4.625 -> ~2.875, janus stays at its
-#     front-end ceiling but the roofline *rises* to 2.250/2.875 = 78.3%, so the
-#     required floor becomes 0.90 * 78.3% = 70.4% — stricter than the 55% the
-#     amendment replaced. The floor is 0.90 * max_i p_i / I_b and max_i p_i is
-#     pinned by the peak kernel, so it is monotone non-increasing in I: every
-#     improvement to the lowering tightens this gate automatically. A kernel at 60%
-#     of peak clears the flat 55% and fails the post-fix ratchet; that is a control
-#     in roofline-test.sh.
-#
-#     It IS the best of the shipped shapes, per host. Two zero-spill tiles ship
-#     (2x32 and 4x32) because which one wins depends on the host's front-end
-#     width and load ports rather than on anything in the source, and P3 will
-#     dispatch to one of them. So the criterion is applied to the shape that
-#     wins on that host, with every shape's number printed either way. Requiring
-#     both to clear would fail a host for carrying a second kernel it would never
-#     select; requiring only their average would hide the winner.
+# The 145 lines of front matter that used to sit here — what each criterion
+# measures, what this gate refuses to decide, and the judgement call behind
+# every threshold below — moved verbatim to docs/gates.md, section "P2", on
+# 2026-08-16. Nothing was summarised and no criterion renumbered; the move was
+# for size, scripts/ having reached 1.61x the shipping library with these four
+# headers its largest single lever. The thresholds themselves still
+# live only here, in code.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
