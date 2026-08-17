@@ -407,30 +407,39 @@ remote_build_test() {
 # back empty, and empty is a reading nobody got, which the caller already knows how
 # to print. Same for every other ssh-backed reader here and in the gates
 # (remote_boost, gate-p3's ob_preflight and ob_coretype_sweep).
+# KEEL_GOV_PROBE_SH — the far-side governor reading, sh, sets `gov`. Shared by every
+# prober in the tree by concatenation into their ssh argument, because two independent
+# readings of one knob is not redundancy, it is a pair that can disagree — and it did:
+# provision-openblas.sh had its own one-liner and called an AWS guest `governor=unknown`
+# on the same host where this cascade says `absent`, so the same machine was a defect to
+# one script and a guest to the other.
+#
+# THREE TOKENS, NOT TWO, because DESIGN section 5 rule 5 (amended 2026-08-16) rules that
+# "no cpufreq interface at all" and "the file is present and unreadable" are different
+# causes and may not share one verdict: the first is a virtualized guest, which does not
+# own the knob, and the second is a defect on a host that has it. Neither is read from
+# "cpu MHz", which is present, plausible and a fixed nominal constant, so a harness
+# sampling it would certify stability forever, where an absent directory fails closed.
+#
+# NO APOSTROPHES ANYWHERE IN HERE. It is one single-quoted string that becomes part of a
+# single-quoted ssh argument, so a possessive in a COMMENT terminates the string and the
+# far side receives a fragment. shellcheck catches it (SC1011), which is the only reason
+# this is a comment and not an outage.
+KEEL_GOV_PROBE_SH='
+  if [ -r /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
+    gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
+    [ -n "$gov" ] || gov=unknown
+  elif [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
+    gov=unreadable
+  else
+    gov=absent
+  fi
+'
+
 remote_probe() {
   local host="$1"
-  ssh "${KEEL_SSH_OPTS[@]}" "$host" '
+  ssh "${KEEL_SSH_OPTS[@]}" "$host" "$KEEL_GOV_PROBE_SH"'
     cpu=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2- | sed "s/^ *//")
-    # THREE TOKENS, NOT TWO, because DESIGN section 5 rule 5 (amended 2026-08-16) rules
-    # that "no cpufreq interface at all" and "the file is present and unreadable" are
-    # different causes and may not share one verdict: the first is a virtualized guest,
-    # which does not own the knob, and the second is a defect on a host that has it.
-    # Both still block. Neither is read from "cpu MHz", which is present, plausible and
-    # a fixed nominal constant, so a harness sampling it would certify stability
-    # forever, where an absent directory at least fails closed.
-    #
-    # NO APOSTROPHES BELOW THIS LINE, and none above it either: this whole snippet is
-    # one single-quoted argument to ssh, so a possessive in a COMMENT terminates the
-    # string and the far side receives a fragment. shellcheck catches it (SC1011),
-    # which is the only reason this is a comment and not an outage.
-    if [ -r /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
-      gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
-      [ -n "$gov" ] || gov=unknown
-    elif [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
-      gov=unreadable
-    else
-      gov=absent
-    fi
     ncpu=$(nproc)
     T=/sys/devices/system/cpu
     uniq_lines() { find "$T" -maxdepth 3 -name "$1" -exec cat {} + 2>/dev/null | sort -u | wc -l | tr -d " "; }

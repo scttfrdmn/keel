@@ -99,6 +99,12 @@ confirm() {
 
 # probe HOST — distro id, go version, libopenblas path, governor.
 #
+# The governor half is $KEEL_GOV_PROBE_SH from remote.sh, concatenated in rather than
+# written here, and the output field is named `governor=` so that assert_governor parses
+# this line as readily as remote_probe's. This script used to read the knob with its own
+# `cat ... || echo unknown`, which called an AWS guest `unknown` where remote.sh calls it
+# `absent` — one host, two readings, and only one of them a cause a gate can act on.
+#
 # `go=` is what the gate sees: the toolchain on a non-interactive, non-login ssh
 # PATH, found the same way gate-p3.sh's ob_preflight finds it. A prerequisite this
 # script calls satisfied and the gate calls missing would be the worst outcome here.
@@ -109,7 +115,7 @@ confirm() {
 # unlinked: "no usable toolchain" and "usable toolchain, wrong PATH" need different
 # repairs, and only the first one justifies deleting anything.
 probe() {
-  ssh -n -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$1" '
+  ssh -n -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$1" "$KEEL_GOV_PROBE_SH"'
     distro=unknown
     [ -r /etc/os-release ] && distro=$(sed -n "s/^ID=//p" /etc/os-release | tr -d \")
     go=none
@@ -120,7 +126,6 @@ probe() {
     for d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib; do
       if [ -e "$d/libopenblas.so" ]; then lib="$d/libopenblas.so"; break; fi
     done
-    gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)
     printf "distro=%s go=%s goat=%s lib=%s governor=%s\n" "$distro" "$go" "$goat" "$lib" "$gov"
   ' 2>/dev/null
 }
@@ -320,7 +325,7 @@ main() {
 
   CHECK_ONLY=0
   ASSUME_YES=0
-  local a p distro ver atver lib gov HOSTS host
+  local a p distro ver atver lib HOSTS host
   local -a ARGS=()
   for a in "$@"; do
     case "$a" in
@@ -362,31 +367,42 @@ main() {
     fi
     distro="$(fieldof distro "$p")"; ver="$(fieldof go "$p")"
     atver="$(fieldof goat "$p")"
-    lib="$(fieldof lib "$p")";       gov="$(fieldof governor "$p")"
-    note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib governor=$gov"
-    # A non-performance governor is now a failure, not a note (ruling with issue #31).
-    # It used to say (citation-lint:quote) "§5.4 rule 5 needs at least one gate host on performance", which
+    lib="$(fieldof lib "$p")"
+    # Classified by assert_governor, not by comparing the token here: it owns the
+    # five-state taxonomy, and a second reader of one field is how the same knob came to
+    # have two meanings in this tree. Only the parse is wanted, so its verdict lines go
+    # to /dev/null — this script prints `bad`/`note`, and a gate PASS stamp from a
+    # provisioning run would be a certificate nobody earned.
+    assert_governor "$host" preamble "$p" >/dev/null 2>&1
+    note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib governor=$GOV_SHOWN"
+    # A non-performance governor is a failure, not a note (ruling with issue #31). It
+    # used to say (citation-lint:quote) "§5.4 rule 5 needs at least one gate host on performance", which
     # was true of the old gate and let antares sit on `powersave` while contributing
     # numbers: its first OpenBLAS reading was 245.0 GFLOP/s against a 296-297 steady
-    # state. gate-p3.sh now fails any host that is not on performance, so a host in
-    # that state is not provisioned-and-ready, it is provisioned-and-unusable — and
-    # this script exists to find that out before a session is spent on it.
+    # state. gate-p3.sh fails any host that is not on performance, so a host in that
+    # state is not provisioned-and-ready, it is provisioned-and-unusable — and this
+    # script exists to find that out before a session is spent on it.
     #
     # Still reported rather than changed: a power policy is a standing property of
     # somebody's machine, not a thing a provisioning script should quietly flip and
     # leave flipped.
     #
-    # Scope, since §5 rule 5 was amended on 2026-08-16: the rule now asks for a clock
-    # *established stable* by whichever instrument the host has, and the governor is
-    # that instrument only where `cpufreq` is readable. This script provisions hosts
-    # where it is, so the check below is unchanged and still right for them. It is not
-    # the rule's whole verdict, and on a guest it would be the wrong question — a
-    # guest has no `cpufreq` directory, which rule 6 says may not share a verdict with
-    # a readable-but-broken one. Reprovisioning this for the AWS fleet is its own job.
+    # `nocpufreq` is the one state this script must NOT fail, and the reason is not that
+    # the fleet is now guests — it is that provisioning has no sweep. §5 rule 5 as
+    # amended asks for a clock established stable by whichever instrument the host has,
+    # and on a guest that instrument is BenchmarkPeak sampled head/middle/tail, which is
+    # a property of a twenty-minute measurement and cannot be read at install time by
+    # anything. So the honest output here is which verdict is being deferred and to
+    # whom, rather than `unknown, not performance` — which is what this printed for all
+    # three AWS guests, naming a defect on hosts that simply have no knob.
     GOV_OK=1
-    if [[ "$gov" != performance ]]; then
+    if [[ "$GOV_STATE" == nocpufreq ]]; then
+      note "no cpufreq interface, so there is no governor to set and none to check: this"
+      note "  host's clock is established by the gate's peak dispersion instead (#23), which"
+      note "  needs a sweep and so cannot be read from here. Deferred, not passed."
+    elif [[ "$GOV_STATE" != performance ]]; then
       GOV_OK=0
-      bad "governor is $gov, and the gate fails any host not on performance (DESIGN.md §5 rule 5)"
+      bad "governor is $GOV_SHOWN, and the gate fails any host not on performance (DESIGN.md §5 rule 5)"
       note "this script does not change a machine's power policy. To set it:"
       note "  sudo cpupower frequency-set -g performance"
       note "  or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
@@ -421,7 +437,7 @@ main() {
     # worth keeping, and re-running once the governor is set should have nothing left
     # to do but re-verify.
     if [[ "$GOV_OK" -eq 0 ]]; then
-      bad "$host is provisioned but not measurable: governor=$gov, not performance"
+      bad "$host is provisioned but not measurable: governor=$GOV_SHOWN, not performance"
       RC=1
     fi
   done 3<<<"$HOSTS"
