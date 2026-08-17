@@ -4,6 +4,13 @@
 # are taken. The rates it publishes are extracted from README.md's keel-numbers
 # block, which the P5 gate re-measures on those hosts; this job copies, and never
 # measures.
+#
+# ACTION VERSIONS: Node 24 throughout, swept with ci.yml (the reasoning lives there,
+# once). One breaking change on the way had to be CHECKED rather than reasoned about:
+# upload-pages-artifact v4 stopped including hidden files, so a site that relied on a
+# dotfile would publish without it and say nothing. `find build/site -name '.*'` returns
+# zero on a real build, which is why no `include-hidden-files` is set here — and the
+# mkdocs-material pin below is what keeps that a stable fact rather than a lucky one.
 name: docs
 on:
   push:
@@ -23,18 +30,18 @@ jobs:
     name: mkdocs build --strict + numbers extraction + citations
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # citation-lint enumerates sites with `git ls-files`, so it needs the
       # checkout it gets here and no toolchain at all. A shallow clone is fine:
       # the lint reads the index, not history.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: '3.13' }
       # Pinned to what the site was written against. An unpinned theme means the
       # green says "it built against whatever was on PyPI this morning", which is
       # a different claim on every run.
       - run: pip install 'mkdocs-material==9.6.22'
       - run: scripts/gate-docs.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: site
           path: build/site
@@ -64,16 +71,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: { python-version: '3.13' }
       - run: pip install 'mkdocs-material==9.6.22'
       # Rebuilt rather than downloaded from the gate job: the artifact above is for
       # a human to look at, and a deploy should publish a tree it just produced
       # from the commit it is deploying.
       - run: scripts/gate-docs.sh
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with: { path: build/site }
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
