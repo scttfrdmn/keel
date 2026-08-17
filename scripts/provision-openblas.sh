@@ -126,7 +126,11 @@ probe() {
     for d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib; do
       if [ -e "$d/libopenblas.so" ]; then lib="$d/libopenblas.so"; break; fi
     done
-    printf "distro=%s go=%s goat=%s lib=%s governor=%s\n" "$distro" "$go" "$goat" "$lib" "$gov"
+    cc=none
+    for c in cc gcc clang; do
+      if command -v "$c" >/dev/null 2>&1; then cc=$c; break; fi
+    done
+    printf "distro=%s go=%s goat=%s lib=%s cc=%s governor=%s\n" "$distro" "$go" "$goat" "$lib" "$cc" "$gov"
   ' 2>/dev/null
 }
 
@@ -152,6 +156,29 @@ go_new_enough() {
 # install_openblas HOST DISTRO — the distribution package, not a source build. The
 # ruling asks for a pinned, recorded version; a distro package is both (it is
 # recorded by the marker) and it is what any reader of these numbers can reproduce.
+# install_cc HOST DISTRO — a C toolchain, which the harness needs and the package
+# above does not pull in.
+#
+# Separate from install_openblas because the two are independently absent: the AWS
+# guests came up with libopenblas-dev installed and no compiler at all, so a run that
+# only installed the library on a fresh host reached `verify` and died there with
+# `cgo: C compiler "gcc" not found`. bench/openblas.go is a cgo file, so a C compiler is
+# as much a prerequisite as the library, and this script's whole premise is that a
+# prerequisite is found missing here rather than in a benchmark. The desktop fleet hid
+# it -- those were developer machines and had gcc for other reasons.
+install_cc() {
+  local host="$1" distro="$2" cmd
+  case "$distro" in
+    ubuntu|debian|pop|linuxmint)        cmd="sudo apt-get update && sudo apt-get install -y build-essential" ;;
+    rhel|centos|rocky|almalinux|fedora) cmd="sudo dnf install -y gcc glibc-devel" ;;
+    *) bad "unrecognized distro id '$distro'; install a C compiler by hand (cgo needs one)"; return 1 ;;
+  esac
+  note "on $host: $cmd"
+  confirm "run it?" || return 1
+  # shellcheck disable=SC2029  # $cmd is this script's own string, expanded here
+  ssh "${SSH_TTY_OPTS[@]}" "$host" "$cmd"
+}
+
 install_openblas() {
   local host="$1" distro="$2" cmd
   case "$distro" in
@@ -325,7 +352,7 @@ main() {
 
   CHECK_ONLY=0
   ASSUME_YES=0
-  local a p distro ver atver lib HOSTS host
+  local a p distro ver atver lib cc HOSTS host
   local -a ARGS=()
   for a in "$@"; do
     case "$a" in
@@ -367,14 +394,14 @@ main() {
     fi
     distro="$(fieldof distro "$p")"; ver="$(fieldof go "$p")"
     atver="$(fieldof goat "$p")"
-    lib="$(fieldof lib "$p")"
+    lib="$(fieldof lib "$p")";       cc="$(fieldof cc "$p")"
     # Classified by assert_governor, not by comparing the token here: it owns the
     # five-state taxonomy, and a second reader of one field is how the same knob came to
     # have two meanings in this tree. Only the parse is wanted, so its verdict lines go
     # to /dev/null — this script prints `bad`/`note`, and a gate PASS stamp from a
     # provisioning run would be a certificate nobody earned.
     assert_governor "$host" preamble "$p" >/dev/null 2>&1
-    note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib governor=$GOV_SHOWN"
+    note "distro=$distro go=$ver (/usr/local/go=$atver) libopenblas=$lib cc=$cc governor=$GOV_SHOWN"
     # A non-performance governor is a failure, not a note (ruling with issue #31). It
     # used to say (citation-lint:quote) "§5.4 rule 5 needs at least one gate host on performance", which
     # was true of the old gate and let antares sit on `powersave` while contributing
@@ -414,6 +441,13 @@ main() {
         RC=1; continue
       fi
       install_openblas "$host" "$distro" || { RC=1; continue; }
+    fi
+    if [[ "$cc" == none ]]; then
+      if [[ "$CHECK_ONLY" -eq 1 ]]; then
+        bad "no C compiler on the PATH, and bench/openblas.go is a cgo file (re-run without --check)"
+        RC=1; continue
+      fi
+      install_cc "$host" "$distro" || { RC=1; continue; }
     fi
     if [[ "$ver" == none ]] || ! go_new_enough "$ver"; then
       if [[ "$CHECK_ONLY" -eq 1 ]]; then
