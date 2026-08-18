@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **A gate could sign a synthetic run** — #78's forgeable certificate, reachable from the environment with nothing
+  edited. The verdict line read each gate's *own* instrument flag, so the four gates without one had no withhold
+  branch, and `VERDICT_STAMP` is seeded from the environment: `VERDICT_STAMP='[synthetic] ' bash scripts/gate-p0.sh`
+  stamped every criterion line and still signed the run `gate-p0: RED`. `gate_verdict` now decides on the stamp,
+  which covers every instrument mode added later with no per-gate branch to forget.
 - **Ctrl-C did not stop any gate, and a SIGTERM to gate-p5 deleted its scratch directory and let it keep running.**
   A group SIGINT killed the `go test` child and the gate resumed at rc=0; gate-p5's `EXIT INT TERM` cleanup handler
   removed `$BINDIR` and also resumed. The signal traps now `exit`, and exiting runs the one EXIT trap: rc=130 and
@@ -16,6 +21,10 @@ While the major version is 0, minor versions may contain breaking changes.
   the EXIT trap on an untrapped fatal signal, is false on both.
 
 ### Removed
+- **`gate_verdict` replaces the verdict tail of all six gates** (D1), in `scripts/remote.sh` beside the four verdict
+  helpers it belongs with. gate-p2's go/no-go tail and p2/p3's withhold wording are parameters, so no gate's output
+  text moves on any path reachable today — proven over FAIL × stamp × flag, 16 identical and 12 intended. **−19
+  lines in `scripts/`.**
 - **`gate_tmpdir` replaces the six scratch paths and the cleanup trap in gate-p1 through gate-p5** (D1); each gate's
   own tail (`AUDITKERN`, `SWEEPLOG`, `ALTCSV`, `KERNBIN`, …) stays where it was. **−7 lines in `scripts/`** — 35
   lines of duplication out, most of it back as the measurement the fix rests on.

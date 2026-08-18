@@ -1517,22 +1517,7 @@ fi
 assumed_ledger
 
 # ------------------------------------------------------------------ verdict
-echo
-# An instrument exercise prints neither colour, and this is the load-bearing half
-# of the artifact discipline. #78's lesson is that a stray log gets picked up by
-# whatever is hungry for a reference, and what such a reader greps for is the last
-# line; a synthetic run that could print "gate-p3: GREEN" would be a forgeable
-# certificate no matter what the banner said. So the verdict is WITHHELD rather
-# than computed, with its own exit code (2) so `detach.sh stat` cannot record it
-# as either a pass or a failure of P3. FAIL is reported as a fact about the
-# renderings that fired, which is the only thing this run measures.
-if [[ -n "$INSTRUMENT_WIDEN_CI" ]]; then
-  echo "gate-p3: VERDICT WITHHELD (instrument exercise, KEEL_INSTRUMENT_WIDEN_CI=$INSTRUMENT_WIDEN_CI; FAIL=$FAIL says which renderings fired, not whether P3 holds)"
-  exit 2
-fi
-if [[ "$FAIL" -eq 0 ]]; then
-  echo "gate-p3: GREEN"
-  exit 0
-fi
-echo "gate-p3: RED" >&2
-exit 1
+# An instrument exercise prints neither colour — the load-bearing half of the artifact
+# discipline (#78), and gate_verdict's decision to make; see its definition.
+gate_verdict gate-p3 \
+  "instrument exercise, KEEL_INSTRUMENT_WIDEN_CI=$INSTRUMENT_WIDEN_CI"

@@ -158,6 +158,38 @@ fail()       { printf '  \033[31mFAIL\033[0m  %s%s\n'        "$VERDICT_STAMP" "$
 unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s%s\n'  "$VERDICT_STAMP" "$1"; FAIL=1; }
 info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$1"; }
 
+# gate_verdict NAME [DETAIL [RED_NOTE...]] — the last line of a gate log, which is the
+# line a reader greps, and the exit status `detach.sh stat` records. Six copies, four
+# byte-identical. DETAIL and RED_NOTE are gate-p2's and gate-p3's own wording, kept as
+# parameters for the reason test_verdict's PHRASE is; PHASE is derived from NAME so the
+# two cannot come to disagree.
+#
+# THE WITHHOLD DECIDES ON VERDICT_STAMP, NOT ON AN INSTRUMENT FLAG — why it is shareable,
+# and a fix. p2 and p3 each tested their own flag, so a gate with no mode of its own had
+# no branch at all, and VERDICT_STAMP is seeded from the environment just above. Measured
+# at 2feb8d2: `VERDICT_STAMP='[synthetic] ' bash scripts/gate-p0.sh` stamped every
+# criterion line and still signed the run `gate-p0: RED`, exit 1 — a forgeable certificate
+# of exactly #78's shape, reachable from the environment. The stamp IS the synthetic-run
+# signal, set in the same block that reads the flag, so deciding on it fails closed for
+# every mode added later with no per-gate branch left to forget.
+gate_verdict() {
+  local name="$1" phase note; shift
+  local detail="${1-}"; [[ $# -gt 0 ]] && shift
+  phase="$(printf '%s' "${name#gate-}" | tr '[:lower:]' '[:upper:]')"
+  echo
+  if [[ -n "$VERDICT_STAMP" ]]; then
+    echo "$name: VERDICT WITHHELD (${detail:-synthetic run: every verdict line above is stamped, so no line of this log is a gate result}; FAIL=$FAIL says which renderings fired, not whether $phase holds)"
+    exit 2
+  fi
+  if [[ "$FAIL" -eq 0 ]]; then
+    echo "$name: GREEN"
+    exit 0
+  fi
+  echo "$name: RED" >&2
+  for note in "$@"; do echo "$note" >&2; done
+  exit 1
+}
+
 # assumed MESSAGE — declare a precondition the gate is TRUSTING, and add it to a
 # ledger printed beside the verdict. This is not a fourth verdict. It sets no
 # FAIL, it is indented as an `info` line, and the tallies cannot see it.

@@ -730,10 +730,4 @@ fi
 assumed_ledger
 
 # ------------------------------------------------------------------ verdict
-echo
-if [[ "$FAIL" -eq 0 ]]; then
-  echo "gate-p4: GREEN"
-  exit 0
-fi
-echo "gate-p4: RED" >&2
-exit 1
+gate_verdict gate-p4

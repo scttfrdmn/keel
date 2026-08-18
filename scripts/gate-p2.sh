@@ -675,21 +675,9 @@ fi
 assumed_ledger
 
 # ------------------------------------------------------------------ verdict
-echo
-# An instrument exercise prints neither colour, exactly as gate-p3.sh does for
-# KEEL_INSTRUMENT_WIDEN_CI and for the reason given there: the last line is what a
-# reader greps, so a synthetic run must not be able to emit one that reads as a
-# certificate. Exit 2 keeps `detach.sh stat` from recording it as either a pass or a
-# failure of P2. FAIL is reported as a fact about which renderings fired.
-if [[ -n "$INSTRUMENT_EXERCISE" ]]; then
-  echo "gate-p2: VERDICT WITHHELD (instrument exercise, KEEL_INSTRUMENT_EXERCISE=$INSTRUMENT_EXERCISE; FAIL=$FAIL says which renderings fired, not whether P2 holds)"
-  exit 2
-fi
-if [[ "$FAIL" -eq 0 ]]; then
-  echo "gate-p2: GREEN"
-  exit 0
-fi
-echo "gate-p2: RED" >&2
-echo "P2 is a go/no-go: if this is still red after the documented shaping steps" >&2
-echo "and one tile shrink, write docs/spill-report.md and stop (CLAUDE.md)." >&2
-exit 1
+# An instrument exercise prints neither colour. gate_verdict decides that on the stamp
+# this flag sets rather than on the flag itself; the reasoning is at its definition.
+gate_verdict gate-p2 \
+  "instrument exercise, KEEL_INSTRUMENT_EXERCISE=$INSTRUMENT_EXERCISE" \
+  "P2 is a go/no-go: if this is still red after the documented shaping steps" \
+  "and one tile shrink, write docs/spill-report.md and stop (CLAUDE.md)."
