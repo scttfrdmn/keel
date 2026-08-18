@@ -102,8 +102,10 @@ CONTROL_FN='l1\.avx512Scal$'
 # map because benchstat reports benchmark names while placement is a property of
 # symbols. Only the avx512 symbols are listed: all three hosts dispatch there
 # (gate-p5's matrix), so a KEEL_FORCE arm would need its own map and would get no
-# grading from this one. A token absent from the map is treated as ungraded, and
-# ungraded is demoted rather than cleared.
+# grading from this one. A token absent from the map is ungraded, and ungraded is
+# demoted rather than cleared — enforced in grade_rows, which is the only place
+# that can see it: grade_pad iterates this map, so it can only ever demote a
+# token the map already names.
 MEASURED=(
   'L1Sasum:l1\.avx512Asum$'
   'L1Sscal:l1\.avx512Scal$'
@@ -187,17 +189,35 @@ grade_pad() {
 # grade_rows RE — annotate benchstat rows whose benchmark matches RE. The label
 # is what makes them uncitable; a WARN elsewhere in the output would not, since
 # the row would still read as a result. RE empty means nothing was demoted.
+#
+# It also demotes rows MEASURED does not cover at all, which grade_pad cannot:
+# that function iterates the map, so its output is a subset of the map's tokens
+# and a benchmark outside the map printed here unlabelled, i.e. citable. Reachable
+# through KEEL_L1_FILTER today and automatically for the next L1 benchmark added.
+# A measured row is one carrying benchstat's ± ; geomean carries none.
 grade_rows() {
-  awk -v re="$1" '
+  # Initialised, not just declared: an empty MEASURED skips the loop entirely, and
+  # an unset `graded` aborts the awk under `set -u` — which drops every row instead
+  # of demoting it. The empty-map control caught exactly that.
+  local graded="" e
+  for e in "${MEASURED[@]}"; do graded+="${graded:+|}${e%%:*}"; done
+  awk -v re="$1" -v graded="$graded" '
     re != "" && $1 ~ re {
       print $0 "   << placement-confounded: EXCLUDED from the verdict set"
+      next
+    }
+    # An empty map would make $1 !~ graded false for every row, so it is spelled
+    # to demote everything instead: no map is no grading, not blanket clearance.
+    /±/ && (graded == "" || $1 !~ graded) {
+      ungraded = 1
+      print $0 "   << ungraded: no symbol mapped, so placement is unknown: EXCLUDED"
       next
     }
     # A geomean over a set containing a demoted row inherits the demotion. Left
     # unlabelled it would launder the excluded number back into a citable one,
     # which is the totals-ratio trap wearing the instrument as clothes.
-    re != "" && $1 == "geomean" {
-      print $0 "   << aggregates a placement-confounded row: EXCLUDED"
+    (re != "" || ungraded) && $1 == "geomean" {
+      print $0 "   << aggregates a demoted row: EXCLUDED"
       next
     }
     { print }

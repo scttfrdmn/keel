@@ -47,6 +47,9 @@ While the major version is 0, minor versions may contain breaking changes.
 - **CI never ran `gofmt`, so an unformatted file sat at HEAD through green runs** — `internal/spill/spill.go`'s var
   block lost its alignment when a comment split it. Added to the stock job in *gating* form, since `gofmt -l` exits 0
   whether or not it lists anything, and both branches driven on purpose before landing.
+- **`layout-ensemble.sh` cleared a benchmark it never graded instead of demoting it.** `grade_pad` iterates the
+  token→symbol map, so a row outside that map — reachable via `KEEL_L1_FILTER` — printed unlabelled and citable while
+  the comment above the map claimed the opposite. Demoted in `grade_rows` now, geomean inheriting it.
 - **`gate-docs.sh` prints an apparatus line beside the historical shell/library one**, moving `tools/*.go` across.
   An instrument counted on the library side would flatter the ratio it is counted by; both lines print so the
   published 1.6× series stays comparable.
