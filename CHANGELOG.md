@@ -17,6 +17,12 @@ While the major version is 0, minor versions may contain breaking changes.
   (declarations only); `DESIGN.md` §5 rule 9 and §7 amended, because they mandated the instrument; control `T3`
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
+### Changed
+- **The evidentiary host class is full-size, not bare metal, and a correctness-class number is
+  reported-not-judged whatever it reads** (#104, ruled 2026-08-17): retiring metal had left the class empty
+  while the harness went on judging perf on any guest that answered — which is how `c7i.4xlarge`'s 34.2%
+  became a P2 STOP. Class is read before the number is trusted, and an unreadable class is `unmeasured`.
+
 ### Fixed
 - **The spill parser silently moved a function's body onto the one before it** (#99, *not* dormant as filed —
   `type:.eq.[2]interface {}` and `type:.eq.[4]interface {}` are unmatched headers in the audited packages today):

@@ -33,7 +33,8 @@ checked in.
 | AVX2 + FMA | the AVX2 backend; `archsimd.X86.AVX2() && .FMA()` |
 | AVX-512 F/CD/BW/DQ/VL | the bundle `archsimd.X86.AVX512()` gates on — all five, or the backend does not register |
 | key-based ssh from the dev host | `remote.sh` uses `BatchMode=yes`; it never prompts and never handles credentials |
-| a clock established stable | for gate numbers, not correctness. DESIGN.md §5 rule 5 (as amended 2026-08-16) requires it of every measuring host, by whichever instrument the host has: the `performance` governor where `cpufreq` is readable, which is the case for every target listed below, else `BenchmarkPeak` sampled at head/middle/tail. The second branch exists for virtualized guests and is not yet implemented in the harness, so a guest currently blocks as `unmeasured` |
+| a clock established stable | for gate numbers, not correctness. DESIGN.md §5 rule 5 (as amended 2026-08-16) requires it of every measuring host, by whichever instrument the host has: the `performance` governor where `cpufreq` is readable, else `BenchmarkPeak` sampled at head/middle/tail. Both branches are live — `clock_gate`/`clock_head`/`clock_post`, and the guest branch is what the AWS fleet runs on, where `assert_governor` reads `absent` |
+| an admission class | `evidentiary` (full-size, judged) or `correctness` (partial-size, reported); see the class table below. Unreadable is `unmeasured`, not `correctness` |
 
 ## Current targets
 
@@ -215,35 +216,49 @@ structurally from the two desktop/HEDT parts. DESIGN.md §4/P3 sizes KC/MC/NC
 against a cache hierarchy, so the blocking parameters that suit vesta should not
 be assumed to transfer here. Measure per host.
 
-## Stage-3 cloud hosts (ruled 2026-08-12, issue #12)
+## Cloud hosts: two admission classes (ruled 2026-08-12 on #12; amended 2026-08-17 on #104)
 
 Two classes, and the distinction is what each one is allowed to produce:
 
-| class | machines | produces | tenancy |
+| class | machines | produces | admission requires |
 |---|---|---|---|
-| **evidentiary** | `c7i.metal` (Sapphire Rapids, true 512-bit datapath), `c7a.metal` (Zen 4 server) | published scaling curves; the stage-3 numbers | bare metal only |
-| **correctness** | spot instances, any µarch | differential and correctness coverage across more microarchitectures | spot is fine |
+| **evidentiary** | a **full-size (whole-socket)** instance of an approved family | judged perf verdicts; published rows; the stage-3 curves | full size **and** a passing preamble: clock stability established by §5 rule 5's instrument for the host it is, and the instance type in the provenance block |
+| **correctness** | any partial-size guest, any µarch | differential and correctness coverage; perf numbers **reported, never judged** | nothing beyond reachability |
+
+**Amended 2026-08-17 (ruling on #104): the evidentiary class is full-size, not metal.**
+Scott's earlier ruling retired bare metal outright — *"no one will ever use this library
+with bare metal"* — which left the class with no members and the harness judging perf on
+whatever guest answered. The property #12 actually argued for was exclusive ownership of
+the silicon under measurement, and a whole-socket instance has that while sharing the
+deployment model a caller really uses. So the *size* carries the admission, and the
+preamble carries the proof.
 
 The reason for the split is that the two roles have different failure modes. A
 correctness run either agrees bit-for-bit with the scalar spec or it does not, and a
 noisy neighbour cannot change that answer; a throughput run on shared tenancy cannot
-distinguish a noisy neighbour or an invisible frequency ceiling from a bad loop nest,
-which is #12's own argument and the reason the evidentiary class is metal-only.
+distinguish a noisy neighbour or an invisible frequency ceiling from a bad loop nest.
+
+**A number from a correctness-class host is reported-not-judged no matter what it reads**,
+high or low, which is the half that had been missing: #104 put a *low* reading from
+`c7i.4xlarge` — 16 vCPU of a Sapphire Rapids socket, 8 physical cores — through a floor
+written for a machine keel owned, and called the result a P2 STOP. Class is checked
+before the number is trusted, not after it surprises someone. And the check fails closed:
+an **unreadable** class is `unmeasured`, never "not judged" — otherwise the mechanism that
+excuses a partial-size reading is also a mechanism for laundering a red.
 
 What the evidentiary hosts are *for*: the ≥6× floor was written when the largest gate
 host had 16 cores. 6× at 8 threads on a client part with client memory channels says
 little about where the parallel nest actually stops scaling — packing-buffer contention
 invisible at 16 threads is the whole show at 64. **The floor does not move**; the
-metal hosts add a wider curve (16/32/64 threads) reported beside the judged number,
+full-size hosts add a wider curve (16/32/64 threads) reported beside the judged number,
 and they must clear the same ≥6× every other host clears, so adding them can only
 make the gate stricter.
 
-Mechanics: `truffle`/`spawn` under `AWS_PROFILE=aws`, one entry in this file per host
-with its class recorded, torn down at session end. **Launched when there is something
-to measure** — the nest they exist to measure is stage 2's output, so a metal instance
-running during stage 1 would bill for hours and measure nothing. Gates keep running on
-the three local hosts: a gate that depends on a paid resource being up is a gate that
-can go red for billing reasons.
+Mechanics: `scripts/aws-fleet.sh up|wire|status|down`, one entry per host with its class
+recorded, torn down at session end. **Launched when there is something to measure** — a
+full-size instance running during stage 1 would bill for hours and measure nothing. The
+standing grant (2026-08-17) covers repeats and re-runs of an instance type already
+approved; a **new** type is Scott's call each time.
 
 ## What P3 asks of every host, and of one
 
