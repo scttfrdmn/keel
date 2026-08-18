@@ -17,8 +17,25 @@ import (
 // A is m×m and B is m×n, so the multiply is 2·m·n·m flops while reflecting A is
 // O(m²) — a ratio of 1/(2n), independent of m. At n = 1 that is half the arithmetic
 // of the whole call and at n = 1024 it is 0.05%, so one sweep over n at fixed m spans
-// the crossover and carries its own control: the wide rows must not move, and a
-// change that moved them is a change to the nest rather than to the pack.
+// the crossover, and at GOMAXPROCS=1 the wide row is its own control: a change that
+// moved it there is a change to the nest rather than to the pack.
+//
+// Two corrections from the first A/B run of this fixture (2026-08-18, dev host,
+// scalar kernel, indicative only — see the #36 thread):
+//
+// The flop ratio is not a time ratio. Every shipped kernel has NR = 32 and the nest
+// zero-pads n out to it, so a call with n < 32 buys one tile of column work whatever
+// n is: n = 1 measured 35.9× the per-column time of the n = 1024 row, close to the 32
+// padding predicts. The reflection was ~5% of the time at n = 1, not the ~50% its
+// flop share suggests.
+//
+// And the control does not hold above one thread. At GOMAXPROCS=8 every row moved,
+// n = 1024 included (+5.4%), so the wide row cannot be read there as "the nest is
+// unchanged". Why is not established by this fixture and should not be asserted from
+// it: the deleted expansion was a serial region *and* a 16.9 MB per-call allocation,
+// and the base arm's variance (±4-6% against the new arm's ±0-2%) is itself an effect
+// of the second. What does the control's job unconditionally is the bit-for-bit
+// equivalence test, internal/pack.TestSymPackMatchesExpansion.
 //
 // Nothing here is new work for the routine. Until #36, Ssymm reflected A into a dense
 // m×m square before the nest ran; now internal/pack reads the stored triangle in
@@ -33,7 +50,7 @@ var symmNarrow = []struct{ m, n int }{
 	{2048, 8},
 	{2048, 32},
 	{2048, 128},
-	{2048, 1024}, // control: the reflection is 0.05% of the call here
+	{2048, 1024}, // control at GOMAXPROCS=1 only: the reflection is 0.05% of the call
 }
 
 // BenchmarkSymmNarrow times Ssymm with far fewer columns of B than rows of A.

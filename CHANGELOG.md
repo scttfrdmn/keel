@@ -15,6 +15,9 @@ While the major version is 0, minor versions may contain breaking changes.
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
 ### Changed
+- **`BenchmarkSymmNarrow`'s wide-n control holds at one thread only, and a flop share is not a time share** (#36). Every
+  shipped kernel has NR=32 and the nest pads n out to it, so n=1 measured 35.9× the n=1024 row's per-column time; at
+  GOMAXPROCS=8 every row moved, the control included. Both corrections are in the fixture's own comment.
 - **`Ssymm` reads its symmetric operand in place rather than reflecting it into a dense square** (#36).
   `internal/pack.ASymPanels`/`BSymPanelsPart` split each run at the diagonal, dropping an O(d²) allocation (67 MB at
   n=4096) and a serial pass; bit-for-bit identical, pinned by `TestSymPackMatchesExpansion`. Fixture: `BenchmarkSymmNarrow`.
