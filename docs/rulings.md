@@ -15,6 +15,9 @@ report to find it. **Every ordinal in §5 is unchanged**, so no citation moved. 
 have no entry here: 1–4 are one line each and have held for the whole project, and rule
 5's ruling is still inside it because its 2026-08-16 amendment is live work.
 
+Rules **10 and 11** were added 2026-08-18 (issue #36) and are entered here from the start,
+appended after rule 9 so no ordinal moved.
+
 What an entry here is *not*: authority. A gate cites `DESIGN.md`, never this file. If an
 entry and its rule disagree, the rule governs and the entry is stale — which is the
 same precedence `CLAUDE.md` has against §7.
@@ -121,3 +124,60 @@ DESIGN-bound sites, with its census recorded in `docs/citation-externals.txt`.
 The worked example behind consequence (a): `DESIGN.md`'s own §7 citation was corrected
 against `scripts/gate-p5.sh`'s, because the two sites made the same argument and the rule
 bodies — not the majority — picked the winner.
+
+## Rule 10 — agreement across N sites is one witness
+
+*Ruled 2026-08-18. Issue #36; retraction at `bb1caf2`.*
+
+Deleting `internal/block.expandSym` was published in six places — `internal/pack/pack.go`'s
+package doc, `internal/block/tri.go`'s *"Why the pack reflects A"* section, `bench/scale_test.go`'s
+`Ssymm` row, `bench/symm_test.go`'s fixture comment, the CHANGELOG entry, and two comments on
+#36 — as removing "a serial region" and with it an Amdahl term from a routine whose parallel
+scaling is a gate-p5 criterion. It was false. `expandSym` ran under `par.Run` over A's rows from
+`175098d`, the parallel-nest commit, and `git log -S'par.Run(d, func' -- internal/block/tri.go`
+returns exactly two commits, which settles the question in one line.
+
+The six sites read as corroboration and were not: every one was written from the first, so they
+agreed by construction. Every *figure* beside the claim was right — 67 MB at d=4096,
+16,904,645 → 127,365 B/op at d=2048, the deltas per row — which is the same shape as the
+Sapphire Rapids mechanism retraction on #104 two days earlier, and is why rule 8's apparatus
+could not touch it: nothing here checks "and this is why."
+
+Two artifacts had already refuted it and neither was consulted. The A/B's own thread-count
+behaviour — the n=1 delta *falling* from 2.55 ms at one thread to 1.15 ms at eight, which is what
+a parallel pass does — and the P5 umbrella's own task list, which said in words why `expandSym`
+was parallelised: *"a serial pass worth 5% of the serial nest is 29% of an 8-way one."* It
+surfaced only because ticking an item off that list meant reading it.
+
+The contrast worth keeping is that independence can be arranged on purpose, and where it is, the
+agreement means something: `gate-p4.sh` and `gate-p5.sh`'s delegated-gate tallies are documented
+as **two independent readers of one vocabulary**, and the §4/P2 threshold constants are
+duplicated across three gates rather than factored, on the stated grounds that two independent
+statements of a threshold is what makes a divergence visible. Propagation is the failure mode;
+duplication chosen for independence is the remedy.
+
+## Rule 11 — an instrument corrects the experimenter, and its blind spots are part of its result
+
+*Ruled 2026-08-18. Issue #36, commits `9362597` and `2b54d1d`.*
+
+`BenchmarkSymmNarrow` was written to find the crossover in n below which reflecting the
+symmetric operand at pack time beats expanding it. Its first run refuted two claims in its own
+doc comment. **A flop share is not a time share:** every shipped kernel has `NR = 32` and the
+nest zero-pads n out to it, so a call with n < 32 buys one tile of column work whatever n is —
+n=1 measured 35.9× the n=1024 row's per-column time, close to the 32 the padding predicts, so
+the reflection was ~5% of the time at n=1 and not the ~50% its flop share suggested. **And the
+wide-n row is a control at GOMAXPROCS=1 only:** at 8 threads every row moved, n=1024 included.
+Both corrections went into the fixture's own comment at `9362597` rather than into a later note,
+and the cause of the 8-thread movement is recorded as *not established* rather than filled in.
+This is the cheap version of being wrong: the fixture was the first reader of the reasoning that
+motivated it.
+
+The mutation clause comes from the same commit. `TestSymPackMatchesExpansion` was driven by five
+mutations of `storedRun`; four are killed — dropping the reflection in either nest, swapping the
+two uplos, widening the stored range by one — and the fifth, shrinking that range by one, passes
+and **cannot** fail: it moves only the diagonal element, whose reflection is its own address, so
+the strided path reads the byte the copy would have written. Reporting "4/5" and stopping would
+have been true and useless; reporting "5/5" would have been a lie. The test says which mutation
+it is and why it is unkillable, so a later reader does not "fix" the test to catch it. The
+boundary is off-by-one-tolerant for values and not for cost, which is a fact about the diagonal
+rather than a gap in the check.

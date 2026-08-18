@@ -140,3 +140,9 @@ When something surprises you — a lowering, a spill, a flaky benchmark — the
 deliverable is the documented surprise, not a quiet workaround. This project
 is partly a field report on `GOEXPERIMENT=simd`; the notes have independent
 value even where keel itself stalls.
+
+Two rules bind what you may treat as *confirmed*, and DESIGN.md is the authority
+for both, not this file: **§5 rule 10** — agreement across N sites is one witness,
+so count independent derivations before counting corroboration — and **§5 rule 11** —
+run a fixture against the reasoning that motivated it before publishing that
+reasoning, and document a mutation that cannot be killed in principle as such.
