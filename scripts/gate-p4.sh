@@ -665,14 +665,19 @@ else
   # from hiding behind a noisy host: one host below the bar is a red whatever the
   # others did, and only when nothing is below the bar does indeterminacy become
   # the reason the criterion did not resolve.
+  #
+  # #90's clause is appended where a count can silently omit a host: SYRK_MEASURED is
+  # incremented only after three `continue` paths, so CLEARED+MISSED+INDET can fall short
+  # of NHOSTS and these lines would read fleet-wide over a proper subset. gate-p2's 5b and
+  # gate-p3's criterion 6 append the same clause; this is the aggregate that never got it.
   if [[ "$SYRK_MEASURED" -eq 0 ]]; then
     unmeasured "no host produced a bounded Ssyrk/Sgemm ratio at all, so criterion 7 is unmeasured rather than missed"
   elif [[ "$SYRK_MISSED" -gt 0 ]]; then
-    fail "$SYRK_MISSED of $NHOSTS gate hosts are below the bar with the whole interval ($SYRK_CLEARED cleared, $SYRK_INDET undecidable); the criterion is per host, on the host's own Sgemm"
+    fail "$SYRK_MISSED of $NHOSTS gate hosts are below the bar with the whole interval ($SYRK_CLEARED cleared, $SYRK_INDET undecidable); the criterion is per host, on the host's own Sgemm$(fleet_shortfall "$NHOSTS" "$SYRK_MEASURED")"
   elif [[ "$SYRK_INDET" -gt 0 ]]; then
-    unmeasured "$SYRK_INDET of $NHOSTS gate hosts produced an interval straddling the bar and none produced one below it ($SYRK_CLEARED cleared): criterion 7 is undecided on this run, which is not the same as missed, and the gate stays not-green until a re-run or a higher -count settles it (#67)"
+    unmeasured "$SYRK_INDET of $NHOSTS gate hosts produced an interval straddling the bar and none produced one below it ($SYRK_CLEARED cleared): criterion 7 is undecided on this run, which is not the same as missed, and the gate stays not-green until a re-run or a higher -count settles it (#67)$(fleet_shortfall "$NHOSTS" "$SYRK_MEASURED")"
   elif [[ "$SYRK_CLEARED" -eq "$NHOSTS" ]]; then
-    pass "every gate host cleared 85% of its own Sgemm ($SYRK_CLEARED/$NHOSTS)"
+    pass "every gate host cleared 85% of its own Sgemm ($SYRK_CLEARED/$NHOSTS)$(fleet_shortfall "$NHOSTS" "$SYRK_MEASURED")"
   else
     unmeasured "$SYRK_CLEARED of $NHOSTS gate hosts cleared the bar and the rest produced no verdict at all, so the host count and the verdict count disagree: criterion 7 covered fewer hosts than this gate believes it has"
   fi

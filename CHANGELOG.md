@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **gate-p4's criterion 7 aggregate was the one fleet aggregate that never got #90's coverage clause.**
+  `SYRK_MEASURED` is counted after three `continue` paths, so a host that produced no bounded ratio is absent from
+  every counter and the fail and indeterminate lines read fleet-wide over a proper subset — *"1 of 3 gate hosts are
+  below the bar (0 cleared, 0 undecidable)"* with two hosts silent. All three now append `fleet_shortfall`, as
+  gate-p2's 5b and gate-p3's criterion 6 do.
 - **A gate could sign a synthetic run** — #78's forgeable certificate, reachable from the environment with nothing
   edited. The verdict line read each gate's *own* instrument flag, so the four gates without one had no withhold
   branch, and `VERDICT_STAMP` is seeded from the environment: `VERDICT_STAMP='[synthetic] ' bash scripts/gate-p0.sh`
