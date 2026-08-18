@@ -169,7 +169,8 @@ info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$
 # no branch at all, and VERDICT_STAMP is seeded from the environment just above. Measured
 # at 2feb8d2: `VERDICT_STAMP='[synthetic] ' bash scripts/gate-p0.sh` stamped every
 # criterion line and still signed the run `gate-p0: RED`, exit 1 — a forgeable certificate
-# of exactly #78's shape, reachable from the environment. The stamp IS the synthetic-run
+# of exactly #78's shape (a stray log picked up by something hungry for a reference, whose
+# reader greps the last line), reachable from the environment. The stamp IS the synthetic-run
 # signal, set in the same block that reads the flag, so deciding on it fails closed for
 # every mode added later with no per-gate branch left to forget.
 gate_verdict() {
