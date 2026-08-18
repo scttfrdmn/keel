@@ -230,6 +230,22 @@ cmd_wire() {
       sleep 5
     done
     say "$host up after ${waited}s"
+    # sshd answers BEFORE cloud-init finishes, and this script's own userdata installs
+    # tmux from cloud-init -- so a provisioner starting at "up after Ns" races the
+    # LAUNCHER's apt and loses the lock. Measured on a judged on-demand run: "Could not
+    # get lock /var/lib/apt/lists/lock ... held by process 3085 (apt-get)", ten minutes
+    # into an $8.568/hour instance, leaving a host with no OpenBLAS and therefore no
+    # mission ratio. A sleep would be a guess here, and the guess that reads as fine is
+    # the expensive one; `status --wait` is the host saying its own boot is done.
+    if ssh -o BatchMode=yes "$host" 'command -v cloud-init >/dev/null 2>&1'; then
+      if ssh -o BatchMode=yes "$host" 'cloud-init status --wait >/dev/null 2>&1'; then
+        say "$host cloud-init settled"
+      else
+        say "$host cloud-init did not finish clean, so this host booted degraded; a provisioner may still work and the boot-time apt is at least over"
+      fi
+    else
+      say "$host has no cloud-init, so there is no boot-time apt to wait for"
+    fi
   done
   cmd_status
 }

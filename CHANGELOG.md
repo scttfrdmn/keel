@@ -41,6 +41,9 @@ While the major version is 0, minor versions may contain breaking changes.
   missed. gate-p3's and gate-p5's judged perf criteria are the same shape and are **not yet** wired.
 
 ### Fixed
+- **`aws-fleet.sh up` handed over hosts whose own boot-time `apt-get` was still running**, so the first judged
+  on-demand campaign died at `Could not get lock /var/lib/apt/lists/lock ... held by process 3085 (apt-get)` —
+  the launcher's userdata racing the provisioner. `wire` now waits on `cloud-init status --wait` per host.
 - **The spill parser silently moved a function's body onto the one before it** (#99, *not* dormant as filed —
   `type:.eq.[2]interface {}` and `type:.eq.[4]interface {}` are unmatched headers in the audited packages today):
   `^(\S+) STEXT` cannot match a symbol holding a space, which every generic instantiated over a struct shape does.
