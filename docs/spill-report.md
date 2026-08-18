@@ -546,7 +546,7 @@ in the order the causes are filed:
 |---|---|---|---|
 | as shipped | 50 | 6.25 | 36.0% |
 | − 8 accumulator copies (golang/go#80829, in-place accumulate) | 42 | 5.25 | 42.9% |
-| − 4 emulated broadcasts (golang/go#80829, `.BCST`) | 38 | 4.75 | 47.4% |
+| − 4 broadcast instructions, folded into the FMA as `.BCST` memory operands (golang/go#80829) | 38 | 4.75 | 47.4% |
 | − 2 anchor NOPs (golang/go#80830) | 36 | 4.50 | 50.0% |
 | − ~8 scalar slice-advance guards (**keel's own**, part 10.4 below) | 28 | 3.50 | 64.3% |
 
@@ -598,8 +598,13 @@ cross-family win against the sweep's own measured same-family drift of 3.30 (#35
 85.8% of the same measured peak, so the gap is not the blocking or the packing — it is
 the microkernel's instruction count, the same cause as part 10.3 above.
 
-One thing here is unexplained and is **not** load-bearing for either verdict: blocked
-`Sgemm` reaches 43.78% of peak while the 4x32 sweep entry reads 34.16%, and a routine
-cannot outrun the kernel it calls. Both numbers are below both floors, so neither
-verdict turns on it, but the sweep entry is measuring something the shipped path does
-not. That belongs to its own investigation.
+One thing here is **not** load-bearing for either verdict, and gate-p3 already names it:
+blocked `Sgemm` reaches 43.78% of peak while the 4x32 sweep entry reads 34.16%, which the
+gate reports as *"retention: the blocked loop nest keeps 128% of its own
+4x32/avx512/kc=128 microkernel … point estimates from two invocations — reported, never
+judged"*. A routine cannot outrun the kernel it calls, so one of the two is not measuring
+what its label says. The hypothesis to test first is that the sweep entry pays a
+per-invocation cost the blocked nest amortises over many calls; it is falsified if the
+sweep's rate is flat in the number of `kc=128` passes per timed iteration, since a fixed
+prologue must dilute with more passes. Both numbers are below both floors, so no verdict
+turns on it either way.
