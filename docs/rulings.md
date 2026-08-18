@@ -15,8 +15,9 @@ report to find it. **Every ordinal in §5 is unchanged**, so no citation moved. 
 have no entry here: 1–4 are one line each and have held for the whole project, and rule
 5's ruling is still inside it because its 2026-08-16 amendment is live work.
 
-Rules **10 and 11** were added 2026-08-18 (issue #36) and are entered here from the start,
-appended after rule 9 so no ordinal moved.
+Rules **10, 11 and 12** were added 2026-08-18 (issue #36) and are entered here from the start,
+appended after rule 9 so no ordinal moved. 11 and 12 were one fused rule for the length of a
+single commit; the split and its reason are recorded under rule 11.
 
 What an entry here is *not*: authority. A gate cites `DESIGN.md`, never this file. If an
 entry and its rule disagree, the rule governs and the entry is stale — which is the
@@ -156,9 +157,9 @@ duplicated across three gates rather than factored, on the stated grounds that t
 statements of a threshold is what makes a divergence visible. Propagation is the failure mode;
 duplication chosen for independence is the remedy.
 
-## Rule 11 — an instrument corrects the experimenter, and its blind spots are part of its result
+## Rule 11 — an instrument's output overrules its author's claims about it
 
-*Ruled 2026-08-18. Issue #36, commits `9362597` and `2b54d1d`.*
+*Ruled 2026-08-18. Issue #36, commit `9362597`. Split from a fused rule the same day: see rule 12.*
 
 `BenchmarkSymmNarrow` was written to find the crossover in n below which reflecting the
 symmetric operand at pack time beats expanding it. Its first run refuted two claims in its own
@@ -172,7 +173,19 @@ and the cause of the 8-thread movement is recorded as *not established* rather t
 This is the cheap version of being wrong: the fixture was the first reader of the reasoning that
 motivated it.
 
-The mutation clause comes from the same commit. `TestSymPackMatchesExpansion` was driven by five
+Why this is worded as *adjudication* and nothing else: the first draft fused it with what is
+now rule 12, and the fusion read well and cited badly. A rule invoked from two unrelated
+situations can be aimed at the wrong one — "instruments correct the experimenter" quoted to
+excuse a coverage omission, or the disclosure clause quoted at a claim that was simply
+unrun. Rule 10 needed its contrast clause for the same reason, so the pattern is now twice
+observed: in this project a rule earns its keep at citation time, and precision of citation
+beats economy of rules.
+
+## Rule 12 — a coverage claim enumerates what it cannot see
+
+*Ruled 2026-08-18. Issue #36, commit `2b54d1d`. Split from rule 11 the same day.*
+
+`TestSymPackMatchesExpansion` was driven by five
 mutations of `storedRun`; four are killed — dropping the reflection in either nest, swapping the
 two uplos, widening the stored range by one — and the fifth, shrinking that range by one, passes
 and **cannot** fail: it moves only the diagonal element, whose reflection is its own address, so

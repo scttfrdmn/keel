@@ -141,8 +141,11 @@ deliverable is the documented surprise, not a quiet workaround. This project
 is partly a field report on `GOEXPERIMENT=simd`; the notes have independent
 value even where keel itself stalls.
 
-Two rules bind what you may treat as *confirmed*, and DESIGN.md is the authority
-for both, not this file: **§5 rule 10** — agreement across N sites is one witness,
-so count independent derivations before counting corroboration — and **§5 rule 11** —
-run a fixture against the reasoning that motivated it before publishing that
-reasoning, and document a mutation that cannot be killed in principle as such.
+Three rules bind what you may treat as *confirmed*, and DESIGN.md is the authority
+for all three, not this file: **§5 rule 10** — agreement across N sites is one
+witness, so count independent derivations before counting corroboration; **§5 rule
+11** — the instrument adjudicates, so run it against the reasoning that motivated it
+before publishing that reasoning; **§5 rule 12** — a coverage claim enumerates what
+it cannot see, so an unkillable mutant or an unreached arm is stated inside the
+number. 11 and 12 are deliberately separate: neither may be cited for the other's
+job.

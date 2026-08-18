@@ -15,9 +15,9 @@ While the major version is 0, minor versions may contain breaking changes.
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
 ### Changed
-- **`DESIGN.md` §5 gains rules 10 and 11**, appended so no ordinal moved (#36). Rule 10: agreement across N sites is one
-  witness, and cross-site agreement certifies propagation, never truth. Rule 11: an instrument's first job is to correct
-  the experimenter, and a mutation unkillable in principle is documented as such. Rulings in `docs/rulings.md`.
+- **`DESIGN.md` §5 gains rules 10, 11 and 12**, appended so no ordinal moved (#36). Rule 10: cross-site agreement
+  certifies propagation, never truth. Rule 11: an instrument's output overrules its author's claims about it. Rule 12: a
+  coverage claim enumerates what it cannot see. 11 and 12 were fused for one commit; split so neither can be miscited.
 - **`BenchmarkSymmNarrow`'s wide-n control holds at one thread only, and a flop share is not a time share** (#36). Every
   shipped kernel has NR=32 and the nest pads n out to it, so n=1 measured 35.9× the n=1024 row's per-column time; at
   GOMAXPROCS=8 every row moved, the control included. Both corrections are in the fixture's own comment.
