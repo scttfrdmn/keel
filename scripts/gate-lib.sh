@@ -102,6 +102,37 @@ test_verdict() {
   fi
 }
 
+# assert_kern_audit_drift LOG AUDITFILE HOST EXTRA — the insns/FMA internal/kern
+# records for each shipped shape, against what the audit counts in the object code
+# emitted. Checked from a marker a host produced, not from source: the point is what
+# the shipped library believes. gate-p3 criterion 5b part 1 and gate-p4 criterion 4,
+# whose executable lines were byte-identical; only the fail message's trailing clause
+# differed, so EXTRA is a parameter for the reason test_verdict's PHRASE is.
+#
+# SETS DRIFT_CHECKED IN THE CALLER, hence absent from the local list. Both gates read
+# it after their host loop to tell "no drift" from "no host reported the marker", and
+# printing the second when every host did print it is #32/#33's misattribution.
+assert_kern_audit_drift() {
+  local log="$1" auditfile="$2" host="$3" extra="$4" kaudit bad="" pair rtile rval raud
+  kaudit="$(marker bench-kern-audit "$log")"
+  [[ -z "$DRIFT_CHECKED" && -n "$kaudit" ]] || return 0
+  DRIFT_CHECKED="$host"
+  for pair in $kaudit; do
+    rtile="${pair%%/*}"; rval="${pair#*=}"
+    raud="$(audit_ipf_tile "$rtile" "$auditfile")"
+    if [[ -z "$raud" ]]; then
+      bad="$bad ${rtile}(recorded $rval, not audited by this gate)"
+    elif ! awk -v a="$rval" -v b="$raud" 'BEGIN{exit !(a - b < 0.001 && b - a < 0.001)}'; then
+      bad="$bad ${rtile}(recorded $rval, audited $(printf '%.3f' "$raud"))"
+    fi
+  done
+  if [[ -z "$bad" ]]; then
+    pass "every shipped shape's recorded insns/FMA matches the audited object code ($kaudit)"
+  else
+    fail "the shape ranking reads stale instruction counts:$bad — internal/kern's registry has drifted from the K-loop it describes$extra"
+  fi
+}
+
 # marker_row NAME FILE KEY VALUE — the first keel-NAME line carrying the token
 # `KEY=VALUE`, or nothing. `marker`'s last-wins reading is wrong wherever a marker
 # is emitted more than once per file, which is every P4 and P5 marker and gate-p3's

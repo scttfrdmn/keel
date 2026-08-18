@@ -550,10 +550,7 @@ else
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
-    # ---- criterion 4's registry drift check, from a marker a host actually
-    # produced. Same binary everywhere, so it is checked once, but it is checked
-    # against what the shipped library believes rather than against source.
-    #
+    # ---- criterion 4's registry drift check.
     # IT RUNS BEFORE THE ROW DECLARATION BELOW, and the order is the point. This
     # check reads a provenance marker the harness prints at startup; it does not
     # divide by any benchmark. Sitting after require_bench, a missing Ssyrk row
@@ -562,25 +559,8 @@ else
     # about a marker every host did print, and the exact misattribution issues #32
     # and #33 are about. A criterion is placed by what it depends on, not by where
     # it reads well.
-    kaudit="$(marker bench-kern-audit "$BENCHLOG")"
-    if [[ -z "$DRIFT_CHECKED" && -n "$kaudit" ]]; then
-      DRIFT_CHECKED="$host"
-      DRIFT_BAD=""
-      for pair in $kaudit; do
-        rtile="${pair%%/*}"; rval="${pair#*=}"
-        raud="$(audit_ipf_tile "$rtile" "$AUDITKERN")"
-        if [[ -z "$raud" ]]; then
-          DRIFT_BAD="$DRIFT_BAD ${rtile}(recorded $rval, not audited by this gate)"
-        elif ! awk -v a="$rval" -v b="$raud" 'BEGIN{exit !(a - b < 0.001 && b - a < 0.001)}'; then
-          DRIFT_BAD="$DRIFT_BAD ${rtile}(recorded $rval, audited $(printf '%.3f' "$raud"))"
-        fi
-      done
-      if [[ -z "$DRIFT_BAD" ]]; then
-        pass "every shipped shape's recorded insns/FMA matches the audited object code ($kaudit)"
-      else
-        fail "the shape ranking reads stale instruction counts:$DRIFT_BAD — internal/kern's registry has drifted from the K-loop it describes, or P4 shipped a shape this gate does not audit"
-      fi
-    fi
+    assert_kern_audit_drift "$BENCHLOG" "$AUDITKERN" "$host" \
+      ", or P4 shipped a shape this gate does not audit"
 
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"

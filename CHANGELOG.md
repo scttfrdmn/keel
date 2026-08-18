@@ -9,6 +9,9 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Removed
+- **`assert_kern_audit_drift` replaces the registry-drift check in gate-p3 and gate-p4** (D1), whose executable
+  lines were byte-identical; the fail message's trailing clause is a parameter, so neither gate's output text moves.
+  **−10 lines in `scripts/`**, and the caller-visible `DRIFT_CHECKED` is now documented rather than incidental.
 - **`test_verdict` replaces eight copies of the pass/fail/paste-the-tail triple** around every gate's `go test` run,
   in all six gates (D1). The phrase is a parameter, not a normalisation: gate-p5 says *"every test passes"* where
   p3/p4 say *"all tests pass"*, and editing that would have changed three gates' output. **−25 lines in `scripts/`.**

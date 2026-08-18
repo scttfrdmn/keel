@@ -750,29 +750,8 @@ else
     require_bench "[$host] the kernel sentinel's inputs" \
       "$BENCHLOG" "$BENCHCSV" GFLOP/s "$GATE_PEAK" $GATE_KERNELS || continue
 
-    # ---- criterion 5b, part 1: the registry's recorded insns/FMA vs the object code
-    # Same binary on every host, so this is checked once — but it is checked from a
-    # marker a host actually produced, not from source, because the point is to
-    # compare what the shipped library believes against what the audit counts.
-    kaudit="$(marker bench-kern-audit "$BENCHLOG")"
-    if [[ -z "$DRIFT_CHECKED" && -n "$kaudit" ]]; then
-      DRIFT_CHECKED="$host"
-      DRIFT_BAD=""
-      for pair in $kaudit; do
-        rtile="${pair%%/*}"; rval="${pair#*=}"
-        raud="$(audit_ipf_tile "$rtile" "$AUDITKERN")"
-        if [[ -z "$raud" ]]; then
-          DRIFT_BAD="$DRIFT_BAD ${rtile}(recorded $rval, not audited by this gate)"
-        elif ! awk -v a="$rval" -v b="$raud" 'BEGIN{exit !(a - b < 0.001 && b - a < 0.001)}'; then
-          DRIFT_BAD="$DRIFT_BAD ${rtile}(recorded $rval, audited $(printf '%.3f' "$raud"))"
-        fi
-      done
-      if [[ -z "$DRIFT_BAD" ]]; then
-        pass "every shipped shape's recorded insns/FMA matches the audited object code ($kaudit)"
-      else
-        fail "the shape ranking reads stale instruction counts:$DRIFT_BAD — internal/kern's registry has drifted from the K-loop it describes"
-      fi
-    fi
+    # ---- criterion 5b, part 1
+    assert_kern_audit_drift "$BENCHLOG" "$AUDITKERN" "$host" ""
 
     # The shape this host's library actually dispatches to, and the class it chose
     # under, from the very run being judged.
