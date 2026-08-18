@@ -173,13 +173,17 @@ func Syrk(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float3
 // The panel at (ic, pc) needs A's entries on both sides of the diagonal, and the
 // ones past it live at their reflections. Until issue #36 this reflected A once into
 // a dense d×d square and handed gemm an ordinary matrix, which cost O(d²) of scratch
-// and a whole extra pass — asymptotically free against the multiply's O(d²·n), and
-// not free at all against a *parallel* multiply, since that pass was one more serial
-// region in a routine whose scaling gate-p5.sh reads as a criterion.
+// — 67 MB at d=4096, measured at 16,904,645 B/op at d=2048 — plus a whole d² pass
+// over A before the pack made its own. Asymptotically free against the multiply's
+// O(d²·n); not free in allocator and memory traffic, which is what it was.
 //
-// Now the reflection happens inside the pack, where it costs neither: see
-// internal/pack.ASymPanels. The alternative — a symmetric microkernel — is still not
-// on the table, because it would double the kernel family P2 audited.
+// What it was NOT is a serial region. `expandSym` ran under par.Run over A's rows
+// from 175098d onward, so deleting it removed no Amdahl term, and an earlier draft of
+// this comment claiming otherwise was wrong. See the #36 thread.
+//
+// Now the reflection happens inside the pack, where it costs neither scratch nor a
+// pass: see internal/pack.ASymPanels. The alternative — a symmetric microkernel — is
+// still not on the table, because it would double the kernel family P2 audited.
 //
 // The values are the same either way, bit for bit: reflecting during the pack reads
 // the same stored element the dense square would have held, and the alpha it is then

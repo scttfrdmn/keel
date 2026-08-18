@@ -59,9 +59,9 @@
 // stored, taking an element on the other side from its reflection. The panel at
 // (ic, pc) needs entries on both sides of the diagonal, so the alternative was for
 // the caller to reflect A once into a dense square and hand this package an
-// ordinary matrix — which is what internal/block.Symm did until issue #36, at a
-// cost of O(d²) scratch and a serial pass in a routine whose parallel scaling is a
-// gate criterion.
+// ordinary matrix — which is what internal/block.Symm did until issue #36, at a cost
+// of O(d²) scratch (67 MB at d=4096) and a whole d² pass over A before this package
+// made its own.
 //
 // Doing it here costs no scratch and no extra pass: each run is split at the
 // diagonal instead of tested per element, so the stored part stays one contiguous

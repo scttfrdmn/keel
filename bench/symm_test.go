@@ -32,10 +32,13 @@ import (
 // And the control does not hold above one thread. At GOMAXPROCS=8 every row moved,
 // n = 1024 included (+5.4%), so the wide row cannot be read there as "the nest is
 // unchanged". Why is not established by this fixture and should not be asserted from
-// it: the deleted expansion was a serial region *and* a 16.9 MB per-call allocation,
-// and the base arm's variance (±4-6% against the new arm's ±0-2%) is itself an effect
-// of the second. What does the control's job unconditionally is the bit-for-bit
-// equivalence test, internal/pack.TestSymPackMatchesExpansion.
+// it. The deleted expansion was *not* a serial region — it ran under par.Run over
+// rows — and consistently with that its measured cost fell with thread count (the
+// n = 1 delta was 2.54 ms at one thread and 1.15 ms at eight), which is far too small
+// to be the 11.9 ms the n = 1024 row moved by. The 16.9 MB per-call allocation is the
+// unexcluded candidate, and the base arm's variance (±4-6% against the new arm's
+// ±0-2%) is itself an effect of it. What does the control's job unconditionally is
+// the bit-for-bit equivalence test, internal/pack.TestSymPackMatchesExpansion.
 //
 // Nothing here is new work for the routine. Until #36, Ssymm reflected A into a dense
 // m×m square before the nest ran; now internal/pack reads the stored triangle in
