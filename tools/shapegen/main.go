@@ -32,6 +32,7 @@
 //	-emit SHAPE     print one candidate to stdout
 //	-verify         emit the three shipped shapes and compare against the tree
 //	-sweep          emit, audit and rank the whole shape space
+//	-frontier       print just the best emittable zero-spill insns/FMA, for gate-p2
 //	-uarch SPEC     score against NAME:WIDTH:PORTS:LATENCY (default skylake-x:4:2:4)
 //
 // A shape is written MRxNR/U, e.g. 2x32/4.
@@ -48,7 +49,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/scttfrdmn/keel/internal/spill"
@@ -85,6 +85,7 @@ func main() {
 		form     = flag.String("form", "broadcast", "accumulate form: broadcast | permute")
 		verify   = flag.Bool("verify", false, "emit the shipped shapes and compare against internal/vec")
 		sweep    = flag.Bool("sweep", false, "emit, audit and rank the whole shape space")
+		frontier = flag.Bool("frontier", false, "print the best emittable zero-spill insns/FMA and nothing else")
 		keep     = flag.String("keep", "", "if set, leave each emitted candidate in this directory")
 		uarch    = flag.String("uarch", "skylake-x:4:2:4", "score against NAME:WIDTH:PORTS:LATENCY")
 	)
@@ -109,6 +110,10 @@ func main() {
 		}
 	case *sweep:
 		if err := runSweep(*keep); err != nil {
+			die(err)
+		}
+	case *frontier:
+		if err := runFrontier(); err != nil {
 			die(err)
 		}
 	default:
@@ -451,15 +456,11 @@ func runSweep(keep string) error {
 	fmt.Printf("objective: cycles = max(insns/width, FMAs/ports, (FMAs/chains)*latency); dependency-bound iff chains < ports*latency = %d\n\n",
 		shippedUArch.Ports*shippedUArch.Lat)
 
-	var rows []row
-	for _, s := range all {
-		r, err := audit(root, s, keep)
-		if err != nil {
-			rows = append(rows, row{Shape: s, Err: err})
-			fmt.Fprintf(os.Stderr, "  %s: %v\n", s.Label(), err)
-			continue
+	rows := auditAll(root, keep)
+	for _, r := range rows {
+		if r.Err != nil {
+			fmt.Fprintf(os.Stderr, "  %s: %v\n", r.Shape.Label(), r.Err)
 		}
-		rows = append(rows, row{Shape: s, Report: r, Score: shippedUArch.Score(s, r.Insns)})
 	}
 
 	fmt.Printf("%-20s %6s %5s %6s %6s %7s %8s %12s %9s\n",
@@ -475,6 +476,85 @@ func runSweep(keep string) error {
 	}
 
 	summarize(rows)
+	return nil
+}
+
+// auditAll audits the whole space, recording rather than judging failures: a shape
+// that will not compile becomes a row with Err set, and what that means is the
+// caller's policy. A sweep prints it and carries on; the frontier refuses to state
+// a figure over it, because the shape that would not compile may be the shape that
+// would have won.
+func auditAll(root, keep string) []row {
+	var rows []row
+	for _, s := range space() {
+		r, err := audit(root, s, keep)
+		if err != nil {
+			rows = append(rows, row{Shape: s, Err: err})
+			continue
+		}
+		rows = append(rows, row{Shape: s, Report: r, Score: shippedUArch.Score(s, r.Insns)})
+	}
+	return rows
+}
+
+// contender reports whether a swept row may set the frontier: audited, and
+// zero-spill. Emittability is upstream of this — space() never enumerates a shape
+// whose A-window load cannot be covered, and Err catches one that will not compile
+// — so "emittable, zero-spill", the terms gate-p2's SWEEP_BEST_IPF is defined in,
+// is exactly this predicate over that enumeration.
+func contender(r row) bool { return r.Err == nil && r.Report.Spills() == 0 }
+
+// best returns the top row under an ordering, and false when there were none.
+//
+// False rather than a zero row on purpose: an empty contender set must not read as
+// a frontier of 0.000 insns/FMA, which is the most permissive figure gate-p2's
+// shape guard could possibly be handed — a broken enumeration would silently widen
+// the very threshold it is supposed to pin.
+func best(rows []row, better func(a, b row) bool) (row, bool) {
+	var top row
+	found := false
+	for _, r := range rows {
+		if !found || better(r, top) {
+			top, found = r, true
+		}
+	}
+	return top, found
+}
+
+func fewestInsnsPerFMA(a, b row) bool { return a.Score.InsnsPerFMA() < b.Score.InsnsPerFMA() }
+func mostFlopsPerCycle(a, b row) bool { return a.Score.FlopsPerCycle() > b.Score.FlopsPerCycle() }
+
+// runFrontier prints the single figure gate-p2's SWEEP_BEST_IPF states, and nothing
+// else, so that constant can be reconciled against a live derivation on every gate
+// run instead of trusted (#33). It is computed across both forms rather than the
+// broadcast form alone: Permute contributes no zero-spill shape today, and stating
+// the frontier over the whole space is what keeps that a finding rather than an
+// assumption baked into the gate.
+//
+// A full audit is ~7s, so the gate re-derives rather than caching. Any shape that
+// fails to compile is fatal here.
+func runFrontier() error {
+	root, err := repoRoot()
+	if err != nil {
+		return err
+	}
+	rows := auditAll(root, "")
+	var zero []row
+	for _, r := range rows {
+		if r.Err != nil {
+			return fmt.Errorf("%s did not audit (%v); the frontier cannot be stated over an incomplete sweep", r.Shape.Label(), r.Err)
+		}
+		if contender(r) {
+			zero = append(zero, r)
+		}
+	}
+	top, ok := best(zero, fewestInsnsPerFMA)
+	if !ok {
+		return fmt.Errorf("no emittable zero-spill shape among %d audited: there is no frontier to state", len(rows))
+	}
+	// Figure, contender count, then the label — the label is several words, so it
+	// goes last and a shell reader can take it as the remainder of the line.
+	fmt.Printf("%.3f %d %s\n", top.Score.InsnsPerFMA(), len(zero), top.Shape.Label())
 	return nil
 }
 
@@ -496,7 +576,7 @@ func summarize(rows []row) {
 	for _, form := range []Form{Broadcast, Permute} {
 		var zero []row
 		for _, r := range rows {
-			if r.Err == nil && r.Shape.Form == form && r.Report.Spills() == 0 {
+			if contender(r) && r.Shape.Form == form {
 				zero = append(zero, r)
 			}
 		}
@@ -515,23 +595,20 @@ func summarize(rows []row) {
 				fmt.Printf("  per row per k-step, putting exactly 16 of them live at once against the 15 SIMD values\n")
 				fmt.Printf("  go1.26.x offers (T10). Emittable and in-budget are mutually exclusive under the shipped\n")
 				fmt.Printf("  A-panel layout, so this form has no zero-spill shape at all.\n")
-				fmt.Printf("  Consequence for gate-p2's SWEEP_BEST_IPF=4.438, which docs/spill-report.md:206 attributes\n")
-				fmt.Printf("  to `2x64 u=2` in this form: that shape guarantees only 4 A floats, so whatever kernel\n")
-				fmt.Printf("  produced 4.438 did not read its A panel the way the shipped kernels read theirs. The\n")
-				fmt.Printf("  threshold is therefore not comparable to a shipped shape's insns/FMA, and this generator\n")
-				fmt.Printf("  does not reproduce it. See #107.\n")
+				fmt.Printf("  This is what retired gate-p2's SWEEP_BEST_IPF=4.438, which docs/spill-report.md:206\n")
+				fmt.Printf("  attributed to `2x64 u=2` in this form: that shape guarantees only 4 A floats, so whatever\n")
+				fmt.Printf("  kernel produced 4.438 did not read its A panel the way the shipped kernels read theirs.\n")
+				fmt.Printf("  Ruled 2026-08-18 (#33): the threshold is now 4.625, the best figure an emittable\n")
+				fmt.Printf("  zero-spill shape reaches, and both gates reconcile it against -frontier rather than\n")
+				fmt.Printf("  reading it. See #107.\n")
 			}
 			continue
 		}
-		byIPF := append([]row(nil), zero...)
-		sort.Slice(byIPF, func(i, j int) bool {
-			return byIPF[i].Score.InsnsPerFMA() < byIPF[j].Score.InsnsPerFMA()
-		})
-		byFPC := append([]row(nil), zero...)
-		sort.Slice(byFPC, func(i, j int) bool {
-			return byFPC[i].Score.FlopsPerCycle() > byFPC[j].Score.FlopsPerCycle()
-		})
-		old, new_ := byIPF[0], byFPC[0]
+		// len(zero) > 0 is established above, so both are found. Same two orderings
+		// -frontier uses, from the same definitions: the figure gate-p2 reconciles
+		// against must be the figure this table publishes.
+		old, _ := best(zero, fewestInsnsPerFMA)
+		new_, _ := best(zero, mostFlopsPerCycle)
 		fmt.Printf("  old objective (insns/FMA only):      %s at %.3f insns/FMA\n",
 			old.Shape.Label(), old.Score.InsnsPerFMA())
 		fmt.Printf("    %s\n", old.Score.Derivation(shippedUArch))

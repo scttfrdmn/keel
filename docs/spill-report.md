@@ -210,15 +210,25 @@ Permute  : 55 shapes, 31 zero-spill, best 4.438 insns/FMA  2x64 u=2 (71 insns / 
 The shipped 2×32 ×4 *is* the broadcast form's optimum, across every shape the
 allocator can hold without spilling.
 
-**The generator is not in the tree and never was** (#107). Only the audit half is
-(`internal/spill/cmd/spill-audit`), so this table cannot be regenerated, and neither can
-`SWEEP_BEST_IPF=4.438`, which criterion 5b of gate-p2 still reads.
+**The generator was not in the tree** (#107). Only the audit half was
+(`internal/spill/cmd/spill-audit`), so this table could not be regenerated, and neither
+could `SWEEP_BEST_IPF=4.438`, which criterion 5b of gate-p2 read.
 
-**Nothing in the sweep reaches 3.88.** The best zero-spill shape in either form is
-4.438, and that one is the `Permute` 2×64 which was dropped for the reasons in
-KERNEL.md §3 (CSE merges identical `Permute` calls, and it would force the P3
-packer to pad every A panel by 16 floats). Even adopting it, janus reaches
-4.15 / (4.438 × 1.944) = **48.0%** — still short.
+**Corrected 2026-08-18 (#33).** `tools/shapegen` re-derives both. The best insns/FMA any
+*emittable* zero-spill shape reaches is **4.625** — the shipped 2×32's own figure —
+because no `Permute` shape is both emittable and zero-spill: one 16-lane A-window load
+is in bounds only when `MR·U ≥ 16` and covers every index the body needs only when
+`MR·U ≤ 16`, and the 16 index vectors that forces are live against the 15 SIMD values
+go1.26.x allocates (T10). The 4.438 row above therefore reads a kernel that cannot be
+emitted under the shipped A-panel layout. gate-p2 and gate-p3 now reconcile the constant
+against `shapegen -frontier` on every run instead of reading it.
+
+**Nothing in the sweep reaches 3.88.** The best zero-spill shape in either form was
+recorded as 4.438 — the `Permute` 2×64, which was dropped for the reasons in KERNEL.md §3
+(CSE merges identical `Permute` calls, and it would force the P3 packer to pad every A
+panel by 16 floats) and which the paragraph above shows cannot be emitted at all. So
+there is no shape to adopt, the frontier is 4.625, and this conclusion holds by more
+than it did.
 
 So this is not "we have not tried hard enough shapes". Every shape the register
 allocator can hold without spilling costs more than 3.88 instructions per FMA, and
@@ -444,7 +454,9 @@ Three properties keep this from being a weaker gate, and each is a fixture in
 
 Bounded leniency: because the peak kernel always pins the ceiling from beneath and
 the shape guard caps the denominator, the amended floor never falls below
-`0.90 × 2.25 ÷ 4.659 = 43.5%` of measured peak. And it **ratchets**: the floor is
+`0.90 × 2.25 ÷ 4.856 = 41.7%` of measured peak (`4.659 = 43.5%` until the 2026-08-18
+correction of `SWEEP_BEST_IPF`, #33; the bound loosens because the cap rose, while the
+floor janus actually faces is unchanged at 43.8%). And it **ratchets**: the floor is
 `0.90 × maxᵢ p_i ÷ I`, monotone in `I`, so when #20 lands and `I` falls to ~2.875,
 janus's required floor *rises* from today's 43.8% (`0.90 × 48.6%`) to 70.4% —
 stricter than the 55% it replaced. The amendment needs no expiry clause because improving the
@@ -550,7 +562,8 @@ from false, and a different thing again from #86's noisy-peak straddle.
 
 At the peak loop's own audited retirement rate (2.25 insns per FMA at 232.3 GFLOP/s),
 55% of peak needs **≤ 4.09 insns/FMA**. §4's sweep audited 115 shapes and its best
-zero-spill result in either accumulate form is 4.438 (`Permute` 2x64) and 4.625
+zero-spill result in either accumulate form is 4.438 (`Permute` 2x64 — corrected
+2026-08-18: not emittable, §4, so the frontier is 4.625 and this holds by more) and 4.625
 (broadcast 2x32). **No shape in the sweep clears 4.09**, and the two that come closest
 are the latency-bound ones. Stripping every filed overhead from 4x32's 50 instructions,
 in the order the causes are filed:

@@ -134,8 +134,13 @@ stated in `tools/shapegen/main.go` and chosen on their own grounds rather than t
 to agree. And the Permute form's 2×64 ×2 at 4.438 insns/FMA — the mint of gate-p2's
 `SWEEP_BEST_IPF` — is not emittable at all under the shipped A-panel layout: one
 16-lane A-window load is in bounds only when `MR·U ≥ 16` and covers every index the
-body needs only when `MR·U ≤ 16`, and that shape's `MR·U` is 4. The threshold is
-reported as not comparable rather than quietly replaced.
+body needs only when `MR·U ≤ 16`, and that shape's `MR·U` is 4. Reported as not
+comparable rather than quietly replaced — and then ruled on: `SWEEP_BEST_IPF` became
+**4.625** on 2026-08-18, the best figure any *emittable* zero-spill shape reaches,
+which both gates now reconcile against `shapegen -frontier` on every run instead of
+reading (#33). Repairing a mis-derived constant is defect repair, not criterion
+amendment: the standard applied — attributable to an emittable, zero-spill shape — is
+P2's founding one and older than the number it corrects.
 
 `insns` and `vector stack refs` are audited counts. `loads/FMA` is exact
 arithmetic, not a measurement: with `MR` rows and `V` 16-lane vectors along N, one
@@ -454,8 +459,10 @@ judging 4×32:  2.250 / 6.250 = 36.0% of peak,  35.2% measured = 97.8% of it
 
 which is to say a *fatter* kernel would have cleared the ≥90%-of-roofline floor
 more comfortably than the fast one does. That is the vacuity P2's shape guard
-exists to refuse, and it does: 6.25 insns/FMA is outside `sweep_best 4.438 × slack
-1.05 = 4.659`, so 4×32 is granted no roofline at all and faces the unmodified bar.
+exists to refuse, and it does: 6.25 insns/FMA is outside `sweep_best 4.625 × slack
+1.05 = 4.856`, so 4×32 is granted no roofline at all and faces the unmodified bar.
+(`4.438 × 1.05 = 4.659` until the 2026-08-18 correction of that constant, #33; the
+refusal is unaffected, and 2×32 moves from 4.2% inside the guard to exactly at it.)
 
 What P3 changes is which shape that number describes. Through P2 the sentinel
 judged whichever shipped shape measured fastest, while `Sgemm` dispatched to the

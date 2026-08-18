@@ -22,7 +22,10 @@
 # (PEAK_FLOOR, ROOF_FLOOR, SWEEP_BEST_IPF, ...). gate-p3.sh:346-350 says why in
 # terms — they are "duplicated rather than factored into a shared file on purpose",
 # because two independent statements of a threshold are what make a divergence
-# visible. This file existing is not an argument for moving them into it.
+# visible. This file existing is not an argument for moving them into it. What does
+# belong here is the *reconciliation* of one against a live derivation
+# (reconcile_sweep_best_ipf, below): a check is not a threshold, and both gates run
+# the identical one.
 #
 # Nor do helpers that merely look alike. check_flops_decl was drafted for this file
 # and refused: gate-p4's and gate-p5's flop-declaration checks differ in three of four
@@ -227,4 +230,37 @@ flops_formula() {
     Ssyrk)       printf 'k*n*(n+1)' ;;
     Strsm)       printf 'n*m*(m+1)' ;;
   esac
+}
+
+# reconcile_sweep_best_ipf VALUE LOG — check a stated SWEEP_BEST_IPF against a live
+# derivation rather than trusting it (#33, ruled 2026-08-18).
+#
+# The constant states "the best insns/FMA any emittable, zero-spill shape reaches",
+# and tools/shapegen re-derives exactly that from a 140-shape audit in ~7s. It was
+# wrong for the whole life of the threshold: 4.438 was attributed to a Permute shape
+# needing 16 index vectors against the 15 SIMD values go1.26.x allocates (T10), so it
+# named a kernel that cannot exist — and nothing could have caught that while the
+# figure was only ever read. A number that can be re-derived and is not is a summary
+# cache with its invalidation protocol sitting unused one directory over.
+#
+# This is the mint check, not the drift check. Both gates still state the constant
+# independently (see each one's carried-from-P2 block) and both call this, so a
+# divergence between the two copies stays visible where it was and neither copy is
+# trusted on its own.
+reconcile_sweep_best_ipf() {
+  local stated="$1" log="$2" got n shape
+  if ! GOEXPERIMENT=simd go run ./tools/shapegen -frontier >"$log" 2>&1; then
+    sed 's/^/        /' "$log" | tail -10
+    fail "shapegen -frontier stated no frontier, so SWEEP_BEST_IPF=$stated is unreconciled (#33)"
+    return
+  fi
+  read -r got n shape <"$log"
+  if [[ -z "$got" || -z "$shape" ]] || ! awk -v a="$got" 'BEGIN { exit !(a > 0) }'; then
+    sed 's/^/        /' "$log" | tail -5
+    fail "shapegen -frontier printed no usable figure ($(wc -l <"$log" | tr -d ' ') lines), so SWEEP_BEST_IPF=$stated is unreconciled (#33)"
+  elif ! awk -v a="$got" -v b="$stated" 'BEGIN { exit !(sprintf("%.3f", a) == sprintf("%.3f", b)) }'; then
+    fail "SWEEP_BEST_IPF=$stated but shapegen -frontier derives $got ($shape, best of $n emittable zero-spill shapes): criterion 5b would judge the shipped shape against a figure no shape reaches (#33)"
+  else
+    pass "SWEEP_BEST_IPF=$stated reconciles against shapegen -frontier: $got from $shape, best of $n emittable zero-spill shapes"
+  fi
 }

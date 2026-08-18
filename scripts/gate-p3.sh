@@ -110,7 +110,7 @@ PEAK_FLOOR=0.55
 ROOF_FLOOR=0.90
 ISSUE_CONVERGE_MAX=1.10
 ISSUE_MIX_SPREAD_MIN=1.25
-SWEEP_BEST_IPF=4.438
+SWEEP_BEST_IPF=4.625
 ROOF_SHAPE_SLACK=1.05
 GATE_KERNELS="Kernel/2x32/avx512/kc=128 Kernel/4x32/avx512/kc=128"
 GATE_PEAK_FUNC="avx512Peak"
@@ -659,6 +659,7 @@ else
   sed 's/^/        /' "$LOG" | tail -20
   fail "build with -d=ssa/check_bce failed"
 fi
+reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG"
 
 # ------------------------------------------ the throughput sentinel (P2, #19)
 echo

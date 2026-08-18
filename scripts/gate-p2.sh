@@ -82,10 +82,15 @@ ISSUE_MIX_SPREAD_MIN=1.25 # ... while max/min of I_i is at least this
 # instruction count of the kernel under test *rises* as that kernel gets worse,
 # so "90% of roofline" would otherwise mean "90% of whatever we happened to
 # emit". The shipped shape must also be within ROOF_SHAPE_SLACK of the best
-# zero-spill insns/FMA in the recorded sweep (KERNEL.md §3), which no amount of
-# padding can satisfy. This is also the term that bounds the amendment's slack at
-# 43.5% of peak (criterion 5b).
-SWEEP_BEST_IPF=4.438
+# insns/FMA any emittable zero-spill shape reaches (KERNEL.md §3), which no amount
+# of padding can satisfy. This is also the term that bounds the amendment's slack
+# at 41.7% of peak (criterion 5b: 0.90 * 2.25 / (4.625 * 1.05)).
+#
+# 4.625 is the shipped 2x32's own audited figure, so on that shape the guard reads
+# ratio 1.000: its live content is "has not drifted off the frontier" rather than
+# "is near it". 4x32 at 6.250 is still refused. Re-derived on every run by
+# reconcile_sweep_best_ipf rather than trusted; was 4.438 until 2026-08-18 (#33).
+SWEEP_BEST_IPF=4.625
 ROOF_SHAPE_SLACK=1.05
 # The shipped shapes' gate benchmarks, at the kc P3 will use. The floor applies to
 # whichever of these wins on the host (criterion 5).
@@ -310,6 +315,11 @@ for f in ${KERN_FUNCS//,/ }; do
     unmeasured "no ssa.html archived for $f — the 'why' behind any spill would be unavailable, so this audit has nothing to read"
   fi
 done
+
+# ------------------------- the shape threshold, re-derived rather than trusted
+echo
+echo "-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#33) --"
+reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG"
 
 # ------------------------------- the tile that cannot be allocated (evidence)
 echo

@@ -12,7 +12,7 @@ While the major version is 0, minor versions may contain breaking changes.
 - **`tools/shapegen` is the microkernel shape generator, in-tree and verified at its mint** (#107). `-verify` re-emits
   the three shipped kernels and compares each against `internal/vec` by source text *and* by audit report — 74/16,
   50/8, 270/48 — and `-sweep`'s first run re-derives all nine rows of KERNEL.md §3 exactly, from an independent
-  enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines).
+  enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
 ### Changed
 - **`tools/shapegen -uarch NAME:WIDTH:PORTS:LATENCY` scores a sweep against any front end**, default unchanged at
@@ -25,9 +25,17 @@ While the major version is 0, minor versions may contain breaking changes.
   `cycles = max(I/W, F/P, (F/A)·L)`, and the measured answer corrects this project's own guess: the shipped 2×32 ×4 is
   *issue*-bound at 18.50 cycles, not latency-bound, so the corrected objective and the old insns/FMA one agree on the
   frontier. The amendment reorders only the low-accumulator corner (2×48 ×2 above 1×48 ×8, 24.77 against 24.00).
-- **gate-p2's `SWEEP_BEST_IPF=4.438` is not comparable to a shipped shape's insns/FMA.** Its attributed shape, Permute
-  2×64 ×2, must have `MR·U == 16` to read its A panel the way the shipped kernels read theirs, and its `MR·U` is 4.
-  The best emittable zero-spill reading is 4.625; recorded as not comparable rather than replaced (#107).
+- **gate-p2's `SWEEP_BEST_IPF` is corrected 4.438 → 4.625, and stops being a trusted constant** (#33, ruled
+  2026-08-18). 4.438 was attributed to Permute 2×64 ×2, which needs `MR·U == 16` to read its A panel the way the
+  shipped kernels read theirs — 16 index vectors live against the 15 SIMD values go1.26.x allocates (T10) — so it
+  named a kernel that cannot exist. `e1c6340`'s enumeration re-derives the best *emittable* zero-spill figure as
+  4.625. The correction is **adverse**: 4.625 sits further from janus's required ≤3.88 than 4.438 did. Both gates now
+  reconcile their own copy against `shapegen -frontier` on every run and fail on mismatch.
+- **That repair loosens the amendment's stated worst case, opposite in sign to the shaping argument it settles.** The
+  bound `0.90 × 2.25 ÷ (SWEEP_BEST_IPF × 1.05)` moves 43.5% → 41.7% of peak. No host's verdict changes and the floor
+  the shipped 2×32 actually faces is unchanged at 43.8%, computed from its own audited `I_b`; only the cap the guard
+  permits rose. 4.625 *is* that shape's figure, so criterion 5b now reads ratio 1.000 and its live content is drift
+  off the frontier rather than distance from it — 4×32 at 6.250 is still refused.
 - **`gate-docs.sh` prints an apparatus line beside the historical shell/library one**, moving `tools/*.go` across.
   An instrument counted on the library side would flatter the ratio it is counted by; both lines print so the
   published 1.6× series stays comparable.

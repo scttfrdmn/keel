@@ -4,10 +4,13 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/scttfrdmn/keel/internal/spill"
 )
 
 // TestShippedShapesAreFixedPoints is the guard that keeps the generator honest
@@ -171,6 +174,33 @@ func TestParseUArchRejectsRatherThanDefaults(t *testing.T) {
 	}
 	if want := (UArch{Name: "skylake-x", Width: 4, Ports: 2, Lat: 4}); shippedUArch != want {
 		t.Errorf("the default uarch is %+v; every published insns/FMA reading was scored against %+v", shippedUArch, want)
+	}
+}
+
+// TestFrontierRefusesRatherThanReportingZero drives the fail-closed claim in best's
+// comment, because the failure it guards is silent and maximally permissive: gate-p2
+// divides by SWEEP_BEST_IPF, so a frontier of 0.000 out of an empty contender set
+// would widen the shape guard to admit any kernel at all. The state is reachable
+// rather than hypothetical — the Permute form has no zero-spill shape today, which is
+// why summarize has a branch for it.
+func TestFrontierRefusesRatherThanReportingZero(t *testing.T) {
+	if got, ok := best(nil, fewestInsnsPerFMA); ok {
+		t.Errorf("best over no rows reported %v as a frontier", got.Score.InsnsPerFMA())
+	}
+	s := Shape{MR: 2, V: 2, U: 4, Form: Broadcast}
+	spilling := row{Shape: s, Report: spill.Report{Insns: 74, Arith: 16, VecStack: []spill.Insn{{}}}}
+	if contender(spilling) {
+		t.Errorf("a row with %d spills was admitted as a frontier candidate", spilling.Report.Spills())
+	}
+	if contender(row{Shape: s, Err: errors.New("did not compile")}) {
+		t.Error("a shape that failed to audit was admitted as a frontier candidate")
+	}
+	clean := row{Shape: s, Report: spill.Report{Insns: 74, Arith: 16}, Score: shippedUArch.Score(s, 74)}
+	if !contender(clean) {
+		t.Fatal("a zero-spill audited row was rejected, so the two checks above prove nothing")
+	}
+	if got, ok := best([]row{clean}, fewestInsnsPerFMA); !ok || got.Score.InsnsPerFMA() != 4.625 {
+		t.Errorf("best over one clean row gave %.3f (ok=%v), want 4.625", got.Score.InsnsPerFMA(), ok)
 	}
 }
 

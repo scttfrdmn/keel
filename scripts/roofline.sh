@@ -71,11 +71,16 @@
 # effective floor for an issue-bound host is
 #
 #       roof_floor * max_i p_i / I_b  >=  0.90 * I_peak / (sweep_best * slack)
-#                                     =   0.90 * 2.25 / 4.659  =  0.435
+#                                     =   0.90 * 2.25 / 4.856  =  0.417
 #
-# so the amendment can lower the bar from 55% of peak to no less than 43.5% of
+# so the amendment can lower the bar from 55% of peak to no less than 41.7% of
 # peak, and only for a host that has independently demonstrated a front-end
 # ceiling. That is the number the amendment costs; it is not unbounded.
+#
+# 4.659 = 43.5% until 2026-08-18, when SWEEP_BEST_IPF was corrected 4.438 -> 4.625
+# (#33). The bound loosens by 1.8 points because the *cap* rose; no host's verdict
+# moves, and the floor the shipped 2x32 actually faces is unchanged at 43.8%,
+# since that is computed from its own audited I_b = 4.625 and not from the cap.
 #
 # WHEN THE CLASSIFICATION CANNOT BE DECIDED (the ruling on issue #86). Two of the
 # comparisons below select the CLASS, and both consume measured fractions of peak:

@@ -140,7 +140,7 @@ main() {
   source scripts/roofline.sh
 
   # The gate constants, so the fixtures are judged by the shipped thresholds.
-  PF=0.55; RF=0.90; CM=1.10; MM=1.25; SB=4.438; SL=1.05
+  PF=0.55; RF=0.90; CM=1.10; MM=1.25; SB=4.625; SL=1.05
   PEAK="1.0:2.25"   # register-only peak kernel: f = 1 by definition, audited I
 
   FAILED=0
@@ -215,14 +215,17 @@ main() {
   check "just under 90% of roofline fails"                   issue fail \
         0.437000 4.625   0.352:6.250 "$PEAK"
 
-  # 9. Boundary on the shape guard: sweep best 4.438 * 1.05 = 4.6599. Tested at
+  # 9. Boundary on the shape guard: sweep best 4.625 * 1.05 = 4.85625. Tested at
   #    +-1e-3 rather than at the exact tie, because insns/FMA is a ratio of small
   #    integers -- 16 or 32 FMAs per body -- so realizable values are quantized to
   #    1/32 = 0.03125 and no measurement can land inside 1e-3 of the threshold.
-  check "shape 4.6590 insns/FMA (+5.0%) gets a roofline"     issue pass \
-        0.437 4.6590   0.352:6.250 "$PEAK"
-  check "shape 4.7000 insns/FMA (+5.9%) is refused"          issue refuse \
-        0.437 4.7000   0.352:6.250 "$PEAK"
+  #    Was 4.438 * 1.05 = 4.6599 until 2026-08-18 (#33). The fixtures had to move
+  #    with the constant: at SB=4.625 the old 4.6590 arm sits 0.2 insns/FMA inside
+  #    the cap, so it would still have passed -- and proved nothing about a boundary.
+  check "shape 4.8560 insns/FMA (+5.0%) gets a roofline"     issue pass \
+        0.437 4.8560   0.352:6.250 "$PEAK"
+  check "shape 4.9000 insns/FMA (+5.9%) is refused"          issue refuse \
+        0.437 4.9000   0.352:6.250 "$PEAK"
 
   echo
   echo "-- the third state (#86): a class-selecting comparison the reading cannot decide --"
