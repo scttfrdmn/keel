@@ -85,3 +85,65 @@ marker_all() { sed -n "s/.*keel-$1: *//p" "$2"; }
 
 # set_has SET VALUE — is VALUE one of SET's comma-separated members.
 set_has() { [[ ",$1," == *",$2,"* ]]; }
+
+# marker_row NAME FILE KEY VALUE — the first keel-NAME line carrying the token
+# `KEY=VALUE`, or nothing. `marker`'s last-wins reading is wrong wherever a marker
+# is emitted more than once per file, which is every P4 and P5 marker and gate-p3's
+# per-size verification line; each caller names the key that distinguishes its own
+# rows. Five copies of this awk existed, three of them as helpers and two inlined —
+# including one inlined in gate-p4 three hundred lines below gate-p4's own helper,
+# which is how a divergence starts.
+marker_row() {
+  marker_all "$1" "$2" | awk -v want="$3=$4" '{
+    for (i = 1; i <= NF; i++) if ($i == want) { print; exit }
+  }'
+}
+
+# flops_expect ROUTINE LINE — a gate's own count of ROUTINE's USEFUL flops at the
+# dimensions the marker declares, recomputed rather than trusted:
+#
+#   Sgemm: 2*m*n*k        one multiply and one add per (i, j, p).
+#   Ssyrk: k*n*(n+1)      the same, over one triangle including its diagonal —
+#                         about half of Sgemm at the same n, so a wrong count moves
+#                         gate-p4's ratio by 2x and its bar would be cleared by a
+#                         routine that did not clear it.
+#   Ssymm: 2*m*n*k        A is symmetric and k x k, but every entry of C still gets
+#                         a full k-deep dot product: symm's saving is memory, never
+#                         arithmetic, so its count is GEMM's.
+#   Strsm: n*m*(m+1)      one multiply-add per (row, column) pair of one triangle
+#                         including the diagonal, per right-hand side.
+#
+# USEFUL, not executed: a masked diagonal tile is computed whole and half of it
+# discarded. Counting what the routine delivers rather than what it performed is
+# what makes the ratios mean something — the discarded half is precisely the cost
+# they exist to expose, and counting it as work would hide it.
+#
+# SHARING THIS DOES NOT WEAKEN CRITERION 7, which is the question a reader of
+# gate-p3.sh:346-350 should ask here. That criterion is a gate checking the *Go
+# harness*'s declared flops and formula against an independent recomputation; the
+# independence that matters is gate-against-harness, and two gates agreeing on the
+# recomputation costs it nothing. A shared *threshold* would be different, which is
+# why the thresholds stay where they are. gate-p4 used to carry the Sgemm/Ssyrk
+# arms only, and calls this for those two routines alone, so the extra arms are
+# unreachable from there rather than newly permissive.
+flops_expect() {
+  local m n k
+  m="$(field m "$2")"; n="$(field n "$2")"; k="$(field k "$2")"
+  case "$1" in
+    Sgemm|Ssymm) awk -v m="$m" -v n="$n" -v k="$k" 'BEGIN { if (m == "" || n == "" || k == "") exit; printf "%.0f", 2 * m * n * k }' ;;
+    Ssyrk)       awk -v n="$n" -v k="$k" 'BEGIN { if (n == "" || k == "") exit; printf "%.0f", k * n * (n + 1) }' ;;
+    Strsm)       awk -v m="$m" -v n="$n" 'BEGIN { if (m == "" || n == "") exit; printf "%.0f", n * m * (m + 1) }' ;;
+  esac
+}
+
+# flops_formula ROUTINE — the formula string the harness must say it applied. The
+# arithmetic is checked by flops_expect; this checks the STATEMENT, so a harness
+# that changed its reasoning and happened to land on the same number at one shape
+# still has to say what it now believes.
+flops_formula() {
+  case "$1" in
+    Sgemm|Ssymm) printf '2*m*n*k' ;;
+    Ssyrk)       printf 'k*n*(n+1)' ;;
+    Strsm)       printf 'n*m*(m+1)' ;;
+  esac
+}

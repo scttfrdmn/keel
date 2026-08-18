@@ -112,11 +112,7 @@ P3LOG="build/gate-p3-under-p4-$(git rev-parse --short HEAD 2>/dev/null || echo u
 # p4_line NAME FILE ROUTINE — the keel-NAME line belonging to one routine. The P4
 # markers are emitted once per routine, so `marker`'s last-wins reading would
 # silently audit Strsm's coverage as if it were Sgemv's.
-p4_line() {
-  marker_all "$1" "$2" | awk -v want="routine=$3" '{
-    for (i = 1; i <= NF; i++) if ($i == want) { print; exit }
-  }'
-}
+p4_line() { marker_row "$1" "$2" routine "$3"; }
 
 # p4_verify_line FILE ROUTINE SIZE — the verification-mode line for one
 # (routine, size) pair, of which there is one per size per routine.
@@ -179,54 +175,11 @@ lattice_product() {
   }' <<<"$1"
 }
 
-# flops_expect ROUTINE LINE — this gate's own count of ROUTINE's USEFUL flops at
-# the dimensions the marker declares (criterion 7).
-#
-# Sgemm: 2·m·n·k — one multiply and one add per (i, j, p).
-# Ssyrk: k·n·(n+1) — the same per (i, j, p), over the n(n+1)/2 entries of one
-#        triangle including the diagonal, i.e. about half of Sgemm at the same n.
-#
-# USEFUL, not executed: a masked C-update computes full MR×NR tiles on the diagonal
-# and keeps half of each. Counting what the routine delivers rather than what it
-# performed is the convention that makes the 85% bar mean something — the wasted
-# half is precisely the cost the bar is measuring, and counting it as work would
-# hide it.
-flops_expect() {
-  local m n k
-  m="$(field m "$2")"; n="$(field n "$2")"; k="$(field k "$2")"
-  case "$1" in
-    Sgemm) awk -v m="$m" -v n="$n" -v k="$k" 'BEGIN { if (m == "" || n == "" || k == "") exit; printf "%.0f", 2 * m * n * k }' ;;
-    Ssyrk) awk -v n="$n" -v k="$k" 'BEGIN { if (n == "" || k == "") exit; printf "%.0f", k * n * (n + 1) }' ;;
-  esac
-}
-
-# flops_formula ROUTINE — the formula string the harness must say it applied. The
-# arithmetic is checked above; this checks the STATEMENT, so a harness that changed
-# its reasoning and arrived at the same number at one size still has to say so.
-flops_formula() {
-  case "$1" in
-    Sgemm) printf '2*m*n*k' ;;
-    Ssyrk) printf 'k*n*(n+1)' ;;
-  esac
-}
-
 echo "== gate-p4: Level 2 + derived Level 3 =="
 echo
 
 # ------------------------------------------------------------- tree state (#63)
-# `git status` sees uncommitted changes and nothing else. A registered worktree
-# is a second checkout of another commit in this repo, invisible to that check,
-# and it usually means an l1-bench.sh or layout-ensemble.sh run is in flight --
-# which is exactly the condition that should stop a gate rather than an exception
-# to carve out for. The tree is frozen for a measurement's life and a gate IS a
-# measurement, so a gate concurrent with a benchmark was never legitimate. No
-# allowlist, no exemption (ruled 2026-08-14). See worktree_strays in remote.sh.
-if WORKTREE_STRAYS="$(worktree_strays)"; then
-  pass "no stray git worktrees (this repo is the only registered checkout)"
-else
-  fail "a git worktree is registered besides this one, so either a measurement is in flight or its wreckage was left behind -- wait for it or kill it, then re-run"
-  sed 's/^/        /' <<<"$WORKTREE_STRAYS"
-fi
+assert_no_strays
 
 # ------------------------------------------------------------------- builds
 echo "-- builds --"
@@ -659,9 +612,7 @@ else
         Sgemm) want_name="$GATE_SGEMM" ;;
         Ssyrk) want_name="$GATE_SSYRK" ;;
       esac
-      fl="$(marker_all bench-flops "$BENCHLOG" | awk -v want="name=$want_name" '{
-        for (i = 1; i <= NF; i++) if ($i == want) { print; exit }
-      }')"
+      fl="$(marker_row bench-flops "$BENCHLOG" name "$want_name")"
       if [[ -z "$fl" ]]; then
         FBAD="$FBAD ${r}(no keel-bench-flops declaration: the rate has an unstated numerator)"
         continue

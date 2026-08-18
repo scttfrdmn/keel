@@ -331,6 +331,21 @@ worktree_strays() {
   [[ "$n" -eq 0 ]]
 }
 
+# assert_no_strays — worktree_strays as a gate criterion. All six gates opened
+# with a byte-identical thirteen lines of this, each preceded by a seven-line
+# restatement of the rationale above; the reasoning lives here, at the function
+# it is about, and the gates now call it. No allowlist, no exemption (ruled
+# 2026-08-14).
+assert_no_strays() {
+  local strays
+  if strays="$(worktree_strays)"; then
+    pass "no stray git worktrees (this repo is the only registered checkout)"
+  else
+    fail "a git worktree is registered besides this one, so either a measurement is in flight or its wreckage was left behind -- wait for it or kill it, then re-run"
+    sed 's/^/        /' <<<"$strays"
+  fi
+}
+
 # remote_build_test PKG OUT — cross-compile PKG's test binary for linux/amd64.
 #
 # CGO_ENABLED=0 guarantees a static binary that does not care which libc the

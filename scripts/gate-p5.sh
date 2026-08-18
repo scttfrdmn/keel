@@ -118,74 +118,13 @@ P5_REMOTE_SRC="${P5_REMOTE_SRC:-/tmp/keel-p5-src}"
 # p5_line NAME FILE ROUTINE — the keel-NAME line belonging to one routine. The P5
 # markers are emitted once per routine, so `marker`'s last-wins reading would
 # audit Strsm's parallel behaviour and call it Sgemm's.
-p5_line() {
-  marker_all "$1" "$2" | awk -v want="routine=$3" '{
-    for (i = 1; i <= NF; i++) if ($i == want) { print; exit }
-  }'
-}
-
-# bench_line NAME FILE BENCHNAME — the keel-bench-* line for one benchmark row.
-bench_line() {
-  marker_all "$1" "$2" | awk -v want="name=$3" '{
-    for (i = 1; i <= NF; i++) if ($i == want) { print; exit }
-  }'
-}
-
-# flops_expect ROUTINE LINE — this gate's own count of ROUTINE's USEFUL flops at
-# the dimensions the marker declares, recomputed rather than trusted (the P4
-# doctrine, carried forward because P5 puts two more routines into a ratio and the
-# numerator is still where a flattering error would live):
-#
-#   Sgemm: 2*m*n*k        one multiply and one add per (i, j, p).
-#   Ssyrk: k*n*(n+1)      the same, over one triangle including its diagonal.
-#   Ssymm: 2*m*n*k        A is symmetric and k x k, but every entry of C still gets
-#                         a full k-deep dot product: symm's saving is memory, never
-#                         arithmetic, so its count is GEMM's.
-#   Strsm: n*m*(m+1)      one multiply-add per (row, column) pair of one triangle
-#                         including the diagonal, per right-hand side.
-#
-# USEFUL, not executed: a masked diagonal tile is computed whole and half of it
-# discarded, and counting the discarded half as work would hide the very cost
-# these ratios exist to expose.
-flops_expect() {
-  local m n k
-  m="$(field m "$2")"; n="$(field n "$2")"; k="$(field k "$2")"
-  case "$1" in
-    Sgemm|Ssymm) awk -v m="$m" -v n="$n" -v k="$k" 'BEGIN { if (m == "" || n == "" || k == "") exit; printf "%.0f", 2 * m * n * k }' ;;
-    Ssyrk)       awk -v n="$n" -v k="$k" 'BEGIN { if (n == "" || k == "") exit; printf "%.0f", k * n * (n + 1) }' ;;
-    Strsm)       awk -v m="$m" -v n="$n" 'BEGIN { if (m == "" || n == "") exit; printf "%.0f", n * m * (m + 1) }' ;;
-  esac
-}
-
-# flops_formula ROUTINE — the formula string the harness must say it applied. The
-# arithmetic is checked above; this checks the STATEMENT, so a harness that changed
-# its reasoning and happened to land on the same number at this one shape still has
-# to say what it now believes.
-flops_formula() {
-  case "$1" in
-    Sgemm|Ssymm) printf '2*m*n*k' ;;
-    Ssyrk)       printf 'k*n*(n+1)' ;;
-    Strsm)       printf 'n*m*(m+1)' ;;
-  esac
-}
+p5_line() { marker_row "$1" "$2" routine "$3"; }
 
 echo "== gate-p5: parallelism, dispatch, polish =="
 echo
 
 # ------------------------------------------------------------- tree state (#63)
-# `git status` sees uncommitted changes and nothing else. A registered worktree
-# is a second checkout of another commit in this repo, invisible to that check,
-# and it usually means an l1-bench.sh or layout-ensemble.sh run is in flight --
-# which is exactly the condition that should stop a gate rather than an exception
-# to carve out for. The tree is frozen for a measurement's life and a gate IS a
-# measurement, so a gate concurrent with a benchmark was never legitimate. No
-# allowlist, no exemption (ruled 2026-08-14). See worktree_strays in remote.sh.
-if WORKTREE_STRAYS="$(worktree_strays)"; then
-  pass "no stray git worktrees (this repo is the only registered checkout)"
-else
-  fail "a git worktree is registered besides this one, so either a measurement is in flight or its wreckage was left behind -- wait for it or kill it, then re-run"
-  sed 's/^/        /' <<<"$WORKTREE_STRAYS"
-fi
+assert_no_strays
 
 # ------------------------------------------------------------------- builds
 echo "-- builds, vet and lint --"
@@ -630,8 +569,8 @@ else
       RBAD=""
       for row in "$one" "$many"; do
         want_t="${row##*threads=}"
-        fl="$(bench_line bench-flops "$BENCHLOG" "$row")"
-        th="$(bench_line bench-threads "$BENCHLOG" "$row")"
+        fl="$(marker_row bench-flops "$BENCHLOG" name "$row")"
+        th="$(marker_row bench-threads "$BENCHLOG" name "$row")"
         if [[ -z "$fl" ]]; then
           RBAD="$RBAD ${row}(no keel-bench-flops declaration: its rate has an unstated numerator)"
         else

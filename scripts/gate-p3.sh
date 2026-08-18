@@ -321,19 +321,7 @@ if [[ -n "$INSTRUMENT_WIDEN_CI" ]]; then
 fi
 
 # ------------------------------------------------------------- tree state (#63)
-# `git status` sees uncommitted changes and nothing else. A registered worktree
-# is a second checkout of another commit in this repo, invisible to that check,
-# and it usually means an l1-bench.sh or layout-ensemble.sh run is in flight --
-# which is exactly the condition that should stop a gate rather than an exception
-# to carve out for. The tree is frozen for a measurement's life and a gate IS a
-# measurement, so a gate concurrent with a benchmark was never legitimate. No
-# allowlist, no exemption (ruled 2026-08-14). See worktree_strays in remote.sh.
-if WORKTREE_STRAYS="$(worktree_strays)"; then
-  pass "no stray git worktrees (this repo is the only registered checkout)"
-else
-  fail "a git worktree is registered besides this one, so either a measurement is in flight or its wreckage was left behind -- wait for it or kill it, then re-run"
-  sed 's/^/        /' <<<"$WORKTREE_STRAYS"
-fi
+assert_no_strays
 
 # ------------------------------------------------------------------- builds
 echo "-- builds --"
@@ -607,7 +595,7 @@ else
   # Per-size oracle verification mode (criterion 2).
   VMISS=""; VBAD=""
   for n in $SWEEP_SIZES; do
-    line="$(marker_all sgemm-verify "$SWEEPLOG" | awk -v want="size=$n" '{ for (i=1;i<=NF;i++) if ($i == want) { print; exit } }')"
+    line="$(marker_row sgemm-verify "$SWEEPLOG" size "$n")"
     if [[ -z "$line" ]]; then
       VMISS="$VMISS $n"
       continue
