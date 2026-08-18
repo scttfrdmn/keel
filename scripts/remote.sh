@@ -672,6 +672,45 @@ host_admission() {
   esac
 }
 
+# admission_readback HOST PROV — the preamble line stating HOST's class, before any
+# number from it is read. Stated for every CONFIGURED host, not only for the ones that
+# survive to a judged criterion: the first version of this read the class at the floor
+# check alone, and the aggregate's "1 of 3 not admitted" then described a fleet in which
+# all three were not admitted — the verdict right and its sentence false, which is #37's
+# label defect and #90's arriving from a third direction.
+admission_readback() {
+  host_admission "$2"
+  info "[$1] admission class: $ADM_CLASS (instance=${ADM_INSTANCE:-unread})"
+}
+
+# adm_judgeable HOST PROV READING — may a perf verdict be formed from HOST's numbers?
+# Returns 0 for the evidentiary class. Otherwise it emits the not-judged verdict itself
+# and returns 1, so a caller gates on it and tallies:
+#
+#   adm_judgeable "$host" "$GOV_PROV" "$reading" || { NOTADM=$((NOTADM+1)); continue; }
+#
+# READING is the number that would have been judged, and it is printed either way: a
+# class that withholds a judgement must not also withhold the measurement. Call it AFTER
+# the reading is rendered and BEFORE the verdict — and before any "indeterminate" branch,
+# because the two are not interchangeable. Indeterminate says "re-measure, uncapped";
+# not-admitted says "no number from this host is judgeable", which no re-run fixes.
+#
+# #104, ruled 2026-08-17: a floor is a claim about silicon, and a partial-size guest
+# shares its socket with tenants the run cannot see, so its reading is reported and never
+# judged however high or low it reads. `c7i.4xlarge` read 34.2% of peak and a flat floor
+# turned that into a P2 STOP on a host never admitted to the class the floor governs.
+adm_judgeable() {
+  host_admission "$2"
+  case "$ADM_CLASS" in
+    evidentiary) return 0 ;;
+    correctness)
+      info "[$1] correctness-class ($ADM_INSTANCE is not a full-size instance of an approved family): $3 — reported, not judged (docs/hosts.md)" ;;
+    *)
+      unmeasured "[$1] the admission class is unreadable (instance=${ADM_INSTANCE:-absent from the provenance line}), so this criterion is unmeasured here rather than cleared or missed: an unread identity must not be the mechanism that excuses a reading from a floor" ;;
+  esac
+  return 1
+}
+
 # remote_exec HOST BIN [ARGS...] — ship BIN to HOST and run it there.
 # stdout/stderr are the remote program's; the return status is its exit code.
 #

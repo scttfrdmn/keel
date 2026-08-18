@@ -411,6 +411,7 @@ if [[ -n "$HOSTS" ]]; then
   while read -r host; do
     [[ -n "$host" ]] || continue
     assert_governor "$host" preamble
+    admission_readback "$host" "$GOV_PROV"
   done <<<"$HOSTS"
 fi
 
@@ -1089,6 +1090,11 @@ OB_MISSED=0
 # separately from a miss, because "did not clear 60%" and "there was no 60% of
 # anything to clear" are different claims about keel's speed.
 OB_INDET=0
+# Hosts that produced a bounded ratio which this gate then declined to judge, because the
+# host is not admitted to the evidentiary class (#104). Its own tally for the reason every
+# other exit has one: a not-admitted host DID produce a ratio, so folding it into
+# OB_NOCOVER would print "produced no ratio" about a number printed six lines above.
+OB_NOTADM=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute): unmeasured, not missed"
@@ -1443,6 +1449,15 @@ else
         fi
         info "  [$host] had the class been ${hypo}-bound: $hsrc $(printf '%.2f' "$hdenom") GFLOP/s (why=$hwhy) -> ${hptpc}%, ${hlopc}% net of CI, which $hv the 60% bar"
       done
+      # Admission after both candidate readings are printed and before either becomes a
+      # verdict (#104). This branch is the one where the two orders visibly differ: the
+      # host is already indeterminate, and reporting that instead would say "re-measure"
+      # about a host no re-measurement makes judgeable.
+      if ! adm_judgeable "$host" "$GOV_PROV" \
+           "Sgemm at 2048^3 reads ${rptpc}% of plain OpenBLAS, ${rlopc}% net of CI, under an indeterminate classification whose candidates split $NCLEAR clear / $NMISS miss"; then
+        OB_NOTADM=$((OB_NOTADM + 1))
+        continue
+      fi
       # The decision itself is p3_collapse, in scripts/roofline.sh with fixtures,
       # for the reason p3_ratio_lo gives about its own arithmetic: an if-chain read
       # inline in a gate script is not evidence that it is right, and this one can
@@ -1500,6 +1515,14 @@ else
     else
       info "[$host] plain OpenBLAS is the denominator (why=$obwhy), so the amended and unmodified ratios are the same number"
     fi
+    # Admission after the reading above and before the bar (#104). The mission ratio is
+    # the number this whole gate exists for, so it is stated on every host; what the class
+    # decides is whether 60% is a bar this host's silicon can be held to.
+    if ! adm_judgeable "$host" "$GOV_PROV" \
+         "Sgemm at 2048^3 reads ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (plain OpenBLAS ${rptpc}%, ${rlopc}%)"; then
+      OB_NOTADM=$((OB_NOTADM + 1))
+      continue
+    fi
     if awk -v r="$alo" -v f="$OPENBLAS_FLOOR" 'BEGIN{exit !(r >= f)}'; then
       pass "[$host] Sgemm at 2048^3 is ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (>= 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
       OB_CLEARED=$((OB_CLEARED + 1))
@@ -1515,16 +1538,16 @@ else
   # Hosts that left the loop with no verdict for a reason that is not the split:
   # no OpenBLAS reference, no benchstat interval, no bounded amended ratio. Named,
   # because they are neither cleared nor slow and the sentence must not imply either.
-  OB_NOCOVER=$((NHOSTS - OB_CLEARED - OB_MISSED - OB_INDET))
+  OB_NOCOVER=$((NHOSTS - OB_CLEARED - OB_MISSED - OB_INDET - OB_NOTADM))
   case "$(fleet_coverage "$NHOSTS" "$OB_MEASURED" "$OB_CLEARED" "$OB_MISSED" "$OB_INDET")" in
   unmeasured)
     unmeasured "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed" ;;
   pass)
     pass "every gate host cleared 60% of its own single-thread OpenBLAS ($OB_CLEARED/$NHOSTS)" ;;
   fail)
-    fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar and $OB_MISSED measured below it ($OB_INDET undecidable-and-split, $OB_NOCOVER produced no ratio); ruling #23 asks every host to clear its own reference" ;;
+    fail "$OB_CLEARED of $NHOSTS gate hosts cleared the bar and $OB_MISSED measured below it ($OB_INDET undecidable-and-split, $OB_NOTADM not admitted to the evidentiary class, $OB_NOCOVER produced no ratio); ruling #23 asks every host to clear its own reference" ;;
   *)
-    unmeasured "$((OB_INDET + OB_NOCOVER)) of $NHOSTS gate hosts could not be judged this run ($OB_INDET had an indeterminate classification whose two candidate denominators disagreed, $OB_NOCOVER produced no bounded ratio at all); the other $OB_CLEARED cleared the bar, and no host measured below it" ;;
+    unmeasured "$((OB_INDET + OB_NOTADM + OB_NOCOVER)) of $NHOSTS gate hosts could not be judged this run ($OB_INDET had an indeterminate classification whose two candidate denominators disagreed, $OB_NOTADM are not admitted to the evidentiary class so no ratio from them is judgeable, $OB_NOCOVER produced no bounded ratio at all); the other $OB_CLEARED cleared the bar, and no host measured below it" ;;
   esac
 fi
 

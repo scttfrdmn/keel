@@ -244,14 +244,8 @@ if [[ -n "$HOSTS" ]]; then
   while read -r host; do
     [[ -n "$host" ]] || continue
     assert_governor "$host" preamble
-    # The class is a property of the host, knowable before any benchmark runs, so it is
-    # stated here for every configured host rather than only for the ones that survive
-    # to criterion 5b. The first run of this had it read at the floor check alone, and
-    # the aggregate's "1 of 3 not admitted" then described a fleet in which all three
-    # were not admitted -- the verdict right, its sentence false, which is #37's label
-    # defect and #90's, arriving from a third direction.
-    host_admission "$GOV_PROV"
-    info "[$host] admission class: $ADM_CLASS (instance=${ADM_INSTANCE:-unread})"
+    # The class is a property of the host, knowable before any benchmark runs.
+    admission_readback "$host" "$GOV_PROV"
   done <<<"$HOSTS"
 fi
 
@@ -591,30 +585,13 @@ else
         info "[$host] ceiling mixes converge ${csx}x (interval [${cslox}x, ${cshix}x], clear of $ISSUE_CONVERGE_MAX) over a ${msx}x spread in insns/FMA -> ${CLASS}-bound" ;;
     esac
 
-    # Admission before trust (#104, ruled 2026-08-17: "check the host's admission class
-    # before trusting any number from it"). A floor is a claim about silicon, and a
-    # partial-size guest shares its socket with tenants this run cannot see, so its
-    # reading is reported and never judged — whatever it reads. That is #104 itself:
-    # `c7i.4xlarge` read 34.2% and the flat floor turned it into a P2 STOP on a host never
-    # admitted to the class the floor governs.
-    #
-    # BEFORE the indeterminate branch, and the orders are not interchangeable —
-    # indeterminate says "re-measure, uncapped", not-admitted says "no number from this
-    # host is judgeable", which no re-run fixes. One cause, one label, dominant cause.
-    # AFTER the classification rendering above, because those lines are the reading rather
-    # than the verdict: spr being fma-bound is a fact worth having either way.
-    host_admission "$GOV_PROV"
-    case "$ADM_CLASS" in
-      evidentiary) : ;;
-      correctness)
-        info "[$host] correctness-class ($ADM_INSTANCE is not a full-size instance of an approved family): $BEST_ID reads ${fracpt}% of measured peak, ${frac}% net of CI, ${CLASS}-bound on a ceiling spread interval of [${cslox}x, ${cshix}x] — reported, not judged (docs/hosts.md)"
-        N_NOTADM=$((N_NOTADM + 1))
-        continue ;;
-      *)
-        unmeasured "[$host] the admission class is unreadable (instance=${ADM_INSTANCE:-absent from the provenance line}), so P2's floor is unmeasured here rather than cleared or missed: an unread identity must not be the mechanism that excuses a reading from the floor"
-        N_NOTADM=$((N_NOTADM + 1))
-        continue ;;
-    esac
+    # Admission before trust (#104), after the classification rendering above because
+    # those lines are the reading rather than the verdict: spr being fma-bound is a fact
+    # worth having either way. adm_judgeable states the rest, including why it comes
+    # before the indeterminate branch below.
+    adm_judgeable "$host" "$GOV_PROV" \
+      "$BEST_ID reads ${fracpt}% of measured peak, ${frac}% net of CI, ${CLASS}-bound on a ceiling spread interval of [${cslox}x, ${cshix}x]" \
+      || { N_NOTADM=$((N_NOTADM + 1)); continue; }
 
     # A classification the run could not make is not a floor this host missed
     # (#86). It comes before N_JUDGED because the aggregate below counts hosts that

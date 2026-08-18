@@ -26,6 +26,10 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Changed
+- **gate-p3's mission ratio is now decided by the admission machinery, not merely taken on an admitted host**
+  (#104/#30): `admission_readback` and `adm_judgeable` in `remote.sh` gate both of criterion 6's verdict paths,
+  gate-p2's inline copy calls them, and a not-admitted host has its own tally so the aggregate stops calling it a
+  host that produced no ratio. gate-p5's scaling floor is **not** wired yet and says so.
 - **The evidentiary host class is full-size, not bare metal, and a correctness-class number is
   reported-not-judged whatever it reads** (#104, ruled 2026-08-17): retiring metal had left the class empty
   while the harness went on judging perf on any guest that answered — which is how `c7i.4xlarge`'s 34.2%
