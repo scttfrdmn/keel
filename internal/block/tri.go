@@ -13,8 +13,8 @@ import (
 //
 //   - Syrk is one gemm call with A on both sides and the C update masked to a
 //     triangle.
-//   - Symm expands the stored triangle of A into a dense square and is then one
-//     unmasked gemm call.
+//   - Symm is one unmasked gemm call whose symmetric operand is reflected as it is
+//     packed.
 //   - Trsm is a sequence of gemm rank updates against the already-solved part of
 //     B, each followed by an unblocked solve against one diagonal block.
 //
@@ -37,6 +37,23 @@ import (
 type triMask struct {
 	on    bool
 	lower bool
+}
+
+// symOperand names the operand of gemm, if either, that stores only the triangle
+// named by lower of a symmetric matrix. The pack reflects it (pack.ASymPanels,
+// pack.BSymPanelsPart) instead of the caller expanding it into a dense square
+// first; issue #36 is that change and this is the only descriptor it needed.
+//
+// The zero value is two ordinary operands, which is what every caller but Symm
+// passes. It is a property of the source layout and not of who is calling — the
+// same thing transA and transB are, and the reason the two flags live side by side
+// in gemm's signature.
+//
+// Never both: A and B are the same matrix only in Syrk, which is masked rather than
+// symmetric-sourced. Nothing enforces that, because nothing needs to — a caller
+// setting both would get a correct answer, just not one anything asks for.
+type symOperand struct {
+	a, b, lower bool
 }
 
 // keeps reports whether element (i, j) of C is written. Unused by the loop nest,
@@ -143,7 +160,7 @@ func Syrk(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float3
 	// is what makes the blocks unequal, and icOrder is where that is dealt with.
 	beginCall()
 	gemm(kn, trans, !trans, n, n, k, alpha, a, lda, a, lda, beta, c, ldc,
-		triMask{on: true, lower: lower}, splitIC)
+		triMask{on: true, lower: lower}, symOperand{}, splitIC)
 }
 
 // Symm computes C = alpha·A·B + beta·C (left) or C = alpha·B·A + beta·C (right)
@@ -151,27 +168,27 @@ func Syrk(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float3
 // case and n×n in the right one. It assumes validated arguments; keel.Ssymm does
 // that.
 //
-// # Why this expands A instead of teaching pack about symmetry
+// # Why the pack reflects A rather than this expanding it
 //
-// The stored half of A is not a matrix the packing routines can read: the panel at
-// (ic, pc) needs A's entries on both sides of the diagonal, and the ones past it
-// live at their reflections. The two ways to handle that are to reflect at pack
-// time — one branch per panel, inside internal/pack — or to reflect once into a
-// dense square here and hand GEMM an ordinary matrix.
+// The panel at (ic, pc) needs A's entries on both sides of the diagonal, and the
+// ones past it live at their reflections. Until issue #36 this reflected A once into
+// a dense d×d square and handed gemm an ordinary matrix, which cost O(d²) of scratch
+// and a whole extra pass — asymptotically free against the multiply's O(d²·n), and
+// not free at all against a *parallel* multiply, since that pass was one more serial
+// region in a routine whose scaling gate-p5.sh reads as a criterion.
 //
-// This does the second, and it is a deliberate cost: O(d²) of scratch and one
-// extra pass over A, which is asymptotically free against the O(d²·n) of the
-// multiply but is not free at the small sizes where d² is comparable to the work.
-// The first is strictly better and belongs in pack, where it also covers a future
-// Ssymv; it is issue #36, and it is not on P4's critical path because P4's job is
-// to establish that the derivation is correct and within 85% of Sgemm, not to
-// remove its last copy. The alternative — a symmetric microkernel — is not on the
-// table at all: it would double the kernel family P2 audited.
+// Now the reflection happens inside the pack, where it costs neither: see
+// internal/pack.ASymPanels. The alternative — a symmetric microkernel — is still not
+// on the table, because it would double the kernel family P2 audited.
 //
-// alpha == 0 returns beta·C without allocating or reading A, matching reference
-// SSYMM. That is not just a shortcut: A's unreferenced triangle may hold anything,
-// and a routine that expanded it to multiply it by zero would fault or produce
-// NaN on a legal call.
+// The values are the same either way, bit for bit: reflecting during the pack reads
+// the same stored element the dense square would have held, and the alpha it is then
+// scaled by is the same one. TestSymPackMatchesExpansion in internal/pack pins that
+// against a literal expansion.
+//
+// alpha == 0 returns beta·C without reading A, matching reference SSYMM. A's
+// unreferenced triangle may hold anything, so a routine that read it in order to
+// multiply it by zero would produce NaN on a legal call.
 func Symm(kn kern.Kernel, left, lower bool, m, n int, alpha float32, a []float32, lda int,
 	b []float32, ldb int, beta float32, c []float32, ldc int) {
 
@@ -183,61 +200,14 @@ func Symm(kn kern.Kernel, left, lower bool, m, n int, alpha float32, a []float32
 		scaleTri(beta, 0, 0, m, n, c, ldc, triMask{})
 		return
 	}
-	d := n
+	sym := symOperand{lower: lower}
 	if left {
-		d = m
+		sym.a = true
+		gemm(kn, false, false, m, n, m, alpha, a, lda, b, ldb, beta, c, ldc, triMask{}, sym, splitIC)
+		return
 	}
-	dense := make([]float32, d*d)
-	expandSym(dense, d, lower, a, lda)
-	if left {
-		gemm(kn, false, false, m, n, m, alpha, dense, d, b, ldb, beta, c, ldc, triMask{}, splitIC)
-	} else {
-		gemm(kn, false, false, m, n, n, alpha, b, ldb, dense, d, beta, c, ldc, triMask{}, splitIC)
-	}
-}
-
-// expandSym writes the full d×d symmetric matrix whose stored triangle is a.
-//
-// # Why this is parallel and row-wise, when it is O(d²) against the nest's O(d²·n)
-//
-// Because Amdahl's law does not care that a term is asymptotically free. At the
-// shape gate-p5.sh measures — d = n = 4096 — this pass touches 16.8M elements
-// while the nest that follows does 137 GFLOP, and the nest is about to be spread
-// over eight workers while this pass is not. A serial pass costing 5% of the
-// serial nest costs 29% of the parallel one, and caps the ratio the headline
-// criterion reads at well under its floor. So the pass is split over the same
-// pool: its rows are independent, which is all the partition needs.
-//
-// Row-wise rather than element-wise for the same measurement-shaped reason. One
-// row of the result is a contiguous run of the stored triangle plus a strided
-// walk down its reflection, so the stored half is a copy and only the reflected
-// half pays for the stride — where the element-wise form paid a branch and a
-// strided address on every element of both halves. The values written are
-// identical either way: these are plain assignments, so nothing here can quiet a
-// signalling NaN that the old loop preserved.
-//
-// Issue #36 removes this pass altogether by teaching internal/pack to read a
-// stored triangle directly. Until it lands, this is the pass that has to not
-// dominate.
-func expandSym(dense []float32, d int, lower bool, a []float32, lda int) {
-	recordWorkers(par.Run(d, func(claim func() int) {
-		for i := claim(); i >= 0; i = claim() {
-			row := dense[i*d : (i+1)*d]
-			if lower {
-				// Stored: columns 0..i of row i. Reflected: a[j][i] for j > i.
-				copy(row[:i+1], a[i*lda:i*lda+i+1])
-				for j := i + 1; j < d; j++ {
-					row[j] = a[j*lda+i]
-				}
-				continue
-			}
-			// Stored: columns i..d-1 of row i. Reflected: a[j][i] for j < i.
-			copy(row[i:], a[i*lda+i:i*lda+d])
-			for j := 0; j < i; j++ {
-				row[j] = a[j*lda+i]
-			}
-		}
-	}))
+	sym.b = true
+	gemm(kn, false, false, m, n, n, alpha, b, ldb, a, lda, beta, c, ldc, triMask{}, sym, splitIC)
 }
 
 // MB is the row (left) or column (right) block size of Trsm's outer loop: how
@@ -431,7 +401,7 @@ func trsmLeft(kn kern.Kernel, lowerEff, trans, unit bool, m, n int, alpha float3
 			// strips), and the rank update's mb rows are fewer than one MC block
 			// anyway, so the ic loop has nothing to hand out.
 			gemm(kn, trans, false, mb, n, kk, -1, asl, lda, b[p0*ldb:], ldb,
-				alpha, b[i0*ldb:], ldb, triMask{}, noSplit)
+				alpha, b[i0*ldb:], ldb, triMask{}, symOperand{}, noSplit)
 		}
 		solveLeft(lowerEff, trans, unit, mb, n, a[i0*lda+i0:], lda, b[i0*ldb:], ldb)
 	}
@@ -466,7 +436,7 @@ func trsmRight(kn kern.Kernel, lowerEff, trans, unit bool, m, n int, alpha float
 			}
 			// noSplit, for the reason trsmLeft's rank update gives.
 			gemm(kn, false, trans, m, nb, kk, -1, b[p0:], ldb, bsl, lda,
-				alpha, b[j0:], ldb, triMask{}, noSplit)
+				alpha, b[j0:], ldb, triMask{}, symOperand{}, noSplit)
 		}
 		solveRight(lowerEff, trans, unit, m, nb, a[j0*lda+j0:], lda, b[j0:], ldb)
 	}

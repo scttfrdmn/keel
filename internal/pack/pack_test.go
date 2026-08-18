@@ -508,3 +508,119 @@ func TestNPanelsCountsTheRaggedOne(t *testing.T) {
 		}
 	}
 }
+
+// symSource returns a d×d symmetric matrix with only the triangle named by lower
+// stored — the other half is NaN — together with the dense expansion of the same
+// matrix. Both use row stride ld, wider than d, so a stride bug reads poison.
+//
+// The NaN is what makes "never reads the unstored triangle" a checkable claim rather
+// than an argument: any read of it lands in the packed panel as a NaN, and the panel
+// packed from the expansion holds a finite value in every slot. That is the same
+// device internal/block's Ssymm sweep uses at the routine level (tri_test.go's
+// symMatrix); here it applies to the pack alone.
+//
+// Each value depends only on the unordered index pair, so the matrix is exactly
+// symmetric and every element is distinct — a reflection taken from the wrong place
+// moves a value the assertion can name.
+func symSource(d, ld int, lower bool) (stored, dense []float32) {
+	stored, dense = poison(d*ld+d), poison(d*ld+d)
+	nan := float32(math.NaN())
+	for i := 0; i < d; i++ {
+		for j := 0; j < d; j++ {
+			lo, hi := i, j
+			if lo > hi {
+				lo, hi = hi, lo
+			}
+			v := float32(lo*d+hi+1) * 0.25
+			dense[i*ld+j] = v
+			stored[i*ld+j] = nan
+			if (lower && j <= i) || (!lower && j >= i) {
+				stored[i*ld+j] = v
+			}
+		}
+	}
+	return stored, dense
+}
+
+// TestSymPackMatchesExpansion is the whole correctness claim of issue #36: packing
+// from a stored triangle gives bit-for-bit what packing from the dense expansion
+// gave, which is what internal/block.Symm did until the expansion was removed.
+//
+// Bit-for-bit and not close, because it is the same stored element scaled by the same
+// alpha — nothing is reassociated, so there is no tolerance to argue about. If this
+// ever has to become a tolerance comparison, something reordered arithmetic that was
+// specified not to.
+//
+// The windows are chosen for where the diagonal falls: through the middle of every
+// run, entering a run partway, and entirely outside the block in each direction — the
+// last of which is the case where storedRun returns an empty range and one side of
+// every run is the whole run. Both uplos, because upper and lower are separate
+// branches there.
+//
+// The B side is packed one panel at a time, the way internal/block.packB calls it,
+// against a serial full-range expansion pack: the shipped call shape and the
+// partition property in one comparison.
+//
+// Driven by mutation rather than trusted: dropping the reflection in either nest,
+// swapping the two uplos in storedRun, and widening its stored range by one all make
+// this fail. Shrinking that range by one does NOT, and cannot — the mutation moves
+// only the diagonal element, whose reflection is itself, so the strided path reads the
+// same address the copy would have. The boundary is off-by-one-tolerant for values
+// and not for cost, which is a fact about the diagonal and not a gap here.
+func TestSymPackMatchesExpansion(t *testing.T) {
+	const d = 40
+	const ld = d + 3
+	windows := []struct{ blk, b0, count, p0, kc int }{
+		{4, 0, 8, 0, 8},   // straddling at the origin
+		{4, 12, 9, 12, 7}, // straddling, ragged, at an offset
+		{8, 10, 8, 8, 12}, // the diagonal enters and leaves mid-run
+		{4, 0, 8, 20, 8},  // strictly off the diagonal one way
+		{4, 20, 8, 0, 8},  // and the other
+		{4, 3, 3, 36, 4},  // count < blk, far off the diagonal
+		{2, 5, 7, 3, 9},   // the thin tile's MR
+		{32, 0, 33, 0, 5}, // the shipped NR, two panels, straddling
+		{32, 4, 33, 2, 6}, // the shipped NR at an offset
+		{1, 5, 3, 6, 4},   // blk=1: no padding is possible
+	}
+	for _, lower := range []bool{true, false} {
+		stored, dense := symSource(d, ld, lower)
+		for _, w := range windows {
+			for _, alpha := range []float32{1, -0.75} {
+				name := fmt.Sprintf("lower=%v/blk=%d/b0=%d/count=%d/p0=%d/kc=%d/alpha=%v",
+					lower, w.blk, w.b0, w.count, w.p0, w.kc, alpha)
+				t.Run("A/"+name, func(t *testing.T) {
+					got, want := poison(ALen(w.blk, w.count, w.kc)), poison(ALen(w.blk, w.count, w.kc))
+					ASymPanels(got, w.blk, alpha, stored, ld, lower, w.b0, w.count, w.p0, w.kc)
+					APanels(want, w.blk, alpha, dense, ld, false, w.b0, w.count, w.p0, w.kc)
+					sameBits(t, name, got, want)
+				})
+			}
+			name := fmt.Sprintf("lower=%v/blk=%d/j0=%d/cols=%d/p0=%d/kc=%d",
+				lower, w.blk, w.b0, w.count, w.p0, w.kc)
+			t.Run("B/"+name, func(t *testing.T) {
+				got, want := poison(BLen(w.blk, w.count, w.kc)), poison(BLen(w.blk, w.count, w.kc))
+				for u, n := 0, NPanels(w.blk, w.count); u < n; u++ {
+					BSymPanelsPart(got, w.blk, stored, ld, lower, w.p0, w.kc, w.b0, w.count, u, u+1)
+				}
+				BPanels(want, w.blk, dense, ld, false, w.p0, w.kc, w.b0, w.count)
+				sameBits(t, name, got, want)
+			})
+		}
+	}
+}
+
+// sameBits compares two packed buffers slot by slot, naming the first slot that
+// differs. NaN is why this is bits and not ==: a slot that read the unstored triangle
+// holds NaN, which compares unequal to everything including itself, so an == check
+// would report a difference it could not describe and a != check would miss nothing
+// but say nothing either.
+func sameBits(t *testing.T, name string, got, want []float32) {
+	t.Helper()
+	for i := range want {
+		g, w := math.Float32bits(got[i]), math.Float32bits(want[i])
+		if g != w {
+			t.Fatalf("%s: slot %d is %v (%#08x) from the stored triangle and %v (%#08x) "+
+				"from the expansion", name, i, got[i], g, want[i], w)
+		}
+	}
+}

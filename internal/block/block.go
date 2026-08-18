@@ -267,7 +267,7 @@ func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 	b []float32, ldb int, beta float32, c []float32, ldc int) {
 
 	beginCall()
-	gemm(kn, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, triMask{}, splitIC)
+	gemm(kn, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, triMask{}, symOperand{}, splitIC)
 }
 
 // gemm is Gemm with a triangular mask on the C update: every write to C, beta
@@ -276,9 +276,11 @@ func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 // predicates fold to constants, the whole-tile test is the one that was already
 // there, and no extra work appears in the loop nest. See tri.go for who uses it.
 //
-// sp says whether the ic loop may be distributed over the worker pool; see split.
+// sym says one of the two operands stores only a triangle of a symmetric matrix,
+// which the pack reflects; see symOperand. sp says whether the ic loop may be
+// distributed over the worker pool; see split.
 func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []float32, lda int,
-	b []float32, ldb int, beta float32, c []float32, ldc int, tri triMask, sp split) {
+	b []float32, ldb int, beta float32, c []float32, ldc int, tri triMask, sym symOperand, sp split) {
 
 	if kn.MR < 1 || kn.MR > kern.MaxMR || kn.NR < 1 || kn.NR > kern.MaxNR {
 		panic(fmt.Sprintf("block: kernel tile %dx%d outside %dx%d", kn.MR, kn.NR, kern.MaxMR, kern.MaxNR))
@@ -313,7 +315,7 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 			// Built once per (jc, pc) and then read by every worker below — and
 			// built BY every worker, because this pack is an Amdahl term rather
 			// than the rounding error its size suggests. See packB.
-			packB(bp, nr, b, ldb, transB, pc, kk, jc, jn, sp)
+			packB(bp, nr, b, ldb, transB, sym.b, sym.lower, pc, kk, jc, jn, sp)
 
 			body := func(claim func() int) {
 				// Per worker, not per call: this is the "per-worker packed-A
@@ -330,7 +332,11 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 					if tri.none(ic, jc, im, jn) {
 						continue
 					}
-					pack.APanels(ab.v, mr, alpha, a, lda, transA, ic, im, pc, kk)
+					if sym.a {
+						pack.ASymPanels(ab.v, mr, alpha, a, lda, sym.lower, ic, im, pc, kk)
+					} else {
+						pack.APanels(ab.v, mr, alpha, a, lda, transA, ic, im, pc, kk)
+					}
 					cb := c[ic*ldc+jc:]
 					if pc == 0 {
 						// First depth block for this C block: apply beta before
@@ -389,10 +395,14 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 //
 // The worker count is recorded, because this region is as real as the ic one and
 // WorkersLastCall promises the widest region of the call.
-func packB(bp []float32, nr int, b []float32, ldb int, transB bool, pc, kk, jc, jn int, sp split) {
+func packB(bp []float32, nr int, b []float32, ldb int, transB, sym, lower bool, pc, kk, jc, jn int, sp split) {
 	npan := pack.NPanels(nr, jn)
 	body := func(claim func() int) {
 		for u := claim(); u >= 0; u = claim() {
+			if sym {
+				pack.BSymPanelsPart(bp, nr, b, ldb, lower, pc, kk, jc, jn, u, u+1)
+				continue
+			}
 			pack.BPanelsPart(bp, nr, b, ldb, transB, pc, kk, jc, jn, u, u+1)
 		}
 	}

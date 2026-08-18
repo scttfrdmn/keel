@@ -321,7 +321,7 @@ func TestSsymmSweep(t *testing.T) {
 	c.dim("uplo", "U", "L")
 	c.dim("alpha", f32set(p4Alphas)...)
 	c.dim("beta", f32set(p4Betas)...)
-	c.l3config("keel.Ssymm->internal/block.Symm->expand+block.gemm")
+	c.l3config("keel.Ssymm->internal/block.Symm->block.gemm(sym-pack)")
 
 	rns := l3Runners()
 	for ri, rn := range rns {

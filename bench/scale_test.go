@@ -117,11 +117,11 @@ func scaleCases() []scaleCase {
 		},
 	}, {
 		// Left side, so A is m×m and the shape is the square m = n = k = 4096 the
-		// gate recomputes 2·m·n·k from. This row pays for block.expandSym's O(d²)
-		// reflection of A into a dense square on every call — 67 MB of scratch at
-		// this size — because that is what a caller gets today. The pass is
-		// parallel (it has to be: see expandSym's comment on Amdahl), and issue #36
-		// removes it by teaching internal/pack to read a stored triangle directly.
+		// gate recomputes 2·m·n·k from. Until issue #36 this row also paid for a
+		// reflection of A into a dense square on every call — 67 MB of scratch at this
+		// size, and one more serial region in the very routine this benchmark measures
+		// the parallel scaling of. internal/pack now reads the stored triangle in
+		// place; BenchmarkSymmNarrow is the fixture at the shape where that shows.
 		name: "Ssymm",
 		work: symmWork(scaleN),
 		prep: func(*testing.B) func() {

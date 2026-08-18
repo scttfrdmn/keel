@@ -53,6 +53,20 @@
 // (jc, pc, ic) block of a call, so a stale value from a previous block would be
 // indistinguishable from data.
 //
+// # A symmetric operand is reflected here, not expanded by the caller
+//
+// ASymPanels and BSymPanelsPart read a matrix of which only one triangle is
+// stored, taking an element on the other side from its reflection. The panel at
+// (ic, pc) needs entries on both sides of the diagonal, so the alternative was for
+// the caller to reflect A once into a dense square and hand this package an
+// ordinary matrix — which is what internal/block.Symm did until issue #36, at a
+// cost of O(d²) scratch and a serial pass in a routine whose parallel scaling is a
+// gate criterion.
+//
+// Doing it here costs no scratch and no extra pass: each run is split at the
+// diagonal instead of tested per element, so the stored part stays one contiguous
+// source run and at most one side of the run is strided.
+//
 // # Why this is not vectorized through the shim
 //
 // DESIGN.md §4/P3 lists "packing routines SIMD-accelerated through the shim".
@@ -107,7 +121,20 @@ func APanels(dst []float32, mr int, alpha float32, a []float32, lda int, trans b
 	// A's rows are the blocked axis. Untransposed, A is m×k: the depth index is
 	// the contiguous one, so packing transposes. Transposed, A is k×m and the
 	// blocked axis is contiguous, so it copies.
-	panels(dst, mr, alpha, a, lda, !trans, i0, rows, p0, kc, 0, NPanels(mr, rows))
+	panels(dst, mr, alpha, a, lda, !trans, symSrc{}, i0, rows, p0, kc, 0, NPanels(mr, rows))
+}
+
+// ASymPanels packs the block APanels packs, from a symmetric A of which only the
+// triangle named by lower is stored. An element on the other side of the diagonal
+// is read from its reflection; the unstored triangle is never touched.
+//
+// There is no trans, and that is not an omission: a symmetric matrix is its own
+// transpose, so the flag would have one meaning and two spellings. The orientation
+// passed below is the untransposed one because it is the loop order whose stored
+// run is contiguous — one row of A per packed slot — not because the source is
+// assumed to be anything.
+func ASymPanels(dst []float32, mr int, alpha float32, a []float32, lda int, lower bool, i0, rows, p0, kc int) {
+	panels(dst, mr, alpha, a, lda, true, symSrc{on: true, lower: lower}, i0, rows, p0, kc, 0, NPanels(mr, rows))
 }
 
 // BPanels packs depth [p0, p0+kc) and columns [j0, j0+cols) of B into nr-column
@@ -119,7 +146,7 @@ func APanels(dst []float32, mr int, alpha float32, a []float32, lda int, trans b
 func BPanels(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0, cols int) {
 	// The mirror image of APanels: B's columns are the blocked axis, and
 	// untransposed B is k×n, so the blocked axis is the contiguous one.
-	panels(dst, nr, 1, b, ldb, trans, j0, cols, p0, kc, 0, NPanels(nr, cols))
+	panels(dst, nr, 1, b, ldb, trans, symSrc{}, j0, cols, p0, kc, 0, NPanels(nr, cols))
 }
 
 // BPanelsPart packs only panels [from, to) of the same block BPanels packs, and
@@ -144,7 +171,17 @@ func BPanels(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0
 // A from >= to is legal and packs nothing, so a partition may hand a worker an empty
 // range without the caller special-casing it.
 func BPanelsPart(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0, cols, from, to int) {
-	panels(dst, nr, 1, b, ldb, trans, j0, cols, p0, kc, from, to)
+	panels(dst, nr, 1, b, ldb, trans, symSrc{}, j0, cols, p0, kc, from, to)
+}
+
+// BSymPanelsPart is BPanelsPart from a symmetric B of which only the triangle
+// named by lower is stored. See ASymPanels for why there is no trans.
+//
+// There is no serial BSymPanels beside it because internal/block packs every B
+// block through the range form, so a second entry point would be reached only from
+// tests. A full pack is from = 0, to = NPanels(nr, cols).
+func BSymPanelsPart(dst []float32, nr int, b []float32, ldb int, lower bool, p0, kc, j0, cols, from, to int) {
+	panels(dst, nr, 1, b, ldb, false, symSrc{on: true, lower: lower}, j0, cols, p0, kc, from, to)
 }
 
 // NPanels returns how many blk-wide panels a count-wide axis packs into: the
@@ -183,9 +220,16 @@ func NPanels(blk, count int) int {
 // memmove has a cheaper entry path would want it lower.
 const memmoveFloor = 16
 
+// symSrc says the source stores only one triangle of a symmetric matrix. The zero
+// value is an ordinary matrix, which is what APanels, BPanels and BPanelsPart pass.
+type symSrc struct {
+	on    bool
+	lower bool
+}
+
 // from and to bound the panel indices this call writes; a serial full pack passes
 // (0, nb). The bound check is against the whole block either way — see BPanelsPart.
-func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthContig bool, b0, count, p0, kc, from, to int) {
+func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthContig bool, sym symSrc, b0, count, p0, kc, from, to int) {
 	need := panelsLen(blk, count, kc)
 	if len(dst) < need {
 		panic(fmt.Sprintf("pack: dst has %d floats, need %d", len(dst), need))
@@ -205,6 +249,10 @@ func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthC
 			valid = r
 		}
 		base := b0 + ib*blk
+		if sym.on {
+			symPanel(panel, blk, alpha, src, ld, depthContig, sym.lower, base, valid, p0, kc)
+			continue
+		}
 		if depthContig {
 			for x := 0; x < valid; x++ {
 				row := src[(base+x)*ld+p0 : (base+x)*ld+p0+kc]
@@ -255,4 +303,108 @@ func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthC
 			}
 		}
 	}
+}
+
+// symPanel fills one panel from a symmetric source, including its zero padding.
+//
+// In both of panels' orientations the source address is src[row*ld + col] with row
+// the first index — the blocked index when the depth one is contiguous, the depth
+// index otherwise — so the reflection rule is written once and serves the A side
+// and the B side alike. That is also why a symmetric source has no transpose flag:
+// the rule does not read one.
+//
+// The orientation still decides the loop order, because the stored part of a run is
+// contiguous in the source only along the column axis. It is a run and not a set of
+// scattered elements, which is what keeps this the same cost as an ordinary pack:
+// storedRun splits at the diagonal, so at most one end of each run is strided and
+// no element is tested individually.
+func symPanel(panel []float32, blk int, alpha float32, src []float32, ld int, depthContig, lower bool,
+	base, valid, p0, kc int) {
+
+	if depthContig {
+		// Row is the blocked index, held across the run over depth. alpha·v
+		// throughout, exactly as panels' transposing branch does it, so the two
+		// agree on every value including the NaN payloads TestBranchesAgree pins.
+		for x := 0; x < valid; x++ {
+			r := base + x
+			lo, hi := storedRun(lower, r, p0, kc)
+			for p := 0; p < lo; p++ {
+				panel[p*blk+x] = alpha * src[(p0+p)*ld+r]
+			}
+			for p, v := range src[r*ld+p0+lo : r*ld+p0+hi] {
+				panel[(lo+p)*blk+x] = alpha * v
+			}
+			for p := hi; p < kc; p++ {
+				panel[p*blk+x] = alpha * src[(p0+p)*ld+r]
+			}
+		}
+		for x := valid; x < blk; x++ {
+			for p := 0; p < kc; p++ {
+				panel[p*blk+x] = 0
+			}
+		}
+		return
+	}
+	// Row is the depth index, held across the run over the blocked axis.
+	for p := 0; p < kc; p++ {
+		r := p0 + p
+		out := panel[p*blk : (p+1)*blk]
+		lo, hi := storedRun(lower, r, base, valid)
+		for x := 0; x < lo; x++ {
+			out[x] = alpha * src[(base+x)*ld+r]
+		}
+		run := src[r*ld+base+lo : r*ld+base+hi]
+		if alpha == 1 {
+			// This nest is the B side, where blk is NR and alpha is folded into A,
+			// so the stored run is the same NR-wide copy the ordinary contiguous
+			// branch makes — minus the memmoveFloor test, which would fire only on
+			// the short remainder next to the diagonal.
+			copy(out[lo:hi], run)
+		} else {
+			for x, v := range run {
+				out[lo+x] = alpha * v
+			}
+		}
+		for x := hi; x < valid; x++ {
+			out[x] = alpha * src[(base+x)*ld+r]
+		}
+		for x := valid; x < blk; x++ {
+			out[x] = 0
+		}
+	}
+}
+
+// storedRun returns the part [lo, hi) of a run of cnt columns starting at column
+// off, in row r of a symmetric matrix, whose elements are the stored ones. lower
+// says the stored triangle is the lower one; the diagonal is stored either way.
+//
+// At most one end of the run is left over, never both, because the stored side of a
+// row is a prefix (lower) or a suffix (upper) of it. A run entirely on the reflected
+// side comes back empty rather than inverted.
+//
+// internal/block's triMask.rowRange is the same arithmetic about a different thing —
+// which columns of C are *written*, not which entries of A are *stored* — and block
+// imports this package, so the resemblance cannot be factored out and should not be:
+// one is a property of the output mask and the other of the input layout.
+func storedRun(lower bool, r, off, cnt int) (lo, hi int) {
+	if lower {
+		// Stored where col <= r, i.e. off+x <= r.
+		hi = r - off + 1
+		if hi < 0 {
+			hi = 0
+		}
+		if hi > cnt {
+			hi = cnt
+		}
+		return 0, hi
+	}
+	// Stored where col >= r.
+	lo = r - off
+	if lo < 0 {
+		lo = 0
+	}
+	if lo > cnt {
+		lo = cnt
+	}
+	return lo, cnt
 }

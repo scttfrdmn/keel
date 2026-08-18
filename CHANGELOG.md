@@ -15,6 +15,9 @@ While the major version is 0, minor versions may contain breaking changes.
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
 ### Changed
+- **`Ssymm` reads its symmetric operand in place rather than reflecting it into a dense square** (#36).
+  `internal/pack.ASymPanels`/`BSymPanelsPart` split each run at the diagonal, dropping an O(d²) allocation (67 MB at
+  n=4096) and a serial pass; bit-for-bit identical, pinned by `TestSymPackMatchesExpansion`. Fixture: `BenchmarkSymmNarrow`.
 - **`tools/shapegen -uarch NAME:WIDTH:PORTS:LATENCY` scores a sweep against any front end**, default unchanged at
   `skylake-x:4:2:4`. The SPR and arm64 constants are deliberately *not* listed in the source: taken on the command
   line, each re-sweep records them in its own log beside whoever sourced them instead of minting three integers.

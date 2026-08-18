@@ -86,8 +86,9 @@ type p5shape struct {
 // Ssymm is exercised right-side. Left-side would make A's dimension m, so k = m =
 // 1200 and this one case would cost more than the other three together on the
 // scalar path this file also has to run on; right-side keeps the m-partition under
-// test (C is still m×n) while A stays n×n. The left-side expansion is covered by
-// TestSsymmSweep, and expandSym's own parallel pass is exercised either way.
+// test (C is still m×n) while A stays n×n. That also fixes which half of the
+// symmetric pack this file reaches: right-side makes A the second operand, so only
+// pack.BSymPanelsPart runs here. TestSsymmSweep drives both halves at every size.
 //
 // Strsm is exercised on BOTH sides, and that is the one case here where two shapes
 // of a routine are not the same test run twice. The two sides split different axes
