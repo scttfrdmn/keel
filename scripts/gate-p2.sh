@@ -430,9 +430,15 @@ while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 # hosts explicitly so the aggregate can say WHICH failure to measure happened, and the
 # shared decision takes it. Without it, "classification undecidable" and "host never
 # answered" would collapse into one leftover and the log would not say which.
+# N_NOTADM is the fifth (#104): a host not admitted to the evidentiary class produced a
+# reading this gate reports and does not judge — a third way to be unjudged, which must
+# not reach the aggregate as either of the other two. Unreadable-class hosts land here
+# too; their own verdict is UNMEASURED, which blocks green by itself, so the aggregate
+# needs only to know they were asked and not judged.
 N_JUDGED=0
 N_CLEARED=0
 N_INDET=0
+N_NOTADM=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   unmeasured "the 55% criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
@@ -603,6 +609,31 @@ else
         info "[$host] ceiling mixes converge ${csx}x (interval [${cslox}x, ${cshix}x], clear of $ISSUE_CONVERGE_MAX) over a ${msx}x spread in insns/FMA -> ${CLASS}-bound" ;;
     esac
 
+    # Admission before trust (#104, ruled 2026-08-17: "check the host's admission class
+    # before trusting any number from it"). A floor is a claim about silicon, and a
+    # partial-size guest shares its socket with tenants this run cannot see, so its
+    # reading is reported and never judged — whatever it reads. That is #104 itself:
+    # `c7i.4xlarge` read 34.2% and the flat floor turned it into a P2 STOP on a host never
+    # admitted to the class the floor governs.
+    #
+    # BEFORE the indeterminate branch, and the orders are not interchangeable —
+    # indeterminate says "re-measure, uncapped", not-admitted says "no number from this
+    # host is judgeable", which no re-run fixes. One cause, one label, dominant cause.
+    # AFTER the classification rendering above, because those lines are the reading rather
+    # than the verdict: spr being fma-bound is a fact worth having either way.
+    host_admission "$GOV_PROV"
+    case "$ADM_CLASS" in
+      evidentiary) : ;;
+      correctness)
+        info "[$host] correctness-class ($ADM_INSTANCE is not a full-size instance of an approved family): $BEST_ID reads ${fracpt}% of measured peak, ${frac}% net of CI, ${CLASS}-bound on a ceiling spread interval of [${cslox}x, ${cshix}x] — reported, not judged (docs/hosts.md)"
+        N_NOTADM=$((N_NOTADM + 1))
+        continue ;;
+      *)
+        unmeasured "[$host] the admission class is unreadable (instance=${ADM_INSTANCE:-absent from the provenance line}), so P2's floor is unmeasured here rather than cleared or missed: an unread identity must not be the mechanism that excuses a reading from the floor"
+        N_NOTADM=$((N_NOTADM + 1))
+        continue ;;
+    esac
+
     # A classification the run could not make is not a floor this host missed
     # (#86). It comes before N_JUDGED because the aggregate below counts hosts that
     # produced a judgeable reading, and this host did not: no class means no floor
@@ -670,14 +701,14 @@ else
   # denominator is the fleet either way. Naming NHOSTS makes the claim's scope explicit
   # instead of leaving it to coincide, and `fleet_shortfall` stays appended as a
   # fail-closed belt: if the two ever diverge, the line says so rather than reading whole.
-  N_NOCOVER=$((NHOSTS - N_JUDGED - N_INDET))
+  N_NOCOVER=$((NHOSTS - N_JUDGED - N_INDET - N_NOTADM))
   case "$(fleet_coverage "$NHOSTS" "$N_JUDGED" "$N_CLEARED" "$((N_JUDGED - N_CLEARED))" "$N_INDET")" in
     unmeasured)
       # Two ways to land here, and they are not the same fact: no host produced a
       # judgeable reading, or the fleet's configured size could not be read (in which
       # case there is no denominator to judge coverage against at all).
       if [[ "$N_JUDGED" -eq 0 ]]; then
-        unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared$(fleet_shortfall "$NHOSTS" 0)"
+        unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared ($N_NOTADM of $NHOSTS not admitted to the evidentiary class)$(fleet_shortfall "$NHOSTS" 0)"
       else
         unmeasured "$N_CLEARED of $N_JUDGED judged hosts cleared their floor, but this run could not read how many hosts were configured, so it cannot say whether that is the fleet$(fleet_shortfall "$NHOSTS" "$N_JUDGED")"
       fi ;;
@@ -689,7 +720,7 @@ else
       # `partial`: nobody measured below the floor, but the fleet is not covered. The
       # counts are named separately because they are different failures to measure --
       # a host the run could not classify is not a host that never answered.
-      unmeasured "the fleet's floor is unmeasured: $N_CLEARED of $NHOSTS configured hosts cleared it and none measured below it, but $((NHOSTS - N_CLEARED)) produced no floor verdict ($N_INDET indeterminate, $N_NOCOVER with no judgeable reading at all), and a fleet with an absent member has not measured a claim about the fleet (#90) — the per-host PASSes above stand as measured" ;;
+      unmeasured "the fleet's floor is unmeasured: $N_CLEARED of $NHOSTS configured hosts cleared it and none measured below it, but $((NHOSTS - N_CLEARED)) produced no floor verdict ($N_INDET indeterminate, $N_NOTADM not admitted to the evidentiary class, $N_NOCOVER with no judgeable reading at all), and a fleet with an absent member has not measured a claim about the fleet (#90) — the per-host PASSes above stand as measured" ;;
   esac
 fi
 

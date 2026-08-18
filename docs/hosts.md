@@ -34,7 +34,7 @@ checked in.
 | AVX-512 F/CD/BW/DQ/VL | the bundle `archsimd.X86.AVX512()` gates on — all five, or the backend does not register |
 | key-based ssh from the dev host | `remote.sh` uses `BatchMode=yes`; it never prompts and never handles credentials |
 | a clock established stable | for gate numbers, not correctness. DESIGN.md §5 rule 5 (as amended 2026-08-16) requires it of every measuring host, by whichever instrument the host has: the `performance` governor where `cpufreq` is readable, else `BenchmarkPeak` sampled at head/middle/tail. Both branches are live — `clock_gate`/`clock_head`/`clock_post`, and the guest branch is what the AWS fleet runs on, where `assert_governor` reads `absent` |
-| an admission class | `evidentiary` (full-size, judged) or `correctness` (partial-size, reported); see the class table below. Unreadable is `unmeasured`, not `correctness` |
+| an admission class | `evidentiary` (full-size, judged) or `correctness` (partial-size, reported); see the class table below. Unreadable is `unmeasured`, not `correctness`. Read by `host_admission` from the provenance line's `instance=` field against the declared `KEEL_EVIDENTIARY_SIZES` (`remote.sh`); wired into gate-p2's criterion 5b, and **not yet** into gate-p3's or gate-p5's judged perf criteria |
 
 ## Current targets
 

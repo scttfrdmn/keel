@@ -214,14 +214,17 @@ main() {
       else
         c=""; n=""
       fi
-      if [[ "$AGG" =~ \(([0-9]+)\ indeterminate,\ ([0-9]+)\ with\ no\ judgeable ]]; then
-        ind="${BASH_REMATCH[1]}"; nocov="${BASH_REMATCH[2]}"
+      # Three terms since #104: keyed to the two-term wording this would report
+      # INDETERMINATE on the run proving the new branch -- the failure the paragraph above
+      # already names, arriving a second time from the same direction.
+      if [[ "$AGG" =~ \(([0-9]+)\ indeterminate,\ ([0-9]+)\ not\ admitted[^,]*,\ ([0-9]+)\ with\ no\ judgeable ]]; then
+        ind="${BASH_REMATCH[1]}"; notadm="${BASH_REMATCH[2]}"; nocov="${BASH_REMATCH[3]}"
       else
-        ind=""; nocov=""
+        ind=""; notadm=""; nocov=""
       fi
       if [[ -z "$c" || -z "$ind" ]]; then
         echo "   INDETERMINATE: the target verdict fired but its counts could not be read"
-        echo "   back (cleared/configured='$c/$n', unjudged breakdown='$ind/$nocov'), so"
+        echo "   back (cleared/configured='$c/$n', unjudged breakdown='$ind/$notadm/$nocov'), so"
         echo "   this run does not establish that the accounting is right."
       elif [[ "$n" != "$nhosts" ]]; then
         echo "   NOT the target rendering: the line says $n configured hosts, .keel-hosts"
@@ -231,10 +234,11 @@ main() {
         echo "   NOT the target rendering: no host is reported as having produced no"
         echo "   judgeable reading, so whatever made this fleet partial, it was not the"
         echo "   induced outage. Treat as unmeasured."
-      elif [[ $((c + ind + nocov)) -ne "$nhosts" ]]; then
-        echo "   NOT the target rendering: $c cleared + $ind indeterminate + $nocov with no"
-        echo "   reading = $((c + ind + nocov)), not the $nhosts configured. A host is"
-        echo "   unaccounted for in the very line that claims to account for them."
+      elif [[ $((c + ind + notadm + nocov)) -ne "$nhosts" ]]; then
+        echo "   NOT the target rendering: $c cleared + $ind indeterminate + $notadm not"
+        echo "   admitted + $nocov with no reading = $((c + ind + notadm + nocov)), not the"
+        echo "   $nhosts configured. A host is unaccounted for in the very line that claims"
+        echo "   to account for them."
       else
         # No line of this report may BEGIN with a verdict token. The first run of this
         # branch wrapped "the verdict is / UNMEASURED rather than a PASS ..." across two
@@ -245,7 +249,8 @@ main() {
         # prose can be miscounted as certification is the wrong shape for this file in
         # particular. Same class as the GREEN/RED grep that hit the banner's promise text.
         echo "   YES: $c of $nhosts configured hosts cleared their floor, $ind were"
-        echo "   indeterminate, and $nocov produced no judgeable reading, so the verdict"
+        echo "   indeterminate, $notadm were not admitted to the evidentiary class, and"
+        echo "   $nocov produced no judgeable reading, so the verdict"
         echo "   reads as unmeasured rather than as a PASS over the survivors. This is"
         echo "   the branch that replaced the one this exercise first drove (#90), and"
         echo "   the counts add up."

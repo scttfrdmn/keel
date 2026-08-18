@@ -22,6 +22,11 @@ While the major version is 0, minor versions may contain breaking changes.
   reported-not-judged whatever it reads** (#104, ruled 2026-08-17): retiring metal had left the class empty
   while the harness went on judging perf on any guest that answered — which is how `c7i.4xlarge`'s 34.2%
   became a P2 STOP. Class is read before the number is trusted, and an unreadable class is `unmeasured`.
+- **The harness reads the class it is told to check** (#104): the provenance line carries `instance=` (IMDSv2;
+  `none` for no EC2 identity, `?` for no way to ask), `host_admission` resolves it against a declared
+  `KEEL_EVIDENTIARY_SIZES`, and gate-p2's criterion 5b reports rather than judges a non-admitted host. **No
+  currently provisioned instance type is admitted**, so P2's floor is now `unmeasured` fleet-wide rather than
+  missed. gate-p3's and gate-p5's judged perf criteria are the same shape and are **not yet** wired.
 
 ### Fixed
 - **The spill parser silently moved a function's body onto the one before it** (#99, *not* dormant as filed —

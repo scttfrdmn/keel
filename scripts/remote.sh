@@ -376,6 +376,13 @@ remote_build_test() {
 # this was not firing, which is the point — it would have fired on one contributor's
 # host, once, as an unattributable UNMEASURED.
 #
+# `instance=` is host_admission's only input (#104): full size is not visible from inside
+# the guest — a 4xlarge sees one socket and eight cores and looks entirely
+# self-consistent — so the type is the fact and every field above is a consequence of it.
+# Three outcomes kept apart because they are three different things (§5 rule 6): the
+# type, `none` for a machine with no EC2 identity, `?` for no way to ask. `none` resolves
+# to the restrictive class and `?` to unmeasured — fail-closed in both directions.
+#
 # `tmux=` is here because #62's supervisor can be absent, and an absent supervisor
 # must not be a silent one. remote_exec degrades to an unsupervised run on a host
 # without a usable tmux — the pre-#62 behaviour, still measured — so the fact that
@@ -457,8 +464,20 @@ remote_probe() {
     done
     tmux=no
     command -v tmux >/dev/null 2>&1 && tmux=yes
-    printf "%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | tmux=%s | %s | %s\n" \
-      "$cpu" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$tmux" "$(uname -sr)" "${cache:-caches=?}"
+    inst="?"
+    if command -v curl >/dev/null 2>&1; then
+      inst=none
+      IM=http://169.254.169.254
+      tok=$(curl -m 2 -sf -X PUT "$IM/latest/api/token" \
+        -H "X-aws-ec2-metadata-token-ttl-seconds: 60" 2>/dev/null) || tok=""
+      if [ -n "$tok" ]; then
+        inst=$(curl -m 2 -sf -H "X-aws-ec2-metadata-token: $tok" \
+          "$IM/latest/meta-data/instance-type" 2>/dev/null) || inst="?"
+        [ -n "$inst" ] || inst="?"
+      fi
+    fi
+    printf "%s | instance=%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | tmux=%s | %s | %s\n" \
+      "$cpu" "$inst" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$tmux" "$(uname -sr)" "${cache:-caches=?}"
   ' 2>/dev/null
 }
 
@@ -517,11 +536,15 @@ remote_probe() {
 GOV_STATE=""
 GOV_VALUE=""
 GOV_SHOWN=""
+# The probe line this call read, so host_admission does not pay a second ssh round trip
+# for a fact already on the wire. Reset with the rest: a stale provenance line is exactly
+# what would let one host's instance type classify the next one.
+GOV_PROV=""
 assert_governor() {
   local host="$1" phase="${2:-preamble}" prov
   if [[ $# -ge 3 ]]; then prov="$3"; else prov="$(remote_probe "$host" || true)"; fi
 
-  GOV_STATE=""; GOV_VALUE=""; GOV_SHOWN=""
+  GOV_STATE=""; GOV_VALUE=""; GOV_SHOWN=""; GOV_PROV="$prov"
   if [[ -z "$prov" ]]; then
     # No reading exists. remote_probe's own `|| echo unknown` means a host that
     # answers always yields a governor= field, so empty output is the host not
@@ -600,6 +623,38 @@ assert_governor() {
     esac
   fi
   return 0
+}
+
+# The types admitted to the evidentiary class: the largest non-metal size in each
+# approved family, which is a whole host and therefore a whole socket too — a
+# conservative subset of what docs/hosts.md admits, not a restatement of it. Metal is
+# absent because metal is retired, not because it was overlooked.
+#
+# An allowlist is safe here in the way a duplicated threshold is not, and that is why
+# this is one: the default is the RESTRICTIVE class, so a stale list can only withhold a
+# judgement, never grant one.
+KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge"
+
+# host_admission PROV — set ADM_CLASS and ADM_INSTANCE from a provenance line
+# (docs/hosts.md, ruled 2026-08-17 on #104). ADM_CLASS is one of:
+#
+#   evidentiary  perf may be judged: a floor is a claim about silicon this host owns
+#   correctness  perf is reported, never judged, however high or low it reads
+#   unknown      the class could not be read, which is `unmeasured` and not a class
+#
+# The third state is the one that matters: without it, the mechanism that excuses a
+# partial-size reading from the floor is also a mechanism for laundering a red past it.
+ADM_CLASS=""
+ADM_INSTANCE=""
+host_admission() {
+  ADM_INSTANCE="$(sed -n 's/.*instance=\([^ |]*\).*/\1/p' <<<"${1-}")"
+  case "$ADM_INSTANCE" in
+    "" | "?") ADM_CLASS=unknown ;;
+    *) case " $KEEL_EVIDENTIARY_SIZES " in
+         *" $ADM_INSTANCE "*) ADM_CLASS=evidentiary ;;
+         *) ADM_CLASS=correctness ;;
+       esac ;;
+  esac
 }
 
 # remote_exec HOST BIN [ARGS...] — ship BIN to HOST and run it there.
