@@ -7,7 +7,14 @@ Required by DESIGN.md §4/P2 and §7 rule 4 (`CLAUDE.md`, "P2 is a go/no-go, not
 hurdle"). `scripts/gate-p2.sh` was **RED**. Work stopped here; nothing in P3 was
 started, and no gate criterion was relaxed to change the colour.
 
-> **Status: resolved — read §9 first if you want the outcome.** The gate's *model*
+> **Status: reopened 2026-08-18 — read §10 first, then §9.** §9 resolved this report on
+> the three desktop hosts, which are retired. On the first *evidentiary* host under
+> #104's ruling — a full-size `c7i.48xlarge` — both P2's floor and P3's mission ratio
+> are red, and §10 shows the 55% floor is out of reach on a 2-FMA/cycle machine until
+> golang/go#80829 lands *and* keel removes its own slice-advance overhead. §9 stands as
+> the resolution for the fleet it was measured on.
+>
+> **Status of the original run: resolved — see §9.** The gate's *model*
 > was amended by the ruling on issue #19 (the floor's denominator was wrong, not
 > its value), the mechanism behind the ceiling was identified and filed upstream
 > (T12/#20), and §5's instruction accounting was corrected — the toolchain gap is
@@ -457,3 +464,142 @@ more useful red-then-roofline-green than it would have been quietly clearing 55%
 - `scripts/gate-p2.sh` under the amended model: see §1 of `CHANGELOG.md`
   `[Unreleased]` and the closing comment on issue #3 for the verbatim output.
 - P3: unblocked.
+
+## 10. Reopened 2026-08-18: the first evidentiary host, and the floor is out of reach on 2 FMA/cycle
+
+§9 closed this report on three desktop hosts. The fleet is now AWS guests (§5 rule 5
+amended, #66), and #104's ruling made *full-size instance of an approved family* the
+evidentiary class. `c7i.48xlarge`, on-demand, is the first host to qualify. Both gates
+are **RED** on it, so under `CLAUDE.md`'s P2 clause work stops here again.
+
+`scripts/gate-p2.sh` and `scripts/gate-p3.sh` at `75bfaf5`, verbatim in the closing
+comment on the campaign; log `build/campaign-spr-75bfaf5.log`.
+
+### 10.1 The reading is silicon, not tenancy — #104 answered
+
+| host | peak GFLOP/s | 4x32 GFLOP/s | 4x32 ÷ peak |
+|---|---|---|---|
+| `c7i.4xlarge` (partial, correctness class) | 240.2 | 82.06 | **34.16%** |
+| `c7i.48xlarge` (full, evidentiary class) | 232.3 | 79.35 | **34.16%** |
+
+The full-size host clocks 3.3% *lower* in absolute terms and lands on the same fraction
+to three figures. A co-tenancy artifact cannot do that, because the numerator and the
+denominator are measured in the same run on the same silicon and the ratio divides the
+clock out. #104's hypothesis is refuted by the strongest test available to it: the
+reading was always right, and what was missing was its evidentiary standing.
+
+Peak is well measured here, which is what makes the ratio judgeable: the substitute
+clock instrument read 232.2 / 232.3 / 232.4 across head, middle and tail, `+/- 0.0%`,
+non-declining.
+
+### 10.2 The two shipped shapes are limited by different resources
+
+This is new, and it is why SPR is not admitted to §9's roofline branch. On SPR the best
+shipped shape is **4x32 at 6.25 insns/FMA**, not janus's 2x32 at 4.625 — the shape with
+*more* instructions per FMA is the faster one, inverting the objective §4's 115-shape
+sweep minimises. The object code says why. 4x32's eight FMAs take eight distinct
+addends, so its chains are independent:
+
+```
+00203  VFMADD213PS  Z7, Z12, Z8      <-- Z8 = Z12*Z8 + Z7
+00209  VFMADD213PS  Z6, Z13, Z14
+00221  VFMADD213PS  Z5, Z12, Z9      ... addends Z7 Z6 Z5 Z4 Z3 Z2 Z1 Z0, all distinct
+00263  VFMADD213PS  Z0, Z13, Z2
+00283  VMOVDQU64    Z2, Z0           <-- and then all eight are copied back,
+00289  VMOVDQU64    Z11, Z1              because 213 leaves the sum in the
+...                                      BROADCAST's register, not the accumulator's
+00325  VMOVDQU64    Z8, Z7
+```
+
+2x32's do not — its addends are the previous FMA's results, a 4-long serial chain:
+
+```
+00134  VFMADD213PS  Z3, Z12, Z4      <-- writes Z4
+00196  VFMADD213PS  Z4, Z12, Z6      <-- consumes it
+00258  VFMADD213PS  Z6, Z5,  Z8      <-- consumes that
+00334  VFMADD213PS  Z8, Z4,  Z3      <-- and that
+```
+
+So 4x32 is instruction-bound and 2x32 is **latency-bound**. On one FMA unit per cycle
+that distinction is cheap and the two mixes converged on janus at 1.023×. On two units
+it is not: the gate measured the ceiling mixes diverging **1.836×** (`[1.836x, 1.836x]`,
+zero-width, wholly over the 1.10 bar), so the classifier calls the host `fma-bound` and
+applies the flat 55%.
+
+**It is right to.** Not because SPR is slow — §9's property 1 — but because neither
+available ceiling mix can *demonstrate* a retirement ceiling here: one of the two is
+limited by something else. Attainment against the roofline the formula would compute is
+34.16 ÷ 36.00 = **94.9%**, under 1, so the issue-bound hypothesis is not falsified
+either. It is undemonstrated for want of a suitable mix, which is a different thing
+from false, and a different thing again from #86's noisy-peak straddle.
+
+### 10.3 What clearing 55% on this host would require
+
+At the peak loop's own audited retirement rate (2.25 insns per FMA at 232.3 GFLOP/s),
+55% of peak needs **≤ 4.09 insns/FMA**. §4's sweep audited 115 shapes and its best
+zero-spill result in either accumulate form is 4.438 (`Permute` 2x64) and 4.625
+(broadcast 2x32). **No shape in the sweep clears 4.09**, and the two that come closest
+are the latency-bound ones. Stripping every filed overhead from 4x32's 50 instructions,
+in the order the causes are filed:
+
+| strip | insns | insns/FMA | ceiling |
+|---|---|---|---|
+| as shipped | 50 | 6.25 | 36.0% |
+| − 8 accumulator copies (golang/go#80829, in-place accumulate) | 42 | 5.25 | 42.9% |
+| − 4 emulated broadcasts (golang/go#80829, `.BCST`) | 38 | 4.75 | 47.4% |
+| − 2 anchor NOPs (golang/go#80830) | 36 | 4.50 | 50.0% |
+| − ~8 scalar slice-advance guards (**keel's own**, part 10.4 below) | 28 | 3.50 | 64.3% |
+
+The three upstream fixes together land at 50.0% — **still short of 55%**. Only the
+fourth lever crosses it, and that one is keel's. Stated the other way: a shape needs
+≥ 8 independent chains *and* ≤ 4.09 insns/FMA simultaneously, no shipped shape has
+both, and the generator sweep never optimised for chain length at all. Whether such a
+shape fits is constrained by golang/go#80828 — 512-bit values come from 15 of the 32
+zmm registers, and 8 accumulators + 2 B panels + 4 broadcasts is already 14.
+
+These are projections from audited instruction counts under the retirement model in
+part 10.2 above,
+not measurements. What is measured is the 50 instructions, the 8 copies, and the 34.16%.
+
+### 10.4 The one lever that is not upstream
+
+`Kernel4x32`'s K-loop advances two slices per iteration (`gemm_amd64.go:182`,
+`ap, bp = ap[4:], bp[32:]`). Each advance compiles to a branchless guard so the data
+pointer never moves past the object — 8 scalar instructions per iteration for what an
+index form does in two:
+
+```
+00120  ADDQ $-4, DI      00137  ADDQ $-32, R9
+00124  MOVQ DI, DX       00141  MOVQ R9, R8
+00127  NEGQ DX           00144  NEGQ R8
+00130  SARQ $63, DX      00147  SARQ $63, R8
+00134  ANDL $16, DX      00151  ANDL $128, R8
+00269  ADDQ DX, BX       00272  ADDQ R8, SI
+```
+
+A counted loop indexing pre-sliced panels would remove these, but it risks
+reintroducing the bounds checks KERNEL.md forbids in the K-loop — which is why the
+slice-advance form was chosen. So it is real work with a real verification step
+(`-gcflags=-d=ssa/check_bce`), not a free win.
+
+### 10.5 P3's mission ratio, on the same host
+
+DESIGN §1's headline criterion is also red, and against the *strongest* reference on
+the host: gate-p3 swept six OpenBLAS coretypes and pinned `SkylakeX` at 202.30 GFLOP/s,
+**+2.8% over** DYNAMIC_ARCH's own `SapphireRapids` choice (196.80), a 5.50 GFLOP/s
+cross-family win against the sweep's own measured same-family drift of 3.30 (#35).
+
+| | GFLOP/s | ÷ measured peak |
+|---|---|---|
+| OpenBLAS, pinned `SkylakeX`, 1 thread | 199.3 `+/- 0.0%` | 85.79% |
+| keel `Sgemm` 2048³, `GOMAXPROCS=1` | 101.7 `+/- 1.0%` | 43.78% |
+
+101.7 ÷ 199.3 = **51.03%**, against the ≥60% floor; 50.5% net of CI. OpenBLAS reaches
+85.8% of the same measured peak, so the gap is not the blocking or the packing — it is
+the microkernel's instruction count, the same cause as part 10.3 above.
+
+One thing here is unexplained and is **not** load-bearing for either verdict: blocked
+`Sgemm` reaches 43.78% of peak while the 4x32 sweep entry reads 34.16%, and a routine
+cannot outrun the kernel it calls. Both numbers are below both floors, so neither
+verdict turns on it, but the sweep entry is measuring something the shipped path does
+not. That belongs to its own investigation.

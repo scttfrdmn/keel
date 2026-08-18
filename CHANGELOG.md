@@ -26,6 +26,9 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Changed
+- **`docs/spill-report.md` is reopened (part 10): P2 and P3 are both red on the first evidentiary host**, a full-size
+  `c7i.48xlarge` — 34.2% of measured peak and a 51.0% mission ratio. 55% needs ≤ 4.09 insns/FMA against the shipped
+  6.25, and golang/go#80829 plus #80830 together reach only 50.0%. The report's part 9 stands for the retired fleet.
 - **gate-p3's mission ratio is now decided by the admission machinery, not merely taken on an admitted host**
   (#104/#30): `admission_readback` and `adm_judgeable` in `remote.sh` gate both of criterion 6's verdict paths,
   gate-p2's inline copy calls them, and a not-admitted host has its own tally so the aggregate stops calling it a
