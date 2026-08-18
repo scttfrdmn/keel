@@ -9,6 +9,10 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Removed
+- **Seven byte-identical gate helpers now live in `scripts/gate-lib.sh`** (Workstream D1's lift): `require_bench`,
+  `audit_ipf`, `audit_ipf_tile`, `field`, `marker`, `marker_all`, `set_has`, out of gate-p2/p3/p4/p5. The comments
+  diverged only in bookkeeping about the duplication itself, a tax quadratic in the copies. **−69 lines in
+  `scripts/`**, 1.63× → 1.62×.
 - **The boost apparatus is retired and gate-p5 can measure the fleet again** (#66, ruled 2026-08-17 —
   *"the cloud does not have that"*): `remote_boost`/`remote_boost_set`, the second boost-on pass, and the
   precondition that refused every guest are gone; criterion 9 now reads the one sweep there is. The 2026-08-15

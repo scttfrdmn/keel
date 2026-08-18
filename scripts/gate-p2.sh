@@ -22,27 +22,13 @@ source scripts/remote.sh
 source scripts/bench.sh
 # shellcheck source=scripts/roofline.sh
 source scripts/roofline.sh
+# shellcheck source=scripts/gate-lib.sh
+source scripts/gate-lib.sh
 
 # pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
 # above: they were copied into all six gates and only one copy applied
 # VERDICT_STAMP. FAIL is this gate's own counter; those helpers only raise it.
 FAIL=0
-
-# audit_ipf FUNC FILE -> that function's audited instructions per FMA.
-#
-# Computed from the audit's own integer counts, not from its rounded "(N.NN per
-# arith)" display, because this number is a gate input. "arith" appears twice on
-# the line ("16 arith" and "per arith):"); only the first is a bare token.
-audit_ipf() {
-  awk -v fn=".$1: steady-state loop" '
-    index($0, fn) {
-      for (i = 2; i <= NF; i++) {
-        if ($i == "insns") ins = $(i-1)
-        if ($i == "arith") ar  = $(i-1)
-      }
-      if (ins != "" && ar != "" && ar + 0 > 0) { printf "%.6f", ins / ar; exit }
-    }' "$2"
-}
 
 # The tiles under audit, the peak kernels the denominator comes from, and the
 # floor. KERNEL.md records why the tiles have these dimensions and which one wins

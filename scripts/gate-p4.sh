@@ -16,6 +16,8 @@ cd "$(dirname "$0")/.."
 source scripts/remote.sh
 # shellcheck source=scripts/bench.sh
 source scripts/bench.sh
+# shellcheck source=scripts/gate-lib.sh
+source scripts/gate-lib.sh
 
 # pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
 # above: they were copied into all six gates and only one copy applied
@@ -28,19 +30,6 @@ FAIL=0
 # unmeasured criterion may not resolve as either colour, and this gate's colour is
 # binary — with a label that distinguishes "Ssyrk is too slow" from "this reading
 # cannot decide".
-
-# require_bench LABEL LOG CSV UNIT NAME... — declare what a criterion is about to
-# read, and give absence exactly one verdict. Same helper, same wording and the
-# same reason as gate-p3.sh: see bench_expect in scripts/bench.sh for why empty is
-# not a readable value, and DESIGN.md §5 rule 6 for why an unmeasured criterion may
-# not resolve as either colour.
-require_bench() {
-  local label miss
-  label="$1"; shift
-  miss="$(bench_expect "$@")" && return 0
-  unmeasured "$label $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
-  return 1
-}
 
 # ------------------------------------------------------------- the P4 routines
 # Level 2 first, then the three Level-3 routines derived from P3's GEMM. The order
@@ -120,24 +109,6 @@ P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(avx512|n=2048)'
 # Revision-stamped for #78's reason — see the same assignment in gate-p5.sh.
 P3LOG="build/gate-p3-under-p4-$(git rev-parse --short HEAD 2>/dev/null || echo unknown).log"
 
-# marker NAME FILE — the value of the last `keel-NAME:` line in FILE. Test output
-# arrives through t.Logf, so the marker may be indented and prefixed.
-marker() { sed -n "s/.*keel-$1: *//p" "$2" | tail -1; }
-
-# marker_all NAME FILE — every `keel-NAME:` value, one per line, for the markers
-# emitted once per routine or once per (routine, size).
-marker_all() { sed -n "s/.*keel-$1: *//p" "$2"; }
-
-# field KEY LINE — the value of a `key=value` token in a marker line.
-field() {
-  awk -v k="$1" '{
-    for (i = 1; i <= NF; i++) {
-      n = index($i, "=")
-      if (n && substr($i, 1, n - 1) == k) { print substr($i, n + 1); exit }
-    }
-  }' <<<"$2"
-}
-
 # p4_line NAME FILE ROUTINE — the keel-NAME line belonging to one routine. The P4
 # markers are emitted once per routine, so `marker`'s last-wins reading would
 # silently audit Strsm's coverage as if it were Sgemv's.
@@ -156,9 +127,6 @@ p4_verify_line() {
     if (rok && sok) { print; exit }
   }'
 }
-
-# set_has SET MEMBER — comma-separated membership.
-set_has() { [[ ",$1," == *",$2,"* ]]; }
 
 # set_scalar_ok SET — 0, 1 and a general value are all present. Compared
 # numerically, so "0", "-0" and "0.0" are one value and "1e0" is 1.
@@ -209,28 +177,6 @@ lattice_product() {
     }
     printf "%d %d", prod, sets
   }' <<<"$1"
-}
-
-# audit_ipf FUNC FILE — that function's audited instructions per FMA, from the
-# audit's own integer counts. Carried from gate-p2.sh/gate-p3.sh for the same
-# reason: this number is a gate input, so it is not read off a rounded display.
-audit_ipf() {
-  awk -v fn=".$1: steady-state loop" '
-    index($0, fn) {
-      for (i = 2; i <= NF; i++) {
-        if ($i == "insns") ins = $(i-1)
-        if ($i == "arith") ar  = $(i-1)
-      }
-      if (ins != "" && ar != "" && ar + 0 > 0) { printf "%.6f", ins / ar; exit }
-    }' "$2"
-}
-
-# audit_ipf_tile TILE FILE — the audited insns/FMA for a shape named as it appears
-# in a marker ("4x32"), via the convention that internal/vec's loop body for that
-# shape is KernelTILE.
-audit_ipf_tile() {
-  [[ -n "$1" ]] || return 0
-  audit_ipf "Kernel$1" "$2"
 }
 
 # flops_expect ROUTINE LINE — this gate's own count of ROUTINE's USEFUL flops at

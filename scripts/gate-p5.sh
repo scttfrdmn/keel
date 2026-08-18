@@ -17,24 +17,13 @@ cd "$(dirname "$0")/.."
 source scripts/remote.sh
 # shellcheck source=scripts/bench.sh
 source scripts/bench.sh
+# shellcheck source=scripts/gate-lib.sh
+source scripts/gate-lib.sh
 
 # pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
 # above: they were copied into all six gates and only one copy applied
 # VERDICT_STAMP. FAIL is this gate's own counter; those helpers only raise it.
 FAIL=0
-
-# require_bench LABEL LOG CSV UNIT NAME... — declare what a criterion is about to
-# read, and give absence exactly one verdict. Same helper, same wording and the
-# same reason as gate-p3.sh and gate-p4.sh: see bench_expect in scripts/bench.sh,
-# and DESIGN.md §5 rule 6 for why an unmeasured criterion may not resolve as
-# either colour.
-require_bench() {
-  local label miss
-  label="$1"; shift
-  miss="$(bench_expect "$@")" && return 0
-  unmeasured "$label $miss — a criterion cannot be resolved in either direction until every benchmark it reads has its rows, so this is neither a pass nor a miss"
-  return 1
-}
 
 # ------------------------------------------------------------ P5's own bars
 # The shape and the thread count DESIGN.md §4/P5 names, and the floor it sets.
@@ -126,24 +115,6 @@ P4LOG="build/gate-p4-under-p5-$(git rev-parse --short HEAD 2>/dev/null || echo u
 # gate-p3's OpenBLAS tree, so a P5 run cannot overwrite a P3 run's working copy.
 P5_REMOTE_SRC="${P5_REMOTE_SRC:-/tmp/keel-p5-src}"
 
-# ----------------------------------------------------------------- helpers
-# marker NAME FILE — the value of the last `keel-NAME:` line in FILE. Test output
-# arrives through t.Logf, so a marker may be indented and prefixed.
-marker() { sed -n "s/.*keel-$1: *//p" "$2" | tail -1; }
-
-# marker_all NAME FILE — every `keel-NAME:` value, one per line.
-marker_all() { sed -n "s/.*keel-$1: *//p" "$2"; }
-
-# field KEY LINE — the value of a `key=value` token in a marker line.
-field() {
-  awk -v k="$1" '{
-    for (i = 1; i <= NF; i++) {
-      n = index($i, "=")
-      if (n && substr($i, 1, n - 1) == k) { print substr($i, n + 1); exit }
-    }
-  }' <<<"$2"
-}
-
 # p5_line NAME FILE ROUTINE — the keel-NAME line belonging to one routine. The P5
 # markers are emitted once per routine, so `marker`'s last-wins reading would
 # audit Strsm's parallel behaviour and call it Sgemm's.
@@ -159,9 +130,6 @@ bench_line() {
     for (i = 1; i <= NF; i++) if ($i == want) { print; exit }
   }'
 }
-
-# set_has SET MEMBER — comma-separated membership.
-set_has() { [[ ",$1," == *",$2,"* ]]; }
 
 # flops_expect ROUTINE LINE — this gate's own count of ROUTINE's USEFUL flops at
 # the dimensions the marker declares, recomputed rather than trusted (the P4
