@@ -22,10 +22,19 @@ GOEXPERIMENT=simd go test ./bench -run XXX -bench 'Peak|Kernel' -count=10 -bench
 
 ## 1. The shapes that ship
 
-| shape | accumulators | unroll | live zmm | insns/FMA | loads/FMA | spills |
-|-------|--------------|--------|----------|-----------|-----------|--------|
-| 2×32  | 4            | 4      | 15       | 4.62      | 1.00      | 0      |
-| 4×32  | 8            | 1      | 15       | 6.25      | 0.75      | 0      |
+| shape | accumulators | unroll | live zmm | insns/FMA | loads/FMA | spills | generator |
+|-------|--------------|--------|----------|-----------|-----------|--------|-----------|
+| 2×32  | 4            | 4      | 15       | 4.62      | 1.00      | 0      | `e1c6340` |
+| 4×32  | 8            | 1      | 15       | 6.25      | 0.75      | 0      | `e1c6340` |
+
+The **generator** column is each shape's pedigree: the commit of `tools/shapegen`
+whose `-verify` re-emits that kernel and matches it both by source text and, field for
+field, by audit report. It is a commit rather than a checkmark so a shape's provenance
+has history like everything else in the tree — when a toolchain bump or a re-sweep
+moves a shape, the cell moves with it and the old cell still names a runnable
+instrument. `Kernel6x32` (§5) is verified the same way at the same commit. Reproduce
+with `go run ./tools/shapegen -verify`; `tools/shapegen/emit_test.go` fails if a
+shipped kernel is edited by hand and the generator is not.
 
 Both are `MR` rows × `NR` columns with the vectors along N: two 16-lane
 `Float32x16` accumulators per row, the A operand arriving as a scalar broadcast.
