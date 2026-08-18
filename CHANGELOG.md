@@ -51,6 +51,9 @@ While the major version is 0, minor versions may contain breaking changes.
   every runner count from 2 to 8, and names the corners a given host does not reach.
 
 ### Added
+- **`aws-fleet.sh` launches on-demand for judged runs** (`KEEL_FLEET_MARKET`, ruled 2026-08-17), tags each instance
+  with its market and shows it in `status`. An unrecognized or empty market is refused, not defaulted; `KEEL_FLEET`
+  specs are shape-checked, since a whitespace-only line passed `-z` and launched an instance with no role or type.
 - **A host with no governor now has a clock instrument instead of an exemption** (§5 rule 5 as amended 2026-08-16):
   `clock_gate`/`clock_head`/`clock_post` sample `BenchmarkPeak` in three separate invocations either side of a
   sweep — `-count` is Go's inner loop, so a sweep's own peak rows are one contiguous window and are the *middle*

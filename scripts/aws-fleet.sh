@@ -5,7 +5,7 @@
 # aws-fleet.sh -- launch, list and terminate keel's spot measurement fleet (#12).
 #
 #   scripts/aws-fleet.sh up       # launch, wait for sshd, write .keel-hosts
-#   scripts/aws-fleet.sh status   # what is running, and what it has cost so far
+#   scripts/aws-fleet.sh status   # what is running, since when, and on which market
 #   scripts/aws-fleet.sh down     # terminate everything tagged Project=keel
 #
 # THIS SCRIPT SPENDS MONEY. Every guard below exists because the expensive failure
@@ -51,11 +51,45 @@ say()  { printf '  %s\n' "$*"; }
 die()  { printf 'aws-fleet: %s\n' "$*" >&2; exit 1; }
 awsq() { aws --region "$REGION" "$@"; }
 
+# KEEL_FLEET overrides that list, one `role:type:uarch` spec per line, so a judged
+# campaign can boot one full-size host without editing the exploration fleet -- which
+# must keep describing what the partial-size readings were taken on.
+#
+# Each spec's SHAPE is checked, not just its presence: a blank-but-not-empty line -- one
+# space, which is what a heredoc leaves behind -- passed a `-z` test and launched an
+# instance with no role and no type. Whole list first, because roles launch in order and
+# a malformed third spec otherwise bills the first two before run-instances rejects it.
+if [[ -n "${KEEL_FLEET:-}" ]]; then
+  FLEET=()
+  while IFS= read -r spec; do
+    [[ -n "${spec//[[:space:]]/}" ]] || continue
+    [[ "$spec" =~ ^[^:]+:[^:]+:.+$ ]] || die "KEEL_FLEET spec '$spec' is not role:type:uarch"
+    FLEET+=("$spec")
+  done <<<"$KEEL_FLEET"
+  [[ "${#FLEET[@]}" -gt 0 ]] || die "KEEL_FLEET is set but names no role:type:uarch spec"
+fi
+
+# KEEL_FLEET_MARKET -- spot for exploration, on-demand for a judged run (ruled
+# 2026-08-17: "on-demand for judged runs, spot only for exploration"). A reclaim
+# mid-measurement converts host-dollars into an honest-but-empty log, which is the
+# reading the harness correctly refuses to invent.
+#
+# An unrecognized OR EMPTY value dies rather than defaulting either way -- hence
+# `${VAR-spot}` and not `${VAR:-spot}`, which would silently accept `MARKET=''`. The two
+# wrong defaults fail differently and neither is this script's call: silently-spot leaves
+# a judged campaign asserting a reliability property it does not have, and
+# silently-on-demand spends money nobody asked for.
+MARKET="${KEEL_FLEET_MARKET-spot}"
+case "$MARKET" in
+  spot | on-demand) ;;
+  *) die "KEEL_FLEET_MARKET='$MARKET' is neither 'spot' nor 'on-demand' -- refusing to guess which one a judged run wanted" ;;
+esac
+
 tagged() {
   # shellcheck disable=SC2016  # the backticks are JMESPath string literals, not a subshell
   awsq ec2 describe-instances \
     --filters Name=tag:Project,Values=keel Name=instance-state-name,Values=pending,running \
-    --query 'Reservations[].Instances[].[InstanceId,Tags[?Key==`Role`]|[0].Value,InstanceType,PublicIpAddress,LaunchTime]' \
+    --query 'Reservations[].Instances[].[InstanceId,Tags[?Key==`Role`]|[0].Value,InstanceType,PublicIpAddress,Tags[?Key==`Market`]|[0].Value,LaunchTime]' \
     --output text
 }
 
@@ -121,7 +155,7 @@ cmd_up() {
     --names /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id \
     --query 'Parameters[0].Value' --output text)"
   [[ "$ami" == ami-* ]] || die "no Ubuntu 24.04 AMI id from SSM (got '$ami')"
-  say "region $REGION, AMI $ami, TTL ${TTL_MIN}m"
+  say "region $REGION, AMI $ami, TTL ${TTL_MIN}m, market $MARKET"
   ensure_key
   sg="$(ensure_sg)"
 
@@ -131,6 +165,15 @@ cmd_up() {
   local userdata
   userdata="$(printf '#!/bin/bash\nshutdown -h +%s\nexport DEBIAN_FRONTEND=noninteractive\napt-get update -y\napt-get install -y tmux\n' "$TTL_MIN" | base64)"
 
+  # Spot passes --instance-market-options; on-demand is the ABSENCE of the flag, not a
+  # different value for it, so the arm is an array that is either empty or the whole
+  # option. The Market tag records which, on the instance itself: a log can be lost or
+  # edited, and "was this reading taken on a reclaimable host" then has no answer.
+  local market_args=()
+  if [[ "$MARKET" == spot ]]; then
+    market_args=(--instance-market-options 'MarketType=spot,SpotOptions={SpotInstanceType=one-time,InstanceInterruptionBehavior=terminate}')
+  fi
+
   for spec in "${FLEET[@]}"; do
     IFS=: read -r role type uarch <<<"$spec"
     iid="$(awsq ec2 run-instances --image-id "$ami" --instance-type "$type" \
@@ -138,11 +181,11 @@ cmd_up() {
       --instance-initiated-shutdown-behavior terminate \
       --user-data "$userdata" \
       --block-device-mappings 'DeviceName=/dev/sda1,Ebs={VolumeSize=24,VolumeType=gp3,DeleteOnTermination=true}' \
-      --instance-market-options 'MarketType=spot,SpotOptions={SpotInstanceType=one-time,InstanceInterruptionBehavior=terminate}' \
-      --tag-specifications "ResourceType=instance,Tags=[{Key=Project,Value=keel},{Key=Role,Value=$role},{Key=Name,Value=keel-$role}]" \
+      "${market_args[@]+"${market_args[@]}"}" \
+      --tag-specifications "ResourceType=instance,Tags=[{Key=Project,Value=keel},{Key=Role,Value=$role},{Key=Name,Value=keel-$role},{Key=Market,Value=$MARKET}]" \
       --query 'Instances[0].InstanceId' --output text)"
     ids+=("$iid")
-    say "$role  $type  $iid  ($uarch)"
+    say "$role  $type  $iid  ($uarch, $MARKET)"
   done
 
   say "waiting for running state"
@@ -194,9 +237,11 @@ cmd_wire() {
 cmd_status() {
   local rows; rows="$(tagged)"
   if [[ -z "$rows" ]]; then say "no instances tagged Project=keel are alive"; return; fi
-  printf '\n  %-20s %-14s %-16s %s\n' ROLE TYPE ADDRESS LAUNCHED
-  while read -r iid role type ip launched; do
-    printf '  %-20s %-14s %-16s %s\n' "keel-$role" "$type" "$ip" "$launched"
+  printf '\n  %-20s %-14s %-16s %-10s %s\n' ROLE TYPE ADDRESS MARKET LAUNCHED
+  while read -r iid role type ip market launched; do
+    # An instance launched before the Market tag existed reports `None`, which is not
+    # "on-demand": it is an unread market, and it says so rather than picking one.
+    printf '  %-20s %-14s %-16s %-10s %s\n' "keel-$role" "$type" "$ip" "${market/None/unread}" "$launched"
   done <<<"$rows"
   printf '\n  %s\n' "$(wc -l <<<"$rows" | tr -d ' ') instance(s) billing. 'down' terminates every one."
 }
@@ -206,7 +251,7 @@ cmd_down() {
   if [[ -z "$rows" ]]; then
     say "nothing tagged Project=keel is alive"
   else
-    while read -r iid _ _ _ _; do ids+=("$iid"); done <<<"$rows"
+    while read -r iid _ _ _ _ _; do ids+=("$iid"); done <<<"$rows"
     awsq ec2 terminate-instances --instance-ids "${ids[@]}" \
       --query 'TerminatingInstances[].[InstanceId,CurrentState.Name]' --output text | sed 's/^/  /'
     say "waiting for terminated state"
