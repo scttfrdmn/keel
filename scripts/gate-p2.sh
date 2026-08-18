@@ -270,6 +270,14 @@ if [[ -n "$HOSTS" ]]; then
   while read -r host; do
     [[ -n "$host" ]] || continue
     assert_governor "$host" preamble
+    # The class is a property of the host, knowable before any benchmark runs, so it is
+    # stated here for every configured host rather than only for the ones that survive
+    # to criterion 5b. The first run of this had it read at the floor check alone, and
+    # the aggregate's "1 of 3 not admitted" then described a fleet in which all three
+    # were not admitted -- the verdict right, its sentence false, which is #37's label
+    # defect and #90's, arriving from a third direction.
+    host_admission "$GOV_PROV"
+    info "[$host] admission class: $ADM_CLASS (instance=${ADM_INSTANCE:-unread})"
   done <<<"$HOSTS"
 fi
 
@@ -708,7 +716,7 @@ else
       # judgeable reading, or the fleet's configured size could not be read (in which
       # case there is no denominator to judge coverage against at all).
       if [[ "$N_JUDGED" -eq 0 ]]; then
-        unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared ($N_NOTADM of $NHOSTS not admitted to the evidentiary class)$(fleet_shortfall "$NHOSTS" 0)"
+        unmeasured "no host produced a judgeable throughput reading, so the floor is unmeasured rather than uncleared (the preamble states every configured host's admission class; hosts turned back at the floor check for want of one: $N_NOTADM)$(fleet_shortfall "$NHOSTS" 0)"
       else
         unmeasured "$N_CLEARED of $N_JUDGED judged hosts cleared their floor, but this run could not read how many hosts were configured, so it cannot say whether that is the fleet$(fleet_shortfall "$NHOSTS" "$N_JUDGED")"
       fi ;;
