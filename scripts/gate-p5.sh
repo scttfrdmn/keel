@@ -133,18 +133,9 @@ if go build ./... 2>&1; then pass "build (stock toolchain, scalar path, no exper
 if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
 if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/amd64)"; else fail "go vet (GOEXPERIMENT=simd, linux/amd64)"; fi
 
-LOG="$(mktemp)"
-BINDIR="$(mktemp -d)"
-BIN="$BINDIR/keel.test"
-BENCHBIN="$BINDIR/bench.test"
-BENCHLOG="$BINDIR/bench.log"
-BENCHCSV="$BINDIR/bench.csv"
+gate_tmpdir
 SWEEPLOG="$BINDIR/sweep-avx512.log"
 : >"$SWEEPLOG"
-
-# INT and TERM alongside EXIT because bash does not run an EXIT trap on an
-# untrapped fatal signal, and being reaped is the normal way a long run ends here.
-trap 'rm -rf "$LOG" "$BINDIR"' EXIT INT TERM
 
 # golangci-lint is named by the criterion, so its ABSENCE is unmeasured rather
 # than clean — the same rule a missing OpenBLAS gets in gate-p3. A check that did

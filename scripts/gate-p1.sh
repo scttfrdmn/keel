@@ -84,13 +84,7 @@ if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; 
 # ----------------------------------------------------------------- L1 tests
 echo
 echo "-- L1 tests (oracle, cross-backend differential, properties) --"
-LOG="$(mktemp)"
-BINDIR="$(mktemp -d)"
-BIN="$BINDIR/keel.test"
-BENCHBIN="$BINDIR/bench.test"
-BENCHLOG="$BINDIR/bench.log"
-BENCHCSV="$BINDIR/bench.csv"
-trap 'rm -rf "$LOG" "$BINDIR"' EXIT
+gate_tmpdir
 
 AVX512_GREEN=""
 AVX512_SEEN=0

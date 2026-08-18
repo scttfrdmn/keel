@@ -182,17 +182,11 @@ if go build ./... 2>&1; then pass "make stock (scalar path, no experiment)"; els
 if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
 if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/amd64)"; else fail "go vet (GOEXPERIMENT=simd, linux/amd64)"; fi
 
-LOG="$(mktemp)"
-BINDIR="$(mktemp -d)"
-BIN="$BINDIR/keel.test"
-BENCHBIN="$BINDIR/bench.test"
-BENCHLOG="$BINDIR/bench.log"
-BENCHCSV="$BINDIR/bench.csv"
+gate_tmpdir
 # The audit logs outlive $LOG: the roofline branch of criterion 5b reads its
 # instruction counts back out of them, long after $LOG has been reused.
 AUDITKERN="$BINDIR/audit-kern.log"
 AUDITPEAK="$BINDIR/audit-peak.log"
-trap 'rm -rf "$LOG" "$BINDIR"' EXIT
 
 # --------------------------------------------------- kernel correctness
 echo

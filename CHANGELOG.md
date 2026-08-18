@@ -8,7 +8,17 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **Ctrl-C did not stop any gate, and a SIGTERM to gate-p5 deleted its scratch directory and let it keep running.**
+  A group SIGINT killed the `go test` child and the gate resumed at rc=0; gate-p5's `EXIT INT TERM` cleanup handler
+  removed `$BINDIR` and also resumed. The signal traps now `exit`, and exiting runs the one EXIT trap: rc=130 and
+  rc=143, neither resuming. Measured on bash 3.2.57 and 5.3.15 — the claim the old form rested on, that bash skips
+  the EXIT trap on an untrapped fatal signal, is false on both.
+
 ### Removed
+- **`gate_tmpdir` replaces the six scratch paths and the cleanup trap in gate-p1 through gate-p5** (D1); each gate's
+  own tail (`AUDITKERN`, `SWEEPLOG`, `ALTCSV`, `KERNBIN`, …) stays where it was. **−7 lines in `scripts/`** — 35
+  lines of duplication out, most of it back as the measurement the fix rests on.
 - **`assert_kern_audit_drift` replaces the registry-drift check in gate-p3 and gate-p4** (D1), whose executable
   lines were byte-identical; the fail message's trailing clause is a parameter, so neither gate's output text moves.
   **−10 lines in `scripts/`**, and the caller-visible `DRIFT_CHECKED` is now documented rather than incidental.

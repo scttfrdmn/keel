@@ -198,16 +198,10 @@ if [[ -n "$(git status --porcelain)" ]]; then
   info "  commit first; this gate's own criteria still run below"
 fi
 
-LOG="$(mktemp)"
-BINDIR="$(mktemp -d)"
-BIN="$BINDIR/keel.test"
-BENCHBIN="$BINDIR/bench.test"
-BENCHLOG="$BINDIR/bench.log"
-BENCHCSV="$BINDIR/bench.csv"
+gate_tmpdir
 SWEEPLOG="$BINDIR/sweep-avx512.log"
 AUDITKERN="$BINDIR/audit-kern.log"
 AUDITPEAK="$BINDIR/audit-peak.log"
-trap 'rm -rf "$LOG" "$BINDIR"' EXIT
 
 # --------------------------------------------- the routines vs the float64 oracle
 echo

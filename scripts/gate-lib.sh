@@ -102,6 +102,34 @@ test_verdict() {
   fi
 }
 
+# gate_tmpdir — the scratch paths every gate builds into, plus the trap that removes
+# them. Sets LOG, BINDIR, BIN, BENCHBIN, BENCHLOG and BENCHCSV in the caller, which is
+# the point: five gates declared the same six and then each added its own tail
+# (AUDITKERN, SWEEPLOG, ALTCSV, KERNBIN, ...). The shared prefix lifts; the tail stays.
+#
+# THE SIGNAL TRAPS EXIT RATHER THAN CLEAN, which neither prior copy did, and each
+# prior copy was wrong in its own direction. Measured, bash 3.2.57 and 5.3.15 alike:
+#   SIGTERM, `EXIT` alone         -> cleaned, rc=143. The EXIT trap DOES run on an
+#                                    untrapped fatal signal, so p1..p4 never leaked
+#                                    and gate-p5's comment claiming otherwise was false.
+#   SIGTERM, `EXIT INT TERM`      -> cleaned, then RESUMED. gate-p5 has been carrying
+#                                    on past a TERM with its scratch dir deleted.
+#   SIGINT to the process group   -> `EXIT` alone RESUMES at rc=0: a real Ctrl-C killed
+#     (i.e. an actual Ctrl-C)        the `sleep`/`go test` child and the gate kept going.
+# Exiting from the handler runs the EXIT trap, which removes the directory once: rc=143
+# on TERM and rc=130 on a group SIGINT, neither RESUMED.
+gate_tmpdir() {
+  LOG="$(mktemp)"
+  BINDIR="$(mktemp -d)"
+  BIN="$BINDIR/keel.test"
+  BENCHBIN="$BINDIR/bench.test"
+  BENCHLOG="$BINDIR/bench.log"
+  BENCHCSV="$BINDIR/bench.csv"
+  trap 'rm -rf "$LOG" "$BINDIR"' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+}
+
 # assert_kern_audit_drift LOG AUDITFILE HOST EXTRA — the insns/FMA internal/kern
 # records for each shipped shape, against what the audit counts in the object code
 # emitted. Checked from a marker a host produced, not from source: the point is what

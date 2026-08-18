@@ -330,13 +330,8 @@ if go build ./... 2>&1; then pass "make stock (scalar path, no experiment)"; els
 if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
 if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/amd64)"; else fail "go vet (GOEXPERIMENT=simd, linux/amd64)"; fi
 
-LOG="$(mktemp)"
-BINDIR="$(mktemp -d)"
-BIN="$BINDIR/keel.test"
+gate_tmpdir
 KERNBIN="$BINDIR/kern.test"
-BENCHBIN="$BINDIR/bench.test"
-BENCHLOG="$BINDIR/bench.log"
-BENCHCSV="$BINDIR/bench.csv"
 # Criterion 5b's cross-check run, kept beside the dispatched one rather than
 # overwriting it: the comparison needs both rates at once.
 ALTLOG="$BINDIR/bench-alt.log"
@@ -344,7 +339,6 @@ ALTCSV="$BINDIR/bench-alt.csv"
 SWEEPLOG="$BINDIR/sweep-avx512.log"
 AUDITKERN="$BINDIR/audit-kern.log"
 AUDITPEAK="$BINDIR/audit-peak.log"
-trap 'rm -rf "$LOG" "$BINDIR"' EXIT
 
 # ------------------------------------------------------- Sgemm vs the oracle
 echo

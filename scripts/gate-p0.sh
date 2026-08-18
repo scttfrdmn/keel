@@ -109,6 +109,10 @@ TESTLOG="$(mktemp)"
 ASM="$(mktemp)"
 TESTBIN="$(mktemp -u)/vec.test"
 trap 'rm -f "$TESTLOG" "$ASM" "$TESTBIN"; rmdir "$(dirname "$TESTBIN")" 2>/dev/null || true' EXIT
+# Signal handlers exit rather than clean; exiting runs the EXIT trap. See gate_tmpdir
+# in gate-lib.sh for the measurement — cleaning in a TERM handler resumes the script.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 mkdir -p "$(dirname "$TESTBIN")"
 
 # FULL_COVER_TARGET names the machine on which all three backends actually
