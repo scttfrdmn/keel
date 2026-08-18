@@ -477,16 +477,25 @@ comment on the campaign; log `build/campaign-spr-75bfaf5.log`.
 
 ### 10.1 The reading is silicon, not tenancy — #104 answered
 
-| host | peak GFLOP/s | 4x32 GFLOP/s | 4x32 ÷ peak |
-|---|---|---|---|
-| `c7i.4xlarge` (partial, correctness class) | 240.2 | 82.06 | **34.16%** |
-| `c7i.48xlarge` (full, evidentiary class) | 232.3 | 79.35 | **34.16%** |
+| rev | host | peak GFLOP/s | 4x32 GFLOP/s | 4x32 ÷ peak |
+|---|---|---|---|---|
+| `882e983` | `c7i.4xlarge` (partial, correctness class) | 228.9 | 78.32 | **34.216%** |
+| `f19a977` | `c7i.4xlarge` (partial, correctness class) | 240.2 | 82.06 | **34.163%** |
+| `75bfaf5` | `c7i.48xlarge` (full, evidentiary class) | 232.3 | 79.35 | **34.158%** |
 
-The full-size host clocks 3.3% *lower* in absolute terms and lands on the same fraction
-to three figures. A co-tenancy artifact cannot do that, because the numerator and the
-denominator are measured in the same run on the same silicon and the ratio divides the
-clock out. #104's hypothesis is refuted by the strongest test available to it: the
-reading was always right, and what was missing was its evidentiary standing.
+Three readings whose peaks span **4.9%** — and the full-size host is the *middle* one,
+3.3% below the small guest's best, so this is not a monotone size effect either. The
+fraction lands within **0.057 points, 0.17% relative**. A co-tenancy artifact cannot do
+that: numerator and denominator are measured in the same run on the same silicon, so the
+ratio divides the clock out, and a neighbour that moved the ratio would have to move it
+by the same two parts in a thousand three times. #104's hypothesis is refuted by the
+strongest test available to it — the reading was always right, and what was missing was
+its evidentiary standing.
+
+Note against §7 rule 7: the two-row form of this table paired `882e983`'s peak with
+`f19a977`'s fraction, which is why the row set is now stated with its revs. 78.32 ÷ 228.9
+is 34.216%, not 34.16%; the argument survives because the third reading widens the peak
+span it rests on from 1.5% to 4.9%.
 
 Peak is well measured here, which is what makes the ratio judgeable: the substitute
 clock instrument read 232.2 / 232.3 / 232.4 across head, middle and tail, `+/- 0.0%`,
