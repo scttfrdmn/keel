@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`BenchmarkTrsmMB` sweeps `MB`, because the arithmetic moved #37's question** (#37). The diagonal solves are 1.59% of
+  the *work* at m=n=4096, and charging the rank updates the full 166.05 GFLOP/s peak still leaves 69.1% of Strsm's
+  measured time unaccounted for; two countable terms of that residual — solve flops `n·m·(MB+1)` and a `~n·m²/(2·MB)`
+  rank-update repack, 5.37e8 elements at MB=64 — move in opposite directions with `MB`, which has never been swept.
+  `TestTrsmMBCounts` and `TestTrsmSolveReplay` check the counts and the replay where the benchmark itself skips.
 - **`tools/shapegen` is the microkernel shape generator, in-tree and verified at its mint** (#107). `-verify` re-emits
   the three shipped kernels and compares each against `internal/vec` by source text *and* by audit report — 74/16,
   50/8, 270/48 — and `-sweep`'s first run re-derives all nine rows of KERNEL.md §3 exactly, from an independent

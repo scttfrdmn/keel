@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -264,6 +265,316 @@ func BenchmarkBlocking(b *testing.B) {
 			}
 		}
 	}
+}
+
+// BenchmarkTrsmMB is issue #37's first deliverable, and it is a sweep of MB rather
+// than a vector inner loop because the arithmetic moved the question.
+//
+// # The statistic #37 reasons from is the wrong one
+//
+// #37 opens "the diagonal solves are scalar" and asks for an L1-backed inner loop.
+// Its premise for why that is the place to look — restated at tri.go:246 — is that
+// the solves are "a few percent of the work" at MB = 64. That is true. Counted by
+// the shipped TrsmWork at the published shape (left side, m = n = 4096):
+//
+//	total        6.87363e10 flops   n·m·(m+1), the count gate-p5 recomputes
+//	rank update  6.76457e10 flops   98.41%, through the audited microkernel
+//	diag solve   1.09052e09 flops    1.59%, scalar Go
+//
+// A work share is not a time share when the two parts run at rates that differ by
+// an order of magnitude, and the published rows say they do: Strsm reaches
+// 52.1 GFLOP/s on Zen 4 where Sgemm reaches 153, against the same 166.05 GFLOP/s
+// microkernel peak (README's block). Charging the rank updates that full peak — a
+// *lower* bound on their time, since nothing exceeds it — accounts for 407 ms of a
+// 1319 ms call and leaves 69.1% of Strsm's measured time to everything else. That
+// residual is what this benchmark is about, and 1.59% of the work cannot be
+// presumed to be either most of it or a corner of it.
+//
+// # Two terms of the residual are exactly countable, and both indict MB
+//
+//	diagonal solve     n·m·(MB+1) flops            RISES linearly with MB
+//	rank-update repack ~n·m²/(2·MB) elements       FALLS linearly with MB
+//
+// The second is the one #37 does not mention. Each block's rank update is a fresh
+// gemm call over the already-solved part of X, and gemm packs its operands per call
+// — block.go:303 allocates bp inside gemm, and packB fills it per (jc, pc), so
+// nothing survives to the next block. Block i therefore re-packs the rows 0..i·MB
+// that block i−1 already packed, and the same data is packed m/(2·MB) times over:
+// 5.37e8 elements, 2.15 GB, at m = n = 4096 with MB = 64. Halving MB doubles it.
+//
+// Which *operand* carries X swaps with the side, and trsmPackCount's comment has the
+// detail: X is gemm's B on the left and gemm's A on the right, so both panels are
+// counted and the marker prints them separately. The closed form above is their SUM,
+// and the figure quoted for it is the sum: 5.37e8 = the big operand's 5.28e8 plus the
+// small one's 8.26e6. Quoting the big operand alone would agree with the closed form
+// to one significant figure and be the wrong quantity, which is the reading
+// TestTrsmMBCounts prints both terms and their total to make impossible.
+//
+// A third term has no closed form and improves with MB as well: the rank update is a
+// gemm of only MB rows against all n columns, far from the square shape the 166.05
+// denominator was measured on, and tri.go:293 already notes that MB rows are fewer
+// than one MC block. Not a fringe effect — MB = 64 over MR = 2 divides exactly into 32
+// whole row tiles, so #22's zero-padded-edge case does not arise here at all; the cost
+// is that the ic loop has one iteration and the panel is re-read per column block.
+//
+// So all three terms say MB = 64 is too small, and MB has never been swept — the
+// var's own comment (tri.go:219) says the balance "is a measurement" and #37's third
+// bullet says it has never been taken. This sweep is BenchmarkBlocking's kind of
+// instrument: whether the parameter matters and in which direction, not a tuner.
+//
+// # The arms
+//
+//	full        Trsm at this MB — the whole routine, packing and all
+//	solve-only  exactly the solveLeft/solveRight calls this MB's partition makes,
+//	            in the same order, on the same slices, under the same strips()
+//	            split, with the rank updates removed and nothing else changed
+//
+// so solve-only ÷ full is the diagonal solves' time share, measured, which is the
+// first thing #37 says it owes. Both arms run under strips() so the comparison holds
+// at any GOMAXPROCS rather than only at one: Trsm partitions rank updates and
+// diagonal solves over the identical column axis, so an arm that dropped the split
+// would be a 1-thread measurement divided by an 8-thread one.
+//
+// Both arms restore B between iterations with the timer stopped, for the reason
+// bench/scale_test.go's Strsm row gives: the solve is in place, so iteration two
+// would otherwise solve against iteration one's output, and repeated application of
+// A⁻¹ walks the magnitudes toward the dominant eigendirection until what is being
+// timed is denormal arithmetic rather than the routine.
+//
+// solve-only computes a correct answer for its first block and wrong ones after it,
+// because the blocks it solves have not had their rank updates applied. That is the
+// timing equivalence nestNoPack already relies on and nothing reads the result;
+// what it preserves is the call count, the shapes, the order and the addresses.
+//
+// The marker line carries the counts each rate must be read against — from the
+// shipped TrsmWork and the shipped nestBlocks generator, not re-derived here — and
+// prints its own sum check, so a reader can confirm rank + solve against the gate's
+// n·m·(m+1) before dividing by either.
+func BenchmarkTrsmMB(b *testing.B) {
+	defer func(mb int) { MB = mb }(MB)
+	mbs := benchGrid(b, "KEEL_TRSM_MB", []int{32, 64, 128, 256, 512})
+	dims := benchGrid(b, "KEEL_TRSM_N", []int{2048})
+	for _, kn := range benchKernels(b) {
+		for _, dim := range dims {
+			m, n := dim, dim
+			a, b0 := benchTri(dim), benchMat(m, n)
+			bm := make([]float32, len(b0))
+			for _, side := range []struct {
+				tag  string
+				left bool
+			}{{"L", true}, {"R", false}} {
+				for _, mb := range mbs {
+					MB = mb
+					rank, solve := TrsmWork(side.left, m, n)
+					// The gate's count, on the side's own axis: a left solve's
+					// triangle is m×m over n right-hand sides and a right solve's is
+					// n×n over m. Equal at these square shapes, and written out
+					// rather than collapsed so the check still holds if a
+					// rectangular dim is ever swept.
+					total := float64(n) * float64(m) * float64(m+1)
+					if !side.left {
+						total = float64(m) * float64(n) * float64(n+1)
+					}
+					aelem, belem, bpBytes, blocks := trsmPackCount(kn, side.left, m, n)
+					fmt.Printf("keel-trsm-mb: name=%s/n=%d/side=%s/mb=%d procs=%d blocks=%d "+
+						"rank-flops=%.6g solve-flops=%.6g total-flops=%.6g sum-ok=%v "+
+						"solve-work-share=%.5f apack-elems=%.6g bpack-elems=%.6g "+
+						"repack-bytes=%.6g bpack-bytes-per-call=%d\n",
+						kn.ID(), dim, side.tag, mb, runtime.GOMAXPROCS(0), blocks,
+						rank, solve, total, rank+solve == total,
+						solve/total, aelem, belem, 4*(aelem+belem), bpBytes)
+
+					name := fmt.Sprintf("%s/n=%d/side=%s/mb=%d", kn.ID(), dim, side.tag, mb)
+					b.Run(name+"/full", func(b *testing.B) {
+						MB = mb
+						b.ResetTimer()
+						for i := 0; i < b.N; i++ {
+							b.StopTimer()
+							copy(bm, b0)
+							b.StartTimer()
+							Trsm(kn, side.left, true, false, false, m, n, 1, a, dim, bm, dim)
+						}
+						trsmMetrics(b, total, solve)
+					})
+					b.Run(name+"/solve-only", func(b *testing.B) {
+						MB = mb
+						b.ResetTimer()
+						for i := 0; i < b.N; i++ {
+							b.StopTimer()
+							copy(bm, b0)
+							b.StartTimer()
+							trsmSolvesOnly(side.left, m, n, a, dim, bm, dim)
+						}
+						trsmMetrics(b, total, solve)
+					})
+					// The in-place solve can only drift toward infinity, never back,
+					// so one look after both arms catches it for both. replayColdC
+					// checks the same property for the same reason: "cannot at the
+					// -benchtime I tried" is not a property.
+					if v := bm[0]; v-v != 0 {
+						b.Fatalf("B reached %v at n=%d side=%s mb=%d: the restore between "+
+							"iterations is what prevents that, so the timings above are "+
+							"not float32 arithmetic", v, dim, side.tag, mb)
+					}
+				}
+			}
+		}
+	}
+}
+
+// trsmMetrics reports the two rates an MB point is read by: the whole routine's rate
+// over the gate's flop count, and the diagonal solves' own rate over theirs.
+//
+// The second is the one that makes solve-only interpretable. A share of time alone
+// says which part to work on; a rate says what the ceiling on the work is, because a
+// scalar solve running at 1 GFLOP/s and one running at 8 have very different room
+// above them and the vector inner loop #37 proposes is worth exactly that room.
+// Reported on both arms deliberately: on solve-only it is the solve's rate, and on
+// full it is the rate the solve's flops would have if the whole call were solve,
+// which brackets it from the other side.
+func trsmMetrics(b *testing.B, total, solve float64) {
+	secs := b.Elapsed().Seconds()
+	b.ReportMetric(total*float64(b.N)/secs/1e9, "GFLOP/s")
+	b.ReportMetric(solve*float64(b.N)/secs/1e9, "solve-GFLOP/s")
+}
+
+// trsmSolvesOnly makes exactly the diagonal-solve calls Trsm makes at the current
+// MB — same partition, same order, same slices, same strips() split — with the rank
+// updates removed and nothing else changed.
+//
+// The block order comes from trsmSolveOrder and the partition from it too, so both
+// are checkable without reading this function: TestTrsmSolveReplay drives the offsets
+// against a written-out expectation and drives this whole replay against Trsm itself.
+//
+// A flag on Trsm itself was the alternative and is rejected for nestNoPack's reason:
+// an `if !skipRank` inside the shipped routine would add a branch to the nest that
+// ships in order to measure the nest that ships.
+func trsmSolvesOnly(left bool, m, n int, a []float32, lda int, bmat []float32, ldb int) {
+	// lowerEff for the flags this benchmark runs (lower, no transpose): lower !=
+	// trans. Written as the derived fact rather than the two flags, as tri.go:274
+	// does, so the two cannot drift apart.
+	const lowerEff = true
+	if left {
+		strips(n, func(j0, jn int) {
+			for _, i0 := range trsmSolveOrder(true, lowerEff, m) {
+				solveLeft(lowerEff, false, false, min(MB, m-i0), jn,
+					a[i0*lda+i0:], lda, bmat[j0+i0*ldb:], ldb)
+			}
+		})
+		return
+	}
+	strips(m, func(i0, im int) {
+		for _, j0 := range trsmSolveOrder(false, lowerEff, n) {
+			solveRight(lowerEff, false, false, im, min(MB, n-j0),
+				a[j0*lda+j0:], lda, bmat[i0*ldb+j0:], ldb)
+		}
+	})
+}
+
+// trsmSolveOrder is the offsets of the diagonal blocks in the order the nest solves
+// them, at the current MB.
+//
+// A generator rather than two loops inside trsmSolvesOnly because the order is the
+// part that a copy gets wrong silently: a replay that solved the blocks backwards
+// would still make the same number of calls at the same shapes and report a
+// perfectly plausible time. As a function it is checkable on its own, and
+// TestTrsmSolveReplay checks it against tri.go's rule directly — a left solve walks
+// its row blocks forward when op(A) is lower and a right solve walks its column
+// blocks backward then, because column block j of X depends on the blocks after it.
+func trsmSolveOrder(left, lowerEff bool, axis int) []int {
+	nb := (axis + MB - 1) / MB
+	out := make([]int, 0, nb)
+	for step := 0; step < nb; step++ {
+		bi := step
+		if left != lowerEff {
+			bi = nb - 1 - step
+		}
+		out = append(out, bi*MB)
+	}
+	return out
+}
+
+// trsmPackCount counts what the rank updates pack at the current MB: the A-panel
+// and B-panel elements every gemm call in the block loop fills, and the bytes those
+// calls allocate for the B-panel buffer.
+//
+// This is the term #37 does not name and the reason MB is the parameter under test,
+// so it is counted rather than modelled: the elements come from nestBlocks, the same
+// generator TestNestBlocksDriveTheSameGemm proves walks the shipped nest's own
+// partition, and the bytes from the shipped plan() and pack.BLen that gemm itself
+// calls. The closed forms in TestTrsmMBCounts are independent derivations checked
+// against this, not its source.
+//
+// # Both operands are counted, because which one carries X swaps with the side
+//
+// The first draft of this counted B panels only and understated the right side by a
+// factor of MB. On the left, gemm's B operand is the already-solved X (kk×rhs) and
+// its A operand is a block of the triangle (bl×kk) — tri.go:407. On the right the
+// two swap: X is gemm's *A* operand (rhs×kk) and the triangle's off-diagonal block
+// is B (kk×bl) — tri.go:442. So the big re-pack is the B side on the left and the A
+// side on the right, and a count of one operand describes one side.
+//
+// The asymmetry also means the two panels are not interchangeable in cost: A panels
+// are packed once per (jc, pc, ic) while B panels are packed once per (jc, pc), a
+// difference packAOnly's comment already names. At these shapes each side has one
+// block on the axis that would multiply, so the counts come out symmetric — which is
+// a property of the shape, not of the code, and is why both are returned separately.
+//
+// The first block has nothing solved, so it makes no gemm call at all (tri.go:391's
+// kk == 0 branch) and contributes nothing here.
+func trsmPackCount(kn kern.Kernel, left bool, m, n int) (aelem, belem float64, bpBytes, blocks int) {
+	axis, rhs := m, n
+	if !left {
+		axis, rhs = n, m
+	}
+	solved := 0
+	for off := 0; off < axis; off += MB {
+		bl := min(MB, axis-off)
+		blocks++
+		if solved > 0 {
+			// The rank update's shape, per side: a left solve's gemm is bl×rhs×kk
+			// and a right solve's is rhs×bl×kk.
+			gm, gn := bl, rhs
+			if !left {
+				gm, gn = rhs, bl
+			}
+			for _, blk := range nestBlocks(kn, gm, gn, solved) {
+				aelem += float64(blk.im) * float64(blk.kk)
+				if blk.newPanel {
+					belem += float64(blk.jn) * float64(blk.kk)
+				}
+			}
+			kc, _, nc := plan(kn, gm, gn, solved)
+			bpBytes += pack.BLen(kn.NR, nc, kc) * 4
+		}
+		solved += bl
+	}
+	return aelem, belem, bpBytes, blocks
+}
+
+// benchTri is an n×n row-major lower-triangular matrix with a unit diagonal and
+// small off-diagonals, for the same two reasons bench/scale_test.go's makeTri has
+// them. The diagonal is exactly 1 so that the solve's divide is exact and repeated
+// iterations do not walk the magnitudes anywhere; the off-diagonals are scaled by
+// 1/n because an unscaled patterned triangle has a growth factor large enough to
+// send the intermediates to infinity part way down a column, and an Inf in the data
+// is a timing artifact on hardware that handles it slowly. The upper half is filled
+// too — Trsm does not read it, but a half-touched matrix pages differently from one
+// that is not.
+func benchTri(n int) []float32 {
+	v := make([]float32, n*n)
+	scale := float32(1) / float32(n)
+	for i := 0; i < n; i++ {
+		row := v[i*n : (i+1)*n]
+		for j := range row {
+			if i == j {
+				row[j] = 1
+				continue
+			}
+			row[j] = float32((i+j)%13-6) * scale
+		}
+	}
+	return v
 }
 
 // BenchmarkPackDirections is #21's first item: what the two pack directions cost,
