@@ -3,6 +3,8 @@
 *.out
 *.prof
 /bin/
+# `go build ./tools/...` drops this in the repo root
+/shapegen
 # spill-audit artifacts (archived per-commit under docs/ssa when wanted)
 ssa.html
 # gate scratch: build/ssa holds one ssa.html per audited kernel, ~5 MB each.
@@ -33,3 +35,6 @@ bench/results/*.local.*
 # (scripts/gate-p3.sh criterion 5). There is no OpenBLAS reference-host list any
 # more — the ruling on issue #23 made the reference same-host on every gate host.
 /.keel-sentinel
+# tools/shapegen candidate scratch. Under internal/vec because that is where simd
+# imports live; dot-prefixed so `go ./...` cannot pick up a crashed sweep's leftovers.
+/internal/vec/.shapegen-*

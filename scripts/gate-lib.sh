@@ -23,6 +23,12 @@
 # terms — they are "duplicated rather than factored into a shared file on purpose",
 # because two independent statements of a threshold are what make a divergence
 # visible. This file existing is not an argument for moving them into it.
+#
+# Nor do helpers that merely look alike. check_flops_decl was drafted for this file
+# and refused: gate-p4's and gate-p5's flop-declaration checks differ in three of four
+# messages and fork on control flow, so a shared body needed a mode flag. Ruled
+# 2026-08-18 — when the lifted function must be told which caller it is, nothing was
+# lifted. The law is one semantic, one definition; it never licensed lookalikes.
 
 # require_bench LABEL LOG CSV UNIT NAME... — declare what a criterion is about to
 # read, and give absence exactly one verdict.

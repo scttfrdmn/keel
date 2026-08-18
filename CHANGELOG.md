@@ -8,6 +8,24 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **`tools/shapegen` is the microkernel shape generator, in-tree and verified at its mint** (#107). `-verify` re-emits
+  the three shipped kernels and compares each against `internal/vec` by source text *and* by audit report — 74/16,
+  50/8, 270/48 — and `-sweep`'s first run re-derives all nine rows of KERNEL.md §3 exactly, from an independent
+  enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines).
+
+### Changed
+- **The shape objective was missing its dependency term.** Ranking is now
+  `cycles = max(I/W, F/P, (F/A)·L)`, and the measured answer corrects this project's own guess: the shipped 2×32 ×4 is
+  *issue*-bound at 18.50 cycles, not latency-bound, so the corrected objective and the old insns/FMA one agree on the
+  frontier. The amendment reorders only the low-accumulator corner (2×48 ×2 above 1×48 ×8, 24.77 against 24.00).
+- **gate-p2's `SWEEP_BEST_IPF=4.438` is not comparable to a shipped shape's insns/FMA.** Its attributed shape, Permute
+  2×64 ×2, must have `MR·U == 16` to read its A panel the way the shipped kernels read theirs, and its `MR·U` is 4.
+  The best emittable zero-spill reading is 4.625; recorded as not comparable rather than replaced (#107).
+- **`gate-docs.sh` prints an apparatus line beside the historical shell/library one**, moving `tools/*.go` across.
+  An instrument counted on the library side would flatter the ratio it is counted by; both lines print so the
+  published 1.6× series stays comparable.
+
 ### Fixed
 - **gate-p4's criterion 7 aggregate was the one fleet aggregate that never got #90's coverage clause.**
   `SYRK_MEASURED` is counted after three `continue` paths, so a host that produced no bounded ratio is absent from

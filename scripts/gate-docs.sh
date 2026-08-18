@@ -290,14 +290,21 @@ stage_citations() {
 # the only one that runs on every push. Definitions printed beside the figure per
 # §7 rule 7; the library side includes bench/ and internal/spill, flattering the
 # ratio by ~100 lines, kept so it matches what the published counts counted.
+# tools/ is Go and would otherwise land on the library side, where an instrument would
+# flatter the very ratio it is counted by. Both lines print: the historical one
+# unchanged so the published 1.6x series stays comparable, and an apparatus one moving
+# tools/ across. Redefining one side silently would make a paydown claim unfalsifiable.
 stage_ratio() {
   head_ "apparatus ratio (reported, never a verdict)"
-  local sh lib ratio
+  local sh lib tool ratio aratio
   sh="$(git ls-files '*.sh' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   lib="$(git ls-files '*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  tool="$(git ls-files 'tools/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   ratio="$(awk -v a="$sh" -v b="$lib" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
+  aratio="$(awk -v a="$sh" -v t="$tool" -v b="$lib" 'BEGIN { if (b - t) printf "%.2f", (a + t) / (b - t); else printf "n/a" }')"
   info "shell ${sh} / library ${lib} / ratio ${ratio}x"
-  info "shell = tracked *.sh; library = tracked *.go less *_test.go"
+  info "apparatus $((sh + tool)) (shell ${sh} + tools/ ${tool}) / library $((lib - tool)) / ratio ${aratio}x"
+  info "shell = tracked *.sh; library = tracked *.go less *_test.go; tools/ is apparatus"
 }
 
 main() {

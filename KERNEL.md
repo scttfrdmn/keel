@@ -115,6 +115,19 @@ of M costs a broadcast and an accumulator pair.
 | 6×32  | 12  | 1      | 76    | 12   | 6.33      | 0.67      | **12**            |
 | 6×32  | 12  | 4      | 270   | 48   | 5.62      | 0.67      | **90**            |
 
+**Independently reproduced, 2026-08-18.** The generator that produced this table was
+a run artifact and is gone (#107); `tools/shapegen` is its in-tree replacement, and
+its first sweep re-derives every row above exactly — all nine shapes' `insns`, `FMAs`
+and `vector stack refs`, including 6×32 ×4's 270/48/90. Two things do not carry over.
+The 115-shape count is not reproducible, because nothing records what the old
+generator enumerated; the new sweep audits 140 (128 broadcast, 12 Permute) over ranges
+stated in `tools/shapegen/main.go` and chosen on their own grounds rather than tuned
+to agree. And the Permute form's 2×64 ×2 at 4.438 insns/FMA — the mint of gate-p2's
+`SWEEP_BEST_IPF` — is not emittable at all under the shipped A-panel layout: one
+16-lane A-window load is in bounds only when `MR·U ≥ 16` and covers every index the
+body needs only when `MR·U ≤ 16`, and that shape's `MR·U` is 4. The threshold is
+reported as not comparable rather than quietly replaced.
+
 `insns` and `vector stack refs` are audited counts. `loads/FMA` is exact
 arithmetic, not a measurement: with `MR` rows and `V` 16-lane vectors along N, one
 pass reads `V·u` B vectors and `MR·u` A scalars for `MR·V·u` FMAs, so the ratio is
@@ -340,7 +353,11 @@ there by any arrangement of this source: janus is limited by instruction issue
 rather than by spills (its two shapes' throughputs stand in the inverse ratio of
 their instruction counts, 1.308 measured against 1.351 predicted, and both derive
 the same ~4.2 instructions per cycle), it would need ≤3.88 instructions per FMA,
-and no zero-spill shape in the 115-shape sweep is below 4.438. Its **issue
+and no zero-spill shape in the 115-shape sweep is below 4.438 — 2026-08-18:
+`tools/shapegen` puts the best *emittable* zero-spill reading at 4.625 (2×32 ×4),
+because the 4.438 shape cannot be emitted under the shipped A-panel layout (§3), so
+the gap to janus's required ≤3.88 is wider than stated here rather than narrower and
+the conclusion below is unaffected. Its **issue
 roofline is 48.6% of peak**, so the kernel is at 94.6% of what the instruction set
 as-lowered can express.
 
