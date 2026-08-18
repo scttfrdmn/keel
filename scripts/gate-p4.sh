@@ -217,20 +217,10 @@ info "every lattice below is audited from a host that ran it with avx512 live"
 
 LOCAL_OK=0
 GOEXPERIMENT=simd go test -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
-if [[ "$LOCAL_OK" -eq 0 ]]; then
-  pass "[local $(go env GOHOSTOS)/$(go env GOHOSTARCH)] all tests pass"
-else
-  fail "[local $(go env GOHOSTOS)/$(go env GOHOSTARCH)] all tests pass"
-  sed 's/^/        /' "$LOG" | tail -40
-fi
+test_verdict "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK" "all tests pass"
 STOCK_OK=0
 go test -count=1 ./... >"$LOG" 2>&1 || STOCK_OK=$?
-if [[ "$STOCK_OK" -eq 0 ]]; then
-  pass "[local, stock toolchain] all tests pass without GOEXPERIMENT=simd"
-else
-  fail "[local, stock toolchain] all tests pass without GOEXPERIMENT=simd"
-  sed 's/^/        /' "$LOG" | tail -40
-fi
+test_verdict "local, stock toolchain" "$LOG" "$STOCK_OK" "all tests pass without GOEXPERIMENT=simd"
 
 HOSTS="$(remote_hosts)"
 # The ledger of what this gate trusts rather than checks (#73 tier C, ruled

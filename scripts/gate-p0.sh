@@ -50,6 +50,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/remote.sh
 source scripts/remote.sh
+# shellcheck source=scripts/gate-lib.sh
+source scripts/gate-lib.sh
 
 # pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
 # above: they were copied into all six gates and only one copy applied
@@ -122,12 +124,7 @@ N_FULLCAP=0
 # is what insists some target had all three.
 record_target() {
   local name="$1" log="$2" ok="$3" cover avail missing="" unexercised=""
-  if [[ "$ok" -eq 0 ]]; then
-    pass "[$name] internal/vec tests pass"
-  else
-    fail "[$name] internal/vec tests pass"
-    sed 's/^/        /' "$log" | tail -40
-  fi
+  test_verdict "$name" "$log" "$ok" "internal/vec tests pass"
 
   cover="$(grep -o 'keel-backends-exercised:.*' "$log" | tail -1 || true)"
   if [[ -z "$cover" ]]; then

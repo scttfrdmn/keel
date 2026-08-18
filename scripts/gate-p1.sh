@@ -59,6 +59,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/remote.sh
 source scripts/remote.sh
+# shellcheck source=scripts/gate-lib.sh
+source scripts/gate-lib.sh
 # shellcheck source=scripts/bench.sh
 source scripts/bench.sh
 
@@ -97,12 +99,7 @@ AVX512_SEEN=0
 # compiled-in backend unexercised.
 score_run() {
   local name="$1" log="$2" ok="$3" cover avail missing="" want
-  if [[ "$ok" -eq 0 ]]; then
-    pass "[$name] tests pass"
-  else
-    fail "[$name] tests pass"
-    sed 's/^/        /' "$log" | tail -40
-  fi
+  test_verdict "$name" "$log" "$ok" "tests pass"
 
   cover="$(grep -o 'keel-l1-backends-exercised:.*' "$log" | tail -1 || true)"
   avail="$(grep -o 'keel-l1-available:.*' "$log" | tail -1 || true)"

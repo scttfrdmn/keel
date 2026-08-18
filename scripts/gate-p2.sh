@@ -200,12 +200,7 @@ echo "-- microkernel correctness (differential vs the scalar tile reference) --"
 
 score_run() {
   local name="$1" log="$2" ok="$3" cover
-  if [[ "$ok" -eq 0 ]]; then
-    pass "[$name] kernel tests pass"
-  else
-    fail "[$name] kernel tests pass"
-    sed 's/^/        /' "$log" | tail -40
-  fi
+  test_verdict "$name" "$log" "$ok" "kernel tests pass"
   cover="$(grep -o 'keel-kern-backends-exercised:.*' "$log" | tail -1 || true)"
   if [[ -z "$cover" ]]; then
     fail "[$name] no kernel backend-coverage marker in test output"

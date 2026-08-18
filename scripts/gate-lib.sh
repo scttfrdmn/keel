@@ -86,6 +86,22 @@ marker_all() { sed -n "s/.*keel-$1: *//p" "$2"; }
 # set_has SET VALUE — is VALUE one of SET's comma-separated members.
 set_has() { [[ ",$1," == *",$2,"* ]]; }
 
+# test_verdict NAME LOG RC PHRASE — the pass/fail/paste-the-tail triple that every
+# gate wraps around a `go test` run. Eight copies, in all six gates, byte-identical
+# but for the phrase: gate-p5 says "every test passes" where p3/p4 say "all tests
+# pass", and p0/p1/p2 each name the package they ran. So PHRASE is a parameter and
+# not a decision — normalising it would have edited three gates' output text, which
+# is the one thing a de-duplication may not do.
+test_verdict() {
+  local name="$1" log="$2" ok="$3" phrase="$4"
+  if [[ "$ok" -eq 0 ]]; then
+    pass "[$name] $phrase"
+  else
+    fail "[$name] $phrase"
+    sed 's/^/        /' "$log" | tail -40
+  fi
+}
+
 # marker_row NAME FILE KEY VALUE — the first keel-NAME line carrying the token
 # `KEY=VALUE`, or nothing. `marker`'s last-wins reading is wrong wherever a marker
 # is emitted more than once per file, which is every P4 and P5 marker and gate-p3's

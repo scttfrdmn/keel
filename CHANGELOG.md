@@ -9,6 +9,9 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Removed
+- **`test_verdict` replaces eight copies of the pass/fail/paste-the-tail triple** around every gate's `go test` run,
+  in all six gates (D1). The phrase is a parameter, not a normalisation: gate-p5 says *"every test passes"* where
+  p3/p4 say *"all tests pass"*, and editing that would have changed three gates' output. **−25 lines in `scripts/`.**
 - **Seven byte-identical gate helpers now live in `scripts/gate-lib.sh`** (Workstream D1's lift): `require_bench`,
   `audit_ipf`, `audit_ipf_tile`, `field`, `marker`, `marker_all`, `set_has`, out of gate-p2/p3/p4/p5. The comments
   diverged only in bookkeeping about the duplication itself, a tax quadratic in the copies. **−69 lines in
