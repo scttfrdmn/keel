@@ -251,12 +251,9 @@ AVX512_GREEN=""
 if [[ -z "$HOSTS" ]]; then
   unmeasured "P4 needs an amd64 host to execute the AVX-512 paths and none is configured, so they are unmeasured on real silicon"
 else
-  if remote_build_test . "$BIN" >"$LOG" 2>&1; then
-    pass "cross-compiled linux/amd64 test binary (root package: P4 routines vs oracle)"
-  else
-    fail "cross-compile of linux/amd64 test binary"
-    sed 's/^/        /' "$LOG" | tail -20
-  fi
+  remote_build_test_or_fail . "$BIN" "$LOG" \
+    "cross-compiled linux/amd64 test binary (root package: P4 routines vs oracle)" \
+    "cross-compile of linux/amd64 test binary"
   while read -r host; do
     [[ -n "$host" ]] || continue
     prov="$(remote_probe "$host" || true)"
@@ -521,12 +518,9 @@ NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the Ssyrk/Sgemm ratio cannot be evaluated: unmeasured, not missed"
 else
-  if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
-    pass "cross-compiled linux/amd64 bench binary (Sgemm + Ssyrk + peak)"
-  else
-    fail "cross-compile of linux/amd64 bench binary"
-    sed 's/^/        /' "$LOG" | tail -20
-  fi
+  remote_build_test_or_fail ./bench "$BENCHBIN" "$LOG" \
+    "cross-compiled linux/amd64 bench binary (Sgemm + Ssyrk + peak)" \
+    "cross-compile of linux/amd64 bench binary"
   DRIFT_CHECKED=""
   while read -r host; do
     [[ -n "$host" ]] || continue

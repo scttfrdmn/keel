@@ -26,6 +26,10 @@ While the major version is 0, minor versions may contain breaking changes.
   the EXIT trap on an untrapped fatal signal, is false on both.
 
 ### Removed
+- **`remote_build_test_or_fail` replaces the ten guarded cross-compile blocks in gate-p1 through gate-p5** (D1),
+  beside the `remote_build_test` it wraps. Both messages are parameters: gate-p5's two say *"cross-compile of **the**
+  linux/amd64 …"* where p1–p4 omit the article, so normalising either would have moved a gate's output. **−15 lines
+  in `scripts/`** — 20 of 20 arms byte-identical, and the helper driven live on a real build and a real failure.
 - **`gate_verdict` replaces the verdict tail of all six gates** (D1), in `scripts/remote.sh` beside the four verdict
   helpers it belongs with. gate-p2's go/no-go tail and p2/p3's withhold wording are parameters, so no gate's output
   text moves on any path reachable today — proven over FAIL × stamp × flag, 16 identical and 12 intended. **−19

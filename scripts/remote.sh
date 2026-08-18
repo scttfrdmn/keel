@@ -392,6 +392,21 @@ remote_build_test() {
     go test -c -o "$out" "$pkg"
 }
 
+# remote_build_test_or_fail PKG OUT LOG PASS_MSG FAIL_MSG — the guarded form of the call
+# above, ten times over: build, render one verdict either way, and on failure indent the
+# last 20 log lines. Both messages are parameters and neither is normalised — each site
+# names its own package, and gate-p5's two say "of *the* linux/amd64 …" where p1-p4 omit
+# the article. A de-duplication may not move a gate's output text (test_verdict's
+# precedent), so only the shape is shared.
+remote_build_test_or_fail() {
+  if remote_build_test "$1" "$2" >"$3" 2>&1; then
+    pass "$4"
+  else
+    fail "$5"
+    sed 's/^/        /' "$3" | tail -20
+  fi
+}
+
 # remote_probe HOST — print a one-line provenance record for HOST.
 #
 # The CPU model is not decoration: DESIGN.md §7 forbids reporting a

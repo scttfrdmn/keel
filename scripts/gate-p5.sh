@@ -235,12 +235,9 @@ AVX512_GREEN=""
 if [[ -z "$HOSTS" ]]; then
   unmeasured "P5 needs an amd64 host with $P5_THREADS cores to execute the AVX-512 paths and none is configured, so they are unmeasured on real silicon"
 else
-  if remote_build_test . "$BIN" >"$LOG" 2>&1; then
-    pass "cross-compiled linux/amd64 test binary (root package: parallel correctness)"
-  else
-    fail "cross-compile of the linux/amd64 test binary"
-    sed 's/^/        /' "$LOG" | tail -20
-  fi
+  remote_build_test_or_fail . "$BIN" "$LOG" \
+    "cross-compiled linux/amd64 test binary (root package: parallel correctness)" \
+    "cross-compile of the linux/amd64 test binary"
   while read -r host; do
     [[ -n "$host" ]] || continue
     OK=0
@@ -498,12 +495,9 @@ SCALE_HOSTS_MEASURED=0
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the scaling criterion cannot be evaluated: unmeasured, not missed"
 else
-  if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
-    pass "cross-compiled linux/amd64 bench binary (Scale + Peak)"
-  else
-    fail "cross-compile of the linux/amd64 bench binary"
-    sed 's/^/        /' "$LOG" | tail -20
-  fi
+  remote_build_test_or_fail ./bench "$BENCHBIN" "$LOG" \
+    "cross-compiled linux/amd64 bench binary (Scale + Peak)" \
+    "cross-compile of the linux/amd64 bench binary"
   while read -r host; do
     [[ -n "$host" ]] || continue
     # Re-read at the moment of measurement, not only in the preamble: a governor

@@ -166,12 +166,9 @@ N_SCORED=0
 if [[ -z "$HOSTS" ]]; then
   info "no remote targets configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)"
 else
-  if remote_build_test ./ "$BIN" >"$LOG" 2>&1; then
-    pass "cross-compiled linux/amd64 test binary"
-  else
-    fail "cross-compile of linux/amd64 test binary"
-    sed 's/^/        /' "$LOG" | tail -20
-  fi
+  remote_build_test_or_fail ./ "$BIN" "$LOG" \
+    "cross-compiled linux/amd64 test binary" \
+    "cross-compile of linux/amd64 test binary"
   while read -r host; do
     [[ -n "$host" ]] || continue
     N_CONF=$((N_CONF + 1))
@@ -233,12 +230,9 @@ N_CLEARED=0
 if [[ -z "$HOSTS" ]]; then
   unmeasured "the 4x criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
 else
-  if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
-    pass "cross-compiled linux/amd64 bench binary"
-  else
-    fail "cross-compile of linux/amd64 bench binary"
-    sed 's/^/        /' "$LOG" | tail -20
-  fi
+  remote_build_test_or_fail ./bench "$BENCHBIN" "$LOG" \
+    "cross-compiled linux/amd64 bench binary" \
+    "cross-compile of linux/amd64 bench binary"
 
   while read -r host; do
     [[ -n "$host" ]] || continue

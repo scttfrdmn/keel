@@ -418,12 +418,9 @@ N_FORCED_OK=0
 if [[ -z "$HOSTS" ]]; then
   unmeasured "P3 needs an amd64 host to execute the AVX-512 Sgemm and none is configured, so the vector Sgemm is unmeasured on real silicon"
 else
-  if remote_build_test . "$BIN" >"$LOG" 2>&1; then
-    pass "cross-compiled linux/amd64 test binary (root package: Sgemm vs oracle)"
-  else
-    fail "cross-compile of linux/amd64 test binary"
-    sed 's/^/        /' "$LOG" | tail -20
-  fi
+  remote_build_test_or_fail . "$BIN" "$LOG" \
+    "cross-compiled linux/amd64 test binary (root package: Sgemm vs oracle)" \
+    "cross-compile of linux/amd64 test binary"
   while read -r host; do
     [[ -n "$host" ]] || continue
     prov="$(remote_probe "$host" || true)"
@@ -935,12 +932,9 @@ info "-count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME; the bar counts as cl
 info "each host is also run once more with KEEL_KERN_CLASS pinned to the other class (criterion 5b), which is where the extra Sgemm time goes"
 
 if [[ -n "$HOSTS" ]]; then
-  if remote_build_test ./bench "$BENCHBIN" >"$LOG" 2>&1; then
-    pass "cross-compiled linux/amd64 bench binary (Sgemm + peak)"
-  else
-    fail "cross-compile of linux/amd64 bench binary"
-    sed 's/^/        /' "$LOG" | tail -20
-  fi
+  remote_build_test_or_fail ./bench "$BENCHBIN" "$LOG" \
+    "cross-compiled linux/amd64 bench binary (Sgemm + peak)" \
+    "cross-compile of linux/amd64 bench binary"
   while read -r host; do
     [[ -n "$host" ]] || continue
     if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" \
