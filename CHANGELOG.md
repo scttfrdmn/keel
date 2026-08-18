@@ -29,6 +29,10 @@ While the major version is 0, minor versions may contain breaking changes.
   removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
 
 ### Changed
+- **The 115-shape generator behind the spill frontier is not in the tree and never was** (#107): only the audit half
+  is, so the report's part 4 table cannot be regenerated and neither can `SWEEP_BEST_IPF=4.438`, which gate-p2
+  criterion 5b reads.
+  Recorded in the report; the rebuild's in-tree/out-of-tree question is Scott's.
 - **`docs/spill-report.md` is reopened (part 10): P2 and P3 are both red on the first evidentiary host**, a full-size
   `c7i.48xlarge` — 34.2% of measured peak and a 51.0% mission ratio. 55% needs ≤ 4.09 insns/FMA against the shipped
   6.25, and golang/go#80829 plus #80830 together reach only 50.0%. The report's part 9 stands for the retired fleet.

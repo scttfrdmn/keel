@@ -210,6 +210,10 @@ Permute  : 55 shapes, 31 zero-spill, best 4.438 insns/FMA  2x64 u=2 (71 insns / 
 The shipped 2×32 ×4 *is* the broadcast form's optimum, across every shape the
 allocator can hold without spilling.
 
+**The generator is not in the tree and never was** (#107). Only the audit half is
+(`internal/spill/cmd/spill-audit`), so this table cannot be regenerated, and neither can
+`SWEEP_BEST_IPF=4.438`, which criterion 5b of gate-p2 still reads.
+
 **Nothing in the sweep reaches 3.88.** The best zero-spill shape in either form is
 4.438, and that one is the `Permute` 2×64 which was dropped for the reasons in
 KERNEL.md §3 (CSE merges identical `Permute` calls, and it would force the P3
