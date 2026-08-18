@@ -150,6 +150,30 @@ func TestPermuteWindowIsExactlySixteen(t *testing.T) {
 	}
 }
 
+// TestParseUArchRejectsRatherThanDefaults exists because the failure mode of a
+// -uarch flag is silent: a parser that returned the zero value or the Skylake-X
+// default on a malformed spec would score an SPR re-sweep as Skylake-X and print the
+// wrong name beside it, which is a whole run's worth of wrong verdicts and no error.
+// So every rejection path is driven, and the default is checked to still be the
+// microarchitecture every published reading was scored against.
+func TestParseUArchRejectsRatherThanDefaults(t *testing.T) {
+	for _, bad := range []string{"", "skylake-x", "skylake-x:4:2", "skylake-x:4:2:4:1", ":4:2:4", "spr:6:x:4", "spr:0:2:4", "spr:6:2:-4"} {
+		if u, err := parseUArch(bad); err == nil {
+			t.Errorf("parseUArch(%q) accepted a malformed spec as %+v", bad, u)
+		}
+	}
+	got, err := parseUArch("sapphire-rapids:6:2:4")
+	if err != nil {
+		t.Fatalf("parseUArch of a well-formed spec: %v", err)
+	}
+	if want := (UArch{Name: "sapphire-rapids", Width: 6, Ports: 2, Lat: 4}); got != want {
+		t.Errorf("parseUArch gave %+v, want %+v", got, want)
+	}
+	if want := (UArch{Name: "skylake-x", Width: 4, Ports: 2, Lat: 4}); shippedUArch != want {
+		t.Errorf("the default uarch is %+v; every published insns/FMA reading was scored against %+v", shippedUArch, want)
+	}
+}
+
 func readShipped(t *testing.T) string {
 	t.Helper()
 	root, err := repoRoot()

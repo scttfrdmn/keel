@@ -15,6 +15,12 @@ While the major version is 0, minor versions may contain breaking changes.
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines).
 
 ### Changed
+- **`tools/shapegen -uarch NAME:WIDTH:PORTS:LATENCY` scores a sweep against any front end**, default unchanged at
+  `skylake-x:4:2:4`. The SPR and arm64 constants are deliberately *not* listed in the source: taken on the command
+  line, each re-sweep records them in its own log beside whoever sourced them instead of minting three integers.
+- **Issue width is a load-bearing input to P2's "unreachable", not a background constant.** Re-scoring the same 140
+  audited shapes at width 6 moves the frontier off the shipped 2×32 ×4 — which becomes dependency-bound at 32.00
+  flops/cycle — onto 3×32 ×2 at 38.40, and the ceiling from 43% of the FMA peak to 60%. Predicted before the run.
 - **The shape objective was missing its dependency term.** Ranking is now
   `cycles = max(I/W, F/P, (F/A)·L)`, and the measured answer corrects this project's own guess: the shipped 2×32 ×4 is
   *issue*-bound at 18.50 cycles, not latency-bound, so the corrected objective and the old insns/FMA one agree on the

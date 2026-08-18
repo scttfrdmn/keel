@@ -32,6 +32,7 @@
 //	-emit SHAPE     print one candidate to stdout
 //	-verify         emit the three shipped shapes and compare against the tree
 //	-sweep          emit, audit and rank the whole shape space
+//	-uarch SPEC     score against NAME:WIDTH:PORTS:LATENCY (default skylake-x:4:2:4)
 //
 // A shape is written MRxNR/U, e.g. 2x32/4.
 //
@@ -57,8 +58,26 @@ import (
 //
 // Skylake-X numbers, and named rather than anonymous: 4-wide retire, 2 FMA pipes,
 // 4-cycle FMA latency. These are vendor pipeline properties, not keel
-// measurements. Change one only with its provenance beside it.
+// measurements. Change one only with its provenance beside it — which is why the
+// other microarchitectures are NOT listed here from memory: -uarch takes them on the
+// command line, so the SPR and arm64 re-sweeps record their constants in the run's
+// own log next to whoever sourced them, rather than minting three integers in a file.
 var shippedUArch = UArch{Name: "skylake-x", Width: 4, Ports: 2, Lat: 4}
+
+// parseUArch reads NAME:WIDTH:PORTS:LATENCY.
+func parseUArch(spec string) (UArch, error) {
+	f := strings.Split(spec, ":")
+	if len(f) != 4 || f[0] == "" {
+		return UArch{}, fmt.Errorf("uarch %q is not NAME:WIDTH:PORTS:LATENCY", spec)
+	}
+	u := UArch{Name: f[0]}
+	for i, p := range []*int{&u.Width, &u.Ports, &u.Lat} {
+		if _, err := fmt.Sscanf(f[i+1], "%d", p); err != nil || *p <= 0 {
+			return UArch{}, fmt.Errorf("uarch %q: field %d is not a positive integer", spec, i+2)
+		}
+	}
+	return u, nil
+}
 
 func main() {
 	var (
@@ -67,8 +86,15 @@ func main() {
 		verify   = flag.Bool("verify", false, "emit the shipped shapes and compare against internal/vec")
 		sweep    = flag.Bool("sweep", false, "emit, audit and rank the whole shape space")
 		keep     = flag.String("keep", "", "if set, leave each emitted candidate in this directory")
+		uarch    = flag.String("uarch", "skylake-x:4:2:4", "score against NAME:WIDTH:PORTS:LATENCY")
 	)
 	flag.Parse()
+
+	u, err := parseUArch(*uarch)
+	if err != nil {
+		die(err)
+	}
+	shippedUArch = u
 
 	switch {
 	case *emitFlag != "":
