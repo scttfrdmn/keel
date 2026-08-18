@@ -25,7 +25,7 @@ While the major version is 0, minor versions may contain breaking changes.
   `cycles = max(I/W, F/P, (F/A)·L)`, and the measured answer corrects this project's own guess: the shipped 2×32 ×4 is
   *issue*-bound at 18.50 cycles, not latency-bound, so the corrected objective and the old insns/FMA one agree on the
   frontier. The amendment reorders only the low-accumulator corner (2×48 ×2 above 1×48 ×8, 24.77 against 24.00).
-- **gate-p2's `SWEEP_BEST_IPF` is corrected 4.438 → 4.625, and stops being a trusted constant** (#33, ruled
+- **gate-p2's `SWEEP_BEST_IPF` is corrected 4.438 → 4.625, and stops being a trusted constant** (#107, ruled
   2026-08-18). 4.438 was attributed to Permute 2×64 ×2, which needs `MR·U == 16` to read its A panel the way the
   shipped kernels read theirs — 16 index vectors live against the 15 SIMD values go1.26.x allocates (T10) — so it
   named a kernel that cannot exist. `e1c6340`'s enumeration re-derives the best *emittable* zero-spill figure as
@@ -36,6 +36,17 @@ While the major version is 0, minor versions may contain breaking changes.
   the shipped 2×32 actually faces is unchanged at 43.8%, computed from its own audited `I_b`; only the cap the guard
   permits rose. 4.625 *is* that shape's figure, so criterion 5b now reads ratio 1.000 and its live content is drift
   off the frontier rather than distance from it — 4×32 at 6.250 is still refused.
+- **"2×32 is latency-bound" was wrong and had been published upstream.** On SPR its chain floors the body at 16.00
+  cycles where it measures 30.24 — 1.89× too loose to bind — and it uses 54.4% of its instruction supply against
+  4×32's 94.9%, clock-free against the peak loop. Corrected in `docs/spill-report.md` §10.2, which argued the
+  inversion without ever recording 2×32's 61.45 GFLOP/s against the 232.3 peak, and on golang/go#80829.
+- **17 citations minted the 4.438 → 4.625 repair against `#33`, which is a live unrelated gate defect.** The number
+  was a *task* id, and the task tool prints its ids in issue syntax, so it transcribes with no doubt-step. Repointed
+  to #107; `52a69af`'s pushed commit message still carries the wrong one and cannot be. Recorded rather than quietly
+  fixed because a citation landing on a real-but-different issue reads as well-formed.
+- **CI never ran `gofmt`, so an unformatted file sat at HEAD through green runs** — `internal/spill/spill.go`'s var
+  block lost its alignment when a comment split it. Added to the stock job in *gating* form, since `gofmt -l` exits 0
+  whether or not it lists anything, and both branches driven on purpose before landing.
 - **`gate-docs.sh` prints an apparatus line beside the historical shell/library one**, moving `tools/*.go` across.
   An instrument counted on the library side would flatter the ratio it is counted by; both lines print so the
   published 1.6× series stays comparable.

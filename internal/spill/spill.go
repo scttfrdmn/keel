@@ -113,7 +113,7 @@ var (
 	// failure mode was misattribution, not omission (#99). stextRE is the
 	// fail-closed half: a line naming STEXT that funcRE cannot parse is an error,
 	// because an unparsed header is otherwise indistinguishable from no header.
-	funcRE  = regexp.MustCompile(`^(.*) STEXT(?: |$)`)
+	funcRE = regexp.MustCompile(`^(.*) STEXT(?: |$)`)
 	// Anchored off column 0 because only a header starts there: an instruction or a
 	// data dump begins with a tab, and a `go:string` dump can carry any bytes at all
 	// in its ASCII column, including these seven.

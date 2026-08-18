@@ -233,7 +233,7 @@ flops_formula() {
 }
 
 # reconcile_sweep_best_ipf VALUE LOG — check a stated SWEEP_BEST_IPF against a live
-# derivation rather than trusting it (#33, ruled 2026-08-18).
+# derivation rather than trusting it (#107, ruled 2026-08-18).
 #
 # The constant states "the best insns/FMA any emittable, zero-spill shape reaches",
 # and tools/shapegen re-derives exactly that from a 140-shape audit in ~7s. It was
@@ -251,15 +251,15 @@ reconcile_sweep_best_ipf() {
   local stated="$1" log="$2" got n shape
   if ! GOEXPERIMENT=simd go run ./tools/shapegen -frontier >"$log" 2>&1; then
     sed 's/^/        /' "$log" | tail -10
-    fail "shapegen -frontier stated no frontier, so SWEEP_BEST_IPF=$stated is unreconciled (#33)"
+    fail "shapegen -frontier stated no frontier, so SWEEP_BEST_IPF=$stated is unreconciled (#107)"
     return
   fi
   read -r got n shape <"$log"
   if [[ -z "$got" || -z "$shape" ]] || ! awk -v a="$got" 'BEGIN { exit !(a > 0) }'; then
     sed 's/^/        /' "$log" | tail -5
-    fail "shapegen -frontier printed no usable figure ($(wc -l <"$log" | tr -d ' ') lines), so SWEEP_BEST_IPF=$stated is unreconciled (#33)"
+    fail "shapegen -frontier printed no usable figure ($(wc -l <"$log" | tr -d ' ') lines), so SWEEP_BEST_IPF=$stated is unreconciled (#107)"
   elif ! awk -v a="$got" -v b="$stated" 'BEGIN { exit !(sprintf("%.3f", a) == sprintf("%.3f", b)) }'; then
-    fail "SWEEP_BEST_IPF=$stated but shapegen -frontier derives $got ($shape, best of $n emittable zero-spill shapes): criterion 5b would judge the shipped shape against a figure no shape reaches (#33)"
+    fail "SWEEP_BEST_IPF=$stated but shapegen -frontier derives $got ($shape, best of $n emittable zero-spill shapes): criterion 5b would judge the shipped shape against a figure no shape reaches (#107)"
   else
     pass "SWEEP_BEST_IPF=$stated reconciles against shapegen -frontier: $got from $shape, best of $n emittable zero-spill shapes"
   fi

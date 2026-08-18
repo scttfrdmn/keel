@@ -89,7 +89,7 @@ ISSUE_MIX_SPREAD_MIN=1.25 # ... while max/min of I_i is at least this
 # 4.625 is the shipped 2x32's own audited figure, so on that shape the guard reads
 # ratio 1.000: its live content is "has not drifted off the frontier" rather than
 # "is near it". 4x32 at 6.250 is still refused. Re-derived on every run by
-# reconcile_sweep_best_ipf rather than trusted; was 4.438 until 2026-08-18 (#33).
+# reconcile_sweep_best_ipf rather than trusted; was 4.438 until 2026-08-18 (#107).
 SWEEP_BEST_IPF=4.625
 ROOF_SHAPE_SLACK=1.05
 # The shipped shapes' gate benchmarks, at the kc P3 will use. The floor applies to
@@ -318,7 +318,7 @@ done
 
 # ------------------------- the shape threshold, re-derived rather than trusted
 echo
-echo "-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#33) --"
+echo "-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#107) --"
 reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG"
 
 # ------------------------------- the tile that cannot be allocated (evidence)

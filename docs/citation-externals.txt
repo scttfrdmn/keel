@@ -11,11 +11,11 @@
 # name went with it: this file no longer records what a citation lands on, only which
 # citations are not about DESIGN.md at all.
 #
-# FIVE OF THE NINE ARE LOAD-BEARING for resolution -- §3.3 and §4.3 name no item that
-# exists in DESIGN.md, so without the declaration they are a false red. The other four
-# (KERNEL.md's §5.2, spill-report's own §5.1-5.3) name forms that WOULD resolve against
-# DESIGN.md, so they are declarations of MEANING that the lint cannot enforce: it would
-# pass either way. #91 is that gap, open.
+# SEVEN OF THE ELEVEN ARE LOAD-BEARING for resolution as of 2026-08-18 -- §3.3, §4.3 and
+# §10.2 name no item that exists in DESIGN.md, so without the declaration they are a false
+# red. The other four (KERNEL.md's §5.2, spill-report's own §5.1-5.3) name forms that WOULD
+# resolve against DESIGN.md, so they are declarations of MEANING that the lint cannot
+# enforce: it would pass either way. #91 is that gap, open.
 #
 # AUTHORITY, kept because it is a dated fact and not a cache. On 2026-08-16 every
 # DESIGN-bound citation site was read at the meaning level -- cited ordinal against the
@@ -38,3 +38,5 @@ KERNEL.md	§5.2	1	docs/spill-report.md §5.2-5.3 — the en dash hides the §5.3
 docs/spill-report.md	§5.1	1	docs/spill-report.md's own §5.1 — self-reference
 docs/spill-report.md	§5.2	1	docs/spill-report.md's own §5.2 — self-reference
 docs/spill-report.md	§5.3	1	docs/spill-report.md's own §5.3 — self-reference
+CHANGELOG.md	§10.2	1	docs/spill-report.md §10.2 — the shipped shapes' binding terms, not DESIGN.md
+docs/spill-report.md	§10.2	1	docs/spill-report.md's own §10.2 — self-reference

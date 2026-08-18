@@ -526,7 +526,7 @@ func mostFlopsPerCycle(a, b row) bool { return a.Score.FlopsPerCycle() > b.Score
 
 // runFrontier prints the single figure gate-p2's SWEEP_BEST_IPF states, and nothing
 // else, so that constant can be reconciled against a live derivation on every gate
-// run instead of trusted (#33). It is computed across both forms rather than the
+// run instead of trusted (#107). It is computed across both forms rather than the
 // broadcast form alone: Permute contributes no zero-spill shape today, and stating
 // the frontier over the whole space is what keeps that a finding rather than an
 // assumption baked into the gate.
@@ -598,7 +598,7 @@ func summarize(rows []row) {
 				fmt.Printf("  This is what retired gate-p2's SWEEP_BEST_IPF=4.438, which docs/spill-report.md:206\n")
 				fmt.Printf("  attributed to `2x64 u=2` in this form: that shape guarantees only 4 A floats, so whatever\n")
 				fmt.Printf("  kernel produced 4.438 did not read its A panel the way the shipped kernels read theirs.\n")
-				fmt.Printf("  Ruled 2026-08-18 (#33): the threshold is now 4.625, the best figure an emittable\n")
+				fmt.Printf("  Ruled 2026-08-18 (#107): the threshold is now 4.625, the best figure an emittable\n")
 				fmt.Printf("  zero-spill shape reaches, and both gates reconcile it against -frontier rather than\n")
 				fmt.Printf("  reading it. See #107.\n")
 			}

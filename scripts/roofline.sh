@@ -78,7 +78,7 @@
 # ceiling. That is the number the amendment costs; it is not unbounded.
 #
 # 4.659 = 43.5% until 2026-08-18, when SWEEP_BEST_IPF was corrected 4.438 -> 4.625
-# (#33). The bound loosens by 1.8 points because the *cap* rose; no host's verdict
+# (#107). The bound loosens by 1.8 points because the *cap* rose; no host's verdict
 # moves, and the floor the shipped 2x32 actually faces is unchanged at 43.8%,
 # since that is computed from its own audited I_b = 4.625 and not from the cap.
 #

@@ -26,6 +26,10 @@ jobs:
       - run: go version && go env GOTOOLCHAIN
       - run: go build ./...
       - run: go vet ./...
+      # `gofmt -l` exits 0 whether or not it lists anything, so it has to be made to
+      # gate: an unformatted file sat at HEAD through green CI because nothing here
+      # ran it at all. Printed as well as gated, so the failure names the file.
+      - run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go test ./...
       # #85: every DESIGN.md rule citation must resolve against DESIGN.md's actual
       # structure. Self-test first — the lint reaches only its clean path on a

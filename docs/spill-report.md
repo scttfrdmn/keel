@@ -214,7 +214,7 @@ allocator can hold without spilling.
 (`internal/spill/cmd/spill-audit`), so this table could not be regenerated, and neither
 could `SWEEP_BEST_IPF=4.438`, which criterion 5b of gate-p2 read.
 
-**Corrected 2026-08-18 (#33).** `tools/shapegen` re-derives both. The best insns/FMA any
+**Corrected 2026-08-18 (#107).** `tools/shapegen` re-derives both. The best insns/FMA any
 *emittable* zero-spill shape reaches is **4.625** — the shipped 2×32's own figure —
 because no `Permute` shape is both emittable and zero-spill: one 16-lane A-window load
 is in bounds only when `MR·U ≥ 16` and covers every index the body needs only when
@@ -455,7 +455,7 @@ Three properties keep this from being a weaker gate, and each is a fixture in
 Bounded leniency: because the peak kernel always pins the ceiling from beneath and
 the shape guard caps the denominator, the amended floor never falls below
 `0.90 × 2.25 ÷ 4.856 = 41.7%` of measured peak (`4.659 = 43.5%` until the 2026-08-18
-correction of `SWEEP_BEST_IPF`, #33; the bound loosens because the cap rose, while the
+correction of `SWEEP_BEST_IPF`, #107; the bound loosens because the cap rose, while the
 floor janus actually faces is unchanged at 43.8%). And it **ratchets**: the floor is
 `0.90 × maxᵢ p_i ÷ I`, monotone in `I`, so when #20 lands and `I` falls to ~2.875,
 janus's required floor *rises* from today's 43.8% (`0.90 × 48.6%`) to 70.4% —
@@ -545,11 +545,22 @@ addends, so its chains are independent:
 00334  VFMADD213PS  Z8, Z4,  Z3      <-- and that
 ```
 
-So 4x32 is instruction-bound and 2x32 is **latency-bound**. On one FMA unit per cycle
-that distinction is cheap and the two mixes converged on janus at 1.023×. On two units
-it is not: the gate measured the ceiling mixes diverging **1.836×** (`[1.836x, 1.836x]`,
-zero-width, wholly over the 1.10 bar), so the classifier calls the host `fma-bound` and
-applies the flat 55%.
+So 4x32's chains are independent and 2x32's are not. **That does not make 2x32
+latency-bound, as this line first said** — corrected 2026-08-18, and the correction went
+upstream too, because the wrong label had been published on golang/go#80829. Same run:
+4x32 reads 79.35 GFLOP/s and 2x32 **61.45**, both against the 232.3 peak, and each shape's
+insns/FMA times its rate is its instruction throughput against the peak loop with the clock
+divided out — 4x32 **94.9%**, 2x32 **54.4%**. 4x32 sits at the front end's demonstrated
+throughput. 2x32's chain floors its body at 16.00 cycles where it measures 30.24, so the
+chain is **1.89× too loose to bind** while half its instruction supply goes unused: it is
+limited by neither static term, and the only candidate the model supplies is the operand
+feed, `1/MR + 1/V` = 1.00 vectors/FMA against 4x32's 0.75. Mechanism on issue #104;
+`tools/shapegen/objective.go` refutes the same label at W=4 for the *different* reason that
+there the front end binds first, so the label was wrong on both hosts for two unrelated
+reasons. What the divergence does establish is what the classifier read: the gate measured
+the ceiling mixes diverging **1.836×** (`[1.836x, 1.836x]`, zero-width, wholly over the
+1.10 bar), so the host is `fma-bound` and faces the flat 55%. On one FMA unit per cycle the
+same mixes converged on janus at 1.023×.
 
 **It is right to.** Not because SPR is slow — §9's property 1 — but because neither
 available ceiling mix can *demonstrate* a retirement ceiling here: one of the two is
@@ -564,8 +575,9 @@ At the peak loop's own audited retirement rate (2.25 insns per FMA at 232.3 GFLO
 55% of peak needs **≤ 4.09 insns/FMA**. §4's sweep audited 115 shapes and its best
 zero-spill result in either accumulate form is 4.438 (`Permute` 2x64 — corrected
 2026-08-18: not emittable, §4, so the frontier is 4.625 and this holds by more) and 4.625
-(broadcast 2x32). **No shape in the sweep clears 4.09**, and the two that come closest
-are the latency-bound ones. Stripping every filed overhead from 4x32's 50 instructions,
+(broadcast 2x32). **No shape in the sweep clears 4.09**, and the two that come closest are
+four-accumulator shapes whose chains are serial — which §10.2 says does not make them
+latency-bound. Stripping every filed overhead from 4x32's 50 instructions,
 in the order the causes are filed:
 
 | strip | insns | insns/FMA | ceiling |

@@ -219,7 +219,7 @@ main() {
   #    +-1e-3 rather than at the exact tie, because insns/FMA is a ratio of small
   #    integers -- 16 or 32 FMAs per body -- so realizable values are quantized to
   #    1/32 = 0.03125 and no measurement can land inside 1e-3 of the threshold.
-  #    Was 4.438 * 1.05 = 4.6599 until 2026-08-18 (#33). The fixtures had to move
+  #    Was 4.438 * 1.05 = 4.6599 until 2026-08-18 (#107). The fixtures had to move
   #    with the constant: at SB=4.625 the old 4.6590 arm sits 0.2 insns/FMA inside
   #    the cap, so it would still have passed -- and proved nothing about a boundary.
   check "shape 4.8560 insns/FMA (+5.0%) gets a roofline"     issue pass \

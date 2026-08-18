@@ -157,7 +157,7 @@ How those are mechanized, and every judgement call involved:
     That is the whole of the slack granted: from 55% to no less than 41.7%, and
     only to a host that has independently demonstrated a front-end ceiling.
     Read 4.659 = 43.5% until 2026-08-18, when SWEEP_BEST_IPF was corrected from
-    4.438 to 4.625 (#33). Only the cap moved: the floor an issue-bound host
+    4.438 to 4.625 (#107). Only the cap moved: the floor an issue-bound host
     actually faces is 0.90 * max_i p_i / I_b from its own audited I_b, which for
     the shipped 2x32 is unchanged at 43.8%.
 

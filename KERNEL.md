@@ -138,7 +138,7 @@ body needs only when `MR·U ≤ 16`, and that shape's `MR·U` is 4. Reported as 
 comparable rather than quietly replaced — and then ruled on: `SWEEP_BEST_IPF` became
 **4.625** on 2026-08-18, the best figure any *emittable* zero-spill shape reaches,
 which both gates now reconcile against `shapegen -frontier` on every run instead of
-reading (#33). Repairing a mis-derived constant is defect repair, not criterion
+reading (#107). Repairing a mis-derived constant is defect repair, not criterion
 amendment: the standard applied — attributable to an emittable, zero-spill shape — is
 P2's founding one and older than the number it corrects.
 
@@ -461,7 +461,7 @@ which is to say a *fatter* kernel would have cleared the ≥90%-of-roofline floo
 more comfortably than the fast one does. That is the vacuity P2's shape guard
 exists to refuse, and it does: 6.25 insns/FMA is outside `sweep_best 4.625 × slack
 1.05 = 4.856`, so 4×32 is granted no roofline at all and faces the unmodified bar.
-(`4.438 × 1.05 = 4.659` until the 2026-08-18 correction of that constant, #33; the
+(`4.438 × 1.05 = 4.659` until the 2026-08-18 correction of that constant, #107; the
 refusal is unaffected, and 2×32 moves from 4.2% inside the guard to exactly at it.)
 
 What P3 changes is which shape that number describes. Through P2 the sentinel
