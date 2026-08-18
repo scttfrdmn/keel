@@ -75,32 +75,16 @@ else
   fail "toolchain too old: $GOVER (need go1.26+ per DESIGN.md §4/P0)"
 fi
 
-if GOEXPERIMENT=simd go list simd/archsimd >/dev/null 2>&1; then
-  pass "GOEXPERIMENT=simd exposes simd/archsimd"
-else
-  fail "GOEXPERIMENT=simd does not expose simd/archsimd"
-fi
+if GOEXPERIMENT=simd go list simd/archsimd >/dev/null 2>&1; then pass "GOEXPERIMENT=simd exposes simd/archsimd"; else fail "GOEXPERIMENT=simd does not expose simd/archsimd"; fi
 
 # ------------------------------------------------------------------- builds
 echo
 echo "-- builds --"
-if GOEXPERIMENT=simd go build ./... 2>&1; then
-  pass "make build (GOEXPERIMENT=simd)"
-else
-  fail "make build (GOEXPERIMENT=simd)"
-fi
+if GOEXPERIMENT=simd go build ./... 2>&1; then pass "make build (GOEXPERIMENT=simd)"; else fail "make build (GOEXPERIMENT=simd)"; fi
 # The scalar path must always build on a stock toolchain (DESIGN.md §4/P5,
 # held from P0 so it can never silently rot).
-if go build ./... 2>&1; then
-  pass "make stock (scalar path, no experiment)"
-else
-  fail "make stock (scalar path, no experiment)"
-fi
-if GOEXPERIMENT=simd go vet ./... 2>&1; then
-  pass "go vet (GOEXPERIMENT=simd)"
-else
-  fail "go vet (GOEXPERIMENT=simd)"
-fi
+if go build ./... 2>&1; then pass "make stock (scalar path, no experiment)"; else fail "make stock (scalar path, no experiment)"; fi
+if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
 
 # ------------------------------------------------- shim differential tests
 echo
@@ -211,12 +195,9 @@ require_disk
 if [[ -z "$HOSTS" ]]; then
   info "no remote targets configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)"
 else
-  if remote_build_test ./internal/vec/ "$TESTBIN" >"$TESTLOG" 2>&1; then
-    pass "cross-compiled linux/amd64 test binary (static, GOAMD64 default)"
-  else
-    fail "cross-compile of linux/amd64 test binary"
-    sed 's/^/        /' "$TESTLOG" | tail -20
-  fi
+  remote_build_test_or_fail ./internal/vec/ "$TESTBIN" "$TESTLOG" \
+    "cross-compiled linux/amd64 test binary (static, GOAMD64 default)" \
+    "cross-compile of linux/amd64 test binary"
   # Count configured vs. actually-scored targets and compare at the end. A
   # target that disappears mid-loop must not pass unnoticed — the first
   # version of this loop lost every host after the first (ssh drained the
