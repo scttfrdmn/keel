@@ -20,6 +20,11 @@ While the major version is 0, minor versions may contain breaking changes.
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
 ### Changed
+- **`DESIGN.md` §5 gains rule 13: two cost terms are comparable only at their rates**, appended so no ordinal moved
+  (#37). A count is not a time, so ordering two terms by their counts predicts a direction only the rates can supply —
+  rule 7's flop-share-is-not-a-time-share one level up. Clause (b) is Scott's: a constant whose optimum depends on
+  another term's rate is tuned jointly with that term, **once**. `MB` therefore stays 64 and the interim 17–33% is
+  priced on #37. Incident in `docs/rulings.md`, rule 13.
 - **The `MB` sweep refutes the prediction that motivated it: smaller is faster today** (#37). At the shipped `MB`=64,
   n=2048, 1 thread, the diagonal solves take 53.2% of the time for 3.17% of the work (2.1 GFLOP/s, 1.3% of peak), and
   `MB`=32 is 17–33% faster on all three hosts. Both predicted *directions* held; the conclusion did not, because the

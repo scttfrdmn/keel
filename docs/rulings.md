@@ -194,3 +194,30 @@ have been true and useless; reporting "5/5" would have been a lie. The test says
 it is and why it is unkillable, so a later reader does not "fix" the test to catch it. The
 boundary is off-by-one-tolerant for values and not for cost, which is a fact about the diagonal
 rather than a gap in the check.
+
+## Rule 13 — two cost terms are comparable only at their rates
+
+*Ruled 2026-08-19. Issue #37, comments 5335770326 (the claim) and 5336454295 (the refutation);
+commit `ce66188`.*
+
+`Trsm`'s `MB` was argued down from two exactly-counted terms moving in opposite directions —
+diagonal-solve flops `n·m·(MB+1)` rising, rank-update repack `~n·m²/(2·MB)` elements falling —
+and the conclusion published on #37 was "all three terms say `MB = 64` is too small." The sweep
+found the opposite direction on all three hosts: `MB = 32` is 17–33% faster and full time rises
+monotonically with `MB`. **Both predicted directions were right and the ranking was wrong.**
+From `MB` = 64 to 512 the repack argument saves 0.0745 s while the solve costs 1.094 s more,
+because the solve runs at 1.3% of the host's kernel peak and the rank update near it. A flop
+count and an element count are not commensurable, and neither is a time.
+
+The failure mode is specific and worth naming: the countable term gets the weight *because* it
+is countable. There was a closed form for the repack and none for the solve's rate, so the
+argument organised itself around the half that could be written down — and then published a
+direction, the one thing an un-rated comparison cannot supply. One arm of a sweep settled what
+three paragraphs of arithmetic got backwards.
+
+Clause (b) is Scott's ruling of the same day, and it is what saved the shipped default from the
+correction: the sweep also shows `MB`'s optimum is a *function* of the solve rate — 8× faster
+moves the best point to 128, 16× to 256 — so retuning to 32 now would tune the parameter for
+the slow-solve world and be re-reversed after #37, putting two tuning flips in the published
+history of one routine, each needing its own judged evidence. `MB` stays 64, and the interim
+17–33% is priced and recorded on #37 as a decision rather than left to read as an oversight.
