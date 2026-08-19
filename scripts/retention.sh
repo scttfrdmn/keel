@@ -74,27 +74,7 @@ warn() { printf '  \033[33mWARN\033[0m  %s\n' "$1"; }
 # pct FRACTION — a fraction as a percentage, or a dash when it was not measured.
 pct() { [[ -n "$1" ]] && awk -v r="$1" 'BEGIN{printf "%.1f%%", r*100}' || printf -- '-'; }
 
-# rows_per_bench LOG — how many sample rows this run actually produced per
-# benchmark, counted out of the log.
-#
-# WHY THIS EXISTS. The methodology line used to print $KEEL_BENCH_COUNT, i.e. the
-# variable the run intended to use — and issue #49 was that variable being
-# silently overwritten: scripts/bench.sh is sourced first and defaults it to 10,
-# so this script's own `${KEEL_BENCH_COUNT:-5}` could never see either the
-# caller's setting or its own documented default, and the header printed a
-# methodology that was not the one that ran. A parameter read back out of the
-# measurement cannot be shadowed by whatever set it, so the header now prints
-# both: what was asked for, and what the log says arrived.
-rows_per_bench() {
-  awk '
-    /^Benchmark/ { n = $1; sub(/-[0-9]+$/, "", n); c[n]++ }
-    END {
-      for (k in c) { if (min == "" || c[k] < min) min = c[k]; if (c[k] > max) max = c[k]; nb++ }
-      if (nb == 0) { printf "no benchmark rows at all"; exit }
-      if (min == max) printf "%d rows x %d benchmarks", min, nb
-      else printf "%d-%d rows x %d benchmarks — uneven, so some did not finish", min, max, nb
-    }' "$1"
-}
+# rows_per_bench moved to scripts/bench.sh, beside the KEEL_BENCH_COUNT it reads back.
 
 # decompose_host HOST CSV LOG — one host's table.
 #

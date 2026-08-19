@@ -20,6 +20,11 @@ While the major version is 0, minor versions may contain breaking changes.
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
 ### Changed
+- **The `MB` sweep refutes the prediction that motivated it: smaller is faster today** (#37). At the shipped `MB`=64,
+  n=2048, 1 thread, the diagonal solves take 53.2% of the time for 3.17% of the work (2.1 GFLOP/s, 1.3% of peak), and
+  `MB`=32 is 17–33% faster on all three hosts. Both predicted *directions* held; the conclusion did not, because the
+  countable term was weighted over the un-rate-checked one. `MB` must not be retuned apart from #37: at a 8× faster
+  solve the best point moves to `MB`=128. Right side costs 3.3–5.9× the left at identical flops. Reported-class.
 - **`DESIGN.md` §5 gains rules 10, 11 and 12**, appended so no ordinal moved (#36). Rule 10: cross-site agreement
   certifies propagation, never truth. Rule 11: an instrument's output overrules its author's claims about it. Rule 12: a
   coverage claim enumerates what it cannot see. 11 and 12 were fused for one commit; split so neither can be miscited.
@@ -70,6 +75,9 @@ While the major version is 0, minor versions may contain breaking changes.
   published 1.6× series stays comparable.
 
 ### Fixed
+- **`rows_per_bench` moved from `retention.sh` to `bench.sh`, beside the `KEEL_BENCH_COUNT` it reads back** (#49). A
+  driver that sourced `bench.sh` for the count then could not count its own log — #49's shape a second time, in a
+  caller. All nine `bench.sh` consumers now get the read-back, one line lighter in `scripts/`.
 - **gate-p4's criterion 7 aggregate was the one fleet aggregate that never got #90's coverage clause.**
   `SYRK_MEASURED` is counted after three `continue` paths, so a host that produced no bounded ratio is absent from
   every counter and the fail and indeterminate lines read fleet-wide over a proper subset — *"1 of 3 gate hosts are

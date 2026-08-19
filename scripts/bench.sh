@@ -42,6 +42,25 @@ KEEL_BENCH_TIME="${KEEL_BENCH_TIME:-1s}"
 # say so rather than be silently aggregated over whatever survived.
 KEEL_BENCH_MIN_ROWS="${KEEL_BENCH_MIN_ROWS:-$KEEL_BENCH_COUNT}"
 
+# rows_per_bench LOG — sample rows this run actually produced per benchmark,
+# counted out of the log. A header prints both this and the requested -count,
+# because #49 was a caller's `${KEEL_BENCH_COUNT:-5}` silently losing to the
+# default declared above it, and a parameter read back out of the measurement
+# cannot be shadowed by whatever set it. It lives beside that declaration, not in
+# retention.sh where it was written: a caller that sources this file for the
+# count and then cannot count its log is #49 again, which is what build/trsm-mb.sh
+# did on all six arms of the Trsm MB sweep.
+rows_per_bench() {
+  awk '
+    /^Benchmark/ { n = $1; sub(/-[0-9]+$/, "", n); c[n]++ }
+    END {
+      for (k in c) { if (min == "" || c[k] < min) min = c[k]; if (c[k] > max) max = c[k]; nb++ }
+      if (nb == 0) { printf "no benchmark rows at all"; exit }
+      if (min == max) printf "%d rows x %d benchmarks", min, nb
+      else printf "%d-%d rows x %d benchmarks — uneven, so some did not finish", min, max, nb
+    }' "$1"
+}
+
 # bench_flags — the -test.* flags for a gate benchmark run.
 bench_flags() {
   printf '%s\n' -test.run=NONE "-test.count=$KEEL_BENCH_COUNT" "-test.benchtime=$KEEL_BENCH_TIME"

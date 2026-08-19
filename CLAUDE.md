@@ -37,6 +37,12 @@ reason your shell should ever die."
   prevent (DESIGN.md §5.6).
 - **The tree stays frozen for a run's whole life**, detached or not — including
   across a chain of per-host invocations, each of which rebuilds its own arms.
+  This covers the *running script itself*, and that is a second hazard, not the
+  same one: bash reads a script incrementally, so editing one mid-execution
+  shifts byte offsets under the interpreter and it resumes at the wrong place.
+  Result contamination is about what the run measures; this is about whether the
+  run is still the program you launched. Don't touch what the machine is still
+  reading — including a fix you have already justified.
 
 ## The prime directive on the simd API
 Never write or edit anything in `internal/vec` from memory. First run
