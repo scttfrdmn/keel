@@ -2038,6 +2038,22 @@ The general lesson, and it is the same one as T20: a formatted number is a
 statement to a human, and a script that parses it inherits the formatting's
 precision, not the underlying quantity's.
 
+**Correction (2026-08-19), seven days later.** "That direction is conservative for
+a floor — a threshold cleared by the median alone is cleared — so no shipped
+criterion is wrong because of this" has the sign backwards. With the CI read as 0
+the check becomes *median ≥ floor*, which is **easier** to pass than *median net of
+CI ≥ floor*: lenient, not conservative. The gate has since produced the verdict
+that paragraph said could not exist — janus Strsm flipped FAIL → PASS on a
+**0.014%** move in the point estimate (7.0098 → 7.0101), because one arm's reported
+CI crossed 0.5% from `1%` to `0%` and with both arms at `0%` the net-of-CI bound
+*is* the raw ratio. One rounding step is worth 0.1386 on a 7.0 ratio; the margins
+being adjudicated are 0.011 and 0.081. Nothing in the tree changed here yet: the
+fix to `bench_ratio_lo`, and the two `zero-width` justifications resting on the
+same misreading, are [#110](https://github.com/scttfrdmn/keel/issues/110), open on
+a decision. A correction rather than a rewrite because the observation and repro
+above are still exactly right — what failed was the consequence reasoned from them,
+published without being run against the instrument it described (§5 rule 11).
+
 <a name="t22" id="t22"></a>
 ## T22 — a commit that changes no instruction bytes in a function can make it 45% slower, and function-entry alignment mod 64 is the discriminator
 

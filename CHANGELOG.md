@@ -29,9 +29,25 @@ While the major version is 0, minor versions may contain breaking changes.
   and named 3 shortfalls where the gate fails 5, because the gate judges net of CI; checking that the floor *constants*
   matched `gate-p5.sh` did not catch it, since the constants agreed and the predicate did not (DESIGN.md §5 rule 11).
   Net `scripts/` lines are ruling-mandated with the offsetting lift owed; for the ledger, this instrument retires a
-  hand-maintained duplicate. Apparatus ratio after: shell 11682 / library 8280 / 1.41×.
+  hand-maintained duplicate. Apparatus ratio **after**, read from `gate-docs.sh` with this file tracked: shell 11939 /
+  library 8280 / **1.44×**. The 1.41× first written here was the ratio *before* — `git ls-files` does not count an
+  untracked emitter, so the honest-accounting sentence beside it was measured on a tree that did not yet contain the
+  thing being accounted for. Naming its own cost by 257 lines too few is the defect this entry claims to avoid.
 
 ### Changed
+- **T21's consequence is corrected: an integer-percent CI is lenient for a floor, not conservative** (#110). It read
+  *"no shipped criterion is wrong because of this"*; with the CI read as 0 the check becomes median ≥ floor, which is
+  **easier** to pass than median net of CI ≥ floor. The gate has since produced the verdict that sentence excluded —
+  `janus` Strsm flipped FAIL → PASS between two runs on a **0.014%** move in the point estimate (7.0098 → 7.0101),
+  because one arm's reported CI crossed 0.5% from `1%` to `0%` and with both arms at `0%` `bench_ratio_lo` returns the
+  raw ratio, which is the degeneracy DESIGN.md's P4 clause exists to prevent. All 48 CI readings in the two logs are
+  integer percents; `benchmath.Summary` holds float64 bounds and `benchtab.ToCSV` reuses the `%.0f%%` *display* string
+  for the machine-readable column. One rounding step is worth 0.1386 on a 7.0 ratio against margins of 0.011 and 0.081.
+  Left as a dated correction, not a rewrite: T21's observation and repro are right, its reasoning was published without
+  being run against the instrument it described (§5 rule 11). §4's new escalation bullet no longer claims a `0%` reading
+  was never undecidable — it is *more* likely undecidable, since the band can straddle the bar. Unfixed pending a
+  decision: `bench_ratio_lo`, and the `zero-width`-interval justifications at `DESIGN.md:116` and `gate-p3.sh:30`, which
+  are properties of the formatter and not of `janus`.
 - **README's 24 published rates are re-measured at `335ea9d`, and their caption is now generated with them** (#6).
   Ruled 2026-08-19: criterion 9 had already ordered the re-measure, because the three stale `Ssymm` rows disagreed with
   the shipped tree by 5.06–9.43% *on the gate's own denominator* — `(a−b)/b` with **this run's** value as base, not the
