@@ -245,11 +245,11 @@ cmd_wire() {
     ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$host" true 2>/dev/null ||
       die "$host does not answer through the alias this script just wrote (the launcher says sshd is up, so suspect the config block, not the boot)"
     # sshd answers BEFORE cloud-init finishes -- so a provisioner starting here races the
-    # boot's own apt and loses the lock. Measured on a judged on-demand run: "Could not
-    # get lock /var/lib/apt/lists/lock ... held by process 3085 (apt-get)", ten minutes
-    # into an $8.568/hour instance, leaving a host with no OpenBLAS and therefore no
-    # mission ratio. A sleep would be a guess here, and the guess that reads as fine is
-    # the expensive one; `status --wait` is the host saying its own boot is done.
+    # boot's own apt and loses the lock. Measured twice, most recently as "Unable to lock
+    # directory /var/lib/apt/lists/" on a $17.99/hour instance. This wait is necessary and
+    # NOT sufficient, which is the second measurement's news: `status --wait` returned
+    # done at 06:42 while cloud-init kept running apt to 06:48:24. The apt gate therefore
+    # lives in provision-openblas.sh, on the lock itself, where whoever holds it is moot.
     if ssh -n -o BatchMode=yes "$host" 'command -v cloud-init >/dev/null 2>&1'; then
       if ssh -n -o BatchMode=yes "$host" 'cloud-init status --wait >/dev/null 2>&1'; then
         say "$host cloud-init settled"
@@ -259,9 +259,9 @@ cmd_wire() {
     else
       say "$host has no cloud-init, so there is no boot-time apt to wait for"
     fi
-    # --command's tmux install runs after spored setup, which is after this wait, so it
-    # is REPORTED and not required: `tmux=no` in a provenance line is the honest reading
-    # and #62's supervisor says so loudly on its own.
+    # --command's tmux install runs UNDER cloud-init -- it is cloud-init's own last apt
+    # line, 06:48:24 on keel-gnr -- so it is REPORTED and not required: `tmux=no` in a
+    # provenance line is the honest reading and #62's supervisor says so on its own.
     ssh -n -o BatchMode=yes "$host" 'command -v tmux >/dev/null 2>&1' &&
       say "$host has tmux" || say "$host has NO tmux yet: the supervisor (#62) needs it, so re-check before a judged run"
   done <<<"$rows"

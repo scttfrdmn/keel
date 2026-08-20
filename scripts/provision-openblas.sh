@@ -59,6 +59,17 @@ say()  { printf '\033[1m==\033[0m %s\n' "$1"; }
 note() { printf '   %s\n' "$1"; }
 bad()  { printf '   \033[31m!!\033[0m %s\n' "$1"; }
 
+# APT_WAIT — prefixed to every apt command below. The launcher's `cloud-init status
+# --wait` is necessary and not sufficient: it returned done while cloud-init ran apt for
+# six more minutes and provisioning died on the lists lock (CHANGELOG has the timestamps
+# and the two rejected fixes, `DPkg::Lock::Timeout` and `flock`, with why each is inert).
+# Gate on the LOCK, not on cloud-init — three guesses at the holder were each refuted by
+# the journal, and this is right without knowing. 300s then EX_TEMPFAIL, so a host that
+# cannot start apt fails by name instead of dying inside it.
+APT_WAIT='w=0; while sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+  w=$((w+5)); [ "$w" -le 300 ] || { echo "apt lists lock still held after ${w}s" >&2; exit 75; }
+  sleep 5; done;'
+
 # confirm PROMPT — ask before changing somebody's machine, unless --yes.
 #
 # Reads from /dev/tty, not from stdin, and the reason is issue #28: the host loop at
@@ -169,7 +180,7 @@ go_new_enough() {
 install_cc() {
   local host="$1" distro="$2" cmd
   case "$distro" in
-    ubuntu|debian|pop|linuxmint)        cmd="sudo apt-get update && sudo apt-get install -y build-essential" ;;
+    ubuntu|debian|pop|linuxmint)        cmd="$APT_WAIT sudo apt-get update && sudo apt-get install -y build-essential" ;;
     rhel|centos|rocky|almalinux|fedora) cmd="sudo dnf install -y gcc glibc-devel" ;;
     *) bad "unrecognized distro id '$distro'; install a C compiler by hand (cgo needs one)"; return 1 ;;
   esac
@@ -182,7 +193,7 @@ install_cc() {
 install_openblas() {
   local host="$1" distro="$2" cmd
   case "$distro" in
-    ubuntu|debian|pop|linuxmint) cmd="sudo apt-get update && sudo apt-get install -y libopenblas-dev" ;;
+    ubuntu|debian|pop|linuxmint) cmd="$APT_WAIT sudo apt-get update && sudo apt-get install -y libopenblas-dev" ;;
     rhel|centos|rocky|almalinux) cmd="sudo dnf install -y openblas-devel" ;;
     fedora)                      cmd="sudo dnf install -y openblas-devel" ;;
     *) bad "unrecognized distro id '$distro'; install an OpenBLAS development package by hand"; return 1 ;;

@@ -211,6 +211,18 @@ While the major version is 0, minor versions may contain breaking changes.
   1.21× apart against Zen 4's 3.20×.
 
 ### Fixed
+- **Provisioning waits on apt's lock, because the launcher's readiness signal is necessary and not sufficient.**
+  `keel-gnr` (c8i.96xlarge) died on `E: Unable to lock directory /var/lib/apt/lists/` with no OpenBLAS, on a
+  $17.99/hour host, after `cmd_wire` had reported `cloud-init settled`: `cloud-init status --wait` returned done at
+  06:42 and cloud-init (pid 5253) went on running apt until 06:48:24, its last line being spawn's `--command` tmux
+  install — so `--command` runs *under* cloud-init, not after it, and the launcher's comment saying otherwise was
+  wrong. The gate is on the **lock**, not on cloud-init: three guesses at the holder (esm-cache, unattended-upgrades,
+  apt-daily) were each refuted by the journal, and waiting on the lock is right without knowing which. Two fixes were
+  measured and rejected first — `DPkg::Lock::Timeout` covers the dpkg frontend lock, not the lists directory, and
+  apt-get still fails in under a second with `-o DPkg::Lock::Timeout=300` set; a `flock` reproduction of a held lock
+  held nothing at all, because `flock(2)` and apt's `fcntl` record locks are independent lock families. Both arms of
+  the new gate were driven on purpose on a live host: it waited 21s where it had failed in 1s, and returned
+  EX_TEMPFAIL against a lock held past its cap, so a host that cannot start apt fails by name instead of dying inside it.
 - **The `evidentiary` grant arm claimed a size it never checked, and only a positive control on a deliberately wrong type
   could show it.** Its preamble read *"`<type>` is a full-size instance of an approved family"*, but membership in one
   flat list — `KEEL_EVIDENTIARY_SIZES` — is the entire test `host_admission` performs; nothing there evaluates size. The
