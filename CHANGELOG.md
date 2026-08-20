@@ -8,6 +8,25 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **`BenchmarkCeiling` measures both halves of P5's per-host attainable ceiling** (ruling on #6, 2026-08-20),
+  the denominator that replaces the retired 6.0x cross-host scaling floor: `compute` runs `BenchmarkPeak`'s
+  register-only FMA kernels concurrently on 1 and 8 threads, so the clock droop with core count is *inside*
+  the reading rather than disclaimed beside it as `gate-p5`'s old `8x the single-thread peak` info line had
+  to; `stream` probes bandwidth with keel's own `Sdot` (2 reads, 4 accumulator chains) and `Saxpy` (2 reads
+  + 1 write, no chain), whose byte counts are countable rather than modelled and which are already
+  differential-tested. Working set is sized from the *measured* LLC (4x it, floored at 256 MB) because a
+  stream that fits in L3 reports L3 as memory bandwidth. Two disclosures inside the numbers: `axpy`'s figure
+  counts 12 architectural bytes/element where write-allocate makes the bus traffic up to 16, so the truth is
+  bracketed at x1.33 and both patterns are published; and the per-thread sink discipline holds without an
+  instrument, since T17 makes `-race` fatal on amd64 wherever archsimd's partial ops are reached.
+- **Allocating a stream buffer inside a benchmark arm made the arm's timing a function of which arm ran
+  first, worth 12x.** `stream/dot/threads=8` first read **15.4 GB/s against its own 1-thread arm's 24.1** — a
+  decline with thread count no memory system produces. Each arm wanted ~4 GB at the 8-thread size, so the
+  first sample paid page faults and later ones ran against the previous arm's garbage. Allocated once for the
+  process and reused, the same arm reads **196 GB/s**. Recorded because the wrong number was *plausible*: it
+  had the shape of a real bandwidth saturation finding.
+
 ### Fixed
 - **§5 rule 5's clock check was flagging coin flips as thermal events; it now judges at full precision
   against a floor its own intervals set** (ruling on #6, 2026-08-20). The test asked only `head > middle >
