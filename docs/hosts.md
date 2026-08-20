@@ -34,11 +34,31 @@ checked in.
 | AVX-512 F/CD/BW/DQ/VL | the bundle `archsimd.X86.AVX512()` gates on — all five, or the backend does not register |
 | key-based ssh from the dev host | `remote.sh` uses `BatchMode=yes`; it never prompts and never handles credentials |
 | a clock established stable | for gate numbers, not correctness. DESIGN.md §5 rule 5 (as amended 2026-08-16) requires it of every measuring host, by whichever instrument the host has: the `performance` governor where `cpufreq` is readable, else `BenchmarkPeak` sampled at head/middle/tail. Both branches are live — `clock_gate`/`clock_head`/`clock_post`, and the guest branch is what the AWS fleet runs on, where `assert_governor` reads `absent` |
-| an admission class | `evidentiary` (whole-socket, judged) or `correctness` (partial-size or unproven, reported); see the class table below. Unreadable is `unmeasured`, not `correctness`. Read by `host_admission` from the provenance line's `instance=`, `virt=` and `governor=` fields — an approved type in `KEEL_EVIDENTIARY_SIZES`, *or* bare metal (`virt=metal`, no `hypervisor` CPU flag) with `governor=performance` (`remote.sh`, #106); wired into gate-p2's criterion 5b, and **not yet** into gate-p3's or gate-p5's judged perf criteria |
+| an admission class | `evidentiary` (whole-socket, judged) or `correctness` (partial-size or unproven, reported); see the class table below. Unreadable is `unmeasured`, not `correctness`. Read by `host_admission` from the provenance line's `instance=`, `virt=`, `spawn=` and `governor=` fields — an approved type in `KEEL_EVIDENTIARY_SIZES` **that the launcher independently confirms, on-demand**, *or* bare metal (`virt=metal`, no `hypervisor` CPU flag) with `governor=performance` (`remote.sh`, #106, and the 2026-08-19 ruling); wired into every judged perf criterion: gate-p2's 5b, gate-p3's two, and gate-p5's scaling criterion. **Deliberately not** gate-p4's criterion 7 — see the scope note below |
+
+**And two on the driver, which is a different list because they are not properties of the
+machine being measured.** `spawn` on `$PATH` with `AWS_PROFILE=aws` credentials, and `jq` —
+the only two things `spawn_probe` needs to produce the `spawn=` field admission now requires.
+Absence of either is **not** an error: the field reads `?`, which withholds admission and
+prints the reason, so a driver without them can still run every correctness gate and every
+lab-fleet judged gate (bare metal takes the other route to the class, and never consults the
+launcher). What it cannot do is judge a cloud host. `jq` is a soft dependency and the only
+one in this repo; nothing else here parses JSON.
 
 ## Current targets
 
 All three were verified on 2026-08-10 and all three run all three backends.
+
+**Two tiers as of 2026-08-19, and the three hosts below are the dev tier.** The *judged*
+tier — the one a published row comes from — is the AWS fleet: full-size on-demand instances
+launched by `truffle`/`spawn`, because they supply **reproducibility by strangers**. Anyone
+can rent a `c7a.48xlarge`; nobody can rent this lab. The lab keeps two things the cloud
+cannot supply, which is why it is reclassified and not retired: real levers (boost-off
+iso-frequency arms, governor control — #105) and **unrentable silicon**. antares in
+particular survives as a **marked consumer-silicon row**, since consumer and mobile Zen 5 is
+exactly what keel's Go audience runs. Lab rows stay publishable *labelled as what they are*
+and never mixed into the citable set. These hosts still reach the `evidentiary` class, by
+the bare-metal arm; the tier split is about which rows get cited, not about which gates run.
 
 ### Private cache sizes (read from sysfs 2026-08-12, not looked up)
 
@@ -66,7 +86,8 @@ come from the host.
 
 ### Zen 4 — AMD Ryzen 9 7950X3D, 16C/32T, Linux 6.17, `performance`
 
-The primary target. DESIGN.md §4/P3 sizes its initial blocking parameters for
+The primary *development* target (the judged tier is the cloud fleet — see above).
+DESIGN.md §4/P3 sizes its initial blocking parameters for
 "a Zen4/Ice Lake-class target", so this is the machine those numbers are aimed
 at. AVX-512 feature set is essentially complete for Zen 4 (F, DQ, IFMA, CD,
 BW, VL, VBMI, VBMI2, VNNI, BITALG, VPOPCNTDQ, BF16, plus GFNI/VAES/VPCLMULQDQ).
@@ -226,8 +247,40 @@ Two classes, and the distinction is what each one is allowed to produce:
 
 | class | machines | produces | admission requires |
 |---|---|---|---|
-| **evidentiary** | a **full-size (whole-socket)** instance of an approved family, **or** a bare-metal host | judged perf verdicts; published rows; the stage-3 curves | whole-socket ownership **and** a passing preamble: clock stability established by §5 rule 5's instrument for the host it is. Two routes to the former, and the class names each — an approved instance type in the provenance block, or `virt=metal` with `governor=performance` |
+| **evidentiary** | a **full-size (whole-socket)** instance of an approved family **that `truffle`/`spawn` launched on-demand**, **or** a bare-metal host | judged perf verdicts; published rows; the stage-3 curves | whole-socket ownership **and** a passing preamble: clock stability established by §5 rule 5's instrument for the host it is. Two routes to the former, and the class names each — an approved instance type the launcher independently confirms, or `virt=metal` with `governor=performance` |
 | **correctness** | any partial-size guest, any µarch; any host whose socket ownership is unproven | differential and correctness coverage; perf numbers **reported, never judged** | nothing beyond reachability |
+
+**Amended 2026-08-19 (Scott's judged-tier directive): the launcher is a second witness, and
+an approved type alone no longer admits.** Every other field in a provenance line is *the
+host describing itself*, which is the circularity the rejected `assume_fleet` design was
+refused for — every witness of a host's identity came from the host. `instance=` narrows it
+(169.254.169.254 is the control plane answering, not the guest) but it is still a reading
+taken inside the guest over a link the guest could serve itself. `spawn=` is read on the
+**driver's** side of the wire, from the EC2 control plane under the driver's own
+credentials, so it is the one statement about a host's identity the host cannot author.
+Admission now needs both, and adds one conjunct the launcher alone can supply:
+
+| `spawn=` | class | why |
+|---|---|---|
+| `id:type:ondemand`, type agreeing with `instance=` | **evidentiary** | two independent witnesses, and the market a judged run requires |
+| `id:type:spot` | correctness | a reclaim mid-sweep converts a judged reading into a truncated one. **Interruption is the whole reason and cost is not** — spot is the exploration tier |
+| type **disagreeing** with `instance=` | **`unknown` ⇒ unmeasured** | the identity is in dispute. Grading it `correctness` would report "not full size" when what is broken is the instrument |
+| `none` | correctness | the launcher has no running record under this name, so the size rests on the guest's own testimony |
+| `ambiguous` | correctness | two records answer to this name; a join that picked one would attribute a reading to a machine that may not have produced it |
+| `?` | correctness | the launcher could not be consulted (no `spawn`, no `jq`, or no credentials) — unread is unmet |
+| absent | correctness | a provenance line from before the launcher was a witness. Told apart from `?` because the remedies differ: upgrade the driver, versus install `jq` |
+
+The market conjunct is a *criterion that became readable*, not a new rule. On-demand was
+already required, but only **declared** — by `aws-fleet.sh`'s `KEEL_FLEET_MARKET`, a
+variable the launcher set and no gate read back. `remote.sh`'s own test for an assumption
+is "is there any mechanism by which this gate could read the precondition back? If yes, it
+is a criterion this gate is missing", and `spawn list`'s `spot` boolean is that mechanism.
+
+The join key is the **ssh alias, matched against `spawn`'s `name` exactly**, which is a
+constraint on how the fleet is launched rather than a heuristic. Matching on a public
+address instead would survive a rename and would also, on a reused address, join a reading
+to a machine that did not produce it: a missed join reads `none` and withholds admission, a
+wrong join would grant it.
 
 **Amended 2026-08-19 (ruling on #106): bare metal reaches the evidentiary class by a named
 arm, and the default stays restrictive.** As first written, `host_admission` read the class
@@ -264,6 +317,20 @@ written for a machine keel owned, and called the result a P2 STOP. Class is chec
 before the number is trusted, not after it surprises someone. And the check fails closed:
 an **unreadable** class is `unmeasured`, never "not judged" — otherwise the mechanism that
 excuses a partial-size reading is also a mechanism for laundering a red.
+
+**Which judged criteria consult admission, and the one that deliberately does not (§5 rule
+12).** Wired: gate-p2's criterion 5b, gate-p3's two percent-of-peak criteria, and gate-p5's
+scaling criterion. **Not** gate-p4's criterion 7, `SYRK_FLOOR=0.85` — and the omission is
+reasoned, not pending. Every wired criterion divides a rate by something *outside* the
+co-tenancy: a theoretical or measured peak, or a single-thread rate on fewer cores than the
+numerator used. A noisy neighbour lands in the numerator alone, so the ratio is a claim
+about silicon the run may not own, and that is what the class governs. Criterion 7 divides
+Ssyrk by Sgemm **at the same thread count on the same host in the same run**, so co-tenancy
+sits in both terms and largely divides out; what survives is a statement about two kernels'
+relative cost, which is as true on a shared 4xlarge as on a whole socket. Wiring admission
+into it would withhold a verdict the class has no bearing on. *This is a judgement, and it
+is the one place a reader should look first if a `c7i.4xlarge` ever produces a criterion-7
+result that a full-size host contradicts.*
 
 What the evidentiary hosts are *for*: the ≥6× floor was written when the largest gate
 host had 16 cores. 6× at 8 threads on a client part with client memory channels says

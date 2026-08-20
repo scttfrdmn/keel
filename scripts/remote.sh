@@ -521,9 +521,72 @@ KEEL_GOV_PROBE_SH='
   fi
 '
 
+# spawn_probe HOST — the LAUNCHER's record of HOST, as the provenance line's `spawn=` field
+# (Scott's directive, 2026-08-19). Four tokens, apart for the reason `virt=` has three:
+#
+#   id:type:market  a single running launcher record, and what it says
+#   none            the launcher answered and has no running record under this name
+#   ambiguous       more than one running record answers to this name, so no join is safe
+#   ?               there was no way to ask (no spawn, no jq, no credentials, or it failed)
+#
+# WHY a launcher-side field is a witness in kind and not one more probe, why `?` must never
+# read as `none`, and what each token buys: docs/hosts.md, the 2026-08-19 amendment. Not
+# repeated here — the argument was in both places for one commit, which is two copies of a
+# claim that can drift apart, and the doc is where a reader looking for the class table
+# already is.
+#
+# THE JOIN KEY IS THE SSH ALIAS, matched against spawn's `name` EXACTLY, which is a
+# constraint on how the fleet is launched and not a heuristic: aws-fleet.sh passes `--name`
+# equal to the alias it writes into ~/.ssh/config. A missed join reads `none` and withholds
+# admission; a join on something rename-proof like a public address would, on a reused
+# address, grant admission to a reading from another machine.
+#
+# The table is fetched once and every host extracted from it BY NAME. That is not the hazard
+# GOV_PROV names — a scalar global carrying the previous host's reading — because nothing
+# here is keyed by position; it would become that hazard the moment an extraction fell back
+# to "the first record", so it does not. The cache saves nothing in practice: every caller
+# invokes remote_probe inside `$(...)`, which forks, so each host pays one all-region sweep
+# (~9s measured) and gate-p5 pays two. Stated rather than fixed — a file-backed cache buys
+# back under a minute of a twenty-five-minute run by holding a launcher reading across a
+# boundary the shell currently guarantees it cannot cross.
+KEEL_SPAWN="${KEEL_SPAWN:-spawn}"
+KEEL_SPAWN_PROFILE="${KEEL_SPAWN_PROFILE:-aws}"
+_KEEL_SPAWN_JSON=""
+_KEEL_SPAWN_ASKED=0
+spawn_probe() {
+  local host="$1" n rec
+  if [[ "$_KEEL_SPAWN_ASKED" -eq 0 ]]; then
+    _KEEL_SPAWN_ASKED=1
+    # No region filter: a host in another region must read as itself, not as `none`.
+    # The cost is one all-region sweep per process, cached here.
+    if command -v "$KEEL_SPAWN" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+      _KEEL_SPAWN_JSON="$(AWS_PROFILE="$KEEL_SPAWN_PROFILE" "$KEEL_SPAWN" list \
+        --state running --output json 2>/dev/null || true)"
+      # `[]` is an answer and stays; anything unparseable is not an answer at all.
+      jq -e 'type == "array"' >/dev/null 2>&1 <<<"$_KEEL_SPAWN_JSON" || _KEEL_SPAWN_JSON=""
+    fi
+  fi
+  if [[ -z "$_KEEL_SPAWN_JSON" ]]; then printf '?'; return 0; fi
+  n="$(jq --arg h "$host" '[.[] | select(.name == $h)] | length' <<<"$_KEEL_SPAWN_JSON" 2>/dev/null || true)"
+  case "${n:-}" in
+    0) printf 'none' ;;
+    1) rec="$(jq -r --arg h "$host" \
+         '[.[] | select(.name == $h)][0]
+          | "\(.instance_id):\(.instance_type):\(if .spot then "spot" else "ondemand" end)"' \
+         <<<"$_KEEL_SPAWN_JSON" 2>/dev/null || true)"
+       # An extraction that came back empty after the count said one is a broken
+       # instrument, not a record, and it says so rather than printing `::`.
+       if [[ -n "$rec" && "$rec" != *"null"* ]]; then printf '%s' "$rec"; else printf '?'; fi ;;
+    "") printf '?' ;;
+    *) printf 'ambiguous' ;;
+  esac
+  return 0
+}
+
 remote_probe() {
   local host="$1"
-  ssh "${KEEL_SSH_OPTS[@]}" "$host" "$KEEL_GOV_PROBE_SH"'
+  local line
+  line="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" "$KEEL_GOV_PROBE_SH"'
     cpu=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2- | sed "s/^ *//")
     ncpu=$(nproc)
     T=/sys/devices/system/cpu
@@ -561,7 +624,15 @@ remote_probe() {
     fi
     printf "%s | instance=%s | virt=%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | tmux=%s | %s | %s\n" \
       "$cpu" "$inst" "$virt" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$tmux" "$(uname -sr)" "${cache:-caches=?}"
-  ' 2>/dev/null
+  ' 2>/dev/null || true)"
+  # The launcher-side field is spliced in HERE, and only when the host answered.
+  # An EMPTY provenance line is the unreachable signal every caller keys on — it is
+  # assert_governor's one discriminator between "answered, governor unreadable" and
+  # "never answered" (#83). Appending `| spawn=?` unconditionally would make a host that
+  # never answered produce a non-empty line, and it would then be classified instead of
+  # reported silent: a verdict about identity earned by a machine that said nothing.
+  [[ -n "$line" ]] || return 0
+  printf '%s | spawn=%s\n' "$line" "$(spawn_probe "$host")"
 }
 
 # assert_governor HOST PHASE [PROV] — the §5 rule 5 performance-governor
@@ -770,15 +841,18 @@ KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge"
 ADM_CLASS=""
 ADM_INSTANCE=""
 ADM_VIRT=""
+# The launcher's token for this host, parsed from the same line as the other three.
+ADM_SPAWN=""
 # Why this class, in the words a verdict line can print. It replaces a hardcoded
 # parenthetical in adm_judgeable that said "$ADM_INSTANCE is not a full-size instance of
 # an approved family" for every correctness host — true of a 4xlarge and false of bare
 # metal under powersave, which would have been refused with a cause it did not have.
 ADM_WHY=""
 host_admission() {
-  local prov="${1-}" gov
+  local prov="${1-}" gov stype smarket
   ADM_INSTANCE="$(sed -n 's/.*instance=\([^ |]*\).*/\1/p' <<<"$prov")"
   ADM_VIRT="$(sed -n 's/.*virt=\([^ |]*\).*/\1/p' <<<"$prov")"
+  ADM_SPAWN="$(sed -n 's/.*spawn=\([^ |]*\).*/\1/p' <<<"$prov")"
   gov="$(sed -n 's/.*governor=\([^ |]*\).*/\1/p' <<<"$prov")"
   case "$ADM_INSTANCE" in
     "" | "?")
@@ -800,11 +874,70 @@ host_admission() {
       fi ;;
     *) case " $KEEL_EVIDENTIARY_SIZES " in
          *" $ADM_INSTANCE "*)
-           ADM_CLASS=evidentiary
-           ADM_WHY="$ADM_INSTANCE is a full-size instance of an approved family" ;;
+           # An approved type is now NECESSARY AND NOT SUFFICIENT. Two conjuncts,
+           # both from the launcher-side field and neither obtainable from the host:
+           #
+           #   (a) the launcher must agree this is that type. The size is the whole basis
+           #       of this arm, and until 2026-08-19 the only witness of it was a reading
+           #       taken inside the guest.
+           #   (b) it must be on-demand. Ruled 2026-08-19: "on-demand for judged runs
+           #       because interruptions corrupt measurements, which is the only reason."
+           #       Until now that was an ASSUMPTION carried in aws-fleet.sh's
+           #       KEEL_FLEET_MARKET — a variable the launcher declared and no gate read
+           #       back. remote.sh's own test for an assumption is "is there any mechanism
+           #       by which this gate could read the precondition back? If yes, it is a
+           #       criterion this gate is missing", and spawn's record is that mechanism,
+           #       so the assumption becomes a conjunct.
+           case "$ADM_SPAWN" in
+             # TWO ABSENCES, NOT ONE, and they were one line until the distinct-causes
+             # check in remote-exec-test.sh refused a list in which they shared a string.
+             # `virt=` already distinguishes them (via `${ADM_VIRT:-unread}`) and the
+             # distinction is not cosmetic: an absent field says the line was produced by
+             # a driver from before the launcher was a witness, which is fixed by
+             # upgrading the driver; `?` says the probe ran and could not answer, which is
+             # fixed by installing jq or supplying credentials. One remedy each.
+             "")
+               ADM_CLASS=correctness
+               ADM_WHY="$ADM_INSTANCE is an approved full-size type, but its provenance line carries no spawn= field at all, so it was produced before the launcher became a witness and this run cannot ask who launched it" ;;
+             "?")
+               ADM_CLASS=correctness
+               ADM_WHY="$ADM_INSTANCE is an approved full-size type, but the launcher could not be consulted (no spawn, no jq, or no credentials), and the judged tier is defined over what truffle/spawn launched — unread is unmet, exactly as it is for virt=" ;;
+             none)
+               ADM_CLASS=correctness
+               ADM_WHY="$ADM_INSTANCE is an approved full-size type, but the launcher has no running record under this host's name, so its size rests on the guest's own testimony alone" ;;
+             ambiguous)
+               ADM_CLASS=correctness
+               ADM_WHY="$ADM_INSTANCE is an approved full-size type, but more than one running launcher record answers to this host's name, and a join that picked one would attribute a reading to a machine that may not have produced it" ;;
+             *)
+               stype="${ADM_SPAWN#*:}"; smarket="${stype#*:}"; stype="${stype%%:*}"
+               if [[ "$stype" != "$ADM_INSTANCE" ]]; then
+                 # THE ONLY ARM THAT REACHES `unknown` THROUGH A READING RATHER THAN AN
+                 # ABSENCE, and it is the reason for having a second witness at all. Two
+                 # instruments that disagree do not average: the identity this arm needs
+                 # is in dispute, so there is no class to read, and `correctness` would
+                 # quietly grade the host as "small" when what is actually broken is the
+                 # instrument. unmeasured, loudly.
+                 ADM_CLASS=unknown
+                 ADM_WHY="the two witnesses of this host's identity disagree: the guest reports instance=$ADM_INSTANCE and the launcher records it as $stype. One of them is wrong and this run cannot say which"
+               elif [[ "$smarket" != ondemand ]]; then
+                 ADM_CLASS=correctness
+                 ADM_WHY="$ADM_INSTANCE, and the launcher agrees, but it was launched $smarket: a reclaim mid-sweep converts a judged reading into a truncated one, so spot is the exploration tier (ruled 2026-08-19)"
+               else
+                 ADM_CLASS=evidentiary
+                 ADM_WHY="$ADM_INSTANCE is a full-size instance of an approved family, and the launcher independently records it as $stype on-demand (${ADM_SPAWN%%:*})"
+               fi ;;
+           esac ;;
          *)
            ADM_CLASS=correctness
-           ADM_WHY="$ADM_INSTANCE is not a full-size instance of an approved family" ;;
+           # NAMES THE CHECK THIS CODE PERFORMED, which is membership in one flat list,
+           # and not a cause it cannot test. The old wording — "not a full-size instance
+           # of an approved family" — is a conjunction over two properties the classifier
+           # never separates, and driving it against real launcher output produced it for
+           # `c8g.48xlarge`, which IS full size and was rejected for its family. Same
+           # defect as the one just fixed one arm down: a sentence that cannot say which
+           # of its causes fired. Distinguishing them for real would need a family list
+           # plus a size rule, so the honest fix is the sentence, not the classifier.
+           ADM_WHY="$ADM_INSTANCE is not among the types admitted to the evidentiary class (KEEL_EVIDENTIARY_SIZES); a type is added there when a read-back on it justifies the addition, so absence covers both a partial size and a family never characterized" ;;
        esac ;;
   esac
 }
@@ -817,7 +950,10 @@ host_admission() {
 # label defect and #90's arriving from a third direction.
 admission_readback() {
   host_admission "$2"
-  info "[$1] admission class: $ADM_CLASS (instance=${ADM_INSTANCE:-unread}, virt=${ADM_VIRT:-unread}) — $ADM_WHY"
+  # Every input the classifier read, `spawn=` included: a preamble that showed two of the
+  # three inputs would present a `correctness` verdict with no visible cause the run after
+  # spawn stops answering, which is the failure mode this line exists to prevent.
+  info "[$1] admission class: $ADM_CLASS (instance=${ADM_INSTANCE:-unread}, virt=${ADM_VIRT:-unread}, spawn=${ADM_SPAWN:-unread}) — $ADM_WHY"
 }
 
 # adm_judgeable HOST PROV READING — may a perf verdict be formed from HOST's numbers?
@@ -843,7 +979,19 @@ adm_judgeable() {
     correctness)
       info "[$1] correctness-class ($ADM_WHY): $3 — reported, not judged (docs/hosts.md)" ;;
     *)
-      unmeasured "[$1] the admission class is unreadable (instance=${ADM_INSTANCE:-absent from the provenance line}), so this criterion is unmeasured here rather than cleared or missed: an unread identity must not be the mechanism that excuses a reading from a floor" ;;
+      # $ADM_WHY, not a parenthetical retyped here. This arm was written when `unknown`
+      # had exactly one cause — an absent identity — so naming that cause inline was
+      # true. It no longer is: since the launcher became a second witness, `unknown` is
+      # also reached when the two witnesses CONTRADICT each other, and the old wording
+      # reported that as "absent from the provenance line" when the line in fact carried
+      # two identities. A sentence that can only describe one of its causes is #37's
+      # label defect (§5 rule 6: one cause, one verdict — and the verdict must be able
+      # to say which cause it had).
+      # "cannot settle", not "unread", for the same reason the parenthetical became
+      # $ADM_WHY one line up: the tail was written when absence was the only route here,
+      # and a disputed identity is emphatically read -- twice, differently. Both routes
+      # share one consequence, which is what this clause is for.
+      unmeasured "[$1] the admission class is unreadable ($ADM_WHY), so this criterion is unmeasured here rather than cleared or missed: an identity this run cannot settle must not be the mechanism that excuses a reading from a floor" ;;
   esac
   return 1
 }

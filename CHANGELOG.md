@@ -9,6 +9,30 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The launcher is a second witness of a host's identity, and an approved instance type alone no longer admits one to
+  the judged tier.** Scott's judged-tier directive, 2026-08-19: *"spawn metadata required in provenance by the admission
+  preamble."* The point is evidential, not bookkeeping. Every other field in a provenance line is *the host describing
+  itself* — the circularity the rejected `assume_fleet` design was refused for — and `instance=`, though answered by the
+  control plane at 169.254.169.254 rather than by the guest, is still a reading taken inside the guest over a link the
+  guest could serve itself. `remote_probe` now splices a `spawn=` field read on the **driver's** side of the wire, from
+  the EC2 control plane under the driver's own credentials: the one statement about a host's identity the host cannot
+  author. Four tokens (`id:type:market` / `none` / `ambiguous` / `?`), and `?` must never read as `none` because "the
+  launcher denies launching this" and "no launcher was consulted" are different facts, only the first of which is
+  evidence about the host. `host_admission` gains a **market** conjunct at the same time, which is a criterion that
+  became *readable* rather than a new rule: on-demand was already required but only *declared*, by a
+  `KEEL_FLEET_MARKET` variable the launcher set and no gate read back, and `spawn list`'s `spot` boolean is the mechanism
+  `remote.sh:212`'s own test asks for. A type **contradiction** between the two witnesses lands on `unknown` ⇒
+  `unmeasured`, not `correctness`, because grading it would report "not full size" when what is broken is the instrument.
+  Lab hosts are untouched: `instance=none` takes the bare-metal arm and never consults the launcher.
+- **gate-p5's scaling criterion consults admission, which was the last judged criterion forming verdicts without asking**
+  (#104). `docs/hosts.md` said admission was wired into gate-p2's 5b and *"not yet"* into gate-p3's or gate-p5's — stale
+  for gate-p3, which has called `adm_judgeable` at two sites all along, and true for gate-p5. This is the gate the
+  twelve-row re-measure runs under, so an unwired judged criterion here is a campaign that grades rows without consulting
+  the class that decides whether they may be graded. A scaling floor is as much a claim about owned silicon as a
+  percent-of-peak floor is: a partial-size guest's eight threads may sit on four cores it shares with tenants the run
+  cannot see. The aggregate now goes through the shared `fleet_coverage` rather than a fourth inline absence chain (#90),
+  which required counting floor misses instead of deriving them — the derived form printed "2 measured below it" for a
+  fleet with one slow host and one that produced no ratio at all.
 - **`tools/benchci` is the gate's summarizer, and it is benchstat plus resolution — measured, not asserted** (#110).
   Ruled 2026-08-19: *"the instrument's quantum exceeds every margin it adjudicated"*, so band-top arithmetic in the
   rounded domain can never make these verdicts measurement-decided and *"the instrument must gain resolution, and the

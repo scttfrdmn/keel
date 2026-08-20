@@ -299,7 +299,7 @@ assert_governor fixture preamble "x | governor=absent | y" >/dev/null 2>&1
 [[ -z "$GOV_VALUE" ]] && pass_ "a guest reports no governor VALUE, only a state" ||
   fail_ "GOV_VALUE='$GOV_VALUE' would print as a reading nobody took"
 
-# ------------------- 8. the admission classifier: one arm widens, four must not
+# ------------------- 8. the admission classifier: two arms widen, ten must not
 #
 # #106: `instance=none` was answering two questions with one word, so bare metal fell
 # through the case default to `correctness` and would have demoted the three lab hosts
@@ -322,7 +322,19 @@ assert_governor fixture preamble "x | governor=absent | y" >/dev/null 2>&1
 #     so there is no live host with a hypervisor flag to read. It is the one arm whose
 #     PROBE half is unexercised anywhere -- that a real guest emits virt=guest is an
 #     inference from CPUID.1:ECX.31, tested here only against a line this file wrote.
-head_ "8. host_admission: one arm widens, four must not (#106)"
+#
+# THE SPAWN CONJUNCTS (2026-08-19), same disclosure. The CLASSIFIER half is fully driven
+# below from synthetic lines. The PROBE half -- spawn_probe, which turns a launcher query
+# into the token these lines carry -- is exercised where it can be: `none` and `?` against
+# the real `spawn list` and a real absent binary, and the single-record arm against real
+# launcher output for two live instances belonging to other work. `ambiguous`, `spot` and
+# the malformed-record `?` were driven against fixtures in spawn's real schema, because
+# producing them live means launching two instances under one name, launching a spot
+# instance, or corrupting the launcher's output. The arm NOTHING has exercised end to end
+# is the CONTRADICTION: no run has yet had a guest and a launcher disagree, and the
+# fixture asserts what host_admission does with a disagreement, not that a real
+# disagreement would ever be phrased this way.
+head_ "8. host_admission: two arms widen, ten must not (#106, and the 2026-08-19 ruling)"
 # The gate primitives remote.sh's verdict lines call, defined at the head of the only case
 # that reads them: "the refusing arms must print their refusals" is a claim about the
 # text, and the text is discarded if these stay undefined.
@@ -348,25 +360,66 @@ adm_case correctness "x | instance=none | virt=? | governor=performance" \
   "REFUSES (default arm): virt unread"
 adm_case correctness "x | instance=none | governor=performance" \
   "REFUSES (default arm): no virt field at all, i.e. a pre-#106 provenance line"
-adm_case evidentiary "x | instance=c7i.48xlarge | virt=guest | governor=absent" \
-  "unchanged: full-size approved instance type"
-adm_case correctness "x | instance=c7i.4xlarge | virt=guest | governor=absent" \
-  "unchanged: partial-size instance type"
+# CHANGED 2026-08-19, and the old line is worth naming because THIS PIN CAUGHT THE
+# CHANGE: it read `instance=c7i.48xlarge` with no spawn field and expected evidentiary,
+# which is what an approved type alone used to buy. Scott's judged-tier ruling made the
+# launcher's record a second conjunct, so the same line now refuses -- correctly, and the
+# fixture's old label ("unchanged") became the false part. A fixture updated because a
+# requirement moved is not a weakened assertion; the arm it used to check is below, with
+# the conjunct it was missing supplied.
+adm_case evidentiary "x | instance=c7a.48xlarge | virt=guest | governor=absent | spawn=i-0ab:c7a.48xlarge:ondemand" \
+  "WIDENS: approved type the launcher independently confirms, on-demand"
+adm_case correctness "x | instance=c7i.4xlarge | virt=guest | governor=absent | spawn=i-0ab:c7i.4xlarge:ondemand" \
+  "unchanged: partial-size instance type, launcher agreeing or not"
+# The four spawn conjuncts. Three refuse for three distinct absences and one refuses for
+# a market, because "the launcher denies launching this", "no launcher was consulted",
+# "two records answer to this name" and "it was spot" are four facts, only three of which
+# are about the host at all.
+adm_case correctness "x | instance=c7a.48xlarge | virt=guest | governor=absent" \
+  "REFUSES: approved type, no spawn field at all (a pre-ruling provenance line)"
+adm_case correctness "x | instance=c7a.48xlarge | virt=guest | governor=absent | spawn=?" \
+  "REFUSES: approved type, launcher could not be consulted"
+adm_case correctness "x | instance=c7a.48xlarge | virt=guest | governor=absent | spawn=none" \
+  "REFUSES: approved type, launcher has no running record under this name"
+adm_case correctness "x | instance=c7a.48xlarge | virt=guest | governor=absent | spawn=ambiguous" \
+  "REFUSES: approved type, two launcher records answer to this name"
+adm_case correctness "x | instance=c7a.48xlarge | virt=guest | governor=absent | spawn=i-0ab:c7a.48xlarge:spot" \
+  "REFUSES: approved type the launcher confirms, but launched spot"
+# The one arm that reaches `unknown` through a READING rather than an absence, and the
+# whole reason a second witness was worth having. It must not land on `correctness`:
+# that would grade the host "not admitted" when what is broken is the instrument.
+adm_case unknown "x | instance=c7a.48xlarge | virt=guest | governor=absent | spawn=i-0ab:c7a.2xlarge:ondemand" \
+  "REFUSES as UNKNOWN: the guest and the launcher name different instance types"
 adm_case unknown "x | instance=? | virt=metal | governor=performance" \
   "unchanged: no way to ask -> unknown, and unknown is unmeasured"
 adm_case unknown "" "unchanged: no reading at all -> unknown"
 
-# Four refusals, four causes. §5 rule 6 forbids one verdict standing for two causes, and
-# a shared WHY string is that defect at the message layer -- which is what the code this
+# N refusals, N causes. §5 rule 6 forbids one verdict standing for two causes, and a
+# shared WHY string is that defect at the message layer -- which is what the code this
 # replaced had, telling a bare-metal host it was "not a full-size instance".
+#
+# THE EXPECTED COUNT IS THE LIST'S LENGTH, not a literal. It was a hardcoded 4 beside a
+# four-element list, and the spawn conjuncts took the list to nine while the 4 stayed --
+# a check that would have gone green on nine arms sharing six causes. The property is
+# "as many distinct causes as refusing arms", so that is what it computes.
+refusals=(
+  "$M | governor=powersave"
+  "x | instance=none | virt=guest"
+  "x | instance=none | virt=?"
+  "x | instance=c7i.4xlarge | virt=guest"
+  "x | instance=c7a.48xlarge | virt=guest"
+  "x | instance=c7a.48xlarge | virt=guest | spawn=?"
+  "x | instance=c7a.48xlarge | virt=guest | spawn=none"
+  "x | instance=c7a.48xlarge | virt=guest | spawn=ambiguous"
+  "x | instance=c7a.48xlarge | virt=guest | spawn=i-0ab:c7a.48xlarge:spot"
+  "x | instance=c7a.48xlarge | virt=guest | spawn=i-0ab:c7a.2xlarge:ondemand"
+)
 whys=()
-for l in "$M | governor=powersave" "x | instance=none | virt=guest" \
-         "x | instance=none | virt=?" "x | instance=c7i.4xlarge | virt=guest"; do
-  host_admission "$l"; whys+=("$ADM_WHY")
-done
+for l in "${refusals[@]}"; do host_admission "$l"; whys+=("$ADM_WHY"); done
 nw="$(printf '%s\n' "${whys[@]}" | sort -u | wc -l | tr -d ' ')"
-[[ "$nw" -eq 4 ]] && pass_ "the four refusals name four distinct causes" ||
-  fail_ "$nw distinct causes across four refusing arms: at least two share a verdict"
+[[ "$nw" -eq "${#refusals[@]}" ]] &&
+  pass_ "the ${#refusals[@]} refusals name ${#refusals[@]} distinct causes" ||
+  fail_ "$nw distinct causes across ${#refusals[@]} refusing arms: at least two share a verdict"
 
 # The governor conjunct is now derived TWICE from one field -- here, and in
 # assert_governor's cascade -- so the two are pinned to agree rather than assumed to
@@ -406,13 +459,24 @@ jcase 1 'governor=powersave, not performance' "$M | governor=powersave" "powersa
 jcase 1 'hypervisor flag present'     "x | instance=none | virt=guest | governor=performance" "guest refused"
 jcase 1 'neither route to whole-socket ownership' "x | instance=none | virt=? | governor=performance" "default arm refused"
 jcase 1 'UNMEAS.*class is unreadable' "x | instance=? | virt=metal | governor=performance" "unread identity unmeasured"
+# The second route to UNMEASURED, and the reason adm_judgeable's parenthetical had to
+# become $ADM_WHY: it was the literal string "instance=... absent from the provenance
+# line", which is the ONE cause `unknown` had before the launcher became a witness. On a
+# contradiction that wording reported an absent identity for a line carrying two of them.
+# Keyed to the contradiction's own phrase, not to a shared prefix, so this case cannot go
+# green on the absence arm's sentence (a verifier keyed to text both outcomes emit
+# certifies neither).
+jcase 1 'UNMEAS.*two witnesses of this host.s identity disagree' \
+  "x | instance=c7a.48xlarge | virt=guest | governor=absent | spawn=i-0ab:c7a.2xlarge:ondemand" \
+  "contradicting witnesses unmeasured, naming the contradiction"
 
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"
   echo "  vanished, a severed link costs nothing, a missing supervisor is loud,"
   echo "  a host with no cpufreq is told apart from one whose knob will not read,"
-  echo "  and bare metal is admitted by a named arm while four arms still refuse."
+  echo "  bare metal is admitted by a named arm while ten arms still refuse, and a"
+  echo "  guest whose launcher contradicts it is unmeasured rather than demoted."
   exit 0
 fi
 echo "  RED -- $FAILS check(s) failed."

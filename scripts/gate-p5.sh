@@ -17,6 +17,17 @@ cd "$(dirname "$0")/.."
 source scripts/remote.sh
 # shellcheck source=scripts/bench.sh
 source scripts/bench.sh
+# shellcheck source=scripts/roofline.sh
+#
+# NEW HERE (p2 and p3 always had it), because the scaling aggregate now calls
+# `fleet_coverage`. An undefined function is the one defect shellcheck cannot see, so the
+# consequence was MEASURED rather than reasoned: without this line, `$(fleet_coverage ...)`
+# under this gate's own `set -euo pipefail` expands to the empty string and does NOT abort
+# — the failing command is inside the substitution — so a fleet that cleared every bar
+# renders `UNMEASURED 0 of 3 ... could not be judged; the other 3 cleared`, a verdict
+# contradicted by its own counts. `command not found` does reach stderr: not silent,
+# unattributable, which in a 900-line gate log is one line's difference.
+source scripts/roofline.sh
 # shellcheck source=scripts/gate-lib.sh
 source scripts/gate-lib.sh
 
@@ -201,6 +212,21 @@ if [[ -n "$HOSTS" ]]; then
     if [[ "$GOV_STATE" == unreachable ]]; then
       continue
     fi
+    # The class is a property of the host, knowable before any benchmark runs — and
+    # stated for every host that ANSWERED, which is why it is here and not only at the
+    # floor check below (#90's shape: "1 of 3 not admitted" must not describe a fleet in
+    # which all three were unclassified). docs/hosts.md said this gate's judged criteria
+    # were "not yet" wired to admission; this is the gate the twelve-row re-measure runs
+    # under, so an unwired judged criterion here is a campaign that grades rows without
+    # consulting the class that decides whether they may be graded.
+    #
+    # AFTER the unreachable branch, not before it, and that ordering is a verdict
+    # decision rather than tidiness: a host that never answered has an empty provenance
+    # line, so host_admission would classify it `unknown` and print "no instance
+    # identity was read from this host" — true, and a second verdict about one cause,
+    # phrased as a fact about the host's identity rather than about its silence. §5 rule
+    # 6, and the first line to print is the one that gets believed.
+    admission_readback "$host" "$prov"
     # Topology is provenance, and it is the first thing to look at if a host misses
     # the floor: eight goroutines across four cores and their siblings is a ceiling
     # that is not keel's (criterion 4, issue #15). Read out of the provenance line
@@ -492,6 +518,15 @@ BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 SCALE_HOSTS_OK=0
 SCALE_HOSTS_MEASURED=0
+# The two counts the aggregate needs and used to derive. SCALE_HOSTS_MISSED is hosts
+# that measured BELOW a bar, counted where the miss is graded rather than subtracted
+# afterwards: #90 found the derived form printing "2 measured below it" for a fleet with
+# one slow host and one that produced no ratio, and fleet_coverage's contract asks for
+# the miss count precisely so that derivation cannot come back. SCALE_HOSTS_NOTADM is
+# hosts whose numbers no bar governs (#104); it is neither a clear nor a miss, and the
+# sentence must not let it read as either.
+SCALE_HOSTS_MISSED=0
+SCALE_HOSTS_NOTADM=0
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the scaling criterion cannot be evaluated: unmeasured, not missed"
 else
@@ -552,6 +587,8 @@ else
 
     HOST_CLEARED=1
     HOST_MEASURED=1
+    HOST_MISSED=0
+    HOST_NOTADM=0
     for r in $P5_JUDGED $P5_MEASURED; do
       one="$(scale_name "$r" 1)"
       many="$(scale_name "$r" "$P5_THREADS")"
@@ -607,6 +644,25 @@ else
         info "[$host] $r: $(awk -v a="$m8" -v b="$p1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread avx512 peak ($p1 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count"
       fi
 
+      # Admission after the reading and before either bar (#104), the order p2 and p3 use:
+      # the scaling is a fact worth having whatever the class, and only whether a FLOOR may
+      # be applied is the class's business. A scaling floor is as much a claim about owned
+      # silicon as percent-of-peak is — a partial-size guest's eight threads may sit on four
+      # cores it shares with tenants this run cannot see.
+      #
+      # PER ROW, not once per host, so an unadmitted host prints its class up to three
+      # times. Deliberate: adm_judgeable's contract is that it states the reading it
+      # declines to judge, and each row has its own reading.
+      if ! adm_judgeable "$host" "$GOV_PROV" \
+           "$r scales ${pt}x at $P5_THREADS threads, ${lo}x net of CI"; then
+        # Not a clear and not a miss. HOST_MEASURED drops too, because the aggregate's
+        # `nmeas` counts hosts that produced a JUDGEABLE reading and this host produced
+        # none — an unadmitted host left in nmeas would make "no host produced a
+        # judgeable ratio" unreachable on a fleet where exactly that happened.
+        HOST_NOTADM=1; HOST_CLEARED=0; HOST_MEASURED=0
+        continue
+      fi
+
       if [[ " $P5_MEASURED " == *" $r "* ]]; then
         mdl="$(p5_line p5-model "$SWEEPLOG" "$r")"
         ru="$(field rank_update "$mdl")"; ds="$(field diag_solve "$mdl")"
@@ -623,6 +679,7 @@ else
         else
           fail "[$host] $r scales ${pt}x, ${lo}x net of CI (< ${STRSM_FLOOR}x, the regression bar ratified for this class)"
           HOST_CLEARED=0
+          HOST_MISSED=1
         fi
 
         # What the printed split is, and — the part a reader cannot reconstruct — what
@@ -650,6 +707,7 @@ else
       else
         fail "[$host] $r scales only ${pt}x at $P5_THREADS threads, ${lo}x net of CI (< ${SCALE_FLOOR}x)"
         HOST_CLEARED=0
+        HOST_MISSED=1
       fi
     done
 
@@ -714,28 +772,44 @@ else
 
     SCALE_HOSTS_MEASURED=$((SCALE_HOSTS_MEASURED + HOST_MEASURED))
     SCALE_HOSTS_OK=$((SCALE_HOSTS_OK + HOST_CLEARED))
+    SCALE_HOSTS_MISSED=$((SCALE_HOSTS_MISSED + HOST_MISSED))
+    SCALE_HOSTS_NOTADM=$((SCALE_HOSTS_NOTADM + HOST_NOTADM))
   done <<<"$HOSTS"
-  if [[ "$SCALE_HOSTS_MEASURED" -eq 0 ]]; then
-    unmeasured "no host produced a complete set of scaling ratios, so the headline criterion is unmeasured rather than missed"
-  elif [[ "$SCALE_HOSTS_OK" -eq "$NHOSTS" ]]; then
-    # TWO BARS IN ONE TALLY, named rather than summarised. HOST_CLEARED is lowered by
-    # a miss against SCALE_FLOOR on any of P5_JUDGED *or* against STRSM_FLOOR on
-    # P5_MEASURED, so once #37's constant was typed this aggregate silently began
-    # covering a routine its own sentence did not mention. A pass line that credits
-    # less than it verified is the same defect as one that credits more; both leave a
-    # reader unable to reconstruct which comparison moved (§5 rule 6).
-    if [[ -n "$STRSM_FLOOR" ]]; then
-      pass "every gate host cleared its class's bar against its own single-thread rate ($SCALE_HOSTS_OK/$NHOSTS): ${SCALE_FLOOR}x for $P5_JUDGED, ${STRSM_FLOOR}x for $P5_MEASURED"
-    else
-      pass "every gate host cleared ${SCALE_FLOOR}x against its own single-thread rate for $P5_JUDGED ($SCALE_HOSTS_OK/$NHOSTS); $P5_MEASURED is reported unjudged (#37)"
-    fi
+  # TWO BARS IN ONE TALLY, named rather than summarised, built ONCE because four renderings
+  # of one clause is four places for the next constant to be typed into three of.
+  # HOST_CLEARED is lowered by a miss against SCALE_FLOOR on any of P5_JUDGED *or* against
+  # STRSM_FLOOR on P5_MEASURED, so once #37's constant was typed this aggregate silently
+  # began covering a routine its own sentence did not mention — and a pass line crediting
+  # less than it verified is the same defect as one crediting more (§5 rule 6).
+  #
+  # Hoisted is the CONSTANT LIST and not the possessive: collapsing both produced "2 of 3
+  # gate hosts cleared its class's bar", caught by rendering the branches rather than
+  # reading them, which is the whole argument for driving a verdict line.
+  if [[ -n "$STRSM_FLOOR" ]]; then
+    BARS="(${SCALE_FLOOR}x for $P5_JUDGED, ${STRSM_FLOOR}x for $P5_MEASURED)"
   else
-    if [[ -n "$STRSM_FLOOR" ]]; then
-      fail "$SCALE_HOSTS_OK of $NHOSTS gate hosts cleared their class's bar (${SCALE_FLOOR}x for $P5_JUDGED, ${STRSM_FLOOR}x for $P5_MEASURED); the criterion is per host and per class, against that host's own single-thread rate — the per-host lines above say which comparison missed"
-    else
-      fail "$SCALE_HOSTS_OK of $NHOSTS gate hosts cleared the scaling floor; the criterion is per host, against that host's own single-thread rate"
-    fi
+    BARS="(${SCALE_FLOOR}x for $P5_JUDGED; $P5_MEASURED is reported unjudged, #37)"
   fi
+  # Hosts that left the loop with no verdict for a reason that is not admission: no
+  # complete set of ratio inputs, no bounded interval, no declared parallelism model.
+  # Named, because they are neither cleared nor slow.
+  SCALE_NOCOVER=$((NHOSTS - SCALE_HOSTS_OK - SCALE_HOSTS_MISSED - SCALE_HOSTS_NOTADM))
+  # Absence semantics decided once in `fleet_coverage`, not a third time here: the
+  # divergent-copies defect at the verdict layer is what #90's sharing ruling was about, and
+  # an inline chain here was the last candidate for it. NINDET is a literal 0 as a fact, not
+  # a placeholder — gate-p3's indeterminate state is a split between two CANDIDATE
+  # DENOMINATORS, and this criterion's denominator is the host's own single-thread rate, of
+  # which there is exactly one. A host with no bounded ratio is counted above as no-coverage.
+  case "$(fleet_coverage "$NHOSTS" "$SCALE_HOSTS_MEASURED" "$SCALE_HOSTS_OK" "$SCALE_HOSTS_MISSED" 0)" in
+  unmeasured)
+    unmeasured "no host produced a judgeable set of scaling ratios, so the headline criterion is unmeasured rather than missed ($SCALE_HOSTS_NOTADM of $NHOSTS not admitted to the evidentiary class, so no ratio from them is judgeable however high it reads; $SCALE_NOCOVER produced no complete set of ratios)" ;;
+  pass)
+    pass "every gate host cleared its class's bar $BARS against its own single-thread rate ($SCALE_HOSTS_OK/$NHOSTS)" ;;
+  fail)
+    fail "$SCALE_HOSTS_OK of $NHOSTS gate hosts cleared their class's bar $BARS against their own single-thread rate and $SCALE_HOSTS_MISSED measured below one ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, $SCALE_NOCOVER produced no ratio); the criterion is per host and per class — the per-host lines above say which comparison missed" ;;
+  *)
+    unmeasured "$((SCALE_HOSTS_NOTADM + SCALE_NOCOVER)) of $NHOSTS gate hosts could not be judged this run ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, so no scaling ratio from them is judgeable; $SCALE_NOCOVER produced no complete set of ratios at all); the other $SCALE_HOSTS_OK cleared their class's bar $BARS, and no host measured below one — the per-host PASSes above stand as measured" ;;
+  esac
 fi
 
 # --------------------------------------- the documentation the phase promises
