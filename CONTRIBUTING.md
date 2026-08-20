@@ -34,6 +34,14 @@ both kinds of contributor.
   major is 0, minor bumps may break API.
 - [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): every user-visible
   change lands in `CHANGELOG.md` under `[Unreleased]` in the same PR/commit.
+- **`[Unreleased]` groups by session; release sections use canonical type
+  headers; the collapse happens at the version cut and never before.** The two
+  formats serve two readers: session groups are provenance, and they are how
+  this project's development ledger works; a release section is the deliverable,
+  and users get one Added/Changed/Fixed set per version. Flattening `[Unreleased]`
+  early churns thousands of lines to serve nobody — measured at 3128 on
+  2026-08-19 — so the collapse is a one-time editorial pass at the tag, over
+  content that has stopped moving.
 - Releases are tagged `vX.Y.Z`; v0.1.0 requires gates P0–P5 green plus the
   scalar-only build passing on a stock toolchain.
 

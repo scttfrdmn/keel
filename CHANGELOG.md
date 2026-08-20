@@ -20,6 +20,10 @@ While the major version is 0, minor versions may contain breaking changes.
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
 ### Changed
+- **`CONTRIBUTING.md` states when `[Unreleased]`'s session grouping collapses**: at the version cut and never before.
+  Ruled 2026-08-19 after an attempt to merge `[Unreleased]`'s 21 session-grouped `### Added/Changed/Fixed` sections into
+  four canonical ones churned 3128 lines and was reverted. Session groups are provenance for this project's ledger; a
+  release section is the deliverable users read. Two formats, two readers, one scheduled conversion.
 - **`solveRight`'s row loop moves to the outside; bit-identical, 4.90× locally** (#37). The strided nest re-walked B's
   live window once per `(j, p)` pair, so every scalar operation touched a different cache line and the rate sat at
   0.213–0.232 GFLOP/s across a 16× change in `MB` — flat, because nothing about it varied with the block. The sweep at
