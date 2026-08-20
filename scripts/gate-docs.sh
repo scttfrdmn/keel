@@ -301,7 +301,7 @@ stage_citations() {
 # design (2026-08-20). The prior comment here said the library side "includes bench/
 # and internal/spill, flattering the ratio by ~100 lines". Measured at this rev:
 # bench/ is 1655 lines of which only openblas.go's 106 ever reached the library term,
-# so the other 1549 -- the whole benchmark harness, including the 376-line ceiling
+# so the other 1549 -- the whole benchmark harness, including the 372-line ceiling
 # instrument #6 landed the same day -- were counted in NEITHER term. A cap policed by
 # a reporter blind to the largest apparatus directory in the tree is a cap with a hole
 # in it, and the hole is invisible in exactly the direction that matters.

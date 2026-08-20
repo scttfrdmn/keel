@@ -89,7 +89,7 @@ While the major version is 0, minor versions may contain breaking changes.
   it is wrong.
 - **`gate-docs`' apparatus ratio was blind to the largest apparatus directory in the tree, and its comment said
   otherwise** (2026-08-20). `library` is tracked `*.go` less `*_test.go` and `bench/` is 1655 lines of which
-  only `openblas.go`'s 106 ever reached it, so **1549 lines of benchmark harness — including the 376-line
+  only `openblas.go`'s 106 ever reached it, so **1549 lines of benchmark harness — including the 372-line
   ceiling instrument landed the same day — were counted in neither term**: a cap policed by a reporter that
   cannot see the spending. `bench/` now moves whole, tests included. The reported ratio goes **1.97x → 2.23x**;
   the historical `shell / library` line is unchanged so the published 1.6x series stays comparable. The old
