@@ -156,15 +156,15 @@ cmd_up() {
   # without creating anything. This exists so the invocation that spends can be validated
   # AS THE SHIPPED COMMAND rather than as a hand-typed mirror of it -- a mirror agrees
   # with the original until the day it is the reason a 48xlarge fleet fails on a rejected
-  # flag. It also prints the bill before a judged campaign, which the 2026-08-19 directive
-  # wants reported rather than approved.
+  # flag. Flag validation is the WHOLE value: `48xlarge` is missing from spawn's rate table
+  # and unmatched sizes default to xlarge (spawn#543), so the price reads 32x low.
   local dry_args=()
-  [[ "${KEEL_FLEET_DRYRUN:-0}" != 1 ]] || { dry_args=(--estimate-only); say "DRY RUN: pricing only, nothing will be launched"; }
+  [[ "${KEEL_FLEET_DRYRUN:-0}" != 1 ]] || { dry_args=(--estimate-only); say "DRY RUN: validating flags, nothing will be launched (spawn's price is 32x low, spawn#543)"; }
 
   local role type uarch spec
   for spec in "${FLEET[@]}"; do
     IFS=: read -r role type uarch <<<"$spec"
-    # --name IS THE JOIN KEY. It equals the ssh alias this script writes below and the
+    # THE NAME IS THE JOIN KEY. It equals the ssh alias this script writes below and the
     # `name` spawn_probe matches on, so admission can only vouch for a host whose alias
     # and launcher record are the same string. Nothing enforces that from the far side;
     # it is enforced here, at the one place both are written.

@@ -86,13 +86,16 @@ While the major version is 0, minor versions may contain breaking changes.
   the launcher's own name.** Scott's directive, 2026-08-19: *"instances via truffle/spawn under `AWS_PROFILE=aws`
   exclusively."* Three things this script guarded now belong to the launcher and are better there — the dead-man switch is
   `--ttl` enforced by spawn's reaper rather than a `shutdown -h` baked into userdata that depended on the guest's own init
-  working, the key pair and security group are spawn's, and `--wait-for-ssh` replaces a poll loop. `--name` equals the ssh
+  working, the key pair and security group are spawn's, and `--wait-for-ssh` replaces a poll loop. The launched **name**
+  (positional — `--name` exists but cobra wants `spawn launch <name>`) equals the ssh
   alias by construction, because that string is the key `spawn_probe` joins a provenance line on: a fleet this script can
   find is exactly a fleet admission can vouch for. `spawn list` reports **no** `tags` field, so the `Project=keel` tag
   selection used by `up`'s guard, `status` and `down` is re-keyed to the `keel-` name prefix, which preserves the property
   the tag was for (not a list this script wrote, so `down` still works after a lost `.keel-hosts`). New knobs:
   `KEEL_FLEET_TTL` (default `8h`), `KEEL_FLEET_DRYRUN=1` (appends `--estimate-only`, so the invocation that spends is
-  validated *as the shipped command* and not as a hand-typed mirror of it), `KEEL_SSH_CONFIG` (so the block writer can be
+  validated *as the shipped command* and not as a hand-typed mirror of it — flag validation only: `48xlarge` is missing
+  from spawn's rate table and unmatched sizes default to xlarge, spawn#543, so the price it prints reads 32x low),
+  `KEEL_SSH_CONFIG` (so the block writer can be
   driven against a throwaway file rather than the operator's real config — that step is the one that failed once *after*
   three instances were already billing). `KEEL_FLEET_MARKET`'s default flips to `on-demand` now that the judged tier is
   the normal case, and `ondemand` is an accepted alias because that is the spelling `spawn_probe` writes into a provenance
