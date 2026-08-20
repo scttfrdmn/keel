@@ -18,8 +18,32 @@ While the major version is 0, minor versions may contain breaking changes.
   the three shipped kernels and compares each against `internal/vec` by source text *and* by audit report — 74/16,
   50/8, 270/48 — and `-sweep`'s first run re-derives all nine rows of KERNEL.md §3 exactly, from an independent
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
+- **`scripts/readme-numbers.sh` writes README's published rates and their caption from a gate log** (#6). Ruled
+  2026-08-19: *"the caption regenerates from the table, never the reverse"* — and an emitter is that ruling's executable
+  form, because hand-assembling 24 rows again is the defect scheduled for recurrence, not the cheap alternative. It
+  never measures. `docs-gen.sh` already refused to let `doc-site/numbers.md` be a hand-copy of README's `keel-numbers`
+  block; that law stopped one file short of the numbers, and the last hand-maintained duplicate in the chain was the
+  published one. What it cost: the block's own ratios put five rows on three hosts below the gate's scaling floors while
+  the caption three lines below said the floor was missed *"on the two hosts that keep the most of their single-thread
+  peak"*. The scaling verdict is **extracted, never recomputed** — the first draft re-derived it from the point estimate
+  and named 3 shortfalls where the gate fails 5, because the gate judges net of CI; checking that the floor *constants*
+  matched `gate-p5.sh` did not catch it, since the constants agreed and the predicate did not (DESIGN.md §5 rule 11).
+  Net `scripts/` lines are ruling-mandated with the offsetting lift owed; for the ledger, this instrument retires a
+  hand-maintained duplicate. Apparatus ratio after: shell 11682 / library 8280 / 1.41×.
 
 ### Changed
+- **README's 24 published rates are re-measured at `335ea9d`, and their caption is now generated with them** (#6).
+  Ruled 2026-08-19: criterion 9 had already ordered the re-measure, because the three stale `Ssymm` rows disagreed with
+  the shipped tree by 5.06–9.43% *on the gate's own denominator* — `(a−b)/b` with **this run's** value as base, not the
+  published row, which understated the breach 3:1 and put all three outside `README_TOL` rather than one. The regenerated
+  caption names 4 of 12 scaling ratios below the floor and splits them by cause: 3 sit below it outright, 1 clears the
+  point estimate and misses only net of CI. Two prose claims that had decayed against the numbers beside them are gone:
+  the floor was "missed on the two hosts that keep the most of their single-thread peak" (five rows, three hosts, and
+  `antares` keeps the *least*), and a stale row "cannot survive a gate run" (it turns the gate red; it does not thereby
+  cease to exist). One denominator defect was in the emitter's own first caption — "All 12 rows" over a 24-row table,
+  since 12 counts ratios and 24 counts rows, and the conflation is older than the script. `scripts/docs-gen.sh` extracts
+  the caption region onto `doc-site/numbers.md` and dies without it: rows published without their floor disclosure are
+  not a thinner page, they are a flattering one. Both fail-closed branches were driven on purpose, not inferred.
 - **`CONTRIBUTING.md` states when `[Unreleased]`'s session grouping collapses**: at the version cut and never before.
   Ruled 2026-08-19 after an attempt to merge `[Unreleased]`'s 21 session-grouped `### Added/Changed/Fixed` sections into
   four canonical ones churned 3128 lines and was reverted. Session groups are provenance for this project's ledger; a

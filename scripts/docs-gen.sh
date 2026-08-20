@@ -95,6 +95,16 @@ numbers_rev() {
   ' README.md
 }
 
+# The caption region scripts/readme-numbers.sh generates: the provenance sentence and
+# the disclosure of which ratios miss the gate's floors. Extracted for the same reason
+# the rows are -- a site that published the 24 rows while the shortfall disclosure stayed
+# behind in README would be the caption drift this pair of scripts exists to end, moved
+# one file out instead of removed.
+numbers_caption() {
+  awk -v b='<!-- keel-caption: begin -->' -v e='<!-- keel-caption: end -->' '
+    index($0, e) { inb = 0 } inb { print } index($0, b) { inb = 1 }' README.md
+}
+
 gen_numbers() {
   [[ -r README.md ]] || die "README.md is unreadable, and it is the only source of the published rates"
   grep -qF "$README_BEGIN" README.md || die "README.md has no '$README_BEGIN' marker"
@@ -131,9 +141,11 @@ gen_numbers() {
   [[ -z "$bad" ]] || die "the keel-numbers table has row(s) whose cell count differs from the header's $((cells - 2)):
 $bad"
 
-  local rev nrows nmodels denom
+  local rev nrows nmodels denom caption
   rev="$(numbers_rev)"
   [[ -n "$rev" ]] || die "no 'rev \`<sha>\`' in README.md's provenance sentence after the block; the page has no run to date itself by"
+  caption="$(numbers_caption)"
+  [[ -n "$caption" ]] || die "README.md has no keel-caption region (scripts/readme-numbers.sh writes it); publishing the rows without the floor disclosure they carry is not a thinner page, it is a flattering one"
 
   # Everything the context lines assert is counted from the block, not typed. The
   # data rows are found by position among the TABLE rows rather than by line
@@ -176,6 +188,8 @@ result."
     echo "# Measured rates"
     echo
     echo "$nrows rows over $nmodels CPU models, all from one gate run, at revision \`$rev\`."
+    echo
+    echo "$caption"
     echo
     echo "$denom"
     echo

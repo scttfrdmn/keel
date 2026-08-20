@@ -131,7 +131,9 @@ fixture_good() {
 | --- | --- | --- | --- | --- |
 | Some CPU | Sgemm | 1 | 100 | 50.0% of 200 GFLOP/s, measured in the same run |
 <!-- keel-numbers: end -->
+<!-- keel-caption: begin -->
 All rows come from one run — `scripts/gate-p5.sh` at rev `abc1234`, log archived.
+<!-- keel-caption: end -->
 EOF
 }
 
@@ -150,6 +152,7 @@ fixture() {
     ragged-row)    fixture_good | sed 's/^| Some CPU | Sgemm | 1 | 100 |.*/| Some CPU | Sgemm | 1 | 100 |/' ;;
     synthetic)     fixture_good | sed 's/measured in the same run/measured in the same run [synthetic]/' ;;
     no-rev)        fixture_good | sed 's/at rev `abc1234`, //' ;;
+    no-caption)    fixture_good | grep -v 'keel-caption: ' ;;
     *)             echo "unknown fixture: $1" >&2; return 1 ;;
   esac
 }
@@ -201,7 +204,7 @@ stage_extraction() {
   fi
 
   local case_ rejected=0
-  for case_ in no-begin no-end reversed empty-block no-table no-separator ragged-row synthetic no-rev; do
+  for case_ in no-begin no-end reversed empty-block no-table no-separator ragged-row synthetic no-rev no-caption; do
     rm -f "$t/doc-site/numbers.md"
     fixture "$case_" > "$t/README.md"
     rc=0
