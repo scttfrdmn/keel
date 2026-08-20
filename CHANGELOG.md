@@ -44,6 +44,18 @@ While the major version is 0, minor versions may contain breaking changes.
   than republishing it under a bar that no longer exists; `docs/gates.md`'s verbatim P5 lift is annotated, not
   edited, since an archive that gets quietly corrected is neither.
 
+- **Re-adjudicating the historical scaling verdicts under the derived form resolves none of them, and that is
+  the finding** (#6, 2026-08-20). Neither half of the ceiling was ever measured — `grep` across all eleven
+  archived `gate-p5` logs finds no 8-thread compute row, because `BenchmarkPeak` has only ever had a 1-thread
+  arm — so the only recoverable denominator is `8 x 1T`, which the clock droop makes an *upper* bound on the
+  true 8-thread ceiling. Every archived share is therefore a **lower bound** on achieved-against-own-ceiling,
+  which resolves in one direction only: at-or-above the fraction is a definitive clear, below it is
+  **unresolved and never a retroactive failure**. Recomputed from the logs: 105 judged rows spanning
+  **23.8%** (`janus` `Ssyrk`, `175098d`) to **74.9%** (`vesta` `Ssyrk`, `117b78f`), **none** at 90%. This
+  corrects a claim committed to `DESIGN.md` §4/P5 hours earlier in the same session, that the compute half was
+  recoverable for every archived run; it is not, and the check that refuted it was a `grep` this session
+  should have run before writing the sentence.
+
 ### Fixed
 - **§5 rule 5's clock check was flagging coin flips as thermal events; it now judges at full precision
   against a floor its own intervals set** (ruling on #6, 2026-08-20). The test asked only `head > middle >
