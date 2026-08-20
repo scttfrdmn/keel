@@ -29,10 +29,16 @@ While the major version is 0, minor versions may contain breaking changes.
   loop reassociates nothing: `TestSolveRightInterchangeIsBitIdentical` holds the new nest against the old one verbatim
   over 6 shapes × 8 flag combinations by `math.Float32bits`, with no tolerance in it, and the test is shown to fail on a
   1-ulp reversal of the `p` loop. `BenchmarkSolveRightInterchange` runs both arms in one binary and one process, since
-  the quantity is a ratio and a cross-build ratio would carry these hosts' 1.0–1.7% layout noise. **4.90× (0.3325 →
-  1.629 solve-GFLOP/s) on the dev host, which is `correctness`-class — reported, never judged**; the fleet number and
-  Trsm's whole-call verdict are still owed. What remains is the accumulator's serial dependency, which caps the scalar
-  arm at one element per subtract latency and is what #37's vector arm addresses by widening across rows.
+  the quantity is a ratio and a cross-build ratio would carry these hosts' layout noise. **Measured on three
+  `evidentiary` hosts** (`build/trsm37-8441a18.log`, `evidentiary=3 correctness=0 unknown=0 of 3 configured`): the
+  isolated solve is **4.21× / 4.97× / 5.77×** faster on Zen 4 / Skylake-X / Zen 5, and `Strsm` side=R at n=2048, MB=64,
+  1 thread is **2.51× faster end-to-end** on vesta, its solve 2.94–3.07× (two estimators whose 4.5% spread *is* the
+  T22 layout systematic, under T22's 7.04% Zen 4 bound). `solveRight`'s share of the call falls 90.7% → 77.4% for
+  3.17% of the flops. `side=L` is byte-identical across the two commits and moves up to 5.1%, so this table's
+  cross-commit floor is measured at ~5% and not the ~2% first asserted (§7 rule 7). What remains is the accumulator's
+  serial dependency, which caps the scalar arm at one element per subtract latency and is what #37's vector arm
+  addresses by widening across rows; its headroom is host-dependent, since post-interchange Skylake-X's two solves sit
+  1.21× apart against Zen 4's 3.20×.
 
 ### Fixed
 - **Bare metal reaches the evidentiary class by a named arm; the default stays restrictive** (#106). `host_admission`
