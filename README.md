@@ -26,38 +26,40 @@ model, never by hostname.
 <!-- keel-numbers: begin -->
 | CPU | benchmark | threads | GFLOP/s | denominator |
 | --- | --- | --- | --- | --- |
-| Intel(R) Xeon(R) 6975P-C | Sgemm | 1 | 101.7 | 41.5% of 245.14999999999998 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| Intel(R) Xeon(R) 6975P-C | Sgemm | 8 | 672.1 | 34.3% of 1961.2 GFLOP/s, that same peak x 8 cores |
-| Intel(R) Xeon(R) 6975P-C | Ssyrk | 1 | 94.84 | 38.7% of 245.14999999999998 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| Intel(R) Xeon(R) 6975P-C | Ssyrk | 8 | 670.1 | 34.2% of 1961.2 GFLOP/s, that same peak x 8 cores |
-| Intel(R) Xeon(R) 6975P-C | Ssymm | 1 | 102.4 | 41.8% of 245.14999999999998 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| Intel(R) Xeon(R) 6975P-C | Ssymm | 8 | 673.6 | 34.3% of 1961.2 GFLOP/s, that same peak x 8 cores |
-| Intel(R) Xeon(R) 6975P-C | Strsm | 1 | 55.71 | 22.7% of 245.14999999999998 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| Intel(R) Xeon(R) 6975P-C | Strsm | 8 | 422.6 | 21.5% of 1961.2 GFLOP/s, that same peak x 8 cores |
-| AMD EPYC 9R45 | Sgemm | 1 | 173.4 | 60.4% of 286.95 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD EPYC 9R45 | Sgemm | 8 | 1034 | 45.0% of 2295.6 GFLOP/s, that same peak x 8 cores |
-| AMD EPYC 9R45 | Ssyrk | 1 | 146.1 | 50.9% of 286.95 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD EPYC 9R45 | Ssyrk | 8 | 991.4 | 43.2% of 2295.6 GFLOP/s, that same peak x 8 cores |
-| AMD EPYC 9R45 | Ssymm | 1 | 170.4 | 59.4% of 286.95 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD EPYC 9R45 | Ssymm | 8 | 1024 | 44.6% of 2295.6 GFLOP/s, that same peak x 8 cores |
-| AMD EPYC 9R45 | Strsm | 1 | 53.79 | 18.7% of 286.95 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD EPYC 9R45 | Strsm | 8 | 423.2 | 18.4% of 2295.6 GFLOP/s, that same peak x 8 cores |
-| AMD EPYC 9R14 | Sgemm | 1 | 106.5 | 91.0% of 117 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD EPYC 9R14 | Sgemm | 8 | 616.8 | 65.9% of 936.0 GFLOP/s, that same peak x 8 cores |
-| AMD EPYC 9R14 | Ssyrk | 1 | 92.16 | 78.8% of 117 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD EPYC 9R14 | Ssyrk | 8 | 629.5 | 67.3% of 936.0 GFLOP/s, that same peak x 8 cores |
-| AMD EPYC 9R14 | Ssymm | 1 | 106.2 | 90.8% of 117 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD EPYC 9R14 | Ssymm | 8 | 618.4 | 66.1% of 936.0 GFLOP/s, that same peak x 8 cores |
-| AMD EPYC 9R14 | Strsm | 1 | 36.11 | 30.9% of 117 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD EPYC 9R14 | Strsm | 8 | 268.9 | 28.7% of 936.0 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R14 | Sgemm | 1 | 106.2 | 90.7% of 117.1 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R14 | Sgemm | 8 | 642.2 | 68.6% of 936.8 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R14 | Ssyrk | 1 | 89.47 | 76.4% of 117.1 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R14 | Ssyrk | 8 | 651.9 | 69.6% of 936.8 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R14 | Ssymm | 1 | 106.8 | 91.2% of 117.1 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R14 | Ssymm | 8 | 654.3 | 69.8% of 936.8 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R14 | Strsm | 1 | 37.61 | 32.1% of 117.1 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R14 | Strsm | 8 | 264.9 | 28.3% of 936.8 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R45 | Sgemm | 1 | 174.2 | 60.8% of 286.65 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R45 | Sgemm | 8 | 1052 | 45.9% of 2293.2 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R45 | Ssyrk | 1 | 148.1 | 51.7% of 286.65 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R45 | Ssyrk | 8 | 968.4 | 42.2% of 2293.2 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R45 | Ssymm | 1 | 166.9 | 58.2% of 286.65 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R45 | Ssymm | 8 | 991.9 | 43.3% of 2293.2 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R45 | Strsm | 1 | 53.64 | 18.7% of 286.65 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R45 | Strsm | 8 | 416 | 18.1% of 2293.2 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Xeon(R) 6975P-C | Sgemm | 1 | 101.2 | 41.5% of 243.9 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Xeon(R) 6975P-C | Sgemm | 8 | 663 | 34.0% of 1951.2 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Xeon(R) 6975P-C | Ssyrk | 1 | 95.12 | 39.0% of 243.9 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Xeon(R) 6975P-C | Ssyrk | 8 | 672.7 | 34.5% of 1951.2 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Xeon(R) 6975P-C | Ssymm | 1 | 97.41 | 39.9% of 243.9 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Xeon(R) 6975P-C | Ssymm | 8 | 657 | 33.7% of 1951.2 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Xeon(R) 6975P-C | Strsm | 1 | 54.09 | 22.2% of 243.9 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Xeon(R) 6975P-C | Strsm | 8 | 400.9 | 20.5% of 1951.2 GFLOP/s, that same peak x 8 cores |
 <!-- keel-numbers: end -->
 
 <!-- keel-caption: begin -->
-All 24 rows come from one run — `scripts/gate-p5.sh` at rev `ce43bca`, log in `build/gate-p5-ce43bca.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `absent` governor on every host. The 1-thread and 8-thread rows for a routine are the two arms of that run's scaling ratio, so they are directly comparable to each other; rows from different CPUs are not, because the peaks differ.
+All 24 rows come from one run — `scripts/gate-p5.sh` at rev `651d1bd`, log in `build/gate-p5-651d1bd.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `absent` governor on every host. The 1-thread and 8-thread rows for a routine are the two arms of that run's scaling ratio, so they are directly comparable to each other; rows from different CPUs are not, because the peaks differ.
 
-4 of the 12 scaling ratios those 24 rows form do not clear the floor scripts/gate-p5.sh enforces (>= 6.0x at 8 threads, >= 7.0x for Strsm, judged net of confidence intervals). 3 sit below it outright: AMD EPYC 9R45 Sgemm at 5.960x (5.754x net of CI); AMD EPYC 9R14 Sgemm at 5.792x (5.678x net of CI); AMD EPYC 9R14 Ssymm at 5.826x (5.707x net of CI). 1 clears it on the point estimate and misses only net of CI, which is a verdict decided by the measurement precision rather than by the parallel nest: AMD EPYC 9R45 Ssymm (6.011x, 5.801x net of CI). These are published shortfalls against a floor checked on every gate run, not regressions against an earlier reading.
+The 8-thread rows divide by 8x the 1-thread peak, which no host can reach: the clock drops with core count, so that share is a floor on how well the nest did and not a score. The bar below divides by a ceiling measured at 8 threads on the host itself, where the droop is inside the reading.
 
-**That 6.0× floor was retired on 2026-08-20**, after these numbers and because of them: it refused the host keeping **65.9%** of 8× its own core peak while passing the one keeping **34.3%**, so it was ordering hosts by how *bad* their single-thread baseline was. The judged three are now compared to a ceiling measured on each host at 8 threads (`DESIGN.md` §4/P5 carries the amendment and `CEIL_FRACTION` the bar, currently reported and not enforced). **The rates in the table above are unaffected** — they are measurements, and no ruling moves a measurement; only the *verdicts* in the paragraph immediately above are superseded. This notice is hand-written inside a generated region on purpose: the first gate-p5 run to carry the ceiling rows regenerates this caption from its own log and deletes this paragraph with it, and `scripts/readme-numbers.sh` refuses outright to regenerate from a log that predates the ruling.
+Measured this run: AMD EPYC 9R14 713.6 GFLOP/s, the judged routines reached 82.5-90.0% of it; AMD EPYC 9R45 1568.5 GFLOP/s, the judged routines reached 61.1-65.3% of it; Intel(R) Xeon(R) 6975P-C 742.2 GFLOP/s, the judged routines reached 86.3-87.4% of it. Those ceilings are 76%, 68% and 38% of 8x each host's own 1-thread peak -- a different factor per host, which is why the retired 6.0x cross-host ratio could rank a host that kept more of its own silicon below one that kept less.
+
+1 of the 12 routine-host pairs those 24 rows form does not clear the bars scripts/gate-p5.sh enforces (the judged routines are reported against each host's own measured 8-thread ceiling with no fraction yet ratified (#6); Strsm must scale >= 7.0x (#37); both judged net of confidence intervals). 1 clears it on the point estimate and misses only net of CI, which is a verdict decided by the measurement precision rather than by the parallel nest: AMD EPYC 9R14 Strsm (7.046x, 6.491x net of CI). These are published shortfalls against bars checked on every gate run, not regressions against an earlier reading.
 <!-- keel-caption: end -->
 
 **The denominator here is keel's own microkernel, not OpenBLAS.** No OpenBLAS

@@ -28,6 +28,14 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The published block is re-measured on the judged fleet under the derived ceiling, and the caption now carries
+  the criterion's own readings** (#6, 2026-08-20; `build/gate-p5-651d1bd.log`, 24 rows from one run on
+  c7a.48xlarge / c8a.48xlarge / c8i.96xlarge). Measured 8-thread ceilings and what the judged routines reached of
+  them: **Zen 4 713.6 GFLOP/s, 82.5-90.0%**; **Zen 5 1568.5 GFLOP/s, 61.1-65.3%**; **Granite Rapids 742.2
+  GFLOP/s, 86.3-87.4%**. Those ceilings are **76%, 68% and 38%** of 8x each host's own 1-thread peak — a
+  different factor per host, which is the retired floor's defect in measured form rather than as the rank
+  inversion that motivated the ruling. The caption had been publishing the 8x-1T share it calls "not a score"
+  while withholding every share the gate judges by.
 - **P5's 6.0x cross-host scaling floor is RETIRED; the judged three are compared to a ceiling measured on
   each host** (ruling on #6, 2026-08-20; `DESIGN.md` §4/P5, `CEIL_FRACTION` in `scripts/gate-p5.sh`). The
   falsifier is a rank inversion, not a miscalibration: at `ce43bca` the floor refused Zen 4 holding **65.9%**

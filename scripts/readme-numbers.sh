@@ -263,6 +263,28 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # thread count instead, which is the number named in the bars sentence below.
     if (nt != "") {
       printf "The 8-thread rows divide by 8x the 1-thread peak, which no host can reach: the clock drops with core count, so that share is a floor on how well the nest did and not a score. The bar below divides by a ceiling measured at %s threads on the host itself, where the droop is inside the reading.\n\n", nt > "/dev/stderr"
+      # THE CRITERION'"'"'S OWN READINGS BELONG ON THE NUMBERS PAGE. Without this the
+      # caption publishes the share it just called "not a score" and withholds every
+      # share the gate actually judges by. The per-host gap between the two
+      # denominators is the measured form of #6'"'"'s argument: 8x-the-1-thread-peak
+      # overstates the attainable ceiling by a DIFFERENT factor on each host, which is
+      # what makes a fixed cross-host ratio rank them wrongly -- an argument that
+      # arrived as a rank inversion and is now a spread.
+      cl = ""; gp = ""
+      for (i = 1; i <= nh; i++) {
+        h = order[i]; if (!(h in ceil8) || !(h in peak)) continue
+        lo = ""; hi = ""; nj = 0
+        for (j = 1; j <= n; j++) if ((h, R[j]) in frr) {
+          v = frr[h, R[j]] + 0; nj++
+          if (lo == "" || v < lo) lo = v; if (hi == "" || v > hi) hi = v
+        }
+        if (lo == "") continue
+        cl = cl (cl == "" ? "" : "; ") sprintf("%s %s GFLOP/s, %s reached %.1f-%.1f%% of it", model[h], ceil8[h], (nj == 1 ? "the judged routine" : "the judged routines"), lo, hi)
+        gp = gp (gp == "" ? "" : ", ") sprintf("%.0f%%", 100 * (ceil8[h] + 0) / (8 * peak[h]))
+      }
+      sub(/, ([^,]*)$/, " and&", gp); sub(/ and, /, " and ", gp)
+      if (cl != "")
+        printf "Measured this run: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less.\n\n", cl, gp, retired > "/dev/stderr"
     }
     # The bars in words, not as a ">= %s" with a hole in it. Either may be deferred to
     # its own measurement and both have been, at different times and for the same
@@ -273,7 +295,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     if (nl + nn + ns == 0) {
       printf "Every one of the %d routine-host pairs those %d rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and Strsm must scale >= %sx (#37). The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tf, retired > "/dev/stderr"
     } else {
-      printf "%d of the %d routine-host pairs those %d rows form do not clear the bars scripts/gate-p5.sh enforces (%s; Strsm must scale >= %sx (#37); both judged net of confidence intervals). ", nl + nn + ns, nr, nrow, jb, tf > "/dev/stderr"
+      printf "%d of the %d routine-host pairs those %d rows form %s not clear the bars scripts/gate-p5.sh enforces (%s; Strsm must scale >= %sx (#37); both judged net of confidence intervals). ", nl + nn + ns, nr, nrow, (nl + nn + ns == 1 ? "does" : "do"), jb, tf > "/dev/stderr"
       if (ns > 0) {
         s = ""; for (k = 1; k <= ns; k++) s = s (k > 1 ? "; " : "") short[k]
         printf "%d of the judged routines %s short of %s own host'"'"'s ceiling: %s. ", ns, (ns == 1 ? "falls" : "fall"), (ns == 1 ? "its" : "their"), s > "/dev/stderr"
