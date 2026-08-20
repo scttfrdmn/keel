@@ -536,8 +536,11 @@ KEEL_GOV_PROBE_SH='
 # already is.
 #
 # THE JOIN KEY IS THE SSH ALIAS, matched against spawn's `name` EXACTLY, which is a
-# constraint on how the fleet is launched and not a heuristic: aws-fleet.sh passes `--name`
-# equal to the alias it writes into ~/.ssh/config. A missed join reads `none` and withholds
+# constraint on how the fleet is launched and not a heuristic: aws-fleet.sh launches each
+# host as `spawn launch <alias>`, the same string it writes into ~/.ssh/config. (It said
+# `--name` until 2026-08-19; that flag exists but spawn wants the name positionally, and a
+# comment naming a flag the code does not pass is a mechanism claim a reader would grep
+# for.) A missed join reads `none` and withholds
 # admission; a join on something rename-proof like a public address would, on a reused
 # address, grant admission to a reading from another machine.
 #

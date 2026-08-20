@@ -340,11 +340,22 @@ full-size hosts add a wider curve (16/32/64 threads) reported beside the judged 
 and they must clear the same ≥6× every other host clears, so adding them can only
 make the gate stricter.
 
-Mechanics: `scripts/aws-fleet.sh up|wire|status|down`, one entry per host with its class
-recorded, torn down at session end. **Launched when there is something to measure** — a
-full-size instance running during stage 1 would bill for hours and measure nothing. The
-standing grant (2026-08-17) covers repeats and re-runs of an instance type already
-approved; a **new** type is Scott's call each time.
+Mechanics: `scripts/aws-fleet.sh up|wire|status|down`, launching through `spawn` under
+`AWS_PROFILE=aws`, one entry per host with its class recorded, torn down at session end.
+**Launched when there is something to measure** — a full-size instance running during stage
+1 would bill for hours and measure nothing, which is a reason of measurement and not of
+cost.
+
+**Superseded 2026-08-19.** The rule here was: *"the standing grant (2026-08-17) covers
+repeats and re-runs of an instance type already approved; a new type is Scott's call each
+time."* It no longer holds. The judged-tier directive reads *"launch whatever the evidence
+needs, sized and counted by the measurement's requirements alone — no per-launch approval,
+no cost hedging; the session-end comment reports what ran, as record not as permission."*
+So a new instance type is now a **measurement** decision, reported afterwards rather than
+asked beforehand, and `KEEL_FLEET_DRYRUN=1` prices a launch before it happens for the
+report rather than for an approval. What did **not** move is `KEEL_EVIDENTIARY_SIZES`: a
+type is admitted to the judged class when a read-back on it justifies the addition, so
+launching a type freely and *judging* rows measured on it remain two decisions.
 
 ## What P3 asks of every host, and of one
 

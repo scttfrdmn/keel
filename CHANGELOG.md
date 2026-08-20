@@ -82,6 +82,36 @@ While the major version is 0, minor versions may contain breaking changes.
   thing being accounted for. Naming its own cost by 257 lines too few is the defect this entry claims to avoid.
 
 ### Changed
+- **`scripts/aws-fleet.sh` launches through `spawn` instead of raw `aws ec2 run-instances`, and the fleet is selected by
+  the launcher's own name.** Scott's directive, 2026-08-19: *"instances via truffle/spawn under `AWS_PROFILE=aws`
+  exclusively."* Three things this script guarded now belong to the launcher and are better there — the dead-man switch is
+  `--ttl` enforced by spawn's reaper rather than a `shutdown -h` baked into userdata that depended on the guest's own init
+  working, the key pair and security group are spawn's, and `--wait-for-ssh` replaces a poll loop. `--name` equals the ssh
+  alias by construction, because that string is the key `spawn_probe` joins a provenance line on: a fleet this script can
+  find is exactly a fleet admission can vouch for. `spawn list` reports **no** `tags` field, so the `Project=keel` tag
+  selection used by `up`'s guard, `status` and `down` is re-keyed to the `keel-` name prefix, which preserves the property
+  the tag was for (not a list this script wrote, so `down` still works after a lost `.keel-hosts`). New knobs:
+  `KEEL_FLEET_TTL` (default `8h`), `KEEL_FLEET_DRYRUN=1` (appends `--estimate-only`, so the invocation that spends is
+  validated *as the shipped command* and not as a hand-typed mirror of it), `KEEL_SSH_CONFIG` (so the block writer can be
+  driven against a throwaway file rather than the operator's real config — that step is the one that failed once *after*
+  three instances were already billing). `KEEL_FLEET_MARKET`'s default flips to `on-demand` now that the judged tier is
+  the normal case, and `ondemand` is an accepted alias because that is the spelling `spawn_probe` writes into a provenance
+  line. One `aws` call survives, an SSM parameter read for the Ubuntu 24.04 AMI: not an instance operation, and pinned
+  rather than taking spawn's AL2023 default because `provision-openblas.sh`'s package maps do not cover `amzn` and would
+  reach `unrecognized distro id` after the fleet was billing — changing the OS also changes which OpenBLAS build every
+  published ratio is measured against. Two defects found before any spend: **every `ssh` in the verification loop takes
+  `-n`**, because `ssh` reads the loop's stdin, which is the herestring holding the remaining hosts — measured at 1 host
+  visited of 3, and the loop *succeeded*, handing a silently partial verification to a judged run; and `--region` is
+  passed to `launch`, since an AMI id is region-scoped and spawn's own default region would have failed on an
+  invalid-AMI error naming neither variable. The name goes **positionally** (`spawn launch <name>`); `--name` also exists
+  and its help says "required", which is how this was first written and what the launcher rejected. Apparatus ledger:
+  **+21 net `scripts/` lines against 0 library lines**, so the prediction that this rewrite would pay back the previous
+  commit's +286 is **refuted** — it deleted 155 lines and added 176, the deletions code and the additions mostly the
+  comments justifying the delegation, which is the "prefer deleting a line to explaining one" rule failing in the
+  direction the rule exists to catch. Correction to `1ff4130`'s message: the baseline it published as "shell 12322" was a
+  mid-work worktree reading; `git ls-files`-counted `*.sh` was **12007** at `HEAD~1` and **12293** after that commit. The
+  ratio it printed, 1.40×, is right at either number, but a budget figure is the thing under review here and a stale
+  numerator is not available as a rounding detail.
 - **§5 rule 15: a conservativeness claim about an instrument is a testable claim, so direction-of-error is a
   measurement** (#110, `docs/rulings.md` rule 15). Scott's ruling on the second defect, the one in the writing rather
   than the arithmetic: *"'safe direction' asserted from reasoning, inverted by the instrument's actual behavior,
