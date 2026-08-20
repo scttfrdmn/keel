@@ -405,6 +405,39 @@ ratio while the version string, the thread count and the config line all still
 look right. An unrecognized name fails too — missing knowledge should cost a
 human one line of diff, not silently widen a bar.
 
+**The allowlist bounds the class, not the shortfall, and the residue is measured
+at 0–5.2%.** `OPENBLAS_CORETYPE` selects the family at runtime on a
+`DYNAMIC_ARCH` build, so what `DYNAMIC_ARCH` picks by itself can be compared
+against every other family on the same host in the same harness. Swept on the AWS
+fleet 2026-08-20 (`OpenBLAS 0.3.26` Ubuntu package, single thread, `n=2048`,
+median of 5):
+
+| host | CPU | `DYNAMIC_ARCH` picked | fastest family | keel's ratio inflated by |
+|---|---|---|---|---|
+| keel-zen4 | EPYC 9R14 (Genoa) | Cooperlake, 161.32 ms | **Haswell, 153.29 ms** | **5.2%** |
+| keel-zen5 | EPYC 9R45 (Turin) | Cooperlake, 63.64 ms | Cooperlake — its own pick | 0% |
+| keel-gnr | Xeon 6975P-C (Granite Rapids) | Cooperlake, 80.85 ms | SkylakeX, 79.85 ms | 1.2% |
+
+The last column is the ratio's inflation, not the reference's rate shortfall, and
+they are not the same number: the mission ratio is keel's rate over OpenBLAS's, so
+a reference 5.24% slower than it need be multiplies the ratio by 1.0524 while its
+own GFLOP/s reads low by 4.98%. The published quantity is the ratio, so that is
+what the column names.
+
+Every one of those picks is *on* the allowlist, so the check passed on all three
+while the ratio over it was inflated by up to 5.2% — the allowlist answers "AVX2 or
+better", and this is a within-class question it cannot reach. It also inverts on
+Zen 4, where the **AVX2** family is the fastest of the five: Zen 4 executes
+AVX-512 over a 256-bit datapath, so the AVX-512 kernels buy no throughput there
+and pay their overhead anyway. "AVX2-or-better" is therefore an ordering that does
+not hold on every host it grades, which is a separate finding from the shortfall.
+
+Direction of error is the same as the paragraph above and that is why it is
+recorded rather than filed away: a light denominator flatters keel. 5.2% is larger
+than several margins these gates adjudicate, so a mission ratio measured against
+the `DYNAMIC_ARCH` pick carries it as a named per-host systematic until the
+reference is pinned to the swept winner.
+
 On an **issue-bound** host the denominator is
 `min(same-host OpenBLAS, roofline × measured peak)` (the same ruling, citing
 #17/#18): OpenBLAS's K-loop there is hand assembly folding accumulation and an

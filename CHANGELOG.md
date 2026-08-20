@@ -9,6 +9,17 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The OpenBLAS reference's allowlist bounds its vector class, not its shortfall, and the residue is now measured at
+  0–5.2%.** `OPENBLAS_CORETYPE` swept over every kernel family on each AWS host (0.3.26 Ubuntu package, 1 thread,
+  n=2048, median of 5) against what `DYNAMIC_ARCH` picks unaided, which is `Cooperlake` on all three: the pick reads
+  **5.2%** slow on Zen 4 (EPYC 9R14), **0%** on Zen 5 (9R45), **1.2%** on Granite Rapids (Xeon 6975P-C) — that being
+  the inflation of the *ratio*, which is the published quantity, and not the reference's own rate shortfall (4.98% on
+  Zen 4). All three picks are *on* `gate-p3.sh:OPENBLAS_OK_CORES`, so that check passed while the ratio over it was
+  inflated by up to 5.2%, and the error runs in keel's favour. On Zen 4 the fastest family is the **AVX2** one, because Zen 4 executes
+  AVX-512 over a 256-bit datapath — so "AVX2-or-better" is an ordering that does not hold on every host it grades,
+  which is a separate finding from the shortfall. Recorded in `docs/hosts.md`; whether to pin the swept winner per
+  host or publish the systematic by name is Scott's call, and gate-p2's percent-of-peak and gate-p5's scaling rows
+  do not depend on this denominator at all.
 - **The launcher is a second witness of a host's identity, and an approved instance type alone no longer admits one to
   the judged tier.** Scott's judged-tier directive, 2026-08-19: *"spawn metadata required in provenance by the admission
   preamble."* The point is evidential, not bookkeeping. Every other field in a provenance line is *the host describing
