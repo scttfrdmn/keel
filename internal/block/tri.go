@@ -488,33 +488,68 @@ func solveLeft(lowerEff, trans, unit bool, d, n int, a []float32, lda int, b []f
 // rows of B. a points at the diagonal block's first element, b at its column
 // window of B.
 //
-// Here the loops are the other way up — a column of B, strided by ldb — because
-// the dependency runs along columns. Nothing in this shape is unit-stride, which
-// is one of the reasons #37 exists.
+// # The row is the outer loop, and that is issue #37's first arm
+//
+// The dependency runs along columns, so the *substitution* has to walk columns in
+// solve order. Which loop is innermost is a separate choice, and until this change
+// the innermost loop was over m with stride ldb: every scalar operation touched a
+// different cache line of B, and B's live window got re-walked once per (j, p)
+// pair. That is what "per-element, not per-block" means in #37's measurement, and
+// the sweep at e8662ba carries its own control — solveLeft and solveRight do
+// *identical* flop counts on identical MB partitions and differed by 7.6–12.4×
+// (recomputed from build/trsm-mb-e8662ba.log: at MB = 64 on vesta, 0.224 against
+// 2.20 GFLOP/s). Same scalar arithmetic, same block shapes; the one structural
+// difference was that solveLeft's inner loop was already unit-stride. A rate that
+// sat at 0.213–0.232 GFLOP/s across a 16× change in MB was never going to be
+// explained by the block, because nothing about it varied with the block.
+//
+// So rows move to the outside. Rows of X are independent — row i of B involves no
+// other row — so this is a pure loop interchange and *not* a change of algorithm:
+// for any fixed row the j order, the p order and the division all stay exactly as
+// they were, which makes the output bit-identical to the strided nest rather than
+// merely equal within a tolerance. TestSolveRightInterchangeIsBitIdentical holds
+// that against the previous implementation directly; no epsilon is involved and
+// none should appear here (DESIGN.md §5, and Trsm's own note on reciprocals).
+//
+// What it buys: one row's d floats are contiguous (≤ 256 bytes at MB = 64) and the
+// d×d block of A is ≤ 16 KB of live data that every row re-reads, so both operands
+// are L1-resident for the whole call instead of B streaming past once per (j, p).
+//
+// The accumulator is a float32 local, so the d²/2 stores to B become one store per
+// solved element. It must stay float32: Go rounds every float32 operation to
+// float32, which is what keeps the accumulation bit-identical to the in-place form.
 func solveRight(lowerEff, trans, unit bool, m, d int, a []float32, lda int, b []float32, ldb int) {
-	for step := 0; step < d; step++ {
-		j := step
-		if lowerEff {
-			j = d - 1 - step
-		}
-		plo, phi := 0, j
-		if lowerEff {
-			plo, phi = j+1, d
-		}
-		for p := plo; p < phi; p++ {
-			apj := a[p*lda+j]
+	for i := 0; i < m; i++ {
+		row := b[i*ldb : i*ldb+d]
+		for step := 0; step < d; step++ {
+			j := step
+			if lowerEff {
+				j = d - 1 - step
+			}
+			plo, phi := 0, j
+			if lowerEff {
+				plo, phi = j+1, d
+			}
+			s := row[j]
+			// op(A)[p, j] is a[j][p] transposed and a[p][j] not, so the operand is
+			// a contiguous run of one row of A in the first case and a column of
+			// stride lda in the second. Split here, once per solved element, rather
+			// than testing trans per element as the strided nest could afford to.
 			if trans {
-				apj = a[j*lda+p]
+				arow := a[j*lda : j*lda+d]
+				for p := plo; p < phi; p++ {
+					s -= row[p] * arow[p]
+				}
+			} else {
+				for p := plo; p < phi; p++ {
+					s -= row[p] * a[p*lda+j]
+				}
 			}
-			for i := 0; i < m; i++ {
-				b[i*ldb+j] -= b[i*ldb+p] * apj
+			if !unit {
+				// Divide, do not scale by a reciprocal: see Trsm's doc comment.
+				s /= a[j*lda+j]
 			}
-		}
-		if !unit {
-			dv := a[j*lda+j]
-			for i := 0; i < m; i++ {
-				b[i*ldb+j] /= dv
-			}
+			row[j] = s
 		}
 	}
 }

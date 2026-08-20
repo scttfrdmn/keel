@@ -19,6 +19,21 @@ While the major version is 0, minor versions may contain breaking changes.
   50/8, 270/48 — and `-sweep`'s first run re-derives all nine rows of KERNEL.md §3 exactly, from an independent
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
+### Changed
+- **`solveRight`'s row loop moves to the outside; bit-identical, 4.90× locally** (#37). The strided nest re-walked B's
+  live window once per `(j, p)` pair, so every scalar operation touched a different cache line and the rate sat at
+  0.213–0.232 GFLOP/s across a 16× change in `MB` — flat, because nothing about it varied with the block. The sweep at
+  `e8662ba` carries its own control: `solveLeft` and `solveRight` do *identical* flop counts on identical partitions and
+  differed by 7.6–12.4× (0.224 against 2.20 GFLOP/s at `MB`=64 on vesta), same scalar arithmetic, the one structural
+  difference being that solveLeft's inner loop was already unit-stride. Rows of X are independent, so hoisting the row
+  loop reassociates nothing: `TestSolveRightInterchangeIsBitIdentical` holds the new nest against the old one verbatim
+  over 6 shapes × 8 flag combinations by `math.Float32bits`, with no tolerance in it, and the test is shown to fail on a
+  1-ulp reversal of the `p` loop. `BenchmarkSolveRightInterchange` runs both arms in one binary and one process, since
+  the quantity is a ratio and a cross-build ratio would carry these hosts' 1.0–1.7% layout noise. **4.90× (0.3325 →
+  1.629 solve-GFLOP/s) on the dev host, which is `correctness`-class — reported, never judged**; the fleet number and
+  Trsm's whole-call verdict are still owed. What remains is the accumulator's serial dependency, which caps the scalar
+  arm at one element per subtract latency and is what #37's vector arm addresses by widening across rows.
+
 ### Fixed
 - **Bare metal reaches the evidentiary class by a named arm; the default stays restrictive** (#106). `host_admission`
   read the class from `instance=` alone, so bare metal — which has no EC2 identity — fell through the `case` default to
