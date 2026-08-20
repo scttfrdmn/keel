@@ -67,9 +67,9 @@ BLOCK="$(awk -v routines="$ROUTINES" -v sf="$SCALE_FLOOR" -v tf="$STRSM_FLOOR" -
   # is the one whose first field after the tag is the CPU model.
   {
     line = strip($0)
-    # Untagged lines carry the run-wide provenance the caption names: the commit and
-    # the problem size. Matched BEFORE the host-tag guard, or the guard skips them.
-    if (match(line, /this commit \([0-9a-f]+\)/)) { rev = substr(line, RSTART + 13, RLENGTH - 14) }
+    # Run-wide provenance, before the host-tag guard or the guard skips it. The sha comes off
+    # a sample path: "green on this commit (sha)" prints only when GREEN, so reds lost the rev.
+    if (match(line, /bench-gate-p5-[0-9a-f]{7,40}-/)) { rev = substr(line, RSTART + 14, RLENGTH - 15) }
     if (match(line, /^-- scaling at 8 cores on [0-9]+\^3/)) { nsz = substr(line, RSTART + 25, RLENGTH - 27) }
     if (match(line, /\[[a-zA-Z0-9_.-]+\]/) == 0) next
     host = substr(line, RSTART + 1, RLENGTH - 2)

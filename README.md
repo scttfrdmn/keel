@@ -26,36 +26,36 @@ model, never by hostname.
 <!-- keel-numbers: begin -->
 | CPU | benchmark | threads | GFLOP/s | denominator |
 | --- | --- | --- | --- | --- |
-| AMD Ryzen 9 7950X3D 16-Core Processor | Sgemm | 1 | 152.1 | 92.0% of 165.4 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD Ryzen 9 7950X3D 16-Core Processor | Sgemm | 8 | 880.1 | 66.5% of 1323.2 GFLOP/s, that same peak x 8 cores |
-| AMD Ryzen 9 7950X3D 16-Core Processor | Ssyrk | 1 | 129.3 | 78.2% of 165.4 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD Ryzen 9 7950X3D 16-Core Processor | Ssyrk | 8 | 888 | 67.1% of 1323.2 GFLOP/s, that same peak x 8 cores |
-| AMD Ryzen 9 7950X3D 16-Core Processor | Ssymm | 1 | 141.6 | 85.6% of 165.4 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD Ryzen 9 7950X3D 16-Core Processor | Ssymm | 8 | 869.8 | 65.7% of 1323.2 GFLOP/s, that same peak x 8 cores |
-| AMD Ryzen 9 7950X3D 16-Core Processor | Strsm | 1 | 51.45 | 31.1% of 165.4 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD Ryzen 9 7950X3D 16-Core Processor | Strsm | 8 | 372 | 28.1% of 1323.2 GFLOP/s, that same peak x 8 cores |
-| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Sgemm | 1 | 74.12 | 34.2% of 216.7 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Sgemm | 8 | 498.5 | 28.8% of 1733.6 GFLOP/s, that same peak x 8 cores |
-| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Ssyrk | 1 | 69.82 | 32.2% of 216.7 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Ssyrk | 8 | 501.8 | 28.9% of 1733.6 GFLOP/s, that same peak x 8 cores |
-| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Ssymm | 1 | 73.33 | 33.8% of 216.7 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Ssymm | 8 | 487.2 | 28.1% of 1733.6 GFLOP/s, that same peak x 8 cores |
-| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Strsm | 1 | 26.69 | 12.3% of 216.7 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | Strsm | 8 | 187.1 | 10.8% of 1733.6 GFLOP/s, that same peak x 8 cores |
-| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Sgemm | 1 | 194.6 | 59.4% of 327.55 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Sgemm | 8 | 1108 | 42.3% of 2620.4 GFLOP/s, that same peak x 8 cores |
-| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Ssyrk | 1 | 168.5 | 51.4% of 327.55 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Ssyrk | 8 | 1134 | 43.3% of 2620.4 GFLOP/s, that same peak x 8 cores |
-| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Ssymm | 1 | 187.6 | 57.3% of 327.55 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Ssymm | 8 | 1080 | 41.2% of 2620.4 GFLOP/s, that same peak x 8 cores |
-| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Strsm | 1 | 59.95 | 18.3% of 327.55 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
-| AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | Strsm | 8 | 423.2 | 16.2% of 2620.4 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Xeon(R) 6975P-C | Sgemm | 1 | 101.7 | 41.5% of 245.14999999999998 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Xeon(R) 6975P-C | Sgemm | 8 | 672.1 | 34.3% of 1961.2 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Xeon(R) 6975P-C | Ssyrk | 1 | 94.84 | 38.7% of 245.14999999999998 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Xeon(R) 6975P-C | Ssyrk | 8 | 670.1 | 34.2% of 1961.2 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Xeon(R) 6975P-C | Ssymm | 1 | 102.4 | 41.8% of 245.14999999999998 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Xeon(R) 6975P-C | Ssymm | 8 | 673.6 | 34.3% of 1961.2 GFLOP/s, that same peak x 8 cores |
+| Intel(R) Xeon(R) 6975P-C | Strsm | 1 | 55.71 | 22.7% of 245.14999999999998 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| Intel(R) Xeon(R) 6975P-C | Strsm | 8 | 422.6 | 21.5% of 1961.2 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R45 | Sgemm | 1 | 173.4 | 60.4% of 286.95 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R45 | Sgemm | 8 | 1034 | 45.0% of 2295.6 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R45 | Ssyrk | 1 | 146.1 | 50.9% of 286.95 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R45 | Ssyrk | 8 | 991.4 | 43.2% of 2295.6 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R45 | Ssymm | 1 | 170.4 | 59.4% of 286.95 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R45 | Ssymm | 8 | 1024 | 44.6% of 2295.6 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R45 | Strsm | 1 | 53.79 | 18.7% of 286.95 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R45 | Strsm | 8 | 423.2 | 18.4% of 2295.6 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R14 | Sgemm | 1 | 106.5 | 91.0% of 117 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R14 | Sgemm | 8 | 616.8 | 65.9% of 936.0 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R14 | Ssyrk | 1 | 92.16 | 78.8% of 117 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R14 | Ssyrk | 8 | 629.5 | 67.3% of 936.0 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R14 | Ssymm | 1 | 106.2 | 90.8% of 117 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R14 | Ssymm | 8 | 618.4 | 66.1% of 936.0 GFLOP/s, that same peak x 8 cores |
+| AMD EPYC 9R14 | Strsm | 1 | 36.11 | 30.9% of 117 GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |
+| AMD EPYC 9R14 | Strsm | 8 | 268.9 | 28.7% of 936.0 GFLOP/s, that same peak x 8 cores |
 <!-- keel-numbers: end -->
 
 <!-- keel-caption: begin -->
-All 24 rows come from one run — `scripts/gate-p5.sh` at rev `335ea9d`, log in `build/gate-p5-335ea9d.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `performance` governor on every host. The 1-thread and 8-thread rows for a routine are the two arms of that run's scaling ratio, so they are directly comparable to each other; rows from different CPUs are not, because the peaks differ.
+All 24 rows come from one run — `scripts/gate-p5.sh` at rev `ce43bca`, log in `build/gate-p5-ce43bca.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `absent` governor on every host. The 1-thread and 8-thread rows for a routine are the two arms of that run's scaling ratio, so they are directly comparable to each other; rows from different CPUs are not, because the peaks differ.
 
-4 of the 12 scaling ratios those 24 rows form do not clear the floor scripts/gate-p5.sh enforces (>= 6.0x at 8 threads, >= 7.0x for Strsm, judged net of confidence intervals). 3 sit below it outright: AMD Ryzen 9 7950X3D 16-Core Processor Sgemm at 5.788x (5.730x net of CI); AMD RYZEN AI MAX+ 395 w/ Radeon 8060S Sgemm at 5.695x (5.582x net of CI); AMD RYZEN AI MAX+ 395 w/ Radeon 8060S Ssymm at 5.760x (5.703x net of CI). 1 clears it on the point estimate and misses only net of CI, which is a verdict decided by the measurement precision rather than by the parallel nest: AMD RYZEN AI MAX+ 395 w/ Radeon 8060S Strsm (7.059x, 6.919x net of CI). These are published shortfalls against a floor checked on every gate run, not regressions against an earlier reading.
+4 of the 12 scaling ratios those 24 rows form do not clear the floor scripts/gate-p5.sh enforces (>= 6.0x at 8 threads, >= 7.0x for Strsm, judged net of confidence intervals). 3 sit below it outright: AMD EPYC 9R45 Sgemm at 5.960x (5.754x net of CI); AMD EPYC 9R14 Sgemm at 5.792x (5.678x net of CI); AMD EPYC 9R14 Ssymm at 5.826x (5.707x net of CI). 1 clears it on the point estimate and misses only net of CI, which is a verdict decided by the measurement precision rather than by the parallel nest: AMD EPYC 9R45 Ssymm (6.011x, 5.801x net of CI). These are published shortfalls against a floor checked on every gate run, not regressions against an earlier reading.
 <!-- keel-caption: end -->
 
 **The denominator here is keel's own microkernel, not OpenBLAS.** No OpenBLAS

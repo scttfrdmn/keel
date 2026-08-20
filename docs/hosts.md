@@ -405,38 +405,39 @@ ratio while the version string, the thread count and the config line all still
 look right. An unrecognized name fails too — missing knowledge should cost a
 human one line of diff, not silently widen a bar.
 
-**The allowlist bounds the class, not the shortfall, and the residue is measured
-at 0–5.2%.** `OPENBLAS_CORETYPE` selects the family at runtime on a
-`DYNAMIC_ARCH` build, so what `DYNAMIC_ARCH` picks by itself can be compared
-against every other family on the same host in the same harness. Swept on the AWS
-fleet 2026-08-20 (`OpenBLAS 0.3.26` Ubuntu package, single thread, `n=2048`,
-median of 5):
+**The allowlist bounds the class, and the pin — not the allowlist — is what
+protects the denominator.** `OPENBLAS_CORETYPE` selects the family at runtime on a
+`DYNAMIC_ARCH` build, and `gate-p3` sweeps it per host and pins the fastest family
+it finds before measuring anything. On the AWS fleet at `ce43bca` (`OpenBLAS
+0.3.26` Ubuntu package, 1 thread, best of 10 at `-benchtime=1s`) it pinned:
 
-| host | CPU | `DYNAMIC_ARCH` picked | fastest family | keel's ratio inflated by |
-|---|---|---|---|---|
-| keel-zen4 | EPYC 9R14 (Genoa) | Cooperlake, 161.32 ms | **Haswell, 153.29 ms** | **5.2%** |
-| keel-zen5 | EPYC 9R45 (Turin) | Cooperlake, 63.64 ms | Cooperlake — its own pick | 0% |
-| keel-gnr | Xeon 6975P-C (Granite Rapids) | Cooperlake, 80.85 ms | SkylakeX, 79.85 ms | 1.2% |
+| host | CPU | `DYNAMIC_ARCH` picks unaided | gate pins | pin's margin | vs same-family drift |
+|---|---|---|---|---|---|
+| keel-zen4 | EPYC 9R14 (Genoa) | Cooperlake, 106.60 | **Haswell, 112.20** | **+5.3%** | 5.60 win vs 0.60 drift |
+| keel-zen5 | EPYC 9R45 (Turin) | Cooperlake, 267.60 | SkylakeX, 268.90 | +0.5% | 1.30 win vs 1.10 drift |
+| keel-gnr | Xeon 6975P-C (Granite Rapids) | Cooperlake, 210.30 | SkylakeX, 214.70 | +2.1% | 4.40 win vs 4.10 drift |
 
-The last column is the ratio's inflation, not the reference's rate shortfall, and
-they are not the same number: the mission ratio is keel's rate over OpenBLAS's, so
-a reference 5.24% slower than it need be multiplies the ratio by 1.0524 while its
-own GFLOP/s reads low by 4.98%. The published quantity is the ratio, so that is
-what the column names.
+So the allowlist is a class check and nothing more, and it is not load-bearing for
+any published ratio: the reference is the swept winner, and the gate weighs the
+cross-family win against the sweep's own same-family drift before believing it —
+which on gnr and zen5 is barely decisive (4.40 against 4.10, 1.30 against 1.10)
+and says so in the log.
 
-Every one of those picks is *on* the allowlist, so the check passed on all three
-while the ratio over it was inflated by up to 5.2% — the allowlist answers "AVX2 or
-better", and this is a within-class question it cannot reach. It also inverts on
-Zen 4, where the **AVX2** family is the fastest of the five: Zen 4 executes
-AVX-512 over a 256-bit datapath, so the AVX-512 kernels buy no throughput there
-and pay their overhead anyway. "AVX2-or-better" is therefore an ordering that does
-not hold on every host it grades, which is a separate finding from the shortfall.
+**VOID, 2026-08-20:** an earlier version of this section claimed the allowlist let
+a `DYNAMIC_ARCH`-picked reference stand and inflated keel's ratio by up to 5.2%.
+There is no such inflation — the gate never divides by the unaided pick. The claim
+was published without running the instrument that already settled it (§5 rule 11),
+and it was refuted by that instrument's own log two hours later. The measurement
+behind it was sound and is a second derivation of the same quantity from a
+different harness (keel's `n=2048` median-of-5 got Haswell +5.2% on Zen 4 against
+the gate's +5.3% at best-of-10/1s); only the conclusion drawn beside it was wrong.
 
-Direction of error is the same as the paragraph above and that is why it is
-recorded rather than filed away: a light denominator flatters keel. 5.2% is larger
-than several margins these gates adjudicate, so a mission ratio measured against
-the `DYNAMIC_ARCH` pick carries it as a named per-host systematic until the
-reference is pinned to the swept winner.
+What does survive, and is corroborated by the gate's own sweep above: on Zen 4 the
+fastest of the five families is the **AVX2** one, beating every AVX-512 option
+(Haswell 112.20 against SkylakeX 107.90 and Cooperlake 106.30). Zen 4 executes
+AVX-512 over a 256-bit datapath, so those kernels buy no throughput there and pay
+their overhead anyway. "AVX2-or-better" is therefore an *ordering* that does not
+hold on every host it grades — which is why the pin, not the allowlist, decides.
 
 On an **issue-bound** host the denominator is
 `min(same-host OpenBLAS, roofline × measured peak)` (the same ruling, citing

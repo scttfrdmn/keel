@@ -9,17 +9,56 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
-- **The OpenBLAS reference's allowlist bounds its vector class, not its shortfall, and the residue is now measured at
-  0–5.2%.** `OPENBLAS_CORETYPE` swept over every kernel family on each AWS host (0.3.26 Ubuntu package, 1 thread,
-  n=2048, median of 5) against what `DYNAMIC_ARCH` picks unaided, which is `Cooperlake` on all three: the pick reads
-  **5.2%** slow on Zen 4 (EPYC 9R14), **0%** on Zen 5 (9R45), **1.2%** on Granite Rapids (Xeon 6975P-C) — that being
-  the inflation of the *ratio*, which is the published quantity, and not the reference's own rate shortfall (4.98% on
-  Zen 4). All three picks are *on* `gate-p3.sh:OPENBLAS_OK_CORES`, so that check passed while the ratio over it was
-  inflated by up to 5.2%, and the error runs in keel's favour. On Zen 4 the fastest family is the **AVX2** one, because Zen 4 executes
-  AVX-512 over a 256-bit datapath — so "AVX2-or-better" is an ordering that does not hold on every host it grades,
-  which is a separate finding from the shortfall. Recorded in `docs/hosts.md`; whether to pin the swept winner per
-  host or publish the systematic by name is Scott's call, and gate-p2's percent-of-peak and gate-p5's scaling rows
-  do not depend on this denominator at all.
+- **README's twelve-row block is republished from the judged AWS campaign: 24 rows, three new CPUs, rev `ce43bca`.**
+  `scripts/readme-numbers.sh build/gate-p5-ce43bca.log` regenerated both marked regions and `docs-gen.sh` extracted
+  `doc-site/numbers.md` from them, so the published rates now describe EPYC 9R14, EPYC 9R45 and Xeon 6975P-C instead
+  of the lab fleet. The generated caption discloses 4 of the 12 scaling ratios as below `gate-p5`'s floors, 3 outright
+  and 1 (9R45 Ssymm, 6.011x point / 5.801x net) decided by measurement precision. Published from the **first** of the
+  two runs DESIGN.md §4's one-re-run allowance permits, both archived (`build/run1-ce43bca/`, `build/run2-ce43bca/`),
+  because it is the only run in which every configured host produced rows — the gate's own README criterion is per
+  host. Stating the favourability plainly: that choice also makes the caption read 4-of-12 rather than run 2's 4-of-8,
+  since run 2 produced no gnr rows at all.
+- **keel gets 47.6% of OpenBLAS on Granite Rapids — below P3's 60% floor — and the same host's scaling looks the best
+  in the fleet for the same reason.** Run 2, `keel-gnr` (Xeon 6975P-C, c8i.96xlarge): keel 102 GFLOP/s against a
+  pinned-SkylakeX 214.3, i.e. 47.6% (47.2% net of CI). Run 1 left this UNMEASURED on the clock instrument below, and
+  the miss was already implicit in run 1's own printed numbers (104.3 against 214.70 = 48.6%) — an UNMEASURED is not a
+  pass, and this one hid the campaign's worst reading for a whole run. The mechanism is measured, not inferred: keel's
+  Sgemm keeps **42.5%** of gnr's own 1-core peak against **88.0%** on Zen 4, its 4x32/avx512 microkernel reaches
+  **33.4%** of that peak unblocked against **96.8%** on Zen 4, and the wider kernel buys *nothing* there (104.3 against
+  104.7 GFLOP/s for 2x32) while buying **+25.6%** on Zen 5 (169.9 against 135.3). So the dispatch selects the wide
+  microkernel on Granite Rapids for no gain, and the headroom that leaves is exactly what makes gnr's 8-thread ratio
+  the only one in any log to clear 6.0x. One mechanism, two opposite-looking verdicts (§5 rule 6).
+- **P5's 6.0x scaling floor is rank-ordered against per-core efficiency, in the direction that refuses the best host.**
+  Sgemm at `ce43bca`, single-thread rate as a fraction of the host's own measured 1-core peak against the 8-thread
+  ratio the floor judges: zen4 88.0% -> 5.792x FAIL, zen5 58.9% -> 5.960x FAIL, gnr 42.5% -> 6.609x PASS. Monotone
+  across all three, and the host keeping the most of its hardware at 8 threads (zen4, 65.9% of 8x peak against gnr's
+  34.3%) is the one refused. Not an AWS artifact: Sgemm has never cleared 6.0x on any AMD host in any log here —
+  vesta 5.708-5.823x, antares 5.477-5.766x — while both Intel hosts clear it. Six machines but one mechanism, so §5
+  rule 10 makes that one witness with a microarchitecture split, which is the question wave 2 (#104) exists to ask.
+  `gate-p4`'s own carried text predicts the hazard ("a ratio whose denominator this phase is chartered to change");
+  what is new is that it now decides verdicts. The floor is unchanged pending a ruling — amending a criterion after
+  seeing the result is not mine to do.
+- **§5 rule 5's substitute clock instrument refuses on ordering alone, and did so on half of one host's readings.**
+  With no cpufreq interface on a virtualized guest, stability is established by BenchmarkPeak at the head, middle and
+  tail of the sweep, refusing any strictly-decreasing triple. `keel-gnr`'s four triples across the two runs: 245.25 >
+  245.20 > 245.15 (refused), 245.10 < 245.15 < 245.25 (passed), 245.15 / 245.45 / 245.15 (passed), 245.20 > 245.15 >
+  245.10 (refused). Total spread across all twelve windows is 0.35 GFLOP/s — **0.14%**, on a 0.05 quantum — and two
+  of four strictly-decreasing triples is ~12% under exchangeable readings, so what reproduced was the test refusing,
+  not a clock declining. Cost: gnr's P3 ratio in run 1 and its entire P5 row set in run 2, which is why neither run
+  carries a complete gnr. The instrument prints `+/- 0.0%` intervals it then discards in favour of the ordering.
+  Unchanged pending a ruling, for the same reason as the floor above.
+- **On Zen 4 the fastest OpenBLAS kernel family is the AVX2 one, so "AVX2-or-better" is an ordering that does not hold
+  on every host it grades.** `gate-p3` sweeps `OPENBLAS_CORETYPE` per host and pins the winner, and at `ce43bca` it
+  pinned `Haswell` on Zen 4 (112.20 GFLOP/s) over every AVX-512 option (SkylakeX 107.90, Cooperlake 106.30) — Zen 4
+  runs AVX-512 on a 256-bit datapath, so those kernels buy no throughput and pay their overhead anyway. `SkylakeX` was
+  pinned on Zen 5 (+0.5%) and Granite Rapids (+2.1%), both margins the log itself reports as barely clear of the
+  sweep's own same-family drift (1.30 against 1.10; 4.40 against 4.10). `provision-openblas.sh`'s allowlist is
+  therefore a class check only, and the **pin** is what protects the denominator. *Retracted in the same breath:* the
+  first version of this entry claimed the allowlist let an unpinned reference inflate keel's ratio by up to 5.2%. It
+  cannot — the gate never divides by `DYNAMIC_ARCH`'s unaided pick. That claim was published without first running the
+  instrument that already settled it (§5 rule 11), and that instrument's log refuted it two hours later. The
+  measurement was sound and independently reproduces the pin's margin (+5.2% against the gate's +5.3% on Zen 4, from a
+  different harness); only the conclusion drawn beside it was wrong. `docs/hosts.md` carries the void by name.
 - **The launcher is a second witness of a host's identity, and an approved instance type alone no longer admits one to
   the judged tier.** Scott's judged-tier directive, 2026-08-19: *"spawn metadata required in provenance by the admission
   preamble."* The point is evidential, not bookkeeping. Every other field in a provenance line is *the host describing
@@ -222,6 +261,15 @@ While the major version is 0, minor versions may contain breaking changes.
   1.21× apart against Zen 4's 3.20×.
 
 ### Fixed
+- **The README emitter lost its revision on exactly the runs it is used for.** `readme-numbers.sh` read the sha out of
+  `"gate-p4 is green on this commit (<sha>)"` — a sentence `gate-p5.sh:888` prints only on the GREEN branch, while a
+  red run prints `(exit N)` instead. So every publication from a red log silently captioned itself rev `unrecorded`,
+  and the campaign's whole purpose is publishing runs that carry disclosed shortfalls. The sha now comes off an
+  archived sample path (`bench-gate-p5-<rev>-…`), which every run writes regardless of verdict; verified by driving
+  both arms — `ce43bca` on the real log, `unrecorded` on a copy with those lines stripped, so the parse is reading the
+  source it names rather than matching something else. Net zero lines in `scripts/`. Residual, disclosed rather than
+  fixed: a missing rev still publishes the word instead of failing closed, and it is `docs-gen.sh:89` that dies on it,
+  one file downstream.
 - **Provisioning waits on apt's lock, because the launcher's readiness signal is necessary and not sufficient.**
   `keel-gnr` (c8i.96xlarge) died on `E: Unable to lock directory /var/lib/apt/lists/` with no OpenBLAS, on a
   $17.99/hour host, after `cmd_wire` had reported `cloud-init settled`: `cloud-init status --wait` returned done at
