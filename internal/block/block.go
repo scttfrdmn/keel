@@ -378,7 +378,11 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 // build/gate-p5-175098d.log): Sgemm, Ssyrk and Ssymm missed the >=6.0x floor on all
 // three hosts while Strsm cleared it on all three, and the difference between them is
 // exactly this — Trsm splits its right-hand sides at the top, so its parallel region
-// *encloses* its packing instead of being enclosed by it. The routine ordering within
+// *encloses* its packing instead of being enclosed by it. That 6.0x floor is retired
+// (#6, 2026-08-20) and the two classes were never judged by the same bar anyway, so
+// the CONTRAST above is evidence only as far as its own log; the mechanism is not,
+// because "enclosing versus enclosed" is a property of this source that a reader can
+// check here rather than a verdict borrowed from a criterion. The routine ordering within
 // the miss follows too: Ssyrk pays this same pack for half the flops, because the mask
 // discards the tiles above the diagonal after the full kc x nc panel has been packed,
 // and Ssyrk was last on every host.

@@ -27,6 +27,23 @@ While the major version is 0, minor versions may contain breaking changes.
   process and reused, the same arm reads **196 GB/s**. Recorded because the wrong number was *plausible*: it
   had the shape of a real bandwidth saturation finding.
 
+### Changed
+- **P5's 6.0x cross-host scaling floor is RETIRED; the judged three are compared to a ceiling measured on
+  each host** (ruling on #6, 2026-08-20; `DESIGN.md` §4/P5, `CEIL_FRACTION` in `scripts/gate-p5.sh`). The
+  falsifier is a rank inversion, not a miscalibration: at `ce43bca` the floor refused Zen 4 holding **65.9%**
+  of 8x its own core peak and passed Granite Rapids holding **34.3%**, monotone across all three hosts, and no
+  AMD host has cleared it in any log here. A fixed T8/T1 ratio rewards a *bad single-thread baseline* — the
+  host whose one thread already saturates its memory system has no ratio headroom left. The bar becomes
+  `min(8-thread measured compute, measured bandwidth bound)` from `BenchmarkCeiling`, judged
+  achieved-against-own-ceiling with the derivation printed. **`CEIL_FRACTION` is empty**, deferred to the
+  fleet measurement on #37's ratified precedent: the fraction is computed, printed and reported, and no host
+  fails on it. The memory term is not yet in the `min()` and the omission is strict — `min(c,b) <= c`, so the
+  printed fraction is a lower bound and cannot pass a host the full ceiling would fail — but the bandwidth
+  rows are measured every run anyway, because a term that can only *rescue* a host must not be the unmeasured
+  one. `scripts/readme-numbers.sh` now refuses to regenerate the published block from a pre-ruling log rather
+  than republishing it under a bar that no longer exists; `docs/gates.md`'s verbatim P5 lift is annotated, not
+  edited, since an archive that gets quietly corrected is neither.
+
 ### Fixed
 - **§5 rule 5's clock check was flagging coin flips as thermal events; it now judges at full precision
   against a floor its own intervals set** (ruling on #6, 2026-08-20). The test asked only `head > middle >

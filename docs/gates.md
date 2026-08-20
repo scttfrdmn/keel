@@ -676,6 +676,15 @@ How those are mechanized, and every judgement call involved:
 
 From `scripts/gate-p5.sh`, lines 2–241 at `c421486`.
 
+> **`SCALE_FLOOR` and the ≥6× criterion quoted below are RETIRED** (ruling on issue #6,
+> 2026-08-20; `DESIGN.md` §4/P5 carries the amendment and the falsifier). The judged class
+> is now compared to a per-host attainable ceiling this project measures, under
+> `CEIL_FRACTION`. The text below is **not** edited to match, because it is a verbatim lift
+> dated to `c421486` and a verbatim archive that gets quietly corrected is neither verbatim
+> nor an archive. Read it as the reasoning that was live then, including the reasoning that
+> the ruling overturned — the passage comparing `STRSM_FLOOR` to `SCALE_FLOOR` as "just
+> margin" is exactly the premise the rank inversion falsified.
+
 ```text
 Gate P5 — see DESIGN.md §4/P5. Written at the START of phase P5, then made
 green. Exits 0 only when every criterion for the phase holds. A red gate

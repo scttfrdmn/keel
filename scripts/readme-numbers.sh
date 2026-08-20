@@ -42,8 +42,15 @@ CAP_END='<!-- keel-caption: end -->'
 # Kept in step with gate-p5.sh by the check at the bottom of this script, not by
 # being remembered: a floor that drifts from the gate's would publish a disclosure
 # about a bar nothing enforces.
-SCALE_FLOOR=6.0
+#
+# CEIL_FRACTION replaced SCALE_FLOOR on 2026-08-20 (#6): the judged class is no longer
+# compared to a cross-host ratio but to each host's own measured 8-thread ceiling, and
+# the fraction is deferred to that measurement, so this is EMPTY on purpose. An empty
+# bar is a real state here and not a missing value — the caption below says so in words
+# rather than printing ">= %s" with nothing in it.
+CEIL_FRACTION=
 STRSM_FLOOR=7.0
+SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'
 
 die() { echo "readme-numbers: $*" >&2; exit 1; }
@@ -54,13 +61,17 @@ DRY="${2:-}"
 
 # The floors are read back out of the gate rather than trusted here. A published
 # disclosure naming 6.0x while the gate enforces something else is exactly the
-# caption-drift defect this script exists to end, one level up.
-for pair in "SCALE_FLOOR=$SCALE_FLOOR" "STRSM_FLOOR=$STRSM_FLOOR"; do
+# caption-drift defect this script exists to end, one level up. The RETIRED constant
+# is read back too, because the caption names it as retired: if it were deleted from
+# the gate, or worse revived there as a live comparison, this disclosure would be
+# describing the wrong one of two 6.0s.
+for pair in "CEIL_FRACTION=$CEIL_FRACTION" "STRSM_FLOOR=$STRSM_FLOOR" "SCALE_FLOOR_RETIRED=$SCALE_FLOOR_RETIRED"; do
   grep -qxF "${pair%%=*}=${pair#*=}" scripts/gate-p5.sh \
     || die "${pair%%=*} here is ${pair#*=} but scripts/gate-p5.sh disagrees; the disclosure would name a bar the gate does not enforce"
 done
 
-BLOCK="$(awk -v routines="$ROUTINES" -v sf="$SCALE_FLOOR" -v tf="$STRSM_FLOOR" -v src="$(basename "$LOG")" '
+BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR" \
+         -v retired="$SCALE_FLOOR_RETIRED" -v src="$(basename "$LOG")" '
   function strip(s) { gsub(/\033\[[0-9;]*m/, "", s); return s }
 
   # Every line the gate emits per host is tagged [host.local]; the provenance line
@@ -121,6 +132,33 @@ BLOCK="$(awk -v routines="$ROUTINES" -v sf="$SCALE_FLOOR" -v tf="$STRSM_FLOOR" -
       ptr[host, r] = pt; cir[host, r] = ci
     }
 
+    # The JUDGED class changed shape with the criterion (#6, 2026-08-20): it no longer
+    # "scales Nx" against a cross-host floor, it "reaches F% of" its own measured
+    # ceiling, and the ratio rides along as reported context. The apostrophe in the
+    # gate wording is deliberately not matched -- this awk program is inside a
+    # single-quoted shell string, so the discriminator is the thread-count clause.
+    #   [h] Sgemm reaches 65.9% of this ... measured 8-thread ceiling (852.1 GFLOP/s), scaling 5.792x / 5.744x net of CI -- ...
+    #   [h] Sgemm reaches only 65.9% of this ... 8-thread ceiling (852.1 GFLOP/s) (< 90%), scaling ...
+    if (match(rest, /^[A-Za-z]+ reaches /) && rest ~ /measured [0-9]+-thread ceiling/) {
+      r = rest; sub(/ reaches .*$/, "", r)
+      fr = ""; if (match(rest, /reaches (only )?[0-9.]+%/)) { fr = substr(rest, RSTART, RLENGTH); sub(/^reaches (only )?/, "", fr); sub(/%$/, "", fr) }
+      ce = ""; if (match(rest, /ceiling \([0-9.]+ GFLOP\/s\)/))  { ce = substr(rest, RSTART, RLENGTH); sub(/^ceiling \(/, "", ce); sub(/ GFLOP\/s\)$/, "", ce) }
+      pt = ""; if (match(rest, /scaling [0-9.]+x/))              { pt = substr(rest, RSTART + 8, RLENGTH - 9) }
+      ci = ""; if (match(rest, /[0-9.]+x net of CI/))            { ci = substr(rest, RSTART, RLENGTH); sub(/x net of CI$/, "", ci) }
+      verdict[host, r] = (line ~ /^ *FAIL/) ? "FAIL" : (line ~ /^ *PASS/) ? "PASS" : "OTHER"
+      if (match(rest, /measured [0-9]+-thread/)) { nt = substr(rest, RSTART + 9, RLENGTH - 16) }
+      # Same refusal as above, extended to the two new numbers: a fraction or a
+      # ceiling that came out as prose would be published as prose.
+      if (fr !~ /^[0-9]+\.?[0-9]*$/ || ce !~ /^[0-9]+\.?[0-9]*$/ || pt !~ /^[0-9]+\.?[0-9]*$/ || ci !~ /^[0-9]+\.?[0-9]*$/)
+        { printf "readme-numbers: [%s] %s ceiling verdict line did not yield four numbers (frac=%s, ceiling=%s, point=%s, net=%s)\n", host, r, fr, ce, pt, ci > "/dev/stderr"; bad = 1 }
+      frr[host, r] = fr; cer[host, r] = ce; ptr[host, r] = pt; cir[host, r] = ci
+      # One ceiling per host, printed once per judged routine: three printings of one
+      # measurement are one witness (§5 rule 10), so they cross-check and never corroborate.
+      if ((host in ceil8) && ceil8[host] != ce)
+        { printf "readme-numbers: [%s] prints two 8-thread ceilings in one run, %s and %s\n", host, ceil8[host], ce > "/dev/stderr"; bad = 1 }
+      ceil8[host] = ce
+    }
+
     # peak, printed once per routine per host, beside the 8-thread percent the gate computes
     if (match(rest, /% of 8x the single-thread avx512 peak \([0-9.]+ GFLOP\/s\)/)) {
       r = rest; sub(/:.*$/, "", r)
@@ -167,16 +205,29 @@ BLOCK="$(awk -v routines="$ROUTINES" -v sf="$SCALE_FLOOR" -v tf="$STRSM_FLOOR" -
 
         # A row with no verdict is not a passing row. Fail closed: the caption would
         # otherwise be silent about exactly the row the gate could not judge.
-        if (!((h, r) in verdict)) { printf "readme-numbers: [%s] %s has rates but no scaling verdict in this log, so its disclosure cannot be derived\n", h, r > "/dev/stderr"; exit 3 }
+        # A log from before the #6 ruling has rates and no ceiling verdict, and lands
+        # here rather than being republished under a criterion it was never judged by.
+        # Re-adjudicating those runs is its own deliverable working from the archived
+        # samples, not something this generator may do by silently keeping the old bar.
+        if (!((h, r) in verdict)) { printf "readme-numbers: [%s] %s has rates but no scaling verdict in this log, so its disclosure cannot be derived (a pre-2026-08-20 log has no ceiling verdict to publish)\n", h, r > "/dev/stderr"; exit 3 }
         if (verdict[h, r] == "FAIL") {
-          f = (r == "Strsm") ? tf + 0 : sf + 0
-          # The two kinds are named apart because they ask for different things: a
-          # point estimate already under the floor is a shortfall, while one that
-          # clears the floor and fails only net of CI is a verdict decided by the
-          # noise the measurement itself carries, and the remedy for that is precision
-          # (DESIGN.md §4, line 130) rather than a discussion about the nest.
-          if (ptr[h, r] + 0 >= f) near[++nn] = sprintf("%s %s (%sx, %sx net of CI)", model[h], r, ptr[h, r], cir[h, r])
-          else low[++nl] = sprintf("%s %s at %sx (%sx net of CI)", model[h], r, ptr[h, r], cir[h, r])
+          # THREE KINDS NOW, because the two classes are judged by different
+          # instruments. The judged class is compared net of CI against its own
+          # measured ceiling, and that comparison yields ONE fraction -- there is no
+          # point-estimate-vs-CI distinction to draw, so a shortfall there is just a
+          # shortfall, named with the ceiling it fell short of.
+          if (r != "Strsm") {
+            short[++ns] = sprintf("%s %s at %s%% of its own %s GFLOP/s ceiling", model[h], r, frr[h, r], cer[h, r])
+          } else {
+            # Strsm keeps the ratio bar and so keeps the distinction, which asks for
+            # different things: a point estimate already under the floor is a
+            # shortfall, while one that clears the floor and fails only net of CI is a
+            # verdict decided by the noise the measurement itself carries, and the
+            # remedy for that is precision (DESIGN.md §4, line 130) rather than a
+            # discussion about the nest.
+            if (ptr[h, r] + 0 >= tf + 0) near[++nn] = sprintf("%s %s (%sx, %sx net of CI)", model[h], r, ptr[h, r], cir[h, r])
+            else low[++nl] = sprintf("%s %s at %sx (%sx net of CI)", model[h], r, ptr[h, r], cir[h, r])
+          }
         }
       }
     }
@@ -203,10 +254,30 @@ BLOCK="$(awk -v routines="$ROUTINES" -v sf="$SCALE_FLOOR" -v tf="$STRSM_FLOOR" -
     printf "All %d rows come from one run — `scripts/gate-p5.sh` at rev `%s`, log in `build/%s` — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. The 1-thread and 8-thread rows for a routine are the two arms of that run'"'"'s scaling ratio, so they are directly comparable to each other; rows from different CPUs are not, because the peaks differ.\n\n", \
       nrow, (rev == "" ? "unrecorded" : rev), src, (nsz == "" ? "4096" : nsz), \
       (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host") > "/dev/stderr"
-    if (nl + nn == 0) {
-      printf "All %d scaling ratios those %d rows form clear the floor scripts/gate-p5.sh enforces (>= %sx at 8 threads, >= %sx for Strsm), net of confidence intervals.\n", nr, nrow, sf, tf > "/dev/stderr"
+    # THE COLUMN DENOMINATOR IS NOT THE CRITERION DENOMINATOR, and after #6 that has
+    # to be said in the caption rather than inferred from the column. "8x the 1-thread
+    # peak" is a true statement about what the percent divides by and an unattainable
+    # ceiling by construction -- every part here loses several hundred MHz going from
+    # one active core under a 512-bit license to eight, for reasons having nothing to
+    # do with the parallel nest. The gate judges against a ceiling measured AT that
+    # thread count instead, which is the number named in the bars sentence below.
+    if (nt != "") {
+      printf "The 8-thread rows divide by 8x the 1-thread peak, which no host can reach: the clock drops with core count, so that share is a floor on how well the nest did and not a score. The bar below divides by a ceiling measured at %s threads on the host itself, where the droop is inside the reading.\n\n", nt > "/dev/stderr"
+    }
+    # The bars in words, not as a ">= %s" with a hole in it. Either may be deferred to
+    # its own measurement and both have been, at different times and for the same
+    # reason (#37 then #6), so "deferred" is a state this sentence can be in.
+    jb = (cf == "" \
+      ? sprintf("the judged routines are reported against each host'"'"'s own measured %s-thread ceiling with no fraction yet ratified (#6)", (nt == "" ? "8" : nt)) \
+      : sprintf("the judged routines must reach %s%% of each host'"'"'s own measured %s-thread ceiling (#6)", cf, (nt == "" ? "8" : nt)))
+    if (nl + nn + ns == 0) {
+      printf "Every one of the %d routine-host pairs those %d rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and Strsm must scale >= %sx (#37). The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tf, retired > "/dev/stderr"
     } else {
-      printf "%d of the %d scaling ratios those %d rows form do not clear the floor scripts/gate-p5.sh enforces (>= %sx at 8 threads, >= %sx for Strsm, judged net of confidence intervals). ", nl + nn, nr, nrow, sf, tf > "/dev/stderr"
+      printf "%d of the %d routine-host pairs those %d rows form do not clear the bars scripts/gate-p5.sh enforces (%s; Strsm must scale >= %sx (#37); both judged net of confidence intervals). ", nl + nn + ns, nr, nrow, jb, tf > "/dev/stderr"
+      if (ns > 0) {
+        s = ""; for (k = 1; k <= ns; k++) s = s (k > 1 ? "; " : "") short[k]
+        printf "%d of the judged routines %s short of %s own host'"'"'s ceiling: %s. ", ns, (ns == 1 ? "falls" : "fall"), (ns == 1 ? "its" : "their"), s > "/dev/stderr"
+      }
       if (nl > 0) {
         s = ""; for (k = 1; k <= nl; k++) s = s (k > 1 ? "; " : "") low[k]
         printf "%d %s below it outright: %s. ", nl, (nl == 1 ? "sits" : "sit"), s > "/dev/stderr"
@@ -215,7 +286,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v sf="$SCALE_FLOOR" -v tf="$STRSM_FLOOR" -
         s = ""; for (k = 1; k <= nn; k++) s = s (k > 1 ? "; " : "") near[k]
         printf "%d %s it on the point estimate and %s only net of CI, which is a verdict decided by the measurement precision rather than by the parallel nest: %s. ", nn, (nn == 1 ? "clears" : "clear"), (nn == 1 ? "misses" : "miss"), s > "/dev/stderr"
       }
-      print "These are published shortfalls against a floor checked on every gate run, not regressions against an earlier reading." > "/dev/stderr"
+      print "These are published shortfalls against bars checked on every gate run, not regressions against an earlier reading." > "/dev/stderr"
     }
   }
 ' "$LOG" 2>build/.readme-numbers.cap)" || { cat build/.readme-numbers.cap >&2; die "the log did not yield a complete block; README.md is untouched"; }

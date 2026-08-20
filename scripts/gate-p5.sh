@@ -40,7 +40,22 @@ FAIL=0
 # The shape and the thread count DESIGN.md §4/P5 names, and the floor it sets.
 P5_SIZE=4096
 P5_THREADS=8
-SCALE_FLOOR=6.0
+
+# THE 6.0x FLOOR IS RETIRED and the judged class is compared to a ceiling this gate
+# measures on the host under test (ruling on #6, 2026-08-20). DESIGN.md §4/P5 carries
+# the whole of it and is the authority: the rank inversion that falsified the floor,
+# why the compute arm is measured AT 8 threads, why the memory term is not yet inside
+# the min() and why that omission is in the strict direction, and why CEIL_FRACTION is
+# empty. Not restated here — a criterion whose reasoning lives in two places has one
+# witness and two things to keep in step (§5 rule 10).
+#
+# Retained only as the value the disclosure names as retired, never as a comparison:
+SCALE_FLOOR_RETIRED=6.0
+# Empty = the fraction is computed, printed and reported, and no host fails on it.
+# Deferred to the fleet measurement on STRSM_FLOOR's own ratified precedent, fifteen
+# lines down in this same file (#37). >=90% when set, per scripts/roofline.sh's
+# issue-bound class.
+CEIL_FRACTION=
 
 # The two parallelism classes (criterion 1, ruled 2026-08-12). P5_JUDGED is one
 # class: GEMM-shaped nests over independent tiles. P5_MEASURED is the other:
@@ -66,6 +81,11 @@ STRSM_AMDAHL_NOTE=1
 # Benchmark row names. The thread count is IN THE NAME (criterion 2).
 scale_name() { printf 'Scale/%s/n=%d/threads=%d' "$1" "$P5_SIZE" "$2"; }
 GATE_PEAK="Peak/avx512"
+# The ceiling's own rows (ruling on #6). compute_name's width tracks GATE_PEAK's so the
+# two peaks can never be read from different kernels; stream_name's patterns are the
+# read-only and read-modify-write halves of the bandwidth bracket.
+compute_name() { printf 'Ceiling/compute/%s/threads=%d' "${GATE_PEAK#Peak/}" "$1"; }
+stream_name()  { printf 'Ceiling/stream/%s/threads=%d' "$1" "$2"; }
 # Two top-level alternatives, each with fewer elements than the names it selects,
 # so each is depth-unconstrained and runs everything beneath it. That is the one
 # reading of `go test -bench`'s two-level split which means what it looks like
@@ -73,7 +93,7 @@ GATE_PEAK="Peak/avx512"
 # only then does each alternative split on '/'. require_bench declares the exact
 # rows this gate reads, so anything extra beneath these two costs time and nothing
 # else.
-P5_BENCH_FILTER='Scale|Peak'
+P5_BENCH_FILTER='Scale|Peak|Ceiling'
 
 # The thread counts the determinism test must cover; 3 is there because a
 # row-partition off-by-one hides at every power of two (criterion 5).
@@ -507,7 +527,11 @@ echo
 echo "-- scaling at $P5_THREADS cores on ${P5_SIZE}^3 (the headline criterion) --"
 info "-test.count=$KEEL_BENCH_COUNT -test.benchtime=$KEEL_BENCH_TIME; one invocation per host with both thread"
 info "counts inside it, and the floor counts as cleared only net of both intervals"
-info "judged at >= ${SCALE_FLOOR}x: $P5_JUDGED — one parallelism class (ruled 2026-08-12)"
+if [[ -n "$CEIL_FRACTION" ]]; then
+  info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, #6)"
+else
+  info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has no floor in force until the bandwidth term is measured on the fleet"
+fi
 if [[ -n "$STRSM_FLOOR" ]]; then
   info "judged at >= ${STRSM_FLOOR}x: $P5_MEASURED — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)"
 else
@@ -582,8 +606,37 @@ else
     for r in $P5_JUDGED $P5_MEASURED; do
       WANT_ROWS+=("$(scale_name "$r" 1)" "$(scale_name "$r" "$P5_THREADS")")
     done
+    # The ceiling's compute rows are required, not optional: they are the denominator
+    # of this gate's headline criterion, and a missing denominator is a failure to
+    # measure rather than a criterion to skip.
+    WANT_ROWS+=("$(compute_name 1)" "$(compute_name "$P5_THREADS")")
     require_bench "[$host] the scaling ratios' inputs" \
       "$BENCHLOG" "$BENCHCSV" GFLOP/s "${WANT_ROWS[@]}" "$GATE_PEAK" || continue
+
+    # ---- the per-host attainable ceiling, derived and printed before anything divides
+    # by it (ruling on #6, 2026-08-20). Printed once per host, not once per row: it is
+    # a property of the machine, and three copies of one derivation would read as three
+    # witnesses (§5 rule 10).
+    CEIL8="$(bench_gflops "$(compute_name "$P5_THREADS")" "$BENCHCSV")"
+    CEIL1="$(bench_gflops "$(compute_name 1)" "$BENCHCSV")"
+    if [[ -z "$CEIL8" || -z "$CEIL1" ]]; then
+      unmeasured "[$host] no measured ${P5_THREADS}-thread compute ceiling, so nothing here may be divided by one"
+      continue
+    fi
+    # The droop 8x-the-1-thread-peak assumed away, now a number. Under 100% is the
+    # clock falling with core count; at or over it, this host holds its clock and the
+    # old denominator was merely unnecessary rather than wrong.
+    info "[$host] ceiling: compute $CEIL8 GFLOP/s measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading, which is the clock droop with core count that the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away"
+    for p in dot axpy; do
+      bw="$(bench_stat "$(stream_name "$p" "$P5_THREADS")" "$BENCHCSV" GB/s)"
+      bw1="$(bench_stat "$(stream_name "$p" 1)" "$BENCHCSV" GB/s)"
+      if [[ -z "$bw" ]]; then
+        info "[$host] ceiling: stream/$p not measured this run, so the memory term contributes nothing to the min() — see the note on CEIL_FRACTION: omitting it is the strict direction"
+      else
+        bw1v="${bw1%% *}"
+        info "[$host] ceiling: stream/$p ${bw%% *} GB/s at $P5_THREADS threads, ${bw1v:-none} at 1 — reported. NOT yet in the min(): converting GB/s to a FLOP/s bound needs a declared DRAM traffic count and no benchmark declares one, so the ceiling in force is the compute term alone, which can only UNDERSTATE how close this host is to its true ceiling"
+      fi
+    done
 
     HOST_CLEARED=1
     HOST_MEASURED=1
@@ -702,10 +755,32 @@ else
         continue
       fi
 
-      if awk -v v="$lo" -v f="$SCALE_FLOOR" 'BEGIN{exit !(v >= f)}'; then
-        pass "[$host] $r scales ${pt}x at $P5_THREADS threads, ${lo}x net of CI (>= ${SCALE_FLOOR}x)"
+      # ---- achieved against this host's OWN measured ceiling (ruling on #6, 2026-08-20)
+      #
+      # The numerator is net of CI, the denominator is the ceiling's point estimate, so
+      # the fraction is conservative in the same direction the retired floor's net-of-CI
+      # comparison was. The T8/T1 ratio is still printed, because it is what every
+      # published row and every historical log is stated in and #17 re-adjudicates them
+      # against this — but it is no longer what decides anything.
+      m8lo="$(bench_gflops_lo "$many" "$BENCHCSV")"
+      if [[ -z "$m8lo" ]]; then
+        unmeasured "[$host] $r: no bounded ${P5_THREADS}-thread rate, so no fraction of the ceiling can be formed"
+        HOST_CLEARED=0; HOST_MEASURED=0
+        continue
+      fi
+      frac="$(awk -v a="$m8lo" -v c="$CEIL8" 'BEGIN{ if (c <= 0) exit 1; printf "%.1f", 100*a/c }')" || frac=""
+      if [[ -z "$frac" ]]; then
+        unmeasured "[$host] $r: the ceiling came out non-positive ($CEIL8), which is a broken denominator and not a verdict"
+        HOST_CLEARED=0; HOST_MEASURED=0
+      elif [[ -z "$CEIL_FRACTION" ]]; then
+        # The STRSM_FLOOR precedent (#37): measured, reported, and the input to setting
+        # the bar rather than a bar itself. Named as unjudged so no reader can mistake a
+        # silent pass for cleared coverage — this class HAS no floor in force right now.
+        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, no fraction ratified yet (#6): this reading is an input to setting one, and the retired ${SCALE_FLOOR_RETIRED}x floor is not applied"
+      elif awk -v v="$frac" -v f="$CEIL_FRACTION" 'BEGIN{exit !(v >= f)}'; then
+        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (>= ${CEIL_FRACTION}%), scaling ${pt}x / ${lo}x net of CI"
       else
-        fail "[$host] $r scales only ${pt}x at $P5_THREADS threads, ${lo}x net of CI (< ${SCALE_FLOOR}x)"
+        fail "[$host] $r reaches only ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (< ${CEIL_FRACTION}%), scaling ${pt}x / ${lo}x net of CI"
         HOST_CLEARED=0
         HOST_MISSED=1
       fi
@@ -785,11 +860,23 @@ else
   # Hoisted is the CONSTANT LIST and not the possessive: collapsing both produced "2 of 3
   # gate hosts cleared its class's bar", caught by rendering the branches rather than
   # reading them, which is the whole argument for driving a verdict line.
-  if [[ -n "$STRSM_FLOOR" ]]; then
-    BARS="(${SCALE_FLOOR}x for $P5_JUDGED, ${STRSM_FLOOR}x for $P5_MEASURED)"
+  # Two bars, each independently deferrable to its own measurement since 2026-08-20, so
+  # this is built from two halves rather than enumerated as four sentences — four
+  # hand-written sentences is four places for the next constant to be typed into three
+  # of. All four combinations were RENDERED before this landed, not read, for the reason
+  # the paragraph above records; there is no harness for this file, so that check is a
+  # session act and not a standing one (§5 rule 12: the gap is stated, not implied).
+  if [[ -n "$CEIL_FRACTION" ]]; then
+    BARS_J="${CEIL_FRACTION}% of each host's own ${P5_THREADS}-thread ceiling for $P5_JUDGED"
   else
-    BARS="(${SCALE_FLOOR}x for $P5_JUDGED; $P5_MEASURED is reported unjudged, #37)"
+    BARS_J="$P5_JUDGED reported against each host's own ceiling with no fraction in force (#6)"
   fi
+  if [[ -n "$STRSM_FLOOR" ]]; then
+    BARS_M="${STRSM_FLOOR}x for $P5_MEASURED"
+  else
+    BARS_M="$P5_MEASURED is reported unjudged (#37)"
+  fi
+  BARS="($BARS_J, $BARS_M)"
   # Hosts that left the loop with no verdict for a reason that is not admission: no
   # complete set of ratio inputs, no bounded interval, no declared parallelism model.
   # Named, because they are neither cleared nor slow.
@@ -855,11 +942,14 @@ fi
 # ------------------------------------------- P4's gate, carried forward whole
 echo
 echo "-- carried from P4 (criterion 10): every absolute bar this ratio stands on --"
-info "\">= ${SCALE_FLOOR}x single-thread\" is a ratio whose denominator this phase is chartered to"
-info "change. Stage 1 makes the serial path faster, which makes this bar harder; a"
-info "parallel nest that slowed it would make the bar easier. So the absolute bars are"
-info "carried by running the gates that own them: gate-p4 runs gate-p3, which carries"
-info "P2's kernel audit — three phases of thresholds, not one of them restated here."
+info "\">= ${SCALE_FLOOR_RETIRED}x single-thread\" was a ratio whose denominator this phase is chartered"
+info "to change: stage 1 makes the serial path faster, which made that bar harder, and a"
+info "parallel nest that SLOWED the serial path made it easier. This gate's own carried text"
+info "predicted that hazard before it decided any verdict, and #6's ruling of 2026-08-20"
+info "removed it — the denominator is now a measured hardware ceiling, which stage 1 cannot"
+info "move in either direction. The absolute bars are still carried by running the gates that"
+info "own them: gate-p4 runs gate-p3, which carries P2's kernel audit — three phases of"
+info "thresholds, not one of them restated here."
 if [[ "$TREE_CLEAN" -eq 0 ]]; then
   unmeasured "the delegated P4 gate did not run: this gate refused a dirty tree above, and a gate that could not run is unmeasured rather than green"
 else
