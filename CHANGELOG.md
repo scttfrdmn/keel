@@ -19,6 +19,25 @@ While the major version is 0, minor versions may contain breaking changes.
   50/8, 270/48 — and `-sweep`'s first run re-derives all nine rows of KERNEL.md §3 exactly, from an independent
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
+### Fixed
+- **Bare metal reaches the evidentiary class by a named arm; the default stays restrictive** (#106). `host_admission`
+  read the class from `instance=` alone, so bare metal — which has no EC2 identity — fell through the `case` default to
+  `correctness`, and a re-admission run would have demoted vesta/janus/antares by a classifier bug rather than by
+  evidence. Driven against the pre-fix code on the same line the lab hosts produce: `correctness` before, `evidentiary`
+  after. The probe gains a `virt=` field (the `hypervisor` CPU flag, read from `/proc/cpuinfo`'s `flags` line, `?` where
+  there is no such line — an absent instrument must not grant what it cannot see), and the class now reads
+  `instance=`, `virt=` and `governor=` from one provenance line. Scott's condition, ruled 2026-08-19: **name the class,
+  do not widen the default** — a permissive default would trade a false demotion for a false admission and invert the
+  allowlist's safety property, so `instance=none` still fails closed unless `virt=metal` *and* `governor=performance`.
+  Four arms must refuse and are driven doing it (`remote-exec-test.sh` case 8/8b, 33 checks): bare metal under
+  `powersave` (#79's case), bare metal with no cpufreq at all, a `hypervisor`-flagged guest, and the default arm on a
+  provenance line with no `virt=` field. The four refusals are checked to name four *distinct* causes, since the
+  hardcoded parenthetical this replaces told a bare-metal host it was "not a full-size instance". The governor
+  conjunct is now a second derivation of a fact `assert_governor` also derives, so the two are pinned to agree over
+  every governor state rather than assumed to (§5 rule 10). Fixture-only, stated: the guest arm has no live host to
+  read (the AWS fleet's last guest is retired), so *that a real guest emits `virt=guest`* is an inference from
+  `CPUID.1:ECX.31` tested against a line the fixture wrote.
+
 ### Changed
 - **`DESIGN.md` §5 gains rule 14: a defect's severity is a function of its deployment context, not its code**, appended
   so no ordinal moved (#106). #106's "latent, not active" was true when written and false once #109 made the lab a

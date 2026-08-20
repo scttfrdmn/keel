@@ -439,12 +439,28 @@ remote_build_test_or_fail() {
 # this was not firing, which is the point — it would have fired on one contributor's
 # host, once, as an unattributable UNMEASURED.
 #
-# `instance=` is host_admission's only input (#104): full size is not visible from inside
-# the guest — a 4xlarge sees one socket and eight cores and looks entirely
+# `instance=` is one of host_admission's two inputs (#104): full size is not visible from
+# inside the guest — a 4xlarge sees one socket and eight cores and looks entirely
 # self-consistent — so the type is the fact and every field above is a consequence of it.
 # Three outcomes kept apart because they are three different things (§5 rule 6): the
-# type, `none` for a machine with no EC2 identity, `?` for no way to ask. `none` resolves
-# to the restrictive class and `?` to unmeasured — fail-closed in both directions.
+# type, `none` for a machine with no EC2 identity, `?` for no way to ask. `?` resolves to
+# unmeasured, and `none` no longer resolves through the default arm — see host_admission.
+#
+# `virt=` is the second input, and it is here because `instance=none` was answering two
+# questions with one word (#106). A machine with no EC2 identity is either bare metal —
+# the *limiting* case of full size, owning its socket more completely than any instance
+# type can demonstrate — or a non-EC2 guest of genuinely unknown size, and those are
+# opposite classifications. The discriminator is the `hypervisor` CPU flag, read directly
+# rather than inferred from an unrelated capability. Three tokens, and the third is the
+# load-bearing one: `metal` (a flags line with no hypervisor flag), `guest` (the flag is
+# there), `?` (there is no flags line to read — no /proc/cpuinfo, or an architecture that
+# does not print one, which is this repo's own macOS dev host and any arm64 target).
+# `?` must not read as `metal`, or an absent instrument would grant what it cannot see.
+# WHAT THIS CANNOT SEE (§5 rule 12): the flag is CPUID.1:ECX.31, which a hypervisor sets
+# by convention and may clear, so a guest configured to hide itself is classified `metal`.
+# That is strictly stronger evidence than the governor-only route prototyped on #104 (a
+# readable governor proves cpufreq exposure, not single tenancy) and strictly weaker than
+# an attestation, which no pure-Go, no-credentials probe can obtain.
 #
 # `tmux=` is here because #62's supervisor can be absent, and an absent supervisor
 # must not be a silent one. remote_exec degrades to an unsupervised run on a host
@@ -527,6 +543,10 @@ remote_probe() {
     done
     tmux=no
     command -v tmux >/dev/null 2>&1 && tmux=yes
+    virt="?"
+    if [ -r /proc/cpuinfo ] && grep -q "^flags" /proc/cpuinfo; then
+      if grep -m1 "^flags" /proc/cpuinfo | grep -qw hypervisor; then virt=guest; else virt=metal; fi
+    fi
     inst="?"
     if command -v curl >/dev/null 2>&1; then
       inst=none
@@ -539,8 +559,8 @@ remote_probe() {
         [ -n "$inst" ] || inst="?"
       fi
     fi
-    printf "%s | instance=%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | tmux=%s | %s | %s\n" \
-      "$cpu" "$inst" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$tmux" "$(uname -sr)" "${cache:-caches=?}"
+    printf "%s | instance=%s | virt=%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | tmux=%s | %s | %s\n" \
+      "$cpu" "$inst" "$virt" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$tmux" "$(uname -sr)" "${cache:-caches=?}"
   ' 2>/dev/null
 }
 
@@ -688,10 +708,15 @@ assert_governor() {
   return 0
 }
 
-# The types admitted to the evidentiary class: the largest non-metal size in each
-# approved family, which is a whole host and therefore a whole socket too — a
-# conservative subset of what docs/hosts.md admits, not a restatement of it. Metal is
-# absent because metal is retired, not because it was overlooked.
+# The EC2 instance types admitted to the evidentiary class: the largest non-metal size in
+# each approved family, which is a whole host and therefore a whole socket too — a
+# conservative subset of what docs/hosts.md admits, not a restatement of it.
+#
+# No metal SIZE is listed, and that is not a statement about metal. This list answers "is
+# this instance type full size", a question only an instance type has; bare metal reaches
+# the same class through its own named arm below rather than by being enumerated here.
+# (Until 2026-08-19 this comment read "Metal is absent because metal is retired" — void by
+# #109, which reclassified the lab fleet as the dev tier rather than retiring it.)
 #
 # An allowlist is safe here in the way a duplicated threshold is not, and that is why
 # this is one: the default is the RESTRICTIVE class, so a stale list can only withhold a
@@ -707,15 +732,79 @@ KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge"
 #
 # The third state is the one that matters: without it, the mechanism that excuses a
 # partial-size reading from the floor is also a mechanism for laundering a red past it.
+#
+# WHAT THE CLASS IS DERIVED FROM: *does this host own its whole socket*, with an approved
+# instance type the EC2-specific way of establishing that and bare metal the direct way.
+# Five arms, four of them restrictive:
+#
+#   instance= in KEEL_EVIDENTIARY_SIZES         evidentiary   full size, unchanged
+#   instance=none, virt=metal, gov=performance  evidentiary   the bare-metal arm (#106)
+#   instance=none, virt=metal, gov anything else   correctness   #79's case
+#   instance=none, virt=guest                   correctness   a guest of unknown size
+#   instance=none, virt=?                       correctness   the default: unread is unmet
+#   instance= anything else                      correctness   not full size
+#   instance= empty or ?                        unknown       ⇒ unmeasured
+#
+# ADDING AN ARM, NOT WIDENING THE DEFAULT (Scott's condition, ruled 2026-08-19 on #106).
+# `instance=none` falling through to `correctness` was the right default and the wrong
+# classification: unknown provenance failing closed is exactly what a `case` default is
+# for, so that arm keeps its behaviour and bare metal gets its own evidence requirements
+# beside it. Widening the default would trade a false demotion for a false admission and
+# invert the allowlist's safety property — a stale list may only withhold a judgement,
+# never grant one — and every unrecognised host thereafter would arrive judged.
+#
+# WHY THE BARE-METAL ARM CARRIES A GOVERNOR CONJUNCT WHERE THE INSTANCE ARM DOES NOT, so
+# the asymmetry is not read as an oversight: the conjunct is what makes this the
+# *pre-existing* §5 rule 5 instrument — the one that admitted the lab fleet in the first
+# place — rather than a new grant, which is the whole basis of the 2026-08-17 ruling that
+# lab admission predates this machinery and stands. A guest has no governor to assert and
+# gets rule 5's substitute instrument instead, judged after its sweep by clock_post.
+#
+# The governor is parsed from THE SAME PROVENANCE LINE as instance= and virt=, not read
+# out of assert_governor's GOV_STATE, so all three conjuncts necessarily describe one
+# host: a global would let the previous host's reading classify this one, which is the
+# hazard GOV_PROV exists to name. It is the same field assert_governor's cascade reads,
+# and `evidentiary` here means exactly `GOV_STATE == performance` there — two derivations
+# of one fact, so remote-exec-test.sh case 8 pins them to agree over every governor state
+# rather than leaving the agreement to be assumed (§5 rule 10).
 ADM_CLASS=""
 ADM_INSTANCE=""
+ADM_VIRT=""
+# Why this class, in the words a verdict line can print. It replaces a hardcoded
+# parenthetical in adm_judgeable that said "$ADM_INSTANCE is not a full-size instance of
+# an approved family" for every correctness host — true of a 4xlarge and false of bare
+# metal under powersave, which would have been refused with a cause it did not have.
+ADM_WHY=""
 host_admission() {
-  ADM_INSTANCE="$(sed -n 's/.*instance=\([^ |]*\).*/\1/p' <<<"${1-}")"
+  local prov="${1-}" gov
+  ADM_INSTANCE="$(sed -n 's/.*instance=\([^ |]*\).*/\1/p' <<<"$prov")"
+  ADM_VIRT="$(sed -n 's/.*virt=\([^ |]*\).*/\1/p' <<<"$prov")"
+  gov="$(sed -n 's/.*governor=\([^ |]*\).*/\1/p' <<<"$prov")"
   case "$ADM_INSTANCE" in
-    "" | "?") ADM_CLASS=unknown ;;
+    "" | "?")
+      ADM_CLASS=unknown
+      ADM_WHY="no instance identity was read from this host" ;;
+    none)
+      if [[ "$ADM_VIRT" == metal && "$gov" == performance ]]; then
+        ADM_CLASS=evidentiary
+        ADM_WHY="bare metal (no hypervisor flag) with governor=performance: a whole machine owns its socket more completely than any instance type can demonstrate"
+      elif [[ "$ADM_VIRT" == metal ]]; then
+        ADM_CLASS=correctness
+        ADM_WHY="bare metal, but its clock is not established: governor=${gov:-unread}, not performance (§5 rule 5)"
+      elif [[ "$ADM_VIRT" == guest ]]; then
+        ADM_CLASS=correctness
+        ADM_WHY="hypervisor flag present and no EC2 identity: a guest whose size this run cannot see"
+      else
+        ADM_CLASS=correctness
+        ADM_WHY="no EC2 identity and virt=${ADM_VIRT:-unread}, so neither route to whole-socket ownership was established"
+      fi ;;
     *) case " $KEEL_EVIDENTIARY_SIZES " in
-         *" $ADM_INSTANCE "*) ADM_CLASS=evidentiary ;;
-         *) ADM_CLASS=correctness ;;
+         *" $ADM_INSTANCE "*)
+           ADM_CLASS=evidentiary
+           ADM_WHY="$ADM_INSTANCE is a full-size instance of an approved family" ;;
+         *)
+           ADM_CLASS=correctness
+           ADM_WHY="$ADM_INSTANCE is not a full-size instance of an approved family" ;;
        esac ;;
   esac
 }
@@ -728,7 +817,7 @@ host_admission() {
 # label defect and #90's arriving from a third direction.
 admission_readback() {
   host_admission "$2"
-  info "[$1] admission class: $ADM_CLASS (instance=${ADM_INSTANCE:-unread})"
+  info "[$1] admission class: $ADM_CLASS (instance=${ADM_INSTANCE:-unread}, virt=${ADM_VIRT:-unread}) — $ADM_WHY"
 }
 
 # adm_judgeable HOST PROV READING — may a perf verdict be formed from HOST's numbers?
@@ -752,7 +841,7 @@ adm_judgeable() {
   case "$ADM_CLASS" in
     evidentiary) return 0 ;;
     correctness)
-      info "[$1] correctness-class ($ADM_INSTANCE is not a full-size instance of an approved family): $3 — reported, not judged (docs/hosts.md)" ;;
+      info "[$1] correctness-class ($ADM_WHY): $3 — reported, not judged (docs/hosts.md)" ;;
     *)
       unmeasured "[$1] the admission class is unreadable (instance=${ADM_INSTANCE:-absent from the provenance line}), so this criterion is unmeasured here rather than cleared or missed: an unread identity must not be the mechanism that excuses a reading from a floor" ;;
   esac

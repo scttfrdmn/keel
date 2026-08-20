@@ -258,6 +258,12 @@ prov="$(remote_probe "$H" || true)"
 info_ "${prov:-no reading}"
 grep -q 'tmux=yes' <<<"$prov" && pass_ "provenance carries tmux=yes" ||
   fail_ "provenance has no tmux=yes field, so an absent supervisor would be silent"
+# #106 appended virt= ahead of the cpus field, so the same re-check applies to it: the
+# field has to be THERE (an absent field reads as an unread one, which is fail-closed and
+# also indistinguishable from a probe that broke) and the parser after it has to survive.
+[[ "$(sed -n 's/.*virt=\([^ |]*\).*/\1/p' <<<"$prov")" =~ ^(metal|guest|\?)$ ]] &&
+  pass_ "provenance carries a virt= token host_admission can read" ||
+  fail_ "provenance has no readable virt= field, so bare metal would be unclassifiable"
 # The three field parsers that read this line, re-checked because #62 appended to it.
 [[ "$(sed -n 's/.*| \([0-9]*\) cpus |.*/\1/p' <<<"$prov")" =~ ^[0-9]+$ ]] &&
   pass_ "gate-p5's cpus parser still resolves" || fail_ "gate-p5's cpus parser broke"
@@ -293,11 +299,120 @@ assert_governor fixture preamble "x | governor=absent | y" >/dev/null 2>&1
 [[ -z "$GOV_VALUE" ]] && pass_ "a guest reports no governor VALUE, only a state" ||
   fail_ "GOV_VALUE='$GOV_VALUE' would print as a reading nobody took"
 
+# ------------------- 8. the admission classifier: one arm widens, four must not
+#
+# #106: `instance=none` was answering two questions with one word, so bare metal fell
+# through the case default to `correctness` and would have demoted the three lab hosts
+# whose evidence the v0.1.0 record rests on. The fix ADDS AN ARM; it does not widen the
+# default. Which means the fix cannot be verified by the arm that widens: a change that
+# only ever granted admission would prove nothing about the three arms that must still
+# refuse, and #79 -- a published ratio measured under powersave -- is the precedent for
+# why the governor conjunct has to be shown to bite.
+#
+# WHICH ARMS ARE FIXTURED, stated rather than left to be assumed (§5 rule 12). All arms
+# are driven here from synthetic provenance lines, which is the whole space including the
+# two combinations no host in this fleet can produce. In addition:
+#   - the WIDENING arm is driven LIVE on vesta/janus/antares in the re-admission run
+#     (bare metal, three vendors, governor=performance), and that is the arm whose live
+#     result matters, because it is the one this fix changes;
+#   - bare-metal-under-powersave stays fixture-only: driving it live means setting a
+#     governor on Scott's hardware, which is both a sudo action and a perturbation of the
+#     fleet a measurement is about to run on;
+#   - virt=guest stays fixture-only: the AWS fleet's last configured guest was retired,
+#     so there is no live host with a hypervisor flag to read. It is the one arm whose
+#     PROBE half is unexercised anywhere -- that a real guest emits virt=guest is an
+#     inference from CPUID.1:ECX.31, tested here only against a line this file wrote.
+head_ "8. host_admission: one arm widens, four must not (#106)"
+# The gate primitives remote.sh's verdict lines call, defined at the head of the only case
+# that reads them: "the refusing arms must print their refusals" is a claim about the
+# text, and the text is discarded if these stay undefined.
+pass() { printf '        gate> ok     %s\n' "$1"; }
+fail() { printf '        gate> FAIL   %s\n' "$1"; }
+info() { printf '        gate> %s\n' "$1"; }
+unmeasured() { printf '        gate> UNMEAS %s\n' "$1"; }
+
+M="Zen 4 | instance=none | virt=metal"
+adm_case() {
+  local want="$1" line="$2" note="$3"
+  host_admission "$line"
+  [[ "$ADM_CLASS" == "$want" ]] && pass_ "$note -> $ADM_CLASS" ||
+    fail_ "$note -> $ADM_CLASS, expected $want"
+  info_ "why: $ADM_WHY"
+}
+adm_case evidentiary "$M | governor=performance | tmux=yes" "WIDENS: bare metal at performance"
+adm_case correctness "$M | governor=powersave | tmux=yes"   "REFUSES: bare metal under powersave (#79)"
+adm_case correctness "$M | governor=absent | tmux=yes"       "REFUSES: bare metal with no cpufreq to assert"
+adm_case correctness "x | instance=none | virt=guest | governor=performance" \
+  "REFUSES: hypervisor flag present, no EC2 identity"
+adm_case correctness "x | instance=none | virt=? | governor=performance" \
+  "REFUSES (default arm): virt unread"
+adm_case correctness "x | instance=none | governor=performance" \
+  "REFUSES (default arm): no virt field at all, i.e. a pre-#106 provenance line"
+adm_case evidentiary "x | instance=c7i.48xlarge | virt=guest | governor=absent" \
+  "unchanged: full-size approved instance type"
+adm_case correctness "x | instance=c7i.4xlarge | virt=guest | governor=absent" \
+  "unchanged: partial-size instance type"
+adm_case unknown "x | instance=? | virt=metal | governor=performance" \
+  "unchanged: no way to ask -> unknown, and unknown is unmeasured"
+adm_case unknown "" "unchanged: no reading at all -> unknown"
+
+# Four refusals, four causes. §5 rule 6 forbids one verdict standing for two causes, and
+# a shared WHY string is that defect at the message layer -- which is what the code this
+# replaced had, telling a bare-metal host it was "not a full-size instance".
+whys=()
+for l in "$M | governor=powersave" "x | instance=none | virt=guest" \
+         "x | instance=none | virt=?" "x | instance=c7i.4xlarge | virt=guest"; do
+  host_admission "$l"; whys+=("$ADM_WHY")
+done
+nw="$(printf '%s\n' "${whys[@]}" | sort -u | wc -l | tr -d ' ')"
+[[ "$nw" -eq 4 ]] && pass_ "the four refusals name four distinct causes" ||
+  fail_ "$nw distinct causes across four refusing arms: at least two share a verdict"
+
+# The governor conjunct is now derived TWICE from one field -- here, and in
+# assert_governor's cascade -- so the two are pinned to agree rather than assumed to
+# (§5 rule 10: two statements of one fact are a pair that can disagree). `evidentiary`
+# on a bare-metal line must mean exactly `GOV_STATE == performance`.
+for g in performance powersave absent unreadable unknown; do
+  line="x | instance=none | virt=metal | governor=$g | tmux=yes"
+  assert_governor fixture preamble "$line" >/dev/null 2>&1
+  host_admission "$line"
+  if [[ "$GOV_STATE" == performance ]]; then want=evidentiary; else want=correctness; fi
+  [[ "$ADM_CLASS" == "$want" ]] &&
+    pass_ "governor=$g: GOV_STATE=$GOV_STATE and class=$ADM_CLASS -- the two derivations agree" ||
+    fail_ "governor=$g: GOV_STATE=$GOV_STATE but class=$ADM_CLASS, expected $want -- diverged"
+done
+
+# adm_judgeable is what a gate calls. It prints the refusal itself and returns 1, so both
+# halves are checked: a refusal that returned 0 would let the number through with the
+# words still on the page, and an unread identity must land on UNMEASURED rather than on
+# the same "reported, not judged" as a class that was read.
+head_ "8b. adm_judgeable prints the refusal a gate would tally"
+jcase() {
+  local want_rc="$1" want_re="$2" line="$3" note="$4" rc=0 out
+  out="$(adm_judgeable fixture "$line" "reads 42.7% of measured peak")" || rc=$?
+  [[ "$rc" -eq "$want_rc" ]] && pass_ "$note -> rc=$rc" ||
+    fail_ "$note -> rc=$rc, expected $want_rc"
+  if [[ "$want_re" == SILENT ]]; then
+    [[ -z "$out" ]] && pass_ "  and says nothing: an admitted host gets no verdict here" ||
+      fail_ "  printed a verdict for an admitted host: $out"
+    return
+  fi
+  printf '%s\n' "${out:-        gate> <no verdict line at all>}"
+  grep -Eq "$want_re" <<<"$out" && pass_ "  and its cause reads '$want_re'" ||
+    fail_ "  its verdict line does not name '$want_re'"
+}
+jcase 0 SILENT                        "$M | governor=performance" "bare metal at performance is judgeable"
+jcase 1 'governor=powersave, not performance' "$M | governor=powersave" "powersave refused"
+jcase 1 'hypervisor flag present'     "x | instance=none | virt=guest | governor=performance" "guest refused"
+jcase 1 'neither route to whole-socket ownership' "x | instance=none | virt=? | governor=performance" "default arm refused"
+jcase 1 'UNMEAS.*class is unreadable' "x | instance=? | virt=metal | governor=performance" "unread identity unmeasured"
+
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"
-  echo "  vanished, a severed link costs nothing, a missing supervisor is loud, and"
-  echo "  a host with no cpufreq is told apart from one whose knob will not read."
+  echo "  vanished, a severed link costs nothing, a missing supervisor is loud,"
+  echo "  a host with no cpufreq is told apart from one whose knob will not read,"
+  echo "  and bare metal is admitted by a named arm while four arms still refuse."
   exit 0
 fi
 echo "  RED -- $FAILS check(s) failed."

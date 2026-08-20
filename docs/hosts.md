@@ -34,7 +34,7 @@ checked in.
 | AVX-512 F/CD/BW/DQ/VL | the bundle `archsimd.X86.AVX512()` gates on — all five, or the backend does not register |
 | key-based ssh from the dev host | `remote.sh` uses `BatchMode=yes`; it never prompts and never handles credentials |
 | a clock established stable | for gate numbers, not correctness. DESIGN.md §5 rule 5 (as amended 2026-08-16) requires it of every measuring host, by whichever instrument the host has: the `performance` governor where `cpufreq` is readable, else `BenchmarkPeak` sampled at head/middle/tail. Both branches are live — `clock_gate`/`clock_head`/`clock_post`, and the guest branch is what the AWS fleet runs on, where `assert_governor` reads `absent` |
-| an admission class | `evidentiary` (full-size, judged) or `correctness` (partial-size, reported); see the class table below. Unreadable is `unmeasured`, not `correctness`. Read by `host_admission` from the provenance line's `instance=` field against the declared `KEEL_EVIDENTIARY_SIZES` (`remote.sh`); wired into gate-p2's criterion 5b, and **not yet** into gate-p3's or gate-p5's judged perf criteria |
+| an admission class | `evidentiary` (whole-socket, judged) or `correctness` (partial-size or unproven, reported); see the class table below. Unreadable is `unmeasured`, not `correctness`. Read by `host_admission` from the provenance line's `instance=`, `virt=` and `governor=` fields — an approved type in `KEEL_EVIDENTIARY_SIZES`, *or* bare metal (`virt=metal`, no `hypervisor` CPU flag) with `governor=performance` (`remote.sh`, #106); wired into gate-p2's criterion 5b, and **not yet** into gate-p3's or gate-p5's judged perf criteria |
 
 ## Current targets
 
@@ -216,14 +216,33 @@ structurally from the two desktop/HEDT parts. DESIGN.md §4/P3 sizes KC/MC/NC
 against a cache hierarchy, so the blocking parameters that suit vesta should not
 be assumed to transfer here. Measure per host.
 
-## Cloud hosts: two admission classes (ruled 2026-08-12 on #12; amended 2026-08-17 on #104)
+## Two admission classes (ruled 2026-08-12 on #12; amended 2026-08-17 on #104 and 2026-08-19 on #106)
+
+*Headed "Cloud hosts" until 2026-08-19. The scope was never the cloud — it is which hosts
+may sign a perf verdict — and the misnomer is exactly how bare metal came to be classified
+by a fallthrough written for guests.*
 
 Two classes, and the distinction is what each one is allowed to produce:
 
 | class | machines | produces | admission requires |
 |---|---|---|---|
-| **evidentiary** | a **full-size (whole-socket)** instance of an approved family | judged perf verdicts; published rows; the stage-3 curves | full size **and** a passing preamble: clock stability established by §5 rule 5's instrument for the host it is, and the instance type in the provenance block |
-| **correctness** | any partial-size guest, any µarch | differential and correctness coverage; perf numbers **reported, never judged** | nothing beyond reachability |
+| **evidentiary** | a **full-size (whole-socket)** instance of an approved family, **or** a bare-metal host | judged perf verdicts; published rows; the stage-3 curves | whole-socket ownership **and** a passing preamble: clock stability established by §5 rule 5's instrument for the host it is. Two routes to the former, and the class names each — an approved instance type in the provenance block, or `virt=metal` with `governor=performance` |
+| **correctness** | any partial-size guest, any µarch; any host whose socket ownership is unproven | differential and correctness coverage; perf numbers **reported, never judged** | nothing beyond reachability |
+
+**Amended 2026-08-19 (ruling on #106): bare metal reaches the evidentiary class by a named
+arm, and the default stays restrictive.** As first written, `host_admission` read the class
+from `instance=` alone, so a machine with no EC2 identity — which is what bare metal is —
+fell through the `case` default to `correctness`. That is the right *default* and the wrong
+*classification*: **bare metal is the limiting case of full size, not the absence of it**,
+and a whole machine with no hypervisor owns its socket more completely than any instance
+type can demonstrate. The repair adds an arm rather than widening the fallthrough, because
+widening it would trade a false demotion for a false admission and invert the allowlist's
+one safety property — a stale list may only withhold a judgement, never grant one. The
+governor conjunct is what makes this the *pre-existing* §5 rule 5 instrument (the one that
+admitted the lab fleet) rather than a new grant; a guest, which owns no governor, gets rule
+5's substitute instrument instead. What the arm cannot see is stated where it is
+implemented: the `hypervisor` flag is `CPUID.1:ECX.31`, which a hypervisor sets by
+convention and may clear.
 
 **Amended 2026-08-17 (ruling on #104): the evidentiary class is full-size, not metal.**
 Scott's earlier ruling retired bare metal outright — *"no one will ever use this library
