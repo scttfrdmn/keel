@@ -171,7 +171,20 @@ func audit(root string, s Shape, keep string) (spill.Report, error) {
 	if err != nil {
 		return spill.Report{}, err
 	}
-	defer os.RemoveAll(dir)
+	// Reported rather than discarded, the same way and for the same reason as
+	// spill-audit's scratch dir (issue #39, whose fix this file reintroduced the
+	// defect against). Cleanup is not load-bearing — the caller reads the returned
+	// report, never the directory — but `-sweep` calls audit once per candidate, so
+	// a silent `_ =` accumulates dot-directories under internal/vec across 34
+	// shapes, and failing the audit over a cleanup would let a chmod suppress a
+	// report that was produced correctly. So: say it on stderr, keep the primary
+	// error. The dot prefix (see above) is what keeps a leak out of ./..., not this.
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			fmt.Fprintf(os.Stderr, "shapegen: candidate dir %s left behind (%v); "+
+				"it is gitignored and skipped by ./... and can be deleted\n", dir, err)
+		}
+	}()
 
 	src := s.Emit()
 	if err := os.WriteFile(filepath.Join(dir, "cand.go"), []byte(src), 0o644); err != nil {

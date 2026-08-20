@@ -62,6 +62,14 @@ While the major version is 0, minor versions may contain breaking changes.
   every governor state rather than assumed to (§5 rule 10). Fixture-only, stated: the guest arm has no live host to
   read (the AWS fleet's last guest is retired), so *that a real guest emits `virt=guest`* is an inference from
   `CPUID.1:ECX.31` tested against a line the fixture wrote.
+- **`shapegen` reports a candidate dir it cannot delete instead of discarding the error** (#107, following #39). The
+  gate's lint criterion caught `defer os.RemoveAll(dir)` at `tools/shapegen/main.go:174` — the same unchecked-cleanup
+  defect #39 already fixed in `spill-audit`, reintroduced by a new file. #39's resolution is followed rather than
+  re-derived: report on stderr, keep the primary error, never fail an audit over a cleanup, because a `chmod` on a
+  scratch dir must not suppress a report that was produced correctly. Driven on purpose rather than inferred from a
+  green run — `internal/vec` made unwritable mid-compile, and the branch prints the real path and errno; the healthy
+  `-frontier` run still prints `4.625 34 2x32 u=4 broadcast`, exit 0, no dir left behind. `-sweep` calls `audit` once
+  per candidate, so the silent form accumulated dot-directories 34 at a time.
 
 ### Changed
 - **`DESIGN.md` §5 gains rule 14: a defect's severity is a function of its deployment context, not its code**, appended
