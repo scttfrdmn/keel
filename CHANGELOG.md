@@ -68,6 +68,13 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **`aws-fleet.sh up` could not resume a half-launched fleet, so finishing one cost terminating it**
+  (2026-08-20). Roles launch in sequence with `--wait-for-ssh`, and the first judged launch was killed between
+  its second and third instance; `up` then refused to run at all while any `keel-` instance was alive, leaving
+  the only route to a complete fleet the termination of two healthy 48xlarges that were fine. `up` now skips a
+  role already running and dies only on a running instance the requested `FLEET` does not name — which is the
+  forgotten fleet the guard was written for, and is still fatal. Same argument that made `cmd_wire` idempotent,
+  learned the same way, one step earlier in the same script.
 - **§5 rule 5's clock check was flagging coin flips as thermal events; it now judges at full precision
   against a floor its own intervals set** (ruling on #6, 2026-08-20). The test asked only `head > middle >
   tail` on the `GFLOP/s` column, whose quantum at 245 is coarser than any decline it ever reported — it

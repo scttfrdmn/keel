@@ -20,8 +20,11 @@
 #   - `down` selects by the LAUNCHER'S OWN NAME, not by a list this script wrote, so it
 #     still finds instances after a lost .keel-hosts. That was the point of selecting by
 #     tag before, and `spawn list` reports no tags (see fleet_json).
-#   - `up` still refuses to run while any keel- instance is alive, because two fleets is
-#     the shape that produces a forgotten one.
+#   - `up` refuses to run beside a keel- instance THIS fleet does not name, and skips the
+#     roles it does. Two fleets is still the shape that produces a forgotten one, but an
+#     all-or-nothing launch makes the only route to a complete fleet the termination of a
+#     healthy one -- measured, 2026-08-20: the first judged launch was killed between its
+#     second and third instance and left two 48xlarges billing that `up` would not join.
 #
 # The SOFTWARE half is not here: scripts/provision-openblas.sh installs Go and
 # libopenblas and verifies the openblas-tagged harness. This script's whole job is to
@@ -130,8 +133,17 @@ write_ssh_config() {
 }
 
 cmd_up() {
-  [[ "$(fleet_json | jq length)" -eq 0 ]] ||
-    die "keel- instances are already running; run 'down' first (two fleets is how one gets forgotten)"
+  # Resumable, for the reason cmd_wire is idempotent and learned the same way. A role
+  # already running is skipped in the loop below; a running instance $FLEET does not name
+  # is still fatal, because that -- not a half-launched fleet -- is the forgotten one the
+  # check was written for.
+  local up_now role
+  up_now="$(fleet_json | jq -r '.[].name')"
+  while read -r role; do
+    [[ -n "$role" ]] || continue
+    printf '%s\n' "${FLEET[@]%%:*}" | grep -qxF "${role#keel-}" ||
+      die "$role is running and this fleet does not name it; 'down' first (two fleets is how one gets forgotten)"
+  done <<<"$up_now"
 
   # THE ONE NON-SPAWN AWS CALL, and it is not an instance operation: an SSM parameter
   # read. The distro is pinned to Ubuntu 24.04 rather than taking spawn's AL2023 default
@@ -161,9 +173,13 @@ cmd_up() {
   local dry_args=()
   [[ "${KEEL_FLEET_DRYRUN:-0}" != 1 ]] || { dry_args=(--estimate-only); say "DRY RUN: validating flags, nothing will be launched (spawn's price is wrong per size, spawn#543; truffle prices)"; }
 
-  local role type uarch spec
+  local type uarch spec
   for spec in "${FLEET[@]}"; do
     IFS=: read -r role type uarch <<<"$spec"
+    if grep -qxF "keel-$role" <<<"$up_now"; then
+      say "$role  $type  (already running, not relaunched)"
+      continue
+    fi
     # THE NAME IS THE JOIN KEY. It equals the ssh alias this script writes below and the
     # `name` spawn_probe matches on, so admission can only vouch for a host whose alias
     # and launcher record are the same string. Nothing enforces that from the far side;
