@@ -120,6 +120,22 @@ checkfs() {
   fi
 }
 
+# checkcs NAME WANT_STATE head middle tail -- clock_series (scripts/bench.sh), §5 rule 5's
+# substitute clock instrument. Each window is a `bench_stat` reading, "median ci", in
+# sec/op with the CI as a fraction. Here because the pure-function-plus-fixtures shape is
+# this file's whole purpose and gate-p3 already runs it, which reaches p4 and p5 by
+# delegation -- the four gates that own a clock verdict get the controls for free.
+checkcs() {
+  local name="$1" want="$2"; shift 2
+  local got; got="$(clock_series "$1" "$2" "$3")"
+  if [[ "${got%% *}" == "$want" ]]; then
+    printf '  ok    %-53s %s\n' "$name" "${got%% *}"
+  else
+    printf '  FAIL  %-53s got "%s", want "%s"\n' "$name" "${got%% *}" "$want"
+    FAILED=1
+  fi
+}
+
 # checkr NAME EXPECT src rlo pklo roof   (EXPECT "" means "no bound at all")
 checkr() {
   local name="$1" want="$2"; shift 2
@@ -138,6 +154,8 @@ main() {
   cd "$(dirname "$0")/.."
   # shellcheck source=scripts/roofline.sh
   source scripts/roofline.sh
+  # shellcheck source=scripts/bench.sh
+  source scripts/bench.sh
 
   # The gate constants, so the fixtures are judged by the shipped thresholds.
   PF=0.55; RF=0.90; CM=1.10; MM=1.25; SB=4.625; SL=1.05
@@ -486,6 +504,37 @@ main() {
   #     count -- "-1 of the 2 configured hosts" would read as a defect in the fleet
   #     rather than in the counter, and there is no hole to report either way.
   checkfs "more judged than configured: no negative"  ""                            2 3
+
+  echo
+  echo "== §5 rule 5's clock series: controls (#6, 2026-08-20) =="
+  echo
+  # 42. THE PHANTOM THIS AMENDMENT EXISTS TO KILL, from run 1's archived keel-gnr samples
+  #     at ce43bca rather than from a constructed pair: head and middle are the real
+  #     full-precision sec/op medians and CIs, and the tail is one GFLOP/s display quantum
+  #     "lower". The old test refused this host. The step is -0.0019% against a 0.2311%
+  #     floor -- 122x inside the interval the same run computed.
+  checkcs "gnr's refused triple is a tie, not an order"  stable \
+    "0.0001026725 0.0009496213689157634" "0.0001026705 0.0013587155025054656" "0.00010267459 0.0010197838058332795"
+  # 43. AND THE FLOOR DOES NOT SWALLOW A REAL DROOP, which is the control that matters:
+  #     an amendment that only ever answers `stable` would have retired the criterion
+  #     rather than repaired it. 2% then 3% slower against 0.1% intervals.
+  checkcs "a real droop still declines"                  declining \
+    "0.000100 0.001" "0.000102 0.001" "0.0001051 0.001"
+  # 44. Monotone means BOTH steps resolve. One resolved step and one tie is not a series
+  #     that declined; it is a series with one step in it.
+  checkcs "one resolved step is not a monotone decline"   stable \
+    "0.000100 0.001" "0.000102 0.001" "0.000102001 0.001"
+  # 45. A rising rate was never a decline, and the sign convention is the easy thing to
+  #     invert here: sec/op FALLING is the rate RISING.
+  checkcs "a rising rate is not a decline"                stable \
+    "0.000104 0.001" "0.000102 0.001" "0.000100 0.001"
+  # 46/47. Fail closed. Unbounded is the pre-existing refusal (too wide to bound is a
+  #     failure to measure); a missing window cannot be judged against an interval that
+  #     does not exist, and must not read as the quiet case.
+  checkcs "an unbounded window is not a rate"             unbounded \
+    "0.000100 inf" "0.000102 0.001" "0.000104 0.001"
+  checkcs "a missing window fails closed"                 unbounded \
+    "0.000100 0.001" "" "0.000104 0.001"
 
   echo
   if [[ "$FAILED" -eq 0 ]]; then

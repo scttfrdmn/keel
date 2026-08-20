@@ -534,22 +534,73 @@ clock_post() {
     return 1
   fi
   info "[$host] peak series GFLOP/s: head $CLOCK_HEAD, middle $mid, tail $CLOCK_TAIL (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)"
-  # The wide case, refused by the rule that already existed: bench_stat reports `inf`
-  # for a distribution benchstat could not bound, and bench_gflops_lo prints nothing
-  # for it. Checked on all three windows, because contention in any one of them is a
-  # sweep that ran on a machine somebody else was using.
-  local t
-  for t in "$BINDIR/peak-head.csv" "$csv" "$BINDIR/peak-tail.csv"; do
-    [[ -n "$(bench_gflops_lo "$GATE_PEAK" "$t")" ]] && continue
-    unmeasured "[$host] benchstat established no interval for one peak window, which §5 rule 5 reads as contention rather than as a rate: too wide to bound is a failure to measure"
-    CLOCK_STATE=unbounded
-    return 1
-  done
-  if awk -v h="$CLOCK_HEAD" -v m="$mid" -v t="$CLOCK_TAIL" 'BEGIN { exit !(h > m && m > t) }'; then
-    unmeasured "[$host] the peak series declines monotonically ($CLOCK_HEAD > $mid > $CLOCK_TAIL GFLOP/s), which §5 rule 5 names as throttling: the sweep between these windows ran on a clock that was falling, so its rates are not this host's"
-    CLOCK_STATE=declining
-    return 1
-  fi
-  pass "[$host] the peak series does not decline and every window is bounded, so the clock is established by §5 rule 5's substitute instrument on a host with no governor"
+  # DISPLAYED IN GFLOP/s ABOVE, JUDGED ON sec/op BELOW, and at this magnitude the two are not
+  # interchangeable. `testing.prettyPrint` picks its decimals from a value's MAGNITUDE, not
+  # from the precision of the measurement (T26): under 999.95 a column gets 4 significant
+  # figures, over it every integer digit. Both columns of one row go through it, so 245 GFLOP/s
+  # is quantized to 0.1 (0.041%, and a median of ten lands on a 0.05 multiple) while the same
+  # measurement's 102762 ns/op is quantized to 1 ns (0.00097%) -- one run, a rate and its
+  # reciprocal, 42x apart in resolution. Every "decline" this test ever reported was one
+  # quantum of the coarse column, i.e. inside the print rounding. benchci then keeps the
+  # interval at full float64. Re-parsing a rounded display string is the defect #110 named one
+  # field up (T21); this is the same defect one column over. NOT a custom-metric rule: ns/op is
+  # formatted by the same function and is only saved by where it sits.
+  local v
+  v="$(clock_series "$(bench_stat "$GATE_PEAK" "$BINDIR/peak-head.csv" sec/op)" \
+                    "$(bench_stat "$GATE_PEAK" "$csv" sec/op)" \
+                    "$(bench_stat "$GATE_PEAK" "$BINDIR/peak-tail.csv" sec/op)")"
+  case "${v%% *}" in
+    ''|unbounded|declining)
+      CLOCK_STATE="${v%% *}"; CLOCK_STATE="${CLOCK_STATE:-unbounded}"
+      unmeasured "[$host] ${v#* }"
+      return 1 ;;
+  esac
+  pass "[$host] ${v#* }"
   CLOCK_STATE=stable
+}
+
+# clock_series HEAD MIDDLE TAIL — judge three `bench_stat` readings ("median ci"). Prints
+# `<state> <message>`; state is `declining`, `unbounded` or `stable`.
+#
+# THE MAGNITUDE GATE (ruled 2026-08-20, #6). The ordering test as it stood asked only
+# `h > m > t`, so it decided on the sign of differences smaller than its own resolution: on
+# keel-gnr it refused two of four triples across a total spread of 0.14%, and a random
+# triple is strictly decreasing one time in six, so ~1 in 4 refusals were arriving by
+# chance. That is rank statistics on noise, and ordering fabricated from sub-quantum
+# differences is fabricated. So a step counts as a decline only when the two windows'
+# intervals are DISJOINT in that direction — A's slowest still faster than B's fastest —
+# and a monotone verdict needs both steps to clear it.
+#
+# THE FLOOR IS MEASURED, NEVER TYPED, which is what makes this a resolution gate and not a
+# new bar: `(1+cA)/(1-cB) - 1` comes from the two windows' own intervals, computed by the
+# same run, on the same host, from the same samples. Nothing here was chosen after meeting
+# the fleet — §5 rule 5's "no threshold in this section to tune" is intact. A genuine droop
+# clears any honest floor by construction; only the phantoms die.
+clock_series() {
+  awk -v h="$1" -v m="$2" -v t="$3" 'BEGIN {
+    n = split(h, H, " ") + split(m, M, " ") + split(t, T, " ")
+    # The wide case, refused by the rule that already existed: too wide for benchstat to
+    # bound is a failure to measure, not a rate. Fails closed on a missing reading too,
+    # since a step cannot be judged against an interval that does not exist.
+    if (n != 6 || H[2] == "inf" || M[2] == "inf" || T[2] == "inf") {
+      print "unbounded benchci established no interval for one peak window, which §5 rule 5 reads as contention rather than as a rate: too wide to bound is a failure to measure"
+      exit
+    }
+    # sec/op RISING is the rate FALLING, so a decline is a positive delta here.
+    nd = 0
+    for (i = 1; i <= 2; i++) {
+      a  = (i == 1) ? H[1] : M[1]; ca = (i == 1) ? H[2] : M[2]
+      b  = (i == 1) ? M[1] : T[1]; cb = (i == 1) ? M[2] : T[2]
+      d[i] = b / a - 1
+      f[i] = (1 + ca) / (1 - cb) - 1
+      if (d[i] > f[i]) nd++
+      s = s sprintf("%s%s %+.4f%% against a %.4f%% floor", (i == 1 ? "" : ", "), \
+                    (i == 1 ? "head->middle" : "middle->tail"), d[i] * 100, f[i] * 100)
+    }
+    if (nd == 2) {
+      printf "declining the peak series declines across both steps and both clear the floor their own intervals set (sec/op %s), which §5 rule 5 names as throttling: the sweep between these windows ran on a clock that was falling, so its rates are not this host'\''s\n", s
+      exit
+    }
+    printf "stable the peak series is bounded in every window and not ordered: %s of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op %s), so the windows are ties and a tie is not an order (#6, 2026-08-20)\n", nd, s
+  }'
 }

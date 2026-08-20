@@ -42,6 +42,7 @@ rewriting them would cost real reasoning to buy back lines already spent.
 | 2026-08-15 | go1.27rc3 | `archsimd`'s load/store are **renamed with a swap**: the slice forms take over the bare names (`LoadFloat32x16Slice`→`LoadFloat32x16`, `StoreSlice`→`Store`) while the array forms gain an `Array` suffix, and the `…SlicePart` forms become `…Part` *and grow a return value*. keel does not compile under 1.27: 51 errors in 3 files, all of them type errors | [T23](#t23) | none — pre-GA API churn, expected (T5) |
 | 2026-08-15 | go1.27rc3 | The portable `simd` package **ships** (T5's guess was right), with arm64, wasm and a pure-Go emulated fallback — but its vector length is a **runtime** quantity (`VectorBitSize()`, `Len()`), so it cannot express a register-blocked microkernel's compile-time tile, and has no `GetLo`/`GetHi` for `HSum`'s fold tree | [T24](#t24) | none — as designed |
 | 2026-08-15 | go1.26.6, go1.26.5, go1.27rc3 | Four ways the *spelling* of an equivalent SIMD loop changes its object code, worth **36 vs 13 instructions** per iteration in keel's fringe add-back: `Load512(x[j:])` keeps `archsimd`'s own `CMPQ $16` **and** T19's conditional pointer advance where `Load512(x[j:j+Lanes])` folds both; the natural guard `j+16 <= len(x)` keeps a bounds check where the identical `j < len(x)-15` does not (a **second remedy [T19](#t19) missed**, and one that keeps the loop indexed); `dst = dst[:len(src)]` *moves* the surviving check onto the resliced operand rather than removing it; and hoisting one invariant limit is free while hoisting both into a `min` puts both checks back | [T25](#t25) | none — known class ([#17370](https://github.com/golang/go/issues/17370), [#25197](https://github.com/golang/go/issues/25197), [#28941](https://github.com/golang/go/issues/28941), fix in flight [#80146](https://github.com/golang/go/issues/80146)); keel #74 |
+| 2026-08-20 | go1.27.0 | Benchmark output precision is chosen by a value's **magnitude**, not by the measurement's: `testing.prettyPrint` gives four significant figures under `999.95` and every integer digit at or above it, for `ns/op` and `ReportMetric` columns alike. So one run's 245.1 GFLOP/s (0.1 quantum, 0.041%) and its own reciprocal 102762 ns/op (1 ns, 0.00097%) sit **42× apart in resolution**, and a check reading the coarse column decides below its own quantum | [T26](#t26) | none — accepted design, raised from three figures to four by [#34626](https://github.com/golang/go/issues/34626) / [CL 267102](https://go-review.googlesource.com/c/go/+/267102), whose thread anticipates this exact 0.05 step |
 
 All repros below were run on `go1.26.5 darwin/arm64` with Homebrew's Go.
 Where a repro needs amd64 it cross-compiles, which is enough for anything the
@@ -2468,3 +2469,66 @@ are both a well-predicted compare-and-branch, and this loop is memory-bound: the
 36-instruction body may be entirely hidden behind the stores. Tracked as keel #74,
 which is where the timing would land, and only that would be worth an upstream
 comment.
+
+<a name="t26" id="t26"></a>
+## T26 — benchmark output precision is chosen by a value's magnitude, so a rate and its reciprocal from one run differ 42× in resolution
+
+**Observation.** `testing.prettyPrint` selects decimals from `math.Abs(x)`, not from
+the precision of the measurement: under `999.95` a column gets four significant
+figures, at or over it every integer digit and none after the point. Both the
+built-in `ns/op` and every `ReportMetric` column of one row go through it, so which
+side of that boundary a quantity happens to land on sets its resolution.
+
+Minimal repro. keel's peak series at 245 GFLOP/s and the same measurement's ns/op,
+plus the boundary either side:
+
+```
+$ cat m_test.go
+package metricprobe
+
+import "testing"
+
+func BenchmarkPrecision(b *testing.B) {
+	for b.Loop() {
+	}
+	b.ReportMetric(245.14999, "GFLOP/s")   // keel's peak series, run 1, keel-gnr
+	b.ReportMetric(102762.4, "nsish/op")   // the same measurement's ns/op
+	b.ReportMetric(999.94999, "under1000")
+	b.ReportMetric(1000.4999, "over1000")
+}
+
+$ go version
+go version go1.27.0 darwin/arm64
+$ go test -run x -bench Precision -benchtime 10x
+goos: darwin
+goarch: arm64
+pkg: metricprobe
+cpu: Apple M4 Pro
+BenchmarkPrecision-12    	      10	        20.90 ns/op	       245.1 GFLOP/s	    102762 nsish/op	      1000 over1000	       999.9 under1000
+PASS
+ok  	metricprobe	0.256s
+```
+
+`245.1` is a 0.1 quantum, 0.041% relative; `102762` is a 1-unit quantum, 0.00097%.
+One run, a rate and its reciprocal, **42× apart** — and `1000.4999 → 1000` against
+`999.94999 → 999.9` shows the discriminator is the magnitude and nothing else.
+
+**What changed in the tree.** §5 rule 5's clock series judged the `GFLOP/s` column,
+where the 0.05 median quantum is larger than any decline it ever reported; it now
+reads `sec/op` at `tools/benchci`'s full float64 and gates on a measured
+resolution floor (`clock_series`, `scripts/bench.sh`; six controls in
+`scripts/roofline-test.sh`; ruling on #6, 2026-08-20). Nothing else here judged a
+sub-1000 column: `bench_describe`'s own `%.4g` is display-only.
+
+**Upstream.** Nothing to file — this is *accepted design*, and recently made so.
+[#34626](https://github.com/golang/go/issues/34626) proposed moving statistics
+into `go test` precisely because "the `prettyPrint` output causes loss of precision
+in any tool that computes the statistics based on the output"; it was redirected to
+printing more digits and completed as
+[CL 267102](https://go-review.googlesource.com/c/go/+/267102), *"testing: increase
+benchmark output to four significant figures"* — so four is the raised value, up
+from three. That thread also anticipates this exact failure: rsc, arguing against a
+further digit, wrote "I'm skeptical that the 0.05 ns/op has any accuracy behind
+it". keel's phantom throttle verdicts were 0.05 GFLOP/s steps, which is his point
+one column over and in agreement with it. A fifth digit is not the remedy anyway —
+the precision was already in the same row.

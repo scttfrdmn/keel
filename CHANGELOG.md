@@ -8,6 +8,16 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **§5 rule 5's clock check was flagging coin flips as thermal events; it now judges at full precision
+  against a floor its own intervals set** (ruling on #6, 2026-08-20). The test asked only `head > middle >
+  tail` on the `GFLOP/s` column, whose quantum at 245 is coarser than any decline it ever reported — it
+  refused two of four `keel-gnr` triples across a 0.14% total spread, where a random triple is strictly
+  decreasing one time in six. It now reads `sec/op` at `tools/benchci`'s full float64 (42× finer from the
+  same samples, `docs/toolchain-notes.md` T26) and counts a step only where the two windows' intervals are
+  disjoint, floor `(1+cA)/(1-cB)-1`, so no threshold is added and none is tunable. `keel-gnr`'s refused
+  triple replays as `stable` (-0.0019% against a 0.2311% floor) and a 2%/3% droop still refuses.
+
 ### Added
 - **README's twelve-row block is republished from the judged AWS campaign: 24 rows, three new CPUs, rev `ce43bca`.**
   `scripts/readme-numbers.sh build/gate-p5-ce43bca.log` regenerated both marked regions and `docs-gen.sh` extracted
