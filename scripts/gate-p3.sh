@@ -32,6 +32,19 @@ source scripts/gate-lib.sh
 # nowhere near 1. A rendering that has never executed is an untested branch in
 # the instrument that issues the certificates.
 #
+# CORRECTION, 2026-08-19 (grounds: issue #110, DESIGN.md §5 rule 15). The
+# sentence above is left as written and is wrong on one word: janus's interval
+# is not zero-width and that was never a measurement. It read width 0 off a
+# reported `+/- 0%`, which is the floor of benchstat's CSV reporting resolution
+# ("narrower than 0.5%"), and the same rounded column decided a shipped P5
+# verdict on one rounding step. The archive refutes the categorical claim on
+# this very host: [1.014x, 1.034x] around 1.026 in one run, non-zero width.
+# The conclusion survives WITH its denominator: 1.10 - 1.034 = 0.066 of margin
+# against ~0.010 of quantization width, about six quanta -- so this knob is
+# still needed, for a measured reason and not an impossibility one. The bounds
+# it widens now arrive at full precision from tools/benchci, so what the knob
+# simulates is a genuinely noisy host rather than a formatter's floor.
+#
 # What it does NOT do:
 #   - It does not move a threshold. ISSUE_CONVERGE_MAX stays at its shipped 1.10
 #     and prints in the banner below, because a bar nobody would ship is not a
@@ -725,7 +738,7 @@ else
       continue
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
-    [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
     # Declared before read: the peak denominator and both shipped shapes. This is NOT
     # degraded for an unjudged host the way a failed *run* is above, because the run
     # succeeded — a missing row after a successful run is this gate's filter or parser
@@ -945,7 +958,7 @@ if [[ -n "$HOSTS" ]]; then
       continue
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
-    [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
     # Both, declared together: the percent-of-peak line, the retention line and the
     # 5b comparison all read the peak, and an absent peak used to degrade silently
     # into a missing info line rather than into a verdict.
@@ -1007,7 +1020,7 @@ if [[ -n "$HOSTS" ]]; then
     else
       altkern="$(marker bench-kern "$ALTLOG")"; altkern="${altkern%% *}"
       bench_csv "$ALTLOG" >"$ALTCSV" 2>"$LOG" || true
-      [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+      [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
       altlo="$(bench_gflops_lo "$GATE_SGEMM" "$ALTCSV")"
       altpt="$(bench_gflops "$GATE_SGEMM" "$ALTCSV")"
       disppt="$(bench_gflops "$GATE_SGEMM" "$BENCHCSV")"
@@ -1300,7 +1313,7 @@ else
       info "[$host] reference kernel family: $obcore (on the AVX2-or-better allowlist, and the sweep's winner as pinned)"
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
-    [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
     # All three declared, not just the reference: criterion 6b reads the peak too, and
     # an absent peak used to reach p3_denominator as peak=0, which takes the nopeak
     # branch and silently reverts an issue-bound host to plain OpenBLAS. That is the

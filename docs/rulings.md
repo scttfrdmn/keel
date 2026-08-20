@@ -251,3 +251,57 @@ fix gives bare metal its own named arm with its own evidence requirements — no
 flag, governor asserted `performance` — and the default arm stays restrictive for genuinely
 unrecognised hosts. Widening the default to rescue the lab would trade a false demotion for a
 false admission; naming the class keeps the asymmetry pointed the safe way.
+
+## Rule 15 — a conservativeness claim about an instrument is a testable claim
+
+*Ruled 2026-08-19. Issue #110, Scott's Q9 ruling.*
+
+The finding's cleanest statement is Scott's: **the instrument's quantum exceeds every margin
+it adjudicated.** benchstat's CSV `CI` column is a display string rounded to a whole percent,
+and one rounding step is worth 0.1386 on a 7.0 scaling ratio; the margins that column decided
+were 0.011 and 0.081. Every verdict within one quantum of the floor — in either direction —
+was decided by the display formatter, not the silicon, and the `7.0098 -> 7.0101` flip is
+that fact caught on camera.
+
+The rule is about the *second* defect, in the writing rather than in the arithmetic. T21
+reasoned from the meaning of a `± 0%` reading to the conclusion that raising `-count` was
+inert on such a row, and that this made the reading **less** likely to be undecidable. That
+is a claim about the **sign of the instrument's error**, and it was wrong: the rounding band
+a reported `0%` stands for can straddle the bar, so such a reading is *more* likely
+undecidable, not less. It was published without being run against the adjudicator it
+described. In Scott's words: *"'safe direction' asserted from reasoning, inverted by the
+instrument's actual behavior, published without being run against the thing it described.
+**Direction-of-error is a measurement.**"*
+
+Why a safe-direction claim is the *worst* place to skip rule 11, rather than the most
+forgivable: conservativeness is self-recommending. A bound believed pessimistic cannot be
+dangerous, so nobody asks it for evidence — and if the sign is in fact backwards, the
+certificate that says "conservative" is precisely what stops the next reader looking. The
+error is not merely undetected; it is protected by its own reassurance.
+
+The archive adjudicates the scope, which is the rule applied to itself. Two prose sites
+asserted a **measured** interval was zero-width (`DESIGN.md` §4, `scripts/gate-p3.sh`'s
+instrument-exercise header), reading width 0 off a reported `± 0%`. The gate logs refute the
+categorical form directly: janus's own class-selecting interval reads `[1.014x, 1.034x]`
+around 1.026 in one archived run — same host, same comparison, non-zero width, in a run whose
+CIs did not happen to round to `0%`. What survives is the *quantitative* claim, and it now
+has a denominator: 1.10 − 1.034 = 0.066 of margin against roughly 0.010 of quantization
+width, about six quanta, so `KEEL_INSTRUMENT_WIDEN_CI` remains necessary to reach the
+three-state renderings — for a measured reason instead of an impossibility one.
+
+One nearby reading is worth recording because it is the closest call the archive holds and it
+came out clean for a reason nobody planned. antares read a ceiling spread of `[1.077x, 1.100x]`
+against the 1.10 bar — flush with it, well inside one quantum. The class does not move: above
+the bar the collapse rule (`why=samemixanyway` / `falsifiedanyway`, added 2026-08-16 for an
+unrelated reason) yields `fma-bound`, and below it the falsification test yields `fma-bound`
+too. Only the `why=` label could flip, and a label is what a reader uses to understand the run
+rather than what a criterion divides by. So a rule written to stop an `UNMEASURED` the data
+settles is also what kept the quantization defect off this verdict — worth saying plainly,
+because it was luck in the sense that no one checked, and the checking is the rule.
+
+And the scope has a floor as well as a ceiling. Five further `zero-width` sites
+(`scripts/roofline.sh` ×4, `scripts/roofline-test.sh`) describe a **fixture given no bounds**,
+which the input format *defines* as zero-width. Those are constructions, not readings, and
+they are correct; correcting them would assert something false about a definition. One word,
+two meanings, and only one of them was ever a measurement — which is why this ruling names
+sites rather than a pattern.

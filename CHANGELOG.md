@@ -9,6 +9,29 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`tools/benchci` is the gate's summarizer, and it is benchstat plus resolution — measured, not asserted** (#110).
+  Ruled 2026-08-19: *"the instrument's quantum exceeds every margin it adjudicated"*, so band-top arithmetic in the
+  rounded domain can never make these verdicts measurement-decided and *"the instrument must gain resolution, and the
+  resolution exists"*. `benchtab` is `internal` to `cmd/benchstat` and cannot be imported, so fidelity is *replicated*
+  — `benchfmt` + `benchproc` + `benchmath`, benchstat's own default projections (`-table .config` with unit, `-row
+  .fullname`, `-col .file`), `-confidence 0.95`, `benchmath.DefaultThresholds`, and the median-vs-mean assumption read
+  from the file's own unit metadata — and then *proved*. `-verify` reruns the pinned `go tool benchstat -format=csv`
+  over the same input and requires every center to match bit for bit and every CI to match after `%.0f%%` rounding,
+  **in both directions**, because a cell benchstat summarized and this tool did not is a row silently dropped from every
+  criterion that reads it. Result on the four archived raw logs: 10 cells each, **0 disagreements**, with CIs like
+  `1.0847442793233681%` and `0.30286946459710257%` where benchstat printed `1%` and `0%`. What it deliberately cannot
+  see (§5 rule 12): no `vs base` column, no p-values, no geomean, because no gate reads the CSV for those —
+  `bench_compare` calls benchstat's *text* output, which this defect never touched and which stays pinned to benchstat.
+  `bench_stat`'s parse is unchanged, so `bench_ratio_lo`'s formula is bit-identical and only its inputs got sharper.
+  `gate-p5.sh` now fails if `-verify` fails, because intervals that do not reproduce benchstat are not benchstat's
+  statistics at higher resolution — they are a second opinion about them.
+- **`bench_csv` archives the raw samples, which is the prerequisite the ruling could not have named** (#110). The ruling
+  said to read *"the archived raw bench output"*; there was none. `gate_tmpdir` put `BENCHLOG` inside a `mktemp -d`
+  under an EXIT trap, so **every judged run in this project's history destroyed its own samples** and the rounded gate
+  log is the only surviving record of all 22. Four lines at the single chokepoint all eleven call sites already went
+  through. The path is *set* in `BENCH_ARCHIVE` and printed by the caller, never written to stderr: every gate relays
+  that stream under a `benchci:` label, so announcing an archive there would arrive labelled as a measurement warning
+  and fire each gate's "any warnings?" branch on every run.
 - **`BenchmarkTrsmMB` sweeps `MB`, because the arithmetic moved #37's question** (#37). The diagonal solves are 1.59% of
   the *work* at m=n=4096, and charging the rank updates the full 166.05 GFLOP/s peak still leaves 69.1% of Strsm's
   measured time unaccounted for; two countable terms of that residual — solve flops `n·m·(MB+1)` and a `~n·m²/(2·MB)`
@@ -35,6 +58,48 @@ While the major version is 0, minor versions may contain breaking changes.
   thing being accounted for. Naming its own cost by 257 lines too few is the defect this entry claims to avoid.
 
 ### Changed
+- **§5 rule 15: a conservativeness claim about an instrument is a testable claim, so direction-of-error is a
+  measurement** (#110, `docs/rulings.md` rule 15). Scott's ruling on the second defect, the one in the writing rather
+  than the arithmetic: *"'safe direction' asserted from reasoning, inverted by the instrument's actual behavior,
+  published without being run against the thing it described."* Why this is the worst place to skip §5 rule 11 and not
+  the most forgivable — conservativeness is self-recommending, so a bound believed pessimistic is never asked for
+  evidence, and if the sign is backwards the word "conservative" is exactly what stops the next reader looking. The two
+  prose sites the previous entry left open are corrected as *substantive*, dated, with the original visible: `DESIGN.md`
+  §4 and `scripts/gate-p3.sh`'s instrument-exercise header both asserted a **measured** interval was `zero-width`,
+  reading width 0 off a reported `± 0%` that means "narrower than 0.5%". **The archive refutes the categorical form on
+  the same host and the same comparison** — janus reads `[1.014x, 1.034x]` around 1.026 in one archived run, non-zero
+  width, from a run whose CIs did not happen to round to `0%`. The conclusion survives *with a denominator it never had*:
+  1.10 − 1.034 = **0.066** of margin against ~**0.010** of quantization width, about six quanta, so
+  `KEEL_INSTRUMENT_WIDEN_CI` is still needed to reach the three-state renderings — for a measured reason instead of an
+  impossibility one. `docs/spill-report.md`'s `[1.836x, 1.836x]` loses the word and keeps the number: **0.736** of margin
+  against ~0.02, thirty-odd quanta clear. Five *other* `zero-width` sites (`roofline.sh` ×4, `roofline-test.sh`) are
+  deliberately untouched — they describe a fixture given **no bounds**, which the input format *defines* as zero-width,
+  so they are constructions and not readings, and correcting them would assert something false about a definition. One
+  word, two meanings, one of them a measurement. Also recorded: antares's `[1.077x, 1.100x]` sits flush with the 1.10
+  bar, well inside one quantum, and its class does not move only because the collapse rule added 2026-08-16 for an
+  unrelated reason yields `fma-bound` on *both* branches — a rule written to stop an `UNMEASURED` the data settles is
+  what kept this defect off that verdict, which was luck in the precise sense that nobody had checked.
+- **The archive re-read finds three moved verdicts, not one, and two were invisible to the first pattern** (#110).
+  `benchci -bandtop` is the only instrument that can read a run whose samples were destroyed, which is every run to
+  date; it states each rounded row as the interval its rounding supports and re-adjudicates at the pessimistic edge.
+  Over all **16** archived gate-p5 logs, **192 rows**, **3 verdicts move** — janus `Strsm` `7.0101 PASS → 6.9404 FAIL`
+  (the flip on camera), plus vesta and antares `Ssymm` at `6.0170 → 5.9562` and `6.0307 → 5.9703`, both against the 6.0
+  bar, both on `boost off` runs. The two new ones were found by the tool *refusing* ten of the sixteen logs rather than
+  by review: the first pattern required `ROUTINE: 1 thread …` and those ten carry a `boost off — ` annotation there,
+  which names a different measurement condition and is now captured and printed rather than skipped. Fail-closed on a
+  zero row count earned its place — a pattern narrower than its input greens exactly like a clean parse when the only
+  report is a count. Every band-top line prints "only ever toward FAIL" with the moved count beside it, so §5 rule 15's
+  own sign claim is checkable on each run instead of asserted once: widening an interval cannot raise a floor net of CI.
+  Band-top is for history **only**, per the ruling — forward runs have samples.
+- **This session's apparatus spending, and the trap in the number that reports it** (#110). Net `scripts/` **+68**,
+  `tools/` **+494**, library **±0** — the cap is violated, ruling-mandated, with the offsetting lift owed and named here
+  rather than argued away. The instructive part is that `gate-docs.sh`'s two ratio lines move in **opposite directions**
+  on this one change: the historical line reads 1.44× → **1.37×**, an apparent 0.07 *improvement*, because its
+  denominator is all tracked non-test Go and it therefore absorbs the new instrument as though it were library. The
+  apparatus line, whose denominator excludes `tools/`, reads 1.80× → **1.88×** with that denominator **identical at 7217
+  on both sides** — which is what makes the comparison clean and the zero-library-lines claim exact. A session can
+  improve the ratio it is capped by, by spending. That is the flattery the second line was added to expose, caught
+  paying out.
 - **T21's consequence is corrected: an integer-percent CI is lenient for a floor, not conservative** (#110). It read
   *"no shipped criterion is wrong because of this"*; with the CI read as 0 the check becomes median ≥ floor, which is
   **easier** to pass than median net of CI ≥ floor. The gate has since produced the verdict that sentence excluded —
@@ -47,7 +112,10 @@ While the major version is 0, minor versions may contain breaking changes.
   being run against the instrument it described (§5 rule 11). §4's new escalation bullet no longer claims a `0%` reading
   was never undecidable — it is *more* likely undecidable, since the band can straddle the bar. Unfixed pending a
   decision: `bench_ratio_lo`, and the `zero-width`-interval justifications at `DESIGN.md:116` and `gate-p3.sh:30`, which
-  are properties of the formatter and not of `janus`.
+  are properties of the formatter and not of `janus`. *(All three are fixed as of the two entries above, in the same
+  unreleased cycle; this sentence is kept because it is what the decision was requested against. The ruling arrived the
+  same day: `tools/benchci` supplies the resolution, and the two prose sites are corrected substantively under §5 rule
+  15.)*
 - **README's 24 published rates are re-measured at `335ea9d`, and their caption is now generated with them** (#6).
   Ruled 2026-08-19: criterion 9 had already ordered the re-measure, because the three stale `Ssymm` rows disagreed with
   the shipped tree by 5.06–9.43% *on the gate's own denominator* — `(a−b)/b` with **this run's** value as base, not the

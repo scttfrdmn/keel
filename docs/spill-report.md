@@ -558,8 +558,14 @@ feed, `1/MR + 1/V` = 1.00 vectors/FMA against 4x32's 0.75. Mechanism on issue #1
 `tools/shapegen/objective.go` refutes the same label at W=4 for the *different* reason that
 there the front end binds first, so the label was wrong on both hosts for two unrelated
 reasons. What the divergence does establish is what the classifier read: the gate measured
-the ceiling mixes diverging **1.836×** (`[1.836x, 1.836x]`, zero-width, wholly over the
-1.10 bar), so the host is `fma-bound` and faces the flat 55%. On one FMA unit per cycle the
+the ceiling mixes diverging **1.836×** (`[1.836x, 1.836x]` as reported, wholly over the
+1.10 bar), so the host is `fma-bound` and faces the flat 55%.
+*(Correction, 2026-08-19, grounds #110 and §5 rule 15: this bracket was described here as
+"zero-width", which was reading width 0 off a `± 0%` that means "narrower than 0.5%".
+The word is dropped rather than the number: unlike the P5 scaling rows that defect decided,
+the margin here is 1.836 − 1.10 = **0.736** against a quantization width of order **0.02**,
+so the verdict is thirty-odd quanta clear and does not move. Stated because a margin that
+survives the correction is only known to survive once someone divides it by the quantum.)* On one FMA unit per cycle the
 same mixes converged on janus at 1.023×.
 
 **It is right to.** Not because SPR is slow — §9's property 1 — but because neither

@@ -522,8 +522,24 @@ else
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
-    bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
-    [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    bench_csv "$BENCHLOG" "$host" >"$BENCHCSV" 2>"$LOG" || true
+    [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
+    # The raw samples, kept (#110). Printed because a verdict that cannot be
+    # recomputed from the numbers it was derived from is a verdict standing on a
+    # log line — which is the state every judged run before this one is in, and
+    # the reason their intervals can now only be re-read by band-top.
+    info "[$host] samples archived: $BENCH_ARCHIVE"
+    # The new instrument is checked against the one it replaced, on this run's own
+    # samples. "benchci is benchstat plus resolution" is a claim until rounding its
+    # CI back to %.0f%% reproduces benchstat's column cell for cell — and this gate
+    # exists because the last instrument's defensible-looking behaviour was
+    # published as safe without being run against the thing it described (#110).
+    if go run ./tools/benchci -verify "$BENCHLOG" >/dev/null 2>"$LOG"; then
+      pass "[$host] benchci reproduces the pinned benchstat: $(sed -n 's/.*-verify ok: //p' "$LOG")"
+    else
+      fail "[$host] benchci does not reproduce the pinned benchstat, so this host's intervals are not benchstat's statistics at higher resolution — they are a second opinion:"
+      sed 's/^/        /' "$LOG"
+    fi
     # Closes the series bracketing the judged sweep (§5 rule 5 as amended 2026-08-16).
     clock_post "$host" "$BENCHBIN" "$BENCHCSV" || continue
 

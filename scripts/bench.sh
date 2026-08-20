@@ -66,12 +66,51 @@ bench_flags() {
   printf '%s\n' -test.run=NONE "-test.count=$KEEL_BENCH_COUNT" "-test.benchtime=$KEEL_BENCH_TIME"
 }
 
-# bench_csv OUT — aggregate a benchmark log with the pinned benchstat.
+# bench_csv LOG [TAG] — aggregate a benchmark log, and keep the samples.
 #
-# stderr is kept: benchstat's warnings ("need >= 6 samples...") are exactly the
-# kind of thing a gate must not swallow.
+# stderr is kept: the aggregator's warnings ("need >= 6 samples...") are exactly
+# the kind of thing a gate must not swallow.
+#
+# WHY NOT `benchstat -format=csv` ANY MORE (#110, ruled 2026-08-19). benchstat's
+# CSV `CI` column is a *display* string: `benchmath.Summary` holds float64 bounds
+# and `benchtab.ToCSV` writes the center at full precision beside
+# `PctRangeString()`, which is `%.0f%%`. Every criterion here grades a threshold
+# *net of that interval*, so a CI that rounds to `0%` makes the bound equal the
+# raw ratio — the degeneracy DESIGN.md's P4 clause exists to prevent — and it
+# decided a shipped verdict (janus Strsm, FAIL -> PASS on a 0.014% move in the
+# point estimate). The quantum, 0.5%, exceeded every margin it adjudicated:
+# 0.1386 on a 7.0 ratio against margins of 0.011 and 0.081.
+#
+# The ruling: no arithmetic in the rounded domain can make those verdicts
+# measurement-decided, so the instrument gains resolution instead.
+# tools/benchci is benchstat's own statistics — same projections, same
+# confidence, same thresholds, same per-unit assumption read from the file — with
+# the formatting step replaced, and `-verify` requires that rounding its CI back
+# to `%.0f%%` reproduces benchstat's column cell for cell.
+#
+# EVERY CONSUMER IS BEHIND THIS ONE FUNCTION, which is why the fix is four lines
+# and not eleven call sites; bench_stat's parse is unchanged, so bench_ratio_lo's
+# formula is bit-identical and only its inputs got sharper.
+#
+# ARCHIVING IS HERE FOR THE SAME REASON. BENCHLOG lives in gate_tmpdir's
+# `mktemp -d`, which the EXIT trap removes, so until now the raw samples of every
+# judged run in this project's history were destroyed at the end of it — leaving
+# the rounded gate log as the only record, which is precisely why #110's
+# historical verdicts can only be re-read by band-top instead of recomputed. A
+# summarizer that can reach the samples is worth nothing if nothing kept them.
+# Archived from inside the aggregator so no call site can forget: whatever gets
+# summarized gets saved.
+#
+# The path is SET, not printed. This function's stdout is the CSV and its stderr
+# is the aggregator's warning stream, which every gate relays under a label; a
+# line announcing an archive on that stream would arrive labelled as a warning
+# about the measurement, and would make the "any warnings?" branch fire on every
+# run. The caller prints $BENCH_ARCHIVE where it already prints provenance.
 bench_csv() {
-  go tool benchstat -format=csv "$1"
+  BENCH_ARCHIVE_N=$((${BENCH_ARCHIVE_N:-0} + 1))
+  BENCH_ARCHIVE="build/bench-$(basename "${0%.sh}")-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)${2:+-$2}-$BENCH_ARCHIVE_N.txt"
+  mkdir -p build && cp "$1" "$BENCH_ARCHIVE" 2>/dev/null || BENCH_ARCHIVE="(not archived)"
+  go run ./tools/benchci "$1"
 }
 
 # Configuration keys that describe the run rather than the build under test, and

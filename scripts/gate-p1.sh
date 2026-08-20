@@ -263,7 +263,7 @@ else
       continue
     fi
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
-    [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
     info "[$host] scalar $(bench_describe GateSdot/scalar "$BENCHCSV")"
     info "[$host] avx512 $(bench_describe GateSdot/avx512 "$BENCHCSV")"
 

@@ -671,7 +671,7 @@ main() {
     # panel-feed column below is read against it rather than against a claim.
     grep -E '^keel-(nest-plan|feed-panels):' "$LOG" | sed 's/^/        /' || true
     bench_csv "$LOG" >"$CSV" 2>"$BINDIR/bserr" || true
-    [[ -s "$BINDIR/bserr" ]] && sed 's/^/        benchstat: /' "$BINDIR/bserr"
+    [[ -s "$BINDIR/bserr" ]] && sed 's/^/        benchci: /' "$BINDIR/bserr"
     case "$MODE" in
       decompose) decompose_host "$host" "$CSV" "$LOG" ;;
       sweep)     sweep_host "$host" "$CSV" "$LOG" ;;

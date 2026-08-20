@@ -551,7 +551,7 @@ else
       ", or P4 shipped a shape this gate does not audit"
 
     bench_csv "$BENCHLOG" >"$BENCHCSV" 2>"$LOG" || true
-    [[ -s "$LOG" ]] && sed 's/^/        benchstat: /' "$LOG"
+    [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
     # All three declared before any is read. Peak is in the list because the
     # provenance lines below divide by it, and an absent peak used to degrade into a
     # missing info line rather than into a verdict (DESIGN.md §5 rule 6).
