@@ -20,6 +20,10 @@ While the major version is 0, minor versions may contain breaking changes.
   enumeration. Counted as apparatus, not library, in gate-docs' ratio (947 lines at `e1c6340`).
 
 ### Changed
+- **`DESIGN.md` §5 gains rule 14: a defect's severity is a function of its deployment context, not its code**, appended
+  so no ordinal moved (#106). #106's "latent, not active" was true when written and false once #109 made the lab a
+  signing tier, with no byte of the defect changed; re-admitting against the unrepaired classifier would have demoted
+  all three lab hosts by a bug's signature instead of by evidence. Incident in `docs/rulings.md`, rule 14.
 - **`DESIGN.md` §5 gains rule 13: two cost terms are comparable only at their rates**, appended so no ordinal moved
   (#37). A count is not a time, so ordering two terms by their counts predicts a direction only the rates can supply —
   rule 7's flop-share-is-not-a-time-share one level up. Clause (b) is Scott's: a constant whose optimum depends on

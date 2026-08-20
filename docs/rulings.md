@@ -221,3 +221,33 @@ moves the best point to 128, 16× to 256 — so retuning to 32 now would tune th
 the slow-solve world and be re-reversed after #37, putting two tuning flips in the published
 history of one routine, each needing its own judged evidence. `MB` stays 64, and the interim
 17–33% is priced and recorded on #37 as a decision rather than left to read as an oversight.
+
+## Rule 14 — a defect's severity is a function of its deployment context
+
+*Ruled 2026-08-19. Issue #106, comment 5349633810; directive #109.*
+
+#106 is a classifier defect: `host_admission` resolves a bare-metal host's `instance=none`
+through the `case`'s default arm to `correctness`, stripping judged standing from the three
+lab hosts the v0.1.0 record rests on. It was filed **"latent, not active"** and that grading
+was correct when written — only gate-p2 consulted the class, and the two-tier directive had not
+yet been ruled, so the lab fleet was framed as retired and no lab host would run under the code.
+The v0.2.0 directive (#109) made the lab a *signing* tier, and the same grading became false
+with **not one byte of the defect changed**. Its neighbouring line died the same way: "no live
+bare-metal host exists to drive this on" was a fact about the fleet, so the widening arm now
+gets driven on three live hosts and only the must-stay-restrictive arms remain fixtured.
+
+What makes this a rule rather than a note is what the stale grading would have caused. Both
+dead premises sat in the issue body reading as current, and "latent" is exactly the word that
+sequences an issue behind other work. Re-admitting the fleet against the unrepaired classifier
+would have **falsely demoted all three hosts by a bug's signature instead of by evidence**,
+days before the tag, manufacturing the tag-week failure the sequencing exists to prevent —
+rule 11's violation moved up to the gate layer, since the judge would have ruled before its
+known defect was repaired.
+
+One condition on the fix, from the same ruling, because the defect's shape is half-correct:
+`instance=none` falling through to `correctness` is the right **default** and the wrong
+**classification**. Unknown provenance failing closed is what a `case` default is for. So the
+fix gives bare metal its own named arm with its own evidence requirements — no `hypervisor`
+flag, governor asserted `performance` — and the default arm stays restrictive for genuinely
+unrecognised hosts. Widening the default to rescue the lab would trade a false demotion for a
+false admission; naming the class keeps the asymmetry pointed the safe way.
