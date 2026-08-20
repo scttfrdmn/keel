@@ -159,7 +159,7 @@ cmd_up() {
   # flag. Flag validation is the WHOLE value: spawn's rate table has no `32xlarge`/`96xlarge`
   # key, so those fall to its xlarge default and read 32x/90x LOW (measured; spawn#543).
   local dry_args=()
-  [[ "${KEEL_FLEET_DRYRUN:-0}" != 1 ]] || { dry_args=(--estimate-only); say "DRY RUN: validating flags, nothing will be launched (spawn's price is 32x low, spawn#543)"; }
+  [[ "${KEEL_FLEET_DRYRUN:-0}" != 1 ]] || { dry_args=(--estimate-only); say "DRY RUN: validating flags, nothing will be launched (spawn's price is wrong per size, spawn#543; truffle prices)"; }
 
   local role type uarch spec
   for spec in "${FLEET[@]}"; do
