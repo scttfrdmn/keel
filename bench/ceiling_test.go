@@ -216,7 +216,18 @@ type streamCase struct {
 
 func streamCases() []streamCase {
 	return []streamCase{{
-		// Two streaming reads, no writes: the unambiguous half of the bracket.
+		// Two streaming reads, no writes, so its byte count carries no write-allocate
+		// ambiguity — but "unambiguous" describes the COUNT and not the reading, and
+		// the first run of this file made the difference matter. On the dev host's
+		// scalar path dot read 32.7 GB/s at one thread where axpy read 44.6: the
+		// read-only probe slower than the read-modify-write one, which no memory
+		// system does. Sdot's own throughput was the limit there, not memory, and a
+		// probe that is not at the memory bound is not measuring the memory bound. At
+		// eight threads the two converged (190.6 vs 193.0), which is what both being
+		// memory-limited looks like. So this arm is a bandwidth reading only where its
+		// 8-thread figure sits near axpy's; where it sits well below, it is a floor on
+		// bandwidth and a measurement of Sdot (§5 rule 11 — the instrument adjudicated
+		// the sentence that used to be on this line).
 		name: "dot", arrays: 2, bytesPerElem: 8, rfo: "none: read-only",
 		body: func(t int, x, y []float32) { streamSink[t*16] = keel.Sdot(len(x), x, 1, y, 1) },
 	}, {

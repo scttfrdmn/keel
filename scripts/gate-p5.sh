@@ -623,10 +623,18 @@ else
       unmeasured "[$host] no measured ${P5_THREADS}-thread compute ceiling, so nothing here may be divided by one"
       continue
     fi
-    # The droop 8x-the-1-thread-peak assumed away, now a number. Under 100% is the
-    # clock falling with core count; at or over it, this host holds its clock and the
-    # old denominator was merely unnecessary rather than wrong.
-    info "[$host] ceiling: compute $CEIL8 GFLOP/s measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading, which is the clock droop with core count that the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away"
+    # The shortfall 8x-the-1-thread-peak assumed away, now a number. Under 100% the old
+    # denominator was unreachable; at or over it this host would have made it merely
+    # unnecessary. NAMED AS A SHORTFALL AND NOT AS CLOCK DROOP: this line said "clock
+    # droop" until the instrument was run on the dev host, which read 53.5% -- far past
+    # anything a licence-level clock change explains, because 8 threads there land on a
+    # mix of performance and efficiency cores. Core heterogeneity, SMT siblings sharing
+    # one core's execution resources and shared-cache pressure all land in this same
+    # number, and this gate distinguishes none of them (§5 rule 6: one cause, one
+    # verdict, so a line that cannot separate three causes may not name one). The
+    # criterion does not care which it is -- the point is that the shortfall is real and
+    # measured rather than assumed to be zero.
+    info "[$host] ceiling: compute $CEIL8 GFLOP/s measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading. That shortfall is what the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here"
     for p in dot axpy; do
       bw="$(bench_stat "$(stream_name "$p" "$P5_THREADS")" "$BENCHCSV" GB/s)"
       bw1="$(bench_stat "$(stream_name "$p" 1)" "$BENCHCSV" GB/s)"

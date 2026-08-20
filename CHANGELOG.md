@@ -44,6 +44,17 @@ While the major version is 0, minor versions may contain breaking changes.
   than republishing it under a bar that no longer exists; `docs/gates.md`'s verbatim P5 lift is annotated, not
   edited, since an archive that gets quietly corrected is neither.
 
+- **Running `BenchmarkCeiling` for the first time refuted two sentences written beside it** (#6, 2026-08-20;
+  §5 rule 11). (1) The read-only `dot` probe was called the unambiguous half of the bandwidth bracket, and on
+  the dev host's scalar path it read **32.7 GB/s at one thread against `axpy`'s 44.6** — the read-only probe
+  slower than the read-modify-write one, which no memory system does. `Sdot`'s own throughput was the limit,
+  not memory: a probe below the memory bound measures the probe. At 8 threads they converge (190.6 vs 193.0),
+  which is what both being memory-limited looks like, so the arm is a bandwidth reading only where its
+  8-thread figure sits near `axpy`'s. (2) `gate-p5` called the 8-thread compute shortfall "the clock droop
+  with core count"; the dev host read **53.5% of 8x its 1-thread rate**, far past any licence-level clock
+  change, because 8 threads there land on a mix of performance and efficiency cores. Core heterogeneity, SMT
+  siblings and shared-cache pressure all land in that one number and the gate separates none of them, so it
+  now reports the shortfall and attributes nothing (§5 rule 6).
 - **Re-adjudicating the historical scaling verdicts under the derived form resolves none of them, and that is
   the finding** (#6, 2026-08-20). Neither half of the ceiling was ever measured — `grep` across all eleven
   archived `gate-p5` logs finds no 8-thread compute row, because `BenchmarkPeak` has only ever had a 1-thread
