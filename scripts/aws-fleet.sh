@@ -156,8 +156,8 @@ cmd_up() {
   # without creating anything. This exists so the invocation that spends can be validated
   # AS THE SHIPPED COMMAND rather than as a hand-typed mirror of it -- a mirror agrees
   # with the original until the day it is the reason a 48xlarge fleet fails on a rejected
-  # flag. Flag validation is the WHOLE value: `48xlarge` is missing from spawn's rate table
-  # and unmatched sizes default to xlarge (spawn#543), so the price reads 32x low.
+  # flag. Flag validation is the WHOLE value: spawn's rate table has no `32xlarge`/`96xlarge`
+  # key, so those fall to its xlarge default and read 32x/90x LOW (measured; spawn#543).
   local dry_args=()
   [[ "${KEEL_FLEET_DRYRUN:-0}" != 1 ]] || { dry_args=(--estimate-only); say "DRY RUN: validating flags, nothing will be launched (spawn's price is 32x low, spawn#543)"; }
 

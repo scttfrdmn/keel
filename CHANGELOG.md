@@ -93,8 +93,9 @@ While the major version is 0, minor versions may contain breaking changes.
   selection used by `up`'s guard, `status` and `down` is re-keyed to the `keel-` name prefix, which preserves the property
   the tag was for (not a list this script wrote, so `down` still works after a lost `.keel-hosts`). New knobs:
   `KEEL_FLEET_TTL` (default `8h`), `KEEL_FLEET_DRYRUN=1` (appends `--estimate-only`, so the invocation that spends is
-  validated *as the shipped command* and not as a hand-typed mirror of it — flag validation only: `48xlarge` is missing
-  from spawn's rate table and unmatched sizes default to xlarge, spawn#543, so the price it prints reads 32x low),
+  validated *as the shipped command* and not as a hand-typed mirror of it — flag validation only: spawn's rate table has
+  no `32xlarge`/`96xlarge` key, so those fall to its xlarge default and read **32x / 90x low**, spawn#543; `48xlarge` and
+  `24xlarge` are present and land within 7%, so the error is per-size and always in the understating direction),
   `KEEL_SSH_CONFIG` (so the block writer can be
   driven against a throwaway file rather than the operator's real config — that step is the one that failed once *after*
   three instances were already billing). `KEEL_FLEET_MARKET`'s default flips to `on-demand` now that the judged tier is
