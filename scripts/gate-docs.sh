@@ -291,23 +291,45 @@ stage_citations() {
 # cap exists to remove -- pay down shell to clear a gate rather than to ship a
 # routine. Printed here because this is the only gate that contacts no host, hence
 # the only one that runs on every push. Definitions printed beside the figure per
-# §7 rule 7; the library side includes bench/ and internal/spill, flattering the
-# ratio by ~100 lines, kept so it matches what the published counts counted.
-# tools/ is Go and would otherwise land on the library side, where an instrument would
-# flatter the very ratio it is counted by. Both lines print: the historical one
-# unchanged so the published 1.6x series stays comparable, and an apparatus one moving
-# tools/ across. Redefining one side silently would make a paydown claim unfalsifiable.
+# §7 rule 7. tools/ and bench/ are Go and would otherwise land on the library side,
+# where an instrument flatters the very ratio it is counted by. Both lines print: the
+# historical one unchanged so the published 1.6x series stays comparable, and an
+# apparatus one moving them across. Redefining one side silently would make a paydown
+# claim unfalsifiable.
+#
+# bench/ MOVES WHOLE, TESTS INCLUDED, and that is the correction rather than the
+# design (2026-08-20). The prior comment here said the library side "includes bench/
+# and internal/spill, flattering the ratio by ~100 lines". Measured at this rev:
+# bench/ is 1655 lines of which only openblas.go's 106 ever reached the library term,
+# so the other 1549 -- the whole benchmark harness, including the 376-line ceiling
+# instrument #6 landed the same day -- were counted in NEITHER term. A cap policed by
+# a reporter blind to the largest apparatus directory in the tree is a cap with a hole
+# in it, and the hole is invisible in exactly the direction that matters.
+#
+# STILL ON THE LIBRARY SIDE, DISCLOSED AND NOT MOVED: internal/spill's 837 non-test
+# lines (spill.go plus cmd/spill-audit) are P2's audit instrument by function and
+# would move on the same argument. They are left because "~100 lines" understated
+# them by 837 and correcting a count is not licence to also redraw a boundary in the
+# same commit -- that is a definition change, and §7 rule 7 wants it argued, not
+# bundled into a bug fix.
 stage_ratio() {
   head_ "apparatus ratio (reported, never a verdict)"
-  local sh lib tool ratio aratio
+  local sh lib tool bench benchlib ratio aratio app libnet
   sh="$(git ls-files '*.sh' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   lib="$(git ls-files '*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   tool="$(git ls-files 'tools/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  # bench/ counts EVERY tracked *.go, tests included -- that is the whole point of the
+  # 2026-08-20 correction above -- while benchlib is only the part the library term
+  # already held, so subtracting it moves bench/ across without double-counting.
+  bench="$(git ls-files 'bench/*.go' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  benchlib="$(git ls-files 'bench/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  app=$((sh + tool + bench))
+  libnet=$((lib - tool - benchlib))
   ratio="$(awk -v a="$sh" -v b="$lib" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
-  aratio="$(awk -v a="$sh" -v t="$tool" -v b="$lib" 'BEGIN { if (b - t) printf "%.2f", (a + t) / (b - t); else printf "n/a" }')"
+  aratio="$(awk -v a="$app" -v b="$libnet" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
   info "shell ${sh} / library ${lib} / ratio ${ratio}x"
-  info "apparatus $((sh + tool)) (shell ${sh} + tools/ ${tool}) / library $((lib - tool)) / ratio ${aratio}x"
-  info "shell = tracked *.sh; library = tracked *.go less *_test.go; tools/ is apparatus"
+  info "apparatus ${app} (shell ${sh} + tools/ ${tool} + bench/ ${bench}, of which ${benchlib} was already counted as library) / library ${libnet} / ratio ${aratio}x"
+  info "shell = tracked *.sh; library = tracked *.go less *_test.go; tools/ and bench/ are apparatus (bench/ whole, tests included); internal/spill's audit instrument stays on the library side, disclosed"
 }
 
 main() {

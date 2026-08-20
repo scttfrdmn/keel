@@ -151,7 +151,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # ceiling that came out as prose would be published as prose.
       if (fr !~ /^[0-9]+\.?[0-9]*$/ || ce !~ /^[0-9]+\.?[0-9]*$/ || pt !~ /^[0-9]+\.?[0-9]*$/ || ci !~ /^[0-9]+\.?[0-9]*$/)
         { printf "readme-numbers: [%s] %s ceiling verdict line did not yield four numbers (frac=%s, ceiling=%s, point=%s, net=%s)\n", host, r, fr, ce, pt, ci > "/dev/stderr"; bad = 1 }
-      frr[host, r] = fr; cer[host, r] = ce; ptr[host, r] = pt; cir[host, r] = ci
+      frr[host, r] = fr; ptr[host, r] = pt; cir[host, r] = ci
       # One ceiling per host, printed once per judged routine: three printings of one
       # measurement are one witness (§5 rule 10), so they cross-check and never corroborate.
       if ((host in ceil8) && ceil8[host] != ce)
@@ -215,9 +215,14 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
           # instruments. The judged class is compared net of CI against its own
           # measured ceiling, and that comparison yields ONE fraction -- there is no
           # point-estimate-vs-CI distinction to draw, so a shortfall there is just a
-          # shortfall, named with the ceiling it fell short of.
+          # shortfall, named as a share of the ceiling and NOT as that ceiling in
+          # GFLOP/s: this string lands in the caption, which is outside the block
+          # criterion 9 re-measures, so a rate here would be a claim (§7 rule 7).
+          # It was one, latently -- unreachable only because CEIL_FRACTION ships
+          # deferred-empty, so the day a fraction is ratified and any row missed it,
+          # criterion 9 would have gone red for a reason unrelated to the shortfall.
           if (r != "Strsm") {
-            short[++ns] = sprintf("%s %s at %s%% of its own %s GFLOP/s ceiling", model[h], r, frr[h, r], cer[h, r])
+            short[++ns] = sprintf("%s %s at %s%% of its own measured %s-thread ceiling", model[h], r, frr[h, r], (nt == "" ? "8" : nt))
           } else {
             # Strsm keeps the ratio bar and so keeps the distinction, which asks for
             # different things: a point estimate already under the floor is a
@@ -279,12 +284,12 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
           if (lo == "" || v < lo) lo = v; if (hi == "" || v > hi) hi = v
         }
         if (lo == "") continue
-        cl = cl (cl == "" ? "" : "; ") sprintf("%s %s GFLOP/s, %s reached %.1f-%.1f%% of it", model[h], ceil8[h], (nj == 1 ? "the judged routine" : "the judged routines"), lo, hi)
+        cl = cl (cl == "" ? "" : "; ") sprintf("%s %.1f-%.1f%%", model[h], lo, hi)
         gp = gp (gp == "" ? "" : ", ") sprintf("%.0f%%", 100 * (ceil8[h] + 0) / (8 * peak[h]))
       }
       sub(/, ([^,]*)$/, " and&", gp); sub(/ and, /, " and ", gp)
       if (cl != "")
-        printf "Measured this run: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less.\n\n", cl, gp, retired > "/dev/stderr"
+        printf "Measured this run, as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings'"'"' own rates are deliberately not republished here: nothing in the table above re-measures them, and a rate no instrument re-checks is a claim rather than a measurement (§7 rule 7, and criterion 9 is what noticed). They are in the gate log this caption names, and publishing them here means first making them re-measured rows.\n\n", (nt == "" ? "8" : nt), cl, gp, retired > "/dev/stderr"
     }
     # The bars in words, not as a ">= %s" with a hole in it. Either may be deferred to
     # its own measurement and both have been, at different times and for the same

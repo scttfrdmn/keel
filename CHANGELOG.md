@@ -76,6 +76,38 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **The caption fixing one honesty defect published three rates no instrument re-measures, and `gate-p5`
+  criterion 9 caught it on the re-run** (#6, 2026-08-20). `0bbf964` put the ceilings in README's caption, which
+  sits *outside* the block criterion 9 re-measures, so they were claims: criterion 9 passed at `651d1bd` and
+  failed at `0bbf964` on the same README. The caption now states shares only, says why the rates are absent, and
+  names the log that carries them. A **second, latent** instance was found and driven on purpose in the same
+  scan — the ceiling-shortfall sentence also printed `GFLOP/s`, unreachable only because `CEIL_FRACTION` ships
+  deferred-empty, so ratifying a fraction would have reddened criterion 9 for a reason unrelated to the
+  shortfall. Publishing the ceilings in README means first making them re-measured rows: `compute_name` already
+  emits `Ceiling/compute/avx512/threads=8`, but the block's row checker hardwires `scale_name`, so it needs a
+  resolver keyed on the published benchmark column plus a validating fleet run. Not done here, and not because
+  it is wrong.
+- **`gate-docs`' apparatus ratio was blind to the largest apparatus directory in the tree, and its comment said
+  otherwise** (2026-08-20). `library` is tracked `*.go` less `*_test.go` and `bench/` is 1655 lines of which
+  only `openblas.go`'s 106 ever reached it, so **1549 lines of benchmark harness — including the 376-line
+  ceiling instrument landed the same day — were counted in neither term**: a cap policed by a reporter that
+  cannot see the spending. `bench/` now moves whole, tests included. The reported ratio goes **1.97x → 2.23x**;
+  the historical `shell / library` line is unchanged so the published 1.6x series stays comparable. The old
+  comment claimed the library side held `bench/` and `internal/spill` "flattering the ratio by ~100 lines" —
+  right for `bench/`'s 106, silent about `internal/spill`'s **837**, which are disclosed and deliberately *not*
+  moved, since correcting a count is not licence to redraw a boundary in the same commit.
+- **Rule 5's new magnitude gate reached a correct verdict through a self-contradicting sentence** (#6,
+  2026-08-20). `bench.sh`'s non-declining `printf` was unconditional, so at one resolved step it printed *"1 of
+  2 adjacent steps resolves a decline … so the windows are ties"* — a sentence whose own count denies its
+  conclusion. Split: no resolved step is a tie, one resolved step is a non-monotone excursion, and rule 5 passes
+  it because rule 5 names a *monotone* decline. Message-only; all four branches were driven and every verdict
+  word is unchanged. Only `keel-gnr` exposed it — both AMD hosts took the tie path, where the wording was right.
+- **`DESIGN.md` §4/P5 stated the retired denominator as the ceiling's formula, one sentence above the text
+  contradicting it** (#6, 2026-08-20). The headline read `min(8 × measured 1-thread compute, …)` while its own
+  sub-bullet said the compute arm is measured *at 8 threads*. The headline now states the implemented form, and
+  the deviation from the ruling's literal text is recorded with its measured consequence: the two forms put
+  Granite Rapids at 33% and 87% of its ceiling respectively, a 54-point swing that **inverts the rank ordering
+  the bullet's own falsifier depended on**, so it is carried as an open question rather than settled in-tree.
 - **`aws-fleet.sh up` could not resume a half-launched fleet, so finishing one cost terminating it**
   (2026-08-20). Roles launch in sequence with `--wait-for-ssh`, and the first judged launch was killed between
   its second and third instance; `up` then refused to run at all while any `keel-` instance was alive, leaving

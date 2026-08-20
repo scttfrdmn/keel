@@ -601,6 +601,17 @@ clock_series() {
       printf "declining the peak series declines across both steps and both clear the floor their own intervals set (sec/op %s), which §5 rule 5 names as throttling: the sweep between these windows ran on a clock that was falling, so its rates are not this host'\''s\n", s
       exit
     }
-    printf "stable the peak series is bounded in every window and not ordered: %s of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op %s), so the windows are ties and a tie is not an order (#6, 2026-08-20)\n", nd, s
+    # TWO NON-DECLINING SHAPES, NOT ONE, and the verdict is the same for both while
+    # the ground is not (#6, 2026-08-20). This printf was unconditional and said "the
+    # windows are ties" at nd == 1 too, which on keel-gnr produced "1 of 2 adjacent
+    # steps resolves a decline ... so the windows are ties" -- a sentence whose own
+    # count denies its conclusion. One resolved step is not a tie; it is half an
+    # order, and rule 5 passes it because rule 5 names a MONOTONE decline. A healthy
+    # host never shows this: zen4 and zen5 both took nd == 0.
+    if (nd == 0) {
+      printf "stable the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op %s), so the windows are ties and a tie is not an order (#6, 2026-08-20)\n", s
+      exit
+    }
+    printf "stable the peak series is bounded in every window and declines in one step but not across both: 1 of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op %s), so the series is a non-monotone excursion and not the monotone decline §5 rule 5 names as throttling -- the resolved step is stated above rather than called a tie (#6, 2026-08-20)\n", s
   }'
 }
