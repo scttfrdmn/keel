@@ -927,7 +927,17 @@ host_admission() {
                  ADM_WHY="$ADM_INSTANCE, and the launcher agrees, but it was launched $smarket: a reclaim mid-sweep converts a judged reading into a truncated one, so spot is the exploration tier (ruled 2026-08-19)"
                else
                  ADM_CLASS=evidentiary
-                 ADM_WHY="$ADM_INSTANCE is a full-size instance of an approved family, and the launcher independently records it as $stype on-demand (${ADM_SPAWN%%:*})"
+                 # NAMES THE CHECK, not a property this arm cannot test -- the same repair
+                 # the rejection arm got, and it needed the same kind of evidence. The
+                 # wording was "$ADM_INSTANCE is a full-size instance of an approved
+                 # family", which is a claim about SIZE that nothing here evaluates:
+                 # membership in one flat list is the whole test. Driving it on a live
+                 # c7a.medium with that type temporarily admitted produced "c7a.medium is a
+                 # full-size instance" in a real preamble. The list's members are in fact
+                 # full-size, so the sentence was true of every host it had ever run on --
+                 # which is exactly why only a positive control on a deliberately wrong
+                 # type could show it, and why a healthy fleet would never have.
+                 ADM_WHY="$ADM_INSTANCE is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as $stype on-demand (${ADM_SPAWN%%:*})"
                fi ;;
            esac ;;
          *)

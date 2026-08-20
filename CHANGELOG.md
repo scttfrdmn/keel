@@ -207,6 +207,19 @@ While the major version is 0, minor versions may contain breaking changes.
   1.21× apart against Zen 4's 3.20×.
 
 ### Fixed
+- **The `evidentiary` grant arm claimed a size it never checked, and only a positive control on a deliberately wrong type
+  could show it.** Its preamble read *"`<type>` is a full-size instance of an approved family"*, but membership in one
+  flat list — `KEEL_EVIDENTIARY_SIZES` — is the entire test `host_admission` performs; nothing there evaluates size. The
+  list's members *are* full-size, so the sentence was true of every host the arm had ever run on, which is precisely why a
+  healthy fleet could never expose it. Driving it on a live `c7a.medium` with that type temporarily admitted printed
+  "c7a.medium is a full-size instance" in a real admission preamble. Now the sentence names the check performed —
+  admitted *by the allowlist*, whose members are full-size types added one justifying read-back at a time. This is the
+  same defect, and the same repair, as the rejection arm one branch down, whose "not a full-size instance of an approved
+  family" was a conjunction over two properties the classifier never separates: a verdict must be able to say which of
+  its causes fired (§5 rule 6). It is also the first end-to-end exercise of the grant arm and of the
+  witness-contradiction arm against a **live launcher record** rather than a fixture — the contradiction arm was driven by
+  forging `instance=c7a.48xlarge` onto a real `spawn=…:c7a.medium:ondemand` line, and reached `unknown` ⇒ `unmeasured`
+  naming both readings.
 - **Bare metal reaches the evidentiary class by a named arm; the default stays restrictive** (#106). `host_admission`
   read the class from `instance=` alone, so bare metal — which has no EC2 identity — fell through the `case` default to
   `correctness`, and a re-admission run would have demoted vesta/janus/antares by a classifier bug rather than by
