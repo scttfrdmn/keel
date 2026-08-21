@@ -199,14 +199,14 @@ rather than a gap in the check.
 correction of a note Scott had filed himself. The archive re-adjudication under `CEIL_FRACTION`
 resolves a `gnr`-class row only if its true share reached **153.9%**, i.e. never: the recoverable
 `8 × 1T` denominator is that much looser than gnr's real ceiling. That was filed as a post-tag
-refinement for #22's re-measured ceiling row — a *forward-looking* instrument pointed at twelve
+refinement for #113's re-measured ceiling row — a *forward-looking* instrument pointed at twelve
 finished runs. No future action can re-measure them. Scott's ruling: "a permanently unfixable
 limitation filed as a debt is a lie about the future — it goes inside the number instead," because
 a debt entry promises eventual payment and an unpayable one reads as *known, scheduled* where the
 truth is *known, permanent*.
 
 Two things this does not do. It does not retire the debt that was correctly scoped: `gnr` and
-`spr` carry ceilings dated to `651d1bd` with nothing re-measuring them, and #22's row is the live
+`spr` carry ceilings dated to `651d1bd` with nothing re-measuring them, and #113's row is the live
 denominator waiting on #111's readmission ruling — a real contingency, honestly conditional. And
 it does not make the enforced bar the subject: `k` appears only in the retrospective proxy, while
 `CEIL_FRACTION` divides by each host's *measured* 8-thread ceiling, where `k` cancels and 58.5% is

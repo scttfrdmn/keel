@@ -54,13 +54,13 @@ While the major version is 0, minor versions may contain breaking changes.
 - **§5 rule 12 gains clause (c): a hole no future action can close goes inside the number and is never filed as a
   debt** (ruling on #6, 2026-08-21; `DESIGN.md` §5, `docs/rulings.md` rule 12). Scott had filed the archive's
   inability to resolve a `gnr`-class row — true share would have to reach **153.9%**, i.e. never — as a post-tag
-  refinement for #22's re-measured ceiling row, which is a *forward-looking* instrument pointed at twelve finished
+  refinement for #113's re-measured ceiling row, which is a *forward-looking* instrument pointed at twelve finished
   runs. His own correction is the rule: "a permanently unfixable limitation filed as a debt is a lie about the
   future — it goes inside the number instead," because a debt entry promises eventual payment and an unpayable one
   reads as *known, scheduled* where the truth is *known, permanent*. The operational test is to **name the future
   action that would remove the limitation**; a forward-looking instrument aimed at completed runs is the tell that
   there isn't one. Two things the clause leaves alone: the debt correctly scoped to what a future action *can*
-  reach (`gnr` and `spr` carrying ceilings dated to `651d1bd` with nothing re-measuring them, #22's row
+  reach (`gnr` and `spr` carrying ceilings dated to `651d1bd` with nothing re-measuring them, #113's row
   conditional on #111's readmission ruling), and the enforced bar, which divides by each host's measured 8-thread
   ceiling — `k` appears only in the retrospective proxy, so 58.5% is vacuous for no host it judges. Recorded with
   the session's mirror-image error beside it: the loose `k` was attributed to `zen4` because zen4's name sat next
@@ -162,6 +162,17 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **Four citations of "#22" for the re-measured ceiling row pointed at a closed edges-campaign issue; the work is
+  now filed as #113** (2026-08-21). The number was a **task-tracker id transcribed into prose as an issue
+  number** — GitHub #22 is *"Edges: measure masked C update against zero-padded panels + temp tile"*, closed, and
+  every one of the tree's twenty-odd pre-existing #22 citations correctly means that campaign. Only today's four
+  meant the ceiling row. The failure is a known one with a known control, and the control was run and still
+  missed: I grepped `#[0-9]+` out of the diff and checked each number against `gh issue view`, but skipped #22 as
+  already-known because it had appeared in the ruling I was implementing. **A number arriving from upstream is
+  not a verified number** — it inherits whatever produced it, and this one came from a task list. Worse than a
+  dangling reference: #22's real subject is edge handling in the single-thread nest, adjacent enough to P5 that
+  the citation reads plausibly. #113 states its own scope limit under §5 rule 12 clause (c) — it is
+  forward-looking and explicitly does *not* claim to reach the archive.
 - **The caption fixing one honesty defect published three rates no instrument re-measures, and `gate-p5`
   criterion 9 caught it on the re-run** (#6, 2026-08-20). `0bbf964` put the ceilings in README's caption, which
   sits *outside* the block criterion 9 re-measures, so they were claims: criterion 9 passed at `651d1bd` and
