@@ -795,7 +795,12 @@ assert_governor() {
 # An allowlist is safe here in the way a duplicated threshold is not, and that is why
 # this is one: the default is the RESTRICTIVE class, so a stale list can only withhold a
 # judgement, never grant one.
-KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge"
+#
+# c5n.18xlarge added 2026-08-21, justified by build/wave2-classify-7ac592a.log: read back as
+# Xeon Platinum 8124M, 36 cores / 2 sockets, equal to c5n.metal's core count. c6i.32xlarge
+# was measured in the same run and is NOT added -- fma-bound at 48.7% of peak, so admitting
+# it would grant a judgement that fails P2 (#6 Q3, and see #86).
+KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge c5n.18xlarge"
 
 # host_admission PROV — set ADM_CLASS and ADM_INSTANCE from a provenance line
 # (docs/hosts.md, ruled 2026-08-17 on #104). ADM_CLASS is one of:

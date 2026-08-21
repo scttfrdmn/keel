@@ -9,6 +9,29 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Wave 2 classified two Intel AVX-512 hosts and they split: SKX admits to the judged set, ICX does not**
+  (#6 Q3, 2026-08-21; `build/wave2-classify-7ac592a.log`). `keel-skx` — **Xeon Platinum 8124M**, `c5n.18xlarge`,
+  36 cores / 2 sockets, equal to `c5n.metal`'s core count — classifies **issue-bound**: ceiling mixes converge
+  `1.023×` over a `2.778×` spread in insns/FMA, interval `[1.017×, 1.026×]`, clear of `1.10`. That is janus's
+  class and the roofline exception P2 has had since #19, so `c5n.18xlarge` joins `KEEL_EVIDENTIARY_SIZES` in this
+  commit, which cites the read-back that justifies it — the addition follows the evidence and never precedes it,
+  because the allowlist's safety property is that a stale list may only *withhold* a judgement. `keel-icx` —
+  **Xeon Platinum 8375C**, `c6i.32xlarge`, 64 cores / 2 sockets — classifies **fma-bound**, is held to the flat
+  55% floor and reads **48.7%** of measured peak, so it is not added: admitting it would grant a judgement that
+  fails P2. **Signing fleet: c7a.48xlarge + c8a.48xlarge + c5n.18xlarge.** ICX joins `gnr` and `spr` as
+  characterization. Both hosts ran OpenBLAS 0.3.26 `DYNAMIC_ARCH corename=SkylakeX`, on the allowlist.
+- **ICX's class turned on 0.25% of margin, which makes #86 a measurement rather than a prediction** (2026-08-21).
+  Its ceiling spread is `1.1028` against a `converge_max` of `1.10`, on a zero-width interval. Re-running
+  `throughput_verdict` — gate-p2's own pure function, so the instrument adjudicates rather than a rederivation
+  (§5 rule 11) — with `converge_max` raised to `1.11` and nothing else changed returns `issue … 0.907758 pass`
+  where the measured inputs return `fma … fail diverge`: **one unchanged keel rate, two opposite verdicts, a
+  quarter of a percent apart on a classifier threshold**, which is exactly the flip #86 was filed on. Held as a
+  **sensitivity probe and not a second verdict**, for two stated reasons: the mix bounds were reconstructed from
+  the log's displayed rates rather than read from the gate's arguments — exact for ICX, whose printed `[1.103×,
+  1.103×]` reproduces, and *wrong* for SKX, whose printed `1.017×` lower bound the reconstruction misses
+  (harmless there, since the register-only peak kernel is the argmax and its `f` is `1.0` by definition, so
+  neither class nor attainment moves) — and the counterfactual `0.9078` clears `0.90` by 0.8 points while resting
+  on a rate read to three figures. The finding is the fragility, not the counterfactual verdict.
 - **`BenchmarkCeiling` measures both halves of P5's per-host attainable ceiling** (ruling on #6, 2026-08-20),
   the denominator that replaces the retired 6.0x cross-host scaling floor: `compute` runs `BenchmarkPeak`'s
   register-only FMA kernels concurrently on 1 and 8 threads, so the clock droop with core count is *inside*
@@ -28,6 +51,21 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **§5 rule 12 gains clause (c): a hole no future action can close goes inside the number and is never filed as a
+  debt** (ruling on #6, 2026-08-21; `DESIGN.md` §5, `docs/rulings.md` rule 12). Scott had filed the archive's
+  inability to resolve a `gnr`-class row — true share would have to reach **153.9%**, i.e. never — as a post-tag
+  refinement for #22's re-measured ceiling row, which is a *forward-looking* instrument pointed at twelve finished
+  runs. His own correction is the rule: "a permanently unfixable limitation filed as a debt is a lie about the
+  future — it goes inside the number instead," because a debt entry promises eventual payment and an unpayable one
+  reads as *known, scheduled* where the truth is *known, permanent*. The operational test is to **name the future
+  action that would remove the limitation**; a forward-looking instrument aimed at completed runs is the tell that
+  there isn't one. Two things the clause leaves alone: the debt correctly scoped to what a future action *can*
+  reach (`gnr` and `spr` carrying ceilings dated to `651d1bd` with nothing re-measuring them, #22's row
+  conditional on #111's readmission ruling), and the enforced bar, which divides by each host's measured 8-thread
+  ceiling — `k` appears only in the retrospective proxy, so 58.5% is vacuous for no host it judges. Recorded with
+  the session's mirror-image error beside it: the loose `k` was attributed to `zen4` because zen4's name sat next
+  to the 35 resolving rows, when zen4 owns them *because* its proxy is the tightest of the three (0.765 against
+  gnr's 0.380). Adjacency is not attribution.
 - **The ceiling's 8-thread form is RATIFIED as the amendment: the deviation was the ruling's own law applied to
   itself** (ruling on #6 Q1, 2026-08-21; `DESIGN.md` §4/P5). The literal `8 × 1T` denominator is *"measured
   denominators, never formulas"* violated by the sentence that states it — arithmetic blind to the all-core
