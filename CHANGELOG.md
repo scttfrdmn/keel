@@ -63,9 +63,14 @@ While the major version is 0, minor versions may contain breaking changes.
   tag condition is green gates — and unparking #111 is out under the freeze's own test, because the feed-bound
   class needs its own derived-OpenBLAS-ratio legislation and *the certificate does not need this host*. What it
   needs is an Intel AVX-512 arm judged under machinery that already exists, and **SKX and ICX are issue-bound
-  silicon — janus's class — whose roofline exception has been law since P2**. `FLEET` becomes `zen4` + `zen5` +
-  `skx` (c5n.4xlarge) + `icx` (c6i.4xlarge), each re-confirmed at 8 physical cores from `describe-instance-types`;
-  whichever lands in the issue-bound class joins the judged set, both if both do. `gnr` and `spr` sit beside each
+  silicon — janus's class — whose roofline exception has been law since P2**. The candidates launch at their
+  family's largest non-metal size — **c5n.18xlarge (36 cores) and c6i.32xlarge (64 cores)**, each equal to its
+  metal sibling's core count — because `remote.sh` classifies anything smaller `correctness`, so one read-back both
+  classifies the µarch and justifies the `KEEL_EVIDENTIARY_SIZES` addition that lets it be judged at all; a
+  read-back at the 8-core exploration size would have certified nothing. `aws-fleet.sh`'s `FLEET` gains the two
+  roles at the exploration size and is relabelled as what it is — a launcher list, not an admission list, since the
+  first draft of this entry called it the signing fleet at 2xlarge and would have booted a fleet no gate may judge.
+  Whichever lands in the issue-bound class joins the judged set, both if both do. `gnr` and `spr` sit beside each
   other as labelled characterization rows on antares's consumer-row precedent. The cost is stated rather than
   absorbed: `gnr`'s scaling rows are **no longer re-measured by any gate**, they are dated to `651d1bd`, and being
   non-citable is what that fact earns them. Keeping it in-fleet as measured-but-unjudged is **not available in the

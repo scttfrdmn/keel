@@ -48,12 +48,14 @@ END_MARK="# END keel-fleet"
 # from describe-instance-types rather than inferred from vCPUs -- Intel reports 2
 # threads/core and AMD 1, so equal vCPU counts would have meant unequal fleets and
 # GOMAXPROCS=8 would name a different machine on each arm (#82).
-# THE SIGNING FLEET as of 2026-08-21 (#6 Q3, whose text is the authority): spr and gnr
-# left it for CHARACTERIZATION, and wave 2's two Intel candidates replace them. Which of
-# those two ends up judged is the P2 classifier's call, not this launcher's.
+# This list is the EXPLORATION fleet and says nothing about who may be judged: at these
+# sizes remote.sh classifies every one of them `correctness`, and judging needs a
+# KEEL_FLEET override onto a KEEL_EVIDENTIARY_SIZES member. wave 2's two candidates were
+# added 2026-08-21 (#6 Q3) at the family's 8-core size for the same reason as the rest.
 FLEET=(
   "zen4:c7a.2xlarge:AMD EPYC Genoa"
   "zen5:c8a.2xlarge:AMD EPYC Turin"
+  "spr:c7i.4xlarge:Intel Sapphire Rapids"
   "skx:c5n.4xlarge:Intel Skylake-SP"
   "icx:c6i.4xlarge:Intel Ice Lake"
 )
