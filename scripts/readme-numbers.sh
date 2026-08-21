@@ -43,12 +43,11 @@ CAP_END='<!-- keel-caption: end -->'
 # being remembered: a floor that drifts from the gate's would publish a disclosure
 # about a bar nothing enforces.
 #
-# CEIL_FRACTION replaced SCALE_FLOOR on 2026-08-20 (#6): the judged class is no longer
-# compared to a cross-host ratio but to each host's own measured 8-thread ceiling, and
-# the fraction is deferred to that measurement, so this is EMPTY on purpose. An empty
-# bar is a real state here and not a missing value — the caption below says so in words
-# rather than printing ">= %s" with nothing in it.
-CEIL_FRACTION=
+# CEIL_FRACTION replaced SCALE_FLOOR on 2026-08-20 (#6): the judged class is compared to
+# each host's own measured 8-thread ceiling, not to a cross-host ratio. Ratified at 58.5
+# on 2026-08-21 (#6 Q2). The empty-bar branch below stays live and is not dead code — it
+# is what the next deferred bar uses, and DESIGN.md keeps the deferral as precedent.
+CEIL_FRACTION=58.5
 STRSM_FLOOR=7.0
 SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'

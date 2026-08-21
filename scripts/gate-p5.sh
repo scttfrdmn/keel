@@ -45,17 +45,16 @@ P5_THREADS=8
 # measures on the host under test (ruling on #6, 2026-08-20). DESIGN.md §4/P5 carries
 # the whole of it and is the authority: the rank inversion that falsified the floor,
 # why the compute arm is measured AT 8 threads, why the memory term is not yet inside
-# the min() and why that omission is in the strict direction, and why CEIL_FRACTION is
-# empty. Not restated here — a criterion whose reasoning lives in two places has one
+# the min() and why that omission is in the strict direction, and how CEIL_FRACTION was
+# derived. Not restated here — a criterion whose reasoning lives in two places has one
 # witness and two things to keep in step (§5 rule 10).
 #
 # Retained only as the value the disclosure names as retired, never as a comparison:
 SCALE_FLOOR_RETIRED=6.0
-# Empty = the fraction is computed, printed and reported, and no host fails on it.
-# Deferred to the fleet measurement on STRSM_FLOOR's own ratified precedent, fifteen
-# lines down in this same file (#37). >=90% when set, per scripts/roofline.sh's
-# issue-bound class.
-CEIL_FRACTION=
+# A REGRESSION BAR, ratified 2026-08-21 (#6 Q2) on STRSM_FLOOR's precedent fifteen lines
+# down; >=90% was refused. The derivation is printed at run time, so it is not restated
+# here for the reason the paragraph above gives: two copies, one witness (§5 rule 10).
+CEIL_FRACTION=58.5
 
 # The two parallelism classes (criterion 1, ruled 2026-08-12). P5_JUDGED is one
 # class: GEMM-shaped nests over independent tiles. P5_MEASURED is the other:
@@ -528,7 +527,8 @@ echo "-- scaling at $P5_THREADS cores on ${P5_SIZE}^3 (the headline criterion) -
 info "-test.count=$KEEL_BENCH_COUNT -test.benchtime=$KEEL_BENCH_TIME; one invocation per host with both thread"
 info "counts inside it, and the floor counts as cleared only net of both intervals"
 if [[ -n "$CEIL_FRACTION" ]]; then
-  info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, #6)"
+  info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, its 8-thread form and this fraction ratified 2026-08-21, #6)"
+  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest judged row of build/gate-p5-651d1bd.log (keel-zen5 Ssyrk, 61.1% net of CI) less 2.6 points of margin. >= 90% was refused because all nine judged rows sat under it. Derived from that run and enforced here, so this reading can fail it"
 else
   info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has no floor in force until the bandwidth term is measured on the fleet"
 fi

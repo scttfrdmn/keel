@@ -28,6 +28,49 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The ceiling's 8-thread form is RATIFIED as the amendment: the deviation was the ruling's own law applied to
+  itself** (ruling on #6 Q1, 2026-08-21; `DESIGN.md` §4/P5). The literal `8 × 1T` denominator is *"measured
+  denominators, never formulas"* violated by the sentence that states it — arithmetic blind to the all-core
+  frequency, shared-cache and memory-controller effects only an 8-thread run reveals. Its consequence is
+  disqualifying rather than merely loose: Granite Rapids reads **32.8–33.2%** of its ceiling under the formula
+  and **86.3–87.4%** under the measured form, and that 33% *is* the front-end deficit #104 already owns, judged
+  by P2's derived-ceiling criterion. Under the formula it would leak into the *scaling* verdict too, double-counting
+  one cause across two criteria (§5 rule 6). The **54-point swing is recorded as the amendment's grounds**, because
+  a move that large is exactly what a thumb on the scale looks like; it inverts the ordering the bullet's own
+  falsifier depended on, and that is a diagnosis of the formula, not of the refinement.
+- **`CEIL_FRACTION = 58.5`, typed as a REGRESSION BAR on `STRSM_FLOOR`'s precedent; ≥90% is REFUSED** (ruling on
+  #6 Q2, 2026-08-21; `scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5). All nine judged rows
+  sit below 90%, and a fraction no observation reaches is an aspiration rather than a floor — pre-registration
+  protects a *standard* from post-hoc tuning, it does not immunise a *model* from nine-of-nine contrary readings.
+  A blocked GEMM at the gate's 4096³ carries pack, sync and imbalance costs an embarrassingly-parallel compute
+  ceiling does not model, so the rows are reporting the real overhead band. Derived from the lowest judged row of
+  `build/gate-p5-651d1bd.log` — `keel-zen5` `Ssyrk` at **61.1%**, already net of CI since the numerator is
+  `bench_gflops_lo` — less **2.6 points** of margin, with the derivation printed on every run. Derived from one
+  run and **enforced on later ones**, so it can genuinely fail, and **invariant to Q3's judged-set change**:
+  `gnr`'s rows sit 25 points above the minimum, so dropping them leaves 61.1% where it stood.
+- **Re-adjudicating the archive under the ratified bar resolves 35 of 105 rows, and one host's resolving power is
+  structurally zero** (#6, 2026-08-21; supersedes the 2026-08-20 *"resolves none of them"* entry below, which was
+  written against the refused ≥90%). The population is now defined **structurally** — every archived `gate-p5` log
+  carrying no measured-ceiling row, which is **12 files**, not the eleven that clause claimed — so it does not go
+  false with each new run: 105 judged rows, **23.8%** to **74.9%**, of which **35 definitively cleared their own
+  ceilings** and 70 stay unresolved. Since `published_share = k × true_share` with `k` = ceiling/(8×1T) per host,
+  the archive can resolve a `zen4`-class row that truly reached **76.5%**, a `zen5`-class row at **85.3%** and a
+  `gnr`-class row at **153.9%** — that is, never. All 35 are Zen 4 rows for precisely that reason: the
+  concentration measures how loose the proxy denominator is per µarch and is **not** a ranking of the hosts
+  (§5 rule 12 wants that stated inside the number, not beside it).
+- **`gnr` drops to CHARACTERIZATION and the signing fleet's Intel arm comes from wave 2** (ruling on #6 Q3,
+  2026-08-21; `scripts/aws-fleet.sh`, `docs/hosts.md`). Tagging v0.1.0 with a disclosed red is out — CONTRIBUTING's
+  tag condition is green gates — and unparking #111 is out under the freeze's own test, because the feed-bound
+  class needs its own derived-OpenBLAS-ratio legislation and *the certificate does not need this host*. What it
+  needs is an Intel AVX-512 arm judged under machinery that already exists, and **SKX and ICX are issue-bound
+  silicon — janus's class — whose roofline exception has been law since P2**. `FLEET` becomes `zen4` + `zen5` +
+  `skx` (c5n.4xlarge) + `icx` (c6i.4xlarge), each re-confirmed at 8 physical cores from `describe-instance-types`;
+  whichever lands in the issue-bound class joins the judged set, both if both do. `gnr` and `spr` sit beside each
+  other as labelled characterization rows on antares's consumer-row precedent. The cost is stated rather than
+  absorbed: `gnr`'s scaling rows are **no longer re-measured by any gate**, they are dated to `651d1bd`, and being
+  non-citable is what that fact earns them. Keeping it in-fleet as measured-but-unjudged is **not available in the
+  instrument** — `$SENTINELS` restricts criterion 5's verdict only, while #111 lives in gate-p3's `OB_*` criterion,
+  which judges every host in `.keel-hosts` with no such branch. Building one is filed, not done here.
 - **The published block is re-measured on the judged fleet under the derived ceiling, and the caption now carries
   the criterion's own readings** (#6, 2026-08-20; `build/gate-p5-651d1bd.log`, 24 rows from one run on
   c7a.48xlarge / c8a.48xlarge / c8i.96xlarge). Measured 8-thread ceilings and what the judged routines reached of
