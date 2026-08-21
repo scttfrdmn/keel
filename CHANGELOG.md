@@ -162,6 +162,36 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **The ceiling-share criterion divided a CI-deducted rate by a bare point estimate, flattering every judged
+  share; `CEIL_FRACTION` re-types from 58.5 to 57.8 as a consequence** (#6, 2026-08-21, ratified as a repair
+  rather than an amendment). `gate-p5.sh` formed the share as `bench_gflops_lo / bench_gflops` — the numerator
+  net of its interval, the denominator's interval simply dropped. `bench.sh`'s own contract forbids exactly
+  that, in the docstring of the function used: *"Do not use it to build a ratio"*, with `bench_ratio_lo` named
+  as the remedy and the fraction-of-peak case named as the example. **The standard that adjudicates this
+  predates the run and is the library's, not the criterion's**, which is why restoring it is a bug fix and not
+  a post-hoc rewrite — and the direction seals it, since the correction is strictly stricter. A census of both
+  call sites confirms one violation, not a pattern: `gate-p3.sh:1024` divides nothing, compares across two
+  CSVs with no shared denominator, and sits inside the stated exemption.
+  **The bar re-derives because its input did.** 57.8 was never a free constant but a formula — *lowest judged
+  row less 2.6 points* — whose input the defective site computed. Re-deriving all nine judged rows of
+  `build/gate-p5-651d1bd.log` through `bench_ratio_lo` moves them down **0.7 to 4.3 points**, in proportion to
+  each host's ceiling CI (`zen5` 1.12% → −0.7, `zen4` 2.07% → −1.8, `gnr` 5.11% → −4.2): **the noisiest
+  denominator was the most flattered**, which is #86's flip hazard reappearing one gate later. The minimum row
+  goes 61.1% → **60.4%** (`keel-zen5` `Ssyrk`), the **argmin does not move**, and 60.4 − 2.6 = **57.8**. The
+  bar's *definition* is unchanged; its input honesty improved. Verified before it shipped: the instrument
+  reproduces all nine *published* shares to the printed digit (§5 rule 11), so the corrected column is a
+  correction and not a second method. The archive re-adjudication is unmoved — **the same 35 of 105 rows
+  resolve**, since none lands in the 57.8–58.5 band — and its per-host resolving thresholds re-derive to 75.6%
+  (`zen4`-class), 84.3% (`zen5`), 152.1% (`gnr`, still *never*).
+  **`CEIL_FRACTION = 58.5` is superseded wherever it still reads as live** — the entries below it in this same
+  release, which record the ratification honestly as of that hour, name the value it was ratified at.
+- **The gate now prints the ceiling's confidence interval, so this class of correction is never unsizable
+  again** (#6, 2026-08-21). Sizing the repair above needed the ceiling CIs, and the gate log had never carried
+  them — only raw `go test` benchmark logs did, which no archive policy promises to keep. They survived here by
+  luck. This is the `BENCHLOG` law's corollary collecting a second time: **a summary that drops the CI it was
+  built from makes its own correction unsizable.** One line, no new machinery: the repair makes the old
+  non-positive-ceiling branch unreachable, and deleting it pays for this print exactly, so `scripts/` closes the
+  session at **net zero** — which matters because this session lands no routine or kernel to spend against.
 - **Four citations of "#22" for the re-measured ceiling row pointed at a closed edges-campaign issue; the work is
   now filed as #113** (2026-08-21). The number was a **task-tracker id transcribed into prose as an issue
   number** — GitHub #22 is *"Edges: measure masked C update against zero-padded panels + temp tile"*, closed, and
@@ -173,6 +203,15 @@ While the major version is 0, minor versions may contain breaking changes.
   dangling reference: #22's real subject is edge handling in the single-thread nest, adjacent enough to P5 that
   the citation reads plausibly. #113 states its own scope limit under §5 rule 12 clause (c) — it is
   forward-looking and explicitly does *not* claim to reach the archive.
+  **A second instance surfaced hours later, and this time the control caught it.** `gate-p5.sh`'s
+  ceiling-share comment said *"#17 re-adjudicates them against this"*; GitHub #17 is the T9 anchor-NOP
+  finding, while **task** #17 was "re-adjudicate every historical scaling verdict" — the same
+  transcription, pre-existing in the tree rather than authored today. Grepping `#[0-9]+` out of the diff
+  and checking each against `gh issue view` is what found it, on a line the repair happened to touch.
+  Repointed to **DESIGN.md §4/P5**, where the re-adjudication actually lives as law, since it has no
+  issue of its own. The tree's other twenty-two pre-existing `#17` citations all correctly mean T9 (counted
+  2026-08-21), so this is one site — and the class is now **two instances with two different task ids**,
+  which is what makes it a class rather than an accident.
 - **The caption fixing one honesty defect published three rates no instrument re-measures, and `gate-p5`
   criterion 9 caught it on the re-run** (#6, 2026-08-20). `0bbf964` put the ceilings in README's caption, which
   sits *outside* the block criterion 9 re-measures, so they were claims: criterion 9 passed at `651d1bd` and

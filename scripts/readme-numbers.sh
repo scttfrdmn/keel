@@ -44,10 +44,10 @@ CAP_END='<!-- keel-caption: end -->'
 # about a bar nothing enforces.
 #
 # CEIL_FRACTION replaced SCALE_FLOOR on 2026-08-20 (#6): the judged class is compared to
-# each host's own measured 8-thread ceiling, not to a cross-host ratio. Ratified at 58.5
-# on 2026-08-21 (#6 Q2). The empty-bar branch below stays live and is not dead code — it
-# is what the next deferred bar uses, and DESIGN.md keeps the deferral as precedent.
-CEIL_FRACTION=58.5
+# each host's own measured 8-thread ceiling. Ratified 2026-08-21 at 58.5, re-typed to 57.8
+# that day when a repair restored the ceiling's interval to the site computing its input (#6
+# Q2). The empty-bar branch below is live, not dead code — the next deferred bar uses it.
+CEIL_FRACTION=57.8
 STRSM_FLOOR=7.0
 SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'

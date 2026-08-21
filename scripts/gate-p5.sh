@@ -54,7 +54,7 @@ SCALE_FLOOR_RETIRED=6.0
 # A REGRESSION BAR, ratified 2026-08-21 (#6 Q2) on STRSM_FLOOR's precedent fifteen lines
 # down; >=90% was refused. The derivation is printed at run time, so it is not restated
 # here for the reason the paragraph above gives: two copies, one witness (§5 rule 10).
-CEIL_FRACTION=58.5
+CEIL_FRACTION=57.8
 
 # The two parallelism classes (criterion 1, ruled 2026-08-12). P5_JUDGED is one
 # class: GEMM-shaped nests over independent tiles. P5_MEASURED is the other:
@@ -528,7 +528,8 @@ info "-test.count=$KEEL_BENCH_COUNT -test.benchtime=$KEEL_BENCH_TIME; one invoca
 info "counts inside it, and the floor counts as cleared only net of both intervals"
 if [[ -n "$CEIL_FRACTION" ]]; then
   info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, its 8-thread form and this fraction ratified 2026-08-21, #6)"
-  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest judged row of build/gate-p5-651d1bd.log (keel-zen5 Ssyrk, 61.1% net of CI) less 2.6 points of margin. >= 90% was refused because all nine judged rows sat under it. Derived from that run and enforced here, so this reading can fail it"
+  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest judged row of build/gate-p5-651d1bd.log (keel-zen5 Ssyrk, 60.4% net of BOTH intervals) less 2.6 points of margin. >= 90% was refused because all nine judged rows sat under it. Derived from that run and enforced here, so this reading can fail it"
+  info "  the 60.4% input is that run's row RE-DERIVED through bench_ratio_lo, not the 61.1% it printed: the bar's definition is unchanged, its input was computed by a site that dropped the ceiling's interval (repaired 2026-08-21, #6). The nine re-derived rows drop by 0.7 to 4.3 points, the argmin does not move"
 else
   info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has no floor in force until the bandwidth term is measured on the fleet"
 fi
@@ -634,7 +635,9 @@ else
     # verdict, so a line that cannot separate three causes may not name one). The
     # criterion does not care which it is -- the point is that the shortfall is real and
     # measured rather than assumed to be zero.
-    info "[$host] ceiling: compute $CEIL8 GFLOP/s measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading. That shortfall is what the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here"
+    # Published because a summary that drops its CI makes its own correction unsizable (#6).
+    CEIL8CI="$(bench_stat "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s | awk '{ printf "%.2f", $2*100 }')"
+    info "[$host] ceiling: compute $CEIL8 GFLOP/s +/- ${CEIL8CI}% measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading. That shortfall is what the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here"
     for p in dot axpy; do
       bw="$(bench_stat "$(stream_name "$p" "$P5_THREADS")" "$BENCHCSV" GB/s)"
       bw1="$(bench_stat "$(stream_name "$p" 1)" "$BENCHCSV" GB/s)"
@@ -765,22 +768,19 @@ else
 
       # ---- achieved against this host's OWN measured ceiling (ruling on #6, 2026-08-20)
       #
-      # The numerator is net of CI, the denominator is the ceiling's point estimate, so
-      # the fraction is conservative in the same direction the retired floor's net-of-CI
-      # comparison was. The T8/T1 ratio is still printed, because it is what every
-      # published row and every historical log is stated in and #17 re-adjudicates them
-      # against this — but it is no longer what decides anything.
-      m8lo="$(bench_gflops_lo "$many" "$BENCHCSV")"
-      if [[ -z "$m8lo" ]]; then
-        unmeasured "[$host] $r: no bounded ${P5_THREADS}-thread rate, so no fraction of the ceiling can be formed"
+      # BOTH intervals in one call, which bench.sh's contract requires: this site divided
+      # bench_gflops_lo by bench_gflops until 2026-08-21 and flattered every share by the
+      # ceiling's own CI. The T8/T1 ratio is still printed, because it is what every
+      # published row and historical log is stated in and DESIGN.md §4/P5 re-adjudicates
+      # them against this — but it is no longer what decides anything.
+      ratio="$(bench_ratio_lo "$many" "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s)"
+      if [[ -z "$ratio" ]]; then
+        unmeasured "[$host] $r: no bounded fraction of the ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) can be formed — an unbounded rate or a non-positive ceiling, and the printed ceiling says which. Either is a broken denominator rather than a verdict"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
       fi
-      frac="$(awk -v a="$m8lo" -v c="$CEIL8" 'BEGIN{ if (c <= 0) exit 1; printf "%.1f", 100*a/c }')" || frac=""
-      if [[ -z "$frac" ]]; then
-        unmeasured "[$host] $r: the ceiling came out non-positive ($CEIL8), which is a broken denominator and not a verdict"
-        HOST_CLEARED=0; HOST_MEASURED=0
-      elif [[ -z "$CEIL_FRACTION" ]]; then
+      frac="$(awk -v x="$ratio" 'BEGIN{ printf "%.1f", 100*x }')"
+      if [[ -z "$CEIL_FRACTION" ]]; then
         # The STRSM_FLOOR precedent (#37): measured, reported, and the input to setting
         # the bar rather than a bar itself. Named as unjudged so no reader can mistake a
         # silent pass for cleared coverage — this class HAS no floor in force right now.

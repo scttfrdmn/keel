@@ -209,7 +209,8 @@ Two things this does not do. It does not retire the debt that was correctly scop
 `spr` carry ceilings dated to `651d1bd` with nothing re-measuring them, and #113's row is the live
 denominator waiting on #111's readmission ruling — a real contingency, honestly conditional. And
 it does not make the enforced bar the subject: `k` appears only in the retrospective proxy, while
-`CEIL_FRACTION` divides by each host's *measured* 8-thread ceiling, where `k` cancels and 58.5% is
+`CEIL_FRACTION` divides by each host's *measured* 8-thread ceiling, where `k` cancels and the bar
+(58.5% when this was written, 57.8% after that day's repair to the site computing its input) is
 vacuous for no host it judges. The same session's other error was the mirror of this one —
 attributing the loose `k` to `zen4` because zen4's name sat beside the 35 resolving rows, when
 zen4 owns them *because* its proxy is the tightest of the three (0.765 against gnr's 0.380).
