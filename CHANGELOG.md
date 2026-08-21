@@ -162,6 +162,23 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **skx's judged shortfall factors onto the one term nothing excuses, and two published skx figures were a bad
+  draw** (#6, 2026-08-21; `build/onethread-decomp-3fceaa9.log`). Pinning the 1-thread arm shows the ladder's
+  `keel1` of 59.16 ±15.12% was low: the truth is 66.56 ±0.11%, so skx's 1T efficiency rises 30.83% → **34.72%**
+  and its normalized scaling falls 1.406 → **1.248**; the 43.34% share does not move, both inputs being
+  8-thread. In the form that reads no 1T keel rate at all, `share = (µkernel/ceil1)(keel8/8µkernel)(8·ceil1/ceil8)`
+  = 0.4633 × 0.5822 × 1.6067, only the middle term has headroom — the nest needs +33.4% while the issue-bound
+  kernel would need 118.6 GFLOP/s against a ~93 cap. **"Fleet's best parallelizer" is withdrawn**: skx scales
+  5.6% better than zen5, not 16%, the rest being credit for its own ceiling droop.
+- **`gate-p5.sh` published an unbounded ceiling interval by formatting an infinity.** `bench_stat` returns
+  `inf` when benchstat established none, which `printf "%.2f"` renders per-awk rather than as the absent
+  measurement it is; it now prints `+/- unbounded`, matching `bench_gflops_lo`'s existing contract that an
+  unbounded reading is not measured. Both branches exercised deliberately.
+- **`docs/hosts.md` called janus "the only Intel part, the only issue-bound one" — a count stated as a
+  permanent property**, false by four Intel hosts and a second issue-bound one without any edit. The clause is
+  now dated and followed by bound-class rows for all six measured hosts. Two consequences recorded there:
+  issue-boundedness tracks the µarch (janus 46.0% of peak, keel-skx 46.1%, same front end, one instrument, so
+  one witness), and **ICX measured fma-bound**, refuting half the premise that launched wave 2.
 - **The ceiling-share criterion divided a CI-deducted rate by a bare point estimate, flattering every judged
   share; `CEIL_FRACTION` re-types from 58.5 to 57.8 as a consequence** (#6, 2026-08-21, ratified as a repair
   rather than an amendment). `gate-p5.sh` formed the share as `bench_gflops_lo / bench_gflops` — the numerator

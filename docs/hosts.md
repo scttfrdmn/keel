@@ -495,9 +495,9 @@ sentinel — missing configuration costs time, never coverage.
 **janus keeps that role through P5** (confirmed 2026-08-12 by ruling). The
 question raised was whether a host sitting at 31.9% of peak should go on
 certifying phases, and the answer is that this is precisely the host worth
-keeping: the only Intel part, the only issue-bound one, and the machine the
-roofline section's standing task names as the thing to re-measure when the
-lowering improves. Because the amendment ratchets — the floor is monotone
+keeping: **as of 2026-08-12** the only Intel part and the only issue-bound one,
+and the machine the roofline section's standing task names as the thing to
+re-measure when the lowering improves. Because the amendment ratchets — the floor is monotone
 non-increasing in `I_b` — the exception tightens automatically rather than
 granting a permanent dispensation. A host whose low number is *explained*, by a
 model that gets stricter as the explanation goes away, carries more information
@@ -507,6 +507,40 @@ Gate P3 classifies *every* host with that same measurement even when only one is
 judged by it, because the amended denominator above applies only where the
 classifier says issue-bound. A host whose classification could not be measured is
 treated as FMA-bound and faces the unmodified bar, which is the strict direction.
+
+**The uniqueness clause above went false without an edit, which is why it now carries
+its date.** Six hosts have been classified since, four of them Intel, and one of the
+new ones is issue-bound too — so "the only Intel part, the only issue-bound one" was a
+count stated as a permanent property. The rows, reported and not judged (the class is
+what selects P2's denominator, per §"Cause of the roofline"); peak and the
+`2x32/avx512/kc=128` rate are each host's own measured GFLOP/s at 1 thread, AWS rows
+from the wave-1 and wave-2 classification passes, `7ac592a`, 2026-08-21:
+
+| host | µarch | measured peak | 2x32/avx512/kc=128 | % peak | class |
+|---|---|---|---|---|---|
+| keel-zen5 | Zen 5 (EPYC 9R45) | 288.6 | 153.5 | 53.2% | fma-bound |
+| keel-zen4 | Zen 4 (EPYC 9R14) | 117.2 | 111.5 | 95.1% | fma-bound |
+| keel-gnr | Granite Rapids (Xeon 6975P-C) | 245.4 | — | — | fma-bound |
+| keel-icx | Ice Lake (Xeon Platinum 8375C) | 213.4 | 104.0 | 48.7% | fma-bound |
+| keel-spr | Sapphire Rapids | 232.3 | 61.45 | 26.5% | fma-bound |
+| keel-skx | Skylake-X (Xeon Platinum 8124M) | 192.9 | 88.91 | 46.1% | **issue-bound** |
+
+Two readings, worth keeping apart. **Issue-boundedness tracks the microarchitecture,
+not the machine**: janus (lab i9-9960X, bare metal, `performance`) reads 46.0% of its
+measured peak and keel-skx (virtualized AWS, no governor at all) reads 46.1% of its
+own — different SKUs, clocks and memory systems, same Skylake-X front end, same shipped
+2×32. That is a second sample of the *claim* about Skylake-X and **not** a second
+witness to the *classifier*: both numbers come from the same instrument, and §5 rule 10
+counts independent derivations rather than agreeing sites. Separately, **ICX measured
+fma-bound** (mixes diverge `1.103×`, wholly over the `1.10` bar), contradicting the
+premise that SKX *and* ICX are issue-bound silicon — the instrument was run against the
+reasoning that motivated launching it and refuted half of it (§5 rule 11). Nothing
+downstream moved: icx is correctness-class and judged nothing.
+
+**Open, and not settled here:** the sentinel rationale above rests on janus being the
+lone issue-bound host, and it no longer is. The second one, keel-skx, sits in the
+*judged* fleet rather than beside it. Whether the sentinel role moves, splits or stays
+is a ruling, not a measurement, and nothing in this file assumes an answer.
 
 ## What has been verified here
 

@@ -636,8 +636,8 @@ else
     # criterion does not care which it is -- the point is that the shortfall is real and
     # measured rather than assumed to be zero.
     # Published because a summary that drops its CI makes its own correction unsizable (#6).
-    CEIL8CI="$(bench_stat "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s | awk '{ printf "%.2f", $2*100 }')"
-    info "[$host] ceiling: compute $CEIL8 GFLOP/s +/- ${CEIL8CI}% measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading. That shortfall is what the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here"
+    CEIL8CI="$(bench_stat "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s | awk '{ if ($2 == "inf") print "unbounded"; else printf "%.2f%%", $2*100 }')"
+    info "[$host] ceiling: compute $CEIL8 GFLOP/s +/- ${CEIL8CI} measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading. That shortfall is what the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here"
     for p in dot axpy; do
       bw="$(bench_stat "$(stream_name "$p" "$P5_THREADS")" "$BENCHCSV" GB/s)"
       bw1="$(bench_stat "$(stream_name "$p" 1)" "$BENCHCSV" GB/s)"
