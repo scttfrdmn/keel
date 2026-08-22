@@ -664,7 +664,7 @@ keel_pin_mask() {
   # Cleared on entry, not only set on success: a refusal that leaves the previous calls
   # shape behind would let a second call report the first ones domains, and the pin line is
   # built from these rather than from stdout.
-  KEEL_PIN_DOMLIST=; KEEL_PIN_NODEDOMS=
+  KEEL_PIN_MASK=; KEEL_PIN_DOMLIST=; KEEL_PIN_NODEDOMS=
   # The sysfs root, overridable for the same reason KEEL_REMOTE_DIR is: this function
   # reads a topology, and a topology is the one input a caller may legitimately want to
   # supply from somewhere else. scripts/remote-exec-test.sh builds fake ones -- an
@@ -751,8 +751,14 @@ keel_pin_mask() {
     # of trusting it -- distinct(domlist) must equal min(width, nodedoms) -- which the mask
     # string alone cannot show, since a confined mask and a one-domain hosts correct mask
     # are the same eight consecutive numbers.
+    #
+    # THE MASK IS A GLOBAL TOO, and that is the fix for what the founding run of 2026-08-22
+    # rendered: the runner read the mask through a command substitution, which is a SUBSHELL,
+    # so it got the mask and dropped the shape -- three hosts measured under a correct spread
+    # mask and recorded `doms= nodedoms=`, unclaimable by the era that motivated them. Any
+    # caller that wants both must take both from the same in-shell call, and now can.
     if [ "$n" -ge "$want" ]; then
-      KEEL_PIN_DOMLIST=$dl; KEEL_PIN_NODEDOMS=$ndoms
+      KEEL_PIN_MASK=$out; KEEL_PIN_DOMLIST=$dl; KEEL_PIN_NODEDOMS=$ndoms
       printf "%s\n" "$out"; return 0
     fi
   done
@@ -1352,7 +1358,8 @@ if ! command -v taskset >/dev/null 2>&1; then
   echo 'keel-pin: REFUSED, no taskset on this host. DESIGN section 5 rule 5 pins fleet-wide and never selectively, so this measurement is not taken rather than taken unpinned.' > '$log'
   printf '%s\n' 121 > '$st'; exit 121
 fi
-KEEL_MASK=\$(keel_pin_mask $KEEL_PIN_WIDTH) || KEEL_MASK=
+# NOT \$(keel_pin_mask ...): that subshell returned the mask and dropped the shape.
+keel_pin_mask $KEEL_PIN_WIDTH >/dev/null; KEEL_MASK=\$KEEL_PIN_MASK
 if [ -z \"\$KEEL_MASK\" ]; then
   echo 'keel-pin: REFUSED, sysfs on this host yields no single NUMA node from which $KEEL_PIN_WIDTH distinct physical cores can be selected one-per-cache-domain -- no node list, no thread siblings to prove distinctness, no cache level to prove the spread, or too few cores. Not taken rather than taken unpinned (DESIGN section 5 rule 5).' > '$log'
   printf '%s\n' 121 > '$st'; exit 121

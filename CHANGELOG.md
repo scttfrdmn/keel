@@ -524,6 +524,24 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **The spread mask's shape was computed and then thrown away, because the runner read the mask through a
+  command substitution** (`scripts/remote.sh`, found by the era-founding run at `450a783` on all three judged
+  hosts). `keel_pin_mask` returns the mask on stdout and records its *shape* — `KEEL_PIN_DOMLIST`,
+  `KEEL_PIN_NODEDOMS` — in globals, deliberately, because stdout is what every other caller parses. The
+  runner then called it as `KEEL_MASK=$(keel_pin_mask 8)`, and a command substitution is a **subshell**: the
+  mask came back and the shape died with the child. Every host measured under a *correct* spread mask
+  (`0,8,16,24,32,40,48,56` on both EPYCs, the degenerate `0,1,2,3,4,5,6,7` on `keel-skx`) and recorded
+  `doms= nodedoms=`, which `gate-p5`'s new shape criterion correctly called **UNMEASURED on all three** —
+  fail-closed, so the cost was host-minutes and not a false verdict. The mask is now a global too
+  (`KEEL_PIN_MASK`), cleared on entry with the other two so a refusal cannot leave a stale mask behind, and
+  one in-shell call yields all three fields the pin line needs: "mask recorded, shape absent" is no longer
+  representable. **The fixtures passed throughout and were never wrong** — they called the selector directly,
+  which is the one form that keeps globals, i.e. the form the runner did *not* use; `shape_case` now redirects
+  stdout to a file instead and asserts the global mask and the printed mask are the same string. Driven
+  end-to-end on `keel-zen4`, `keel-zen5` and `keel-skx` after the fix: all three pin lines carry their shape
+  and all three satisfy `distinct(doms) == min(width, nodedoms)` with imbalance 0. The founding run's numbers
+  are **discarded rather than salvaged**, though the mask under them was right: reconstructing a shape after
+  the fact from a host's topology is exactly what recording it was meant to replace (§5 rule 5).
 - **`benchci -verify` failed on every pinned host, because the mask's own provenance line is a CSV field
   with commas in it** (`tools/benchci/main.go`, found on the era-founding run at `be5bb91`). `remote_exec`
   prints `keel-pin: mask=0,1,2,3,4,5,6,7 width=8` *inside* the benchmark block, which makes it a

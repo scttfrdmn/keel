@@ -604,9 +604,20 @@ pin_case "same node, want 4 (uses 4 of 12 domains)" 4 "0,8,16,24" "$EPYC"
 # this wrong is a comparison against 8, which reads as three broken assertions.
 shape_case() {
   local note="$1" wantv="$2" root="$3"
-  KEEL_SYSFS="$root" keel_pin_mask 8 >/dev/null || true
+  # Stdout to a FILE, never to `$(...)`: a command substitution is a subshell, and this
+  # assertion's whole subject is what survives the call. That is not a hypothetical — the
+  # runner read the mask through `$(keel_pin_mask ...)` and the 2026-08-22 founding run
+  # recorded `doms= nodedoms=` on three hosts whose masks were correct. These cases passed
+  # throughout, because they called the selector the way the runner did NOT.
+  KEEL_SYSFS="$root" keel_pin_mask 8 > "$WORK/shape.out" || true
   local got="$KEEL_PIN_DOMLIST|$KEEL_PIN_NODEDOMS"
   [[ "$got" == "$wantv" ]] && pass_ "$note -> $got" || fail_ "$note -> $got, expected $wantv"
+  # The mask is a global as well now, so one in-shell call yields all three fields the pin
+  # line needs. Asserting it AGREES WITH STDOUT is what makes the two forms interchangeable
+  # for every other caller, rather than a second answer that could drift from the first.
+  [[ "$KEEL_PIN_MASK" == "$(cat "$WORK/shape.out")" ]] &&
+    pass_ "$note -> the global mask and the printed mask are the same string" ||
+    fail_ "$note -> global mask '$KEEL_PIN_MASK' but stdout '$(cat "$WORK/shape.out")'"
 }
 shape_case "EPYC node records doms and nodedoms" "0,8,16,24,32,40,48,56|12" "$EPYC"
 shape_case "skx node: consecutive cores, and one domain to spread over" "0,0,0,0,0,0,0,0|1" "$SKX"
