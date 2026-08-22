@@ -420,21 +420,31 @@ func writeCSV(f *os.File, rows []outRow) error {
 	return w.Error()
 }
 
-// verifyAgainstBenchstat is the differential test. It does not check that this
-// tool is *right* — it checks that it is benchstat, plus resolution.
-func verifyAgainstBenchstat(path string, rows []outRow) error {
-	out, err := exec.Command("go", "tool", "benchstat", "-format=csv", path).Output()
+// bsRef is one cell of benchstat's own summary, kept as the text it printed.
+type bsRef struct {
+	center string
+	ci     string
+}
+
+// parseBenchstatCSV reads `benchstat -format=csv` into cells keyed unit\x00name.
+//
+// benchstat writes this CSV with encoding/csv, so it is read back with the same
+// package rather than split on commas. A configuration line is a single quoted
+// field, and `keel-pin: mask=0,1,2,3,4,5,6,7 width=8` split into eight columns
+// that read as a data row named `"keel-pin: mask=0`. Every earlier comma-bearing
+// config line happened to split into exactly two columns and was absorbed by the
+// len < 3 guard below, so that guard was passing by luck, not by design.
+func parseBenchstatCSV(out []byte) (map[string]bsRef, error) {
+	cr := csv.NewReader(strings.NewReader(string(out)))
+	cr.FieldsPerRecord = -1
+	recs, err := cr.ReadAll()
+	// Fail rather than skip: unparsed input greens exactly like clean input.
 	if err != nil {
-		return fmt.Errorf("running the pinned benchstat: %w", err)
+		return nil, fmt.Errorf("parsing the pinned benchstat's CSV: %w", err)
 	}
-	type ref struct {
-		center string
-		ci     string
-	}
-	want := map[string]ref{}
+	want := map[string]bsRef{}
 	unit := ""
-	for _, line := range strings.Split(string(out), "\n") {
-		rec := strings.Split(line, ",")
+	for _, rec := range recs {
 		if len(rec) < 2 {
 			continue
 		}
@@ -449,8 +459,33 @@ func verifyAgainstBenchstat(path string, rows []outRow) error {
 		if rec[0] == "geomean" {
 			continue
 		}
-		want[unit+"\x00"+rec[0]] = ref{center: rec[1], ci: rec[2]}
+		want[unit+"\x00"+rec[0]] = bsRef{center: rec[1], ci: rec[2]}
 	}
+	return want, nil
+}
+
+// verifyAgainstBenchstat is the differential test. It does not check that this
+// tool is *right* — it checks that it is benchstat, plus resolution.
+func verifyAgainstBenchstat(path string, rows []outRow) error {
+	out, err := exec.Command("go", "tool", "benchstat", "-format=csv", path).Output()
+	if err != nil {
+		return fmt.Errorf("running the pinned benchstat: %w", err)
+	}
+	want, err := parseBenchstatCSV(out)
+	if err != nil {
+		return err
+	}
+	if bad := diffAgainstBenchstat(want, rows); len(bad) > 0 {
+		return fmt.Errorf("%d disagreement(s) with the pinned benchstat:\n  %s", len(bad), strings.Join(bad, "\n  "))
+	}
+	if len(rows) == 0 {
+		return fmt.Errorf("no cells were summarized, so agreement with benchstat is vacuous")
+	}
+	return nil
+}
+
+// diffAgainstBenchstat compares both directions and returns every disagreement.
+func diffAgainstBenchstat(want map[string]bsRef, rows []outRow) []string {
 	var bad []string
 	for _, r := range rows {
 		w, ok := want[r.unit+"\x00"+r.name]
@@ -484,11 +519,6 @@ func verifyAgainstBenchstat(path string, rows []outRow) error {
 			bad = append(bad, fmt.Sprintf("%s (%s): benchstat summarized it, this tool did not", parts[1], parts[0]))
 		}
 	}
-	if len(bad) > 0 {
-		return fmt.Errorf("%d disagreement(s) with the pinned benchstat:\n  %s", len(bad), strings.Join(bad, "\n  "))
-	}
-	if len(rows) == 0 {
-		return fmt.Errorf("no cells were summarized, so agreement with benchstat is vacuous")
-	}
-	return nil
+	sort.Strings(bad)
+	return bad
 }

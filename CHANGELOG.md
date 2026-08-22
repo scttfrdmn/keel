@@ -371,6 +371,37 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **`benchci -verify` failed on every pinned host, because the mask's own provenance line is a CSV field
+  with commas in it** (`tools/benchci/main.go`, found on the era-founding run at `be5bb91`). `remote_exec`
+  prints `keel-pin: mask=0,1,2,3,4,5,6,7 width=8` *inside* the benchmark block, which makes it a
+  configuration line; `benchstat -format=csv` therefore quotes it; and `verifyAgainstBenchstat` split
+  benchstat's output on commas, so the line arrived as **eight fields** and was recorded as a data cell named
+  `"keel-pin: mask=0` that no summarizer can reproduce. The gate went red for a metadata line, with the
+  statistics untouched. **The guard that should have caught it was passing by luck**: every earlier
+  comma-bearing configuration line (`keel-bench-clock-mhz`, `keel-bench-peak-method`, the `Ceiling/stream`
+  names) happens to split into exactly two fields and was absorbed by a `len < 3` test, so the parser had
+  been wrong since it was written and no archive had yet exercised it. The tool **wrote** its CSV with
+  `encoding/csv` and **read** benchstat's with `strings.Split`; it now reads with the same package it writes
+  with, and a CSV it cannot parse is an error rather than a skip — unparsed input greens exactly like clean
+  input. Verified on all three pinned archives and on three `free-placement` archives as a regression
+  control; `verify_test.go` asserts the config-line case, the fail-closed case, and both directions of the
+  differential, and each was **driven against a reverted parser**, which reproduces the gate log's failure
+  line verbatim.
+- **The scaling aggregate printed a negative host count — `-1 produced no ratio`** (`scripts/gate-p5.sh`,
+  found on the same run). BASELINE is decided per (host, criterion), and keel-skx rendered it on the share
+  class while being judged and *missing* the `Strsm` bar in the same run — the first fleet where one host
+  splits across classes. The per-host subtraction from the judged denominator counted it anyway, so the host
+  sat in two buckets and `SCALE_NOCOVER`, the one term still **derived** rather than counted, went to −1.
+  That is #90's second finding recurring at the last place it could: the miss count was moved to a counter
+  in 2026-08-16 precisely so derivation could not come back, and this term was missed. Now two counters —
+  `SCALE_HOSTS_BASE` reports how many hosts rendered the class, `SCALE_HOSTS_BASEONLY` counts those it was
+  the *whole* of the verdict for, and only the latter leaves the denominator. A residual that still goes
+  negative now **fails** with the bucket tally printed, rather than being published as a quantity. Driving
+  the six fleet shapes through the corrected arithmetic also found a **second, never-reached instance**: a
+  host that clears both bars while rendering BASELINE on the README criterion broke the old form identically.
+  `gate-p5.sh` has no standing harness, so those shapes were rendered as a session act and not a landed one
+  (§5 rule 12). The verdict does not move — `be5bb91` is RED either way; what was wrong was the sentence and
+  the denominator under it.
 - **The gate told every reader that nothing was pinned, one line above every number the mask shaped**
   (2026-08-22). `804fb75` put the affinity mask in `remote_exec` and added the readback criterion, and left
   `gate-p5`'s per-host provenance line saying *"nothing is pinned either way, placement is the scheduler's"* —

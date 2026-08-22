@@ -678,14 +678,16 @@ SCALE_HOSTS_MEASURED=0
 # the miss count precisely so that derivation cannot come back. SCALE_HOSTS_NOTADM is
 # hosts whose numbers no bar governs (#104); it is neither a clear nor a miss, and the
 # sentence must not let it read as either.
-# SCALE_HOSTS_BASE is the third of those: hosts that produced a complete, bounded,
-# admitted set of ratios and still have no bar, because the reference artifact every
-# candidate bar is made of predates their admission (#6). It gets its own subtraction
-# for exactly the reason NOTADM did — left out, a BASELINE host falls into SCALE_NOCOVER,
-# whose sentence says "produced no complete set of ratios", which of this host is false.
+# SCALE_HOSTS_BASE is the third of those: hosts with no bar because every candidate bar's
+# reference artifact predates their admission (#6). BASE IS PER (HOST, CRITERION) AND THE
+# SUBTRACTION IS PER HOST, hence the fourth counter: BASEONLY is the hosts BASELINE was the
+# WHOLE of the verdict for, and only they leave the denominator. Counted, not derived —
+# be5bb91 printed "-1 produced no ratio" when one host landed in two buckets, #90's item 2
+# recurring at the last derived term. CHANGELOG `[Unreleased]` carries the whole finding.
 SCALE_HOSTS_MISSED=0
 SCALE_HOSTS_NOTADM=0
 SCALE_HOSTS_BASE=0
+SCALE_HOSTS_BASEONLY=0
 BASELINE_OWING=""
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the scaling criterion cannot be evaluated: unmeasured, not missed"
@@ -1126,6 +1128,9 @@ else
     SCALE_HOSTS_MISSED=$((SCALE_HOSTS_MISSED + HOST_MISSED))
     SCALE_HOSTS_NOTADM=$((SCALE_HOSTS_NOTADM + HOST_NOTADM))
     SCALE_HOSTS_BASE=$((SCALE_HOSTS_BASE + HOST_BASE))
+    # Neither cleared nor missed anywhere: BASELINE was the whole of this host's verdict.
+    [[ "$HOST_BASE" -eq 1 && "$HOST_CLEARED" -eq 0 && "$HOST_MISSED" -eq 0 ]] &&
+      SCALE_HOSTS_BASEONLY=$((SCALE_HOSTS_BASEONLY + 1))
   done <<<"$HOSTS"
   # TWO BARS IN ONE TALLY, named rather than summarised, built ONCE because four renderings
   # of one clause is four places for the next constant to be typed into three of.
@@ -1137,12 +1142,11 @@ else
   # Hoisted is the CONSTANT LIST and not the possessive: collapsing both produced "2 of 3
   # gate hosts cleared its class's bar", caught by rendering the branches rather than
   # reading them, which is the whole argument for driving a verdict line.
-  # Two bars, each independently deferrable to its own measurement since 2026-08-20, so
-  # this is built from two halves rather than enumerated as four sentences — four
-  # hand-written sentences is four places for the next constant to be typed into three
-  # of. All four combinations were RENDERED before this landed, not read, for the reason
-  # the paragraph above records; there is no harness for this file, so that check is a
-  # session act and not a standing one (§5 rule 12: the gap is stated, not implied).
+  # Two bars, each independently deferrable to its own measurement since 2026-08-20, hence
+  # two halves. All four combinations were RENDERED before this landed, not read; there is
+  # no harness for this file, so that check is a session act and not a standing one
+  # (§5 rule 12: the gap is stated, not implied) — as is the six-shape render of the
+  # BASEONLY residual above, for the same missing harness.
   if [[ -n "$CEIL_FRACTION" ]]; then
     BARS_J="${CEIL_FRACTION}% of each host's own ${P5_THREADS}-thread ceiling for $P5_JUDGED on the hosts that derived that fraction, and a registered baseline less ${BASELINE_MARGIN} points elsewhere (#6)"
   else
@@ -1157,7 +1161,13 @@ else
   # Hosts that left the loop with no verdict for a reason that is not admission: no
   # complete set of ratio inputs, no bounded interval, no declared parallelism model.
   # Named, because they are neither cleared nor slow.
-  SCALE_NOCOVER=$((NHOSTS - SCALE_HOSTS_OK - SCALE_HOSTS_MISSED - SCALE_HOSTS_NOTADM - SCALE_HOSTS_BASE))
+  SCALE_NOCOVER=$((NHOSTS - SCALE_HOSTS_OK - SCALE_HOSTS_MISSED - SCALE_HOSTS_NOTADM - SCALE_HOSTS_BASEONLY))
+  # A negative residual is arithmetic asserting a fleet shape that did not occur: reported,
+  # never published as a quantity (#90).
+  if [[ "$SCALE_NOCOVER" -lt 0 ]]; then
+    fail "the scaling aggregate's buckets over-count this fleet: $NHOSTS host(s) but $SCALE_HOSTS_OK cleared + $SCALE_HOSTS_MISSED missed + $SCALE_HOSTS_NOTADM unadmitted + $SCALE_HOSTS_BASEONLY BASELINE-only, so a host was graded in two buckets and no aggregate over them is a fact (#6, #90)"
+    SCALE_NOCOVER=0
+  fi
   # The debt, printed where eyes are rather than left to be found by grep. Emitted in
   # both directions the class can point: a host that spent its BASELINE and owes a
   # landed row, and a host that rendered one this run and will owe it next time.
@@ -1179,23 +1189,28 @@ else
   # DENOMINATORS, and this criterion's denominator is the host's own single-thread rate, of
   # which there is exactly one. A host with no bounded ratio is counted above as no-coverage.
   #
-  # THE DENOMINATOR DROPS THE BASELINE HOSTS, and that is a changed denominator on a
+  # THE DENOMINATOR DROPS THE BASELINE-ONLY HOSTS, and that is a changed denominator on a
   # published aggregate, so it is stated rather than left to be diffed (#6, 2026-08-21).
-  # `pass` requires nclear == the denominator, so leaving a BASELINE host in NHOSTS would
+  # Only BASELINE-ONLY: a host judged on any class stays inside the denominator it was
+  # judged against, or the aggregate excuses a miss it printed one line above.
+  # `pass` requires nclear == the denominator, so leaving such a host in NHOSTS would
   # resolve every such fleet to `partial` and block green — which contradicts the ruling
   # that the class is green-compatible, and would do it silently, by arithmetic, one
   # function away from the branch that renders the verdict. The excluded count is named in
   # every branch below for the same reason. If EVERY host renders BASELINE the denominator
   # is 0 and fleet_coverage returns `unmeasured`: a fleet on which no host has a bar has
   # measured nothing judged, which is the fail-closed reading and the correct one.
-  SCALE_NJUDGE=$((NHOSTS - SCALE_HOSTS_BASE))
+  SCALE_NJUDGE=$((NHOSTS - SCALE_HOSTS_BASEONLY))
   # ONE CLAUSE, EMPTY WHEN THE CLASS DID NOT FIRE, on BARS's precedent above. Written
   # inline in each branch first, and rendering the six fleet shapes is what rejected
   # that: today's healthy green carried "0 of 3 rendered BASELINE and are outside this
   # denominator" on the headline PASS, which is noise on the common path and, worse,
   # invites a reader to think the class fired on a fleet where it did not.
+  # TWO clauses, because BASELINE is per criterion: one sentence for both would assert the
+  # exclusion of a host the aggregate just judged.
   BASE_NOTE=""
-  [[ "$SCALE_HOSTS_BASE" -gt 0 ]] && BASE_NOTE=" — and a further $SCALE_HOSTS_BASE of $NHOSTS configured host(s) sit outside that denominator entirely, having rendered BASELINE (#6)"
+  [[ "$SCALE_HOSTS_BASEONLY" -gt 0 ]] && BASE_NOTE=" — and a further $SCALE_HOSTS_BASEONLY of $NHOSTS configured host(s) sit outside that denominator entirely, BASELINE being the whole of their verdict (#6)"
+  [[ $((SCALE_HOSTS_BASE - SCALE_HOSTS_BASEONLY)) -gt 0 ]] && BASE_NOTE="$BASE_NOTE — and $((SCALE_HOSTS_BASE - SCALE_HOSTS_BASEONLY)) host(s) rendered BASELINE on one criterion while being judged on another, so they remain inside it and their per-host lines above say which was which (#6)"
   # THE ALL-BASELINE FLEET IS ITS OWN SENTENCE, not fleet_coverage's `unmeasured`. Both
   # resolve to no verdict, but for different reasons, and rendering the case is what
   # caught it: with every host new, the shared wording said "no host produced a judgeable
