@@ -9,6 +9,21 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **A run's archives are named for HEAD at the moment each file is written, not for the code that produced
+  them, so one launch can carry two revision labels** (`scripts/bench.sh:117`, measured 2026-08-22). The run
+  stamp is pinned on first use (line 115) precisely because a per-process counter discriminated nothing
+  between runs; the **rev beside it is recomputed on every archive** and has the same defect the stamp was
+  fixed for. Today's `gate-p3` sweep group shows it directly: one `BENCH_ARCHIVE_RUN` value, `20260822T185826Z`,
+  split across **`bench-gate-p3-450a783-...-1.txt`** (written 19:05:47Z) and **13 files
+  `bench-gate-p3-2a5bfa3-...-{2..14}.txt`** (19:08:11Z–19:23:49Z) — because `2a5bfa3` was committed at
+  19:07:14Z, under nine minutes into the group. Nothing distinguishes the two labels but the clock. This is
+  the freeze rule's hazard leaving a visible trace rather than a new one: `2a5bfa3` touched `scripts/remote.sh`,
+  which is the file a live run re-invokes per host and which bash reads incrementally, so the label flip marks
+  the same commit that could have moved bytes under the interpreter. **What the labels cannot tell you is which
+  code ran** — that is the finding, and it is why a rev label is not provenance. Recorded and not repaired: the
+  one-line fix is to pin the rev the way the stamp is pinned, and it costs `scripts/` budget this session has
+  not earned with a routine or a kernel, so it is deferred with its mechanism named rather than filed as an
+  issue larger than itself.
 - **The `free-placement` era's evidence is now in the repository: 35 archives at `archive/free-placement/`,
   which is half of `pinned8`'s both-arms condition landed before the run that lands the other half**
   (2026-08-21, ruled on #6). The era ledger makes a both-arms transition archive a condition of an era existing,
