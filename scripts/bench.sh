@@ -463,6 +463,59 @@ bench_gflops_lo() {
     awk '{ if ($2 == "inf") exit; printf "%.4f", $1 * (1 - $2) }'
 }
 
+# bench_ceiling_impossible RATE CEIL — true when the rate POINT exceeds the ceiling
+# POINT that denominates it. Prints the point share it is refusing, so the caller can
+# name the impossibility rather than just assert one. Both arguments are medians, as
+# bench_gflops prints them.
+#
+# A ceiling below a rate it denominates is not a wide interval. It is a physically
+# impossible reading for the quantity the name claims: the ceiling is supposed to be
+# the most this machine can do, so nothing measured on this machine can be above it,
+# and a run that says otherwise has measured its own denominator wrong.
+#
+# ON THE POINTS, AND DELIBERATELY NOT ON THE INTERVALS. This exists because the
+# conservative construction inverts here. bench_ratio_lo divides the numerator's LOWER
+# bound by the denominator's UPPER bound, which is right for a floor and is exactly what
+# laundered keel-zen4's 152.7% point share into a 93.7% bound on 2026-08-22 — a share
+# that reads as a comfortable pass and whose raw form was impossible. Widen either
+# interval and the laundering gets easier, so a CI-aware refusal would be loosest
+# precisely where the defect is worst. The points are the only form of the quantity the
+# impossibility is a statement about.
+#
+# The refusal it feeds is not a FAIL either: nothing here is a claim that the library
+# regressed. It is the third member of #110's family — an instrument whose output was
+# decided by something other than the quantity it names — and like its siblings the fix
+# is the honest branch, not a cleverer computation.
+bench_ceiling_impossible() {
+  local r="$1" c="$2"
+  [[ -n "$r" && -n "$c" ]] || return 1
+  awk -v r="$r" -v c="$c" 'BEGIN{ if (c <= 0 || r <= c) exit 1; printf "%.1f", 100 * r / c }'
+}
+
+# bench_ceiling_refused CEIL PAIRS — the host-level form, and the form a gate consumes.
+# PAIRS is whitespace-separated `name=rate`. Prints `name=rateGF/s=share%` for every rate
+# whose point exceeds CEIL, and returns 0 if any did.
+#
+# HOST-LEVEL AND NOT PER-ROW. That is the entire content of this function, and the reason
+# it is a function at all rather than a loop at its one call site: the rule is what needs
+# exercising, so it has to be reachable from a fixture without standing up a fleet.
+# keel-zen4's two passes are the case. Pass 1 read a ceiling of 461.4 GFLOP/s with all
+# three judged rates above it — obvious. Pass 2 read 690.85 with ONE rate above and two
+# below, and a per-row test would refuse the one and let the other two PASS against a
+# denominator their own sibling had just proved impossible. Being under an impossible
+# ceiling is not evidence of anything: the mismeasurement is a property of the CEILING
+# reading, so it disqualifies the ceiling for the host, not the rows that happened to
+# come in beneath it.
+bench_ceiling_refused() {
+  local ceil="$1" p s out=""
+  for p in $2; do
+    s="$(bench_ceiling_impossible "${p#*=}" "$ceil")" &&
+      out="$out ${p%%=*}=${p#*=}GF/s=${s}%"
+  done
+  [[ -n "$out" ]] || return 1
+  printf '%s\n' "${out# }"
+}
+
 # ---------------------------------------------------------------------------
 # §5 rule 5's substitute clock instrument, for a host with no governor to assert.
 #

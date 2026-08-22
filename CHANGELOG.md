@@ -524,6 +524,22 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **A ceiling below a rate it denominates is now refused, not divided** (#6, 2026-08-22). `gate-p5`'s share
+  criterion published three plausible passes over an impossible denominator on `keel-zen4`: the measured
+  8-thread ceiling read **461.4 GFLOP/s ± 62.68%** while the three judged 8-thread rates read 675.1, 704.3 and
+  662.3 — **146.3%, 152.6% and 143.5% of it** — and the criterion printed 89.8%, 93.7% and 88.1%, because
+  `bench_ratio_lo` divides the numerator's *lower* bound by the denominator's *upper* bound. That construction
+  is correct for a floor and inverts here into a plausibility generator: the wider the ceiling's interval, the
+  more comfortable the impossible share looks. `bench_ceiling_impossible` and `bench_ceiling_refused` compare
+  the **points**, deliberately not the intervals — there is no confidence level at which dividing by an
+  impossible ceiling becomes a verdict — and the criterion answers `unmeasured`, naming a mismeasured
+  denominator rather than a regression. **Host-level and not per-row**, which the second pass is what decides:
+  it read 690.85 with `Ssyrk` at 101.6% and `Sgemm`/`Ssymm` at 97.5%/95.8%, and a per-row test would have let
+  those two PASS against a denominator their own sibling proves is not a ceiling. Twice lucky is not a method.
+  Six fixture arms in `remote-exec-test.sh` §9e carry both passes' own rows, `keel-zen5` from the same run as
+  the healthy control, a rate exactly at the ceiling (reached, not impossible), an absent rate, and a zero
+  ceiling left to the branch that already owns it. Third member of #110's family — an instrument whose output
+  was decided by something other than the quantity it names.
 - **The spread mask's shape was computed and then thrown away, because the runner read the mask through a
   command substitution** (`scripts/remote.sh`, found by the era-founding run at `450a783` on all three judged
   hosts). `keel_pin_mask` returns the mask on stdout and records its *shape* — `KEEL_PIN_DOMLIST`,

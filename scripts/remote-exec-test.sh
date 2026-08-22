@@ -820,6 +820,62 @@ mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8' \
       'BenchmarkScale/threads=8-8   	      10	  16000000 ns/op'
 sh_case "a 2026-08-21 confined archive: no shape recorded" "||-|unmeasured"
 
+# ------------------- 9e. a ceiling below a rate it denominates
+#
+# The spread-mask campaign of 2026-08-22 produced a denominator smaller than the numerators
+# it divided, on both of its passes, and `bench_ratio_lo` answered with a plausible number
+# instead of a refusal: keel-zen4's Ssyrk read 704.3 against a 461.4 ceiling — 152.6% of it
+# raw — and the criterion published 93.7%, because the conservative construction divides the
+# numerator's LOWER bound by the denominator's UPPER bound and that ceiling's interval was
+# +/- 62.68% wide. Right for a floor, and here it inverts into a plausibility generator: the
+# wider the ceiling's CI, the more comfortable the impossible share looks. Every arm below is
+# a ceiling and some rates, so every arm is drivable from a fixture — which matters more than
+# usual, because a working host cannot reach this branch.
+#
+# The rates are the two logs' own rows, not a reconstruction: build/gate-p5-2a5bfa3.log and
+# build/gate-p5-2a5bfa3-rerun.log, keel-zen4, `8 threads` on each routine's reading line, and
+# the ceiling from that host's `ceiling: compute` line in the same log. The second ceiling is
+# carried with all fifteen digits benchstat printed, since that string is what the gate hands
+# this predicate.
+head_ "9e. the impossible denominator: a ceiling under the rates it divides"
+ci_case() {     # note, expected "verdict|refusals", ceiling, name=rate pairs
+  local note="$1" want="$2" ceil="$3" pairs="$4" got out
+  out="$(bench_ceiling_refused "$ceil" "$pairs")" && got="refused|$out" || got="ok|$out"
+  [[ "$got" == "$want" ]] && pass_ "$note -> $got" || fail_ "$note -> $got, expected $want"
+}
+# PASS 1: ceiling 461.4 +/- 62.68%, all three judged rates above it. The published shares
+# were 89.8% / 93.7% / 88.1% — three plausible passes over a denominator smaller than every
+# numerator it divided.
+ci_case "keel-zen4 pass 1: every judged rate above the ceiling" \
+  "refused|Sgemm=675.1GF/s=146.3% Ssyrk=704.3GF/s=152.6% Ssymm=662.3GF/s=143.5%" \
+  461.4 "Sgemm=675.1 Ssyrk=704.3 Ssymm=662.3"
+# PASS 2, and the arm that decides the rule's shape: ceiling 690.85, Ssyrk above at 101.6%
+# while Sgemm (97.5%) and Ssymm (95.8%) sit under. Per-row, those two would have PASSED here
+# against a denominator their own sibling proves is not a ceiling. The expected value names
+# only Ssyrk as the witness and the gate refuses all three off it; that is the host-level
+# rule, and this arm is the only place it is distinguishable from a per-row one.
+ci_case "keel-zen4 pass 2: one rate above, two below — the ceiling is still refused" \
+  "refused|Ssyrk=702GF/s=101.6%" \
+  690.8499999999999 "Sgemm=673.9 Ssyrk=702 Ssymm=662"
+# THE HEALTHY CONTROL, which must stay silent: keel-zen5 from the same run, whose rates sit
+# at 70.3% / 69.6% / 67.9% of its 1369.5 ceiling. Without this arm the section would be
+# satisfied by a predicate that refuses everything.
+ci_case "keel-zen5 in the same run: every rate under the ceiling, nothing refused" \
+  "ok|" 1369.5 "Sgemm=1104 Ssyrk=1094 Ssymm=1068"
+# Exactly equal is not impossible. A rate AT the ceiling is a host that reached its ceiling,
+# which is the boundary the whole quantity is defined to permit; only strictly above is a
+# contradiction. Written as an arm because `>=` and `>` are one character apart.
+ci_case "a rate exactly at the ceiling is reached, not impossible" \
+  "ok|" 500.0 "Sgemm=500.0 Ssyrk=499.99 Ssymm=400.0"
+# A missing rate is not a small rate. require_bench has already refused this run upstream;
+# what this asserts is that the predicate does not read an absent numerator as zero and
+# report a clean ceiling, which would be the same laundering one layer down.
+ci_case "an absent rate does not read as under the ceiling" \
+  "refused|Ssyrk=800.0GF/s=160.0%" 500.0 "Sgemm= Ssyrk=800.0"
+# And a non-positive ceiling stays with the empty-ratio branch that already owns it: this
+# predicate must not claim a second cause (§5 rule 6).
+ci_case "a zero ceiling is not this branch's finding" "ok|" 0 "Sgemm=612.9"
+
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"

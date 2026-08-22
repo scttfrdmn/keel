@@ -886,6 +886,29 @@ else
     # deviation from the ruling's wording and why it was taken.
     HOST_SPENT=0; baseline_spent "$BASELINE_WITNESS" "$hcpu" "$P5_ERA" && HOST_SPENT=1
 
+    # ---- is this host's ceiling physically capable of being a ceiling (ruled 2026-08-22)
+    #
+    # Scanned ONCE PER HOST and over the judged rows only, then consumed by the share
+    # criterion below. A ceiling point below a rate point it denominates says the
+    # denominator was mismeasured, and a mismeasured denominator is a property of the
+    # HOST's ceiling reading, not of the routine that tripped over it. keel-zen4's two
+    # passes are why this is host-level and not per-row: pass 1 read 461.4 GFLOP/s
+    # against three rates all above it, but pass 2 read 690.85 with ONE rate above and
+    # two below, and a per-row test would have let those two PASS against a denominator
+    # their own sibling proves impossible. Twice lucky is not a method.
+    #
+    # Strsm is excluded because it is judged against a floor on its own scaling and never
+    # divides by the ceiling (§5 rule 6: a verdict may not be moved by a quantity it does
+    # not use). It keeps whatever verdict its own inputs earn.
+    CEIL_PAIRS=""
+    for r in $P5_JUDGED; do
+      CEIL_PAIRS="$CEIL_PAIRS $r=$(bench_gflops "$(scale_name "$r" "$P5_THREADS")" "$BENCHCSV")"
+    done
+    CEIL_IMP="$(bench_ceiling_refused "$CEIL8" "$CEIL_PAIRS")" || CEIL_IMP=""
+    if [[ -n "$CEIL_IMP" ]]; then
+      info "[$host] ceiling: REFUSED as a denominator — $CEIL8 GFLOP/s is below the ${P5_THREADS}-thread rate of $CEIL_IMP. Every share row on this host is unmeasured below; the scaling readings still print, and Strsm's floor still applies, because neither divides by this number"
+    fi
+
     HOST_CLEARED=1
     HOST_MEASURED=1
     HOST_MISSED=0
@@ -1011,6 +1034,18 @@ else
       # ceiling's own CI. The T8/T1 ratio is still printed, because it is what every
       # published row and historical log is stated in and DESIGN.md §4/P5 re-adjudicates
       # them against this — but it is no longer what decides anything.
+      # The impossible-denominator refusal, before anything divides (ruled 2026-08-22).
+      # AHEAD OF bench_ratio_lo AND NOT INSTEAD OF ITS EMPTY CHECK: that check catches an
+      # unbounded rate or a non-positive ceiling, which are absent readings. This catches a
+      # PRESENT reading that cannot be what its name says, and bench_ratio_lo answers such a
+      # reading with a number — 152.7% raw arrived as 93.7% net of CI, which is a plausible
+      # pass. So this cannot be expressed as a bar: at no confidence level is dividing by an
+      # impossible ceiling a verdict, and there is no CI at which it becomes one.
+      if [[ -n "$CEIL_IMP" ]]; then
+        unmeasured "[$host] $r: no share of the ${P5_THREADS}-thread ceiling is computable — the ceiling reading $CEIL8 GFLOP/s sits BELOW a rate it denominates ($CEIL_IMP), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that $r regressed"
+        HOST_CLEARED=0; HOST_MEASURED=0
+        continue
+      fi
       ratio="$(bench_ratio_lo "$many" "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s)"
       if [[ -z "$ratio" ]]; then
         unmeasured "[$host] $r: no bounded fraction of the ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) can be formed — an unbounded rate or a non-positive ceiling, and the printed ceiling says which. Either is a broken denominator rather than a verdict"
