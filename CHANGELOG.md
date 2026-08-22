@@ -79,13 +79,21 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The headline criterion's PASS and FAIL lines named a denominator retired two days earlier** (`scripts/gate-p5.sh`;
+  #6). Both said hosts cleared "their class's bar … against their own single-thread rate", but the judged share has
+  divided by each host's own measured 8-thread ceiling since the 2026-08-20 ruling; only `Strsm` still divides by a
+  single-thread rate, and `$BARS` spans both classes. Each bar now names its own denominator instead, and the
+  `gate-p4`-is-RED caveat — which disclaimed only what "divides by a single-thread rate" — now disclaims measured
+  rates generally, having stopped reaching the headline criterion at all. Worst on the **green** path: the PASS
+  string is what ships verbatim in a gate-green closing comment.
 - **`CEIL_FRACTION = 51.0`, typed for `pinned8` from the era-founding run, with its derivation set narrowed from
   three CPU models to two** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; #6). The minimum
   judged row on `build/gate-p5-be5bb91.log` is `keel-zen5` `Ssymm` at 53.6% net of both intervals, less the same
-  2.6 points of margin. **The bar fell 6.8 points and the cause is the denominator, not the kernels:** every judged
-  rate on both derivation hosts rose under pinning, and zen5's measured 8-thread ceiling rose further than any of
-  them — 1564.5 → 1999.5 GFLOP/s, +27.8%, against rates at +6.2/+17.5/+9.0% — so its share fell while its code got
-  faster. zen4 is the mirror image (ceiling +14.8%, rates +17.6–21.0%, shares up), and the argmin moved with it,
+  2.6 points of margin. **The bar fell 6.8 points and the cause is the denominator, not the kernels:** on both
+  derivation hosts the ceiling outran every judged rate, so all six raw shares fell — zen5 1568.5 → 1999.5 GFLOP/s,
+  +27.5%, against +6.2/+17.5/+9.0%; zen4 713.6 → 817.4, +14.5%, against +9.7/+13.7/+5.7%. zen4 is not zen5's mirror
+  image but the same phenomenon: two of its net-of-interval shares rose regardless, pinning having collapsed the rate
+  intervals (1.0–8.3% → 0.0–0.8%), and a share net of both intervals has three terms. The argmin moved with it,
   `Ssyrk` → `Ssymm`. `Intel(R) Xeon(R) 6975P-C` leaves `CEIL_DERIVED_FROM`: `gnr` is characterization, and
   characterization hosts are "never mixed into the citable set" — the 2026-08-21 ruling applied, not a new decision,
   and no verdict moves because the model is not in the fleet. Stated inside the number (§5 rule 12): **no Intel

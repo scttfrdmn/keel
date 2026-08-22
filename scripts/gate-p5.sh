@@ -628,7 +628,7 @@ info "counts inside it, and the floor counts as cleared only net of both interva
 if [[ -n "$CEIL_FRACTION" ]]; then
   info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, its 8-thread form and this fraction ratified 2026-08-21, #6)"
   info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest judged row of build/gate-p5-be5bb91.log (keel-zen5 Ssymm, 53.6% net of BOTH intervals) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. The set is SIX rows over TWO models, and what it cannot see is stated inside it (§5 rule 12): no Intel silicon derived it, keel-skx being DERIV=0 and gnr characterization, and the two it has spread 53.6-89.9%, so one fleet bar is set by the weakest host — per-host convergence is the post-tag option named above"
-  info "  the bar FELL 6.8 points from the retired 57.8 and the cause is the DENOMINATOR, not the kernels: every judged rate on both derivation hosts rose under pinning, and keel-zen5's measured ${P5_THREADS}-thread ceiling rose further than any of them (1564.5 -> 1999.5 GFLOP/s, +27.8%), so its share fell. keel-zen4's ceiling rose 14.8% against rates rising 18-21%, and its shares rose. A share moves when either term does (#6, and the argmin moved with it: Ssyrk -> Ssymm)"
+  info "  the bar FELL 6.8 points from the retired 57.8 and the cause is the DENOMINATOR, not the kernels: on BOTH derivation hosts the measured ${P5_THREADS}-thread ceiling outran every judged rate, so all six RAW shares fell -- keel-zen5 1568.5 -> 1999.5 GFLOP/s (+27.5%) against rates at +6.2/+17.5/+9.0%, keel-zen4 713.6 -> 817.4 (+14.5%) against +9.7/+13.7/+5.7%. Two of zen4's net-of-interval shares rose regardless (80.9 -> 85.6, 88.2 -> 89.9, Ssymm's fell 86.3 -> 83.5), because pinning collapsed the rate intervals from 1.0-8.3% to 0.0-0.8% and this share subtracts them: it has THREE terms, and variance reduction is indistinguishable from improvement in the one no artifact prints (#6, and the argmin moved with it: Ssyrk -> Ssymm)"
 else
   info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). This branch has fired twice: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor, and at era $P5_ERA's boundary, where 57.8 could not be inherited because a bar from another instrument's rows books the methodology delta as host drift"
 fi
@@ -1153,7 +1153,7 @@ else
     BARS_J="$P5_JUDGED reported against each host's own ceiling with no fraction in force (#6)"
   fi
   if [[ -n "$STRSM_FLOOR" ]]; then
-    BARS_M="${STRSM_FLOOR}x for $P5_MEASURED"
+    BARS_M="${STRSM_FLOOR}x of its own single-thread rate for $P5_MEASURED"
   else
     BARS_M="$P5_MEASURED is reported unjudged (#37)"
   fi
@@ -1224,9 +1224,9 @@ else
   unmeasured)
     unmeasured "no host produced a judgeable set of scaling ratios, so the headline criterion is unmeasured rather than missed ($SCALE_HOSTS_NOTADM of $NHOSTS not admitted to the evidentiary class, so no ratio from them is judgeable however high it reads; $SCALE_NOCOVER produced no complete set of ratios)$BASE_NOTE" ;;
   pass)
-    pass "every gate host a bar governs cleared its class's bar $BARS against its own single-thread rate ($SCALE_HOSTS_OK/$SCALE_NJUDGE)$BASE_NOTE" ;;
+    pass "every gate host a bar governs cleared its class's bar $BARS ($SCALE_HOSTS_OK/$SCALE_NJUDGE)$BASE_NOTE" ;;
   fail)
-    fail "$SCALE_HOSTS_OK of $SCALE_NJUDGE governed gate hosts cleared their class's bar $BARS against their own single-thread rate and $SCALE_HOSTS_MISSED measured below one ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, $SCALE_NOCOVER produced no ratio); the criterion is per host and per class — the per-host lines above say which comparison missed$BASE_NOTE" ;;
+    fail "$SCALE_HOSTS_OK of $SCALE_NJUDGE governed gate hosts cleared their class's bar $BARS and $SCALE_HOSTS_MISSED measured below one ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, $SCALE_NOCOVER produced no ratio); the criterion is per host and per class — the per-host lines above say which comparison missed$BASE_NOTE" ;;
   *)
     unmeasured "$((SCALE_HOSTS_NOTADM + SCALE_NOCOVER)) of $SCALE_NJUDGE governed gate hosts could not be judged this run ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, so no scaling ratio from them is judgeable; $SCALE_NOCOVER produced no complete set of ratios at all); the other $SCALE_HOSTS_OK cleared their class's bar $BARS, and no host measured below one — the per-host PASSes above stand as measured$BASE_NOTE" ;;
   esac
@@ -1311,7 +1311,7 @@ else
   if [[ "$P4RC" -eq 0 && "$P4V" == *GREEN* ]]; then
     pass "gate-p4 is green on this commit ($(git rev-parse --short HEAD)), so every rate this gate divided by is still a measured one"
   elif [[ "$P4RC" -eq 1 && "$P4V" == *RED* ]]; then
-    fail "gate-p4 is RED on this commit (exit $P4RC), so nothing above that divides by a single-thread rate means what it says"
+    fail "gate-p4 is RED on this commit (exit $P4RC), so nothing above that divides by a measured rate means what it says"
     printf '%s\n' "$P4_STRIP" | grep -E '^  (FAIL|UNMEASURED)  ' | sed 's/^/        /' | head -20
     info "  DESIGN.md §4's one-re-run allowance for a failing throughput sentinel applies inside the delegated gates exactly as it does when they are run directly: one immediate re-run, both outputs archived, never for a correctness criterion"
   else
