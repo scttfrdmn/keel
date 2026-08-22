@@ -5,6 +5,10 @@
 # beside it and then frozen, for the same reason free-placement/INDEX.tsv is: see
 # README.md. The command that generated it is in the commit that landed this set.
 #
+# Frozen at the 24 CONFINED archives, i.e. the pre-amendment arm (README.md, 2026-08-22):
+# spread-form archives land beside it and are NOT indexed here. Every row below is
+# therefore a mask=0,1,2,3,4,5,6,7 reading with no doms= field, by construction.
+#
 # Membership is the MEASURED predicate "carries a keel-pin: line", not the revision
 # and not the name: an archive is in this era because the instrument that produced it
 # recorded the mask it ran under. `kind` is likewise read from which benchmarks the

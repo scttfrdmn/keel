@@ -79,6 +79,57 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **§5 rule 5's mask is AMENDED to one core per cache domain, and `pinned8` finalizes on the spread form**
+  (2026-08-22, ruled on #6; `scripts/remote.sh`, `DESIGN.md` §5 rule 5, `docs/hosts.md`, `docs/gates.md`,
+  `scripts/measurement-eras.tsv`). The 2026-08-21 form took the first eight distinct physical cores of one NUMA
+  node in ascending order, and **on EPYC 9R45 that is definitionally one CCD** — sysfs reports `index3`'s
+  `shared_cpu_list` as exactly eight cores wide, so "eight cores, one node" and "one L3" were the same set by
+  construction rather than by accident, on the host the fleet's widest readings come from. Measured against it
+  (T-45, three controls): 8-thread stream **dot 56.26 → 335.48 GB/s (5.96×)** and **axpy 75.89 → 353.0 GB/s
+  (4.65×)** one-core-per-CCD, with the repeat arm reproducing to **0.10%**, the 1T arms invariant across masks, and
+  arm A's 1T axpy matching the untouched harness to **0.01%** (66.29 vs 66.30) — so the delta is placement and
+  not the instrument. The spread arm also **exceeds free placement by 1.69× / 1.55×**, which is what makes this
+  publication honesty and not precision: the confined mask would have regenerated the README's bandwidth-bound
+  `dot`/`axpy` rows several-fold low, and **§5 rule 16 forbids a systematically underselling reference in exactly
+  the spirit it forbids the max-draw overselling one**. The enumeration is stated in the law as a function of
+  topology alone — partition a node's distinct physical cores by their **highest cache `level`** (keyed on the
+  lowest cpu id in `shared_cpu_list`), order domains ascending by that key, round-robin one core per domain per
+  pass taking the lowest unused core — so nothing here is a chosen mask. `level`, never `index3` by number, is
+  `bench/ceiling_test.go`'s `llcBytes` discipline reused: the harness makes no microarchitecture claim it would
+  have to maintain. **A missing cache level now refuses exactly as missing thread siblings does** (status 121,
+  amended refusal string), because falling back to consecutive cores would file a confined reading under this
+  era's label — the era-ledger forgery one layer in from free placement. **On `keel-skx` the amendment is
+  degenerate and that is the correctness argument**: one L3 domain per socket means the spread form returns
+  consecutive `0..7`, byte-identical to the old answer and the right mask there, so this refines the 2026-08-21
+  form rather than replacing it — and the new arms are therefore driven by fixtures written on purpose (a
+  12-domain EPYC node, a 2-domain wrap-around, a cache-blind cpu, no cache at all) instead of resting on an
+  unchanged expectation. The 24 archives at `archive/pinned8/` are preserved unedited as the **provisional
+  confined arm**, superseded by the amendment, and they **self-identify** by carrying no `doms=` field: the two
+  arms are separable by their own witnesses with no file touched. `transition_archive` stays `—` because the
+  spread-form campaign is now what fills it; the gnr hole no longer figures, the 2026-08-22 ruling having scoped
+  the both-arms condition to **judged** hosts, so `keel-gnr` is a stated exclusion in the era row rather than an
+  unmet condition.
+- **The pin line records the mask's SHAPE, because `GOMAXPROCS` cannot witness it** (`scripts/remote.sh`,
+  `scripts/bench.sh`, `scripts/gate-p5.sh`, criterion 4). Amending the banner surfaced the gap: the gate would
+  have asserted a spread its archive could not show, since `gomaxprocs=8` reads identically under a confined and
+  a spread mask — the field the old criterion cross-checked is blind to the very defect the amendment fixes. The
+  line now carries `doms=` (each selected core's domain, in mask order) and `nodedoms=` (how many the chosen node
+  offered), and the invariant `distinct(doms) == min(width, nodedoms)` **and** `max_count − min_count ≤ 1` is
+  checked off the artifact per row. **The surprise: a fully confined mask has imbalance 0, not 7.** Eight cores
+  in one domain are perfectly *balanced* over that one domain — predicted 7, the fixture read 0 — so balance
+  cannot see confinement at all and `nodedoms` is load-bearing rather than belt-and-braces; the two terms catch
+  disjoint defects. A row missing both fields is **`unmeasured`, not a failure**, naming the provisional confined
+  arm as exactly that shape, since a pre-amendment archive is not a broken post-amendment one (§5 rule 6). The
+  invariant was lifted into `bench.sh` as `bench_pin_spread` so it is drivable from log fixtures: the criterion
+  needs a fleet, and the confined arm it must still classify is a shape **no working host can now produce**.
+  `remote-exec-test.sh` grew section 9d over that seam (7 cases) and every pre-existing pin fixture gained cache
+  topology, without which all of them would have started refusing. **`scripts/` budget, disclosed rather than
+  netted out** (CLAUDE.md, "the apparatus pays its own way"): this pair of entries lands net shell with **no**
+  library, kernel or routine beside it: **+279 net lines in `scripts/`, moving `gate-docs.sh`'s reported ratio
+  1.63× → 1.66×** as measured 2026-08-22, and the move is attributable to the numerator alone because the library
+  term does not change in this commit (`verify_test.go` is a test and is not counted). It is the instrument the
+  era's founding campaign is about to be measured with, so deferring it wastes fleet time rather than lines, and
+  the paydown is owed post-tag — but the ratio moved the wrong way and saying so is the rule's whole mechanism.
 - **The `pinned8` era's arm is preserved and tracked at `archive/pinned8/` — 24 archives, `INDEX.tsv`, mapped to the
   free arm by `cpu_model`** (#6). It existed only as untracked `build/` output, one `make clean` from gone, on an era
   whose evidentiary half cost a three-host fleet to measure. Membership is the **measured predicate "carries a

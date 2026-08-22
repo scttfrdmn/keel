@@ -545,9 +545,21 @@ is a ruling, not a measurement, and nothing in this file assumes an answer.
 ## Placement methodology: pinned since 2026-08-21
 
 Every judged benchmark invocation on every host runs under a CPU affinity mask of eight
-distinct physical cores inside one NUMA node, and the ceiling arm runs under the identical
-mask. Adopted fleet-wide by ruling on #6; the law and the falsification condition are
-DESIGN.md §5 rule 5. **Before this date every number in this file and in the README was
+distinct physical cores inside one NUMA node — **one core per cache domain**, amended
+2026-08-22 — and the ceiling arm runs under the identical mask. Adopted fleet-wide by ruling
+on #6; the law, the enumeration and the falsification condition are DESIGN.md §5 rule 5.
+
+The amendment is not a refinement of taste. The form adopted on 2026-08-21 took the first
+eight cores in ascending order, which on EPYC 9R45 — whose `index3` `shared_cpu_list` is
+exactly eight cores wide — is definitionally **one CCD**: the 8-thread stream ceiling it
+measured sat 5.96× (dot) and 4.65× (axpy) below the same host measured one-core-per-CCD, and
+*below free placement itself* by 1.69×. So the confined mask would have regenerated this
+file's and the README's bandwidth-bound rows several-fold under what the silicon does, which
+§5 rule 16 forbids in the same words it forbids overselling. On `keel-skx`, whose L3 is per
+socket, the node is one domain and the mask is the same consecutive eight it always was.
+Every archive from 2026-08-22 records the domain of each masked core and the count its node
+offered, so the shape is checked off the artifact rather than trusted (`gate-p5.sh`,
+`bench_pin_spread`). **Before this date every number in this file and in the README was
 measured under free placement**, which matters when comparing across the boundary: the whole
 judged fleet is 2-socket/2-NUMA (keel-skx 2×18×2SMT, keel-zen4 and keel-zen5 2×96), so an
 unpinned goroutine could and did migrate across sockets mid-measurement.

@@ -812,14 +812,22 @@ HOW THOSE BECOME CHECKS, and every judgement call involved:
     eight goroutines on four physical cores and their SMT siblings cannot reach 6x,
     and would fail this gate for a reason that is not keel's. So the gate requires
     >= 8 CPUs, prints threads-per-core and cores-per-socket per host, and PINS
-    every judged invocation to eight distinct physical cores within one NUMA node
-    — the ceiling arm under the identical mask, since a share whose numerator and
-    denominator came from different placement methodologies is not a share. No
-    taskset, or no such node, is status 121 and nothing measured: a free-placement
+    every judged invocation to eight distinct physical cores within one NUMA node,
+    ONE PER CACHE DOMAIN since 2026-08-22 — the ceiling arm under the identical
+    mask, since a share whose numerator and denominator came from different
+    placement methodologies is not a share. No taskset, no such node, or no cache
+    level to partition it by, is status 121 and nothing measured: a free-placement
     reading wearing a `pinned8` label is the one artifact the era ledger exists to
-    make impossible. That is the pinning decision issue #15 (vesta's bimodal Sdot,
-    CCD placement) asked for, ruled into DESIGN §5 rule 5 on 2026-08-21 and
-    implemented in `remote_exec`; #15 stays open until its own rows are
+    make impossible, and a *confined* reading wearing it is the same forgery one
+    layer in — which is why the mask records the domain of each core it selected
+    and the criterion asserts distinct(domains) = min(width, the node's), rather
+    than reading GOMAXPROCS back and calling the shape established. It cannot:
+    GOMAXPROCS is 8 whether the eight cores share one CCD or eight, and on
+    keel-zen5 the confined form measured 5.96× less stream bandwidth. That is the
+    pinning decision issue #15 (vesta's bimodal Sdot,
+    CCD placement) asked for, ruled into DESIGN §5 rule 5 on 2026-08-21, amended
+    to the spread form on 2026-08-22, and implemented in `remote_exec`; #15 stays
+    open until its own rows are
     re-measured under the mask, because an adoption closes on measurement and not
     on a ruling. If a host misses the floor with sibling placement as the visible
     cause, that is a finding to write up and take to a ruling, not a bar to lower

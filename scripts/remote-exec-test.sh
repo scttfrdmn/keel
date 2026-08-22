@@ -492,17 +492,40 @@ jcase 1 'UNMEAS.*two witnesses of this host.s identity disagree' \
 # KEEL_SYSFS is a root path, not a mode flag: the function has no test-only branch, and
 # the fixtures below are ordinary callers supplying an ordinary argument.
 #
-# WHAT THESE CANNOT SEE (§5 rule 12). That a real Linux host's node/cpulist and
-# thread_siblings_list are formatted the way these fixtures write them is read off two
-# hosts' sysfs and off Documentation/ABI/testing/sysfs-devices-node -- it is not
-# established here. Nor is `taskset -c <mask>` itself exercised anywhere in this file;
+# WHAT THESE CANNOT SEE (§5 rule 12). That a real Linux host's node/cpulist,
+# thread_siblings_list and cache/indexN/{level,shared_cpu_list} are formatted the way
+# these fixtures write them is read off two hosts' sysfs, off T-45's reading of EPYC
+# 9R45's index3, and off Documentation/ABI/testing/sysfs-devices-node -- it is not
+# established here. Nor is the fixtures' NODE partition: whether keel-zen5's node0 is a
+# socket or half of one is unread, and it does not reach the selector, which answers out
+# of the first node that satisfies the width. Nor is `taskset -c <mask>` itself exercised anywhere in this file;
 # what proves the mask TOOK is gate-p5's second reading of it (GOMAXPROCS off Go's own
 # affinity), and that needs a Linux host with eight cores, which is a fleet run.
-head_ "9. keel_pin_mask selects eight distinct cores or refuses"
+head_ "9. keel_pin_mask spreads one core per cache domain, or refuses"
 eval "$KEEL_PIN_SH"     # the shipped text, defined in this shell exactly as the far side sees it
 
+# llc_dom ROOT SHARED_CPU_LIST CPU... -- a cache topology for the named cpus: a level-1
+# index shared with nobody, and a level-3 index shared across SHARED_CPU_LIST. Both, not
+# just the L3, so the selector's "highest level" is actually put to work: a version that
+# took the FIRST readable index would make every core its own domain and hand back
+# consecutive cores, which is the old form wearing the new label.
+llc_dom() {
+  local root="$1" list="$2"; shift 2
+  local c
+  for c in "$@"; do
+    mkdir -p "$root/cpu/cpu$c/cache/index0" "$root/cpu/cpu$c/cache/index3"
+    printf '1\n'    > "$root/cpu/cpu$c/cache/index0/level"
+    printf '%d\n' "$c" > "$root/cpu/cpu$c/cache/index0/shared_cpu_list"
+    printf '3\n'    > "$root/cpu/cpu$c/cache/index3/level"
+    printf '%s\n' "$list" > "$root/cpu/cpu$c/cache/index3/shared_cpu_list"
+  done
+}
+
 # A two-socket SMT host in the shape keel-skx really has: 18 physical cores per node, the
-# second thread of core c numbered c+36, and a cpulist written as two ranges.
+# second thread of core c numbered c+36, and a cpulist written as two ranges. Its L3 is
+# per-socket, so each node is ONE domain and the spread form degenerates to consecutive
+# cores -- which is why every expectation below this is byte-identical to the packed
+# form's, and why that is evidence of a refinement rather than of an unexercised change.
 topo_skx() {
   local root="$1" c
   mkdir -p "$root/node/node0" "$root/node/node1"
@@ -514,6 +537,8 @@ topo_skx() {
     mkdir -p "$root/cpu/cpu$((c + 36))/topology"
     printf '%d,%d\n' "$c" "$((c + 36))" > "$root/cpu/cpu$((c + 36))/topology/thread_siblings_list"
   done
+  llc_dom "$root" '0-17,36-53'  $(seq 0 17)  $(seq 36 53)
+  llc_dom "$root" '18-35,54-71' $(seq 18 35) $(seq 54 71)
 }
 pin_case() {
   local note="$1" want="$2" expect="$3" root="$4" got=""
@@ -542,8 +567,78 @@ for c in 0 1 2 3; do
   mkdir -p "$NOSMT/cpu/cpu$c/topology"
   printf '%d\n' "$c" > "$NOSMT/cpu/cpu$c/topology/thread_siblings_list"
 done
+llc_dom "$NOSMT" '0-3' 0 1 2 3
 pin_case "4 cores, no SMT, want 4" 4 "0,1,2,3" "$NOSMT"
 pin_case "4 cores, no SMT, want 8" 8 "" "$NOSMT"
+
+# THE SHAPE THE AMENDMENT WAS MADE FOR (2026-08-22). EPYC 9R45 as T-45 read it out of
+# sysfs: eight-core L3 domains, the second thread of core c numbered c+96. The expected
+# answer is not a preference, it is the arm the 5.96x/4.65x ratio in DESIGN §5 rule 5 was
+# measured on -- so this fixture asserts that what the law now says and what the harness
+# now selects are the same eight cores, which is the one claim T-45 could not make about
+# the packed form.
+EPYC="$WORK/topo-epyc"
+mkdir -p "$EPYC/node/node0"; printf '0-95,96-191\n' > "$EPYC/node/node0/cpulist"
+for c in $(seq 0 95); do
+  mkdir -p "$EPYC/cpu/cpu$c/topology" "$EPYC/cpu/cpu$((c + 96))/topology"
+  printf '%d,%d\n' "$c" "$((c + 96))" > "$EPYC/cpu/cpu$c/topology/thread_siblings_list"
+  printf '%d,%d\n' "$c" "$((c + 96))" > "$EPYC/cpu/cpu$((c + 96))/topology/thread_siblings_list"
+done
+for d in $(seq 0 11); do
+  a=$((d * 8)); b=$((a + 7))
+  llc_dom "$EPYC" "$a-$b,$((a + 96))-$((b + 96))" $(seq "$a" "$b")
+done
+pin_case "EPYC 9R45 node: 12 eight-core L3 domains, want 8" 8 "0,8,16,24,32,40,48,56" "$EPYC"
+# Twelve domains, want 4: the first FOUR domains and no domain twice, which is what
+# distinguishes one-per-domain from a stride that happens to be eight.
+pin_case "same node, want 4 (uses 4 of 12 domains)" 4 "0,8,16,24" "$EPYC"
+
+# THE TWO SHAPE GLOBALS, which stdout does not carry and pin_case therefore cannot see. The
+# pin line is built out of these, so an unasserted global is an unrecorded shape — and the
+# skx pair below is the reason the second one exists at all: the same eight consecutive cores
+# are a confined mask on a 12-domain node and the only correct mask on a 1-domain one, and
+# nothing but `nodedoms` tells those apart.
+# `wantv`, not `want`: the shipped selector is POSIX sh and assigns `want=$1` with no local,
+# and bash locals are dynamically scoped — so calling it clobbers a caller local of that name.
+# `pin_case` above is safe only because it never reads `want` after the call. Cost of getting
+# this wrong is a comparison against 8, which reads as three broken assertions.
+shape_case() {
+  local note="$1" wantv="$2" root="$3"
+  KEEL_SYSFS="$root" keel_pin_mask 8 >/dev/null || true
+  local got="$KEEL_PIN_DOMLIST|$KEEL_PIN_NODEDOMS"
+  [[ "$got" == "$wantv" ]] && pass_ "$note -> $got" || fail_ "$note -> $got, expected $wantv"
+}
+shape_case "EPYC node records doms and nodedoms" "0,8,16,24,32,40,48,56|12" "$EPYC"
+shape_case "skx node: consecutive cores, and one domain to spread over" "0,0,0,0,0,0,0,0|1" "$SKX"
+# A refusal must not leave the previous run's shape standing. Driven immediately after a
+# success, which is the only ordering in which the bug is visible.
+mkdir -p "$WORK/topo-none"
+shape_case "a refusal clears them rather than keeping the last success" "|" "$WORK/topo-none"
+# More width than domains, so pass two runs four times: every domain gives its first core
+# before any gives its second. Nothing in the fleet has this shape; the round-robin has a
+# second pass whether or not a host exercises it, and an unexercised loop is not evidence.
+WRAP="$WORK/topo-wrap"
+mkdir -p "$WRAP/node/node0"; printf '0-7\n' > "$WRAP/node/node0/cpulist"
+for c in $(seq 0 7); do
+  mkdir -p "$WRAP/cpu/cpu$c/topology"
+  printf '%d\n' "$c" > "$WRAP/cpu/cpu$c/topology/thread_siblings_list"
+done
+llc_dom "$WRAP" '0-3' 0 1 2 3; llc_dom "$WRAP" '4-7' 4 5 6 7
+pin_case "2 domains of 4, want 8 (four passes)" 8 "0,4,1,5,2,6,3,7" "$WRAP"
+
+# THE NEW FAIL-CLOSED BRANCH, driven on purpose. Sibling lists prove distinctness and
+# cache levels prove the spread, so a host that cannot show the second refuses exactly as
+# one that cannot show the first: falling back to consecutive cores here would put a
+# single-CCD reading under the spread label, which is the forgery the era ledger exists to
+# prevent, one layer in from the free-placement one.
+NOLLC="$WORK/topo-nollc"; topo_skx "$NOLLC"; rm -rf "$NOLLC"/cpu/cpu*/cache
+pin_case "36 cores, sibling lists, no cache topology at all" 8 "" "$NOLLC"
+# And the check is per-core, not per-host: one core of node0 cannot prove its domain, so
+# node0 goes whole and node1 answers instead. A version reading only cpu0 would pass this
+# and hand back a mask over a topology it never looked at.
+ONELLC="$WORK/topo-onecoreblind"; topo_skx "$ONELLC"; rm -rf "$ONELLC/cpu/cpu5/cache"
+pin_case "one core of node0 is cache-blind: node0 abandoned, node1 answers" \
+  8 "18,19,20,21,22,23,24,25" "$ONELLC"
 
 # THE BRANCH THIS FIXTURE CREATED. The first version of the selector fell back to
 # `sib=$c` when no sibling list could be read, which on a hyperthreaded host hands back
@@ -563,6 +658,7 @@ for c in 0 1 2 3; do
   printf '%d-%d\n' "$(( (c / 2) * 2 ))" "$(( (c / 2) * 2 + 1 ))" \
     > "$RANGE/cpu/cpu$c/topology/thread_siblings_list"
 done
+llc_dom "$RANGE" '0-3' 0 1 2 3
 pin_case "sibling lists spelled as ranges, want 2" 2 "0,2" "$RANGE"
 pin_case "sibling lists spelled as ranges, want 4 (only 2 cores exist)" 4 "" "$RANGE"
 
@@ -623,6 +719,17 @@ readback() {   # prints "mask width gomaxprocs" the way gate-p5 derives them
   pg="$(bench_gomaxprocs "$WORK/pin.log")"
   printf '%s|%s|%s\n' "$pm" "$pw" "$pg"
 }
+shape() {      # prints "domlist|nodedoms|distinct expected imbalance|verdict", gate-p5's second half
+  local pd pn ps rc
+  pd="$(bench_pin_doms "$WORK/pin.log")"; pn="${pd##* }"; pd="${pd%% *}"
+  if [[ -z "$pd" || -z "$pn" ]]; then printf '%s|%s|-|unmeasured\n' "$pd" "$pn"; return; fi
+  ps="$(bench_pin_spread "$pd" 8 "$pn")" && rc=pass || rc=FAIL
+  printf '%s|%s|%s|%s\n' "$pd" "$pn" "$ps" "$rc"
+}
+sh_case() {
+  local note="$1" want="$2" got; got="$(shape)"
+  [[ "$got" == "$want" ]] && pass_ "$note -> $got" || fail_ "$note -> $got, expected $want"
+}
 rb_case() {
   local note="$1" want="$2" got; got="$(readback)"
   [[ "$got" == "$want" ]] && pass_ "$note -> $got" || fail_ "$note -> $got, expected $want"
@@ -656,6 +763,52 @@ rb_case "a pre-2026-08-21 log: no mask line" "||192"
 mklog 'keel-pin: REFUSED, no taskset on this host. DESIGN section 5 rule 5 pins fleet-wide and never selectively, so this measurement is not taken rather than taken unpinned.'
 rb_case "a refusal log carries a keel-pin line but no mask" "||"
 
+# ------------------- 9d. and the SHAPE of the mask, which its width cannot show
+#
+# The 2026-08-22 spread amendment (§5 rule 5) is the reason this section exists: a mask
+# confined to one CCD and a mask spread over eight read back identically through
+# `bench_gomaxprocs`, because GOMAXPROCS is 8 either way, and on keel-zen5 the confined one
+# measured 5.96x less stream bandwidth. So the pin line carries the domain of each selected
+# core and the count the node had, and the invariant over them is what the criterion asserts.
+# Every arm below is a log, so every arm is drivable here — including the confined one, which
+# no correctly working host can now produce.
+head_ "9d. the mask's shape: one core per cache domain, or not this era"
+mklog 'keel-pin: mask=0,8,16,24,32,40,48,56 width=8 doms=0,8,16,24,32,40,48,56 nodedoms=12' \
+      'BenchmarkScale/threads=8-8   	      10	  16000000 ns/op'
+sh_case "keel-zen5's spread mask: 8 cores, 8 of 12 domains" \
+  "0,8,16,24,32,40,48,56|12|8 8 0|pass"
+# The width still reads, which is what keeps the two halves of the criterion independent: a
+# log can satisfy the width check and fail the shape one.
+rb_case "the same line still yields mask and width to bench_pin" "0,8,16,24,32,40,48,56|8|8"
+# THE CONFINED ARM, the defect the amendment was made for, as its log would look. Same width,
+# same GOMAXPROCS, one domain out of twelve — caught here and nowhere else. Note the third
+# number: imbalance is **0**, because eight cores in one domain are perfectly evenly spread
+# over the one domain they occupy. Balance cannot see confinement at all, which is what makes
+# `nodedoms` load-bearing rather than belt-and-braces — the two terms of the invariant catch
+# disjoint defects. Predicted 7 here and read 0; the fixture adjudicated the field.
+mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=12' \
+      'BenchmarkScale/threads=8-8   	      10	  16000000 ns/op'
+sh_case "a single-CCD mask on a 12-domain node" "0,0,0,0,0,0,0,0|12|1 8 0|FAIL"
+# And the same eight consecutive cores are CORRECT where the node has one domain: keel-skx's
+# L3 is per socket, so min(8,1) is 1 and the mask cannot spread further than the silicon does.
+# The two logs above and below differ only in `nodedoms`, which is the whole reason it is
+# recorded: the mask string cannot tell these apart.
+mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1' \
+      'BenchmarkScale/threads=8-8   	      10	  16000000 ns/op'
+sh_case "keel-skx: the same mask, one domain in the node" "0,0,0,0,0,0,0,0|1|1 1 0|pass"
+# Fewer domains than the width, so the round-robin wraps and the invariant is balance rather
+# than one-each. An unbalanced mask over the same domain count is refused.
+mklog 'keel-pin: mask=0,4,1,5,2,6,3,7 width=8 doms=0,4,0,4,0,4,0,4 nodedoms=2'
+sh_case "2 domains, 4 cores each, balanced" "0,4,0,4,0,4,0,4|2|2 2 0|pass"
+mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,4 nodedoms=2'
+sh_case "2 domains, 7 cores against 1" "0,0,0,0,0,0,0,4|2|2 2 6|FAIL"
+# A pre-amendment archive: the mask line without the two fields. It must read as "the shape
+# was not reported", never as a shape that passed — this is exactly the 24 confined archives
+# in archive/pinned8/, which is how the provisional arm identifies itself untouched.
+mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8' \
+      'BenchmarkScale/threads=8-8   	      10	  16000000 ns/op'
+sh_case "a 2026-08-21 confined archive: no shape recorded" "||-|unmeasured"
+
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"
@@ -663,7 +816,8 @@ if [[ "$FAILS" -eq 0 ]]; then
   echo "  a host with no cpufreq is told apart from one whose knob will not read,"
   echo "  bare metal is admitted by a named arm while ten arms still refuse, a"
   echo "  guest whose launcher contradicts it is unmeasured rather than demoted, and"
-  echo "  a benchmark is pinned to eight distinct cores in one node or not taken."
+  echo "  a benchmark is pinned to eight distinct cores, one per cache domain, in"
+  echo "  one node -- or not taken, and the shape is recorded rather than trusted."
   exit 0
 fi
 echo "  RED -- $FAILS check(s) failed."

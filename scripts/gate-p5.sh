@@ -353,7 +353,7 @@ if [[ -n "$HOSTS" ]]; then
     # (#82). It is also now in every gate's archived record, not just this one's.
     ncpu="$(sed -n 's/.*| \([0-9]*\) cpus |.*/\1/p' <<<"$prov")"
     smt="$(sed -n 's/.*| smt=\([0-9?]*\) |.*/\1/p' <<<"$prov")"
-    info "[$host] smt=${smt:-?} threads/core, so UNMASKED the criterion's $P5_THREADS goroutines could span as few as $P5_THREADS/${smt:-?} physical cores — which is the hazard the mask removes: every benchmark below runs on $KEEL_PIN_WIDTH distinct physical cores inside one NUMA node, refused rather than run free, and read back per row (§5 rule 5; the pinning decision #15 asked for)"
+    info "[$host] smt=${smt:-?} threads/core, so UNMASKED the criterion's $P5_THREADS goroutines could span as few as $P5_THREADS/${smt:-?} physical cores — which is the hazard the mask removes: every benchmark below runs on $KEEL_PIN_WIDTH distinct physical cores, one per cache domain, inside one NUMA node — refused rather than run free, and read back per row for both width and shape (§5 rule 5; the pinning decision #15 asked for)"
     # The two branches are the three-way taxonomy's pair, and #73 rules them
     # apart deliberately: an unreadable count is a reading nobody got, a count
     # that reads short is a reading the gate has and the environment fails. Both
@@ -752,9 +752,23 @@ else
     elif [[ "$PING" != "$PINW" ]]; then
       fail "[$host] the affinity mask was requested and did not take: the harness pinned $PINW cores ($PINM) and Go read GOMAXPROCS as [$PING] off its own affinity. A mask that only the requesting side can see is free placement with a label, which is the one artifact the era ledger exists to make impossible (§5 rule 5, #6)"
       continue
-    else
-      pass "[$host] placement pinned to $PINW distinct physical cores in one NUMA node (mask $PINM), confirmed twice: the harness applied it and Go reports GOMAXPROCS=$PING off its own affinity, so every row below carries -$PING and the numerator and denominator of each share came from the identical mask (§5 rule 5)"
     fi
+    # The width took; now the SHAPE, which the width cannot show. §5 rule 5 takes one core
+    # per cache domain since 2026-08-22, and a mask confined to one CCD reads back as
+    # GOMAXPROCS=8 exactly as a spread one does — so the criterion asserts the invariant the
+    # pin line carries: as many distinct domains as min(width, domains the node had), and no
+    # domain holding more than one core than another. Both are read off the archive, never
+    # off this shell, for bench_pin's reason.
+    PIND="$(bench_pin_doms "$BENCHLOG")"; PINND="${PIND##* }"; PIND="${PIND%% *}"
+    if [[ -z "$PIND" || -z "$PINND" ]]; then
+      unmeasured "[$host] the sweep recorded a mask but not its shape: no doms=/nodedoms= on the keel-pin line, so whether those $PINW cores span $PINW cache domains or one is unknown rather than assumed. Every archive taken under the confined form that preceded the 2026-08-22 amendment reads exactly like this, which is how the provisional arm identifies itself — and it is not a reading this era may claim (§5 rule 5)"
+      continue
+    fi
+    if ! PINS="$(bench_pin_spread "$PIND" "$PINW" "$PINND")"; then
+      fail "[$host] the mask took but is not the shape §5 rule 5 specifies: $PINW cores (mask $PINM) land on ${PINS%% *} distinct cache domains where min(width $PINW, node's $PINND) is $(cut -d' ' -f2 <<<"$PINS"), most-loaded minus least-loaded ${PINS##* }. One core per domain up to the width is what recovered 5.96× the stream bandwidth of the confined form, so a mask drifting back toward confinement measures a fraction of this machine and publishes it as the machine (§5 rule 5, rule 16, #6)"
+      continue
+    fi
+    pass "[$host] placement pinned to $PINW cores over ${PINS%% *} of the node's $PINND cache domains (mask $PINM), confirmed three ways: the harness applied it, Go reports GOMAXPROCS=$PING off its own affinity, and the recorded domain list satisfies rule 5's spread invariant — so every row below carries -$PING and the numerator and denominator of each share came from the identical mask (§5 rule 5)"
     # The new instrument is checked against the one it replaced, on this run's own
     # samples. "benchci is benchstat plus resolution" is a claim until rounding its
     # CI back to %.0f%% reproduces benchstat's column cell for cell — and this gate

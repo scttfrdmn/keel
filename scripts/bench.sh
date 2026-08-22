@@ -126,7 +126,31 @@ bench_csv() {
 # what a criterion needs to know is what the far side actually ran under. remote_exec
 # writes the line immediately before the binary, so it is inside the same log as the rows
 # it shaped and travels with them into the archive.
-bench_pin() { sed -n 's/^keel-pin: mask=\([^ ]*\) width=\([0-9]*\)$/\1 \2/p' "$1" | tail -1; }
+bench_pin() { sed -n 's/^keel-pin: mask=\([^ ]*\) width=\([0-9]*\).*$/\1 \2/p' "$1" | tail -1; }
+
+# bench_pin_doms LOG — "domlist nodedoms" from the same line, or nothing. Added with the
+# 2026-08-22 spread amendment, and it is what makes the SHAPE of the mask checkable off the
+# archive: distinct(domlist) must equal min(width, nodedoms), an invariant self-contained in
+# one line and needing no knowledge of the host. Absent on every pre-amendment archive,
+# which is how the confined provisional arm identifies itself without any of its 24 files
+# being touched (§5 rule 5; the era predicate in archive/pinned8/README.md).
+bench_pin_doms() { sed -n 's/^keel-pin: .* doms=\([^ ]*\) nodedoms=\([0-9]*\)$/\1 \2/p' "$1" | tail -1; }
+
+# bench_pin_spread DOMLIST WIDTH NODEDOMS — prints "distinct expected imbalance" and returns
+# nonzero unless the mask is the shape §5 rule 5 specifies: one core per cache domain up to
+# the width, hence as many distinct domains as min(WIDTH, NODEDOMS), and no domain carrying
+# more than one core more than another. Here rather than inline in the criterion for the
+# reason the rest of this file exists — a judgement no gate can deviate from — and because a
+# pure function of one archived line is drivable from a fixture, where the criterion around
+# it needs a fleet.
+bench_pin_spread() {
+  local u b e
+  u="$(tr ',' '\n' <<<"$1" | sort -u | grep -c .)"
+  b="$(tr ',' '\n' <<<"$1" | sort | uniq -c | awk '{if($1>m)m=$1; if(n==0||$1<n)n=$1} END{print m-n}')"
+  e=$(( $2 < $3 ? $2 : $3 ))
+  printf '%s %s %s\n' "$u" "$e" "$b"
+  [[ "$u" -eq "$e" && "$b" -le 1 ]]
+}
 
 # bench_gomaxprocs LOG — the distinct -GOMAXPROCS suffixes Go appended to the row names
 # in LOG, space-separated and sorted. The SECOND reading of the mask width, and an

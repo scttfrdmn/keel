@@ -1,18 +1,30 @@
 <!-- Copyright 2026 The keel Authors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# The `pinned8` arm, preserved
+# The `pinned8` arm, preserved — and superseded 2026-08-22
 
-The 24 files beside this one are every `gate-p5` sample archive keel has produced under the
-`pinned8` measurement era — the era in which every benchmark-carrying invocation runs under one
-CPU affinity mask of eight distinct physical cores inside a single NUMA node (DESIGN.md §5 rule 5,
-implemented in `804fb75`). They are here, tracked, for the reason the free arm is: an arm cited by
-a path under `build/` is cited on one operator's laptop and nowhere else, and `build/` is ignored
-(`.gitignore:13`).
+The 24 files beside this one are every `gate-p5` sample archive keel produced under the **first
+form** of §5 rule 5's affinity mask: eight distinct physical cores taken in ascending order
+inside one NUMA node (implemented in `804fb75`). They are here, tracked, for the reason the free
+arm is: an arm cited by a path under `build/` is cited on one operator's laptop and nowhere else,
+and `build/` is ignored (`.gitignore:13`).
 
-This is the **pinned half** of the `pinned8` transition that `scripts/measurement-eras.tsv` makes
-a condition of the era existing. The free half is `archive/free-placement/` (35 archives). What
-this directory does *not* do is close the era — see "why `transition_archive` is still `—`".
+**That form was amended on 2026-08-22 and these 24 readings are the *provisional* arm, not the
+era's founding one.** On EPYC 9R45 sysfs reports `index3`'s `shared_cpu_list` as exactly eight
+cores wide, so "the first eight in order" was definitionally one CCD, and the 8-thread stream
+ceiling these files carry sits **5.96×** (dot) and **4.65×** (axpy) below the same host measured
+one core per CCD — and 1.69× below *free placement* (T-45, three controls; DESIGN.md §5 rule 5).
+Rule 5 now takes one core per cache domain, and the era finalizes on that form by the 2026-08-22
+ruling on #6. Nothing here is edited: these are what the instrument read, and they are the
+evidence that the amendment was needed.
+
+**They identify themselves.** Every archive taken after the amendment carries `doms=` and
+`nodedoms=` on its `keel-pin:` line — the domain of each selected core and the count its node
+offered. None of these 24 do, so the two arms are separable by their own witnesses with no edit
+to either, which is the membership discipline this file already uses one field over.
+
+The free half of the transition is `archive/free-placement/` (35 archives). What this directory
+does *not* do is close the era — see "why `transition_archive` is still `—`".
 
 ## Membership is a measured predicate, not a revision range
 
@@ -60,26 +72,33 @@ judged, exactly as the free arm includes its `clock-window` files.
 
 ## Why `transition_archive` is still `—`
 
-**Granite Rapids has no pinned half.** `Intel(R) Xeon(R) 6975P-C` appears 8 times in the free arm
-and 0 times here, because `keel-gnr` was ruled a *characterization* host and is absent from the
-pinned fleet (#6 Q3). So "the same fleet measured under the old instrument and the new one" holds
-for **three of the four** models the free era touched, and does not hold for the fourth.
+**Because the campaign that fills it has not run yet.** The column wants the fleet measured under
+the old instrument and the new one, and as of the 2026-08-22 amendment the new instrument is the
+spread mask — so the pinned half of the transition is the spread-form campaign, not these 24
+files. They are the arm of a form that no longer defines the era.
 
-That gap is arguably consistent with the condition rather than a breach of it — gnr is not part of
-the fleet the era governs, so there is nothing for the era to certify about it — but reading the
-condition as met is a judgment about what "the same fleet" means, and certifying a condition with
-a stated hole in it is not a call to make while filing the evidence for it. **Left as `—`, asked on
-#6.** Preserving the arm is unambiguously right and is done; closing the era is the open question.
+The **gnr question is settled and is no longer why this column is empty.** `Intel(R) Xeon(R)
+6975P-C` appears 8 times in the free arm and 0 times here because `keel-gnr` was ruled a
+*characterization* host and is absent from the pinned fleet (#6 Q3), and the 2026-08-22 ruling
+scopes the both-arms condition to **judged** hosts: gnr is a **stated exclusion** in the era row's
+record rather than an unmet condition, since the era certifies nothing about a host it does not
+govern. A pinned-era gnr re-measure stays available as characterization work (#104/#112) and is
+not owed to this column.
 
 Note what provisional does not cost: the era table says PROVISIONAL "is a disclosure, not a
 permission — it does not widen what BASELINE covers", and what bounds BASELINE is
 `scripts/judged-runs.tsv`, one row per `(host, era)`, provisional or not.
 
-## This set is not closed, unlike the free arm
+## This set is not closed, unlike the free arm — but its confined subset is
 
 `free-placement/` has no generator because no thirty-sixth member can ever exist — the mask
-refuses with status 121 rather than running free. **This set can still grow**: every future
-`gate-p5` run adds to it while rule 5 stands. `INDEX.tsv` was still generated once by a command
+refuses with status 121 rather than running free. **This directory can still grow, and what it
+grows with is spread-form archives**: every future `gate-p5` run adds to it while rule 5 stands,
+and every one of those carries `doms=`/`nodedoms=`. What is closed is the **confined subset**, at
+24 as of 2026-08-22: the selector now spreads or refuses, so no twenty-fifth pre-amendment reading
+can ever be taken. Every count and table above is a statement about those 24 and does not move.
+
+`INDEX.tsv` was still generated once by a command
 recorded in the commit that landed it, rather than by a tracked script, because a generator is
 `scripts/` budget spent on a file that regenerating by hand costs one command
 (CLAUDE.md, "the apparatus pays its own way"). If this set starts growing per-run, that trade

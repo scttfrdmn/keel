@@ -612,19 +612,59 @@ KEEL_GOV_PROBE_SH='
 # and pinning them would refuse to run the TEST SUITE on any host with fewer than eight
 # physical cores in a node -- a coverage loss in exchange for nothing measured.
 #
-# IT REFUSES RATHER THAN FALLING BACK. No taskset, no NUMA topology in sysfs, or fewer
-# than eight distinct physical cores inside a single node, and the measurement is not
-# taken: status 121, a log saying so, and the caller reports it unmeasured. Free
-# placement as a silent fallback is the one behaviour that must not exist, because it
-# produces exactly the artifact the era ledger was built to make impossible -- a
-# free-placement reading wearing a pinned8 label. "Fleet-wide and never selectively" is
-# a constraint on the harness before it is one on the operator.
+# IT REFUSES RATHER THAN FALLING BACK. No taskset, no NUMA topology in sysfs, no cache
+# topology to partition a node by, or fewer than eight selectable cores inside a single
+# node, and the measurement is not taken: status 121, a log saying so, and the caller
+# reports it unmeasured. Free placement as a silent fallback is the one behaviour that
+# must not exist, because it produces exactly the artifact the era ledger was built to
+# make impossible -- a free-placement reading wearing a pinned8 label. "Fleet-wide and
+# never selectively" is a constraint on the harness before it is one on the operator.
+#
+# ONE CORE PER CACHE DOMAIN, DETERMINISTICALLY (amended 2026-08-22, ruling on #6;
+# grounds and derivation in DESIGN section 5 rule 5). The first form took the first
+# eight distinct cores in order inside a node, and on EPYC 9R45 sysfs reports index3s
+# shared_cpu_list as exactly eight cores wide -- so "the first eight in order" was
+# definitionally ONE CCD, and the 8-thread stream ceiling it measured sat 5.96x (dot)
+# and 4.65x (axpy) below what the same host does one-core-per-CCD, which also EXCEEDS
+# the free era by 1.69x. The packing was not merely tighter than free placement, it was
+# worse than it, and at size the L1 rows are bandwidth-bound -- so a confined mask
+# regenerates published rows several-fold below what the silicon does (section 5 rule
+# 16 forbids underselling exactly as it forbids overselling).
+#
+# The partition is the highest cache LEVEL sysfs reports for a core, never index3 by
+# number: bench/ceiling_test.go llcBytes already scans the indices rather than naming
+# one, and a hardcoded index is a microarchitecture claim in a harness that refuses to
+# make them. Enumeration is domains in ascending first-cpu order, one core each per
+# pass, lowest unused core first -- a function of the topology and nothing else, and on
+# EPYC 9R45 node0 it returns exactly the arm the ratio above was measured on,
+# 0,8,16,24,32,40,48,56. A node with ONE domain (keel-skx, L3 per socket) degenerates
+# to the old consecutive answer, which is the right mask there: this refines the first
+# form rather than reversing it. The NODE constraint survives untouched -- spreading is
+# within one node, because eight cores across two is the cross-socket migration the
+# mask exists to stop.
 #
 # NO APOSTROPHES ANYWHERE IN HERE, for the reason the gov probe above states.
 KEEL_PIN_WIDTH=8
 KEEL_PIN_SH='
+# keel_llc_first CPUDIR -- the lowest cpu id sharing CPUDIRs highest-level cache, which
+# names that cores cache domain. Empty when no index reports both a level and a sharing
+# list, and the caller treats empty as unprovable rather than as one domain.
+keel_llc_first() {
+  lv=-1; got=
+  for ix in "$1"/cache/index*; do
+    { [ -r "$ix/level" ] && [ -r "$ix/shared_cpu_list" ]; } || continue
+    l=$(cat "$ix/level") || continue
+    [ "$l" -gt "$lv" ] 2>/dev/null || continue
+    lv=$l; got=$(cat "$ix/shared_cpu_list"); got=${got%%,*}; got=${got%%-*}
+  done
+  [ -n "$got" ] && printf "%s" "$got"
+}
 keel_pin_mask() {
   want=$1
+  # Cleared on entry, not only set on success: a refusal that leaves the previous calls
+  # shape behind would let a second call report the first ones domains, and the pin line is
+  # built from these rather than from stdout.
+  KEEL_PIN_DOMLIST=; KEEL_PIN_NODEDOMS=
   # The sysfs root, overridable for the same reason KEEL_REMOTE_DIR is: this function
   # reads a topology, and a topology is the one input a caller may legitimately want to
   # supply from somewhere else. scripts/remote-exec-test.sh builds fake ones -- an
@@ -639,7 +679,10 @@ keel_pin_mask() {
   # cores in node 0 may not be completed out of node 1.
   for nd in "$S"/node/node[0-9]*; do
     [ -r "$nd/cpulist" ] || continue
-    out=; n=0
+    # Pass one partitions the node: pairs is domain:core for every distinct core, doms
+    # is each domain once in first-appearance order. Both are built in ascending cpu
+    # order, which is what makes pass two a function of the topology alone.
+    pairs=; doms=; ndoms=0
     for spec in $(tr "," " " < "$nd/cpulist"); do
       case $spec in
         *-*) a=${spec%%-*}; b=${spec##*-} ;;
@@ -655,19 +698,63 @@ keel_pin_mask() {
         # hyperthreaded cores under a mask of width eight -- and the readback in gate-p5
         # cannot catch it, because GOMAXPROCS is 8 either way. The fixture that drives
         # this branch is the reason it exists: the first version fell back to sib=$c.
-        if [ -z "$sib" ]; then break 2; fi
+        # `continue 3` and not `break 2`, because pass two now sits after this loop:
+        # breaking out of it would run the round-robin over a partial partition and
+        # could return a mask from a node this branch just declared unprovable.
+        if [ -z "$sib" ]; then continue 3; fi
         first=${sib%%,*}; first=${first%%-*}
         # Only a threads first sibling, so the mask is eight distinct CORES and not four
         # cores twice over. Go reports the mask width as GOMAXPROCS, so this is also what
         # makes every row name carry -8: the width is readable off the measurement.
         if [ "$first" = "$c" ]; then
-          out="${out}${out:+,}$c"
-          n=$((n + 1))
-          if [ "$n" -ge "$want" ]; then printf "%s\n" "$out"; return 0; fi
+          # No cache domain, no claim of spread, and the readback cannot catch this one
+          # either: GOMAXPROCS is 8 whether the eight cores share a domain or not. Same
+          # fail-closed as the sibling list above, and a distinct cause per rule 6.
+          d=$(keel_llc_first "$T/cpu$c")
+          if [ -z "$d" ]; then continue 3; fi
+          pairs="${pairs}${pairs:+ }$d:$c"
+          case " $doms " in
+            *" $d "*) ;;
+            *) doms="${doms}${doms:+ }$d"; ndoms=$((ndoms + 1)) ;;
+          esac
         fi
         c=$((c + 1))
       done
     done
+    # Pass two: one core from each domain in turn, and only once every domain has given
+    # its p-th core does anyone give a p+1-th. With one domain this is the consecutive
+    # answer the first form returned; with more domains than `want` it uses the first
+    # `want` of them and no domain twice. A pass that takes nothing means the node is
+    # exhausted, which is the only way out of this loop other than success.
+    out=; dl=; n=0; p=1
+    while [ "$n" -lt "$want" ]; do
+      took=0
+      for d in $doms; do
+        i=0
+        for t in $pairs; do
+          case $t in
+            "$d":*)
+              i=$((i + 1)); [ "$i" -eq "$p" ] || continue
+              out="${out}${out:+,}${t#*:}"; dl="${dl}${dl:+,}$d"
+              n=$((n + 1)); took=1; break ;;
+          esac
+        done
+        [ "$n" -ge "$want" ] && break
+      done
+      [ "$took" -eq 1 ] || break
+      p=$((p + 1))
+    done
+    # The two globals are the masks own witness of its SHAPE, which stdout cannot carry
+    # without changing what every caller of this function parses: KEEL_PIN_DOMLIST is the
+    # domain of each selected core in mask order, KEEL_PIN_NODEDOMS the domains the chosen
+    # node had to offer. Together they let a reader of the archive check the spread instead
+    # of trusting it -- distinct(domlist) must equal min(width, nodedoms) -- which the mask
+    # string alone cannot show, since a confined mask and a one-domain hosts correct mask
+    # are the same eight consecutive numbers.
+    if [ "$n" -ge "$want" ]; then
+      KEEL_PIN_DOMLIST=$dl; KEEL_PIN_NODEDOMS=$ndoms
+      printf "%s\n" "$out"; return 0
+    fi
   done
   return 1
 }
@@ -1267,11 +1354,11 @@ if ! command -v taskset >/dev/null 2>&1; then
 fi
 KEEL_MASK=\$(keel_pin_mask $KEEL_PIN_WIDTH) || KEEL_MASK=
 if [ -z \"\$KEEL_MASK\" ]; then
-  echo 'keel-pin: REFUSED, no $KEEL_PIN_WIDTH distinct physical cores inside a single NUMA node could be selected from sysfs on this host. Not taken rather than taken unpinned (DESIGN section 5 rule 5).' > '$log'
+  echo 'keel-pin: REFUSED, sysfs on this host yields no single NUMA node from which $KEEL_PIN_WIDTH distinct physical cores can be selected one-per-cache-domain -- no node list, no thread siblings to prove distinctness, no cache level to prove the spread, or too few cores. Not taken rather than taken unpinned (DESIGN section 5 rule 5).' > '$log'
   printf '%s\n' 121 > '$st'; exit 121
 fi
 PIN=\"taskset -c \$KEEL_MASK\"
-PINLINE=\"keel-pin: mask=\$KEEL_MASK width=$KEEL_PIN_WIDTH\""
+PINLINE=\"keel-pin: mask=\$KEEL_MASK width=$KEEL_PIN_WIDTH doms=\$KEEL_PIN_DOMLIST nodedoms=\$KEEL_PIN_NODEDOMS\""
   fi
 
   local tmpd; tmpd="$(mktemp -d)"
