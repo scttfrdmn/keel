@@ -9,6 +9,34 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The `free-placement` era's evidence is now in the repository: 35 archives at `archive/free-placement/`,
+  which is half of `pinned8`'s both-arms condition landed before the run that lands the other half**
+  (2026-08-21, ruled on #6). The era ledger makes a both-arms transition archive a condition of an era existing,
+  and the arm it wanted was cited as a path under gitignored `build/` — an arm that resolves on one operator's
+  laptop and nowhere else, which is the defect #114 already names for the BASELINE witness. 464 KB of plain text
+  buys a citation that resolves in any clone. **The set is closed by construction**, because `remote_exec` refuses
+  with status 121 rather than running a benchmark free, so `INDEX.tsv` was generated once from the files beside it
+  and has no tracked generator: apparatus for a set that cannot grow has nothing left to measure.
+  Read out of the archives rather than off their names: **15 `ladder` archives** (the judged benchmarks plus
+  `Peak`, one per revision × host over five revisions and four CPU models) and **20 `clock-window` archives**
+  (`Peak/avx512` alone, §5 rule 5's substitute clock instrument). **Twelve of the fifteen carry the `Ceiling`
+  arm** — the three at `ce43bca` predate it, so a share over the measured attainable ceiling is recomputable at
+  four revisions and not five, and per CPU model that is 4 / 4 / 2 / 2 for zen4 / zen5 / gnr / skx.
+  The arm ships with the disclosure it was ratified with: **these are single draws per configuration.** Ten
+  `-count` samples give within-run spread, but a model's several archives sit at different *revisions*, so they
+  are one draw each of several configurations rather than several draws of one — §5 rule 16 applies to this arm
+  exactly as to the README rows measured beside it, which is why `host-baselines.tsv` refuses to import keel-skx's
+  baseline from `5ec5fea` or `33de3b2`. So **the era mapping's precision is bounded by the free arm's own
+  spread**, and this arm cannot bound its own run-to-run component: a pinned row differing from its free
+  counterpart by less than that has not been shown to differ. Nothing was upgraded to make the transition read
+  better. Recorded and not fixed here: the 20 clock windows cannot be mapped back to the head/middle/tail series
+  the gate log reports, and **two causes are available** — `peak_window` calls `bench_csv "$log"` untagged
+  (`scripts/bench.sh:509`), so the window's own name reaches the scratch log and not the archive, and these
+  predate `RUN_STAMP`, so a second run at one revision overwrote the first. Either explains four preserved windows
+  per revision where a three-host fleet running a three-invocation series implies six; neither is asserted. The
+  tag is a one-word fix held until after the era-founding run, because `readme-numbers.sh` parses these names and
+  the moment before a founding run is the worst one to change them. It costs nothing published: every number
+  citing this era cites a `ladder` archive, and those name their host with no collision to resolve.
 - **Wave 2 classified two Intel AVX-512 hosts and they split: SKX admits to the judged set, ICX does not**
   (#6 Q3, 2026-08-21; `build/wave2-classify-7ac592a.log`). `keel-skx` — **Xeon Platinum 8124M**, `c5n.18xlarge`,
   36 cores / 2 sockets, equal to `c5n.metal`'s core count — classifies **issue-bound**: ceiling mixes converge

@@ -1,0 +1,30 @@
+keel-bench-cpu: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz
+keel-bench-cores: 72 logical
+keel-bench-governor: unknown (no cpufreq)
+keel-bench-clock-mhz: 1175-3456 (snapshot, not sustained)
+keel-bench-platform: linux/amd64
+keel-bench-backend: avx512 (available: avx512 avx2 scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: avx512: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: avx2: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: scalar: unavailable (no cpuinfo_max_freq)
+keel-bench-gomaxprocs: 72
+keel-bench-kern: 2x32/avx512 (available: 4x32/avx512 2x32/avx512 4x32/scalar 2x32/scalar)
+keel-bench-kern-class: issue insns-per-fma=4.625 (avx512 without vbmi2+vpopcntdq (Skylake-X / Cascade Lake / Cooper Lake generation))
+keel-bench-kern-audit: 4x32/avx512=6.250 2x32/avx512=4.625
+keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+goos: linux
+goarch: amd64
+pkg: github.com/scttfrdmn/keel/bench
+cpu: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz
+BenchmarkPeak/avx512-72         	    8257	    130638 ns/op	       192.6 GFLOP/s
+BenchmarkPeak/avx512-72         	    8950	    130173 ns/op	       193.3 GFLOP/s
+BenchmarkPeak/avx512-72         	    9064	    130133 ns/op	       193.4 GFLOP/s
+BenchmarkPeak/avx512-72         	    9124	    130617 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-72         	    9066	    130329 ns/op	       193.1 GFLOP/s
+BenchmarkPeak/avx512-72         	    9105	    130314 ns/op	       193.1 GFLOP/s
+BenchmarkPeak/avx512-72         	    9134	    130179 ns/op	       193.3 GFLOP/s
+BenchmarkPeak/avx512-72         	    8932	    130739 ns/op	       192.5 GFLOP/s
+BenchmarkPeak/avx512-72         	    9146	    130138 ns/op	       193.4 GFLOP/s
+BenchmarkPeak/avx512-72         	    8893	    130023 ns/op	       193.5 GFLOP/s
+PASS

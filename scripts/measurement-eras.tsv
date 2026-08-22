@@ -27,7 +27,13 @@
 #
 # Condition 2 cannot exist before the transition run that creates it, so an era is
 # LANDED with (1) and PROVISIONAL until (2) is filled in by the reviewed commit that
-# lands the era's registrations. Provisional is a disclosure, not a permission: it
+# lands the era's registrations. Half of it CAN exist beforehand, and for `pinned8` it
+# does: the old instrument's arm is 35 preserved archives at archive/free-placement/,
+# tracked with the single-draw disclosure rule 16 puts on them (ruled 2026-08-21, #6 —
+# the both-arms condition asks for both eras' evidence preserved and mapped, never for
+# simultaneous re-measurement, which the mask's refusal-with-no-opt-out makes
+# unavailable anyway). What the transition run adds is the pinned half.
+# Provisional is a disclosure, not a permission: it
 # does not widen what BASELINE covers. What bounds BASELINE is scripts/judged-runs.tsv
 # — one row per (host, era) — so each host gets exactly one BASELINE per era whether
 # the era is provisional or closed.
@@ -43,5 +49,5 @@
 #   4 transition_archive  the both-arms archive; `—` while provisional
 #   5 grounds             what changed about the instrument, in one clause
 era	opened	amendment	transition_archive	grounds
-free-placement	retroactive	DESIGN.md §5 rule 17 (2026-08-21, naming it)	n/a — the era before eras	every reading taken with no CPU pinning: the OS placed threads, so a host's rate carries its scheduler's choices. Retroactively named and deliberately undated — the era was not a concept while it ran, and inventing an opening date would be a provenance claim no artifact supports
-pinned8	2026-08-21	DESIGN.md §5 rule 5 (placement is pinned, fleet-wide and never selectively) + §5 rule 17 (the era clause)	—	every judged invocation and its ceiling arm run under one CPU affinity mask of eight distinct physical cores within a single NUMA node. Rows carry `-8` where the free arm carried `-192` or `-72`. PROVISIONAL: the both-arms transition archive is what fills this column, and it does not exist until the transition run lands
+free-placement	retroactive	DESIGN.md §5 rule 17 (2026-08-21, naming it)	n/a — the era before eras; its own readings are preserved at archive/free-placement/ (35 archives, INDEX.tsv, closed set)	every reading taken with no CPU pinning: the OS placed threads, so a host's rate carries its scheduler's choices. Retroactively named and deliberately undated — the era was not a concept while it ran, and inventing an opening date would be a provenance claim no artifact supports
+pinned8	2026-08-21	DESIGN.md §5 rule 5 (placement is pinned, fleet-wide and never selectively) + §5 rule 17 (the era clause)	—	every judged invocation and its ceiling arm run under one CPU affinity mask of eight distinct physical cores within a single NUMA node. Rows carry `-8` where the free arm carried `-192` or `-72`. PROVISIONAL: the both-arms transition archive is what fills this column, and it does not exist until the transition run lands. Its FREE half already does — archive/free-placement/, 35 archives, single draws per configuration — so what is missing is the pinned half and the mapping between them, not the old era's evidence

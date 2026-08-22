@@ -1,0 +1,56 @@
+# Copyright 2026 The keel Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# INDEX.tsv — one row per preserved free-placement archive. Generated once from the
+# files beside it and then frozen: see README.md for why this set has no generator.
+#
+# Every field except `kind` is read out of the archive itself, not out of its name.
+# `kind` is read out of the archive too — from which benchmarks it contains — because
+# the name does not say (README.md, "what the names do not record").
+#
+# columns, tab-separated:
+#   1 file       the archive beside this index
+#   2 rev        the tree revision, from the name (bench_csv put it there)
+#   3 host       the hostname, from the name; `—` where bench_csv was called untagged
+#   4 cpu_model  keel-bench-cpu, the exact string the registries key on
+#   5 logical    keel-bench-cores
+#   6 gomaxprocs keel-bench-gomaxprocs — the free arm read the whole machine
+#   7 kind       ladder (the judged benchmarks + their ceiling arm) | clock-window
+#   8 benches    distinct benchmark names
+#   9 samples    total sample lines
+file	rev	host	cpu_model	logical	gomaxprocs	kind	benches	samples
+bench-gate-p5-0bbf964-1.txt	0bbf964	—	AMD EPYC 9R14	192 logical	192	clock-window	1	10
+bench-gate-p5-0bbf964-2.txt	0bbf964	—	AMD EPYC 9R45	192 logical	192	clock-window	1	10
+bench-gate-p5-0bbf964-3.txt	0bbf964	—	Intel(R) Xeon(R) 6975P-C	384 logical	384	clock-window	1	10
+bench-gate-p5-0bbf964-4.txt	0bbf964	—	Intel(R) Xeon(R) 6975P-C	384 logical	384	clock-window	1	10
+bench-gate-p5-0bbf964-keel-gnr-3.txt	0bbf964	keel-gnr	Intel(R) Xeon(R) 6975P-C	384 logical	384	ladder	21	210
+bench-gate-p5-0bbf964-keel-zen4-1.txt	0bbf964	keel-zen4	AMD EPYC 9R14	192 logical	192	ladder	21	210
+bench-gate-p5-0bbf964-keel-zen5-2.txt	0bbf964	keel-zen5	AMD EPYC 9R45	192 logical	192	ladder	21	210
+bench-gate-p5-33de3b2-1.txt	33de3b2	—	AMD EPYC 9R45	192 logical	192	clock-window	1	10
+bench-gate-p5-33de3b2-2.txt	33de3b2	—	AMD EPYC 9R14	192 logical	192	clock-window	1	10
+bench-gate-p5-33de3b2-3.txt	33de3b2	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	72 logical	72	clock-window	1	10
+bench-gate-p5-33de3b2-4.txt	33de3b2	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	72 logical	72	clock-window	1	10
+bench-gate-p5-33de3b2-keel-skx-3.txt	33de3b2	keel-skx	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	72 logical	72	ladder	21	210
+bench-gate-p5-33de3b2-keel-zen4-2.txt	33de3b2	keel-zen4	AMD EPYC 9R14	192 logical	192	ladder	21	210
+bench-gate-p5-33de3b2-keel-zen5-1.txt	33de3b2	keel-zen5	AMD EPYC 9R45	192 logical	192	ladder	21	210
+bench-gate-p5-5ec5fea-1.txt	5ec5fea	—	AMD EPYC 9R45	192 logical	192	clock-window	1	10
+bench-gate-p5-5ec5fea-2.txt	5ec5fea	—	AMD EPYC 9R14	192 logical	192	clock-window	1	10
+bench-gate-p5-5ec5fea-3.txt	5ec5fea	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	72 logical	72	clock-window	1	10
+bench-gate-p5-5ec5fea-4.txt	5ec5fea	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	72 logical	72	clock-window	1	10
+bench-gate-p5-5ec5fea-keel-skx-3.txt	5ec5fea	keel-skx	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	72 logical	72	ladder	21	210
+bench-gate-p5-5ec5fea-keel-zen4-2.txt	5ec5fea	keel-zen4	AMD EPYC 9R14	192 logical	192	ladder	21	210
+bench-gate-p5-5ec5fea-keel-zen5-1.txt	5ec5fea	keel-zen5	AMD EPYC 9R45	192 logical	192	ladder	21	210
+bench-gate-p5-651d1bd-1.txt	651d1bd	—	AMD EPYC 9R14	192 logical	192	clock-window	1	10
+bench-gate-p5-651d1bd-2.txt	651d1bd	—	AMD EPYC 9R45	192 logical	192	clock-window	1	10
+bench-gate-p5-651d1bd-3.txt	651d1bd	—	Intel(R) Xeon(R) 6975P-C	384 logical	384	clock-window	1	10
+bench-gate-p5-651d1bd-4.txt	651d1bd	—	Intel(R) Xeon(R) 6975P-C	384 logical	384	clock-window	1	10
+bench-gate-p5-651d1bd-keel-gnr-3.txt	651d1bd	keel-gnr	Intel(R) Xeon(R) 6975P-C	384 logical	384	ladder	21	210
+bench-gate-p5-651d1bd-keel-zen4-1.txt	651d1bd	keel-zen4	AMD EPYC 9R14	192 logical	192	ladder	21	210
+bench-gate-p5-651d1bd-keel-zen5-2.txt	651d1bd	keel-zen5	AMD EPYC 9R45	192 logical	192	ladder	21	210
+bench-gate-p5-ce43bca-1.txt	ce43bca	—	Intel(R) Xeon(R) 6975P-C	384 logical	384	clock-window	1	10
+bench-gate-p5-ce43bca-2.txt	ce43bca	—	AMD EPYC 9R45	192 logical	192	clock-window	1	10
+bench-gate-p5-ce43bca-3.txt	ce43bca	—	AMD EPYC 9R14	192 logical	192	clock-window	1	10
+bench-gate-p5-ce43bca-4.txt	ce43bca	—	AMD EPYC 9R14	192 logical	192	clock-window	1	10
+bench-gate-p5-ce43bca-keel-gnr-1.txt	ce43bca	keel-gnr	Intel(R) Xeon(R) 6975P-C	384 logical	384	ladder	11	110
+bench-gate-p5-ce43bca-keel-zen4-3.txt	ce43bca	keel-zen4	AMD EPYC 9R14	192 logical	192	ladder	11	110
+bench-gate-p5-ce43bca-keel-zen5-2.txt	ce43bca	keel-zen5	AMD EPYC 9R45	192 logical	192	ladder	11	110
