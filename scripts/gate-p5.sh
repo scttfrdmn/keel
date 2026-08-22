@@ -51,26 +51,26 @@ P5_THREADS=8
 #
 # Retained only as the value the disclosure names as retired, never as a comparison:
 SCALE_FLOOR_RETIRED=6.0
-# EMPTY IS THIS ERA'S PRE-REGISTERED STATE, NOT A FALLBACK. 57.8 was ratified 2026-08-21
-# (#6 Q2, on STRSM_FLOOR's precedent below) over FREE-PLACEMENT medians and retired the
-# same day at the `pinned8` boundary: a bar from another instrument's rows books the
-# methodology delta as host drift, and the CEIL_DERIVED_FROM hosts are DERIV=1, so no
-# class shields them. Nor can it be pre-typed here -- the formula's inputs are this run's
-# own outputs. The era-founding run REPORTS (`-z "$CEIL_FRACTION"` below), a reviewed
-# commit types it from those rows, the next run judges. DESIGN.md §4/P5 is the authority
-# for all of it; scripts/readme-numbers.sh reads this line back verbatim.
-CEIL_FRACTION=
-# The three CPU models whose nine judged rows DERIVED CEIL_FRACTION. Named because the
+# TYPED 2026-08-22 from the era-founding run, closing DESIGN.md §4/P5's sequence: that run
+# REPORTED through the `-z` branch below, this commit types the value from its rows with the
+# derivation printed, the next run is the first `pinned8` judges. 57.8 was the free-placement
+# era's bar and is retired, not inherited -- another instrument's rows book the methodology
+# delta as host drift (#6 Q2, §5 rule 17(d)). readme-numbers.sh reads this line back verbatim.
+CEIL_FRACTION=51.0
+# The CPU models whose judged rows DERIVED CEIL_FRACTION. Named because the
 # BASELINE-REGISTERED class below turns on whether a criterion's reference artifact
-# predates the host's admission, and for these three it does not — they ARE the artifact.
+# predates the host's admission, and for these it does not — they ARE the artifact.
 # So they stay on the fleet bar, and only hosts outside this set are registry-governed.
 # Per-host convergence for them is a post-tag option, not part of #6 (ruled 2026-08-21).
-CEIL_DERIVED_FROM="AMD EPYC 9R14|AMD EPYC 9R45|Intel(R) Xeon(R) 6975P-C"
+# NARROWED to two models with 51.0: Xeon 6975P-C derived 57.8 and derived nothing here,
+# gnr having dropped to characterization, which DESIGN.md §4/P5 rules is "never mixed into
+# the citable set". Leaving it would put a future Intel host on a bar two Zen models set.
+CEIL_DERIVED_FROM="AMD EPYC 9R14|AMD EPYC 9R45"
 # The margin between a registered baseline and the bar it sets; the registry it is
 # subtracted from is named below, once the exercise seam has decided which one that is.
 #
 # THE MARGIN IS CEIL_FRACTION'S OWN, not a second constant with a second justification:
-# 60.4 - 2.6 = 57.8 is the derivation this gate already prints, so a per-host bar is the
+# 53.6 - 2.6 = 51.0 is the derivation this gate already prints, so a per-host bar is the
 # fleet bar's construction applied to a different baseline rather than a new kind of
 # threshold. One number, stated once, reused — which also means a future re-argument of
 # the margin moves both bars together instead of leaving them to drift apart.
@@ -627,10 +627,10 @@ info "-test.count=$KEEL_BENCH_COUNT -test.benchtime=$KEEL_BENCH_TIME; one invoca
 info "counts inside it, and the floor counts as cleared only net of both intervals"
 if [[ -n "$CEIL_FRACTION" ]]; then
   info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, its 8-thread form and this fraction ratified 2026-08-21, #6)"
-  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest judged row of build/gate-p5-651d1bd.log (keel-zen5 Ssyrk, 60.4% net of BOTH intervals) less 2.6 points of margin. >= 90% was refused because all nine judged rows sat under it. Derived from that run and enforced here, so this reading can fail it"
-  info "  the 60.4% input is that run's row RE-DERIVED through bench_ratio_lo, not the 61.1% it printed: the bar's definition is unchanged, its input was computed by a site that dropped the ceiling's interval (repaired 2026-08-21, #6). The nine re-derived rows drop by 0.7 to 4.3 points, the argmin does not move"
+  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest judged row of build/gate-p5-be5bb91.log (keel-zen5 Ssymm, 53.6% net of BOTH intervals) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. The set is SIX rows over TWO models, and what it cannot see is stated inside it (§5 rule 12): no Intel silicon derived it, keel-skx being DERIV=0 and gnr characterization, and the two it has spread 53.6-89.9%, so one fleet bar is set by the weakest host — per-host convergence is the post-tag option named above"
+  info "  the bar FELL 6.8 points from the retired 57.8 and the cause is the DENOMINATOR, not the kernels: every judged rate on both derivation hosts rose under pinning, and keel-zen5's measured ${P5_THREADS}-thread ceiling rose further than any of them (1564.5 -> 1999.5 GFLOP/s, +27.8%), so its share fell. keel-zen4's ceiling rose 14.8% against rates rising 18-21%, and its shares rose. A share moves when either term does (#6, and the argmin moved with it: Ssyrk -> Ssymm)"
 else
-  info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE — the live cause, stated because this branch has had another: 57.8 was derived over free-placement medians and era $P5_ERA cannot inherit it, since a bar from another instrument's rows books the methodology delta as host drift; nor can it be pre-typed from this run, whose own rows are its formula's inputs. So this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first this era judges (ruled 2026-08-21, #6; §5 rule 17(d))"
+  info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). This branch has fired twice: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor, and at era $P5_ERA's boundary, where 57.8 could not be inherited because a bar from another instrument's rows books the methodology delta as host drift"
 fi
 if [[ -n "$STRSM_FLOOR" ]]; then
   info "judged at >= ${STRSM_FLOOR}x: $P5_MEASURED — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)"

@@ -79,6 +79,25 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **`CEIL_FRACTION = 51.0`, typed for `pinned8` from the era-founding run, with its derivation set narrowed from
+  three CPU models to two** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; #6). The minimum
+  judged row on `build/gate-p5-be5bb91.log` is `keel-zen5` `Ssymm` at 53.6% net of both intervals, less the same
+  2.6 points of margin. **The bar fell 6.8 points and the cause is the denominator, not the kernels:** every judged
+  rate on both derivation hosts rose under pinning, and zen5's measured 8-thread ceiling rose further than any of
+  them — 1564.5 → 1999.5 GFLOP/s, +27.8%, against rates at +6.2/+17.5/+9.0% — so its share fell while its code got
+  faster. zen4 is the mirror image (ceiling +14.8%, rates +17.6–21.0%, shares up), and the argmin moved with it,
+  `Ssyrk` → `Ssymm`. `Intel(R) Xeon(R) 6975P-C` leaves `CEIL_DERIVED_FROM`: `gnr` is characterization, and
+  characterization hosts are "never mixed into the citable set" — the 2026-08-21 ruling applied, not a new decision,
+  and no verdict moves because the model is not in the fleet. Stated inside the number (§5 rule 12): **no Intel
+  silicon derived this bar**, and the two models that did spread 53.6–89.9%, so one fleet bar is set by the weakest
+  host. `keel-skx` does not register beside it — one draw is not an estimator (§5 rule 16) and its witness row may
+  not land without its baseline, so it re-renders `BASELINE` on the confirmation run, printed as a debt by design.
+  Found by exercising the twin against that log and **left for the README regeneration to fix, in the file it already
+  has to touch**: `readme-numbers.sh` dies on a `BASELINE` verdict line, because that branch prints no `scaling …x /
+  …x net of CI` clause and the parser requires four numbers. It fails closed, so nothing is published wrongly — but
+  no log containing a BASELINE host can generate a caption at all, and the fix is a *counted* exclusion ("a published
+  row is born from a judged run") rather than a skip, since a parser silent about what it never read greens like a
+  clean one. Pre-existing: the era-founding run is simply the first log this class has ever appeared in.
 - **`CEIL_FRACTION` is retired at the era boundary, and empty is its pre-registered state rather than its
   fallback** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; ruled 2026-08-21 on #6, the
   same day 57.8 was ratified — §5 rule 17(d), a derived constant re-derives by its own formula over new-era
