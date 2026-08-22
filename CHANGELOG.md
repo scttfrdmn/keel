@@ -302,6 +302,17 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **Two runs at one rev on one host wrote one archive path, so the second overwrote the first's samples**
+  (found 2026-08-21 while building the synthetic exercise, measured rather than reasoned). `bench_csv` keyed the
+  path on gate, rev, host and a counter — and the counter was per *process*, so it discriminated archives inside
+  a run and nothing at all between runs. Two shells sourcing `scripts/bench.sh` and calling the function both
+  printed `build/bench-<gate>-804fb75-keel-probe-1.txt`, the second `cp` silently replaced the first's numbers,
+  and the gate printed the path as that run's own archive either way. The two things this project most often does
+  with one rev are exactly the two that collide: DESIGN.md §4's one-immediate-re-run allowance for a failing
+  throughput sentinel says **both outputs archived**, which the naming made impossible, and an instrument exercise
+  runs one gate three times over to drive three states. A per-process UTC run stamp now sits between the host and
+  the counter; it goes at the **end** because `readme-numbers.sh` reads the rev by offset from `bench-gate-p5-`
+  and both `build/bench-gate-p5-*-<host>-*.txt` globs still match, so an appended field costs no reader.
 - **The fleet-wide CPU affinity mask was law, doc and measurement era three times over, and no line of code
   applied it** (§5 rule 5, found and implemented 2026-08-21 while building the synthetic exercise of the
   BASELINE-REGISTERED class, ruled on #6).

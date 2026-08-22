@@ -106,9 +106,15 @@ bench_flags() {
 # line announcing an archive on that stream would arrive labelled as a warning
 # about the measurement, and would make the "any warnings?" branch fire on every
 # run. The caller prints $BENCH_ARCHIVE where it already prints provenance.
+#
+# THE COUNTER IS PER PROCESS, so it discriminated archives within a run and nothing
+# between runs: two runs at one rev on one host wrote one path and the second overwrote
+# the first (measured, 2026-08-21). Hence the run stamp, set on first use. It goes at the
+# END because readme-numbers.sh reads the rev by offset from `bench-gate-p5-`.
 bench_csv() {
+  BENCH_ARCHIVE_RUN="${BENCH_ARCHIVE_RUN:-$(date -u +%Y%m%dT%H%M%SZ)}"
   BENCH_ARCHIVE_N=$((${BENCH_ARCHIVE_N:-0} + 1))
-  BENCH_ARCHIVE="build/bench-$(basename "${0%.sh}")-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)${2:+-$2}-$BENCH_ARCHIVE_N.txt"
+  BENCH_ARCHIVE="build/bench-$(basename "${0%.sh}")-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)${2:+-$2}-$BENCH_ARCHIVE_RUN-$BENCH_ARCHIVE_N.txt"
   mkdir -p build && cp "$1" "$BENCH_ARCHIVE" 2>/dev/null || BENCH_ARCHIVE="(not archived)"
   go run ./tools/benchci "$1"
 }
