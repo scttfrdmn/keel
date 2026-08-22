@@ -79,6 +79,27 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **`CEIL_FRACTION` is retired at the era boundary, and empty is its pre-registered state rather than its
+  fallback** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; ruled 2026-08-21 on #6, the
+  same day 57.8 was ratified — §5 rule 17(d), a derived constant re-derives by its own formula over new-era
+  inputs). 57.8 came from free-placement medians on the three `CEIL_DERIVED_FROM` models, and those models are
+  `DERIV=1` — the fleet-bar hosts the BASELINE-REGISTERED class deliberately does not shield. Left standing it
+  would judge their *pinned* readings against a *free* bar: the methodology delta booked as host drift, arriving
+  through the bar rather than through the registry, which is the one error the era boundary exists to prevent.
+  **Counted rather than assumed, it judged one complete run** — `gate-p5-33de3b2.log`, nine rows, no `keel-pin`
+  line, and its RED is the observation that minted rule 17; `gate-p5-fdd23d4.log` cites it in the preamble and
+  never reached a judged row. It never judged a pinned reading and now never will. Nor can the `pinned8` value be
+  pre-typed, which is a construction and not a scheduling problem: the formula's inputs are the era-founding run's
+  own outputs, so a bar derived from the rows it judges is cleared by its own argmin by exactly the margin every
+  time, certifying arithmetic rather than silicon. So the transition run **reports** through the branch already in
+  the gate, a reviewed commit types the value from those rows with its derivation printed, and the confirmation run
+  is the first this era judges — #37's rhythm, and 57.8's own. Both copies empty together because
+  `readme-numbers.sh` reads the gate's line back verbatim and dies on disagreement, which is why the second file is
+  a second edit and not a second decision. The preamble's empty-fraction line had also kept the *previous*
+  deferral's reason ("until the bandwidth term is measured on the fleet"), false since the ceiling was measured, so
+  it now names the live cause; the era-founding log is this era's constitution and may not carry a stale one. The
+  historical re-adjudication is undisturbed — a free-placement bar over free-placement archives is intra-era by
+  construction, so its 35-of-105 stands and does not become a cross-era claim.
 - **The BASELINE-REGISTERED class gets a synthetic driver before the era-founding run, not after it**
   (`scripts/exercise-baseline.sh`, ordered by Scott's ruling of 2026-08-21 on #6). The class decides which bar
   governs a host from the contents of two tracked files, and **its row loop had never executed**: no `frac`

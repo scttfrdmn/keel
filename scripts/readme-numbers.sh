@@ -47,7 +47,12 @@ CAP_END='<!-- keel-caption: end -->'
 # each host's own measured 8-thread ceiling. Ratified 2026-08-21 at 58.5, re-typed to 57.8
 # that day when a repair restored the ceiling's interval to the site computing its input (#6
 # Q2). The empty-bar branch below is live, not dead code — the next deferred bar uses it.
-CEIL_FRACTION=57.8
+#
+# THE NEXT DEFERRED BAR ARRIVED (2026-08-21, ruled on #6): 57.8 is retired at the `pinned8`
+# era boundary — gate-p5.sh's comment and DESIGN.md §4/P5 carry the reasoning. Emptied here
+# in the same commit because the check below reads that line back verbatim, so this is a
+# second edit and not a second decision.
+CEIL_FRACTION=
 STRSM_FLOOR=7.0
 SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'
