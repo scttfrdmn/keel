@@ -524,6 +524,22 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **The 8-thread compute ceiling under-reads by 10–37%, and it is the harness, not the machine** (#115,
+  2026-08-22). `computeArm` re-forks 8 goroutines and joins them every one of `b.N` iterations.
+  `BenchmarkT52Hoist` is the same arm with the fork lifted out of the loop — same work, same flops formula,
+  `b.N` joins reduced to one — and paired against the shipped arm on each host under each mask it reads
+  **1.290 → 1.010** (keel-zen4 spread), **1.599 → 1.014** (keel-zen5 spread), **1.147 → 1.029** and
+  **1.157 → 1.007** confined, as multiples of eight times each host's own 1-thread rate. Duty cycle rises to
+  **0.97–0.99** on all six arms, so the lost time is workers *parked*: **the spread-mask collapse is a
+  fork/join cost, and the spread-vs-confined gap goes from 0.143 to −0.019 and from 0.442 to 0.007.**
+  Placement was correct throughout — 8 running threads on 8 distinct masked cpus — and keel-skx, whose two
+  masks are byte-identical, is flat in every arm both before and after. `internal/par/par.go:109` forks per
+  call too, so the routines share the shape; what differs is op duration, **204 ms for
+  `Scale/Sgemm/n=4096/threads=8` against 268 µs for the ceiling**, a factor of 762, which makes a ~60 µs
+  fork/join **22% of a ceiling op and 0.03% of a routine op**. Both sides of every judged share pay it and
+  only the denominator pays it at a rate that matters — so **this is the cause of the impossible denominator
+  below, not a second finding** (§5 rule 14: severity is a function of deployment context). Hoisting the
+  shipped arm changes the criterion's denominator, so it is blocked on a ruling.
 - **A ceiling below a rate it denominates is now refused, not divided** (#6, 2026-08-22). `gate-p5`'s share
   criterion published three plausible passes over an impossible denominator on `keel-zen4`: the measured
   8-thread ceiling read **461.4 GFLOP/s ± 62.68%** while the three judged 8-thread rates read 675.1, 704.3 and
