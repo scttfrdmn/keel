@@ -79,6 +79,28 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The reported 8-thread stream ceiling is a single-CCD figure, ~6× below the socket, because §5 rule 5's affinity
+  mask packs all 8 threads into one CCD** (`keel-zen5`, EPYC 9R45; #6). sysfs gives `shared_cpu_list` for
+  `index3` as exactly 8 cores wide, so `keel_pin_mask`'s "first 8 distinct physical cores in order inside one NUMA
+  node" is definitionally one L3 domain. A three-arm probe — mask `0-7`, then `0,8,16,…,56`, then `0-7` again —
+  measures 8-thread **dot 56.26 → 335.48 GB/s (5.96×)** and **axpy 75.89 → 353.0 GB/s (4.65×)**, which fully accounts
+  for the era's collapse at `be5bb91` (dot 198.7 → 56.525, axpy 227.4 → 76.195) and then some: the spread arm
+  *exceeds* the free era's own reading by 1.69× and 1.55×, so scheduler placement was leaving CCD bandwidth on the
+  table before the mask existed too. Three controls: the repeated first arm reproduces itself to 0.10%
+  (so not drift or thermal), the 1-thread arms are invariant across masks (so not the instrument), and arm A's
+  1-thread axpy matches the gate harness to 0.01% (66.29 vs 66.30). **Consequence is forward-looking**: the figure is
+  inert today — `scripts/gate-p5.sh` reports it and keeps the `min()` on the compute term alone, which stays the
+  strict direction — but it is documented there as a candidate for that `min()`, and promoting a 6×-low bandwidth
+  into a ceiling would understate the ceiling in the flattering direction. The compute ceiling is unaffected,
+  needing no cross-CCD traffic, so DESIGN.md's strict-direction argument survives. **No headroom multiple is quoted
+  here on purpose**: converting GB/s to a FLOP/s bound needs a declared DRAM traffic count, and as that same line
+  says, no benchmark declares one — the honest statement is the measured bandwidth ratio, not a modelled headroom
+  derived from a denominator this tree does not have. **The mask was not changed** — rule 5 is
+  law and it pins fleet-wide, never selectively, so whether to spread across CCDs is Scott's call (#6). `keel-zen4`
+  is *inferred, not probed*: its harness bandwidth fell comparably (103.25 → 39.265 GB/s at 8 threads) on the same
+  vendor topology. `keel-skx`, which has no CCDs, *gained* under pinning (52.5 → 88.0 GB/s) and is the negative
+  control. Probe is ad-hoc and deliberately untracked: it varies rule 5's mask and carries no provenance block, so
+  it is **not citable as a keel measurement** and adds no `scripts/` lines.
 - **The headline criterion's PASS and FAIL lines named a denominator retired two days earlier** (`scripts/gate-p5.sh`;
   #6). Both said hosts cleared "their class's bar … against their own single-thread rate", but the judged share has
   divided by each host's own measured 8-thread ceiling since the 2026-08-20 ruling; only `Strsm` still divides by a
