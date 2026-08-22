@@ -357,16 +357,24 @@ run_pass() {
   for f in "build/baseline-candidates-$REV.tsv" "build/witness-candidates-$REV.tsv"; do
     if [[ -e "$f" ]]; then cp "$f" "$DIR/pass$n-$(basename "$f")"; fi
   done
-  # The delegated log is collected per pass, and its path is READ OUT OF THE PASS LOG
-  # rather than reconstructed: the gate prints where it wrote, and three passes at one rev
-  # used to overwrite one file until RUN_STAMP landed -- a driver that rebuilt the name
-  # would be asserting it still knows the naming rule that just changed.
-  local dlog
-  dlog="$(sed -n 's/^ *full output: \(build\/gate-p4-under-p5-[^ ]*\.log\) .*/\1/p' "$DIR/pass$n.txt" | tail -1)"
-  if [[ -n "$dlog" && -e "$dlog" ]]; then
-    cp "$dlog" "$DIR/pass$n-gate-p4-under-p5.log"
-  else
-    say "   pass $n names no delegated log ('$dlog'), so the stamp audit below covers the parent only"
+  # The delegated chain is collected per pass by asking each log which log it names, down
+  # two levels: gate-p5 names gate-p4's, gate-p4 names gate-p3's. Two levels because the
+  # stamp has to survive two delegations, and surviving them is exactly what the `export`
+  # 804fb75 lifted is for. The paths are READ rather than reconstructed -- three passes at
+  # one rev used to overwrite one file until RUN_STAMP landed, so a driver that rebuilt the
+  # name would be asserting it still knows a naming rule that had just changed.
+  local src="$DIR/pass$n.txt" d
+  DCOLLECTED=0
+  while :; do
+    d="$(dlogs "$src")"
+    [[ -n "$d" && -e "$d" ]] || break
+    cp "$d" "$DIR/pass$n-$(basename "$d")"
+    DCOLLECTED=$((DCOLLECTED + 1))
+    src="$d"
+  done
+  if [[ "$DCOLLECTED" -eq 0 ]]; then
+    say "   pass $n names no delegated log, so the stamp audit below covers this pass's parent"
+    say "   log ONLY -- and it says so there too, since a tally is read where it is printed"
   fi
   say "   pass $n exited $PASSRC (2 is the withheld-verdict exit), full output $plog"
   if [[ "$PASSRC" -ne 2 ]]; then
@@ -378,6 +386,18 @@ run_pass() {
 
 # count PATTERN N -- occurrences of a verdict phrase in pass N's stripped log.
 count() { grep -cF "$1" "$DIR/pass$2.txt" || true; }
+
+# dlogs LOG -- the delegated log path LOG names, if any. Keyed to the phrase the gates
+# print and tolerant of ANY prefix: instrument_exercise stamps info lines too, so
+# `[synthetic] ` sits between the indent and the phrase, and an anchored `^ *full output:`
+# matched nothing on all three passes (found live, 2026-08-22). It failed closed -- the
+# driver said the delegate was uncollected instead of auditing files it never read -- which
+# is why that is a finding and not a false green. `sort -u` because gate-p4 names gate-p3's
+# log twice, in the announcement and again in the exit-code note.
+dlogs() {
+  sed -n 's/^.*full output: \(build\/gate-p[0-9]-under-p[0-9]-[^ ]*\.log\).*/\1/p' "$1" |
+    sort -u | tail -1
+}
 
 # --------------------------------------------------------------- read-backs
 #
@@ -505,12 +525,21 @@ land_registry() {
 # that happens to contain the word cannot be counted as a verdict (the failure recorded
 # in exercise-dead-host.sh). The delegated logs are audited too -- that is what the
 # missing `export` cost, and an unstamped child is the whole reason it was lifted.
+#
+# THE TALLY NAMES ITS OWN DOMAIN, which is repair and not decoration. On this driver's
+# first firing no delegated log was collected (see dlogs), so this audit read three parent
+# logs, totalled 129, and concluded "all 129 verdict lines carry [synthetic] ... parent or
+# delegate". The disclosure existed -- three screens earlier, once per pass -- and the
+# summary line contradicted it. So: the file count is printed with the total, an expected
+# count is asserted, and an uncollected delegate is a NO rather than a footnote. A checker
+# is silent about what it never parsed.
 stamp_audit() {
-  local n total=0 unstamped=0 f
+  local n total=0 unstamped=0 f files=0
   say ""
-  say "-- stamp audit: every verdict line of every pass, parent and delegate --"
-  for f in "$DIR"/pass[123].txt "$DIR"/pass[123]-gate-p4-under-p5.log; do
+  say "-- stamp audit: every verdict line of every log this run collected --"
+  for f in "$DIR"/pass[123].txt "$DIR"/pass[123]-gate-p[0-9]-under-p[0-9]-*.log; do
     [[ -e "$f" ]] || continue
+    files=$((files + 1))
     local raw
     raw="$(strip "$f")"
     n="$(grep -cE '^  (PASS|FAIL|UNMEASURED|BASELINE)  ' <<<"$raw" || true)"
@@ -520,11 +549,19 @@ stamp_audit() {
     say "   $(basename "$f"): $n verdict line(s), $u unstamped"
   done
   local signed
-  signed="$(grep -hE '^gate-p[0-9]: (GREEN|RED)' "$DIR"/pass[123].txt "$DIR"/pass[123]-gate-p4-under-p5.log 2>/dev/null | grep -c . || true)"
+  signed="$(grep -hE '^gate-p[0-9]: (GREEN|RED)' "$DIR"/pass[123].txt "$DIR"/pass[123]-gate-p[0-9]-under-p[0-9]-*.log 2>/dev/null | grep -c . || true)"
   say "   signed verdict lines across every log: $signed (expected 0)"
-  if [[ "$unstamped" -eq 0 && "$signed" -eq 0 && "$total" -gt 0 ]]; then
-    say "   YES: all $total verdict lines carry [synthetic] and nothing signed a verdict,"
-    say "   parent or delegate."
+  # 9 = three passes x (parent + gate-p4 + gate-p3). Asserted rather than assumed, because
+  # every way this audit can be wrong is a way of reading fewer files than it claims.
+  local want=$((3 * 3))
+  if [[ "$files" -ne "$want" ]]; then
+    say "   NO on coverage: $files log(s) audited where the three-pass chain is $want (parent,"
+    say "   gate-p4, gate-p3 per pass). The stamp is unaudited wherever a log is missing, and"
+    say "   an unstamped delegate is precisely what the lifted \`export\` exists to prevent, so"
+    say "   this reads as no exercise of the stamp rather than as $total clean lines."
+  elif [[ "$unstamped" -eq 0 && "$signed" -eq 0 && "$total" -gt 0 ]]; then
+    say "   YES: all $total verdict lines across $files log(s) carry [synthetic] and nothing"
+    say "   signed a verdict -- three passes, each of parent, gate-p4 and gate-p3."
   else
     say "   NO: $unstamped of $total verdict lines are unstamped and $signed verdict lines"
     say "   were signed. A synthetic log that reads as a gate result is worse than no"

@@ -322,6 +322,31 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **The gate told every reader that nothing was pinned, one line above every number the mask shaped**
+  (2026-08-22). `804fb75` put the affinity mask in `remote_exec` and added the readback criterion, and left
+  `gate-p5`'s per-host provenance line saying *"nothing is pinned either way, placement is the scheduler's"* —
+  printed once per host, immediately above that host's ratios, and it would have been printed into the founding
+  log of the `pinned8` era. The line now states the hazard the mask removes (`smt=2` means eight goroutines
+  *unmasked* could span four physical cores and their siblings) and then the mask that removes it, reading
+  `$KEEL_PIN_WIDTH` from `remote.sh` rather than retyping `8`. `docs/gates.md`'s criterion 4 is corrected the same
+  way, including the refusal — no `taskset` or no eight-core node is status 121 and nothing measured. Neither site
+  says issue #15 is closed, because it is not: the *decision* it asked for was ruled and implemented, and #15
+  closes on vesta's rows being re-measured under the mask, since an adoption closes on measurement rather than on
+  a ruling. That reasoning is now recorded on #15 itself with the four measured grounds, including the
+  **±0.11% pinned against ±14.6% unpinned** probe that is #15's own phenomenon.
+- **The exercise driver's own `[synthetic]` stamp defeated the driver's own reader, and the audit then claimed
+  coverage it did not have** (found live on the first firing, 2026-08-22). `run_pass` collected the delegated
+  gate's log by matching `^ *full output: build/gate-p4-under-p5-…`, but `instrument_exercise` stamps `info`
+  lines too, so `[synthetic] ` sits between the indent and the phrase and the anchored pattern matched nothing on
+  all three passes. It **failed closed** — the driver said the delegate was uncollected rather than tallying files
+  it had never read — and then `stamp_audit`, skipping absent files with `continue`, totalled three parent logs
+  and concluded *"all 129 verdict lines carry `[synthetic]` … parent or delegate"*. The disclosure existed three
+  screens earlier, once per pass, and the summary line contradicted it. Now: the extractor tolerates any prefix
+  before the phrase and walks the chain **two levels** (gate-p5 names gate-p4's log, gate-p4 names gate-p3's),
+  because surviving two delegations is precisely what the lifted `export` is for; and the audit prints the file
+  count beside the total, asserts the expected nine, and calls a missing log **NO on coverage** rather than
+  reporting the surviving lines as clean. Both branches driven against this run's real bytes: nine logs / **420
+  verdict lines / 0 unstamped / 0 signed**, and with one log removed it refuses rather than reporting 382.
 - **#78's fix rev-stamped the delegated gate logs and left two runs at one rev overwriting each other, which is
   the same defect past its own fix** (found 2026-08-21 from the other end, while writing the exercise driver's
   own `#78` control). `build/gate-p4-under-p5-<rev>.log` and `build/gate-p3-under-p4-<rev>.log` stopped a run at

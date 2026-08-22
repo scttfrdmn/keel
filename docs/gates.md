@@ -811,11 +811,19 @@ HOW THOSE BECOME CHECKS, and every judgement call involved:
     THE RECORD. "At 8 cores" is not "at GOMAXPROCS=8 on whatever that lands on":
     eight goroutines on four physical cores and their SMT siblings cannot reach 6x,
     and would fail this gate for a reason that is not keel's. So the gate requires
-    >= 8 CPUs, prints threads-per-core and cores-per-socket per host, and pins
-    NOTHING — placement is the scheduler's, and issue #15 (vesta's bimodal Sdot,
-    CCD placement) is the open pinning decision this measurement feeds. If a host
-    misses the floor with sibling placement as the visible cause, that is a finding
-    to write up and take to a ruling, not a bar to lower here.
+    >= 8 CPUs, prints threads-per-core and cores-per-socket per host, and PINS
+    every judged invocation to eight distinct physical cores within one NUMA node
+    — the ceiling arm under the identical mask, since a share whose numerator and
+    denominator came from different placement methodologies is not a share. No
+    taskset, or no such node, is status 121 and nothing measured: a free-placement
+    reading wearing a `pinned8` label is the one artifact the era ledger exists to
+    make impossible. That is the pinning decision issue #15 (vesta's bimodal Sdot,
+    CCD placement) asked for, ruled into DESIGN §5 rule 5 on 2026-08-21 and
+    implemented in `remote_exec`; #15 stays open until its own rows are
+    re-measured under the mask, because an adoption closes on measurement and not
+    on a ruling. If a host misses the floor with sibling placement as the visible
+    cause, that is a finding to write up and take to a ruling, not a bar to lower
+    here — and now the refusal is how that finding arrives.
 
  5. PARALLELISM IS A CORRECTNESS QUESTION BEFORE IT IS A THROUGHPUT ONE, AND THE
     STANDARD IS BITWISE. Partitioning the MC loop splits C by row panels; it does

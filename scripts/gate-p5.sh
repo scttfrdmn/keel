@@ -348,7 +348,7 @@ if [[ -n "$HOSTS" ]]; then
     # (#82). It is also now in every gate's archived record, not just this one's.
     ncpu="$(sed -n 's/.*| \([0-9]*\) cpus |.*/\1/p' <<<"$prov")"
     smt="$(sed -n 's/.*| smt=\([0-9?]*\) |.*/\1/p' <<<"$prov")"
-    info "[$host] smt=${smt:-?} threads/core, so the criterion's $P5_THREADS goroutines can span as few as $P5_THREADS/${smt:-?} physical cores; nothing is pinned either way, placement is the scheduler's (#15)"
+    info "[$host] smt=${smt:-?} threads/core, so UNMASKED the criterion's $P5_THREADS goroutines could span as few as $P5_THREADS/${smt:-?} physical cores — which is the hazard the mask removes: every benchmark below runs on $KEEL_PIN_WIDTH distinct physical cores inside one NUMA node, refused rather than run free, and read back per row (§5 rule 5; the pinning decision #15 asked for)"
     # The two branches are the three-way taxonomy's pair, and #73 rules them
     # apart deliberately: an unreadable count is a reading nobody got, a count
     # that reads short is a reading the gate has and the environment fails. Both
