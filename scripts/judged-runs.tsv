@@ -1,0 +1,53 @@
+# Copyright 2026 The keel Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# judged-runs.tsv — which CPU models have been judged in which era. Tab-separated,
+# tracked, one row per (cpu_model, era). This is the WITNESS the BASELINE-REGISTERED
+# class distinguishes newness from an unmet registration with (#6, #114).
+#
+# WHY IT IS A TRACKED FILE. The first implementation asked the question of
+# `build/bench-gate-p5-*-<host>-*.txt` — the archives the run itself writes. That
+# reads correctly on the machine that has been running the gate and is WRONG
+# EVERYWHERE ELSE: `build/` is gitignored, so on a fresh clone, on CI, or on a second
+# operator's machine no host has ever been judged, every host is `new` forever, and
+# BASELINE renews on every run. A per-machine witness defeats single-shot exactly as
+# thoroughly as the permanent exemption the class was built to kill — it just does it
+# quietly, and only for readers who are not the operator (ruled 2026-08-21).
+#
+# WHY IT IS KEYED ON cpu_model AND NOT ON HOSTNAME. Deviation from the ruling's
+# wording — "keyed (host, era)" — taken deliberately and recorded here rather than
+# resolved silently in either direction. The registry next door is keyed on the exact
+# CPU-model string because that is the key the criterion consuming it greps: "one key
+# shared with the criterion", so the artifact can never disagree with the check about
+# who a host is. A hostname-keyed witness would break that in the one direction that
+# matters: renaming keel-skx to keel-skx2 would produce no witness row and hand the
+# host a second BASELINE, which is exemption-renewal-by-rename — the same loophole the
+# era guard closes one door down. Keying on cpu_model closes it, and costs nothing,
+# because a *second* host of an already-judged model finds a registered row and is
+# never in BASELINE's path at all. The hostname is recorded in column 5 as provenance,
+# never read as a key.
+#
+# WHAT THIS BUYS AND WHAT IT DOES NOT (§5 rule 12 — the limitation goes inside the
+# number). Automatic-and-invisible has been traded for reviewed-and-visible. The gate
+# proposes a witness row exactly as it proposes a baseline row — same scratch file,
+# same reviewed commit — so a session that lands the candidate baseline lands the
+# witness with it. A session that lands NEITHER leaves the host unregistered, and the
+# next run renders BASELINE again. That repeat is not silent: it is the state where
+# nothing was registered, and gate-p5 prints it as a debt line on every run until it
+# is discharged. The old scan could not be skipped but could not be read either; this
+# one can be read by anyone with the repo.
+#
+# ERA SCOPING. A row licenses nothing outside its era. When an instrument change opens
+# a new era (scripts/measurement-eras.tsv), no host has a witness in it yet, so every
+# host renders BASELINE once — which is the point: judging a new-era reading against an
+# old-era baseline would book the methodology delta as host drift. Each host therefore
+# gets exactly ONE BASELINE PER ERA, and an era cannot be conjured by convenience.
+#
+# columns, tab-separated:
+#   1 cpu_model  the exact string the host reports, as gate-p5 greps it
+#   2 era        the era of the instrument that judged it (measurement-eras.tsv)
+#   3 rev        the tree revision of the first judged run in this era
+#   4 as_of      the date of that run
+#   5 host       the hostname that produced it — provenance, never a key
+#   6 archive    the archived log the run is recomputable from
+cpu_model	era	rev	as_of	host	archive

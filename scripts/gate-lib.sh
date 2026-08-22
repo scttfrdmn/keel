@@ -238,54 +238,98 @@ flops_formula() {
 # rather than in gate-p5.sh only because a decision no harness can drive is a
 # decision nothing checks, and scripts/baseline-test.sh drives every branch of these.
 
-# baseline_lookup TSV CPU CRIT — the registry row for one host × criterion, or nothing.
-# Absent file and absent row are deliberately the SAME answer: "this host is not
-# registered" is what the caller needs, and a missing registry is a repository with no
-# registered hosts. What separates newness from an unmet obligation is baseline_prior,
-# below, and keeping the two apart is the point — a lookup that also guessed at
-# newness would be deciding the verdict inside the accessor.
-baseline_lookup() {
-  local tsv="$1" cpu="$2" crit="$3"
-  [[ -r "$tsv" ]] || return 0
-  awk -F'\t' -v c="$cpu" -v k="$crit" '
-    /^#/ || $1 == "cpu_model" { next }
-    NF >= 7 && $1 == c && $2 == k { print; exit }' "$tsv"
-}
-
-# baseline_prior DIR HOST REV — 0 if this host was judged by an archived run OTHER than
-# this one, which is what forbids a second BASELINE. Excludes REV's own archives by exact
-# rev, so the run currently writing them cannot cite itself as its own precedent.
+# era_current LEDGER — print the current era's id, or nothing at all.
 #
-# THE SCOPE OF THE SINGLE-SHOT GUARANTEE IS PER OPERATOR MACHINE, NOT PER REPOSITORY,
-# and that is weaker than "single-shot by construction" sounds. build/ is gitignored
-# (.gitignore:13), so a fresh clone sees no priors and would render BASELINE for every
-# host. It is not a hole so much as a scope: .keel-hosts is gitignored too
-# (.gitignore:32, "hostnames are infrastructure, not source"), so a clone that has no
-# archive also has no fleet to judge, and reconstructing one is an operator act on a new
-# operator machine. The witness has exactly the scope of the thing it witnesses.
-# What would widen it is a tracked index of judged runs — feasible, landed by the same
-# reviewed commit act as a registry row, and named here so this stays a debt with an
-# action rather than a limitation inside a number (§5 rule 12 as amended 2026-08-19; #114).
-baseline_prior() {
-  local dir="$1" host="$2" rev="$3" f
-  for f in "$dir"/bench-gate-p5-*-"$host"-*.txt; do
-    [[ -e "$f" ]] || continue
-    [[ "$(basename "$f")" == bench-gate-p5-"$rev"-* ]] && continue
-    return 0
-  done
-  return 1
+# The current era is the LAST data row, and it is validated rather than searched for:
+# a ledger whose final row is malformed, unnamed, or cites no amendment yields NOTHING,
+# and the caller must treat that as unmeasured. Skipping a bad row to reach an older
+# valid one would be the opposite of failing closed — it would silently judge new-era
+# readings against old-era baselines, which is the exact misattribution eras exist to
+# prevent. The amendment column is what an era is made of (measurement-eras.tsv states
+# the two conditions), so an era with no cited amendment is not an era: that is the
+# loophole guard, and it lives here because a guard only in prose is a wish.
+era_current() {
+  local tsv="$1"
+  [[ -r "$tsv" ]] || return 0
+  awk -F'\t' '
+    /^#/ || /^[[:space:]]*$/ || $1 == "era" { next }
+    { last = $0; n = NF }
+    END {
+      if (last == "") exit 0
+      split(last, f, "\t")
+      # No `f[1] != ""` conjunct: an unnamed era would print an empty line, which every
+      # caller already reads as "no era" — the guard was unkillable by mutation because it
+      # changed nothing observable. Deleted rather than explained; the fixture asserting an
+      # unnamed era resolves nothing still stands, on the outcome instead of the branch.
+      if (n >= 5 && f[3] != "" && f[3] != "—") print f[1]
+    }' "$tsv"
 }
 
-# baseline_candidate FILE CPU CRIT VALUE ESTIMATOR SOURCE ASOF GROUNDS — append one fully
-# formed candidate row. The gate calls this and nothing else: it never opens the registry
+# era_provisional LEDGER ERA — 0 while the era's both-arms transition archive is absent.
+# Provisional is a DISCLOSURE, not a permission: it widens nothing about what BASELINE
+# covers, because what bounds BASELINE is the witness index. It exists so a run under a
+# freshly opened era says so in its own log rather than reading as a settled state.
+era_provisional() {
+  local tsv="$1" era="$2"
+  [[ -r "$tsv" && -n "$era" ]] || return 1
+  awk -F'\t' -v e="$era" '
+    /^#/ || $1 == "era" { next }
+    NF >= 5 && $1 == e { if ($4 == "" || $4 == "—") prov = 1; exit }
+    END { exit !prov }' "$tsv"
+}
+
+# baseline_lookup TSV CPU CRIT ERA — the registry row for one host × criterion × era,
+# or nothing. Absent file and absent row are deliberately the SAME answer: "this host is
+# not registered" is what the caller needs, and a missing registry is a repository with no
+# registered hosts. A row from ANOTHER era does not match, and that is the point rather
+# than an inconvenience — it is what makes an instrument change render BASELINE fleet-wide
+# instead of booking the methodology delta against every host as drift. What separates
+# newness from an unmet obligation is baseline_spent, below, and keeping the two apart is
+# the point: a lookup that also guessed at newness would decide the verdict in the accessor.
+baseline_lookup() {
+  local tsv="$1" cpu="$2" crit="$3" era="$4"
+  [[ -r "$tsv" && -n "$era" ]] || return 0
+  awk -F'\t' -v c="$cpu" -v k="$crit" -v e="$era" '
+    /^#/ || $1 == "cpu_model" { next }
+    NF >= 8 && $1 == c && $2 == k && $3 == e { print; exit }' "$tsv"
+}
+
+# baseline_spent INDEX CPU ERA — 0 if this CPU model has already been judged in this era,
+# which is what forbids a second BASELINE. The witness is scripts/judged-runs.tsv: TRACKED
+# state, keyed (cpu_model, era), read by anyone with the repo.
+#
+# THE PREDECESSOR WAS A GLOB OVER build/, and it was right only on the machine that had
+# been running the gate (#114). build/ is gitignored, so on a fresh clone, on CI, or on a
+# second operator's machine every host was `new` forever and BASELINE renewed on every
+# run — a per-machine witness defeats single-shot exactly as thoroughly as the permanent
+# exemption the class was built to kill, and more quietly. The self-citation guard the
+# glob needed (excluding this run's own archives by exact rev, so the run writing the
+# evidence could not cite itself) is gone with it: a witness row is landed by a reviewed
+# commit, so a run cannot mint its own precedent mid-flight. judged-runs.tsv states what
+# the trade costs — reviewed-and-visible in place of automatic-and-invisible.
+baseline_spent() {
+  local tsv="$1" cpu="$2" era="$3"
+  [[ -r "$tsv" && -n "$cpu" && -n "$era" ]] || return 1
+  awk -F'\t' -v c="$cpu" -v e="$era" '
+    /^#/ || $1 == "cpu_model" { next }
+    NF >= 6 && $1 == c && $2 == e { found = 1; exit }
+    END { exit !found }' "$tsv"
+}
+
+# baseline_candidate FILE FIELDS... — append one fully formed candidate row, tab-joined.
+# The gate calls this and nothing else: it never opens the registry or the witness index
 # for writing, because an instrument that mints the reference it will judge against has
 # certified itself. Emitting a complete row (not a diff, not a reminder) is what makes the
-# reviewed commit act a review rather than a re-derivation.
+# reviewed commit act a review rather than a re-derivation. Variadic because a BASELINE
+# rendering proposes TWO rows into two files — the baseline and the witness that spends it
+# — and they have different widths; one of them landing without the other is the state
+# judged-runs.tsv describes, not a state this function may paper over.
 baseline_candidate() {
   local file="$1"; shift
   mkdir -p "$(dirname "$file")" || return 1
   [[ -s "$file" ]] || printf '# candidate rows proposed by gate-p5; landing them is a reviewed commit act (#6)\n' >"$file"
-  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@" >>"$file"
+  local IFS=$'\t'
+  printf '%s\n' "$*" >>"$file"
 }
 
 # reconcile_sweep_best_ipf VALUE LOG — check a stated SWEEP_BEST_IPF against a live

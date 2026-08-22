@@ -51,6 +51,52 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The BASELINE-REGISTERED witness was a glob over gitignored output, so it was right on one machine and wrong
+  everywhere else** (#114, fixed 2026-08-21 on Scott's direction, folded into the era commit). `baseline_prior`
+  asked `build/bench-gate-p5-*-<host>-*.txt` whether a host had been judged before. `build/` is gitignored, so on
+  a fresh clone, on CI, or on a second operator's machine the answer is always *no*: every host is new forever and
+  `BASELINE` renews on every run. **A per-machine witness defeats single-shot exactly as thoroughly as the
+  permanent exemption the class was built to kill**, and more quietly, because it fails only for readers who are
+  not the operator. The witness is now `scripts/judged-runs.tsv` — tracked, keyed `(cpu_model, era)`, proposed by
+  the gate beside the baseline row it spends. The trade is stated where the old scope disclosure was, not deleted:
+  **automatic-and-invisible for reviewed-and-visible**. A session that lands neither row leaves the host
+  unregistered and re-renders `BASELINE`; the debt line gate-p5 already prints is what makes that repeat visible,
+  and the message that used to say "spent — this run's own archive is the prior log" now says spent *only once the
+  witness lands*, because the old wording over-promised in the same direction the defect did. Keyed on the CPU
+  model rather than the hostname, deviating from the ruling's wording on purpose and recording why: the registry
+  next door keys on the probe string, and a hostname key would hand a renamed host a second exemption.
+- **A baseline now belongs to the era of the instrument that measured it, and the pinning adoption is an era
+  boundary** (DESIGN.md §5 rule 17 clause (d), ruled 2026-08-21 on #6). Read literally, "one `BASELINE` per host,
+  ever" said skx must be judged against a baseline imported from `5ec5fea`/`33de3b2`. Scott's ruling refuses that
+  on **misattribution** grounds rather than on convenience: those are free-placement readings, §5 rule 5 pinned
+  placement fleet-wide the same day, so judging pinned readings against unpinned baselines would book **the
+  methodology delta as host drift** — the cross-denominator sin the registry exists to prevent, arriving through
+  the registry. An instrument change is therefore the "dated re-registration citing a named change" door opened
+  fleet-wide: every host renders `BASELINE` once per era, registrations land from the new instrument's medians
+  with rule 16's estimator honestly stated, derived constants re-derive by the same formula over new-era inputs.
+  **The loophole guard is a reader and not a paragraph:** an era exists only via a dated §5/§7 amendment plus a
+  both-arms transition archive, both recorded in `scripts/measurement-eras.tsv`; a current era citing no amendment
+  resolves to *nothing* and gate-p5 renders `FAIL`; and resolution deliberately does **not** skip a malformed row
+  to reach a valid one, because falling back is precisely the misattribution the clause forbids. `free-placement`,
+  the era before eras, is named retroactively and left undated — it was not a concept while it ran. Consequence
+  for this tree: the registry is empty for the whole fleet rather than for one host, and the transition run's
+  green is the first green under `pinned8`.
+- **21 mutants driven against the new readers, 21 killed, and a 22nd deleted for being unkillable.** Three
+  survived the first pass and every one was a **blind fixture rather than redundant code**: an empty-era guard
+  with no era-less registry row to match, a width check with no row one column short, and an empty-key guard with
+  no empty-keyed witness row. Each got the row that makes the guard matter. The fourth survivor was genuine — an
+  unnamed-era check whose deletion changed nothing observable, since an empty name prints an empty line and every
+  caller reads that as no era — so it was deleted rather than explained, and the fixture asserting the outcome
+  stands. One fixture case was also **vacuous on the first pass**: the rename case re-asserted a neighbour under
+  a new label, since the hostname is not an argument at all; it now moves the host column and shows the answer
+  does not move. Fixtures 22 → 50. Mutation is a session act with no standing harness, and gate-p5's pass line
+  says so inside the number (§5 rule 12).
+- **Apparatus ledger for this commit, both lines** (the standing clause, ruled recorded-owed-parked): **+236 net
+  `*.sh` lines against zero library lines**, ratio **1.49x → 1.52x**. A third figure the counter cannot see:
+  **114 lines of tracked `.tsv`** (the era ledger, the witness index, the registry's new header) which
+  `gate-docs.sh` does not count, because its shell term is `*.sh`. So the apparatus grew by ~350 lines and the
+  report shows 236 — disclosed as a share rather than left to be diffed, and whether the counter should widen is
+  Scott's call, not a fix to slip in beside the thing being measured. The paydown lift is owed post-tag.
 - **The apparatus-ratio report could not see a new script until it was committed, so it understated the cost of
   the commit being prepared.** `gate-docs.sh` counted *tracked* `*.sh`, so `scripts/baseline-test.sh` (131 lines)
   was invisible while it was still untracked. `820eac0`'s message therefore published **1.47x**; the correct

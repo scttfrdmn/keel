@@ -69,6 +69,15 @@ presumptively wrong. Copy exact names from `go doc` output.
 Scott reviews progress through GitHub between sessions. Keep it truthful
 and current using `gh`:
 
+**`#nn` means a GitHub issue and nothing else. A task-tool id is written
+`T-nn`.** Ruled 2026-08-21 after the second occurrence: task ids and this
+repo's issue numbers occupy the same low integers, are syntactically
+identical, and a wrong one resolves to a real issue with a plausible
+subject — so the collision is structurally unlintable and the only fix is
+typographic. `ddd642f` minted 17 such citations and `820eac0` almost
+minted 31, both against `#33`. Never carry a bare number from the task
+tool into prose, a commit message, or a comment.
+
 1. **Session start:** `gh issue list --milestone "<current phase>" --state open`
    and read new comments on the umbrella issue — Scott's course corrections
    arrive there. Treat unresolved questions from him as blocking input.

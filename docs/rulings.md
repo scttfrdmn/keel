@@ -406,24 +406,54 @@ baseline — predates the host's admission.** Convicting skx at the README crite
 absence is *rule 16's error relocated one criterion over*: in both cases the check measures
 a property of the reference rather than of the code.
 
-### The three states, and why they come from the archive rather than a flag
+### The three states, and why they come from tracked state rather than a flag
 
-| registry row | prior archived judged log | verdict | why |
+Both facts are read at `(cpu_model, era)`, from two tracked files and nothing else.
+
+| registry row | witness row | verdict | why |
 |---|---|---|---|
-| absent | absent | `BASELINE`, green-compatible | genuine newness; the run emits the candidate reference formed from its own numbers |
+| absent | absent | `BASELINE`, green-compatible | genuine newness; the run emits the candidate reference formed from its own numbers, and the witness row that will spend it |
 | absent | **present** | `FAIL`, naming the unmet registration | absence is no longer newness, it is an obligation someone did not land |
-| present | either | judged at `baseline − margin`, derivation printed | the host has a reference of its own |
+| present | either | judged at `baseline − margin`, derivation printed | the host has a reference of its own, from this era |
 
 The middle row is the whole design. A `BASELINE`-shaped exemption that could be renewed
-would be a permanent green for any host nobody got around to registering — and the closure
-is structural rather than vigilant: **the run that renders `BASELINE` creates the prior log
-that forbids it next time.** The class is single-shot per host by construction, and nothing
-has to remember to revoke it.
+would be a permanent green for any host nobody got around to registering.
 
-That has an immediate consequence for skx, and it is not the one the ruling anticipated.
-This machine's archive already holds two judged skx runs (`5ec5fea`, `33de3b2`), so skx is
-in the **middle** row today: it renders `FAIL`, not `BASELINE`, and its registration is
-already overdue. The exemption was spent by the runs that discovered the problem.
+**VOID, and the correction is the interesting part.** The first version of this section said
+the closure was structural rather than vigilant — *the run that renders `BASELINE` creates
+the prior log that forbids it next time* — with the witness being a glob over
+`build/bench-gate-p5-*-<host>-*.txt`. That is elegant and it is wrong outside the machine it
+was written on. `build/` is gitignored, so on a fresh clone, on CI, or on a second
+operator's machine no host has ever been judged, every host sits in the **top** row forever,
+and `BASELINE` renews on every run. **A per-machine witness defeats single-shot exactly as
+thoroughly as the permanent exemption this class was built to kill**, and it does it more
+quietly, because it fails only for readers who are not the operator. Filed as #114 and fixed
+in the same commit as the era amendment, on Scott's direction.
+
+The witness is now `scripts/judged-runs.tsv`: tracked, keyed `(cpu_model, era)`, proposed by
+the gate beside the baseline row it spends, landed by the same reviewed commit. What that
+costs is stated rather than absorbed — **automatic-and-invisible traded for
+reviewed-and-visible**. A session that lands neither row leaves the host unregistered and
+the next run renders `BASELINE` again; that repeat is not silent, because the unregistered
+state is printed as a debt line on every run until it is discharged. The old scan could not
+be skipped but could not be read either.
+
+**Keyed on the CPU model, not the hostname** — the one deviation from the ruling's wording
+(`keyed (host, era)`), taken deliberately rather than resolved silently in either direction.
+The registry next door keys on the exact probe string because that is the key the criterion
+consuming it greps: one key shared with the criterion, so the artifact can never disagree
+with the check about who a host is. A hostname key would break that in the direction that
+matters — renaming `keel-skx` to `keel-skx2` would produce no witness row and hand the host
+a second `BASELINE`, which is exemption-renewal-by-rename. Keying on the model closes it and
+costs nothing, because a *second* host of an already-judged model finds a registered row and
+is never in `BASELINE`'s path. `scripts/baseline-test.sh` drives the rename on purpose,
+by moving the host column and showing the answer does not move.
+
+**Also VOID:** the claim that skx is in the middle row today and renders `FAIL`. Two things
+moved it back to the top row, and neither is a weakening. The witness index is tracked and
+empty, so no host has a witness at all; and the current era is `pinned8`, in which no
+reading has yet been taken. skx renders `BASELINE` on the transition run — as does every
+other host — which is the era clause operating, not the exemption being renewed.
 
 ### Two boundaries
 
@@ -431,8 +461,10 @@ already overdue. The exemption was spent by the runs that discovered the problem
 reference it will judge against has certified itself, so `gate-p5` emits a fully formed
 candidate row to `build/baseline-candidates-<rev>.tsv` and stops. Landing it is a reviewed
 commit act, exactly as `CEIL_FRACTION` and every README row were. `scripts/baseline-test.sh`
-case 19 asserts the tracked registry has no data rows and was not written, which makes this
-the one property whose violation is not a wrong number but a wrong constitution.
+asserts that **both** tracked files — the registry and the witness index — have no data rows
+and were not written, which makes this the one property whose violation is not a wrong number
+but a wrong constitution. Both, because the witness is now half the decision, and a gate that
+could write it could spend its own exemption.
 
 **A candidate emitted from one run is not landable as it stands** — rule 16, applied to
 this mechanism by its own author's instrument. The emitted row's estimator column says
@@ -451,18 +483,53 @@ a second justification. The three CPU models that derived the fleet bar stay on 
 for them the artifact does not predate the admission — they are the artifact. Per-host
 convergence for them is a post-tag option, and was not smuggled in here.
 
+### Eras, and why an instrument change is a fleet-wide re-registration
+
+*Amended 2026-08-21 on Scott's ruling, and the grounds are not the ones the literal rule
+would have given.* Read literally, "one `BASELINE` per host, ever" said skx must be judged
+against a baseline imported from `5ec5fea` and `33de3b2`. It fails on **misattribution**:
+those are free-placement readings, §5 rule 5 pinned placement fleet-wide the same day, and
+`docs/hosts.md` now says in plain text that every number predating 2026-08-21 was measured
+free. Judging pinned readings against baselines minted from unpinned draws would book **the
+methodology delta as host drift** — the cross-denominator sin the registry exists to
+prevent, arriving through the registry.
+
+So a baseline belongs to the **era** of the instrument that measured it, and the pinning
+adoption is an era boundary: a constitution-dated instrument change, which is exactly the
+"dated re-registration citing a named change" door the design already had, opened fleet-wide
+instead of one host at a time. On the transition run every host renders `BASELINE` for
+placement-sensitive quantities; entries land from the pinned arm's medians with enough
+repeats per host that rule 16's estimator has an honest N; `CEIL_FRACTION` re-derives by the
+same formula over new-era inputs (the CEIL8CI precedent); the README regenerates.
+
+**The loophole guard**, without which "new era" becomes exemption-renewal-by-tweak: an era
+exists only via a **dated §5/§7 amendment plus a both-arms transition archive**, recorded per
+era in `scripts/measurement-eras.tsv`, and each host gets exactly one `BASELINE` per era.
+Operator convenience cannot mint one. The guard is a reader and not a paragraph: a ledger
+whose current era cites no amendment resolves to *nothing*, gate-p5 renders `FAIL`, and
+resolution does **not** skip the bad row to reach a valid one — a fallback would silently
+perform the misattribution the clause forbids. An era is *provisional* until its transition
+archive lands, which is a disclosure and not a permission: what bounds `BASELINE` is the
+witness index, so a provisional era grants nothing extra.
+
+`free-placement`, the era before eras, is named retroactively and deliberately **undated**:
+it was not a concept while it ran, and inventing an opening date would be a provenance claim
+no artifact supports.
+
+Note what this ruling did not turn on. Declining to import the free-placement reading was
+right procedure, and the ruling lands on grounds that would hold if it had favoured no one —
+which is why it is recorded here as misattribution rather than as a convenience.
+
 ### What this mechanism does not cover, stated inside the number
 
-The prior-log witness is **per operator machine, not per repository**. `build/` is
-gitignored (`.gitignore:13`), so a fresh clone sees no priors and would render `BASELINE`
-for every host. The scope is coherent rather than accidental — `.keel-hosts` is gitignored
-too (`.gitignore:32`, "hostnames are infrastructure, not source"), so a clone with no
-archive also has no fleet to judge — but "single-shot by construction" is true of an
-operator machine and not of the repository, and the difference is the kind that goes inside
-the number rather than into prose beside it. **The action that would widen it** is a tracked
-index of judged runs, landed by the same reviewed commit act as a registry row; it is named
-because a limitation with an available action is a debt, not a property (§5 rule 12), and it
-is filed as one on #114.
+**The per-operator-machine limitation is discharged**, and the repair is named so a reader
+who arrives at the old wording knows which claim died: the witness was a glob over
+gitignored `build/` output, it is now the tracked `scripts/judged-runs.tsv`, and #114 is
+closed by that change. What replaced it is a *different* limitation and not a lesser
+statement of the same one — the tracked witness is landed by review, so a session that
+proposes a witness row and lands nothing re-renders `BASELINE` next run. That has no
+available action beyond the debt line gate-p5 already prints, so per §5 rule 12 as amended
+it goes inside the number rather than into a new debt.
 
 One branch is written and unreached: an unreadable CPU model resolves the share criterion to
 `UNMEASURED` rather than falling back to the fleet bar, since falling back would be *looser*

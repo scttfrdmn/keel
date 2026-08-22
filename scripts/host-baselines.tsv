@@ -20,16 +20,26 @@
 # landing it is a reviewed commit act, exactly like every reference artifact before
 # it. The three states it decides between come from the archive, not from a flag:
 #
-#   registered   — a row here → judged at (baseline - BASELINE_MARGIN), derivation printed
-#   new          — no row, and no archived judged log for this host predating the run
-#                  → BASELINE: verdict green-compatible, candidate emitted
-#   owing        — no row, but a prior archived judged log exists → FAIL, naming the
-#                  unmet registration
+#   registered   — a row here for this era → judged at (baseline - BASELINE_MARGIN),
+#                  derivation printed
+#   new          — no row, and no witness row for (this cpu_model, this era)
+#                  → BASELINE: verdict green-compatible, both candidate rows emitted
+#   owing        — no row, but a witness row exists → FAIL, naming the unmet registration
 #
-# BASELINE IS SINGLE-SHOT PER HOST BY CONSTRUCTION: the run that renders it creates
-# the prior log that forbids it next time, so no host can ride the exemption. The
-# scope of that guarantee is stated where it is weaker than it sounds — see
-# `baseline_prior` in scripts/gate-lib.sh.
+# BASELINE IS SINGLE-SHOT PER HOST PER ERA, and the thing that spends it is a TRACKED
+# witness row in scripts/judged-runs.tsv, keyed (cpu_model, era). It is not the run's own
+# archive: build/ is gitignored, so an archive-derived witness is right on the operator's
+# machine and wrong on every other one (#114). What the tracked form costs is stated
+# where it is weaker than it sounds — see judged-runs.tsv and `baseline_spent`.
+#
+# EVERY ROW IS SCOPED TO AN ERA (column 3, scripts/measurement-eras.tsv), because a
+# baseline is a number an instrument produced and a changed instrument changes it for
+# reasons that are not the host's code. Judging a pinned reading against a baseline
+# minted from free-placement draws would book THE METHODOLOGY DELTA AS HOST DRIFT — the
+# cross-denominator sin this registry exists to prevent, arriving through the registry.
+# So a row from another era does not match, an instrument change renders BASELINE
+# fleet-wide once, and an era cannot be conjured by operator convenience: it takes a
+# dated §5/§7 amendment plus a both-arms transition archive (ruled 2026-08-21, #6).
 #
 # BASELINES ARE IMMUTABLE except by the two doors that already exist in law:
 # supersession by a tighter re-measure, or dated re-registration citing a named code
@@ -43,18 +53,22 @@
 # mechanism.
 #
 # THERE ARE NO DATA ROWS YET, and that is a measurement state rather than an
-# oversight. keel-skx is the one host owing registration, and its share baseline
-# cannot be imported from the free-instrument runs that measured it (5ec5fea,
-# 33de3b2): a published reference is an estimator, never a draw (§5 rule 16), and
-# both of those are single draws under the instrument the pinning transition
-# replaces. Its rows are born from the pinned arm of that campaign (#6).
+# oversight — now for a second reason, and the two are worth keeping apart. The first:
+# keel-skx's share baseline cannot be imported from the free-instrument runs that
+# measured it (5ec5fea, 33de3b2), because a published reference is an estimator, never
+# a draw (§5 rule 16), and both of those are single draws. The second, and it is why
+# the file is empty for the WHOLE FLEET rather than for one host: the current era is
+# `pinned8`, opened 2026-08-21, and no row can exist in an era before the run that
+# measures it. Every host renders BASELINE on the transition run, by design and once.
+# The rows below are born from that run's pinned arm (#6).
 #
 # columns, tab-separated:
 #   1 cpu_model  the exact string the host reports, as gate-p5 greps it
 #   2 criterion  what the baseline is a baseline FOR (e.g. share/Sgemm, scale/Strsm)
-#   3 baseline   the reference value; the bar is this less BASELINE_MARGIN
-#   4 estimator  how it was reduced from samples, with N and the runs named
-#   5 source     the archived log the value is recomputable from
-#   6 as_of      the date the row was landed
-#   7 grounds    why this host has its own baseline rather than the fleet's
-cpu_model	criterion	baseline	estimator	source	as_of	grounds
+#   3 era        the instrument that produced it (scripts/measurement-eras.tsv)
+#   4 baseline   the reference value; the bar is this less BASELINE_MARGIN
+#   5 estimator  how it was reduced from samples, with N and the runs named
+#   6 source     the archived log the value is recomputable from
+#   7 as_of      the date the row was landed
+#   8 grounds    why this host has its own baseline rather than the fleet's
+cpu_model	criterion	era	baseline	estimator	source	as_of	grounds

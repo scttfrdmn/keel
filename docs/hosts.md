@@ -560,6 +560,13 @@ band coming in narrower than the spread of the rows it judges. The transition ca
 **both** arms and archives both, so the crossing is measurable rather than asserted, and any
 verdict that changes colour is published with both readings side by side.
 
+The boundary has a name the gates read: this is the **`pinned8` measurement era**, and
+everything before it is `free-placement` (`scripts/measurement-eras.tsv`, DESIGN.md §5 rule
+17 clause (d)). It is not a label — a registered baseline is scoped to its era, so a
+free-placement reference cannot be applied to a pinned reading, and that is enforced by the
+reader rather than by a reviewer noticing. Which is why every host's registry row is empty
+today: no host has a baseline in this era yet, and the transition run is where they are born.
+
 Two limitations sit inside the figures rather than beside them. The mask pins the
 `threads=1` rows to a *node*, not to a core, so the ±0.11% a one-core probe read for skx's
 1-thread `Sgemm` — against ±14.6% unpinned, in a run of `-count=20` against the gate's 10 — is

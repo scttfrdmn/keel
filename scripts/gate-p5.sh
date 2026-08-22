@@ -71,8 +71,21 @@ CEIL_DERIVED_FROM="AMD EPYC 9R14|AMD EPYC 9R45|Intel(R) Xeon(R) 6975P-C"
 # the margin moves both bars together instead of leaving them to drift apart.
 BASELINE_REGISTRY="scripts/host-baselines.tsv"
 BASELINE_MARGIN=2.6
+# The two tracked artifacts the class reads besides the registry. BASELINE_WITNESS is what
+# spends a host's one BASELINE — tracked, keyed (cpu_model, era), so it reads the same on a
+# fresh clone as on the operator's machine, which the build/ glob it replaces did not
+# (#114). BASELINE_ERAS scopes every baseline to the instrument that produced it, so a
+# changed instrument renders BASELINE fleet-wide once instead of booking the methodology
+# delta against each host as drift (ruled 2026-08-21, #6).
+BASELINE_WITNESS="scripts/judged-runs.tsv"
+BASELINE_ERAS="scripts/measurement-eras.tsv"
 P5_REV="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 BASELINE_CANDIDATES="build/baseline-candidates-$P5_REV.tsv"
+WITNESS_CANDIDATES="build/witness-candidates-$P5_REV.tsv"
+# Resolved once, and empty is a legitimate answer meaning "this tree's era ledger does not
+# resolve" — checked as its own criterion below rather than defaulted, because defaulting
+# would judge under whichever era happened to parse.
+P5_ERA="$(era_current "$BASELINE_ERAS")"
 
 # The two parallelism classes (criterion 1, ruled 2026-08-12). P5_JUDGED is one
 # class: GEMM-shaped nests over independent tiles. P5_MEASURED is the other:
@@ -565,11 +578,25 @@ fi
 # one machine here without AVX-512, and catches a broken reader before a $24/hr fleet
 # renders a bar from it; this copy is what makes the published log self-certifying.
 if BTLOG="$(bash scripts/baseline-test.sh 2>&1)"; then
-  pass "BASELINE-REGISTERED readers pass their controls ($(grep -c '^  ok ' <<<"$BTLOG") fixtures, five mutants driven at 2026-08-21)"
+  pass "BASELINE-REGISTERED readers pass their controls ($(grep -c '^  ok ' <<<"$BTLOG") fixtures; 21 mutants driven 2026-08-21, all killed, and a 22nd found unkillable — an unnamed-era guard whose deletion changed nothing observable, so it was deleted rather than explained. §5 rule 12: the number is what it covers, and mutation is a session act with no standing harness)"
 else
   fail "BASELINE-REGISTERED readers fail their own controls, so no bar this criterion applies is trustworthy (#6)"
   # shellcheck disable=SC2001  # prefixing every line; not a scalar substitution
   sed 's/^/        /' <<<"$BTLOG"
+fi
+
+# Which era this run's readings belong to, before any of them is judged against anything.
+# A malformed or amendment-less ledger is a FAIL and not an `unmeasured`: nothing failed to
+# measure here, the tree is wrong, and per §5 rule 6 those are different causes and may not
+# share a verdict. Failing closed matters more here than anywhere else in the class — the
+# permissive default is to judge every host against whatever era last parsed, i.e. to book
+# an instrument change as fleet-wide drift, which is the one outcome eras exist to prevent.
+if [[ -z "$P5_ERA" ]]; then
+  fail "no measurement era resolves from $BASELINE_ERAS, so no reading below has a scope and no baseline may be applied to it (#6). An era needs a name and a dated §5/§7 amendment in its row; operator convenience cannot mint one"
+elif era_provisional "$BASELINE_ERAS" "$P5_ERA"; then
+  info "measurement era: $P5_ERA — PROVISIONAL, its both-arms transition archive not yet landed in $BASELINE_ERAS. Provisional is a disclosure and not a permission: what bounds BASELINE is $BASELINE_WITNESS, one row per (cpu_model, era), so each host still gets exactly one (#6)"
+else
+  info "measurement era: $P5_ERA — closed, transition archive landed. Baselines from other eras do not govern these readings and are not consulted (#6)"
 fi
 
 BFLAGS=()
@@ -706,9 +733,13 @@ else
     while IFS= read -r d; do
       [[ -n "$d" && "$hcpu" == *"$d"* ]] && DERIV=1
     done < <(printf '%s\n' "${CEIL_DERIVED_FROM//|/$'\n'}")
-    # The witness that separates newness from an unmet obligation. Read once per host
-    # because it is a fact about the archive, not about a routine.
-    HOST_PRIOR=0; baseline_prior build "$host" "$P5_REV" && HOST_PRIOR=1
+    # The witness that separates newness from an unmet obligation: has this SILICON been
+    # judged in THIS ERA before. Read once per host because it is a fact about the tracked
+    # index, not about a routine. Keyed on the CPU model rather than the hostname, matching
+    # the registry next door — one key shared with the criterion that consumes it, and a
+    # hostname key would hand a renamed host a second BASELINE. judged-runs.tsv records the
+    # deviation from the ruling's wording and why it was taken.
+    HOST_SPENT=0; baseline_spent "$BASELINE_WITNESS" "$hcpu" "$P5_ERA" && HOST_SPENT=1
 
     HOST_CLEARED=1
     HOST_MEASURED=1
@@ -845,14 +876,17 @@ else
 
       # ---- which bar is in force for this host x this criterion (#6, ruled 2026-08-21)
       #
-      # Three states, decided from the registry and the archive rather than from a flag,
-      # and every one of them printed with its derivation. The fleet bar is the default
-      # only for the hosts that derived it; for everyone else absence of a row is either
-      # newness or an obligation, and which one it is is not this criterion's opinion.
+      # Three states, decided from two tracked artifacts rather than from a flag, and every
+      # one of them printed with its derivation. The fleet bar is the default only for the
+      # hosts that derived it; for everyone else absence of a row is either newness or an
+      # obligation, and which one it is is not this criterion's opinion. Both artifacts are
+      # read at (cpu_model, era): a baseline governs only readings from the instrument that
+      # produced it, so an era boundary renders BASELINE fleet-wide once instead of
+      # convicting every host of a methodology change.
       BCRIT="share/$r"; BBAR="$CEIL_FRACTION"
       BWHY="the fleet bar, whose derivation is printed in this criterion's preamble"
       BROW=""
-      [[ "$DERIV" -eq 0 && -n "$hcpu" ]] && BROW="$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT")"
+      [[ "$DERIV" -eq 0 && -n "$hcpu" ]] && BROW="$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT" "$P5_ERA")"
       if [[ -z "$hcpu" ]]; then
         # FAIL-CLOSED, and not a fallback to the fleet bar: the host's identity is the key
         # to its bar, so without it there is no bar in force, and a reading judged against
@@ -864,7 +898,7 @@ else
         unmeasured "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), but the CPU model is unreadable so no bar can be keyed to this host: the reading is unjudged rather than cleared (#6)"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
-      elif [[ "$DERIV" -eq 1 && -n "$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT")" ]]; then
+      elif [[ "$DERIV" -eq 1 && -n "$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT" "$P5_ERA")" ]]; then
         # Two independent statements of who governs a host, disagreeing. Reported rather
         # than resolved by precedence: a silent winner here would judge a host against a
         # bar neither the registry nor CEIL_DERIVED_FROM meant it to have.
@@ -876,23 +910,33 @@ else
         # review and not a re-derivation — but its estimator column says what one run can
         # support, which is a draw and not a reference (§5 rule 16). The gate proposes;
         # it never writes the registry.
-        baseline_candidate "$BASELINE_CANDIDATES" "$hcpu" "$BCRIT" "$frac" \
+        baseline_candidate "$BASELINE_CANDIDATES" "$hcpu" "$BCRIT" "$P5_ERA" "$frac" \
           "SINGLE DRAW from gate-p5 at $P5_REV -- NOT landable as-is (§5 rule 16): re-reduce as a median over N archived runs before committing" \
           "$BENCH_ARCHIVE" "$(date -u +%Y-%m-%d)" \
           "admitted after CEIL_FRACTION's derivation set, so the fleet bar's reference artifact predates this host"
-        if [[ "$HOST_PRIOR" -eq 0 ]]; then
-          baseline "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), and this host has no registered baseline and no earlier archived judged run: the fleet bar's reference artifact predates its admission, so the reading is RECORDED as its candidate baseline rather than judged (#6). Candidate row: $BASELINE_CANDIDATES"
+        if [[ "$HOST_SPENT" -eq 0 ]]; then
+          # The witness that spends this era's one BASELINE is proposed HERE, beside the
+          # baseline it spends, and once per host rather than once per routine. Both rows
+          # land in one reviewed commit or neither does; landing neither leaves the host
+          # unregistered and re-renders BASELINE next run, which is the honest state and is
+          # printed as a debt below rather than absorbed (judged-runs.tsv states the trade).
+          [[ "$HOST_BASE" -eq 0 ]] && baseline_candidate "$WITNESS_CANDIDATES" \
+            "$hcpu" "$P5_ERA" "$P5_REV" "$(date -u +%Y-%m-%d)" "$host" "$BENCH_ARCHIVE"
+          baseline "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), and this silicon has no registered baseline and no witness row in era $P5_ERA: the fleet bar's reference artifact predates its admission to this era, so the reading is RECORDED as its candidate baseline rather than judged (#6). Candidate rows: $BASELINE_CANDIDATES and $WITNESS_CANDIDATES"
           HOST_BASE=1
         else
           BASELINE_OWING="$BASELINE_OWING $host/$BCRIT"
-          fail "[$host] $r has no registered baseline in $BASELINE_REGISTRY, and this host was already judged by an earlier archived run — so the absence is an unmet registration rather than newness, and BASELINE is spent (#6). Land the candidate row emitted at $BASELINE_CANDIDATES"
+          fail "[$host] $r has no registered baseline in $BASELINE_REGISTRY for era $P5_ERA, and $BASELINE_WITNESS says this silicon was already judged in that era — so the absence is an unmet registration rather than newness, and BASELINE is spent (#6). Land the candidate row emitted at $BASELINE_CANDIDATES"
         fi
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
       elif [[ -n "$BROW" ]]; then
-        bval="$(awk -F'\t' '{print $3}' <<<"$BROW")"
+        # Field 3 is the era, matched by baseline_lookup, so value/estimator/source/as_of are
+        # 4..7. Named here because these ordinals moved when the era column landed and an
+        # off-by-one would print a bar made out of a date.
+        bval="$(awk -F'\t' '{print $4}' <<<"$BROW")"
         BBAR="$(awk -v b="$bval" -v m="$BASELINE_MARGIN" 'BEGIN{printf "%.1f", b-m}')"
-        BWHY="this host's registered baseline ${bval}% less the same ${BASELINE_MARGIN} points of margin the fleet bar uses (estimator: $(awk -F'\t' '{print $4}' <<<"$BROW"); recomputable from $(awk -F'\t' '{print $5}' <<<"$BROW"); registered $(awk -F'\t' '{print $6}' <<<"$BROW"))"
+        BWHY="this host's registered baseline ${bval}% (era $(awk -F'\t' '{print $3}' <<<"$BROW")) less the same ${BASELINE_MARGIN} points of margin the fleet bar uses (estimator: $(awk -F'\t' '{print $5}' <<<"$BROW"); recomputable from $(awk -F'\t' '{print $6}' <<<"$BROW"); registered $(awk -F'\t' '{print $7}' <<<"$BROW"))"
       fi
 
       if [[ -z "$CEIL_FRACTION" ]]; then
@@ -959,7 +1003,7 @@ else
             RBADN="$RBADN ${rben}/threads=${rthr}(README says $rgf, this run measured $mgf)"
           fi
         done <<<"$RROWS"
-        if [[ "$RMATCH" -eq 0 && "$HOST_PRIOR" -eq 0 ]]; then
+        if [[ "$RMATCH" -eq 0 && "$HOST_SPENT" -eq 0 ]]; then
           # THE SAME CLASS, ONE CRITERION OVER (#6). A README row is born from a judged
           # run, so a host whose first judged run is this one cannot have had a row to
           # publish, and convicting it for the absence measures its admission date. Its
@@ -967,11 +1011,11 @@ else
           # archived runs — which is the artifact-creating act here, and why this
           # branch proposes no candidate: there is no registry row to propose, only a
           # README the campaign rewrites wholesale.
-          baseline "[$host] README.md publishes no row for '$hcpu', and this host has no earlier archived judged run: a published row is born from a judged run, so its absence here is this host's admission date and not an unpublished number (#6). Its rows are created when the README is regenerated as medians over archived runs"
+          baseline "[$host] README.md publishes no row for '$hcpu', and $BASELINE_WITNESS records no judged run for this silicon in era $P5_ERA: a published row is born from a judged run, so its absence here is this host's admission date and not an unpublished number (#6). Its rows are created when the README is regenerated as medians over archived runs from this era"
           HOST_BASE=1
         elif [[ "$RMATCH" -eq 0 ]]; then
           BASELINE_OWING="$BASELINE_OWING $host/README"
-          fail "[$host] README.md publishes no row for '$hcpu', and this host was already judged by an earlier archived run — so its numbers are unpublished rather than unborn, and BASELINE is spent (#6)"
+          fail "[$host] README.md publishes no row for '$hcpu', and $BASELINE_WITNESS records a judged run for this silicon in era $P5_ERA — so its numbers are unpublished rather than unborn, and BASELINE is spent (#6)"
         elif [[ -z "$RBADN" ]]; then
           pass "[$host] every README row for this CPU re-measures within 5% ($RMATCH row(s))"
         else
@@ -1024,7 +1068,12 @@ else
     info "hosts owing registration:$BASELINE_OWING — candidate rows emitted at $BASELINE_CANDIDATES, and landing them is a reviewed commit act, never this gate's (#6)"
   fi
   if [[ "$SCALE_HOSTS_BASE" -gt 0 ]]; then
-    info "$SCALE_HOSTS_BASE of $NHOSTS host(s) rendered BASELINE this run: green-compatible, and spent — this run's own archive is the prior log that makes the same absence an unmet registration next time (#6)"
+    # What spends BASELINE is a LANDED WITNESS ROW, not the existence of this run's archive.
+    # The earlier wording said the archive — true on the operator's machine and false on
+    # every other one, since build/ is gitignored (#114) — and it also over-promised: this
+    # run cannot spend anything by itself, because the witness is landed by review. Stated
+    # as the conditional it is, so a reader who lands nothing is not told the debt is closed.
+    info "$SCALE_HOSTS_BASE of $NHOSTS host(s) rendered BASELINE this run in era $P5_ERA: green-compatible, and spent ONLY once the witness rows at $WITNESS_CANDIDATES are landed in $BASELINE_WITNESS by a reviewed commit. Until then the same absence re-renders BASELINE rather than becoming an unmet registration, and this line is the record of it (#6, #114)"
   fi
   # Absence semantics decided once in `fleet_coverage`, not a third time here: the
   # divergent-copies defect at the verdict layer is what #90's sharing ruling was about, and

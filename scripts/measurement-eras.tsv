@@ -1,0 +1,47 @@
+# Copyright 2026 The keel Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# measurement-eras.tsv — the eras a baseline can belong to. Tab-separated, tracked.
+#
+# WHY ERAS EXIST. A baseline is a number measured by an instrument, and when the
+# instrument changes the number changes with it for reasons that are not the host's
+# code. Judging a pinned reading against a baseline minted from free-placement draws
+# would book the METHODOLOGY DELTA AS HOST DRIFT — the cross-denominator sin the
+# registry exists to prevent, arriving through the registry itself. So a baseline is
+# scoped to the era whose instrument produced it, and a criterion may not judge a
+# reading from one era against a baseline from another (ruled 2026-08-21, #6).
+#
+# AN ERA BOUNDARY IS THE "DATED RE-REGISTRATION CITING A NAMED CHANGE" DOOR, OPENED
+# FLEET-WIDE. That door already existed in the registry's law for one host at a time;
+# an instrument change opens it for every host at once, which is what makes the
+# transition run an era boundary rather than a fleet-wide regression.
+#
+# THE LOOPHOLE GUARD, which is the whole reason this is a tracked file and not a
+# variable. If an era could be declared by convenience, "new era" would become
+# exemption-renewal-by-tweak: any operator wanting a green run would open one and
+# every host's BASELINE would come back. So an era exists ONLY with both of:
+#
+#   1. a dated DESIGN.md §5 or §7 amendment, cited in the `amendment` column, and
+#   2. a both-arms transition archive, cited in `transition_archive`, showing the
+#      same fleet measured under the old instrument and the new one.
+#
+# Condition 2 cannot exist before the transition run that creates it, so an era is
+# LANDED with (1) and PROVISIONAL until (2) is filled in by the reviewed commit that
+# lands the era's registrations. Provisional is a disclosure, not a permission: it
+# does not widen what BASELINE covers. What bounds BASELINE is scripts/judged-runs.tsv
+# — one row per (host, era) — so each host gets exactly one BASELINE per era whether
+# the era is provisional or closed.
+#
+# The CURRENT era is the last data row. A row whose `amendment` is empty or `—` is
+# not an era: era resolution fails closed, and a criterion with no era resolves to
+# UNMEASURED rather than falling back to some other era's baseline.
+#
+# columns, tab-separated:
+#   1 era                 the id baselines and judged-run rows are scoped by
+#   2 opened              the date the amendment landed
+#   3 amendment           the dated §5/§7 rule this era's instrument change was ruled by
+#   4 transition_archive  the both-arms archive; `—` while provisional
+#   5 grounds             what changed about the instrument, in one clause
+era	opened	amendment	transition_archive	grounds
+free-placement	retroactive	DESIGN.md §5 rule 17 (2026-08-21, naming it)	n/a — the era before eras	every reading taken with no CPU pinning: the OS placed threads, so a host's rate carries its scheduler's choices. Retroactively named and deliberately undated — the era was not a concept while it ran, and inventing an opening date would be a provenance claim no artifact supports
+pinned8	2026-08-21	DESIGN.md §5 rule 5 (placement is pinned, fleet-wide and never selectively) + §5 rule 17 (the era clause)	—	every judged invocation and its ceiling arm run under one CPU affinity mask of eight distinct physical cores within a single NUMA node. Rows carry `-8` where the free arm carried `-192` or `-72`. PROVISIONAL: the both-arms transition archive is what fills this column, and it does not exist until the transition run lands
