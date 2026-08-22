@@ -617,3 +617,120 @@ the benchmark once per ramping `b.N` trial, so the `b.N=1` call wins and any `b.
 field freezes at 1. It printed `ops=1` beside a row that measured 3853 iterations. The
 pre-existing fields are `b.N`-invariant, which is why the dedup was safe before and is the reason
 the trap is recorded rather than worked around.
+
+## Rule 19 — an interval too wide to adjudicate its criterion is not a vote
+
+*Ruled 2026-08-22. Issue #6, Scott's ruling on the Strsm widening, opening "Ruled, and it's the
+third option — your assumption is closer than the exception, but the existing law does better
+than 'unjudgeable'" and closing "CEIL_FRACTION types from the GEMM-class rows regardless of how
+Strsm scatters, so the founding no longer has a single point of failure."*
+
+Three verdict classes were available for a row whose interval is wider than the bar it is
+compared against, and the ruling took none of the two obvious ones. The question arose because
+the spread mask, adopted the same day as the standing judged placement, widened `Strsm`'s
+intervals 3–15× — ±2.32/2.97% to ±6.52/9.48/11.84% on zen4, ±0.75/0.87% to ±5.13/10.28/13.24%
+on zen5 — while keel-skx's identical-mask control did not move (±0.50–1.30% to ±0.82–1.00%).
+
+### What was refused, and why the quiet reading is the dishonest one
+
+The first candidate was a **per-row placement exception**: judge `Strsm` under the confined mask,
+which reads tighter, and everything else under spread. Refused, and the grounds are what the mask
+*does* to the phenomenon. T-45 and T-52 established that the bimodality exists under **both**
+placements. Confined `Strsm` is therefore not measuring a different, truer quantity — it is
+sampling the same two-mode behaviour at weights that happen to concentrate. Choosing it would be
+choosing the placement that **hides a real behaviour of the routine** because the hidden version
+is quieter, which is flattery-shopping's respectable cousin, and "one standing placement" exists
+to bar the whole family. In the ruling's words: the 334–455 spread is information — something in
+the solve's execution is placement-sensitive and bistable, and the row's honest state says so.
+
+The second candidate was **unjudgeable**, a new verdict meaning "this criterion cannot be applied
+to this routine". Refused as over-broad, because the law already covered this shape and had
+covered it for months: #105's clause, ruled for the clock series, is that *an interval too wide
+to adjudicate its criterion is not a vote, it is an UNMEASURED with its width named*. The ruling
+extends that to the scaling and share criteria as a standing clause rather than minting a
+routine-specific escape hatch. Rows over cap render `REPORTED`, naming the width; rows within cap
+judge normally. Which means **keel-skx judges** — its control is tight and there is no reason to
+discard a measurable host because its fleet-mates scatter — while the two EPYCs **report** until
+the bimodality is attributed.
+
+### The cap is the criterion's own declared slack, and it must predate the readings
+
+The cap could not be read out of the tree: `git grep admissib` found the law stated and no
+numeric threshold anywhere, and #105 and #86 both refuse only the unbounded case. So it is
+derived, and the constraint on the derivation is the one that matters — a width cap chosen after
+seeing the widths is the threshold-invented-after-the-fact §5 exists against, and this one had to
+come from a standard that predates the run (the amend-a-criterion rule).
+
+Each criterion's own **declared slack** satisfies that, and each has exactly one:
+
+| criterion | bar | slack | dated | width measured as |
+|---|---|---|---|---|
+| share of the 8-thread ceiling | `CEIL_FRACTION` | `BASELINE_MARGIN` = 2.6 points | 2026-08-20 | `100*(share − share net of CI)`, points of share |
+| `Strsm` scaling | `STRSM_FLOOR` | `STRSM_MARGIN` = 0.403x | 2026-08-16 | `point − point net of CI`, in x |
+
+Both are the same construction — `bar = reference − slack` — which is why importing them is
+reuse and not invention: 53.6 − 2.6 = 51.0 is the derivation the share bar printed while it
+stood, and 7.403x (janus, the lowest of the nine) − 0.403x = 7.0x is what `Strsm`'s bar was
+ratified as. Two caveats travel with the second: 0.403x is partly a **residual**, since 7.0 also
+had to clear the then-live 6.0x general floor, and it settles only the *units* half of the open
+construction question at `scripts/gate-p5.sh`'s `STRSM_FLOOR` — what margin the typing commit
+subtracts to set the bar is still that commit's to argue.
+
+The units are not interchangeable, and the reason is #110's error one criterion over: the share
+bar is in **points**, and a relative rate CI converts to more or fewer points depending on how
+high the share sits, so a ±% compared against a points margin is two units in one inequality.
+As a fraction of its own bar the two margins land 0.7 points apart — 2.6/51.0 = 5.10% against
+0.403/7.0 = 5.76%. That is corroboration and not a derivation, and the independence is weak
+enough to say so out loud (§5 rule 10): neither number was chosen with the other in view, but
+both were chosen by the same two people six days apart.
+
+### The class is per row, which is what made it new
+
+Every non-pass class before this one was per host: admission is a property of the silicon,
+`BASELINE` a property of a (host, criterion) pair. `REPORTED` is the first that is **per row**,
+and that produces a defect with no precedent to copy. `HOST_CLEARED` and `HOST_MEASURED` start at
+1 and are only ever lowered, so a host every row of which rendered `REPORTED` would leave the row
+loop looking like a clean sweep and be **counted as one** — §5 rule 6's vacuous pass, arriving
+through a class designed to be green-compatible. So:
+
+- a host with **some** rows over cap keeps the votes its other rows earned, and the fleet
+  aggregate names the row count in every branch including `pass`, because a pass over hosts three
+  of whose twelve rows were out-resolved is a pass over nine rows;
+- a host with **every** row over cap gets its own bucket, subtracted from the no-coverage
+  residual whose sentence — "produced no complete set of ratios" — would be false about a
+  reading that printed;
+- the all-rows test compares against the **row count** rather than tracking a "judged something"
+  flag, because that flag would have to be set on all eight paths that reach a verdict and a
+  missed one is invisible on a healthy run.
+
+### What a bar may be typed from
+
+`CEIL_FRACTION` and `STRSM_FLOOR` type from **admissible rows only, or stay empty**. Either state
+is honest and neither blocks the era. This is the clause's real work in the founding run, and the
+reason it had to land before the campaign rather than after: with both bars empty there is no
+comparison for it to refuse, so what it decides today is **eligibility**, and a bar typed from an
+interval wider than its own slack is noise promoted to law. Landing it first is also the only
+order in which it cannot have been tuned to the widths it sorts.
+
+An earlier draft of this reasoning said the clause "changes no verdict in the founding run
+because the bars are empty." That is wrong and is recorded as wrong: the width test sits *ahead*
+of the empty-bar branch in both criteria, so a wide row renders `REPORTED` where it would
+otherwise have rendered a bar-less `PASS`. The pre-registration argument is the one above — the
+clause predates the numbers — and not the false claim that it is inert.
+
+### Coverage, and what stays unexercised (§5 rule 12)
+
+`scripts/gate-p5.sh` has no standing harness, so this is a session act and is stated as one. 19
+renderings were driven against the file's own bytes: both predicates at their boundaries (2.59 /
+2.60 / 2.61 points; 7.403x−7.403x, 7.403x−7.000x, 7.404x−7.000x), the reconstructed EPYC and skx
+widths, all four arms of the all-rows test, and the aggregate's arithmetic and sentences with a
+noisy host and with one noisy row per host. Predicted before it ran and confirmed: skx's ±0.9%
+judges at 0.06x of width, zen5's ±13.2% reports at 0.930x, 2.3× its cap.
+
+Three things are **not** exercised. The clause has never executed inside `gate-p5.sh` on a real
+fleet — the predicates and message bytes are driven, the control flow reaching them is not. The
+widths above are reconstructions from the disclosure percentages, not readings lifted from
+archives. And the uncomputable-width arm is a can't-happen written as a refusal rather than
+driven: the raw share reads the same two rows the bounded share just read successfully, so it
+cannot be reached, which is exactly why it refuses instead of falling through to a judgement that
+would green forever and tell no reader which it was.

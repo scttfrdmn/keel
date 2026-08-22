@@ -181,6 +181,13 @@ info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$
 # because folding it into info() would leave the one green-compatible non-pass
 # invisible to a reader scanning the verdict column.
 baseline()   { printf '  \033[36mBASELINE\033[0m  %s%s\n'    "$VERDICT_STAMP" "$1"; }
+# reported() — a criterion declining to judge a reading whose own interval is too wide to
+# adjudicate it (docs/rulings.md rule 19, 2026-08-22). The second green-compatible non-pass.
+# Distinct from unmeasured(), which says no reading was obtained: here a reading WAS obtained
+# and is printed, and what is refused is only the comparison. Callers must name the width in
+# the message — a class whose whole content is "too wide" that does not say how wide leaves
+# the next reader unable to tell a 3-point interval from a 30-point one.
+reported()   { printf '  \033[35mREPORTED\033[0m  %s%s\n'    "$VERDICT_STAMP" "$1"; }
 
 # gate_verdict NAME [DETAIL [RED_NOTE...]] — the last line of a gate log, which is the
 # line a reader greps, and the exit status `detach.sh stat` records. Six copies, four

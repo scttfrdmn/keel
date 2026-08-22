@@ -542,9 +542,9 @@ stamp_audit() {
     files=$((files + 1))
     local raw
     raw="$(strip "$f")"
-    n="$(grep -cE '^  (PASS|FAIL|UNMEASURED|BASELINE)  ' <<<"$raw" || true)"
+    n="$(grep -cE '^  (PASS|FAIL|UNMEASURED|BASELINE|REPORTED)  ' <<<"$raw" || true)"
     local u
-    u="$(grep -E '^  (PASS|FAIL|UNMEASURED|BASELINE)  ' <<<"$raw" | grep -vcF '[synthetic] ' || true)"
+    u="$(grep -E '^  (PASS|FAIL|UNMEASURED|BASELINE|REPORTED)  ' <<<"$raw" | grep -vcF '[synthetic] ' || true)"
     total=$((total + n)); unstamped=$((unstamped + u))
     say "   $(basename "$f"): $n verdict line(s), $u unstamped"
   done

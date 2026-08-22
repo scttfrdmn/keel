@@ -709,9 +709,13 @@ else
   # gate-p5 alone today, so neither tally can see one yet — which is exactly the
   # condition under which a missing column is invisible, and the reason to widen on
   # the day the helper lands rather than on the day a delegate first uses it.
+  # REPORTED joined on 2026-08-22 (docs/rulings.md rule 19) and both readers widened
+  # again the same day, on that precedent — a second green-compatible class is a
+  # second way for a line to be swallowed by neither neighbour, and the two tallies
+  # are still two readers of one vocabulary.
   P3_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P3LOG")
   P3V="$(grep -E '^gate-p3: (GREEN|RED)' "$P3LOG" | tail -1 || true)"
-  info "$(printf '%s\n' "$P3_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P3_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P3_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED / $(printf '%s\n' "$P3_STRIP" | grep -c '^  BASELINE  ' || true) BASELINE, verdict: ${P3V:-none printed}"
+  info "$(printf '%s\n' "$P3_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P3_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P3_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED / $(printf '%s\n' "$P3_STRIP" | grep -c '^  BASELINE  ' || true) BASELINE / $(printf '%s\n' "$P3_STRIP" | grep -c '^  REPORTED  ' || true) REPORTED, verdict: ${P3V:-none printed}"
   # Three-way on the delegate, for the same reason the criteria themselves are
   # (#76). gate-p3 exits 0 for GREEN and 1 for RED, and prints the matching line;
   # any other exit status means it died before reaching its own verdict — 255 when

@@ -9,6 +9,22 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **A third verdict class for a reading whose interval is too wide to adjudicate its own criterion**
+  (`REPORTED`, `scripts/remote.sh`; DESIGN.md §5 rule 19, `docs/rulings.md` rule 19; ruled 2026-08-22 on #6).
+  The spread mask widened `Strsm`'s intervals 3–15× — ±0.75/0.87% to ±5.13/10.28/13.24% on zen5 — while
+  keel-skx's identical-mask control did not move, so a per-row placement exception was considered and
+  **refused**: the mask reweights a bimodality both placements exhibit rather than measuring a truer
+  quantity, and picking the quieter placement hides a real behaviour of the routine. What lands instead is
+  #105's existing three-state clause extended to the scaling and share criteria. A row whose width exceeds
+  **the criterion's own declared slack** — 2.6 points of share, or 0.403x for `Strsm`, both predating these
+  readings — prints, is archived, and has only its *comparison* refused; a row within cap judges normally.
+  So keel-skx judges and the two EPYCs report. Bars type from admissible rows only or stay empty. The class
+  is the first that is **per row**, which added a per-host bucket for a host every row of which was
+  out-resolved: `HOST_CLEARED` starts at 1 and is only ever lowered, so without it such a host would have
+  been counted as a clean sweep. Driven, not read: 19 renderings against the file's own bytes, both
+  predicates at their boundaries, all four arms of the all-rows test, and the aggregate's four sentences.
+  What stays unexercised is inside the ruling, per §5 rule 12.
+
 - **A run's archives are named for HEAD at the moment each file is written, not for the code that produced
   them, so one launch can carry two revision labels** (`scripts/bench.sh:117`, measured 2026-08-22). The run
   stamp is pinned on first use (line 115) precisely because a per-process counter discriminated nothing
@@ -126,6 +142,19 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **`scripts/detach.sh` forwards no environment, so a detached run can be a different program than the
+  same command typed directly** (measured 2026-08-22; no code change, recorded and worked around at the
+  call site). The generated runner is `cd $ROOT` plus a `printf '%q '` of argv and nothing else, so a
+  `KEEL_*` variable exported in the caller's shell is simply absent inside the tmux session. Found by
+  launching the founding campaign's fleet with `KEEL_FLEET` set to the judged sizes and watching it bring
+  up the **exploration** sizes instead (`c7a.2xlarge`, `c8a.2xlarge`); killed, torn down twice, both
+  instances confirmed `terminated` by instance-id, ≈$0.09. Then positively controlled rather than
+  reasoned: the detached run printed `KEEL_PROBE_VAR=[<unset>]` where the identical command run directly
+  printed `[set-by-caller]`. Compounded by `tmux set-option -s exit-empty off` (line 114), which keeps the
+  server alive between sessions, so a later run inherits whichever caller first started it. The fix is not
+  invisible forwarding: launches that need a variable use the inline `env VAR=... ./script` form at the
+  call site, which costs no `scripts/` lines and is what a judged run wants anyway — a stray `KEEL_*`
+  in an operator's shell cannot leak into a measurement it does not name.
 - **Ceiling readings taken before the hoist are marked `instrument=v1` and era-scoped, NOT re-adjudicated**
   (ruled 2026-08-22 on #115; `scripts/measurement-eras.tsv`, DESIGN §5 rule 18). The v1 bias was host- and
   mask-dependent **and varied per run** — that variance *was* the ceiling scatter that drew attention in the

@@ -163,6 +163,10 @@ P5_ERA="$(era_current "$BASELINE_ERAS")"
 # Strsm, whose diagonal solves carry a dependency chain the others do not.
 P5_JUDGED="Sgemm Ssyrk Ssymm"
 P5_MEASURED="Strsm"
+# Both classes as one list, because the row loop walks them together and the
+# all-rows-noise-limited test below needs the length. Counted once: a second derivation of
+# "how many rows a host has" is a second thing to keep in step with this line.
+read -ra P5_ROWS <<<"$P5_JUDGED $P5_MEASURED"
 # Ratified 2026-08-16 (#37, DESIGN.md §4/P5) as a REGRESSION BAR under the
 # replacement model — the per-(jc,pc) B-packing residue plus the claim tail — after
 # the printed work split failed as an Amdahl model on all nine readings (criterion 1
@@ -189,6 +193,13 @@ P5_MEASURED="Strsm"
 # `argmin less 2.6` is not a formula that transfers. One derivation block, three bars, and
 # this one needs its margin argued in the units it is measured in.
 STRSM_FLOOR=
+# This class's DECLARED SLACK in the units it is measured in, and the width cap rule 19 uses
+# for it: 7.403x (janus, the lowest of the nine) less the ratified 7.0x. Not a new constant and
+# not a post-hoc one — it is BASELINE_MARGIN's construction, bar = reference - slack, in x
+# instead of points, and it predates these readings by six days. docs/rulings.md rule 19 carries
+# the derivation and both caveats. It answers the units half of the open question above and NOT
+# the other half: what the typing commit subtracts to set the bar is still that commit's to argue.
+STRSM_MARGIN=0.403
 # The falsified ceiling, recomputed from each run's own declared work split rather
 # than carried as a constant, and reported beside the reading that clears it. Judged
 # by nothing: a future reading landing BELOW it would refute nothing (the nine
@@ -720,6 +731,12 @@ SCALE_HOSTS_MISSED=0
 SCALE_HOSTS_NOTADM=0
 SCALE_HOSTS_BASE=0
 SCALE_HOSTS_BASEONLY=0
+# The fifth and sixth (docs/rulings.md rule 19). TWO counters for one class, it being the first
+# that is per ROW: NOISY is hosts every row of which was out-resolved and is a bucket like
+# NOTADM. ROWS is the disclosure, and it is the number that matters on the common path — one row
+# of four scattering, host still voting — which the aggregate would otherwise be silent about.
+SCALE_HOSTS_NOISY=0
+SCALE_NOISY_ROWS=0
 BASELINE_OWING=""
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the scaling criterion cannot be evaluated: unmeasured, not missed"
@@ -914,7 +931,12 @@ else
     HOST_MISSED=0
     HOST_NOTADM=0
     HOST_BASE=0
-    for r in $P5_JUDGED $P5_MEASURED; do
+    # Counted, not folded into the flags above: rule 19's class is PER ROW where every other
+    # non-verdict here is per host, so a host can clear three bars and have its fourth row
+    # out-resolved. The count decides after the loop, the only place that knows if it was all.
+    HOST_NOISY=0
+    HOST_NOISY_ROWS=0
+    for r in "${P5_ROWS[@]}"; do
       one="$(scale_name "$r" 1)"
       many="$(scale_name "$r" "$P5_THREADS")"
 
@@ -953,8 +975,11 @@ else
 
       lo="$(bench_ratio_lo "$many" "$one" "$BENCHCSV" GFLOP/s)"
       pt="$(bench_ratio "$many" "$one" "$BENCHCSV" GFLOP/s)"
-      if [[ -z "$lo" ]]; then
-        unmeasured "[$host] $r: no bounded scaling ratio — benchstat established no interval, which is a failure to measure rather than a pass"
+      # BOTH, not just the bound: rule 19's clause SUBTRACTS $pt, and an unset one reads as 0 in
+      # awk, so `p-l` goes large-negative and a missing point estimate would judge as a tight
+      # reading. Checked here because eight sentences below also print it (§5 rule 6).
+      if [[ -z "$lo" || -z "$pt" ]]; then
+        unmeasured "[$host] $r: no bounded scaling ratio — benchstat established no interval, or no point estimate, and either is a failure to measure rather than a pass (lo='${lo:-}' point='${pt:-}')"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
       fi
@@ -997,6 +1022,16 @@ else
         elif ! awk -v a="$ru" -v b="$ds" 'BEGIN{s=a+b; exit !(s > 0.98 && s < 1.02)}'; then
           fail "[$host] $r's declared model does not account for its work: rank_update=$ru + diag_solve=$ds does not sum to 1"
           HOST_MEASURED=0
+        # Width admissibility in this class's own units (docs/rulings.md rule 19). AHEAD of the
+        # no-floor branch on purpose, and that is the whole reason it earns its lines this run:
+        # with STRSM_FLOOR empty there is no comparison to refuse, but the next commit TYPES the
+        # floor from these rows, and a bar typed from an interval wider than its own slack is
+        # noise promoted to law. So what this branch decides today is eligibility, not a verdict
+        # — and it decides it before any number from the campaign exists, which is what keeps it
+        # from having been tuned to the widths it sorts.
+        elif awk -v p="$pt" -v l="$lo" -v c="$STRSM_MARGIN" 'BEGIN{exit !(p-l > c)}'; then
+          reported "[$host] $r scales ${pt}x, ${lo}x net of CI; model at this shape: rank_update=$ru diag_solve=$ds — NOISE-LIMITED, NOT JUDGED and NOT ELIGIBLE TO TYPE A FLOOR: the interval on this ratio is $(awk -v p="$pt" -v l="$lo" 'BEGIN{printf "%.3f", p-l}')x wide, which exceeds the ${STRSM_MARGIN}x this class's bar was deliberately set under its own reference, so no floor placed with that slack could be adjudicated by this reading. The reading stands and is archived; what is refused is its vote (#6, ruled 2026-08-22)"
+          HOST_NOISY_ROWS=$((HOST_NOISY_ROWS + 1))
         elif [[ -z "$STRSM_FLOOR" ]]; then
           pass "[$host] $r scales ${pt}x, ${lo}x net of CI; model at this shape: rank_update=$ru diag_solve=$ds — measured and reported, NO FLOOR IN FORCE (#37): 7.0x was ratified 2026-08-16 and is suspended at the 2026-08-22 spread amendment, not never set, and this reading is the input to re-deriving it"
         elif awk -v v="$lo" -v f="$STRSM_FLOOR" 'BEGIN{exit !(v >= f)}'; then
@@ -1053,6 +1088,27 @@ else
         continue
       fi
       frac="$(awk -v x="$ratio" 'BEGIN{ printf "%.1f", 100*x }')"
+
+      # ---- width admissibility (docs/rulings.md rule 19, ruled 2026-08-22 on #6). Three local
+      # choices; the law is in the ruling. The cap is BASELINE_MARGIN, this criterion's own
+      # declared slack. The width is POINTS OF SHARE, because the bar is in points and a
+      # relative rate CI converts to more or fewer of them depending on how high the share sits
+      # (#110's units error, one criterion over). And it sits BEFORE bar selection, so it cannot
+      # be read as choosing which bar a wide row is measured against.
+      ratio_raw="$(bench_ratio "$many" "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s)"
+      # A can't-happen written as a refusal, not a fall-through: an absent instrument that
+      # defaults to judging greens forever and tells no reader which it was.
+      if [[ -z "$ratio_raw" ]]; then
+        unmeasured "[$host] $r: the share's point estimate is missing where its lower bound is not, so the width of its interval — the quantity that decides whether this share can be adjudicated at all — is not computable. A row of unknown resolution is not a row within cap, so it is refused rather than judged (docs/rulings.md rule 19)"
+        HOST_CLEARED=0; HOST_MEASURED=0
+        continue
+      fi
+      SHARE_WIDTH="$(awk -v r="$ratio_raw" -v n="$ratio" 'BEGIN{ printf "%.2f", 100*(r-n) }')"
+      if awk -v w="$SHARE_WIDTH" -v c="$BASELINE_MARGIN" 'BEGIN{exit !(w > c)}'; then
+        reported "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), scaling ${pt}x / ${lo}x — NOISE-LIMITED, NOT JUDGED: the intervals cost this share ${SHARE_WIDTH} points (raw $(awk -v x="$ratio_raw" 'BEGIN{printf "%.1f", 100*x}')% net to ${frac}%), which exceeds the ${BASELINE_MARGIN}-point margin every bar here is set by, so no comparison at this bar has the resolution to decide it. The reading stands and is archived; what is refused is the verdict, not the number"
+        HOST_NOISY_ROWS=$((HOST_NOISY_ROWS + 1))
+        continue
+      fi
 
       # ---- which bar is in force for this host x this criterion (#6, ruled 2026-08-21)
       #
@@ -1133,6 +1189,23 @@ else
       fi
     done
 
+    # ---- every row noise-limited: the host adjudicated nothing (docs/rulings.md rule 19)
+    #
+    # Both flags start at 1 and are only ever lowered, so a host every row of which rendered
+    # REPORTED would leave this loop looking like a clean sweep — the vacuous pass §5 rule 6
+    # exists against, arriving through a class designed to be green-compatible. Against the row
+    # COUNT and not a "judged something" flag, which would have to be set on all eight paths
+    # that reach a verdict and would be invisible on a healthy run if one were missed. Its own
+    # bucket, not no-coverage, whose sentence would be false about a printed reading.
+    if [[ "$HOST_NOISY_ROWS" -gt 0 && "$HOST_NOISY_ROWS" -eq "${#P5_ROWS[@]}" ]]; then
+      HOST_NOISY=1; HOST_CLEARED=0; HOST_MEASURED=0
+      # info and not a verdict, on CEIL_IMP's precedent above: this states the CONSEQUENCE of
+      # lines already printed, and the aggregate is where one red is issued for it. A second
+      # red here would convict the host twice for one condition, and it would also make a
+      # green-compatible class not green-compatible at the level a reader greps.
+      info "[$host] all ${#P5_ROWS[@]} rows are noise-limited, so this host adjudicated nothing this run and is neither a clear nor a miss. Its readings above stand as measured; the aggregate below is what refuses (#6, docs/rulings.md rule 19)"
+    fi
+
     # ---- retention, printed and not judged (criterion 8, issue #26)
     rk="$(marker bench-retention "$BENCHLOG")"
     [[ -n "$rk" ]] && info "[$host] retention (the blocked nest against its own microkernel): $rk — reported, never judged; #26 is a direction to work in, not a threshold invented after the fact"
@@ -1208,6 +1281,8 @@ else
     SCALE_HOSTS_OK=$((SCALE_HOSTS_OK + HOST_CLEARED))
     SCALE_HOSTS_MISSED=$((SCALE_HOSTS_MISSED + HOST_MISSED))
     SCALE_HOSTS_NOTADM=$((SCALE_HOSTS_NOTADM + HOST_NOTADM))
+    SCALE_HOSTS_NOISY=$((SCALE_HOSTS_NOISY + HOST_NOISY))
+    SCALE_NOISY_ROWS=$((SCALE_NOISY_ROWS + HOST_NOISY_ROWS))
     SCALE_HOSTS_BASE=$((SCALE_HOSTS_BASE + HOST_BASE))
     # Neither cleared nor missed anywhere: BASELINE was the whole of this host's verdict.
     [[ "$HOST_BASE" -eq 1 && "$HOST_CLEARED" -eq 0 && "$HOST_MISSED" -eq 0 ]] &&
@@ -1242,11 +1317,11 @@ else
   # Hosts that left the loop with no verdict for a reason that is not admission: no
   # complete set of ratio inputs, no bounded interval, no declared parallelism model.
   # Named, because they are neither cleared nor slow.
-  SCALE_NOCOVER=$((NHOSTS - SCALE_HOSTS_OK - SCALE_HOSTS_MISSED - SCALE_HOSTS_NOTADM - SCALE_HOSTS_BASEONLY))
+  SCALE_NOCOVER=$((NHOSTS - SCALE_HOSTS_OK - SCALE_HOSTS_MISSED - SCALE_HOSTS_NOTADM - SCALE_HOSTS_NOISY - SCALE_HOSTS_BASEONLY))
   # A negative residual is arithmetic asserting a fleet shape that did not occur: reported,
   # never published as a quantity (#90).
   if [[ "$SCALE_NOCOVER" -lt 0 ]]; then
-    fail "the scaling aggregate's buckets over-count this fleet: $NHOSTS host(s) but $SCALE_HOSTS_OK cleared + $SCALE_HOSTS_MISSED missed + $SCALE_HOSTS_NOTADM unadmitted + $SCALE_HOSTS_BASEONLY BASELINE-only, so a host was graded in two buckets and no aggregate over them is a fact (#6, #90)"
+    fail "the scaling aggregate's buckets over-count this fleet: $NHOSTS host(s) but $SCALE_HOSTS_OK cleared + $SCALE_HOSTS_MISSED missed + $SCALE_HOSTS_NOTADM unadmitted + $SCALE_HOSTS_NOISY noise-limited + $SCALE_HOSTS_BASEONLY BASELINE-only, so a host was graded in two buckets and no aggregate over them is a fact (#6, #90)"
     SCALE_NOCOVER=0
   fi
   # The debt, printed where eyes are rather than left to be found by grep. Emitted in
@@ -1292,6 +1367,11 @@ else
   BASE_NOTE=""
   [[ "$SCALE_HOSTS_BASEONLY" -gt 0 ]] && BASE_NOTE=" — and a further $SCALE_HOSTS_BASEONLY of $NHOSTS configured host(s) sit outside that denominator entirely, BASELINE being the whole of their verdict (#6)"
   [[ $((SCALE_HOSTS_BASE - SCALE_HOSTS_BASEONLY)) -gt 0 ]] && BASE_NOTE="$BASE_NOTE — and $((SCALE_HOSTS_BASE - SCALE_HOSTS_BASEONLY)) host(s) rendered BASELINE on one criterion while being judged on another, so they remain inside it and their per-host lines above say which was which (#6)"
+  # On BASE_NOTE's precedent and for its reason: empty when the class did not fire. Appended to
+  # EVERY branch including pass — a pass over hosts three of whose twelve rows were out-resolved
+  # is a pass over nine rows, and crediting more than it verified is §5 rule 6's defect.
+  NOISY_NOTE=""
+  [[ "$SCALE_NOISY_ROWS" -gt 0 ]] && NOISY_NOTE=" — and $SCALE_NOISY_ROWS row(s) across the fleet rendered REPORTED, their intervals wider than the margin their own bar is set by, so they are outside every count in this sentence (docs/rulings.md rule 19)"
   # THE ALL-BASELINE FLEET IS ITS OWN SENTENCE, not fleet_coverage's `unmeasured`. Both
   # resolve to no verdict, but for different reasons, and rendering the case is what
   # caught it: with every host new, the shared wording said "no host produced a judgeable
@@ -1303,13 +1383,13 @@ else
   else
   case "$(fleet_coverage "$SCALE_NJUDGE" "$SCALE_HOSTS_MEASURED" "$SCALE_HOSTS_OK" "$SCALE_HOSTS_MISSED" 0)" in
   unmeasured)
-    unmeasured "no host produced a judgeable set of scaling ratios, so the headline criterion is unmeasured rather than missed ($SCALE_HOSTS_NOTADM of $NHOSTS not admitted to the evidentiary class, so no ratio from them is judgeable however high it reads; $SCALE_NOCOVER produced no complete set of ratios)$BASE_NOTE" ;;
+    unmeasured "no host produced a judgeable set of scaling ratios, so the headline criterion is unmeasured rather than missed ($SCALE_HOSTS_NOTADM of $NHOSTS not admitted to the evidentiary class, so no ratio from them is judgeable however high it reads; $SCALE_HOSTS_NOISY had every row out-resolved by its own interval; $SCALE_NOCOVER produced no complete set of ratios)$BASE_NOTE$NOISY_NOTE" ;;
   pass)
-    pass "every gate host a bar governs cleared its class's bar $BARS ($SCALE_HOSTS_OK/$SCALE_NJUDGE)$BASE_NOTE" ;;
+    pass "every gate host a bar governs cleared its class's bar $BARS ($SCALE_HOSTS_OK/$SCALE_NJUDGE)$BASE_NOTE$NOISY_NOTE" ;;
   fail)
-    fail "$SCALE_HOSTS_OK of $SCALE_NJUDGE governed gate hosts cleared their class's bar $BARS and $SCALE_HOSTS_MISSED measured below one ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, $SCALE_NOCOVER produced no ratio); the criterion is per host and per class — the per-host lines above say which comparison missed$BASE_NOTE" ;;
+    fail "$SCALE_HOSTS_OK of $SCALE_NJUDGE governed gate hosts cleared their class's bar $BARS and $SCALE_HOSTS_MISSED measured below one ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, $SCALE_HOSTS_NOISY noise-limited on every row, $SCALE_NOCOVER produced no ratio); the criterion is per host and per class — the per-host lines above say which comparison missed$BASE_NOTE$NOISY_NOTE" ;;
   *)
-    unmeasured "$((SCALE_HOSTS_NOTADM + SCALE_NOCOVER)) of $SCALE_NJUDGE governed gate hosts could not be judged this run ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, so no scaling ratio from them is judgeable; $SCALE_NOCOVER produced no complete set of ratios at all); the other $SCALE_HOSTS_OK cleared their class's bar $BARS, and no host measured below one — the per-host PASSes above stand as measured$BASE_NOTE" ;;
+    unmeasured "$((SCALE_HOSTS_NOTADM + SCALE_HOSTS_NOISY + SCALE_NOCOVER)) of $SCALE_NJUDGE governed gate hosts could not be judged this run ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, so no scaling ratio from them is judgeable; $SCALE_HOSTS_NOISY had every row out-resolved by its own interval; $SCALE_NOCOVER produced no complete set of ratios at all); the other $SCALE_HOSTS_OK cleared their class's bar $BARS, and no host measured below one — the per-host PASSes above stand as measured$BASE_NOTE$NOISY_NOTE" ;;
   esac
   fi
 fi
@@ -1382,7 +1462,7 @@ else
   # this comment's own bug did, one column over.
   P4_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P4LOG")
   P4V="$(grep -E '^gate-p4: (GREEN|RED)' "$P4LOG" | tail -1 || true)"
-  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P4_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED / $(printf '%s\n' "$P4_STRIP" | grep -c '^  BASELINE  ' || true) BASELINE, verdict: ${P4V:-none printed}"
+  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P4_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED / $(printf '%s\n' "$P4_STRIP" | grep -c '^  BASELINE  ' || true) BASELINE / $(printf '%s\n' "$P4_STRIP" | grep -c '^  REPORTED  ' || true) REPORTED, verdict: ${P4V:-none printed}"
   # Three-way on the delegate (#76), the identical shape to gate-p4's reading of
   # gate-p3 — and this is the deeper of the two chains, so a death inside gate-p3
   # arrives here twice removed: gate-p4 now reports it as UNMEASURED, and this gate
