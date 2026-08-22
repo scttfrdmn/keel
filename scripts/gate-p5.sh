@@ -1186,8 +1186,8 @@ else
   # divergent-copies defect at the verdict layer is what #90's sharing ruling was about, and
   # an inline chain here was the last candidate for it. NINDET is a literal 0 as a fact, not
   # a placeholder — gate-p3's indeterminate state is a split between two CANDIDATE
-  # DENOMINATORS, and this criterion's denominator is the host's own single-thread rate, of
-  # which there is exactly one. A host with no bounded ratio is counted above as no-coverage.
+  # DENOMINATORS; each class here has exactly one — the measured 8-thread ceiling for the judged
+  # classes, its own single-thread rate for Strsm. A host with no bounded ratio is no-coverage above.
   #
   # THE DENOMINATOR DROPS THE BASELINE-ONLY HOSTS, and that is a changed denominator on a
   # published aggregate, so it is stated rather than left to be diffed (#6, 2026-08-21).

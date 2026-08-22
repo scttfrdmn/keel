@@ -107,7 +107,13 @@ While the major version is 0, minor versions may contain breaking changes.
   single-thread rate, and `$BARS` spans both classes. Each bar now names its own denominator instead, and the
   `gate-p4`-is-RED caveat — which disclaimed only what "divides by a single-thread rate" — now disclaims measured
   rates generally, having stopped reaching the headline criterion at all. Worst on the **green** path: the PASS
-  string is what ships verbatim in a gate-green closing comment.
+  string is what ships verbatim in a gate-green closing comment. A **fourth site** turned up afterwards, while
+  adjudicating the confirmation log (`gate-p5.sh:1189`): it justified `NINDET = 0` by that same retired denominator
+  — "this criterion's denominator is the host's own single-thread rate, of which there is exactly one". The
+  conclusion survives, since each class still has exactly one denominator and so there is no candidate split, but
+  the reason named the wrong one now that the criterion spans both classes. Lower severity than the three verdict
+  strings by §5 rule 14 — a comment ships to the next editor, not into a closing comment — and fixed rather than
+  filed, at no net `scripts/` lines.
 - **`CEIL_FRACTION = 51.0`, typed for `pinned8` from the era-founding run, with its derivation set narrowed from
   three CPU models to two** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; #6). The minimum
   judged row on `build/gate-p5-be5bb91.log` is `keel-zen5` `Ssymm` at 53.6% net of both intervals, less the same
