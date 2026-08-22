@@ -1,0 +1,60 @@
+# Copyright 2026 The keel Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# host-baselines.tsv — the per-host reference artifacts gate-p5 judges against.
+# Tab-separated, tracked, human-diffable, and keyed on THE EXACT CPU-MODEL STRING
+# gate-p5's README criterion greps (`remote_probe | cut -d'|' -f1`). One key shared
+# with the criterion that consumes it, so the registry can never disagree with the
+# check about who a host is.
+#
+# WHY THIS FILE EXISTS. A criterion whose reference artifact predates the host's
+# admission cannot judge that host: the bar-derivation set, the README row and the
+# archived baseline are all artifacts of runs a newly admitted host was not in, and
+# convicting it for its absence from them measures its admission date rather than
+# its code. That is the BASELINE-REGISTERED class (ruled 2026-08-21, #6), and this
+# file is what a host graduates INTO.
+#
+# THE GATE PROPOSES ROWS AND NEVER WRITES THIS FILE. An instrument minting the
+# reference it will judge against is self-certification, so gate-p5 emits a fully
+# formed candidate row to build/baseline-candidates-<rev>.tsv and stops there;
+# landing it is a reviewed commit act, exactly like every reference artifact before
+# it. The three states it decides between come from the archive, not from a flag:
+#
+#   registered   — a row here → judged at (baseline - BASELINE_MARGIN), derivation printed
+#   new          — no row, and no archived judged log for this host predating the run
+#                  → BASELINE: verdict green-compatible, candidate emitted
+#   owing        — no row, but a prior archived judged log exists → FAIL, naming the
+#                  unmet registration
+#
+# BASELINE IS SINGLE-SHOT PER HOST BY CONSTRUCTION: the run that renders it creates
+# the prior log that forbids it next time, so no host can ride the exemption. The
+# scope of that guarantee is stated where it is weaker than it sounds — see
+# `baseline_prior` in scripts/gate-lib.sh.
+#
+# BASELINES ARE IMMUTABLE except by the two doors that already exist in law:
+# supersession by a tighter re-measure, or dated re-registration citing a named code
+# change. Either way the row's estimator, source and grounds move with the value;
+# provenance is the row, not a footnote.
+#
+# NOT IN HERE, on purpose: the three CPU models that DERIVED CEIL_FRACTION
+# (gate-p5.sh's CEIL_DERIVED_FROM). Their reference artifact does not predate their
+# admission — they are the artifact — so they stay on the fleet bar. Per-host
+# convergence for them is a post-tag option, not something smuggled in with this
+# mechanism.
+#
+# THERE ARE NO DATA ROWS YET, and that is a measurement state rather than an
+# oversight. keel-skx is the one host owing registration, and its share baseline
+# cannot be imported from the free-instrument runs that measured it (5ec5fea,
+# 33de3b2): a published reference is an estimator, never a draw (§5 rule 16), and
+# both of those are single draws under the instrument the pinning transition
+# replaces. Its rows are born from the pinned arm of that campaign (#6).
+#
+# columns, tab-separated:
+#   1 cpu_model  the exact string the host reports, as gate-p5 greps it
+#   2 criterion  what the baseline is a baseline FOR (e.g. share/Sgemm, scale/Strsm)
+#   3 baseline   the reference value; the bar is this less BASELINE_MARGIN
+#   4 estimator  how it was reduced from samples, with N and the runs named
+#   5 source     the archived log the value is recomputable from
+#   6 as_of      the date the row was landed
+#   7 grounds    why this host has its own baseline rather than the fleet's
+cpu_model	criterion	baseline	estimator	source	as_of	grounds

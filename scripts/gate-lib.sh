@@ -232,6 +232,62 @@ flops_formula() {
   esac
 }
 
+# ---------------------------------------------------------------------------
+# The BASELINE-REGISTERED class (#6, ruled 2026-08-21). scripts/host-baselines.tsv
+# carries the whole of the design and is the authority; these are its readers, here
+# rather than in gate-p5.sh only because a decision no harness can drive is a
+# decision nothing checks, and scripts/baseline-test.sh drives every branch of these.
+
+# baseline_lookup TSV CPU CRIT — the registry row for one host × criterion, or nothing.
+# Absent file and absent row are deliberately the SAME answer: "this host is not
+# registered" is what the caller needs, and a missing registry is a repository with no
+# registered hosts. What separates newness from an unmet obligation is baseline_prior,
+# below, and keeping the two apart is the point — a lookup that also guessed at
+# newness would be deciding the verdict inside the accessor.
+baseline_lookup() {
+  local tsv="$1" cpu="$2" crit="$3"
+  [[ -r "$tsv" ]] || return 0
+  awk -F'\t' -v c="$cpu" -v k="$crit" '
+    /^#/ || $1 == "cpu_model" { next }
+    NF >= 7 && $1 == c && $2 == k { print; exit }' "$tsv"
+}
+
+# baseline_prior DIR HOST REV — 0 if this host was judged by an archived run OTHER than
+# this one, which is what forbids a second BASELINE. Excludes REV's own archives by exact
+# rev, so the run currently writing them cannot cite itself as its own precedent.
+#
+# THE SCOPE OF THE SINGLE-SHOT GUARANTEE IS PER OPERATOR MACHINE, NOT PER REPOSITORY,
+# and that is weaker than "single-shot by construction" sounds. build/ is gitignored
+# (.gitignore:13), so a fresh clone sees no priors and would render BASELINE for every
+# host. It is not a hole so much as a scope: .keel-hosts is gitignored too
+# (.gitignore:32, "hostnames are infrastructure, not source"), so a clone that has no
+# archive also has no fleet to judge, and reconstructing one is an operator act on a new
+# operator machine. The witness has exactly the scope of the thing it witnesses.
+# What would widen it is a tracked index of judged runs — feasible, landed by the same
+# reviewed commit act as a registry row, and named here so this stays a debt with an
+# action rather than a limitation inside a number (§5 rule 12 as amended 2026-08-19).
+baseline_prior() {
+  local dir="$1" host="$2" rev="$3" f
+  for f in "$dir"/bench-gate-p5-*-"$host"-*.txt; do
+    [[ -e "$f" ]] || continue
+    [[ "$(basename "$f")" == bench-gate-p5-"$rev"-* ]] && continue
+    return 0
+  done
+  return 1
+}
+
+# baseline_candidate FILE CPU CRIT VALUE ESTIMATOR SOURCE ASOF GROUNDS — append one fully
+# formed candidate row. The gate calls this and nothing else: it never opens the registry
+# for writing, because an instrument that mints the reference it will judge against has
+# certified itself. Emitting a complete row (not a diff, not a reminder) is what makes the
+# reviewed commit act a review rather than a re-derivation.
+baseline_candidate() {
+  local file="$1"; shift
+  mkdir -p "$(dirname "$file")" || return 1
+  [[ -s "$file" ]] || printf '# candidate rows proposed by gate-p5; landing them is a reviewed commit act (#6)\n' >"$file"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@" >>"$file"
+}
+
 # reconcile_sweep_best_ipf VALUE LOG — check a stated SWEEP_BEST_IPF against a live
 # derivation rather than trusting it (#107, ruled 2026-08-18).
 #

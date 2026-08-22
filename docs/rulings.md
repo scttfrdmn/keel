@@ -384,3 +384,87 @@ same-revision repeat the archive holds — `ce43bca` against its own rerun, `Ssy
 622.8 — spread 0.71%, which does not decompose the 7.1% and is one pair. So the decomposition
 is unmeasured, and the ruling rests on the estimator argument alone, which needs no
 decomposition: sample size one is the worst estimator available whatever the spread's cause.
+
+## Rule 17 — a criterion may not judge a host its reference artifact predates
+
+*Ruled 2026-08-21. Issue #6, Scott's ruling on the BASELINE-REGISTERED class, ending "Build it."*
+
+`gate-p5` rendered five reds on `keel-skx` at `33de3b2`. Three were a real deficit and one
+was a noise-margin miss, but the fifth was structural:
+
+```
+FAIL [keel-skx] README.md publishes no row for 'Intel(R) Xeon(R) Platinum 8124M CPU
+     @ 3.00GHz', so this host's numbers are either unpublished or published under a
+     CPU it does not have
+```
+
+A README row is *born* from a judged run. skx's first judged run is the one issuing this
+verdict, so the row it is convicted for lacking could not have existed — the criterion is
+reading the host's admission date. Scott's structural definition covers the whole family:
+**any criterion whose reference artifact — bar derivation set, README row, archived
+baseline — predates the host's admission.** Convicting skx at the README criterion for that
+absence is *rule 16's error relocated one criterion over*: in both cases the check measures
+a property of the reference rather than of the code.
+
+### The three states, and why they come from the archive rather than a flag
+
+| registry row | prior archived judged log | verdict | why |
+|---|---|---|---|
+| absent | absent | `BASELINE`, green-compatible | genuine newness; the run emits the candidate reference formed from its own numbers |
+| absent | **present** | `FAIL`, naming the unmet registration | absence is no longer newness, it is an obligation someone did not land |
+| present | either | judged at `baseline − margin`, derivation printed | the host has a reference of its own |
+
+The middle row is the whole design. A `BASELINE`-shaped exemption that could be renewed
+would be a permanent green for any host nobody got around to registering — and the closure
+is structural rather than vigilant: **the run that renders `BASELINE` creates the prior log
+that forbids it next time.** The class is single-shot per host by construction, and nothing
+has to remember to revoke it.
+
+That has an immediate consequence for skx, and it is not the one the ruling anticipated.
+This machine's archive already holds two judged skx runs (`5ec5fea`, `33de3b2`), so skx is
+in the **middle** row today: it renders `FAIL`, not `BASELINE`, and its registration is
+already overdue. The exemption was spent by the runs that discovered the problem.
+
+### Two boundaries
+
+**The instrument proposes references and never writes them.** An instrument that mints the
+reference it will judge against has certified itself, so `gate-p5` emits a fully formed
+candidate row to `build/baseline-candidates-<rev>.tsv` and stops. Landing it is a reviewed
+commit act, exactly as `CEIL_FRACTION` and every README row were. `scripts/baseline-test.sh`
+case 19 asserts the tracked registry has no data rows and was not written, which makes this
+the one property whose violation is not a wrong number but a wrong constitution.
+
+**A candidate emitted from one run is not landable as it stands** — rule 16, applied to
+this mechanism by its own author's instrument. The emitted row's estimator column says
+`SINGLE DRAW … re-reduce as a median over N archived runs before committing`, in the row
+itself rather than in a note beside it. So skx's share baseline cannot be imported from
+`33de3b2`: that reading is a draw under the free instrument the pinning transition
+replaces, and enshrining it as a reference would be precisely the defect rule 16 names.
+Its rows are born from the pinned arm of the pinning-transition campaign.
+
+### What is not per-host
+
+The bar is `registered baseline − BASELINE_MARGIN`, and the margin is `CEIL_FRACTION`'s
+own: `60.4 − 2.6 = 57.8` is the derivation the gate already prints, so a per-host bar is
+the fleet bar's *construction* applied to a different baseline, not a second threshold with
+a second justification. The three CPU models that derived the fleet bar stay on it, since
+for them the artifact does not predate the admission — they are the artifact. Per-host
+convergence for them is a post-tag option, and was not smuggled in here.
+
+### What this mechanism does not cover, stated inside the number
+
+The prior-log witness is **per operator machine, not per repository**. `build/` is
+gitignored (`.gitignore:13`), so a fresh clone sees no priors and would render `BASELINE`
+for every host. The scope is coherent rather than accidental — `.keel-hosts` is gitignored
+too (`.gitignore:32`, "hostnames are infrastructure, not source"), so a clone with no
+archive also has no fleet to judge — but "single-shot by construction" is true of an
+operator machine and not of the repository, and the difference is the kind that goes inside
+the number rather than into prose beside it. **The action that would widen it** is a tracked
+index of judged runs, landed by the same reviewed commit act as a registry row; it is named
+because a limitation with an available action is a debt, not a property (§5 rule 12).
+
+One branch is written and unreached: an unreadable CPU model resolves the share criterion to
+`UNMEASURED` rather than falling back to the fleet bar, since falling back would be *looser*
+than the truth for any host whose registered baseline sits above the fleet's. A host that
+cannot answer a probe also produced no benchmark rows, so the branch is fail-closed and
+unexercised, and that is stated rather than implied.

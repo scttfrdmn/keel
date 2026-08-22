@@ -700,10 +700,16 @@ else
   # gate-p3's misses became UNMEASURED under #72, and a two-column tally would
   # have shown them as neither — the same disappearing act the unanchored grep
   # performed, one column over. gate-p5's tally of *this* gate has the identical
-  # shape (gate-p5.sh:987); they are two readers of one vocabulary.
+  # shape (gate-p5.sh:1143); they are two readers of one vocabulary.
+  #
+  # BASELINE joined the vocabulary on 2026-08-21 (#6) and both readers gained a
+  # column the same day, before either could have swallowed one. It is emitted by
+  # gate-p5 alone today, so neither tally can see one yet — which is exactly the
+  # condition under which a missing column is invisible, and the reason to widen on
+  # the day the helper lands rather than on the day a delegate first uses it.
   P3_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P3LOG")
   P3V="$(grep -E '^gate-p3: (GREEN|RED)' "$P3LOG" | tail -1 || true)"
-  info "$(printf '%s\n' "$P3_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P3_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P3_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED, verdict: ${P3V:-none printed}"
+  info "$(printf '%s\n' "$P3_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P3_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P3_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED / $(printf '%s\n' "$P3_STRIP" | grep -c '^  BASELINE  ' || true) BASELINE, verdict: ${P3V:-none printed}"
   # Three-way on the delegate, for the same reason the criteria themselves are
   # (#76). gate-p3 exits 0 for GREEN and 1 for RED, and prints the matching line;
   # any other exit status means it died before reaching its own verdict — 255 when

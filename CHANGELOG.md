@@ -51,6 +51,55 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **31 citations in this commit named `#6` only after `gh issue view` refuted `#33`/`#34`/`#36`, which were task
+  ids.** Same failure mode as `ddd642f` (2026-08-18, "17 citations pointed at the wrong issue"), against the
+  same number `#33`, three days later — so the recorded lesson did not prevent the recurrence. It cannot be linted away
+  either: task ids and this repo's issue numbers occupy the same low integers and are syntactically identical,
+  so no local check can discriminate them, and `#33` resolves to a real open-shaped issue with a plausible
+  subject. The discriminator is a network query or a human reading, which is why the rule is *never carry the
+  number into prose* rather than *check it later*. Caught before commit; the blind substitution was refused
+  because seven tracked files cite the genuine `#33` (the coretype-sweep defect), so only lines this diff added
+  were rewritten.
+- **A criterion may not judge a host its reference artifact predates: the BASELINE-REGISTERED class**
+  (#6, ruled 2026-08-21; DESIGN.md §5 rule 17, `docs/rulings.md` rule 17). gate-p5 convicted `keel-skx` for
+  publishing no README row — a row that is *born* from a judged run, so the host's first judged run could not
+  have had one, and the criterion was reading its admission date. Now three states, decided from the archive
+  and never from a flag: no registry row and no prior archived judged log is newness (`BASELINE`, a fifth
+  verdict colour that does not raise `FAIL`); no row **with** a prior log is an unmet registration (`FAIL`);
+  a row is judged at `baseline − 2.6`, the same margin `CEIL_FRACTION` uses, derivation printed. The
+  exemption closes structurally rather than by vigilance — the run that renders `BASELINE` creates the prior
+  log that forbids it next time — and the consequence is immediate: this machine's archive already holds two
+  judged skx runs, so **skx renders `FAIL` today, not `BASELINE`**, its exemption having been spent by the
+  runs that found the problem. The gate emits a fully formed candidate row to
+  `build/baseline-candidates-<rev>.tsv` and never writes `scripts/host-baselines.tsv`; the registry ships with
+  **zero data rows**, because skx's share baseline cannot be imported from `5ec5fea` or `33de3b2` — those are
+  single draws under the instrument the pinning-transition campaign replaces, and a published reference is an estimator, never a draw
+  (§5 rule 16). Two limitations stated inside the number: the prior-log witness is per **operator machine**,
+  not per repository (`build/` is gitignored, and the widening action — a tracked judged-run index — is
+  named); and the unreadable-CPU branch resolves to `UNMEASURED` fail-closed and is unexercised.
+- **The scaling aggregate's denominator now excludes BASELINE hosts, and two of its sentences were wrong**
+  (#6, 2026-08-21). `fleet_coverage` passes only when `nclear` equals its denominator, so leaving a
+  green-compatible host in `NHOSTS` would have resolved every such fleet to `partial` and blocked green
+  silently, by arithmetic, one function from the branch that renders the verdict. Rendering the six fleet
+  shapes rather than reading them — the practice this file's own comment records — caught two further
+  defects the change introduced: a healthy fleet's headline PASS carried `0 of 3 rendered BASELINE`, noise
+  that invites a reader to think the class fired; and an all-new fleet printed "no host produced a judgeable
+  set of scaling ratios … 0 produced no complete set of ratios", of which the first clause is false about the
+  mechanism and the second contradicts it. All-BASELINE is now its own sentence, and a zero denominator
+  resolves to `UNMEASURED` — a fleet on which no host has a bar has measured nothing judged.
+- **Both delegated verdict tallies gained a BASELINE column on the day the vocabulary did** (2026-08-21).
+  `gate-p4.sh` over gate-p3's log and `gate-p5.sh` over gate-p4's each counted three columns where the
+  vocabulary now has four. Neither can see a `BASELINE` yet — gate-p5 alone emits them — which is exactly the
+  condition under which a missing column is invisible, and the reason to widen on the day the helper lands
+  rather than on the day a delegate first uses one. The stale `gate-p5.sh:987` cross-citation in that comment
+  was repointed at the line it names.
+- **`scripts/baseline-test.sh`: 22 fixtures, five mutants driven** (#6, 2026-08-21). The registry ships empty,
+  so a healthy run cannot reach the `registered` branch at all and a green gate would say nothing about the
+  code that will set a per-host bar. Each of five mutations — a dropped `NF >= 7` guard, a dropped header
+  skip, a dropped self-citation guard, a lost host-name anchor, a truncating append — was caught by exactly
+  the one case aimed at it. Wired into both `make lint` and gate-p5, deliberately: lint runs on every push
+  and catches a broken reader before a $24/hr fleet renders a bar from it, and the gate's copy is what makes
+  the published log self-certifying.
 - **§5 rule 16: a published reference is an estimator, never a draw** (ruling on #6, 2026-08-21; `DESIGN.md` §5,
   `docs/rulings.md` rule 16). `gate-p5` criterion 9 convicted two `keel-zen4` README rows on `33de3b2`, and both
   published values were the **maximum** of their six-run history on the same physical instance (`Ssymm/8T`

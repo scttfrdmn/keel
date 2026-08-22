@@ -124,8 +124,9 @@ remote_hosts() {
 # a synthetic log self-describes line by line and no single line of it can be
 # quoted as a gate result.
 #
-# ALL FOUR VERDICT HELPERS LIVE HERE, AND NO GATE THAT SOURCES THIS FILE DEFINES
-# ITS OWN (2026-08-16; scoped 2026-08-16 after the sentence was checked).
+# ALL FIVE VERDICT HELPERS LIVE HERE, AND NO GATE THAT SOURCES THIS FILE DEFINES
+# ITS OWN (2026-08-16; scoped 2026-08-16 after the sentence was checked; a fifth
+# added 2026-08-21).
 #
 # The sentence used to read "no gate defines its own", which gate-docs.sh
 # falsifies: it sources nothing and defines pass/fail/info itself. That is not the
@@ -157,6 +158,16 @@ pass()       { printf '  \033[32mPASS\033[0m  %s%s\n'        "$VERDICT_STAMP" "$
 fail()       { printf '  \033[31mFAIL\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; FAIL=1; }
 unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s%s\n'  "$VERDICT_STAMP" "$1"; FAIL=1; }
 info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$1"; }
+# baseline() — a criterion declining to judge a host its reference artifact predates,
+# and recording the reference this run would propose instead (#6, ruled 2026-08-21).
+# It is the one verdict helper that does NOT raise FAIL, and that is the whole of its
+# content: green-compatible, because convicting a host for its absence from a run it
+# was not in measures its admission date. It is not an escape hatch — a host reaches
+# it at most once, and the run that renders it creates the archived log that makes the
+# next absence an unmet obligation (FAIL) instead of newness. A colour of its own
+# because folding it into info() would leave the one green-compatible non-pass
+# invisible to a reader scanning the verdict column.
+baseline()   { printf '  \033[36mBASELINE\033[0m  %s%s\n'    "$VERDICT_STAMP" "$1"; }
 
 # gate_verdict NAME [DETAIL [RED_NOTE...]] — the last line of a gate log, which is the
 # line a reader greps, and the exit status `detach.sh stat` records. Six copies, four

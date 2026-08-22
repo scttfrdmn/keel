@@ -55,6 +55,24 @@ SCALE_FLOOR_RETIRED=6.0
 # down; >=90% was refused. The derivation is printed at run time, so it is not restated
 # here for the reason the paragraph above gives: two copies, one witness (§5 rule 10).
 CEIL_FRACTION=57.8
+# The three CPU models whose nine judged rows DERIVED CEIL_FRACTION. Named because the
+# BASELINE-REGISTERED class below turns on whether a criterion's reference artifact
+# predates the host's admission, and for these three it does not — they ARE the artifact.
+# So they stay on the fleet bar, and only hosts outside this set are registry-governed.
+# Per-host convergence for them is a post-tag option, not part of #6 (ruled 2026-08-21).
+CEIL_DERIVED_FROM="AMD EPYC 9R14|AMD EPYC 9R45|Intel(R) Xeon(R) 6975P-C"
+# The registry a registry-governed host is judged from, and the margin between a
+# registered baseline and the bar it sets. scripts/host-baselines.tsv carries the design.
+#
+# THE MARGIN IS CEIL_FRACTION'S OWN, not a second constant with a second justification:
+# 60.4 - 2.6 = 57.8 is the derivation this gate already prints, so a per-host bar is the
+# fleet bar's construction applied to a different baseline rather than a new kind of
+# threshold. One number, stated once, reused — which also means a future re-argument of
+# the margin moves both bars together instead of leaving them to drift apart.
+BASELINE_REGISTRY="scripts/host-baselines.tsv"
+BASELINE_MARGIN=2.6
+P5_REV="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+BASELINE_CANDIDATES="build/baseline-candidates-$P5_REV.tsv"
 
 # The two parallelism classes (criterion 1, ruled 2026-08-12). P5_JUDGED is one
 # class: GEMM-shaped nests over independent tiles. P5_MEASURED is the other:
@@ -539,6 +557,21 @@ else
   info "measured and reported, floor deferred to this measurement plus a stated model: $P5_MEASURED (#37)"
 fi
 
+# The class's own controls, in the log that publishes the class's verdicts (#6). The
+# registry ships with no data rows, so this run can reach `owing` and `new` and cannot
+# reach `registered` at all — a green below is the only thing standing behind the branch
+# that will decide a per-host bar the day a row lands. Run in `make lint` too, and that
+# duplication is deliberate rather than a slip: lint runs on every push, including on the
+# one machine here without AVX-512, and catches a broken reader before a $24/hr fleet
+# renders a bar from it; this copy is what makes the published log self-certifying.
+if BTLOG="$(bash scripts/baseline-test.sh 2>&1)"; then
+  pass "BASELINE-REGISTERED readers pass their controls ($(grep -c '^  ok ' <<<"$BTLOG") fixtures, five mutants driven at 2026-08-21)"
+else
+  fail "BASELINE-REGISTERED readers fail their own controls, so no bar this criterion applies is trustworthy (#6)"
+  # shellcheck disable=SC2001  # prefixing every line; not a scalar substitution
+  sed 's/^/        /' <<<"$BTLOG"
+fi
+
 BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 SCALE_HOSTS_OK=0
@@ -550,8 +583,15 @@ SCALE_HOSTS_MEASURED=0
 # the miss count precisely so that derivation cannot come back. SCALE_HOSTS_NOTADM is
 # hosts whose numbers no bar governs (#104); it is neither a clear nor a miss, and the
 # sentence must not let it read as either.
+# SCALE_HOSTS_BASE is the third of those: hosts that produced a complete, bounded,
+# admitted set of ratios and still have no bar, because the reference artifact every
+# candidate bar is made of predates their admission (#6). It gets its own subtraction
+# for exactly the reason NOTADM did — left out, a BASELINE host falls into SCALE_NOCOVER,
+# whose sentence says "produced no complete set of ratios", which of this host is false.
 SCALE_HOSTS_MISSED=0
 SCALE_HOSTS_NOTADM=0
+SCALE_HOSTS_BASE=0
+BASELINE_OWING=""
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the scaling criterion cannot be evaluated: unmeasured, not missed"
 else
@@ -649,10 +689,32 @@ else
       fi
     done
 
+    # ---- who this host is, and therefore which bar its class puts in force (#6)
+    #
+    # HOISTED ABOVE BOTH CONSUMERS on purpose. The share criterion and the README
+    # criterion are two criteria of one class, and each probing for itself would let
+    # them come to disagree about the host's identity between one line and the next —
+    # the same argument that keys the registry on this exact string rather than on a
+    # short name. scripts/host-baselines.tsv carries the design; this resolves only
+    # the host-level half of it, since the registry is keyed on host × criterion and
+    # the criterion half belongs inside the row loop.
+    hcpu="$(remote_probe "$host" | cut -d'|' -f1 | sed 's/ *$//' || true)"
+    # Substring, in the same direction and for the same reason as the README criterion's
+    # row match: a probe string that gains a suffix must not silently move a host out of
+    # the derivation set and into registry governance, which would change its bar.
+    DERIV=0
+    while IFS= read -r d; do
+      [[ -n "$d" && "$hcpu" == *"$d"* ]] && DERIV=1
+    done < <(printf '%s\n' "${CEIL_DERIVED_FROM//|/$'\n'}")
+    # The witness that separates newness from an unmet obligation. Read once per host
+    # because it is a fact about the archive, not about a routine.
+    HOST_PRIOR=0; baseline_prior build "$host" "$P5_REV" && HOST_PRIOR=1
+
     HOST_CLEARED=1
     HOST_MEASURED=1
     HOST_MISSED=0
     HOST_NOTADM=0
+    HOST_BASE=0
     for r in $P5_JUDGED $P5_MEASURED; do
       one="$(scale_name "$r" 1)"
       many="$(scale_name "$r" "$P5_THREADS")"
@@ -780,15 +842,68 @@ else
         continue
       fi
       frac="$(awk -v x="$ratio" 'BEGIN{ printf "%.1f", 100*x }')"
+
+      # ---- which bar is in force for this host x this criterion (#6, ruled 2026-08-21)
+      #
+      # Three states, decided from the registry and the archive rather than from a flag,
+      # and every one of them printed with its derivation. The fleet bar is the default
+      # only for the hosts that derived it; for everyone else absence of a row is either
+      # newness or an obligation, and which one it is is not this criterion's opinion.
+      BCRIT="share/$r"; BBAR="$CEIL_FRACTION"
+      BWHY="the fleet bar, whose derivation is printed in this criterion's preamble"
+      BROW=""
+      [[ "$DERIV" -eq 0 && -n "$hcpu" ]] && BROW="$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT")"
+      if [[ -z "$hcpu" ]]; then
+        # FAIL-CLOSED, and not a fallback to the fleet bar: the host's identity is the key
+        # to its bar, so without it there is no bar in force, and a reading judged against
+        # a bar that may not be this host's is not a verdict. Falling back would be looser
+        # than the truth for any host whose registered baseline sits above the fleet's.
+        # UNEXERCISED: an unreadable model means remote_probe failed, and a host that
+        # cannot answer a probe did not produce the benchmark rows this line stands after
+        # — so the branch is written fail-closed and stated as unreached (§5 rule 12).
+        unmeasured "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), but the CPU model is unreadable so no bar can be keyed to this host: the reading is unjudged rather than cleared (#6)"
+        HOST_CLEARED=0; HOST_MEASURED=0
+        continue
+      elif [[ "$DERIV" -eq 1 && -n "$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT")" ]]; then
+        # Two independent statements of who governs a host, disagreeing. Reported rather
+        # than resolved by precedence: a silent winner here would judge a host against a
+        # bar neither the registry nor CEIL_DERIVED_FROM meant it to have.
+        fail "[$host] $BCRIT is claimed by both CEIL_DERIVED_FROM and $BASELINE_REGISTRY, so two artifacts disagree about which bar governs this host and neither may be applied (#6)"
+        HOST_CLEARED=0; HOST_MEASURED=0
+        continue
+      elif [[ "$DERIV" -eq 0 && -z "$BROW" ]]; then
+        # The class itself. The candidate row is fully formed so that landing it is a
+        # review and not a re-derivation — but its estimator column says what one run can
+        # support, which is a draw and not a reference (§5 rule 16). The gate proposes;
+        # it never writes the registry.
+        baseline_candidate "$BASELINE_CANDIDATES" "$hcpu" "$BCRIT" "$frac" \
+          "SINGLE DRAW from gate-p5 at $P5_REV -- NOT landable as-is (§5 rule 16): re-reduce as a median over N archived runs before committing" \
+          "$BENCH_ARCHIVE" "$(date -u +%Y-%m-%d)" \
+          "admitted after CEIL_FRACTION's derivation set, so the fleet bar's reference artifact predates this host"
+        if [[ "$HOST_PRIOR" -eq 0 ]]; then
+          baseline "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), and this host has no registered baseline and no earlier archived judged run: the fleet bar's reference artifact predates its admission, so the reading is RECORDED as its candidate baseline rather than judged (#6). Candidate row: $BASELINE_CANDIDATES"
+          HOST_BASE=1
+        else
+          BASELINE_OWING="$BASELINE_OWING $host/$BCRIT"
+          fail "[$host] $r has no registered baseline in $BASELINE_REGISTRY, and this host was already judged by an earlier archived run — so the absence is an unmet registration rather than newness, and BASELINE is spent (#6). Land the candidate row emitted at $BASELINE_CANDIDATES"
+        fi
+        HOST_CLEARED=0; HOST_MEASURED=0
+        continue
+      elif [[ -n "$BROW" ]]; then
+        bval="$(awk -F'\t' '{print $3}' <<<"$BROW")"
+        BBAR="$(awk -v b="$bval" -v m="$BASELINE_MARGIN" 'BEGIN{printf "%.1f", b-m}')"
+        BWHY="this host's registered baseline ${bval}% less the same ${BASELINE_MARGIN} points of margin the fleet bar uses (estimator: $(awk -F'\t' '{print $4}' <<<"$BROW"); recomputable from $(awk -F'\t' '{print $5}' <<<"$BROW"); registered $(awk -F'\t' '{print $6}' <<<"$BROW"))"
+      fi
+
       if [[ -z "$CEIL_FRACTION" ]]; then
         # The STRSM_FLOOR precedent (#37): measured, reported, and the input to setting
         # the bar rather than a bar itself. Named as unjudged so no reader can mistake a
         # silent pass for cleared coverage — this class HAS no floor in force right now.
         pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, no fraction ratified yet (#6): this reading is an input to setting one, and the retired ${SCALE_FLOOR_RETIRED}x floor is not applied"
-      elif awk -v v="$frac" -v f="$CEIL_FRACTION" 'BEGIN{exit !(v >= f)}'; then
-        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (>= ${CEIL_FRACTION}%), scaling ${pt}x / ${lo}x net of CI"
+      elif awk -v v="$frac" -v f="$BBAR" 'BEGIN{exit !(v >= f)}'; then
+        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (>= ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"
       else
-        fail "[$host] $r reaches only ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (< ${CEIL_FRACTION}%), scaling ${pt}x / ${lo}x net of CI"
+        fail "[$host] $r reaches only ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (< ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"
         HOST_CLEARED=0
         HOST_MISSED=1
       fi
@@ -805,7 +920,8 @@ else
     if [[ ! -r README.md ]]; then
       fail "README.md is missing, and DESIGN.md §4/P5 asks for it with honest numbers in it"
     else
-      hcpu="$(remote_probe "$host" | cut -d'|' -f1 | sed 's/ *$//' || true)"
+      # hcpu is resolved once per host above, with the derivation-set membership and the
+      # prior-archive witness this criterion's three states share with the share bar's.
       RROWS="$(awk -v b="$README_BEGIN" -v e="$README_END" '
         index($0, b) { inb = 1; next }
         index($0, e) { inb = 0 }
@@ -843,8 +959,19 @@ else
             RBADN="$RBADN ${rben}/threads=${rthr}(README says $rgf, this run measured $mgf)"
           fi
         done <<<"$RROWS"
-        if [[ "$RMATCH" -eq 0 ]]; then
-          fail "[$host] README.md publishes no row for '$hcpu', so this host's numbers are either unpublished or published under a CPU it does not have"
+        if [[ "$RMATCH" -eq 0 && "$HOST_PRIOR" -eq 0 ]]; then
+          # THE SAME CLASS, ONE CRITERION OVER (#6). A README row is born from a judged
+          # run, so a host whose first judged run is this one cannot have had a row to
+          # publish, and convicting it for the absence measures its admission date. Its
+          # rows are created by the regeneration that reduces every row to a median over
+          # archived runs — which is the artifact-creating act here, and why this
+          # branch proposes no candidate: there is no registry row to propose, only a
+          # README the campaign rewrites wholesale.
+          baseline "[$host] README.md publishes no row for '$hcpu', and this host has no earlier archived judged run: a published row is born from a judged run, so its absence here is this host's admission date and not an unpublished number (#6). Its rows are created when the README is regenerated as medians over archived runs"
+          HOST_BASE=1
+        elif [[ "$RMATCH" -eq 0 ]]; then
+          BASELINE_OWING="$BASELINE_OWING $host/README"
+          fail "[$host] README.md publishes no row for '$hcpu', and this host was already judged by an earlier archived run — so its numbers are unpublished rather than unborn, and BASELINE is spent (#6)"
         elif [[ -z "$RBADN" ]]; then
           pass "[$host] every README row for this CPU re-measures within 5% ($RMATCH row(s))"
         else
@@ -857,6 +984,7 @@ else
     SCALE_HOSTS_OK=$((SCALE_HOSTS_OK + HOST_CLEARED))
     SCALE_HOSTS_MISSED=$((SCALE_HOSTS_MISSED + HOST_MISSED))
     SCALE_HOSTS_NOTADM=$((SCALE_HOSTS_NOTADM + HOST_NOTADM))
+    SCALE_HOSTS_BASE=$((SCALE_HOSTS_BASE + HOST_BASE))
   done <<<"$HOSTS"
   # TWO BARS IN ONE TALLY, named rather than summarised, built ONCE because four renderings
   # of one clause is four places for the next constant to be typed into three of.
@@ -875,7 +1003,7 @@ else
   # the paragraph above records; there is no harness for this file, so that check is a
   # session act and not a standing one (§5 rule 12: the gap is stated, not implied).
   if [[ -n "$CEIL_FRACTION" ]]; then
-    BARS_J="${CEIL_FRACTION}% of each host's own ${P5_THREADS}-thread ceiling for $P5_JUDGED"
+    BARS_J="${CEIL_FRACTION}% of each host's own ${P5_THREADS}-thread ceiling for $P5_JUDGED on the hosts that derived that fraction, and a registered baseline less ${BASELINE_MARGIN} points elsewhere (#6)"
   else
     BARS_J="$P5_JUDGED reported against each host's own ceiling with no fraction in force (#6)"
   fi
@@ -888,23 +1016,60 @@ else
   # Hosts that left the loop with no verdict for a reason that is not admission: no
   # complete set of ratio inputs, no bounded interval, no declared parallelism model.
   # Named, because they are neither cleared nor slow.
-  SCALE_NOCOVER=$((NHOSTS - SCALE_HOSTS_OK - SCALE_HOSTS_MISSED - SCALE_HOSTS_NOTADM))
+  SCALE_NOCOVER=$((NHOSTS - SCALE_HOSTS_OK - SCALE_HOSTS_MISSED - SCALE_HOSTS_NOTADM - SCALE_HOSTS_BASE))
+  # The debt, printed where eyes are rather than left to be found by grep. Emitted in
+  # both directions the class can point: a host that spent its BASELINE and owes a
+  # landed row, and a host that rendered one this run and will owe it next time.
+  if [[ -n "$BASELINE_OWING" ]]; then
+    info "hosts owing registration:$BASELINE_OWING — candidate rows emitted at $BASELINE_CANDIDATES, and landing them is a reviewed commit act, never this gate's (#6)"
+  fi
+  if [[ "$SCALE_HOSTS_BASE" -gt 0 ]]; then
+    info "$SCALE_HOSTS_BASE of $NHOSTS host(s) rendered BASELINE this run: green-compatible, and spent — this run's own archive is the prior log that makes the same absence an unmet registration next time (#6)"
+  fi
   # Absence semantics decided once in `fleet_coverage`, not a third time here: the
   # divergent-copies defect at the verdict layer is what #90's sharing ruling was about, and
   # an inline chain here was the last candidate for it. NINDET is a literal 0 as a fact, not
   # a placeholder — gate-p3's indeterminate state is a split between two CANDIDATE
   # DENOMINATORS, and this criterion's denominator is the host's own single-thread rate, of
   # which there is exactly one. A host with no bounded ratio is counted above as no-coverage.
-  case "$(fleet_coverage "$NHOSTS" "$SCALE_HOSTS_MEASURED" "$SCALE_HOSTS_OK" "$SCALE_HOSTS_MISSED" 0)" in
+  #
+  # THE DENOMINATOR DROPS THE BASELINE HOSTS, and that is a changed denominator on a
+  # published aggregate, so it is stated rather than left to be diffed (#6, 2026-08-21).
+  # `pass` requires nclear == the denominator, so leaving a BASELINE host in NHOSTS would
+  # resolve every such fleet to `partial` and block green — which contradicts the ruling
+  # that the class is green-compatible, and would do it silently, by arithmetic, one
+  # function away from the branch that renders the verdict. The excluded count is named in
+  # every branch below for the same reason. If EVERY host renders BASELINE the denominator
+  # is 0 and fleet_coverage returns `unmeasured`: a fleet on which no host has a bar has
+  # measured nothing judged, which is the fail-closed reading and the correct one.
+  SCALE_NJUDGE=$((NHOSTS - SCALE_HOSTS_BASE))
+  # ONE CLAUSE, EMPTY WHEN THE CLASS DID NOT FIRE, on BARS's precedent above. Written
+  # inline in each branch first, and rendering the six fleet shapes is what rejected
+  # that: today's healthy green carried "0 of 3 rendered BASELINE and are outside this
+  # denominator" on the headline PASS, which is noise on the common path and, worse,
+  # invites a reader to think the class fired on a fleet where it did not.
+  BASE_NOTE=""
+  [[ "$SCALE_HOSTS_BASE" -gt 0 ]] && BASE_NOTE=" — and a further $SCALE_HOSTS_BASE of $NHOSTS configured host(s) sit outside that denominator entirely, having rendered BASELINE (#6)"
+  # THE ALL-BASELINE FLEET IS ITS OWN SENTENCE, not fleet_coverage's `unmeasured`. Both
+  # resolve to no verdict, but for different reasons, and rendering the case is what
+  # caught it: with every host new, the shared wording said "no host produced a judgeable
+  # set of scaling ratios … 0 produced no complete set of ratios", of which the first
+  # clause is false about the mechanism and the second contradicts it. Every host produced
+  # a complete, bounded, admitted set of ratios; not one of them had a bar (§5 rule 6).
+  if [[ "$SCALE_NJUDGE" -le 0 && "$SCALE_HOSTS_BASE" -gt 0 ]]; then
+    unmeasured "all $SCALE_HOSTS_BASE configured host(s) rendered BASELINE, so the headline criterion has no host it may judge: every one of them produced a complete set of ratios and not one has a bar whose reference artifact predates its admission (#6). Unmeasured, and not a clean sweep"
+  else
+  case "$(fleet_coverage "$SCALE_NJUDGE" "$SCALE_HOSTS_MEASURED" "$SCALE_HOSTS_OK" "$SCALE_HOSTS_MISSED" 0)" in
   unmeasured)
-    unmeasured "no host produced a judgeable set of scaling ratios, so the headline criterion is unmeasured rather than missed ($SCALE_HOSTS_NOTADM of $NHOSTS not admitted to the evidentiary class, so no ratio from them is judgeable however high it reads; $SCALE_NOCOVER produced no complete set of ratios)" ;;
+    unmeasured "no host produced a judgeable set of scaling ratios, so the headline criterion is unmeasured rather than missed ($SCALE_HOSTS_NOTADM of $NHOSTS not admitted to the evidentiary class, so no ratio from them is judgeable however high it reads; $SCALE_NOCOVER produced no complete set of ratios)$BASE_NOTE" ;;
   pass)
-    pass "every gate host cleared its class's bar $BARS against its own single-thread rate ($SCALE_HOSTS_OK/$NHOSTS)" ;;
+    pass "every gate host a bar governs cleared its class's bar $BARS against its own single-thread rate ($SCALE_HOSTS_OK/$SCALE_NJUDGE)$BASE_NOTE" ;;
   fail)
-    fail "$SCALE_HOSTS_OK of $NHOSTS gate hosts cleared their class's bar $BARS against their own single-thread rate and $SCALE_HOSTS_MISSED measured below one ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, $SCALE_NOCOVER produced no ratio); the criterion is per host and per class — the per-host lines above say which comparison missed" ;;
+    fail "$SCALE_HOSTS_OK of $SCALE_NJUDGE governed gate hosts cleared their class's bar $BARS against their own single-thread rate and $SCALE_HOSTS_MISSED measured below one ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, $SCALE_NOCOVER produced no ratio); the criterion is per host and per class — the per-host lines above say which comparison missed$BASE_NOTE" ;;
   *)
-    unmeasured "$((SCALE_HOSTS_NOTADM + SCALE_NOCOVER)) of $NHOSTS gate hosts could not be judged this run ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, so no scaling ratio from them is judgeable; $SCALE_NOCOVER produced no complete set of ratios at all); the other $SCALE_HOSTS_OK cleared their class's bar $BARS, and no host measured below one — the per-host PASSes above stand as measured" ;;
+    unmeasured "$((SCALE_HOSTS_NOTADM + SCALE_NOCOVER)) of $SCALE_NJUDGE governed gate hosts could not be judged this run ($SCALE_HOSTS_NOTADM not admitted to the evidentiary class, so no scaling ratio from them is judgeable; $SCALE_NOCOVER produced no complete set of ratios at all); the other $SCALE_HOSTS_OK cleared their class's bar $BARS, and no host measured below one — the per-host PASSes above stand as measured$BASE_NOTE" ;;
   esac
+  fi
 fi
 
 # --------------------------------------- the documentation the phase promises
@@ -975,7 +1140,7 @@ else
   # this comment's own bug did, one column over.
   P4_STRIP=$(sed $'s/\033\\[[0-9;]*m//g' "$P4LOG")
   P4V="$(grep -E '^gate-p4: (GREEN|RED)' "$P4LOG" | tail -1 || true)"
-  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P4_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED, verdict: ${P4V:-none printed}"
+  info "$(printf '%s\n' "$P4_STRIP" | grep -c '^  PASS  ' || true) PASS / $(printf '%s\n' "$P4_STRIP" | grep -c '^  FAIL  ' || true) FAIL / $(printf '%s\n' "$P4_STRIP" | grep -c '^  UNMEASURED  ' || true) UNMEASURED / $(printf '%s\n' "$P4_STRIP" | grep -c '^  BASELINE  ' || true) BASELINE, verdict: ${P4V:-none printed}"
   # Three-way on the delegate (#76), the identical shape to gate-p4's reading of
   # gate-p3 — and this is the deeper of the two chains, so a death inside gate-p3
   # arrives here twice removed: gate-p4 now reports it as UNMEASURED, and this gate
