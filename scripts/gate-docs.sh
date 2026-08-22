@@ -312,24 +312,31 @@ stage_citations() {
 # them by 837 and correcting a count is not licence to also redraw a boundary in the
 # same commit -- that is a definition change, and §7 rule 7 wants it argued, not
 # bundled into a bug fix.
+#
+# BOTH TERMS COUNT UNTRACKED-NOT-IGNORED FILES (2026-08-21). `git ls-files` alone is
+# tracked-only, so a new script was invisible to this reporter until it was committed --
+# and a counter whose job is to police NEW shell was blind in exactly the direction that
+# flatters the commit being prepared. 820eac0 read 1.47x while its own 131-line fixture
+# file was untracked; the honest figure was 1.49x. Both sides gained -co so correcting the
+# shell term is not also a redefinition that lets untracked Go pay down the ratio.
 stage_ratio() {
   head_ "apparatus ratio (reported, never a verdict)"
   local sh lib tool bench benchlib ratio aratio app libnet
-  sh="$(git ls-files '*.sh' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
-  lib="$(git ls-files '*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
-  tool="$(git ls-files 'tools/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  sh="$(git ls-files -co --exclude-standard '*.sh' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  lib="$(git ls-files -co --exclude-standard '*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  tool="$(git ls-files -co --exclude-standard 'tools/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   # bench/ counts EVERY tracked *.go, tests included -- that is the whole point of the
   # 2026-08-20 correction above -- while benchlib is only the part the library term
   # already held, so subtracting it moves bench/ across without double-counting.
-  bench="$(git ls-files 'bench/*.go' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
-  benchlib="$(git ls-files 'bench/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  bench="$(git ls-files -co --exclude-standard 'bench/*.go' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  benchlib="$(git ls-files -co --exclude-standard 'bench/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   app=$((sh + tool + bench))
   libnet=$((lib - tool - benchlib))
   ratio="$(awk -v a="$sh" -v b="$lib" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
   aratio="$(awk -v a="$app" -v b="$libnet" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
   info "shell ${sh} / library ${lib} / ratio ${ratio}x"
   info "apparatus ${app} (shell ${sh} + tools/ ${tool} + bench/ ${bench}, of which ${benchlib} was already counted as library) / library ${libnet} / ratio ${aratio}x"
-  info "shell = tracked *.sh; library = tracked *.go less *_test.go; tools/ and bench/ are apparatus (bench/ whole, tests included); internal/spill's audit instrument stays on the library side, disclosed"
+  info "shell = *.sh; library = *.go less *_test.go; both count tracked AND untracked-not-ignored, since a counter that polices new shell must see it before it is committed; tools/ and bench/ are apparatus (bench/ whole, tests included); internal/spill's audit instrument stays on the library side, disclosed"
 }
 
 main() {

@@ -51,6 +51,19 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The apparatus-ratio report could not see a new script until it was committed, so it understated the cost of
+  the commit being prepared.** `gate-docs.sh` counted *tracked* `*.sh`, so `scripts/baseline-test.sh` (131 lines)
+  was invisible while it was still untracked. `820eac0`'s message therefore published **1.47x**; the correct
+  figure for that commit is **1.45x → 1.49x** (shell 12693 → 13062, library 8778 unmoved). Both readings came
+  from the same instrument minutes apart and the delta is exactly the new file's line count, so the arithmetic
+  reconciles — but the metric that polices new shell was blind to new shell at the only moment consulting it
+  could change a decision. That is the gameable-denominator hazard already recorded here, running in the other
+  direction: not a denominator that absorbs the cost, a numerator not yet told about it. **Fixed
+  rather than disclosed**: both terms now count `git ls-files -co --exclude-standard`, so the reporter sees a
+  script the moment it exists. Both sides gained the flag, because correcting only the shell term would have
+  been a redefinition letting untracked Go pay the ratio down. Proved by making the quantity move — a 7-line
+  untracked probe raised `shell` by exactly 7 and removing it restored the reading, since a constant that is
+  merely readable certifies nothing.
 - **31 citations in this commit named `#6` only after `gh issue view` refuted `#33`/`#34`/`#36`, which were task
   ids.** Same failure mode as `ddd642f` (2026-08-18, "17 citations pointed at the wrong issue"), against the
   same number `#33`, three days later — so the recorded lesson did not prevent the recurrence. It cannot be linted away
@@ -76,7 +89,8 @@ While the major version is 0, minor versions may contain breaking changes.
   single draws under the instrument the pinning-transition campaign replaces, and a published reference is an estimator, never a draw
   (§5 rule 16). Two limitations stated inside the number: the prior-log witness is per **operator machine**,
   not per repository (`build/` is gitignored, and the widening action — a tracked judged-run index — is
-  named); and the unreadable-CPU branch resolves to `UNMEASURED` fail-closed and is unexercised.
+  named and filed as #114); and the unreadable-CPU branch resolves to `UNMEASURED` fail-closed and is
+  unexercised.
 - **The scaling aggregate's denominator now excludes BASELINE hosts, and two of its sentences were wrong**
   (#6, 2026-08-21). `fleet_coverage` passes only when `nclear` equals its denominator, so leaving a
   green-compatible host in `NHOSTS` would have resolved every such fleet to `partial` and blocked green

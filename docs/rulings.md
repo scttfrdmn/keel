@@ -461,7 +461,8 @@ archive also has no fleet to judge — but "single-shot by construction" is true
 operator machine and not of the repository, and the difference is the kind that goes inside
 the number rather than into prose beside it. **The action that would widen it** is a tracked
 index of judged runs, landed by the same reviewed commit act as a registry row; it is named
-because a limitation with an available action is a debt, not a property (§5 rule 12).
+because a limitation with an available action is a debt, not a property (§5 rule 12), and it
+is filed as one on #114.
 
 One branch is written and unreached: an unreadable CPU model resolves the share criterion to
 `UNMEASURED` rather than falling back to the fleet bar, since falling back would be *looser*

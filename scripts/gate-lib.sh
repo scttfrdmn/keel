@@ -265,7 +265,7 @@ baseline_lookup() {
 # operator machine. The witness has exactly the scope of the thing it witnesses.
 # What would widen it is a tracked index of judged runs — feasible, landed by the same
 # reviewed commit act as a registry row, and named here so this stays a debt with an
-# action rather than a limitation inside a number (§5 rule 12 as amended 2026-08-19).
+# action rather than a limitation inside a number (§5 rule 12 as amended 2026-08-19; #114).
 baseline_prior() {
   local dir="$1" host="$2" rev="$3" f
   for f in "$dir"/bench-gate-p5-*-"$host"-*.txt; do
