@@ -79,6 +79,22 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The `pinned8` era's arm is preserved and tracked at `archive/pinned8/` — 24 archives, `INDEX.tsv`, mapped to the
+  free arm by `cpu_model`** (#6). It existed only as untracked `build/` output, one `make clean` from gone, on an era
+  whose evidentiary half cost a three-host fleet to measure. Membership is the **measured predicate "carries a
+  `keel-pin:` line"**, not a revision range: what makes an archive pinned is that the mask applied to it, and that
+  line is the only witness. Applying the predicate also returned exactly 35 *unpinned* archives whose names match the
+  35 already in `archive/free-placement/`, an independent check that the free arm was preserved whole. All 24 report
+  the same `mask=0,1,2,3,4,5,6,7 width=8` and `gomaxprocs=8`, which is what rule 5's "fleet-wide and never
+  selectively" looks like in the evidence. **The count corrects a figure published hours earlier on #6 as 15**: that
+  was the two runs in front of me, and the predicate found `e64b34e`'s nine as well.
+- **`transition_archive` stays `—` and `pinned8` stays PROVISIONAL, deliberately** (`scripts/measurement-eras.tsv`;
+  #6). Granite Rapids (`Intel(R) Xeon(R) 6975P-C`) appears 8 times in the free arm and 0 times in the pinned one,
+  being a characterization host absent from the pinned fleet, so "the same fleet measured under the old instrument
+  and the new one" holds for three of the four models the free era touched. That is arguably consistent with the
+  condition rather than a breach — a characterization host is not part of the fleet the era governs — but reading it
+  as met is a judgment about what "the same fleet" means, and certifying a condition with a stated hole in it is not
+  a call to make in the commit that files the evidence for it. Preserving is unambiguous and done; closing is asked.
 - **The reported 8-thread stream ceiling is a single-CCD figure, ~6× below the socket, because §5 rule 5's affinity
   mask packs all 8 threads into one CCD** (`keel-zen5`, EPYC 9R45; #6). sysfs gives `shared_cpu_list` for
   `index3` as exactly 8 cores wide, so `keel_pin_mask`'s "first 8 distinct physical cores in order inside one NUMA

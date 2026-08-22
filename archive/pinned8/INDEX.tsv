@@ -1,0 +1,48 @@
+# Copyright 2026 The keel Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# INDEX.tsv — one row per preserved pinned8 archive. Generated once from the files
+# beside it and then frozen, for the same reason free-placement/INDEX.tsv is: see
+# README.md. The command that generated it is in the commit that landed this set.
+#
+# Membership is the MEASURED predicate "carries a keel-pin: line", not the revision
+# and not the name: an archive is in this era because the instrument that produced it
+# recorded the mask it ran under. `kind` is likewise read from which benchmarks the
+# file contains, since the name does not say.
+#
+# columns, tab-separated:
+#   1 file       the archive beside this index
+#   2 rev        the tree revision, from the name (bench_csv put it there)
+#   3 host       the hostname, from the name; `—` where bench_csv was called untagged
+#   4 cpu_model  keel-bench-cpu, the exact string the registries key on
+#   5 logical    keel-bench-cores
+#   6 gomaxprocs keel-bench-gomaxprocs — the mask holds this to 8
+#   7 kind       ladder (judged benchmarks + ceiling arm) | clock-window
+#   8 benches    distinct benchmark names
+#   9 samples    total sample lines
+#  10 pin_mask   keel-pin, the affinity mask the run actually applied (§5 rule 5)
+file	rev	host	cpu_model	logical	gomaxprocs	kind	benches	samples	pin_mask
+bench-gate-p5-be5bb91-20260822T054223Z-1.txt	be5bb91	—	AMD EPYC 9R45	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-be5bb91-20260822T054223Z-2.txt	be5bb91	—	AMD EPYC 9R14	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-be5bb91-20260822T054223Z-3.txt	be5bb91	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-be5bb91-20260822T054223Z-4.txt	be5bb91	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-be5bb91-20260822T065732Z-1.txt	be5bb91	—	AMD EPYC 9R45	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-be5bb91-keel-skx-20260822T054223Z-3.txt	be5bb91	keel-skx	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-be5bb91-keel-zen4-20260822T054223Z-2.txt	be5bb91	keel-zen4	AMD EPYC 9R14	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-be5bb91-keel-zen5-20260822T054223Z-1.txt	be5bb91	keel-zen5	AMD EPYC 9R45	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-d2fe477-20260822T072236Z-1.txt	d2fe477	—	AMD EPYC 9R45	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-d2fe477-20260822T072236Z-2.txt	d2fe477	—	AMD EPYC 9R14	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-d2fe477-20260822T072236Z-3.txt	d2fe477	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-d2fe477-20260822T072236Z-4.txt	d2fe477	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-d2fe477-keel-skx-20260822T072236Z-3.txt	d2fe477	keel-skx	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-d2fe477-keel-zen4-20260822T072236Z-2.txt	d2fe477	keel-zen4	AMD EPYC 9R14	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-d2fe477-keel-zen5-20260822T072236Z-1.txt	d2fe477	keel-zen5	AMD EPYC 9R45	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-20260822T034030Z-1.txt	e64b34e	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-20260822T034030Z-2.txt	e64b34e	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-20260822T040706Z-1.txt	e64b34e	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-20260822T040706Z-2.txt	e64b34e	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-20260822T043337Z-1.txt	e64b34e	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-20260822T043337Z-2.txt	e64b34e	—	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	clock-window	Peak	10	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-keel-skx-20260822T034030Z-1.txt	e64b34e	keel-skx	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-keel-skx-20260822T040706Z-1.txt	e64b34e	keel-skx	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
+bench-gate-p5-e64b34e-keel-skx-20260822T043337Z-1.txt	e64b34e	keel-skx	Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	8 logical	8	ladder	Ceiling,Peak,Scale	210	mask=0,1,2,3,4,5,6,7 width=8
