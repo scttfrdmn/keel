@@ -302,6 +302,31 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **The fleet-wide CPU affinity mask was law, doc and measurement era three times over, and no line of code
+  applied it** (§5 rule 5, found and implemented 2026-08-21 while building the synthetic exercise of the
+  BASELINE-REGISTERED class, ruled on #6).
+  `docs/hosts.md` said in the present tense that *"every judged benchmark invocation on every host runs under a
+  CPU affinity mask of eight distinct physical cores"*; `scripts/measurement-eras.tsv` had already opened a
+  `pinned8` era for it; DESIGN §5 rule 5 carried its falsification condition. `git grep taskset` over the whole
+  tree returned four CHANGELOG lines, three doc paragraphs, and two comments saying P2 needs none. **Three
+  artifacts asserting a mechanism and zero implementing it is one witness restated three times** (§5 rule 10) —
+  grep for a mechanism before publishing the number that depends on it. Now: `remote_exec` — the single launcher
+  all 20 remote call sites funnel through, so no gate can deviate — selects a mask of eight first-thread cores
+  inside *one* NUMA node for every invocation carrying `-test.bench`, and **refuses rather than falling back**
+  (no `taskset`, no sibling lists, or fewer than eight cores in any one node ⇒ status 121, nothing measured),
+  because a silent free-placement fallback produces precisely the artifact the era ledger exists to make
+  impossible: a free-placement reading wearing a `pinned8` label. Correctness runs (`-test.v`) stay free — a mask
+  cannot make a wrong answer right, and pinning them would refuse the test suite on small hosts for nothing
+  measured. The mask is printed into the benchmark log immediately before the binary, so it travels into the
+  archive with the numbers it shaped, and `gate-p5` reads placement back **twice** — the mask the harness asked
+  for (`bench_pin`) against the width Go saw through its own affinity (`bench_gomaxprocs`) — because a requested
+  mask that did not take is invisible to the side that requested it. A declined mask and a broken sweep are told
+  apart there, being opposite causes of one `unmeasured` (§5 rule 6). Nine selector fixtures in
+  `scripts/remote-exec-test.sh` drive shapes no fleet host has, and one of them **created a branch**: the first
+  version fell back to `sib=$c` when a topology had no `thread_siblings_list`, which hands back eight cpus that
+  may be four hyperthreaded cores — and the `GOMAXPROCS` readback cannot catch that, since the width is 8 either
+  way. Distinctness unprovable now abandons the node. Every keel benchmark number published before this commit
+  was measured under free placement, which is what the era boundary is for.
 - **skx's judged shortfall factors onto the one term nothing excuses, and two published skx figures were a bad
   draw** (#6, 2026-08-21; `build/onethread-decomp-3fceaa9.log`). Pinning the 1-thread arm shows the ladder's
   `keel1` of 59.16 ±15.12% was low: the truth is 66.56 ±0.11%, so skx's 1T efficiency rises 30.83% → **34.72%**

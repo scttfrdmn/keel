@@ -149,18 +149,13 @@ echo
 # the verdict is WITHHELD rather than computed, because what a reference-hungry
 # reader greps for is the last line -- a synthetic run able to print "gate-p2:
 # GREEN" would be a forgeable certificate no matter what this banner said.
+#
+# The three lines that used to sit here are now instrument_exercise in
+# scripts/remote.sh, lifted when gate-p5 needed them (2026-08-21). They gained an
+# `export` in the move, which changes nothing for this gate — p2 delegates to no other
+# gate — and closes a real hole in p5, which does. See that function.
 INSTRUMENT_EXERCISE="${KEEL_INSTRUMENT_EXERCISE:-}"
-if [[ -n "$INSTRUMENT_EXERCISE" ]]; then
-  VERDICT_STAMP="[synthetic] "
-  echo "  ############################################################"
-  echo "  ##  SYNTHETIC RUN -- NOT A GATE RESULT                    ##"
-  echo "  ##  reason: $INSTRUMENT_EXERCISE"
-  echo "  ##  Every verdict line below carries a [synthetic] stamp. ##"
-  echo "  ##  No GREEN and no RED is printed; the exit code is 2.   ##"
-  echo "  ##  This run judges the instrument, never P2.             ##"
-  echo "  ############################################################"
-  echo
-fi
+instrument_exercise "$INSTRUMENT_EXERCISE" || true
 
 # ------------------------------------------------------------- tree state (#63)
 assert_no_strays

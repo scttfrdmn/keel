@@ -117,7 +117,16 @@ head_ "1. a run that finishes"
 # REMOTE_SUPERVISED=" against a function that had set it correctly — and worse, case 5
 # read `yes` left over from case 2 and would have passed had the assertion been weaker.
 # Every case here runs remote_exec in this shell and redirects to a file.
-remote_exec "$H" "$BIN" -test.bench='Sgemm|Ssyrk' -test.count=2 > "$WORK/1.log" 2>&1; rc=$?
+#
+# `-test.run=` AND NOT `-test.bench=`, changed 2026-08-21 when remote_exec began pinning.
+# What this case checks is transport -- an argument containing a shell pipeline surviving
+# two shells -- and `-test.run` carries that hazard identically. `-test.bench` now also
+# selects the affinity branch, whose far side must have taskset and a NUMA sysfs; this
+# machine has neither, so keeping it here would have turned four transport assertions into
+# one refusal. The bench form is driven in case 9, with its refusal asserted rather than
+# tolerated. A case narrowed to what it can actually witness is not a weakened case; a case
+# that reports "argv was altered" because the mask was declined would be a wrong one.
+remote_exec "$H" "$BIN" -test.run='Sgemm|Ssyrk' -test.count=2 > "$WORK/1.log" 2>&1; rc=$?
 out="$(cat "$WORK/1.log")"
 [[ "$REMOTE_SUPERVISED" == yes ]] && pass_ "ran supervised (REMOTE_SUPERVISED=yes)" ||
   fail_ "expected a supervised run, got REMOTE_SUPERVISED=$REMOTE_SUPERVISED"
@@ -126,7 +135,7 @@ out="$(cat "$WORK/1.log")"
 # The hazard #62 named: a tmux layer is a second shell on the far side, so an
 # argument that survived printf %q once must survive it twice. 'Sgemm|Ssyrk' as
 # shell input is a pipeline -- the failure that made printf %q necessary at all.
-if grep -q 'argv: \[-test\.bench=Sgemm|Ssyrk\] \[-test\.count=2\]' <<<"$out"; then
+if grep -q 'argv: \[-test\.run=Sgemm|Ssyrk\] \[-test\.count=2\]' <<<"$out"; then
   pass_ "argv crossed two shells intact: $(grep -o 'argv:.*' <<<"$out")"
 else
   fail_ "argv was altered on the far side:"; sed 's/^/        /' <<<"$out"
@@ -470,13 +479,191 @@ jcase 1 'UNMEAS.*two witnesses of this host.s identity disagree' \
   "x | instance=c7a.48xlarge | virt=guest | governor=absent | spawn=i-0ab:c7a.2xlarge:ondemand" \
   "contradicting witnesses unmeasured, naming the contradiction"
 
+# ------------------- 9. the affinity mask: selected from a topology, or refused
+#
+# §5 rule 5's mask (adopted fleet-wide 2026-08-21). The selector is sh, reads a topology
+# out of sysfs, and runs on the far side -- so it is driven HERE against topologies this
+# script builds, on a machine with no sysfs at all. That is the same move case 7 makes for
+# the governor: hand the function its input rather than find a host that has it. What it
+# buys is the shapes no host in the fleet has, and those are the ones a mask gets wrong:
+# a node too small to satisfy the width, a sysfs with no sibling lists, a cpulist written
+# as a range where the sibling list is written as a comma pair.
+#
+# KEEL_SYSFS is a root path, not a mode flag: the function has no test-only branch, and
+# the fixtures below are ordinary callers supplying an ordinary argument.
+#
+# WHAT THESE CANNOT SEE (§5 rule 12). That a real Linux host's node/cpulist and
+# thread_siblings_list are formatted the way these fixtures write them is read off two
+# hosts' sysfs and off Documentation/ABI/testing/sysfs-devices-node -- it is not
+# established here. Nor is `taskset -c <mask>` itself exercised anywhere in this file;
+# what proves the mask TOOK is gate-p5's second reading of it (GOMAXPROCS off Go's own
+# affinity), and that needs a Linux host with eight cores, which is a fleet run.
+head_ "9. keel_pin_mask selects eight distinct cores or refuses"
+eval "$KEEL_PIN_SH"     # the shipped text, defined in this shell exactly as the far side sees it
+
+# A two-socket SMT host in the shape keel-skx really has: 18 physical cores per node, the
+# second thread of core c numbered c+36, and a cpulist written as two ranges.
+topo_skx() {
+  local root="$1" c
+  mkdir -p "$root/node/node0" "$root/node/node1"
+  printf '0-17,36-53\n' > "$root/node/node0/cpulist"
+  printf '18-35,54-71\n' > "$root/node/node1/cpulist"
+  for c in $(seq 0 35); do
+    mkdir -p "$root/cpu/cpu$c/topology"
+    printf '%d,%d\n' "$c" "$((c + 36))" > "$root/cpu/cpu$c/topology/thread_siblings_list"
+    mkdir -p "$root/cpu/cpu$((c + 36))/topology"
+    printf '%d,%d\n' "$c" "$((c + 36))" > "$root/cpu/cpu$((c + 36))/topology/thread_siblings_list"
+  done
+}
+pin_case() {
+  local note="$1" want="$2" expect="$3" root="$4" got=""
+  got="$(KEEL_SYSFS="$root" keel_pin_mask "$want" || true)"
+  [[ "$got" == "$expect" ]] && pass_ "$note -> ${got:-REFUSED}" ||
+    fail_ "$note -> '${got:-REFUSED}', expected '${expect:-REFUSED}'"
+}
+
+SKX="$WORK/topo-skx"; topo_skx "$SKX"
+pin_case "18-core SMT node, want 8" 8 "0,1,2,3,4,5,6,7" "$SKX"
+# The cross-socket guard, driven on purpose: 72 cpus and 36 cores are present and the
+# answer must still be no, because completing the count out of node 1 is the migration the
+# mask exists to prevent. An unrefused 20 here is a mask spanning two sockets.
+pin_case "18-core SMT node, want 20 (more cores than any ONE node has)" 20 "" "$SKX"
+
+# node0 unreadable, node1 fine: the loop moves on, and the count restarts at the node it
+# lands on rather than carrying node0's partial run across.
+NOD0="$WORK/topo-nonode0"; topo_skx "$NOD0"; rm -f "$NOD0/node/node0/cpulist"
+pin_case "node0 has no cpulist, node1 does" 4 "18,19,20,21" "$NOD0"
+
+# No SMT at all -- every cpu is its own sibling list, which is what a host with
+# hyperthreading disabled in firmware reports.
+NOSMT="$WORK/topo-nosmt"
+mkdir -p "$NOSMT/node/node0"; printf '0-3\n' > "$NOSMT/node/node0/cpulist"
+for c in 0 1 2 3; do
+  mkdir -p "$NOSMT/cpu/cpu$c/topology"
+  printf '%d\n' "$c" > "$NOSMT/cpu/cpu$c/topology/thread_siblings_list"
+done
+pin_case "4 cores, no SMT, want 4" 4 "0,1,2,3" "$NOSMT"
+pin_case "4 cores, no SMT, want 8" 8 "" "$NOSMT"
+
+# THE BRANCH THIS FIXTURE CREATED. The first version of the selector fell back to
+# `sib=$c` when no sibling list could be read, which on a hyperthreaded host hands back
+# eight cpus that may be four cores -- and gate-p5's readback cannot catch it, because
+# GOMAXPROCS is 8 either way. Distinctness is the whole claim, so an unreadable topology
+# now abandons the node. Sixteen cpus present, answer still no.
+NOSIB="$WORK/topo-nosib"
+mkdir -p "$NOSIB/node/node0" "$NOSIB/cpu"; printf '0-15\n' > "$NOSIB/node/node0/cpulist"
+pin_case "16 cpus but no sibling lists: distinctness unprovable" 8 "" "$NOSIB"
+
+# A sibling list written as a RANGE, which some kernels do for a pair. `first` has to
+# survive both spellings or the second thread of every core counts as a core.
+RANGE="$WORK/topo-range"
+mkdir -p "$RANGE/node/node0"; printf '0-3\n' > "$RANGE/node/node0/cpulist"
+for c in 0 1 2 3; do
+  mkdir -p "$RANGE/cpu/cpu$c/topology"
+  printf '%d-%d\n' "$(( (c / 2) * 2 ))" "$(( (c / 2) * 2 + 1 ))" \
+    > "$RANGE/cpu/cpu$c/topology/thread_siblings_list"
+done
+pin_case "sibling lists spelled as ranges, want 2" 2 "0,2" "$RANGE"
+pin_case "sibling lists spelled as ranges, want 4 (only 2 cores exist)" 4 "" "$RANGE"
+
+# No node directory at all: a container or a kernel without NUMA in sysfs.
+mkdir -p "$WORK/topo-empty"
+pin_case "no node directories in sysfs" 8 "" "$WORK/topo-empty"
+
+# ------------------- 9b. and remote_exec refuses the measurement it cannot pin
+#
+# The live half, on whatever far side this machine has. Both arms are assertions: a far
+# side with no taskset must take NO MEASUREMENT and say why (macOS localhost, which is
+# what runs here), and one that can pin must write the mask into the log the caller reads.
+# Free placement is the arm that must be unreachable, so the check is that the program did
+# not run -- not merely that the status was nonzero.
+head_ "9b. a benchmark invocation is pinned, or not taken"
+grep -q 'keel-pin:' "$WORK/1.log" &&
+  fail_ "a NON-benchmark invocation was pinned: case 1's log carries a keel-pin line" ||
+  pass_ "a non-benchmark invocation is untouched: no keel-pin line in case 1's log"
+source scripts/bench.sh   # bench_pin / bench_gomaxprocs, so the readings below are the
+                          # ones gate-p5's criterion takes and not a second sed that agrees
+remote_exec "$H" "$BIN" -test.bench=Sgemm -test.count=1 > "$WORK/9.log" 2>&1; rc=$?
+info_ "$(head -1 "$WORK/9.log" 2>/dev/null || echo '<empty log>')"
+if grep -q 'keel-pin: REFUSED' "$WORK/9.log"; then
+  [[ "$rc" -eq 121 && "$REMOTE_STATE" == ok ]] &&
+    pass_ "unpinnable far side: exit 121 recovered, REMOTE_STATE=ok (a refusal, not a vanishing)" ||
+    fail_ "refusal reported exit $rc / REMOTE_STATE=$REMOTE_STATE, expected 121 / ok"
+  grep -q 'argv:' "$WORK/9.log" &&
+    fail_ "the binary RAN anyway: a refusal that still measures is free placement with a log line" ||
+    pass_ "the binary did not run, so no unpinned sample can reach an archive"
+  info_ "the pinned arm is unexercised here: this far side has no taskset. It is driven on"
+  info_ "every fleet host by gate-p5's placement criterion, which reads the mask back twice."
+elif grep -q 'keel-pin: mask=' "$WORK/9.log"; then
+  m="$(bench_pin "$WORK/9.log")"
+  nf="$(tr ',' '\n' <<<"${m%% *}" | grep -c .)"
+  [[ "$rc" -eq 0 && "${m##* }" == "$KEEL_PIN_WIDTH" && "$nf" -eq "$KEEL_PIN_WIDTH" ]] &&
+    pass_ "pinned far side: mask ${m%% *} of $nf cores, width ${m##* }, exit $rc" ||
+    fail_ "pinned run disagrees with itself: '$m' names width ${m##* } over $nf cores, exit $rc"
+  grep -q 'argv: \[-test\.bench=Sgemm\]' "$WORK/9.log" &&
+    pass_ "and the measurement ran under it" || fail_ "pinned but the program did not run"
+  info_ "the REFUSAL arm is unexercised here: this far side can pin. It is driven wherever"
+  info_ "taskset or an eight-core node is missing, and by the selector fixtures above."
+else
+  fail_ "a benchmark invocation produced neither a mask nor a refusal (exit $rc), so placement is unrecorded:"
+  sed 's/^/        /' "$WORK/9.log"
+fi
+
+# ------------------- 9c. the two readings gate-p5 compares, and their disagreement
+#
+# gate-p5's placement criterion is `bench_pin` against `bench_gomaxprocs` over one log.
+# Its PASS arm runs on every fleet host; its FAIL arm — a mask requested that did not take
+# — is by construction something no correctly working host produces, so without fixtures it
+# would be an unexecuted branch in the criterion that scopes every reading to an era. These
+# are logs, so both arms are drivable here: what the criterion reads is a file.
+head_ "9c. bench_pin vs bench_gomaxprocs, agreeing and disagreeing"
+mklog() { printf '%s\n' "$@" > "$WORK/pin.log"; }
+readback() {   # prints "mask width gomaxprocs" the way gate-p5 derives them
+  local pm pw pg; pm="$(bench_pin "$WORK/pin.log")"; pw="${pm##* }"; pm="${pm%% *}"
+  pg="$(bench_gomaxprocs "$WORK/pin.log")"
+  printf '%s|%s|%s\n' "$pm" "$pw" "$pg"
+}
+rb_case() {
+  local note="$1" want="$2" got; got="$(readback)"
+  [[ "$got" == "$want" ]] && pass_ "$note -> $got" || fail_ "$note -> $got, expected $want"
+}
+mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8' \
+      'BenchmarkScale/n=1024/threads=1-8   	      10	 118000000 ns/op' \
+      'BenchmarkScale/n=1024/threads=8-8   	      10	  16000000 ns/op'
+rb_case "a pinned sweep: mask, width and GOMAXPROCS all read" "0,1,2,3,4,5,6,7|8|8"
+# THE FAIL ARM. Same mask line, rows named -192: the harness asked and the kernel did not
+# deliver, which is free placement wearing a pinned label. This is the log shape every
+# reading published before 2026-08-21 has (minus the mask line), and the criterion has to
+# see 8 against 192 rather than read one of them twice.
+mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8' \
+      'BenchmarkScale/n=1024/threads=8-192   	      10	  16000000 ns/op'
+rb_case "a mask that did not take: 8 requested, 192 seen" "0,1,2,3,4,5,6,7|8|192"
+# Two widths in one log, which is what a concatenation or a re-run into the same file gives:
+# the readings must DISAGREE rather than quietly agree on the last one, because a log with
+# rows from two placements is not a measurement of either.
+mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8' \
+      'BenchmarkScale/threads=8-8   	      10	  16000000 ns/op' \
+      'BenchmarkScale/threads=8-72   	      10	  16000000 ns/op'
+rb_case "rows from two placements in one log" "0,1,2,3,4,5,6,7|8|8 72"
+# An unpinned log: no mask line at all, which is the UNMEASURED arm. It must not be
+# mistaken for a mask of width zero, and the rows must still be readable — the criterion
+# distinguishes "the instrument did not report" from "it reported free".
+mklog 'BenchmarkScale/threads=8-192   	      10	  16000000 ns/op'
+rb_case "a pre-2026-08-21 log: no mask line" "||192"
+# A refusal log, which has a keel-pin line that is NOT a mask. `bench_pin` matches on the
+# full `mask=... width=N` shape for exactly this reason: a refusal must read as no mask
+# rather than as a parse of the word REFUSED.
+mklog 'keel-pin: REFUSED, no taskset on this host. DESIGN section 5 rule 5 pins fleet-wide and never selectively, so this measurement is not taken rather than taken unpinned.'
+rb_case "a refusal log carries a keel-pin line but no mask" "||"
+
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"
   echo "  vanished, a severed link costs nothing, a missing supervisor is loud,"
   echo "  a host with no cpufreq is told apart from one whose knob will not read,"
-  echo "  bare metal is admitted by a named arm while ten arms still refuse, and a"
-  echo "  guest whose launcher contradicts it is unmeasured rather than demoted."
+  echo "  bare metal is admitted by a named arm while ten arms still refuse, a"
+  echo "  guest whose launcher contradicts it is unmeasured rather than demoted, and"
+  echo "  a benchmark is pinned to eight distinct cores in one node or not taken."
   exit 0
 fi
 echo "  RED -- $FAILS check(s) failed."

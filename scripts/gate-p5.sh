@@ -61,24 +61,75 @@ CEIL_FRACTION=57.8
 # So they stay on the fleet bar, and only hosts outside this set are registry-governed.
 # Per-host convergence for them is a post-tag option, not part of #6 (ruled 2026-08-21).
 CEIL_DERIVED_FROM="AMD EPYC 9R14|AMD EPYC 9R45|Intel(R) Xeon(R) 6975P-C"
-# The registry a registry-governed host is judged from, and the margin between a
-# registered baseline and the bar it sets. scripts/host-baselines.tsv carries the design.
+# The margin between a registered baseline and the bar it sets; the registry it is
+# subtracted from is named below, once the exercise seam has decided which one that is.
 #
 # THE MARGIN IS CEIL_FRACTION'S OWN, not a second constant with a second justification:
 # 60.4 - 2.6 = 57.8 is the derivation this gate already prints, so a per-host bar is the
 # fleet bar's construction applied to a different baseline rather than a new kind of
 # threshold. One number, stated once, reused — which also means a future re-argument of
 # the margin moves both bars together instead of leaving them to drift apart.
-BASELINE_REGISTRY="scripts/host-baselines.tsv"
 BASELINE_MARGIN=2.6
-# The two tracked artifacts the class reads besides the registry. BASELINE_WITNESS is what
-# spends a host's one BASELINE — tracked, keyed (cpu_model, era), so it reads the same on a
-# fresh clone as on the operator's machine, which the build/ glob it replaces did not
-# (#114). BASELINE_ERAS scopes every baseline to the instrument that produced it, so a
-# changed instrument renders BASELINE fleet-wide once instead of booking the methodology
-# delta against each host as drift (ruled 2026-08-21, #6).
-BASELINE_WITNESS="scripts/judged-runs.tsv"
-BASELINE_ERAS="scripts/measurement-eras.tsv"
+# ---- the instrument exercise for this class (#6, ruled 2026-08-21)
+#
+# KEEL_INSTRUMENT_BASELINE_DIR=<dir> reads the class's three tracked artifacts from <dir>
+# instead of scripts/. It is a knob in judging code and gate-p2's exercise banner is
+# right that a knob usually proves only the knob — so here is why the induction cannot
+# come from outside, which is the test gate-p3's KEEL_INSTRUMENT_WIDEN_CI had to pass to
+# be authorized (#86) and the reason that one exists at all.
+#
+# The class's three states are selected by the CONTENTS OF TWO TRACKED FILES, and every
+# route to varying tracked content from outside this gate is closed BY OTHER CHECKS THIS
+# GATE ENFORCES, all of them correctly:
+#
+#   - editing scripts/*.tsv in place makes the tree dirty, and the dirty-tree criterion
+#     below refuses to run the delegated chain at all (`git archive HEAD` would ship
+#     something nobody committed);
+#   - a second checkout with different rows is a registered worktree, and
+#     assert_no_strays fails on one with no allowlist and no exemption (ruled
+#     2026-08-14, #63);
+#   - the shim route that drives the dead-host branch cannot reach this one: an `ssh`
+#     that refuses a host makes the host unmeasurable, and what this class needs is a
+#     host that measures FINE and has no reference to be judged against.
+#
+# So the choice is a seam or a branch that never executes until the era-founding
+# campaign, and an unexecuted branch in the instrument that issues the certificates is
+# what this whole apparatus exists to distrust. What the seam CANNOT do is decide
+# anything: it substitutes inputs and touches no comparison, no margin and no tally, so
+# a state it renders is still the shipped code's reading of the rows it was handed.
+#
+# It fails closed on the forgery axis rather than trusting the caller to stamp: without
+# KEEL_INSTRUMENT_EXERCISE this run would judge hosts against a substituted registry and
+# still be able to sign `gate-p5: GREEN`, so the substitution is refused outright before
+# any host is contacted. Nothing beyond scripts/exercise-baseline.sh is expected to set
+# either variable, and that script is the only caller.
+INSTRUMENT_EXERCISE="${KEEL_INSTRUMENT_EXERCISE:-}"
+BASELINE_DIR=scripts
+if [[ -n "${KEEL_INSTRUMENT_BASELINE_DIR:-}" ]]; then
+  if [[ -z "$INSTRUMENT_EXERCISE" ]]; then
+    echo "gate-p5: KEEL_INSTRUMENT_BASELINE_DIR is set and KEEL_INSTRUMENT_EXERCISE is not," >&2
+    echo "gate-p5: so this run would judge every host against a substituted baseline registry" >&2
+    echo "gate-p5: and still be able to sign a verdict. Refusing before contacting a host." >&2
+    exit 2
+  fi
+  if [[ ! -d "$KEEL_INSTRUMENT_BASELINE_DIR" ]]; then
+    echo "gate-p5: KEEL_INSTRUMENT_BASELINE_DIR='$KEEL_INSTRUMENT_BASELINE_DIR' is not a directory." >&2
+    echo "gate-p5: An unreadable substitution reads as an empty registry, which is one of the" >&2
+    echo "gate-p5: states an exercise means to drive, so it may not be reached by accident." >&2
+    exit 2
+  fi
+  BASELINE_DIR="$KEEL_INSTRUMENT_BASELINE_DIR"
+fi
+# The registry a registry-governed host is judged from; scripts/host-baselines.tsv
+# carries the design. BASELINE_WITNESS is what spends a host's one BASELINE — tracked,
+# keyed (cpu_model, era), so it reads the same on a fresh clone as on the operator's
+# machine, which the build/ glob it replaces did not (#114). BASELINE_ERAS scopes every
+# baseline to the instrument that produced it, so a changed instrument renders BASELINE
+# fleet-wide once instead of booking the methodology delta against each host as drift
+# (ruled 2026-08-21, #6).
+BASELINE_REGISTRY="$BASELINE_DIR/host-baselines.tsv"
+BASELINE_WITNESS="$BASELINE_DIR/judged-runs.tsv"
+BASELINE_ERAS="$BASELINE_DIR/measurement-eras.tsv"
 P5_REV="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 BASELINE_CANDIDATES="build/baseline-candidates-$P5_REV.tsv"
 WITNESS_CANDIDATES="build/witness-candidates-$P5_REV.tsv"
@@ -183,6 +234,15 @@ p5_line() { marker_row "$1" "$2" routine "$3"; }
 
 echo "== gate-p5: parallelism, dispatch, polish =="
 echo
+
+# Armed here rather than at the seam above so the banner sits under the title, and read
+# from the same variable the seam gated on so the two cannot come to disagree about
+# whether this run is synthetic. scripts/remote.sh carries what it does and why it
+# exports (the delegated chain must withhold too).
+instrument_exercise "$INSTRUMENT_EXERCISE" || true
+if [[ "$BASELINE_DIR" != scripts ]]; then
+  info "BASELINE-REGISTERED artifacts substituted: reading host-baselines.tsv, judged-runs.tsv and measurement-eras.tsv from $BASELINE_DIR, NOT from scripts/. Every verdict of that class below is the shipped code's reading of substituted rows"
+fi
 
 # ------------------------------------------------------------- tree state (#63)
 assert_no_strays
@@ -645,8 +705,16 @@ else
     # (criterion 2) and the harness sets it per row; pinning it in the environment
     # would cap the eight-thread row at whatever this line happened to say.
     if ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench="$P5_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
-      unmeasured "[$host] the scaling benchmark run failed, so this host's judged ratio is unmeasured rather than short of the floor"
-      sed 's/^/        /' "$BENCHLOG" | tail -20
+      # Two causes, two verdicts (§5 rule 6). A declined mask and a broken sweep are both
+      # unmeasured, but they are unmeasured for opposite reasons -- the first is the harness
+      # keeping a promise, the second is the harness failing -- and a reader who cannot tell
+      # them apart will go looking for a bug in the benchmark.
+      if grep -q '^keel-pin: REFUSED' "$BENCHLOG"; then
+        unmeasured "[$host] no measurement was taken because it could not be pinned, which is the intended refusal and not a failure: $(sed -n 's/^keel-pin: REFUSED, //p' "$BENCHLOG" | head -1)"
+      else
+        unmeasured "[$host] the scaling benchmark run failed, so this host's judged ratio is unmeasured rather than short of the floor"
+        sed 's/^/        /' "$BENCHLOG" | tail -20
+      fi
       continue
     fi
     bench_csv "$BENCHLOG" "$host" >"$BENCHCSV" 2>"$LOG" || true
@@ -656,6 +724,27 @@ else
     # log line — which is the state every judged run before this one is in, and
     # the reason their intervals can now only be re-read by band-top.
     info "[$host] samples archived: $BENCH_ARCHIVE"
+    # ---- placement, read back off the measurement (§5 rule 5, adopted 2026-08-21)
+    #
+    # TWO INDEPENDENT READINGS OF ONE QUANTITY, which is the whole point: the mask the
+    # harness asked the kernel for, and the width the Go runtime saw when it read its own
+    # affinity. remote_exec refuses to run a benchmark it cannot pin, so an unpinned sweep
+    # should be unreachable from here — this is the control on that claim, and it is a
+    # control precisely because a requested mask that did not take is invisible to the
+    # side that requested it. A criterion, not an info line: every ratio below divides one
+    # placement-sensitive reading by another, and the era they are scoped to is named for
+    # this mask.
+    PINM="$(bench_pin "$BENCHLOG")"; PINW="${PINM##* }"; PINM="${PINM%% *}"
+    PING="$(bench_gomaxprocs "$BENCHLOG")"
+    if [[ -z "$PINW" ]]; then
+      unmeasured "[$host] this sweep recorded no affinity mask, so its placement is unknown rather than free: remote_exec writes a keel-pin line before every benchmark it pins and refuses the ones it cannot, so a log with neither is an instrument that did not report, and nothing here may be scoped to the $P5_ERA era on trust"
+      continue
+    elif [[ "$PING" != "$PINW" ]]; then
+      fail "[$host] the affinity mask was requested and did not take: the harness pinned $PINW cores ($PINM) and Go read GOMAXPROCS as [$PING] off its own affinity. A mask that only the requesting side can see is free placement with a label, which is the one artifact the era ledger exists to make impossible (§5 rule 5, #6)"
+      continue
+    else
+      pass "[$host] placement pinned to $PINW distinct physical cores in one NUMA node (mask $PINM), confirmed twice: the harness applied it and Go reports GOMAXPROCS=$PING off its own affinity, so every row below carries -$PING and the numerator and denominator of each share came from the identical mask (§5 rule 5)"
+    fi
     # The new instrument is checked against the one it replaced, on this run's own
     # samples. "benchci is benchstat plus resolution" is a claim until rounding its
     # CI back to %.0f%% reproduces benchstat's column cell for cell — and this gate

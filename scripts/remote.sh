@@ -202,6 +202,44 @@ gate_verdict() {
   exit 1
 }
 
+# instrument_exercise REASON — arm synthetic mode: stamp every verdict line, print the
+# banner, and thereby make gate_verdict above withhold. Returns 1 on an empty REASON so
+# a caller can branch on it without re-reading the environment, and does nothing else:
+# it is read nowhere near a comparison, a threshold, a tally or a host list, so no
+# rendering below can be forged by setting it.
+#
+# LIFTED FROM gate-p2.sh (2026-08-21), which had the only copy, the moment gate-p5
+# needed the same three lines. A second copy of a forgery guard is how the first one
+# comes to be the only one that works, and that is not a hypothetical here: it is
+# VERDICT_STAMP's own history twenty lines up, where five copies of pass/fail existed
+# and exactly one stamped. gate-p2's rationale for what its exercise DRIVES stays in
+# gate-p2 — that is about its branch, not about this mechanism.
+#
+# THE EXPORT IS THE PART THAT WAS MISSING, and it is a defect of the copy rather than of
+# the design, which is why lifting had to fix it rather than preserve it. gate-p2
+# delegates to nothing, so a stamp that stopped at its own process cost it nothing.
+# gate-p5 runs `bash scripts/gate-p4.sh`, which runs gate-p3: unexported, the child
+# seeds VERDICT_STAMP empty, stamps not one of its ~50 verdict lines, and signs
+# `gate-p4: GREEN` into a real gate-pN log path — over whatever host list the parent's
+# exercise imposed, which for an exercise is usually one host presented as a whole
+# fleet. A forgeable certificate produced by the machinery built to prevent one (#78).
+# So the stamp crosses the process boundary with the run.
+instrument_exercise() {
+  local reason="${1:-}"
+  [[ -n "$reason" ]] || return 1
+  VERDICT_STAMP="[synthetic] "
+  export VERDICT_STAMP
+  echo "  ############################################################"
+  echo "  ##  SYNTHETIC RUN -- NOT A GATE RESULT                    ##"
+  echo "  ##  reason: $reason"
+  echo "  ##  Every verdict line below carries a [synthetic] stamp. ##"
+  echo "  ##  No verdict is signed; the exit code is 2.             ##"
+  echo "  ##  This run judges the instrument, never the phase.      ##"
+  echo "  ##  Delegated gates inherit the stamp and withhold too.   ##"
+  echo "  ############################################################"
+  echo
+}
+
 # assumed MESSAGE — declare a precondition the gate is TRUSTING, and add it to a
 # ledger printed beside the verdict. This is not a fourth verdict. It sets no
 # FAIL, it is indented as an `info` line, and the tallies cannot see it.
@@ -530,6 +568,96 @@ KEEL_GOV_PROBE_SH='
   else
     gov=absent
   fi
+'
+
+# KEEL_PIN_WIDTH / KEEL_PIN_SH — the CPU affinity mask DESIGN section 5 rule 5 adopted
+# fleet-wide on 2026-08-21, and the code that was missing when it did.
+#
+# THE SURPRISE THIS FIXES, recorded because it is the more useful half of the change.
+# The pinning was ruled, written into DESIGN section 5 rule 5 with its falsification
+# condition, described in docs/hosts.md in the PRESENT TENSE ("Every judged benchmark
+# invocation on every host runs under a CPU affinity mask of eight distinct physical
+# cores"), and given a measurement era of its own in scripts/measurement-eras.tsv --
+# and `git grep taskset` over the whole tree answered with four CHANGELOG lines, three
+# doc paragraphs and two comments saying P2 needs none. Not one line of scripts/ set a
+# mask. Three artifacts asserting a mechanism, zero implementing it: the law, the doc
+# and the era ledger agreed with each other, which is one witness restated three times
+# and not three witnesses (section 5 rule 10). Grep for a mechanism before publishing
+# the number that depends on it.
+#
+# WHERE IT GOES, and why here rather than in each gate. remote_exec is the single place
+# every gate, every sweep and every ensemble launches a binary on a host -- 20 call
+# sites, all of them through this one function -- so a mask applied here cannot be
+# deviated from by one gate, which is the same argument section 4 makes for keeping the
+# benchmark mechanics in scripts/bench.sh.
+#
+# WHICH INVOCATIONS, exactly: the ones carrying -test.bench, because the rule binds
+# "every judged benchmark invocation" and the ceiling arm is the same invocation as the
+# rows it is the denominator of (one -test.bench=Scale|Peak|Ceiling), so numerator and
+# denominator get the identical mask by construction rather than by two sites agreeing.
+# The correctness runs (-test.v) are left free: a mask cannot make a wrong answer right,
+# and pinning them would refuse to run the TEST SUITE on any host with fewer than eight
+# physical cores in a node -- a coverage loss in exchange for nothing measured.
+#
+# IT REFUSES RATHER THAN FALLING BACK. No taskset, no NUMA topology in sysfs, or fewer
+# than eight distinct physical cores inside a single node, and the measurement is not
+# taken: status 121, a log saying so, and the caller reports it unmeasured. Free
+# placement as a silent fallback is the one behaviour that must not exist, because it
+# produces exactly the artifact the era ledger was built to make impossible -- a
+# free-placement reading wearing a pinned8 label. "Fleet-wide and never selectively" is
+# a constraint on the harness before it is one on the operator.
+#
+# NO APOSTROPHES ANYWHERE IN HERE, for the reason the gov probe above states.
+KEEL_PIN_WIDTH=8
+KEEL_PIN_SH='
+keel_pin_mask() {
+  want=$1
+  # The sysfs root, overridable for the same reason KEEL_REMOTE_DIR is: this function
+  # reads a topology, and a topology is the one input a caller may legitimately want to
+  # supply from somewhere else. scripts/remote-exec-test.sh builds fake ones -- an
+  # 18-core-per-node SMT host, a 4-core node, a node directory that does not exist -- and
+  # drives all of them on the dev machine, which has no sysfs at all. Setting it in a real
+  # run cannot forge a measurement: it selects a mask, and if that mask is not the one the
+  # Go runtime ends up under, gate-p5 fails the placement criterion on the mismatch.
+  S=${KEEL_SYSFS:-/sys/devices/system}
+  T=$S/cpu
+  # One node at a time, and the count restarts at each: eight cores spread over two
+  # nodes is the cross-socket migration this mask exists to stop, so a partial run of
+  # cores in node 0 may not be completed out of node 1.
+  for nd in "$S"/node/node[0-9]*; do
+    [ -r "$nd/cpulist" ] || continue
+    out=; n=0
+    for spec in $(tr "," " " < "$nd/cpulist"); do
+      case $spec in
+        *-*) a=${spec%%-*}; b=${spec##*-} ;;
+        *)   a=$spec; b=$spec ;;
+      esac
+      c=$a
+      while [ "$c" -le "$b" ]; do
+        sib=
+        [ -r "$T/cpu$c/topology/thread_siblings_list" ] &&
+          sib=$(cat "$T/cpu$c/topology/thread_siblings_list")
+        # No sibling list, no claim of distinctness: abandon this node and try the next
+        # rather than assume the cpus are cores. Taking eight anyway would be four
+        # hyperthreaded cores under a mask of width eight -- and the readback in gate-p5
+        # cannot catch it, because GOMAXPROCS is 8 either way. The fixture that drives
+        # this branch is the reason it exists: the first version fell back to sib=$c.
+        if [ -z "$sib" ]; then break 2; fi
+        first=${sib%%,*}; first=${first%%-*}
+        # Only a threads first sibling, so the mask is eight distinct CORES and not four
+        # cores twice over. Go reports the mask width as GOMAXPROCS, so this is also what
+        # makes every row name carry -8: the width is readable off the measurement.
+        if [ "$first" = "$c" ]; then
+          out="${out}${out:+,}$c"
+          n=$((n + 1))
+          if [ "$n" -ge "$want" ]; then printf "%s\n" "$out"; return 0; fi
+        fi
+        c=$((c + 1))
+      done
+    done
+  done
+  return 1
+}
 '
 
 # spawn_probe HOST — the LAUNCHER's record of HOST, as the provenance line's `spawn=` field
@@ -1109,16 +1237,52 @@ remote_exec() {
   local id="keel-$$-$REMOTE_EXEC_SEQ"
   local runner="$KEEL_REMOTE_DIR/$id.sh" log="$KEEL_REMOTE_DIR/$id.log" st="$KEEL_REMOTE_DIR/$id.status"
 
+  # Placement (DESIGN section 5 rule 5, adopted fleet-wide 2026-08-21). A benchmark
+  # invocation is one carrying -test.bench; see KEEL_PIN_SH for why that is the line and
+  # why the failure is a refusal. The predicate reads the arguments rather than a caller
+  # flag, so a new sweep gets the mask by asking for benchmarks and cannot forget to.
+  local a2 wants_bench=0
+  for a2 in "$@"; do
+    case "$a2" in -test.bench=*|-test.bench) wants_bench=1 ;; esac
+  done
+  local pin_pre=""
+  if [[ "$wants_bench" -eq 1 ]]; then
+    pin_pre="
+if ! command -v taskset >/dev/null 2>&1; then
+  echo 'keel-pin: REFUSED, no taskset on this host. DESIGN section 5 rule 5 pins fleet-wide and never selectively, so this measurement is not taken rather than taken unpinned.' > '$log'
+  printf '%s\n' 121 > '$st'; exit 121
+fi
+KEEL_MASK=\$(keel_pin_mask $KEEL_PIN_WIDTH) || KEEL_MASK=
+if [ -z \"\$KEEL_MASK\" ]; then
+  echo 'keel-pin: REFUSED, no $KEEL_PIN_WIDTH distinct physical cores inside a single NUMA node could be selected from sysfs on this host. Not taken rather than taken unpinned (DESIGN section 5 rule 5).' > '$log'
+  printf '%s\n' 121 > '$st'; exit 121
+fi
+PIN=\"taskset -c \$KEEL_MASK\"
+PINLINE=\"keel-pin: mask=\$KEEL_MASK width=$KEEL_PIN_WIDTH\""
+  fi
+
   local tmpd; tmpd="$(mktemp -d)"
   # `\$?` is escaped so the status is read on the far side, at the far side's
   # moment; expanded here it would freeze this shell's last exit code into the
   # script and report it as the measurement's.
+  #
+  # PIN and PINLINE are empty for every non-benchmark invocation, so those runs exec
+  # exactly what they used to and their LOGS are byte-identical -- the runner script is
+  # not, since it carries the selector either way, and remote-exec-test.sh case 1 checks
+  # the log rather than taking the claim. The `keel-pin:` line is printed INSIDE the block,
+  # immediately before
+  # the binary, so it lands in the log the caller reads and `$?` still belongs to the
+  # measurement -- the mask is then recoverable from the same artifact as the numbers it
+  # shaped, instead of from this driver's memory of what it asked for.
   cat > "$tmpd/$id.sh" <<EOF
 #!/bin/sh
 # Generated by remote_exec (keel #62). Not edited by hand and not reused: one
 # runner per measurement, named for the tmux session that supervises it.
 cd '$KEEL_REMOTE_DIR' || exit 127
-{ env ${KEEL_REMOTE_ENV:-} ./'$base'$args; printf '%s\n' "\$?" > '$st'; } > '$log' 2>&1
+PIN=; PINLINE=
+$KEEL_PIN_SH
+$pin_pre
+{ [ -n "\$PINLINE" ] && echo "\$PINLINE"; env ${KEEL_REMOTE_ENV:-} \$PIN ./'$base'$args; printf '%s\n' "\$?" > '$st'; } > '$log' 2>&1
 EOF
 
   ssh "${KEEL_SSH_OPTS[@]}" "$host" "mkdir -p '$KEEL_REMOTE_DIR'" >/dev/null

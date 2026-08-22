@@ -113,6 +113,25 @@ bench_csv() {
   go run ./tools/benchci "$1"
 }
 
+# bench_pin LOG — "mask width" as the measurement itself recorded them, or nothing.
+#
+# Read off the artifact that carries the numbers, never off the driver that asked for the
+# mask: a constant this shell can print certifies only that this shell can print it, and
+# what a criterion needs to know is what the far side actually ran under. remote_exec
+# writes the line immediately before the binary, so it is inside the same log as the rows
+# it shaped and travels with them into the archive.
+bench_pin() { sed -n 's/^keel-pin: mask=\([^ ]*\) width=\([0-9]*\)$/\1 \2/p' "$1" | tail -1; }
+
+# bench_gomaxprocs LOG — the distinct -GOMAXPROCS suffixes Go appended to the row names
+# in LOG, space-separated and sorted. The SECOND reading of the mask width, and an
+# independent one: bench_pin above reports what the harness asked the kernel for, this
+# reports what the Go runtime saw when it called sched_getaffinity. A mask that was
+# requested and did not take shows up here and nowhere else.
+bench_gomaxprocs() {
+  grep -oE '^Benchmark[^[:space:]]*-[0-9]+' "$1" | sed 's/.*-//' | sort -un | tr '\n' ' ' |
+    sed 's/ $//'
+}
+
 # Configuration keys that describe the run rather than the build under test, and
 # so must not split a comparison. See bench_compare.
 KEEL_BENCH_IGNORE="${KEEL_BENCH_IGNORE:-keel-bench-clock-mhz,keel-bench-flops}"
