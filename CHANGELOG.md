@@ -51,6 +51,26 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The BASELINE-REGISTERED class gets a synthetic driver before the era-founding run, not after it**
+  (`scripts/exercise-baseline.sh`, ordered by Scott's ruling of 2026-08-21 on #6). The class decides which bar
+  governs a host from the contents of two tracked files, and **its row loop had never executed**: no `frac`
+  computed inside it, `new`/`owing`/`registered` all unentered. Its live debut would otherwise have been the
+  pinning transition — the era-founding campaign — where a wiring bug costs a fleet-wide re-run and muddies the
+  both-arms archive that campaign exists to produce. Three passes on one real host through the
+  `KEEL_INSTRUMENT_BASELINE_DIR` seam: empty registry and empty witness (BASELINE on both criteria of the class,
+  with the candidate rows a reviewed commit would land); witness landed and registry still empty (`BASELINE is
+  spent` on both, plus the debt line — the branch #114's fix created, and unexercised a repo with one landed row
+  would have renewed BASELINE instead); registry landed from pass 1's own fracs **with a wrong-era decoy row at
+  99.0 written above the real rows**, so one pass drives the registered state and both arms of era scoping, since
+  `baseline_lookup` returns the first match and a decoy below the real row would prove nothing. The discriminator
+  is textual and declared before the run: a bar of `frac − 2.6` naming era `pinned8` confirms scoping, a bar of
+  96.4 naming `free-placement` refutes it. The preflight spends no sweep and drives **both** of the seam's
+  fail-closed refusals with `env -u`, so neither can pass by inheriting a variable the driver happens to have
+  set; it also asserts from gate-p5's own bytes that the seam resolves *before* the gate's first remote call, and
+  reads `CEIL_DERIVED_FROM`, `P5_JUDGED` and `BASELINE_MARGIN` out of the gate rather than restating them. Each
+  read-back is keyed to its own pass's phrase and reports NO on no match, and the run finishes with a stamp audit
+  over the parent *and* the three delegated logs — `^  TOKEN  ` followed by `[synthetic] `, plus zero signed
+  `gate-pN:` lines anywhere.
 - **The BASELINE-REGISTERED witness was a glob over gitignored output, so it was right on one machine and wrong
   everywhere else** (#114, fixed 2026-08-21 on Scott's direction, folded into the era commit). `baseline_prior`
   asked `build/bench-gate-p5-*-<host>-*.txt` whether a host had been judged before. `build/` is gitignored, so on
@@ -302,6 +322,18 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **#78's fix rev-stamped the delegated gate logs and left two runs at one rev overwriting each other, which is
+  the same defect past its own fix** (found 2026-08-21 from the other end, while writing the exercise driver's
+  own `#78` control). `build/gate-p4-under-p5-<rev>.log` and `build/gate-p3-under-p4-<rev>.log` stopped a run at
+  one revision from destroying a run at another — and the collision that remained is the *ordinary* case here,
+  not a corner: DESIGN.md §4 allows one immediate re-run of a failing throughput sentinel with **both outputs
+  archived**, and an instrument exercise runs one gate three times over at one rev. Both paths now carry
+  `RUN_STAMP`, a per-process UTC stamp defined once in `scripts/remote.sh` and deliberately **not exported**, so
+  a delegated gate stamps its own log with its own process's stamp while a driver that wants one stamp across a
+  chain can set it in the environment. `bench_csv`'s identical stamp — landed hours earlier, from the archive
+  side of the same defect — now defers to it, so one process's samples and its delegated logs are joinable by
+  stamp instead of merely being distinct. **Two independent discoveries of one naming rule** (§5 rule 10): the
+  archive path was caught by measurement, this one by writing a control that had to know where a log would land.
 - **Two runs at one rev on one host wrote one archive path, so the second overwrote the first's samples**
   (found 2026-08-21 while building the synthetic exercise, measured rather than reasoned). `bench_csv` keyed the
   path on gate, rev, host and a counter — and the counter was per *process*, so it discriminated archives inside

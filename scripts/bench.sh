@@ -112,7 +112,7 @@ bench_flags() {
 # the first (measured, 2026-08-21). Hence the run stamp, set on first use. It goes at the
 # END because readme-numbers.sh reads the rev by offset from `bench-gate-p5-`.
 bench_csv() {
-  BENCH_ARCHIVE_RUN="${BENCH_ARCHIVE_RUN:-$(date -u +%Y%m%dT%H%M%SZ)}"
+  BENCH_ARCHIVE_RUN="${BENCH_ARCHIVE_RUN:-${RUN_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}}"
   BENCH_ARCHIVE_N=$((${BENCH_ARCHIVE_N:-0} + 1))
   BENCH_ARCHIVE="build/bench-$(basename "${0%.sh}")-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)${2:+-$2}-$BENCH_ARCHIVE_RUN-$BENCH_ARCHIVE_N.txt"
   mkdir -p build && cp "$1" "$BENCH_ARCHIVE" 2>/dev/null || BENCH_ARCHIVE="(not archived)"

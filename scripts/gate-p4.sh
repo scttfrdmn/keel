@@ -107,7 +107,9 @@ P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(avx512|n=2048)'
 # The delegated P3 gate's full output. build/ is gitignored; the path is printed
 # because CLAUDE.md wants gate output verbatim in the umbrella issue.
 # Revision-stamped for #78's reason — see the same assignment in gate-p5.sh.
-P3LOG="build/gate-p3-under-p4-$(git rev-parse --short HEAD 2>/dev/null || echo unknown).log"
+# Run-stamped too, for the reason the same assignment in gate-p5.sh now records: the
+# revision stamp left two runs at one rev colliding, which is #78 past its own fix.
+P3LOG="build/gate-p3-under-p4-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)-$RUN_STAMP.log"
 
 # p4_line NAME FILE ROUTINE — the keel-NAME line belonging to one routine. The P4
 # markers are emitted once per routine, so `marker`'s last-wins reading would

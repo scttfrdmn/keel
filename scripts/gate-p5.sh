@@ -221,7 +221,10 @@ README_END='<!-- keel-numbers: end -->'
 # The tree is frozen for a run's whole life, so HEAD is the run's revision by
 # construction; #68 is what will make a dirty tree at that revision say so, and
 # until it lands the stamp distinguishes revisions but not tree states.
-P4LOG="build/gate-p4-under-p5-$(git rev-parse --short HEAD 2>/dev/null || echo unknown).log"
+# And the run stamp, because the revision stamp alone still let two runs at one rev
+# overwrite each other (RUN_STAMP, remote.sh): three passes of an instrument exercise
+# are three runs at one rev, which is how that survivor of #78's fix was found.
+P4LOG="build/gate-p4-under-p5-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)-$RUN_STAMP.log"
 
 # Where a native, race-instrumented build lands on a remote host. Deliberately not
 # gate-p3's OpenBLAS tree, so a P5 run cannot overwrite a P3 run's working copy.

@@ -153,6 +153,19 @@ remote_hosts() {
 # gate-p6. Lifted instead, which is why every gate sources this file before it
 # would have defined these. FAIL stays per-gate: it is a counter the gate owns,
 # and these helpers only ever raise it.
+
+# RUN_STAMP — the per-process half of an output path's key. #78 rev-stamped the delegated
+# gate logs so a run at one rev could no longer destroy a run at another, and that left
+# TWO RUNS AT ONE REV overwriting each other exactly as before: the same defect, in the
+# same paths, past its own fix. Which is the ordinary case here, not a corner — DESIGN.md
+# §4 allows one immediate re-run of a failing throughput sentinel with *both* outputs
+# archived, and an instrument exercise runs one gate three times over at one rev. Not
+# exported, so a delegated gate stamps its own log with its own process's stamp; seeded
+# from the environment so a driver that wants one stamp across a chain can set it. One
+# definition, because bench_csv's identical stamp was the second copy and this is where a
+# third would have started to drift.
+RUN_STAMP="${RUN_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
+
 VERDICT_STAMP="${VERDICT_STAMP:-}"
 pass()       { printf '  \033[32mPASS\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; }
 fail()       { printf '  \033[31mFAIL\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; FAIL=1; }
