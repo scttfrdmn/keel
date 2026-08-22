@@ -536,3 +536,84 @@ One branch is written and unreached: an unreadable CPU model resolves the share 
 than the truth for any host whose registered baseline sits above the fleet's. A host that
 cannot answer a probe also produced no benchmark rows, so the branch is fail-closed and
 unexercised, and that is stated rather than implied.
+
+## Rule 18 — an instrument measures a noun
+
+*Ruled 2026-08-22. Issue #115, Scott's ruling on the hoist, opening "Yes, the shipped arm
+hoists" and ending "The questions are answered; what remains is execution."*
+
+The 8-thread compute ceiling is the denominator under every judged scaling share. `computeArm`
+forked eight goroutines and joined them inside every one of `b.N` iterations, so the clock ran
+across the convening as well as the arithmetic. Every figure it produced was correct arithmetic
+over the wrong region. Scott's formulation is the rule: **"The ceiling's *definition* is what
+eight threads can compute; an instrument whose measured quantity is 78% compute and 22%
+choreography is measuring the wrong noun."**
+
+Rule 11 already says the instrument overrules its author about the *number*. This is the
+adjacent audit, and the number cannot perform it: a stable, reproducible, cross-host-consistent
+reading is exactly what a wrong-noun instrument produces. What adjudicates is the timed region
+itself, read as text, against the quantity the name claims.
+
+### The severity is the deployment, not the code
+
+`internal/par/par.go:109` forks per call too, so the judged routines share the shape. What
+differs is op duration, by three orders of magnitude — `204126044 ns/op` for
+`Scale/Sgemm/n=4096/threads=8` against `267710 ns/op` for the ceiling, from the same run's own
+rows, a factor of 762. Converted to a rate so the hosts compare (§5 rule 13): **60.4 µs per
+fork/join on keel-zen4 spread, 25.5 µs confined, 51.4 / 13.2 on keel-zen5, 33.4 on keel-skx
+either way.** So ~60 µs is 22% of a ceiling op and 0.03% of a routine op. Both sides of a share
+pay the term; only the denominator pays it at a rate that matters. That is §5 rule 14 arriving
+as a corollary rather than a citation: the same code is honest in one deployment and dishonest
+in the other, so the audit is per deployment and never inherited.
+
+Its output was the impossible reading `8e6c6ac` now refuses — `ceiling: compute 461.4 GFLOP/s
++/- 62.68%` beside three 8-thread rates of 675.1, 704.3 and 662.3, i.e. **146.3%, 152.6% and
+143.5% of their own ceiling**, printed as `89.8% / 93.7% / 88.1%` passes.
+
+### The repair, and that it predates the mask
+
+Workers are created before the timer, each warmed by a full op on the cpu the mask gave it,
+parked on a `start` channel; the timed region is one `close(start)`, the steady-state loops, and
+one `wg.Wait()`. Excess over ideal goes 1.290 → 1.010 on keel-zen4 spread and 1.599 → 1.014 on
+keel-zen5 spread, with worker duty cycle rising from 0.67–0.88 to 0.97–0.99 — the removed time
+was time the workers spent **parked**.
+
+Scott's second clause is the one that matters for attribution: **"note this is a fidelity repair
+to a defect that predates the mask entirely: at 25.5 µs per fork/join the confined-era ceilings
+carried the same contamination at smaller amplitude, so the repair isn't cleaning up the spread
+mask's mess, it's fixing an instrument the mask merely exposed."** The mask is an amplifier of a
+harness term. Booking this repair against the mask would have made a placement decision out of
+a harness defect, which is what T-51 nearly did.
+
+### Version, do not correct
+
+The archived shares divided by v1 ceilings, whose bias was host-and-mask-dependent and **varied
+per run** — that variance *was* the scatter that drew attention. No correction formula recovers
+them honestly, and one applied anyway would publish a precision the data never had. Scott:
+**"Era-scoped, no re-adjudication."**
+
+Nothing needed recovering, and that is the pre-commitment discipline collecting its payoff. No
+bar was typed from those readings, no registry entry landed from them, no verdict rests on them.
+The counterfactual is recorded because it is the argument for the discipline rather than for the
+repair: **had 74.3% been typed as `CEIL_FRACTION`, this repair would now be forcing a bar
+retraction with published consequences.** A defect in a denominator became a version label.
+
+`instrument=v2` is emitted in the ceiling's own declaration line, not merely stated here — a
+reader comparing two archives needs the noun's version where they read the number.
+
+### The precondition the hoist trades for, stated inside the number
+
+v1 was `b.N`-independent by construction. v2 amortizes one convening over `b.N`, so a short run
+under-reads: locally **74.15 GFLOP/s at `1x`, 127.5 at `5000x`, converged by `500x`**. The gates
+run `-benchtime=1s` and sit far inside the flat region (~0.005%), but that is a fact about the
+gate configuration and not about the arm, so it is written in the arm's comment where a future
+`-benchtime=3x` smoke run will be read against it.
+
+Two limitations, neither with an available action (§5 rule 12 as amended). *Which* fork/join term
+is topology-sensitive is unattributed — cold wake-up of parked Ms and cross-cache-domain stealing
+are both live and nothing here separates them. And the `ops=` field this repair first tried to
+emit is **not** in the declaration: `declareCeiling` keeps one line per row and `testing` calls
+the benchmark once per ramping `b.N` trial, so the `b.N=1` call wins and any `b.N`-dependent
+field freezes at 1. It printed `ops=1` beside a row that measured 3853 iterations. The
+pre-existing fields are `b.N`-invariant, which is why the dedup was safe before and is the reason
+the trap is recorded rather than worked around.

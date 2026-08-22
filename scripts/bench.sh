@@ -111,10 +111,22 @@ bench_flags() {
 # between runs: two runs at one rev on one host wrote one path and the second overwrote
 # the first (measured, 2026-08-21). Hence the run stamp, set on first use. It goes at the
 # END because readme-numbers.sh reads the rev by offset from `bench-gate-p5-`.
+#
+# THE REV IS PINNED THE SAME WAY, and for a defect one class worse. It used to be
+# recomputed per archive while the stamp beside it was fixed at group start, so a run
+# spanning a commit split into two labels under ONE stamp: 20260822T185826Z wrote
+# `450a783-...-1` at 19:05:47Z and `2a5bfa3-...-{2..14}` from 19:08:11Z, because 2a5bfa3
+# landed at 19:07:14Z. Nothing distinguished those labels but the clock, so the field
+# named when a file was WRITTEN and not what wrote it — and a rev label that cannot say
+# which code ran is not provenance. The commit that split it touched remote.sh, the file
+# a live run re-invokes per host and which bash reads incrementally, so the flip marked
+# exactly the hazard the freeze rule exists for. Pinned here rather than at the call
+# sites because every archive in a group must answer identically or the group is not one.
 bench_csv() {
   BENCH_ARCHIVE_RUN="${BENCH_ARCHIVE_RUN:-${RUN_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}}"
+  BENCH_ARCHIVE_REV="${BENCH_ARCHIVE_REV:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}"
   BENCH_ARCHIVE_N=$((${BENCH_ARCHIVE_N:-0} + 1))
-  BENCH_ARCHIVE="build/bench-$(basename "${0%.sh}")-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)${2:+-$2}-$BENCH_ARCHIVE_RUN-$BENCH_ARCHIVE_N.txt"
+  BENCH_ARCHIVE="build/bench-$(basename "${0%.sh}")-$BENCH_ARCHIVE_REV${2:+-$2}-$BENCH_ARCHIVE_RUN-$BENCH_ARCHIVE_N.txt"
   mkdir -p build && cp "$1" "$BENCH_ARCHIVE" 2>/dev/null || BENCH_ARCHIVE="(not archived)"
   go run ./tools/benchci "$1"
 }

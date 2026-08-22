@@ -20,10 +20,42 @@ While the major version is 0, minor versions may contain breaking changes.
   the freeze rule's hazard leaving a visible trace rather than a new one: `2a5bfa3` touched `scripts/remote.sh`,
   which is the file a live run re-invokes per host and which bash reads incrementally, so the label flip marks
   the same commit that could have moved bytes under the interpreter. **What the labels cannot tell you is which
-  code ran** — that is the finding, and it is why a rev label is not provenance. Recorded and not repaired: the
-  one-line fix is to pin the rev the way the stamp is pinned, and it costs `scripts/` budget this session has
-  not earned with a routine or a kernel, so it is deferred with its mechanism named rather than filed as an
-  issue larger than itself.
+  code ran** — that is the finding, and it is why a rev label is not provenance. **REPAIRED the next day**
+  (ruled 2026-08-22 on #115: freeze-exempt on the criterion-honesty clause, because the founding campaign's
+  archives must name what wrote them). `BENCH_ARCHIVE_REV` is now pinned on first use exactly as the stamp
+  above it is, one `:-` default and nothing else, and the field's *position* in the filename is unchanged
+  because `readme-numbers.sh` reads the rev by offset from the `bench-gate-p5-` prefix. Exercised with a live
+  positive control rather than by inspection: a shadow `git` returning a different rev per call gives
+  `rev0001 rev0002 rev0003` unpinned and `rev0001` three times with one `rev-parse` call pinned. **The first
+  attempt at that exercise was a dead instrument and is recorded as one** — the counter incremented inside a
+  command substitution, so the fake `git` returned `rev0001` every time and unpinned code would have produced
+  the identical output (the readable-constant trap: an instrument that cannot move certifies nothing). Redone
+  file-backed.
+- **The 8-thread compute ceiling was measuring the wrong noun, and the repair is a fidelity repair that
+  predates the mask** (`bench/ceiling_test.go`, ruled 2026-08-22 on #115; new DESIGN §5 rule 18). `computeArm`
+  forked eight goroutines and joined them **inside every `b.N` iteration**, so the timed region under the
+  project's most load-bearing denominator was **78% arithmetic and 22% convening**. Scott's formulation is the
+  new rule: *the ceiling's definition is what eight threads can compute, and an instrument whose measured
+  quantity is 78% compute and 22% choreography is measuring the wrong noun.* Workers are now created before the
+  timer, each **warmed by a full op on the cpu the mask gave it**, and parked on a `start` channel; the timed
+  region is one `close(start)`, the steady-state loops, and one `wg.Wait()`. Excess over ideal goes **1.290 →
+  1.010** (zen4 spread) and **1.599 → 1.014** (zen5 spread), duty cycle **0.67–0.88 → 0.97–0.99** — so the
+  removed time was time the workers spent *parked*. This is not cleanup after the spread mask: at **25.5 µs**
+  per fork/join the confined-era ceilings carried the same contamination at smaller amplitude, so the mask was
+  an amplifier of a harness term and booking the repair against placement would have made a placement decision
+  out of a harness defect. `internal/par` forks per call too and is **left alone**, because the term is 22% of a
+  267710 ns ceiling op and 0.03% of a 204126044 ns `Sgemm/n=4096/threads=8` op — §5 rule 14, a severity that is
+  a function of deployment, and this one was deployed as a denominator. `streamArm` also keeps its per-iteration
+  fork deliberately: ~0.5% on a ≥10 ms op, REPORTED and never in the `min()`, and hoisting it would move
+  first-touch page faults out of the timed region, which is its own decision with its own magnitude to measure
+  rather than something smuggled in beside this one. **What the hoist trades for, disclosed at the arm:** v1 was
+  `b.N`-independent by construction and v2 amortizes one convening over `b.N`, so a short run under-reads —
+  **74.15 GFLOP/s at `1x` rising to 127.5 at `5000x`, converged by `500x`** — and the gates' `-benchtime=1s`
+  sits far inside the flat region at ~0.005%, which is a fact about the gate configuration and not about the
+  arm. An `ops=` field was drafted and **backed out**: `declareCeiling` keeps one line per row and `testing`
+  calls the benchmark once per ramping `b.N` trial, so the `b.N=1` call wins and it printed `ops=1` beside a row
+  that measured 3853 iterations. Every pre-existing field is `b.N`-invariant, which is why that dedup was safe
+  before and why the trap is recorded instead of worked around.
 - **The `free-placement` era's evidence is now in the repository: 35 archives at `archive/free-placement/`,
   which is half of `pinned8`'s both-arms condition landed before the run that lands the other half**
   (2026-08-21, ruled on #6). The era ledger makes a both-arms transition archive a condition of an era existing,
@@ -94,6 +126,42 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **Ceiling readings taken before the hoist are marked `instrument=v1` and era-scoped, NOT re-adjudicated**
+  (ruled 2026-08-22 on #115; `scripts/measurement-eras.tsv`, DESIGN §5 rule 18). The v1 bias was host- and
+  mask-dependent **and varied per run** — that variance *was* the ceiling scatter that drew attention in the
+  first place — so no correction formula recovers an archived share honestly, and one applied anyway would
+  publish a precision the data never had. Nothing needed recovering: **no bar was typed from those readings, no
+  registry row landed from them, no verdict rests on them.** The counterfactual is recorded because it is the
+  argument for the pre-commitment discipline rather than for the repair — **had `CEIL_FRACTION` been typed at
+  the 74.3% the v1 ceilings supported, this repair would now be forcing a published bar retraction with every
+  verdict derived from it.** A defect in a denominator resolved into a version label. The version is emitted by
+  the instrument in its own declaration row (`instrument=v2`), not only in prose, because a reader comparing two
+  archives needs the noun's version where they read the number. `pinned8` is therefore founded a **third** time
+  and still has never closed; a fresh era id was considered and refused, since the era id bounds
+  *registrations* while the artifact fields (`doms=`/`nodedoms=`, `instrument=`) bound *configurations*, and
+  the re-founding returns nobody's exemption — `scripts/judged-runs.tsv` has no data rows and
+  `scripts/host-baselines.tsv` is header-only, so no host has ever spent a `BASELINE` in this era.
+- **§5 rule 5's spread mask is FINAL as the standing judged placement, and its cost is now stated as measured
+  rather than as asserted** (ruled 2026-08-22 on #6; §7 rule 7 extended with it). T-52 removed the only standing
+  argument against spread — the ceiling scatter was the harness, not the placement — so the choice was decided
+  on spread's own profile: deterministic, and bandwidth-honest on the L1 rows by 5.96×/4.65×, which a confined
+  mask would have buried. **The ruling's "4–6% GEMM cost" did not survive being recomputed from the archives and
+  is not what landed.** Median-of-medians on the judged 8-thread rows at n=4096, confined against spread, as
+  `Sgemm / Ssyrk / Ssymm`: keel-zen4 **4.32 / 5.49 / 4.30%**, keel-zen5 **1.16 / 3.40 / 0.46%**, keel-skx
+  **1.70 / 0.30 / 1.17%**. keel-skx is a **null band, not a third data point** — its two masks are byte-identical
+  (`nodedoms=1`), so its 0.30–1.70% is what this cross-era, cross-revision comparison reads when the mask does
+  not change at all. zen4 clears that band; **zen5 straddles it**, so the honest statement is a few percent on
+  Zen 4 and at-or-near the noise floor on Zen 5, and one fleet-wide figure would have been zen4's number wearing
+  the fleet's name. The one-L3-copy-per-CCD mechanism is recorded as **unmeasured** beside it. **A fourth
+  limitation is stated inside the number, and it is an argument against spread that T-52 did not remove**
+  (§5 rule 12): the GEMM-class rows are tight under spread (CIs **0.045–0.41%**, two outliers at 1.41% and
+  1.85%) but **`Strsm` is not, and this mask is why** — its 8-thread interval goes ±2.32/2.97% → ±6.52/9.48/11.84%
+  on zen4 and ±0.75/0.87% → ±5.13/10.28/13.24% on zen5, a 3–15× widening, while **keel-skx's identical-mask
+  control does not move** (±0.50–1.30% → ±0.82–1.00%). In raw samples on zen5 that is 399–412 GFLOP/s confined
+  against 334–455 spread: a 3.3% total spread becoming 36%, consistent with this mask reweighting the bimodal
+  distribution T-45 and T-52 both found rather than with a new cost. It bears on one decision and not on the
+  placement, so it is disclosed rather than netted out: **whether `Strsm` can be judged at all under a mask
+  that gives it a 5–13% interval is open, and `STRSM_FLOOR` stays empty until it is answered.**
 - **Both of P5's bars are SUSPENDED TO EMPTY for the era-founding run, and one of them was RED when it happened**
   (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; ruled on #6, 2026-08-22). `CEIL_FRACTION`
   goes because its denominator is the compute ceiling *measured under the mask in force* and the confined mask is a

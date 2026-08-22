@@ -284,6 +284,70 @@ func BenchmarkCeiling(b *testing.B) {
 }
 
 // computeArm runs one width's FMA saturation kernel on procs threads at once.
+//
+// # Instrument v2: persistent workers, and the choreography is off the clock
+//
+// v1 forked procs goroutines and joined them inside every one of b.N iterations,
+// and that made this instrument measure the wrong noun. A ceiling named "what
+// eight threads can compute" was reading **78% compute and 22% fork/join**: the
+// term costs ~60 µs on keel-zen4 under rule 5's spread mask against a 268 µs op,
+// and the arm hoisting it out of the loop read 1.010 of eight times this host's
+// own 1-thread rate where v1 read 1.290 (keel-zen5: 1.014 against 1.599, duty
+// cycle 0.97-0.99 against 0.67-0.88 — the lost time was workers *parked*). T-52's
+// full attribution is on #115; the v1 arm and its paired diagnostic are at
+// 2b1d60b if the comparison ever needs re-running.
+//
+// **This is a fidelity repair to a defect that predates the mask.** At 25.5 µs per
+// fork/join the confined-placement ceilings carried the same contamination at
+// smaller amplitude, so the spread mask did not degrade compute — it amplified a
+// tax this arm was always paying, and one the judged routines never could feel:
+// the same fork/join in internal/par is 0.03% of a 204 ms Sgemm op against 22%
+// here, a 700:1 exposure ratio to one term (§5 rule 14, severity as a function of
+// deployment context). It is also why a ceiling could read BELOW rates it
+// denominated without any paradox — this arm was timing compute plus its own
+// harness while the routines timed compute alone (the refusal that catches it is
+// gate-p5's, landed 8e6c6ac).
+//
+// So: workers are created ONCE, before the timer, and each has already executed a
+// full op on its own cpu before the clock starts, which pays the cold-M wake-up
+// off the clock too. The timed region is one channel close, the steady-state
+// loops, and one Wait — b.N joins reduced to one, whose ~60 µs is then 0.005% of
+// a 1 s benchmark instead of 22% of an op. Keep that shape. Reintroducing a
+// per-iteration barrier does not merely add noise; it silently lowers every
+// judged share's denominator, and no test here will go red for it.
+//
+// Readings from before this arm landed are instrument-v1 and are era-scoped, not
+// corrected: v1's bias is host- and mask-dependent AND varies run to run (that
+// variance was the scatter), so no formula recovers them honestly. Nothing rests
+// on them — the pre-commitment discipline meant no bar was ever typed from a v1
+// ceiling, so an instrument defect cost a version label instead of a retraction.
+//
+// # What v2 trades for it, which v1 did not have
+//
+// v1's reading was b.N-independent by construction, because every iteration paid
+// its own fork. v2's is not: the one remaining fork/join is amortized over b.N, so
+// a SHORT run under-reads. Exercised on the author's laptop rather than measured
+// on a judged host (darwin/arm64, scalar path, no mask — a mechanism check, not a
+// number that goes anywhere), the 8-thread arm reads 74.15 GFLOP/s at
+// -benchtime=1x, 94.71 at 5x, 99.00 at 50x and 127.2 / 127.5 at 500x / 5000x:
+// converged two decades before the 1 s the gates use, and 127.5 against 8x the
+// same host's 17.98 single-thread reading is 0.886 — the residual there is an M4
+// Pro putting 8 threads across heterogeneous cores, which is why that host is not
+// a judged one. The bias is one fork/join over the whole timed region, so at the
+// 1 s every gate uses against 268 µs ops it is ~0.005%. A too-short run biases the
+// ceiling DOWN and every share UP, which is the direction gate-p5's
+// impossible-denominator refusal already fails closed on.
+//
+// b.N is therefore load-bearing for this reading in a way it was not for v1, and
+// it is auditable where testing already prints it: the iteration column of the row
+// itself, which is what benchstat parses and what the archive keeps. It is NOT put
+// in the declaration line below, and that is a measured refusal rather than a
+// preference — declareCeiling keeps one line per row and testing calls this
+// function once per b.N trial, ramping from 1, so the first call wins and any
+// b.N-dependent field there is frozen at b.N=1 forever. Adding `ops=%d` printed
+// `ops=1` beside a row that had just measured 3853 iterations. Every other field
+// in that line is b.N-invariant by construction (flops= is per-op, iters= is a
+// constant), which is why the dedup was safe before and is a trap now.
 func computeArm(b *testing.B, procs int, k vec.PeakKernel) {
 	prev := runtime.GOMAXPROCS(procs)
 	defer runtime.GOMAXPROCS(prev)
@@ -297,25 +361,49 @@ func computeArm(b *testing.B, procs int, k vec.PeakKernel) {
 	// The write lands once per peakItersPerOp iterations so the sharing would be
 	// immaterial to the timing either way; the race would not be.
 	sinks := make([]float32, procs*16)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var wg sync.WaitGroup
-		for t := 0; t < procs; t++ {
-			wg.Add(1)
-			go func(t int) {
-				defer wg.Done()
+	n := b.N
+	var wg sync.WaitGroup
+	// Buffered by procs so reporting warm cannot itself park a worker.
+	warm := make(chan struct{}, procs)
+	start := make(chan struct{})
+	for t := 0; t < procs; t++ {
+		wg.Add(1)
+		go func(t int) {
+			defer wg.Done()
+			sinks[t*16] = k.Run(peakItersPerOp)
+			warm <- struct{}{}
+			<-start
+			for i := 0; i < n; i++ {
 				sinks[t*16] = k.Run(peakItersPerOp)
-			}(t)
-		}
-		wg.Wait()
+			}
+		}(t)
 	}
-	flops := float64(k.FlopsPerIter) * float64(peakItersPerOp) * float64(procs) * float64(b.N)
+	// Every worker has now run a full op on the cpu the mask gave it, so what the
+	// clock below sees is a steady state rather than eight threads starting up.
+	for t := 0; t < procs; t++ {
+		<-warm
+	}
+	b.ResetTimer()
+	close(start)
+	wg.Wait()
+	b.StopTimer()
+	flops := float64(k.FlopsPerIter) * float64(peakItersPerOp) * float64(procs) * float64(n)
 	b.ReportMetric(flops/b.Elapsed().Seconds()/1e9, "GFLOP/s")
-	declareCeiling(b, procs, fmt.Sprintf("kind=compute width=%s flops=%s iters=%d",
-		k.Name, strconv.FormatFloat(flops/float64(b.N), 'f', 0, 64), peakItersPerOp))
+	declareCeiling(b, procs, fmt.Sprintf("kind=compute instrument=v2 width=%s flops=%s iters=%d",
+		k.Name, strconv.FormatFloat(flops/float64(n), 'f', 0, 64), peakItersPerOp))
 }
 
 // streamArm runs one memory probe on procs threads over disjoint slices.
+//
+// This arm still forks per iteration, deliberately, and the residual is stated
+// rather than removed (§5 rule 12). Its op sweeps at least 256 MB per thread —
+// order 10 ms against the compute arm's 268 µs — so the same ~60 µs fork/join is
+// order 0.5% here instead of 22%, and this half is REPORTED and never in the
+// min() that denominates a share. Hoisting it is not the same one-line change
+// either: a warm-up round would move first-touch page faults out of the timed
+// region, which moves a published bandwidth number for a reason that has nothing
+// to do with #115's finding. That is its own decision with its own magnitude to
+// measure, so it is not smuggled in beside the ceiling repair.
 func streamArm(b *testing.B, procs int, c streamCase) {
 	prev := runtime.GOMAXPROCS(procs)
 	defer runtime.GOMAXPROCS(prev)
