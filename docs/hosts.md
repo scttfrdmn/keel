@@ -542,6 +542,31 @@ lone issue-bound host, and it no longer is. The second one, keel-skx, sits in th
 *judged* fleet rather than beside it. Whether the sentinel role moves, splits or stays
 is a ruling, not a measurement, and nothing in this file assumes an answer.
 
+## Placement methodology: pinned since 2026-08-21
+
+Every judged benchmark invocation on every host runs under a CPU affinity mask of eight
+distinct physical cores inside one NUMA node, and the ceiling arm runs under the identical
+mask. Adopted fleet-wide by ruling on #6; the law and the falsification condition are
+DESIGN.md §5 rule 5. **Before this date every number in this file and in the README was
+measured under free placement**, which matters when comparing across the boundary: the whole
+judged fleet is 2-socket/2-NUMA (keel-skx 2×18×2SMT, keel-zen4 and keel-zen5 2×96), so an
+unpinned goroutine could and did migrate across sockets mid-measurement.
+
+What drove it was not a preference for tidiness but four independent readings that the free
+instrument was reporting the *draw* rather than the code — zen4's `Strsm` verdict flipping red
+then green on unchanged code, zen5's `Ssyrk` clearing a bar by 0.4 points where its derivation
+set 2.6, skx's `Strsm` clearing 7.0 at its median and failing net of CI, and criterion 9's 5%
+band coming in narrower than the spread of the rows it judges. The transition campaign runs
+**both** arms and archives both, so the crossing is measurable rather than asserted, and any
+verdict that changes colour is published with both readings side by side.
+
+Two limitations sit inside the figures rather than beside them. The mask pins the
+`threads=1` rows to a *node*, not to a core, so the ±0.11% a one-core probe read for skx's
+1-thread `Sgemm` — against ±14.6% unpinned, in a run of `-count=20` against the gate's 10 — is
+not what this weaker mask promises. And because Go reports the mask's width as `GOMAXPROCS`,
+benchmark names carry a `-8` suffix where the free arm carried `-192` or `-72`; that is a
+renames every row, which every comparison across the boundary has to cope with.
+
 ## What has been verified here
 
 2026-08-10, gate P0: the differential suite ran on all three hosts, bit-exact

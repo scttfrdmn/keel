@@ -326,3 +326,61 @@ which the input format *defines* as zero-width. Those are constructions, not rea
 they are correct; correcting them would assert something false about a definition. One word,
 two meanings, and only one of them was ever a measurement — which is why this ruling names
 sites rather than a pattern.
+
+## Rule 16 — a published reference is an estimator, never a draw
+
+*Ruled 2026-08-21. Issue #6, Scott's ruling on the README re-measure red.*
+
+`gate-p5.sh`'s criterion 9 compares each README rate to this run's median against a 5% band.
+On `33de3b2` it convicted two zen4 rows, and the finding is not that they drifted:
+
+| row | six-run history, same physical instance | README | this run | gate `d` |
+|---|---|---|---|---|
+| `Ssymm/threads=8` | 610.8 615.4 618.4 622.8 643.4 **654.3** | 654.3 | 615.4 | +6.32% |
+| `Strsm/threads=1` | 35.66 36.06 36.11 36.32 37.12 **37.61** | 37.61 | 35.665 | +5.45% |
+
+Both published values are the **maximum** of their own history. That is not cherry-picking
+after the fact — it is what single-draw publication does by construction. Any one run lands
+somewhere in its spread; the check thereafter measures the reference draw's altitude rather
+than the code, with a sign set by luck. Scott's statement of it: *"a high draw manufactures
+future reds exactly as a low draw would manufacture future flattery."* The flattery is the
+dangerous half, because a red gets investigated and a green does not.
+
+Checked against the intervals the two runs actually measured — the reference's read from
+`build/gate-p5-651d1bd.log`, the revision both rows were published from — neither
+disagreement resolves:
+
+```
+zen4/Ssymm/8   654.3(+/-3.9%)  615.4(+/-3.2%)  |diff| 38.90  half-widths 45.21  TIE
+zen4/Strsm/1   37.61(+/-5.7%) 35.665(+/-5.2%)  |diff|  1.95  half-widths  4.00  TIE
+```
+
+**The ratified repair is median-over-archive, and it is a repair rather than an amendment.**
+The band is untouched: 5% stays 5%, applied to an honest center instead of a peak. The
+criterion's standard was always "today within 5% of what this host does", and a
+max-of-history reference was never a faithful implementation of that — so restoring the
+estimator needs no standard that predates the result, because it *is* the predating standard.
+Each regenerated row states its estimator: median of N archived runs, the runs named.
+
+**What was refused, and why it is the reusable half.** The obvious-looking fix was to make the
+check interval-aware, on the precedent of the scaling bars and of rule 5's `a tie is not an
+order` (2026-08-20) — a standard that genuinely predates this result. It was drafted,
+computed, and rejected on direction. All four rows in question tie at their archived
+intervals, zen4's two reds included, and nothing is newly convicted; on the data in hand the
+change *only acquits*. Scott: *"a correction that on the data in hand only acquits is not a
+two-way improvement, it's a loosening wearing rigor's vocabulary."* That is rule 15's
+sign-of-error discipline one level up, and the never-weaken order reached before the change
+shipped rather than after.
+
+The first computation of that same test was itself wrong, in a way worth recording: it assumed
+the reference carried *this* run's interval, which is the tighter one, and so reported zen5's
+two `Ssymm` rows as newly resolving. Reading the real archived intervals turned them into ties
+as well. Compute, catch the source error, recompute, then refuse your own now-correct fix on
+direction grounds — the flattery asymmetry applied twice in one sitting.
+
+**What stays unmeasured, and is not claimed.** The 7.1% peak-to-peak spread in that six-run
+history mixes measurement noise with real code change across six revisions. The only
+same-revision repeat the archive holds — `ce43bca` against its own rerun, `Ssymm/8T` 618.4 vs
+622.8 — spread 0.71%, which does not decompose the 7.1% and is one pair. So the decomposition
+is unmeasured, and the ruling rests on the estimator argument alone, which needs no
+decomposition: sample size one is the worst estimator available whatever the spread's cause.

@@ -51,6 +51,37 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **§5 rule 16: a published reference is an estimator, never a draw** (ruling on #6, 2026-08-21; `DESIGN.md` §5,
+  `docs/rulings.md` rule 16). `gate-p5` criterion 9 convicted two `keel-zen4` README rows on `33de3b2`, and both
+  published values were the **maximum** of their six-run history on the same physical instance (`Ssymm/8T`
+  610.8…**654.3**, `Strsm/1T` 35.66…**37.61**), so a 5% band was spent on the reference's own bias — and neither
+  disagreement resolves at the intervals the two runs actually measured (`Ssymm/8T` |diff| 38.90 against 45.21 of
+  half-widths; `Strsm/1T` 1.95 against 4.00). Single-draw publication makes the check measure the reference draw's
+  *altitude within its own spread* rather than the code, with a sign set by luck: "a high draw manufactures future
+  reds exactly as a low draw would manufacture future flattery." The ratified repair is **median over the archived
+  runs, each row stating its estimator** — a repair and not an amendment, because the band is untouched at 5% and
+  the criterion's standard was always "today within 5% of what this host does". The **interval-aware variant was
+  drafted, computed and refused** on direction: all four rows in question tie at their archived intervals, so it
+  would have retired two reds and convicted nothing, and a correction that only acquits on the data in hand is a
+  loosening wearing rigour's vocabulary. Its first computation was itself wrong — it assumed the reference carried
+  *this* run's tighter interval — which is why the recomputation is what refused it. The 7.1% peak-to-peak spread
+  stays **unmeasured** as to noise-versus-code-change: the archive's one same-revision repeat spread 0.71%, which
+  does not decompose it, and the ruling rests on the estimator argument alone.
+- **§5 rule 5: placement is pinned, fleet-wide and never selectively; §7 rule 7 gains placement and estimator to
+  what a reported number must state** (ruling on #6, 2026-08-21; `DESIGN.md` §5/§7, `docs/hosts.md`). Every judged
+  invocation runs under an affinity mask of eight distinct physical cores in one NUMA node, and the ceiling arm
+  under the identical one — a share whose numerator and denominator came from different placement methodologies is
+  not a share. Four independent readings that the free instrument was reporting the draw: `keel-zen4`'s `Strsm`
+  verdict red at `5ec5fea` and green at `33de3b2` on unchanged code; `keel-zen5`'s `Ssyrk` clearing by 0.4 points a
+  bar its derivation set 2.6 below every healthy row, at ±5.0% where the ladder read ±0.90%; `keel-skx`'s `Strsm`
+  clearing 7.0 at its median and failing net of CI; and criterion 9's band narrower than the spread it judges. A
+  red that turns green under a tighter estimator of the same quantity is supersession working, so it is disclosed
+  with both readings side by side rather than avoided — the transition campaign runs **both** arms and archives
+  both. Stated as a falsifiable prediction (§5 rule 15): the pinned arm's intervals must narrow materially, or the
+  adoption is refuted by its own transition run and reverts. Two limitations inside the number (§5 rule 12): the
+  mask pins `threads=1` rows to a *node* and not a core, so the ±0.11% a one-core probe read for skx's 1T `Sgemm`
+  (against ±14.6% unpinned, at `-count=20` versus the gate's 10) is not what it promises; and Go reports the mask's
+  width as `GOMAXPROCS`, so rows carry `-8` where the free arm carried `-192` or `-72`.
 - **§5 rule 12 gains clause (c): a hole no future action can close goes inside the number and is never filed as a
   debt** (ruling on #6, 2026-08-21; `DESIGN.md` §5, `docs/rulings.md` rule 12). Scott had filed the archive's
   inability to resolve a `gnr`-class row — true share would have to reach **153.9%**, i.e. never — as a post-tag
