@@ -79,6 +79,37 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **Both of P5's bars are SUSPENDED TO EMPTY for the era-founding run, and one of them was RED when it happened**
+  (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; ruled on #6, 2026-08-22). `CEIL_FRACTION`
+  goes because its denominator is the compute ceiling *measured under the mask in force* and the confined mask is a
+  different instrument; **counted rather than assumed, 51.0 judged exactly one run** (`build/gate-p5-d2fe477.log`:
+  six rows, two models, all PASS, and the argmin row read 53.6% again — clearing by exactly its own 2.6-point
+  margin, a reproduction to one decimal rather than a defect). `STRSM_FLOOR` joins it and becomes era-scoped, for
+  a reason of its own: it is a ratio over the **1-thread** rate, the one arm this fleet has measured bimodal and
+  placement-sensitive, and rule 5's controls are explicitly silent there. **The suspension removes three live
+  FAILs — zen5 6.982/6.756, zen4 7.257/6.881, skx 6.806/6.637 against 7.0× — and that is disclosed first because
+  it is the shape of a criterion weakened to pass.** What makes it a re-derivation: the ruling scoping the bar to
+  the era was made with those three reds already on the record, and §5 rule 17(d) predates them. **Pre-committed:
+  if the spread rows land below 7.0× net of CI, the value does not get typed** — a bar under 7.0 would be
+  loosening after a red, so it goes to Scott as a finding and the class stays REPORTED. `BASELINE_MARGIN` is
+  deliberately **not** suspended: 2.6 points is an *input* to the formula rather than an output of the run, so the
+  circularity clause has nothing to say about it, and what suspends it this era is the artifact — both registries
+  are header-only for `pinned8`, so the branch that subtracts it cannot execute. Five predictions are
+  pre-registered in DESIGN §4/P5 before the run (§5 rule 11), including **the control that tests the amendment
+  hardest: `keel-skx` must not move**, its L3 being per socket so the spread enumeration is degenerate there.
+- **The README caption could print "every pair clears the bars" when NO bar was in force** (`readme-numbers.sh`).
+  Vacuously true, and it reads as a pass — §5 rule 8's defect published in the one file a reader checks. Both
+  suspended bars now render in words (the `>= %sx` hole was already anticipated for the ceiling bar and not for
+  Strsm), and the both-suspended case prints **NONE of the pairs was judged**. A second, worse case was found by
+  driving it: the bars are read from this tree and the rows from a **log**, so a log written while a bar was in
+  force carries FAIL verdicts a suspended bar cannot produce — the constants read-back compares two scripts and
+  cannot see it. That combination now **refuses** rather than choosing which sentence to publish. Stated inside
+  the number (§5 rule 12): the both-suspended branch is **unexercised by any archived log** — every log in
+  `build/` predates the suspension and now takes the refusal instead, so the string was rendered against one of
+  them before the refusal landed, which proves formatting and not reachability. **And the founding run will not
+  reach it either**, which is the find that matters: a `BASELINE` verdict line carries no scaling clause, so this
+  program refuses the whole log the moment one host renders BASELINE — `keel-skx` does, this era, which makes it
+  the blocker on regenerating the README as medians over this era (#6).
 - **§5 rule 5's mask is AMENDED to one core per cache domain, and `pinned8` finalizes on the spread form**
   (2026-08-22, ruled on #6; `scripts/remote.sh`, `DESIGN.md` §5 rule 5, `docs/hosts.md`, `docs/gates.md`,
   `scripts/measurement-eras.tsv`). The 2026-08-21 form took the first eight distinct physical cores of one NUMA

@@ -51,12 +51,18 @@ P5_THREADS=8
 #
 # Retained only as the value the disclosure names as retired, never as a comparison:
 SCALE_FLOOR_RETIRED=6.0
-# TYPED 2026-08-22 from the era-founding run, closing DESIGN.md §4/P5's sequence: that run
-# REPORTED through the `-z` branch below, this commit types the value from its rows with the
-# derivation printed, the next run is the first `pinned8` judges. 57.8 was the free-placement
-# era's bar and is retired, not inherited -- another instrument's rows book the methodology
-# delta as host drift (#6 Q2, §5 rule 17(d)). readme-numbers.sh reads this line back verbatim.
-CEIL_FRACTION=51.0
+# SUSPENDED TO EMPTY 2026-08-22, one day after 57.8 was retired the same way, and for the
+# same clause: 51.0 was typed from build/gate-p5-be5bb91.log, whose eight cores were CONFINED
+# to one CCD by the first form of the mask. The spread amendment changes what its denominator
+# measures -- the ceiling is the compute term at 8 threads, taken on the host under the mask
+# in force -- so enforcing 51.0 on spread rows books the instrument change through THE BAR,
+# which is the error §5 rule 17(d) closed two doors against and this is the third. EMPTY is
+# the PRE-REGISTERED state, not a fallback: the founding run REPORTS through the `-z` branch
+# below, one reviewed commit types the value from its rows with the derivation printed, and
+# the confirmation run is the first this instrument judges. That costs a run, by the same law
+# that makes a bar derived from one run and enforced on the next able to fail at all.
+# readme-numbers.sh reads this line back verbatim, so both files empty together.
+CEIL_FRACTION=
 # The CPU models whose judged rows DERIVED CEIL_FRACTION. Named because the
 # BASELINE-REGISTERED class below turns on whether a criterion's reference artifact
 # predates the host's admission, and for these it does not — they ARE the artifact.
@@ -70,10 +76,19 @@ CEIL_DERIVED_FROM="AMD EPYC 9R14|AMD EPYC 9R45"
 # subtracted from is named below, once the exercise seam has decided which one that is.
 #
 # THE MARGIN IS CEIL_FRACTION'S OWN, not a second constant with a second justification:
-# 53.6 - 2.6 = 51.0 is the derivation this gate already prints, so a per-host bar is the
-# fleet bar's construction applied to a different baseline rather than a new kind of
-# threshold. One number, stated once, reused — which also means a future re-argument of
+# 53.6 - 2.6 = 51.0 was the derivation this gate printed while that bar stood, so a per-host
+# bar is the fleet bar's construction applied to a different baseline rather than a new kind
+# of threshold. One number, stated once, reused — which also means a future re-argument of
 # the margin moves both bars together instead of leaving them to drift apart.
+#
+# NOT SUSPENDED with the two bars above, and the asymmetry is the point: 2.6 points is an
+# INPUT to their formula, a declared slack, not an output of the run they are derived from —
+# so the circularity clause has nothing to say about it and re-deriving it from the rows it
+# governs is the one thing it must not do. What suspends it this era is the artifact: both
+# registries are header-only for `pinned8` (`scripts/host-baselines.tsv`,
+# `scripts/judged-runs.tsv`), so the branch that subtracts it cannot execute until a
+# baseline lands, and the bar-typing commit restates all three together with one derivation
+# block so the margin is never printed beside an argmin it did not come from.
 BASELINE_MARGIN=2.6
 # ---- the instrument exercise for this class (#6, ruled 2026-08-21)
 #
@@ -151,12 +166,29 @@ P5_MEASURED="Strsm"
 # Ratified 2026-08-16 (#37, DESIGN.md §4/P5) as a REGRESSION BAR under the
 # replacement model — the per-(jc,pc) B-packing residue plus the claim tail — after
 # the printed work split failed as an Amdahl model on all nine readings (criterion 1
-# above carries the arithmetic). Set below every observation on purpose: 7.0x is
+# above carries the arithmetic). Set below every observation on purpose: 7.0x was
 # 0.403x under the lowest of nine (7.403x, janus) and above the 6.0x general floor,
-# so Strsm stops being the routine with no threshold at all without pretending the
+# so Strsm stopped being the routine with no threshold at all without pretending the
 # number came from a ceiling. Its nine readings are boost-off desktop measurements,
-# so they are not comparable to this fleet's; the bar binds from this commit forward.
-STRSM_FLOOR=7.0
+# so they are not comparable to this fleet's; the bar bound from 2026-08-16 forward.
+#
+# SUSPENDED TO EMPTY 2026-08-22 and made era-scoped, ruled on #6 with the ceiling bar it now
+# joins. This bar is NOT a share of a measured ceiling — it is a ratio, this host's 8-thread
+# rate over ITS OWN 1-thread rate — so it looked immune to a placement change that moves both
+# arms together. It is not, and the reason is the denominator: the 1-thread Strsm arm is the
+# one arm this fleet has measured BIMODAL and placement-sensitive (the skx probe, #6), and
+# §5 rule 5's own limitations state that T-45's invariance controls cover the 1-thread STREAM
+# arms and are SILENT on the 1-thread routine arms. A ratio whose denominator's mask
+# sensitivity is unmeasured cannot carry a bar across the instrument change, in either
+# direction: the spread mask is expected to raise the 8-thread arm, which would LOWER the bar
+# in effect while the printed constant stayed put, and a regression bar that quietly loosens
+# is the failure mode a regression bar exists to prevent.
+#
+# Open construction question for the typing commit, stated here rather than guessed: the
+# share bar's margin is 2.6 POINTS of a percentage and this class's bar is a multiple, so
+# `argmin less 2.6` is not a formula that transfers. One derivation block, three bars, and
+# this one needs its margin argued in the units it is measured in.
+STRSM_FLOOR=
 # The falsified ceiling, recomputed from each run's own declared work split rather
 # than carried as a constant, and reported beside the reading that clears it. Judged
 # by nothing: a future reading landing BELOW it would refute nothing (the nine
@@ -630,12 +662,12 @@ if [[ -n "$CEIL_FRACTION" ]]; then
   info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest judged row of build/gate-p5-be5bb91.log (keel-zen5 Ssymm, 53.6% net of BOTH intervals) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. The set is SIX rows over TWO models, and what it cannot see is stated inside it (§5 rule 12): no Intel silicon derived it, keel-skx being DERIV=0 and gnr characterization, and the two it has spread 53.6-89.9%, so one fleet bar is set by the weakest host — per-host convergence is the post-tag option named above"
   info "  the bar FELL 6.8 points from the retired 57.8 and the cause is the DENOMINATOR, not the kernels: on BOTH derivation hosts the measured ${P5_THREADS}-thread ceiling outran every judged rate, so all six RAW shares fell -- keel-zen5 1568.5 -> 1999.5 GFLOP/s (+27.5%) against rates at +6.2/+17.5/+9.0%, keel-zen4 713.6 -> 817.4 (+14.5%) against +9.7/+13.7/+5.7%. Two of zen4's net-of-interval shares rose regardless (80.9 -> 85.6, 88.2 -> 89.9, Ssymm's fell 86.3 -> 83.5), because pinning collapsed the rate intervals from 1.0-8.3% to 0.0-0.8% and this share subtracts them: it has THREE terms, and variance reduction is indistinguishable from improvement in the one no artifact prints (#6, and the argmin moved with it: Ssyrk -> Ssymm)"
 else
-  info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). This branch has fired twice: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor, and at era $P5_ERA's boundary, where 57.8 could not be inherited because a bar from another instrument's rows books the methodology delta as host drift"
+  info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). This branch has fired THREE times: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor, at era $P5_ERA's boundary, where 57.8 could not be inherited because a bar from another instrument's rows books the methodology delta as host drift, and now at the 2026-08-22 spread amendment, which retires 51.0 for the same reason one bar in: it was typed from rows whose eight cores were confined to one cache domain, so its denominator was measured by an instrument this run does not use"
 fi
 if [[ -n "$STRSM_FLOOR" ]]; then
   info "judged at >= ${STRSM_FLOOR}x: $P5_MEASURED — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)"
 else
-  info "measured and reported, floor deferred to this measurement plus a stated model: $P5_MEASURED (#37)"
+  info "measured and reported, floor deferred to this measurement plus a stated model: $P5_MEASURED (#37). This is a SUSPENSION and not an absence: 7.0x WAS ratified 2026-08-16 and is retired here, made era-scoped by the 2026-08-22 ruling on #6 because its denominator is the 1-thread arm this fleet has measured bimodal and placement-sensitive, and rule 5's own controls are silent on that arm"
 fi
 
 # The class's own controls, in the log that publishes the class's verdicts (#6). The
@@ -943,7 +975,7 @@ else
           fail "[$host] $r's declared model does not account for its work: rank_update=$ru + diag_solve=$ds does not sum to 1"
           HOST_MEASURED=0
         elif [[ -z "$STRSM_FLOOR" ]]; then
-          pass "[$host] $r scales ${pt}x, ${lo}x net of CI; model at this shape: rank_update=$ru diag_solve=$ds — measured and reported, no ratified floor yet (#37), and this reading is the input to setting one"
+          pass "[$host] $r scales ${pt}x, ${lo}x net of CI; model at this shape: rank_update=$ru diag_solve=$ds — measured and reported, NO FLOOR IN FORCE (#37): 7.0x was ratified 2026-08-16 and is suspended at the 2026-08-22 spread amendment, not never set, and this reading is the input to re-deriving it"
         elif awk -v v="$lo" -v f="$STRSM_FLOOR" 'BEGIN{exit !(v >= f)}'; then
           pass "[$host] $r scales ${pt}x, ${lo}x net of CI (>= ${STRSM_FLOOR}x, the regression bar ratified for this class 2026-08-16 under the B-packing-residue model)"
         else
@@ -1056,7 +1088,7 @@ else
         # The STRSM_FLOOR precedent (#37): measured, reported, and the input to setting
         # the bar rather than a bar itself. Named as unjudged so no reader can mistake a
         # silent pass for cleared coverage — this class HAS no floor in force right now.
-        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, no fraction ratified yet (#6): this reading is an input to setting one, and the retired ${SCALE_FLOOR_RETIRED}x floor is not applied"
+        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, NO FRACTION IN FORCE (#6): 51.0 was typed 2026-08-22 from confined-mask rows and is suspended at the spread amendment the same day, so this reading is an input to re-deriving it, and neither that bar nor the retired ${SCALE_FLOOR_RETIRED}x floor is applied"
       elif awk -v v="$frac" -v f="$BBAR" 'BEGIN{exit !(v >= f)}'; then
         pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (>= ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"
       else

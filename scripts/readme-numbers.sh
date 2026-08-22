@@ -49,13 +49,15 @@ CAP_END='<!-- keel-caption: end -->'
 # Q2), then emptied the same day when the `pinned8` era boundary retired it. The empty-bar
 # branch below is live, not dead code — it has served two deferred bars and will serve a third.
 #
-# 51.0 TYPED 2026-08-22 from the era-founding run's rows; gate-p5.sh carries the derivation
-# and prints it, and DESIGN.md §4/P5 is the authority. Re-typed here in the same commit
-# because the check below reads that line back verbatim, so this is a second edit and not
-# a second decision. The published shares this caption governs are regenerated separately,
-# as medians over this era's archives (#6): a bar and the rows it judges are not one act.
-CEIL_FRACTION=51.0
-STRSM_FLOOR=7.0
+# 51.0 was TYPED 2026-08-22 from rows measured under the mask's confined first form, and
+# SUSPENDED the same day when the spread amendment changed the instrument its denominator was
+# measured with. STRSM_FLOOR is suspended beside it, made era-scoped by the same ruling.
+# gate-p5.sh carries both derivations and is the authority; emptied here in the same commit
+# because the check below reads those lines back verbatim, so this is a second edit and not a
+# second decision. The published shares this caption governs are regenerated separately, as
+# medians over this era's archives (#6): a bar and the rows it judges are not one act.
+CEIL_FRACTION=
+STRSM_FLOOR=
 SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'
 
@@ -301,12 +303,42 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # its own measurement and both have been, at different times and for the same
     # reason (#37 then #6), so "deferred" is a state this sentence can be in.
     jb = (cf == "" \
-      ? sprintf("the judged routines are reported against each host'"'"'s own measured %s-thread ceiling with no fraction yet ratified (#6)", (nt == "" ? "8" : nt)) \
+      ? sprintf("the judged routines are reported against each host'"'"'s own measured %s-thread ceiling with no fraction in force (#6)", (nt == "" ? "8" : nt)) \
       : sprintf("the judged routines must reach %s%% of each host'"'"'s own measured %s-thread ceiling (#6)", cf, (nt == "" ? "8" : nt)))
-    if (nl + nn + ns == 0) {
-      printf "Every one of the %d routine-host pairs those %d rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and Strsm must scale >= %sx (#37). The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tf, retired > "/dev/stderr"
+    # The same hole, in the same sentence, for the same reason: the bar for this class has been
+    # deferred once (#37) and suspended once (the 2026-08-22 spread amendment), so ">= x"
+    # with nothing in it is a state this printf could reach and did not handle.
+    tb = (tf == "" \
+      ? "Strsm is reported against its own 1-thread rate with no floor in force (#37)" \
+      : sprintf("Strsm must scale >= %sx (#37)", tf))
+    if (cf == "" && tf == "" && nl + nn + ns > 0) {
+      # The log disagrees with this tree about whether a bar exists. The constants readback
+      # above compares this script with gate-p5.sh and cannot see this: the rows come from a
+      # LOG, and a log written when a bar was in force carries FAIL verdicts no suspended bar
+      # could have produced. Refuse rather than publish either sentence -- "none was judged"
+      # over evidence of judging is the worse of the two lies available here.
+      printf "readme-numbers: both bars are suspended in this tree, but %s shortfall verdict(s) appear in %s -- that log was judged by bars this tree does not have, so no caption over it can be true\n", nl + nn + ns, FILENAME > "/dev/stderr"
+      exit 3
+    }
+    if (cf == "" && tf == "") {
+      # BOTH bars suspended: "clears the bars" would be vacuously true and would read as a
+      # pass, which is the one sentence this caption may not print -- a check that could not
+      # have come out otherwise is not evidence (DESIGN.md §5 rule 8). No row can fail here,
+      # so the shortfall clauses below are unreachable and are not the reason none printed.
+      #
+      # UNEXERCISED BY ANY ARCHIVED LOG, stated rather than implied (§5 rule 12): every log in
+      # build/ predates the suspension and carries a shortfall, so each one now takes the
+      # refusal above instead. This string was rendered against one of them before that
+      # refusal landed, which proves the formatting and not the reachability. The run this
+      # branch exists for is the era-founding one, and that log will not reach it either until
+      # a BASELINE verdict line can be parsed: those lines carry no scaling clause, so this
+      # program refuses the whole log, which is the blocker on regenerating the README as
+      # medians over this era (#6). Found 2026-08-22 by driving this branch, not by reading it.
+      printf "NONE of the %d routine-host pairs those %d rows form was judged: both bars scripts/gate-p5.sh would enforce are suspended for re-derivation from this era (%s; %s), so every number above is REPORTED and the absence of a shortfall below is not a pass. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
+    } else if (nl + nn + ns == 0) {
+      printf "Every one of the %d routine-host pairs those %d rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
     } else {
-      printf "%d of the %d routine-host pairs those %d rows form %s not clear the bars scripts/gate-p5.sh enforces (%s; Strsm must scale >= %sx (#37); both judged net of confidence intervals). ", nl + nn + ns, nr, nrow, (nl + nn + ns == 1 ? "does" : "do"), jb, tf > "/dev/stderr"
+      printf "%d of the %d routine-host pairs those %d rows form %s not clear the bars scripts/gate-p5.sh enforces (%s; %s; both judged net of confidence intervals). ", nl + nn + ns, nr, nrow, (nl + nn + ns == 1 ? "does" : "do"), jb, tb > "/dev/stderr"
       if (ns > 0) {
         s = ""; for (k = 1; k <= ns; k++) s = s (k > 1 ? "; " : "") short[k]
         printf "%d of the judged routines %s short of %s own host'"'"'s ceiling: %s. ", ns, (ns == 1 ? "falls" : "fall"), (ns == 1 ? "its" : "their"), s > "/dev/stderr"
