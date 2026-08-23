@@ -9,6 +9,20 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The founding campaign ran twice on the same commit and fleet, and the pair is what made the instrument
+  legible** (`6ba6566`, 2026-08-22/23; `build/campaign-6ba6566.log`, `build/campaign-c30-6ba6566.log`).
+  Take three at `-count=10`: 56 PASS / 3 FAIL / 5 UNMEASURED / 4 BASELINE / 5 REPORTED. Take four at
+  `KEEL_BENCH_COUNT=30`: 62 / 3 / 4 / 4 / **0**. Both RED, on the same three reds. Rule 19 executed on a real
+  fleet for the first time and fired fail-closed, and take four vindicated it: the zen5 `Strsm` reading it
+  refused a vote to was **9.8% off** its own re-measurement (427.15 → 388.85 GFLOP/s at 8 threads).
+  **The surprise is that the lost resolution was not the host's.** zen5's ceiling contamination is real
+  (2 of 10 low, recurring 1 in 30) but cost nothing; `benchci`'s `ciFraction` mirrored a *one-sided* median CI
+  onto the side with a 0.5 GFLOP/s half-width, so the gate divided by 2588 GFLOP/s — above every sample ever
+  taken there. Filed as #116 with the arithmetic; conservative in the safe direction, so no published figure
+  is overstated. Re-measurement confirms it independently: the corrected take-three shares (48.25/47.56/46.64)
+  land within ~0.3 points of take four's judged 48.0/47.9/46.8, against a shipped rendering off by 5+.
+  `CEIL_FRACTION` now has six admissible rows over **two** hosts, spread 46.8–75.4%.
+
 - **A third verdict class for a reading whose interval is too wide to adjudicate its own criterion**
   (`REPORTED`, `scripts/remote.sh`; DESIGN.md §5 rule 19, `docs/rulings.md` rule 19; ruled 2026-08-22 on #6).
   The spread mask widened `Strsm`'s intervals 3–15× — ±0.75/0.87% to ±5.13/10.28/13.24% on zen5 — while
