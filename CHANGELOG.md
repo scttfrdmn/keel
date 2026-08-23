@@ -650,6 +650,37 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **The gates divided by a CI bound above every sample ever taken** (#116, 2026-08-22; DESIGN.md §5 rule 20,
+  `docs/rulings.md` rule 20). `bench_ratio_lo` reconstructed a bound as `center × (1 + ci)`, but benchstat's
+  median CI is `[x_(r), x_(n+1−r)]` — **both bounds order statistics, so neither can lie outside the data** —
+  and `ciFraction` reports the *wider* half-width. keel-zen5's ceiling reached 296.5 GFLOP/s down and 0.5 up;
+  mirrored, that made a denominator of **2588** against a sample max of 2295 (2296 over 30 draws). `benchci`
+  now emits the honest `lo`/`hi` plus the observed `min`/`max`, and the consumers read the bounds instead of
+  reconstructing them. `ciFraction` is **unchanged on purpose**: it is benchstat's display quantity and
+  `-verify` still agrees on all 42 cells, so no historical `±%` moved. Direction, per §5 rule 15: the old form
+  could only deflate a share (`hi_den ≥ center_den`), so it never manufactured a pass — zen5's ceiling share
+  was 42.7% and is 48.25% — which is why it survived, and why the care owed its favorable direction is
+  procedural.
+- **A zero-width interval can mean the rank window stopped looking, so every reading now prints its range**
+  (same ruling). At n=30 the zen5 contaminant **recurred** (1989 is in the sample) yet
+  `[x_(10), x_(21)] = [2291, 2291]` reported **±0.00%** over a span of 13.40%: raising `-count` concealed the
+  defect it was ordered to resolve. The rank pair marches inward faster than any variance argument — `[2, 9]`
+  of 10, `[10, 21]` of 30, `[36, 55]` of 90 — so at fixed 20% contamination the width goes ±21% → ±0% → ±0%.
+  `bench_describe` prints `[min, max]` beside every reading and names `RANK-WINDOW-BLIND(span …)`, driven on
+  purpose rather than inferred. Unthresholded deliberately, and it moves no verdict. **Sensitivity measured,
+  not claimed: the exact-zero trigger names 1 of the 3 blind rows in that log** — `avx2` (span 7.42%) and
+  `scalar` (13.34%) sit under *nearly* zero ±0.087% intervals — and the threshold-free widening was refuted in
+  the same log, firing on three healthy rows too, since the rank pair excludes an extreme by construction.
+  A second finding fell out: the contaminant reaches the **scalar** arm, so it is not an AVX-512 frequency
+  artifact. Also repaired en route:
+  `clock_series`'s field-count guard would have reported "unbounded" on every host on every run the moment
+  `bench_stat` grew a column — found by enumerating its 29 call sites, not by a test.
+- **Every gate now prints its own verdict arithmetic** (ruled 2026-08-22 on #6: *"the run that signs v0.1.0
+  prints its own arithmetic"*). The previous campaign's headline tally was the operator's grep, disclosed as
+  such. The five verdict primitives count, and `gate_verdict` calls `gate_tally` from one site, so all six
+  gates gained it at once; a **zero total sets `FAIL`**, since a gate that reached a verdict without rendering
+  one adjudicated nothing. Cross-checked against an ANSI-stripped grep of the same gate-p0 log (11/1/4/0/0,
+  exact), with `BASELINE`, `REPORTED` and the zero-total anomaly driven separately.
 - **The 8-thread compute ceiling under-reads by 10–37%, and it is the harness, not the machine** (#115,
   2026-08-22). `computeArm` re-forks 8 goroutines and joins them every one of `b.N` iterations.
   `BenchmarkT52Hoist` is the same arm with the fork lifted out of the loop — same work, same flops formula,

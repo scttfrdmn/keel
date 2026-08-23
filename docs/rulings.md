@@ -734,3 +734,159 @@ archives. And the uncomputable-width arm is a can't-happen written as a refusal 
 driven: the raw share reads the same two rows the bounded share just read successfully, so it
 cannot be reached, which is exactly why it refuses instead of falling through to a judgement that
 would green forever and tell no reader which it was.
+
+## Rule 20 — a zero-width rank interval can mean the window stopped looking
+
+*Ruled 2026-08-22. Issue #6, Scott's ruling on the #116 stop, authorizing the repair — "your stop
+was the right protocol for the wrong-shaped reason to hold it" — and then minting a fifth law off
+`build/ceil-recur.log`: "a zero-width rank CI can mean the window stopped looking … that's one
+printf and it closes the concealment class — the third instrument this month whose confidence
+statement was measuring its own construction rather than the host."*
+
+### The fabrication that led here, and why it is rule 18 rather than a new rule
+
+`tools/benchci`'s `ciFraction` reproduces benchstat's **display** half-width,
+`d := max(Hi−Center, Center−Lo)`, which is correct for printing a `±x%` column and is the reason
+`-verify` agrees with benchstat on all 42 cells. The defect was in the *consumer*:
+`scripts/bench.sh`'s `bench_ratio_lo` reconstructed a denominator bound as `center × (1 + ci)`,
+applying a half-width **selected from the wider side** symmetrically to both. benchstat's interval
+is the distribution-free median CI `[x_(r), x_(n+1−r)]`, so **both bounds are order statistics —
+literally sample values — and neither can lie outside the data.** A one-sided *low* tail was
+therefore mirrored *upward* onto the denominator.
+
+Scott's governing statement: **a CI bound must be a bound of something measured, and a symmetrized
+one-sided interval is a number with no referent.** That is rule 18's principle — an instrument
+measures a noun, and the noun is auditable separately from the number — reaching one level in,
+from the timed region to the interval. Rule 18's *text* governs the timed region and is cited here
+as principle-with-extension, never as though it already covered intervals.
+
+Three independent refutations of the fabricated denominator, all printed in the fix commit:
+
+1. **The arithmetic reproduces to 14 significant figures.** From keel-zen5's take-three ceiling,
+   `Center=2291.5, Lo=1995, Hi=2292`: `max(0.5, 296.5) = 296.5`, `296.5/2291.5 =
+   12.93912284529784%`, and `2291.5 × 1.1293912284529784 = 2588.0` — the exact denominator the
+   gate used. The reported width was the **downward** reach of 296.5, applied upward.
+2. **2588 exceeds anything ever observed.** The n=10 sample maxes at 2295; a fresh n=30 sample
+   maxes at **2296**. The fabricated bound sits 12.7% above the largest of forty draws. A bound
+   outside the sample range is the tell, and it is available without any distributional argument.
+3. **Take four re-measured it.** The corrected share landed within 0.3 points of the prediction
+   made from the repaired arithmetic before the run.
+
+Direction, per rule 15: the old form could only ever **inflate a denominator** and therefore
+**deflate a share** — `hi_den ≥ center_den` always — so it could not manufacture a pass, and that
+is exactly why it survived so long. The repair moves shares *up* (zen5's ceiling share 42.7% →
+48.25%). The extra care owed to a favorable direction is **procedural, not substantive**: it
+buys the three refutations and the pinning fixtures, not a different verdict about whether the
+number was fake.
+
+### The rank window, and why 1/sqrt(n) is the wrong model of escalation
+
+Verified against `benchmath`'s own `stats.QuantileCI(n, 0.5, 0.95)`: the rank pair is `[2, 9]` of
+10, `[10, 21]` of 30, `[36, 55]` of 90. Those move **inward as a fraction of n** — 0.20/0.90 →
+0.33/0.70 → 0.40/0.61 — so a contaminant present at a fixed *rate* is stepped over by rank at a
+speed no variance argument predicts. At a fixed 20% contamination the reported width goes
+**±21% → ±0% → ±0%** across n = 10/30/90.
+
+### The recurrence: escalation concealed a live defect
+
+`build/ceil-recur.log`, n=30 on keel-zen5, sorted: `1989 2290 2290 2290 2290 2291 ×16 2292 2293
+2294 2294 2294 2295 2295 2295 2296`. The low mode **recurred** — it is in the sample — and
+`[x_(10), x_(21)] = [2291, 2291]`, an **exact** zero width, over a range spanning 13.40% of the
+center. Raising `-count` did not fix the host; it moved the window past the evidence.
+
+This **partially inverts** the assumption under the same-precision-votes / higher-precision-
+supersedes clause (`DESIGN.md` §4 Phase 3, ratified 2026-08-19). That clause survives intact for
+variance-tightening, and the reason is that its claim is true *of the central mass*: a higher count
+really is a strictly tighter estimator of the median. What it does not say, and now must, is that
+the same move widens the blind spot outside the window — "strictly more informative" is true of the
+center and false of the tails.
+
+**One printed `0%`, two mechanisms.** The clause's existing limit already treats `0%` as inert,
+but on the grounds of benchstat's *reporting resolution* — T21's `± 0%` meaning "narrower than
+0.5%", a rounding band that can straddle a bar (#110). This is a different animal: an exact zero,
+both bounds the same sample value. The two are indistinguishable in the column that prints them,
+which is what makes the range disclosure load-bearing rather than decorative.
+
+### The disclosure, and why it carries no threshold
+
+`bench_describe` now prints the observed min/max beside every reading, and names the anomaly:
+
+    2291 GFLOP/s +/- 0.0% [1989, 2296] RANK-WINDOW-BLIND(span 13.40% under a 0.00% interval)
+
+Three properties are deliberate. It is **unthresholded** — any exact-zero interval under any
+nonzero span fires it — because a triviality cutoff would be the tuned-after-the-fact constant §5
+is built against, and a reader dismissing a 0.01% span can do so from the printed span. The
+**range is not an interval**: it is what was observed, it survives on a row whose CI is unbounded,
+and no criterion divides by it, which is what lets it be read off archived CSVs without moving a
+historical verdict. And it **moves no verdict** — stated as a limit, not a feature: a blind
+reading still adjudicates, and the anomaly only makes it visible to whoever must decide to re-run.
+
+The empty-field guard is the non-obvious part. Pre-#116 archives have three columns, and `%.4g` of
+an empty awk field renders a confident `[0, 0]`; the guard exits before the range on any row that
+does not carry one.
+
+### The tally printer (same ruling)
+
+*"A certificate whose headline tally is the operator's grep, however honestly labeled, is a
+certificate with a hand-counted spine. The run that signs v0.1.0 prints its own arithmetic."*
+The previous session's 62/3/4/4/0 was my grep of the gate log, disclosed as such on #6. Now the
+five verdict primitives in `scripts/remote.sh` each increment a counter and `gate_verdict` calls
+`gate_tally` from **one** site, so all six gates gained it at once. Zero counts print rather than
+being omitted, and a **zero total is an anomaly that sets `FAIL`** — a gate that reached a verdict
+without rendering one adjudicated nothing, which is §5 rule 6's vacuous pass arriving through the
+counter. The constraint worth recording: the helpers may never be called in a subshell, or the
+increment is lost with the subshell's environment while the line still prints.
+
+### Coverage, and what stays unexercised (§5 rule 12)
+
+Driven: three Go fixtures pinning the one-sided form (the symmetric `ci` at
+`12.93912284529784/100` *and* the honest `Hi` at 2292, held apart on purpose because the gap
+between them **is** the defect; `sampleRange`; the seven-column CSV with ci/lo/hi going unbounded
+**together** on one flag). `-verify` agrees with pinned benchstat on all 42 cells, so the display
+column is provably untouched. The awk consumers were run end-to-end on the real archived CSV
+(share 0.483, matching the 48.25% predicted pre-run). `RANK-WINDOW-BLIND` was driven **on purpose**
+against the recurrence sample rather than inferred from a healthy run. `clock_series` was exercised
+across five shapes — six-field flat, legacy two-field flat, genuine decline, missing, unbounded —
+after an audit found its `n != 6` guard would have silently reported "unbounded" on every host on
+every run the moment `bench_stat` grew fields; that hazard was found by enumerating the 29 call
+sites, not by a test. The tally was cross-checked against an ANSI-stripped grep of the same
+gate-p0 log (11 PASS / 1 FAIL / 4 UNMEASURED / 0 BASELINE / 0 REPORTED, agreeing exactly), and
+because that run left two classes at zero, `BASELINE`, `REPORTED` and the zero-total anomaly were
+driven separately.
+
+Not exercised. **No part of this has run on a real fleet** — the signing hosts were torn down
+before it was written, so the range disclosure and the tally have never executed inside
+`gate-p5.sh` against live remote readings, and gate-p0's own FAIL/UNMEASURED here are
+fleet-absence rather than criterion failures. The n=90 rank pair is arithmetic from
+`QuantileCI`, not a measured 90-sample run.
+
+### The trigger's sensitivity is measured, and it is 1 of 3
+
+The anomaly's blind spot is not a hypothetical, and running the repaired tool over the whole
+recurrence log rather than the one row that motivated it is what showed that. **All three** of
+zen5's 8-thread arms are contaminated, and only the `avx512` one renders an exact zero:
+
+| arm | reported CI | interval width | observed range | span | named? |
+|---|---|---|---|---|---|
+| `avx512/8T` | ±0.0000% | 0 | [1989, 2296] | 13.40% | **YES** |
+| `avx2/8T` | ±0.0873% | 1 | [1063, 1148] | 7.42% | no |
+| `scalar/8T` | ±0.0861% | 0.1 | [100.9, 116.4] | 13.34% | no |
+
+Two consequences, and the first is not about this rule at all. **The contaminant reaches the
+scalar arm**, so it is not an AVX-512 frequency artifact; whatever intermittently costs zen5 13%
+of its 8-thread throughput is indifferent to the instruction set, which points at scheduling and
+away from the vector units. That is a lead for the attribution `Strsm`'s bimodality still needs,
+recorded here because this log is where it was visible.
+
+Second: the exact-zero trigger names **1 of the 3** blind rows. The obvious threshold-free
+widening — fire when the window excluded observed data by more than its own width — was
+implemented and **refuted by measurement in the same log**: it fires on all six rows, including
+the three healthy 1-thread arms whose spans are ~1% and whose CIs are ordinary ±0.17–0.27%. The
+reason is structural, which is why no tuning rescues it: at n=10 the pair `[2, 9]` excludes exactly
+one sample at each end **by construction**, so "excluded more than it resolved" is almost always
+true and carries no information. So the two available threshold-free triggers are 1/3 sensitive
+with 0/3 false positives, or 3/3 sensitive with 3/3 false positives, and everything between them
+needs a constant chosen by looking at these widths — which is Scott's call under the
+amend-only-with-a-predating-standard rule and is not taken here. The conservative one ships, its
+sensitivity stated in this table rather than in a claim, and the span prints on **every** row so
+that the two rows the trigger misses are still legible to anyone who reads the reading.

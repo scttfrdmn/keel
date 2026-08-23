@@ -3,7 +3,122 @@
 
 package main
 
-import "testing"
+import (
+	"bytes"
+	"encoding/csv"
+	"os"
+	"testing"
+
+	"golang.org/x/perf/benchmath"
+)
+
+// keel-zen5's 8-thread compute ceiling on 6ba6566, take three, verbatim. Ten
+// samples, two of them low, and at n=10 benchstat's median CI is [x_(2), x_(9)] =
+// [1995, 2292] about a center of 2291.5 — reaching DOWN 296.5 and UP 0.5.
+//
+// This is the fixture the whole of #116 rests on, so it is the real numbers rather
+// than a constructed shape: a synthetic one-sided sample would demonstrate the
+// arithmetic without pinning the case that actually shipped a fabricated
+// denominator.
+var zen5Ceiling = []float64{1900, 1995, 2291, 2291, 2291, 2292, 2292, 2292, 2292, 2295}
+
+// The mirroring is REAL and is deliberately still here: ciFraction keeps
+// reproducing benchstat's symmetric display half-width, because -verify compares
+// against it and changing it would move historical verdicts under cover of a
+// precision fix. What #116 changed is what the *consumer* divides by. This pins
+// both halves of that: the symmetric fraction stays 12.939...%, and the honest Hi
+// stays 2292 — the two must not be allowed to drift into agreement, because the
+// gap between them IS the defect.
+func TestCIFractionStaysSymmetricWhileBoundsStayHonest(t *testing.T) {
+	s := benchmath.Summary{Center: 2291.5, Lo: 1995, Hi: 2292}
+	got := ciFraction(s)
+	// 296.5/2291.5 — the DOWNWARD half-width, which max() selects.
+	const want = 12.93912284529784 / 100
+	if got != want {
+		t.Errorf("ciFraction = %v, want %v (max() must keep taking the larger, downward half-width)", got, want)
+	}
+	// The fabrication, stated as the arithmetic the gate used to perform.
+	if fab := s.Center * (1 + got); fab <= 2295 {
+		t.Errorf("center*(1+ci) = %v; the whole point is that it exceeds the sample maximum 2295", fab)
+	}
+	lo, hi := sampleRange(zen5Ceiling)
+	if s.Lo < lo || s.Hi > hi {
+		t.Errorf("interval [%v, %v] escapes the sample range [%v, %v]; a rank-window bound cannot", s.Lo, s.Hi, lo, hi)
+	}
+}
+
+func TestSampleRange(t *testing.T) {
+	lo, hi := sampleRange(zen5Ceiling)
+	if lo != 1900 || hi != 2295 {
+		t.Errorf("sampleRange = [%v, %v], want [1900, 2295]", lo, hi)
+	}
+	// Empty must not report a confident [0, 0] that a reader would take for data.
+	if lo, hi := sampleRange(nil); lo != 0 || hi != 0 {
+		t.Errorf("sampleRange(nil) = [%v, %v], want [0, 0]", lo, hi)
+	}
+}
+
+// The seven-column shape, and the invariant that matters most about it: ci, lo and
+// hi go unbounded TOGETHER. A row whose ci read ∞ while lo/hi looked usable would
+// let bench_ratio_lo proceed where it has always bailed, so the new columns would
+// have widened what the gates judge instead of only making an existing judgement
+// honest.
+func TestWriteCSVColumnsAndUnboundedTogether(t *testing.T) {
+	rows := []outRow{
+		{unit: "GFLOP/s", name: "Judged-8", center: 2291.5, ci: 0.1293912284529784,
+			lo: 1995, hi: 2292, sampleMin: 1900, sampleMax: 2295, bounded: true},
+		{unit: "GFLOP/s", name: "Unbounded-8", center: 100, ci: 0,
+			lo: 90, hi: 110, sampleMin: 80, sampleMax: 120, bounded: false},
+	}
+	f, err := os.CreateTemp(t.TempDir(), "csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeCSV(f, rows); err != nil {
+		t.Fatalf("writeCSV: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cr := csv.NewReader(bytes.NewReader(b))
+	// Ragged by design and unchanged by #116: a unit header is two fields and a
+	// data row is seven, which is benchstat's own layout. parseBenchstatCSV sets
+	// the same thing for the same reason.
+	cr.FieldsPerRecord = -1
+	recs, err := cr.ReadAll()
+	if err != nil {
+		t.Fatalf("the emitted CSV does not parse: %v", err)
+	}
+	// unit header, then two data rows.
+	if len(recs) != 3 {
+		t.Fatalf("got %d record(s), want 3: %v", len(recs), recs)
+	}
+	if recs[0][0] != "" || recs[0][1] != "GFLOP/s" {
+		t.Errorf("unit header = %v, want [\"\", GFLOP/s]; bench.sh keys on the leading comma", recs[0])
+	}
+	// The first three fields must stay byte-identical to the pre-#116 shape:
+	// every archived CSV and every awk -F, consumer reads by position.
+	want := []string{"Judged-8", "2291.5", "12.93912284529784%", "1995", "2292", "1900", "2295"}
+	for i, w := range want {
+		if recs[1][i] != w {
+			t.Errorf("judged row field %d = %q, want %q", i, recs[1][i], w)
+		}
+	}
+	for _, i := range []int{2, 3, 4} {
+		if recs[2][i] != "∞" {
+			t.Errorf("unbounded row field %d = %q, want ∞: ci/lo/hi must go unbounded together", i, recs[2][i])
+		}
+	}
+	// The range is still real on an unbounded row: it is what was observed, not
+	// what was inferred, so it survives the interval being unestablished.
+	if recs[2][5] != "80" || recs[2][6] != "120" {
+		t.Errorf("unbounded row range = [%q, %q], want [80, 120]", recs[2][5], recs[2][6])
+	}
+}
 
 // A configuration line benchstat quotes because it contains a comma is not a
 // data row. `keel-pin:` is the case that caught this: split on commas it yields

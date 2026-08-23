@@ -167,9 +167,24 @@ remote_hosts() {
 RUN_STAMP="${RUN_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 
 VERDICT_STAMP="${VERDICT_STAMP:-}"
-pass()       { printf '  \033[32mPASS\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; }
-fail()       { printf '  \033[31mFAIL\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; FAIL=1; }
-unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s%s\n'  "$VERDICT_STAMP" "$1"; FAIL=1; }
+
+# THE TALLY COUNTS FROM THE PRIMITIVES THAT PRINT, never by grepping the log
+# (ruled 2026-08-22, #6). gate-p5 tallied its *delegated* gate-p4 output and never
+# itself, so the founding campaign's headline count — 62/3/4/4/0 — was the
+# operator's `grep` of the log, and the session report had to disclose it as such.
+# A certificate whose spine is hand-counted is a certificate with a hand-counted
+# spine however honestly it is labelled, and the run that signs v0.1.0 prints its
+# own arithmetic.
+#
+# CONSTRAINT, because these are shell variables: a verdict helper called inside a
+# subshell — `$(...)`, a pipeline stage, an explicit `( )` — increments a copy that
+# dies with it, and the tally would silently undercount. Verified at the time of
+# landing that no gate does this; gate_tally's own zero-check below is the standing
+# guard, since a gate that rendered no verdict at all is the shape this would take.
+N_PASS=0 N_FAIL=0 N_UNMEASURED=0 N_BASELINE=0 N_REPORTED=0
+pass()       { printf '  \033[32mPASS\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; N_PASS=$((N_PASS + 1)); }
+fail()       { printf '  \033[31mFAIL\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; FAIL=1; N_FAIL=$((N_FAIL + 1)); }
+unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s%s\n'  "$VERDICT_STAMP" "$1"; FAIL=1; N_UNMEASURED=$((N_UNMEASURED + 1)); }
 info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$1"; }
 # baseline() — a criterion declining to judge a host its reference artifact predates,
 # and recording the reference this run would propose instead (#6, ruled 2026-08-21).
@@ -180,14 +195,32 @@ info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$
 # next absence an unmet obligation (FAIL) instead of newness. A colour of its own
 # because folding it into info() would leave the one green-compatible non-pass
 # invisible to a reader scanning the verdict column.
-baseline()   { printf '  \033[36mBASELINE\033[0m  %s%s\n'    "$VERDICT_STAMP" "$1"; }
+baseline()   { printf '  \033[36mBASELINE\033[0m  %s%s\n'    "$VERDICT_STAMP" "$1"; N_BASELINE=$((N_BASELINE + 1)); }
 # reported() — a criterion declining to judge a reading whose own interval is too wide to
 # adjudicate it (docs/rulings.md rule 19, 2026-08-22). The second green-compatible non-pass.
 # Distinct from unmeasured(), which says no reading was obtained: here a reading WAS obtained
 # and is printed, and what is refused is only the comparison. Callers must name the width in
 # the message — a class whose whole content is "too wide" that does not say how wide leaves
 # the next reader unable to tell a 3-point interval from a 30-point one.
-reported()   { printf '  \033[35mREPORTED\033[0m  %s%s\n'    "$VERDICT_STAMP" "$1"; }
+reported()   { printf '  \033[35mREPORTED\033[0m  %s%s\n'    "$VERDICT_STAMP" "$1"; N_REPORTED=$((N_REPORTED + 1)); }
+
+# gate_tally NAME — the gate's own count of its own verdict lines, printed
+# immediately above its verdict. Every class is named even at zero, because a class
+# omitted when empty cannot be distinguished from a class the reader forgot existed,
+# and REPORTED at zero is the specific reading the founding campaign needed (rule 19
+# fired five times on take three and none on take four; the zero is the finding).
+gate_tally() {
+  local total=$((N_PASS + N_FAIL + N_UNMEASURED + N_BASELINE + N_REPORTED))
+  printf '%s tally: %d PASS / %d FAIL / %d UNMEASURED / %d BASELINE / %d REPORTED\n' \
+    "$1" "$N_PASS" "$N_FAIL" "$N_UNMEASURED" "$N_BASELINE" "$N_REPORTED"
+  # Fails loudly rather than printing five confident zeros: a gate reaching its
+  # verdict having rendered nothing is either a criterion list that never ran or a
+  # verdict helper called in a subshell, and both green exactly like a clean run.
+  if [[ "$total" -eq 0 ]]; then
+    printf '%s tally: ANOMALY — this gate reached its verdict without rendering a single verdict line, so the run above adjudicated nothing\n' "$1" >&2
+    FAIL=1
+  fi
+}
 
 # gate_verdict NAME [DETAIL [RED_NOTE...]] — the last line of a gate log, which is the
 # line a reader greps, and the exit status `detach.sh stat` records. Six copies, four
@@ -209,6 +242,10 @@ gate_verdict() {
   local detail="${1-}"; [[ $# -gt 0 ]] && shift
   phase="$(printf '%s' "${name#gate-}" | tr '[:lower:]' '[:upper:]')"
   echo
+  # Above the verdict, and before the withhold branch: a withheld run still
+  # rendered lines and a reader still needs to know how many of what. One call
+  # site, so every gate gains its own arithmetic rather than five of six.
+  gate_tally "$name"
   if [[ -n "$VERDICT_STAMP" ]]; then
     echo "$name: VERDICT WITHHELD (${detail:-synthetic run: every verdict line above is stamped, so no line of this log is a gate result}; FAIL=$FAIL says which renderings fired, not whether $phase holds)"
     exit 2

@@ -2,8 +2,28 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Command benchci summarizes a Go benchmark log the way `benchstat -format=csv`
-// does, and differs from it in exactly one respect: the confidence interval is
-// emitted at full float64 precision instead of rounded to a whole percent.
+// does, and differs from it in two respects: the confidence interval is emitted
+// at full float64 precision instead of rounded to a whole percent, and the
+// interval's ASYMMETRIC bounds are emitted beside it along with the observed
+// sample range.
+//
+// THE SECOND DIFFERENCE IS #116, AND IT IS A FABRICATION FIX. benchstat's
+// reported `± p%` is a single half-width, `max(Hi-Center, Center-Lo)/Center`.
+// The interval underneath it is not symmetric: `benchmath.assumeNothing.Summary`
+// builds it as the distribution-free median CI `[x_(r), x_(n+1-r)]`, so both
+// bounds are *order statistics* — literally sample values — and neither can lie
+// outside the data. Collapsing that to one number and applying it in both
+// directions therefore invents range that was never measured, and
+// `scripts/bench.sh`'s `bench_ratio_lo` applied it to the denominator's high
+// side. On keel-zen5's 8-thread compute ceiling the interval was [1995, 2292]
+// about a center of 2291.5 — reaching down 296.5 and up 0.5 — so the gate
+// divided by 2291.5·1.1294 = 2588.0 GFLOP/s, 12.8% above the largest reading
+// that host has ever produced. Three independent refutations: the mirror
+// arithmetic reproduces benchci's printed CI to 14 significant figures; a
+// 30-sample re-draw maxes at 2296; and take four's clean re-measurement judged
+// the affected rows within 0.3 points of the corrected arithmetic. So `lo`/`hi`
+// are emitted as they are, `ci` is left exactly as it was for `-verify`, and the
+// consumer divides by a bound of something measured.
 //
 // WHY THIS EXISTS. benchstat's CSV `CI` column is a *display* string. In
 // x/perf, `benchmath.Summary` carries `Lo`/`Hi` as float64, and
@@ -167,8 +187,29 @@ type outRow struct {
 	center float64
 	// ci is the half-width as a fraction of center, matching what
 	// PctRangeString renders as a percent: max(|hi-center|, |center-lo|)/center.
-	ci      float64
-	bounded bool
+	// KEPT, and deliberately still symmetric: -verify compares it against
+	// benchstat's own column, so changing it would move historical verdicts under
+	// cover of a precision fix (#110's discipline). lo/hi below are the honest
+	// bounds; ci is the display quantity.
+	ci float64
+	// lo and hi are benchstat's interval as it actually is: ASYMMETRIC, and both
+	// bounds order statistics. benchmath.assumeNothing.Summary computes them as
+	// [x_(r), x_(n+1-r)] via medianCI + SampleCI, so each is literally a sample
+	// value and NEITHER CAN LIE OUTSIDE THE DATA. Collapsing them to one
+	// half-width and applying it in both directions invents range the data never
+	// showed, which is #116: on keel-zen5's 8-thread ceiling the interval reached
+	// down 296.5 and up 0.5, max() took 296.5, and the gate divided by
+	// center*(1+ci) = 2588 GFLOP/s against a sample maximum of 2295.
+	lo, hi float64
+	// sampleMin and sampleMax bound what was actually observed. They exist to make
+	// a fabricated bound VISIBLE at the point of reading rather than derivable
+	// three files away: a bound outside [sampleMin, sampleMax] is impossible for a
+	// rank-window interval, so printing the range beside the interval turns #116's
+	// whole class into an eye-check. They also carry the zero-width disclosure
+	// (DESIGN.md §5 rule 20) — a +/-0.00% reading whose samples disagree is the
+	// rank window having stopped looking, not a quiet host.
+	sampleMin, sampleMax float64
+	bounded              bool
 }
 
 // summarize reads path and returns one row per (unit, benchmark), in benchstat's
@@ -252,12 +293,17 @@ func summarize(path string) ([]outRow, []string, error) {
 		for _, w := range c.summary.Warnings {
 			warnings = append(warnings, fmt.Sprintf("%s (%s): %s", k.row, k.unit, w))
 		}
+		lo, hi := sampleRange(c.values)
 		rows = append(rows, outRow{
-			unit:    k.unit,
-			name:    k.row,
-			center:  c.summary.Center,
-			ci:      ciFraction(c.summary),
-			bounded: bounded(c.summary),
+			unit:      k.unit,
+			name:      k.row,
+			center:    c.summary.Center,
+			ci:        ciFraction(c.summary),
+			lo:        c.summary.Lo,
+			hi:        c.summary.Hi,
+			sampleMin: lo,
+			sampleMax: hi,
+			bounded:   bounded(c.summary),
 		})
 	}
 	return rows, warnings, nil
@@ -387,6 +433,22 @@ func ciFraction(s benchmath.Summary) float64 {
 	return d / s.Center
 }
 
+// sampleRange is the observed extent of the samples. Computed here rather than
+// read off the Summary because the Summary has no such field: benchstat reports
+// an interval and a center, and the *range* is the one quantity that makes a
+// fabricated bound self-evident (#116).
+func sampleRange(v []float64) (lo, hi float64) {
+	if len(v) == 0 {
+		return 0, 0
+	}
+	lo, hi = v[0], v[0]
+	for _, x := range v[1:] {
+		lo = min(lo, x)
+		hi = max(hi, x)
+	}
+	return lo, hi
+}
+
 func bounded(s benchmath.Summary) bool {
 	return !isInf(s.Lo) && !isInf(s.Hi) && s.Center != 0
 }
@@ -406,13 +468,27 @@ func writeCSV(f *os.File, rows []outRow) error {
 				return err
 			}
 		}
-		ci := "∞"
+		// ci, lo and hi go unbounded TOGETHER, on the one `bounded` flag. Not
+		// three independent checks: a row whose ci read ∞ while lo/hi looked
+		// usable would let bench_ratio_lo proceed where it has always bailed,
+		// so the new columns would have widened what the gates will judge. They
+		// may only make an existing judgement honest, never create one.
+		ci, lo, hi := "∞", "∞", "∞"
 		if r.bounded {
 			// Full precision, which is the whole point of this program. %g
 			// rather than %f: a 0.0003 interval must not print as 0.000.
 			ci = fmt.Sprintf("%g%%", 100*r.ci)
+			lo, hi = fmt.Sprint(r.lo), fmt.Sprint(r.hi)
 		}
-		if err := w.Write([]string{r.name, fmt.Sprint(r.center), ci}); err != nil {
+		// Seven columns. The first three are byte-identical to what this tool has
+		// always written, because scripts/bench.sh keys on position and every
+		// archived CSV must keep re-reading the same; the four new ones are
+		// appended, which is the only shape that leaves `awk -F,` consumers of
+		// $1/$2/$3 untouched.
+		if err := w.Write([]string{
+			r.name, fmt.Sprint(r.center), ci, lo, hi,
+			fmt.Sprint(r.sampleMin), fmt.Sprint(r.sampleMax),
+		}); err != nil {
 			return err
 		}
 	}

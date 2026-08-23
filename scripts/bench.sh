@@ -223,14 +223,23 @@ bench_compare() {
   return 1
 }
 
-# bench_stat NAME CSV [UNIT] — print "median ci_fraction" for one benchmark.
+# bench_stat NAME CSV [UNIT] — print "median ci_fraction lo hi min max" for one
+# benchmark.
 #
 # UNIT defaults to sec/op. Prints nothing if the benchmark is absent under that
-# unit, and a ci of "inf" when benchstat could not establish an interval. The
+# unit, and "inf" for ci/lo/hi when benchstat could not establish an interval. The
 # unit is tracked from the section headers so a B/s or GFLOP/s row can never be
 # read as a time: benchstat emits one section per unit and every section carries
 # the same benchmark names, which is a trap worth closing once here rather than
 # per gate.
+#
+# SIX FIELDS SINCE #116, AND THE FIRST TWO ARE UNCHANGED. lo/hi are benchstat's
+# real, asymmetric interval and min/max are the observed sample range; ci stays
+# the symmetric display half-width so -verify keeps comparing like with like.
+# Appended rather than inserted because every consumer reads by position — and
+# APPENDING IS NOT FREE: clock_series counted the total field width of three
+# readings and demanded exactly 6, so it had to be taught to count per reading
+# instead. That is the shape to check for in any new consumer.
 bench_stat() {
   awk -F, -v want="$1" -v wantunit="${3:-sec/op}" '
     /^,/ { unit = $2; next }
@@ -238,10 +247,12 @@ bench_stat() {
       name = $1
       sub(/-[0-9]+$/, "", name)
       if (name == want && unit == wantunit) {
-        ci = $3
+        ci = $3; lo = $4; hi = $5
         sub(/%$/, "", ci)
         if (ci == "" || ci ~ /∞/) ci = "inf"; else ci = ci / 100
-        print $2, ci
+        if (lo == "" || lo ~ /∞/) lo = "inf"
+        if (hi == "" || hi ~ /∞/) hi = "inf"
+        print $2, ci, lo, hi, $6, $7
         exit
       }
     }' "$2"
@@ -301,16 +312,32 @@ bench_expect() {
 
 # bench_ratio_lo NUM DEN CSV [UNIT] — conservative lower bound on NUM/DEN.
 #
-# (median_num · (1 − ci_num)) / (median_den · (1 + ci_den)): the smallest ratio
-# consistent with both confidence intervals. Prints nothing if either benchmark
-# is missing or unbounded, so the caller must treat empty as "not measured"
-# rather than as zero.
+# lo_num / hi_den: the smallest ratio consistent with both confidence intervals.
+# Prints nothing if either benchmark is missing or unbounded, so the caller must
+# treat empty as "not measured" rather than as zero.
+#
+# THE BOUNDS ARE READ, NOT RECONSTRUCTED (#116, ruled 2026-08-22). This was
+# `(median_num·(1−ci_num)) / (median_den·(1+ci_den))`, which rebuilt each bound
+# from the center and one symmetric half-width. benchstat's interval is not
+# symmetric — both its bounds are order statistics, so each is a sample value and
+# neither can lie outside the data — and `ci` is `max()` of the two half-widths.
+# So on a one-sided distribution the reconstruction applied a DOWNWARD spread to
+# the denominator's UP side: keel-zen5's ceiling interval [1995, 2292] about
+# 2291.5 became a denominator of 2588 GFLOP/s, above every sample that host has
+# ever produced. A bound must be a bound of something measured (§5 rule 18's
+# principle, extended from the timed region to the interval), and the fix is to
+# divide by the bound benchstat actually computed.
+#
+# Direction, per §5 rule 15: the old form could only ever DEFLATE a ratio, so no
+# verdict this repair moves was a green becoming a red. It flips rows that were
+# out-resolved back into judgeable ones (five REPORTED rows on the founding
+# campaign), and it cannot manufacture a pass — hi_den >= center_den always.
 #
 # The formula is unit-agnostic on purpose. For sec/op the caller puts the slow
 # side on top (scalar/vector) and reads a speedup; for GFLOP/s it puts the
 # achieved rate on top and reads a fraction of peak. Both want the same
-# conservative treatment — numerator down by its interval, denominator up by
-# its own — so both get it from one function.
+# conservative treatment — numerator at its low bound, denominator at its high
+# one — so both get it from one function.
 bench_ratio_lo() {
   local n d
   n="$(bench_stat "$1" "$3" "${4:-sec/op}")"
@@ -319,14 +346,14 @@ bench_ratio_lo() {
   awk -v n="$n" -v d="$d" '
     BEGIN {
       split(n, a, " "); split(d, b, " ")
-      if (a[2] == "inf" || b[2] == "inf") exit
-      printf "%.3f", (a[1] * (1 - a[2])) / (b[1] * (1 + b[2]))
+      if (a[3] == "inf" || b[4] == "inf") exit
+      printf "%.3f", a[3] / b[4]
     }'
 }
 
 # bench_ratio_hi NUM DEN CSV [UNIT] — the mirror of bench_ratio_lo: the LARGEST
-# ratio consistent with both confidence intervals,
-# (median_num · (1 + ci_num)) / (median_den · (1 − ci_den)).
+# ratio consistent with both confidence intervals, hi_num / lo_den, read from
+# benchstat's own asymmetric bounds for the reason bench_ratio_lo gives (#116).
 #
 # WHY A GATE NEEDS THE UPPER END TOO. bench_ratio_lo alone supports exactly one
 # question — "is the whole interval above the bar?" — and a two-state gate reads
@@ -348,9 +375,9 @@ bench_ratio_hi() {
   awk -v n="$n" -v d="$d" '
     BEGIN {
       split(n, a, " "); split(d, b, " ")
-      if (a[2] == "inf" || b[2] == "inf") exit
-      if (b[2] >= 1) exit   # the denominator interval reaches zero: the ratio is unbounded above
-      printf "%.3f", (a[1] * (1 + a[2])) / (b[1] * (1 - b[2]))
+      if (a[4] == "inf" || b[3] == "inf") exit
+      if (b[3] <= 0) exit   # the low bound of the denominator reaches zero: unbounded above
+      printf "%.3f", a[4] / b[3]
     }'
 }
 
@@ -447,8 +474,24 @@ bench_describe() {
     BEGIN {
       split(s, a, " ")
       label = (unit == "sec/op") ? "s" : unit
-      if (a[2] == "inf") printf "%.4g %s (no CI: too few or too noisy samples)", a[1], label
-      else printf "%.4g %s +/- %.1f%%", a[1], label, a[2] * 100
+      if (a[2] == "inf") { printf "%.4g %s (no CI: too few or too noisy samples)", a[1], label; exit }
+      printf "%.4g %s +/- %.1f%%", a[1], label, a[2] * 100
+      # THE RANGE PRINTS BESIDE THE INTERVAL (DESIGN.md §5 rule 20). Guarded on
+      # non-empty because a pre-#116 archived CSV has three columns, and "%.4g" of
+      # an empty field would render a confident "[0, 0]" over a range nobody
+      # measured — the exact class of fabrication this disclosure exists to expose.
+      if (a[5] == "" || a[6] == "") exit
+      printf " [%.4g, %.4g]", a[5], a[6]
+      # A zero-width interval over samples that disagree is the rank window having
+      # stopped looking, never a quiet host: benchstat bounds the median with order
+      # statistics [x_(r), x_(n+1-r)], and as n grows r moves inward FAST (n=10 ->
+      # [2,9], n=30 -> [10,21]), so a contaminant that cost three verdicts at n=10
+      # sat inside a +/-0.00% reading at n=30 while still in the sample. Named, not
+      # thresholded: any nonzero span under a zero interval is disclosed, because
+      # picking a triviality cutoff is exactly the tuned constant §5 forbids, and an
+      # over-eager disclosure fails safe where a silent one does not.
+      if (a[2] + 0 == 0 && a[6] + 0 > a[5] + 0)
+        printf " RANK-WINDOW-BLIND(span %.2f%% under a 0.00%% interval)", 100 * (a[6] - a[5]) / a[1]
     }'
 }
 
@@ -692,11 +735,16 @@ clock_post() {
 # clears any honest floor by construction; only the phantoms die.
 clock_series() {
   awk -v h="$1" -v m="$2" -v t="$3" 'BEGIN {
-    n = split(h, H, " ") + split(m, M, " ") + split(t, T, " ")
-    # The wide case, refused by the rule that already existed: too wide for benchstat to
-    # bound is a failure to measure, not a rate. Fails closed on a missing reading too,
-    # since a step cannot be judged against an interval that does not exist.
-    if (n != 6 || H[2] == "inf" || M[2] == "inf" || T[2] == "inf") {
+    # PER READING, NOT SUMMED (#116). This counted the three splits together and
+    # demanded exactly 6, so it encoded the field WIDTH of a bench_stat reading rather
+    # than the completeness of one — and the moment bench_stat grew lo/hi/min/max the
+    # sum became 18 and this criterion would have reported "unbounded" on every host,
+    # on every run, fail-closed and silent. A shared function gained a field; an
+    # assumption in one caller about the shape of that function is a separate defect
+    # from the function being wrong. The completeness question this always meant to
+    # ask is per reading, and width-agnostic.
+    if (split(h, H, " ") < 2 || split(m, M, " ") < 2 || split(t, T, " ") < 2 ||
+        H[2] == "inf" || M[2] == "inf" || T[2] == "inf") {
       print "unbounded benchci established no interval for one peak window, which §5 rule 5 reads as contention rather than as a rate: too wide to bound is a failure to measure"
       exit
     }
