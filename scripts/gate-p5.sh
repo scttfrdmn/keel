@@ -51,18 +51,12 @@ P5_THREADS=8
 #
 # Retained only as the value the disclosure names as retired, never as a comparison:
 SCALE_FLOOR_RETIRED=6.0
-# SUSPENDED TO EMPTY 2026-08-22, one day after 57.8 was retired the same way, and for the
-# same clause: 51.0 was typed from build/gate-p5-be5bb91.log, whose eight cores were CONFINED
-# to one CCD by the first form of the mask. The spread amendment changes what its denominator
-# measures -- the ceiling is the compute term at 8 threads, taken on the host under the mask
-# in force -- so enforcing 51.0 on spread rows books the instrument change through THE BAR,
-# which is the error §5 rule 17(d) closed two doors against and this is the third. EMPTY is
-# the PRE-REGISTERED state, not a fallback: the founding run REPORTS through the `-z` branch
-# below, one reviewed commit types the value from its rows with the derivation printed, and
-# the confirmation run is the first this instrument judges. That costs a run, by the same law
-# that makes a bar derived from one run and enforced on the next able to fail at all.
-# readme-numbers.sh reads this line back verbatim, so both files empty together.
-CEIL_FRACTION=
+# TYPED 2026-08-22 for the spread + instrument-v2 era, replacing the suspended 51.0. Derived
+# from the founding campaign's take four recomputed under #116, and the gate PRINTS the whole
+# derivation below — not restated here, per the §5 rule 10 note above. DESIGN.md §4/P5 carries
+# what the set cannot see and this run's refutation of its own motivating predictions.
+# readme-numbers.sh reads this line back verbatim, so both files change together.
+CEIL_FRACTION=44.2
 # The CPU models whose judged rows DERIVED CEIL_FRACTION. Named because the
 # BASELINE-REGISTERED class below turns on whether a criterion's reference artifact
 # predates the host's admission, and for these it does not — they ARE the artifact.
@@ -188,11 +182,13 @@ read -ra P5_ROWS <<<"$P5_JUDGED $P5_MEASURED"
 # in effect while the printed constant stayed put, and a regression bar that quietly loosens
 # is the failure mode a regression bar exists to prevent.
 #
-# Open construction question for the typing commit, stated here rather than guessed: the
-# share bar's margin is 2.6 POINTS of a percentage and this class's bar is a multiple, so
-# `argmin less 2.6` is not a formula that transfers. One derivation block, three bars, and
-# this one needs its margin argued in the units it is measured in.
-STRSM_FLOOR=
+# TYPED 2026-08-22 from that same take four, and the open question above is ANSWERED BY THE
+# CONSTANT BELOW rather than by a new one: STRSM_MARGIN is already in x and already predates
+# these rows. The gate prints the derivation and the coincidence guard for 6.0x. Three decimals
+# deliberately -- 6.1x invents strictness no row earned, and 6.0x would be typographically
+# indistinguishable from the value readme-numbers.sh publishes AS retired, which is the "wrong
+# one of two 6.0s" its own check exists to prevent.
+STRSM_FLOOR=6.067
 # This class's DECLARED SLACK in the units it is measured in, and the width cap rule 19 uses
 # for it: 7.403x (janus, the lowest of the nine) less the ratified 7.0x. Not a new constant and
 # not a post-hoc one — it is BASELINE_MARGIN's construction, bar = reference - slack, in x
@@ -670,13 +666,16 @@ info "-test.count=$KEEL_BENCH_COUNT -test.benchtime=$KEEL_BENCH_TIME; one invoca
 info "counts inside it, and the floor counts as cleared only net of both intervals"
 if [[ -n "$CEIL_FRACTION" ]]; then
   info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, its 8-thread form and this fraction ratified 2026-08-21, #6)"
-  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest judged row of build/gate-p5-be5bb91.log (keel-zen5 Ssymm, 53.6% net of BOTH intervals) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. The set is SIX rows over TWO models, and what it cannot see is stated inside it (§5 rule 12): no Intel silicon derived it, keel-skx being DERIV=0 and gnr characterization, and the two it has spread 53.6-89.9%, so one fleet bar is set by the weakest host — per-host convergence is the post-tag option named above"
-  info "  the bar FELL 6.8 points from the retired 57.8 and the cause is the DENOMINATOR, not the kernels: on BOTH derivation hosts the measured ${P5_THREADS}-thread ceiling outran every judged rate, so all six RAW shares fell -- keel-zen5 1568.5 -> 1999.5 GFLOP/s (+27.5%) against rates at +6.2/+17.5/+9.0%, keel-zen4 713.6 -> 817.4 (+14.5%) against +9.7/+13.7/+5.7%. Two of zen4's net-of-interval shares rose regardless (80.9 -> 85.6, 88.2 -> 89.9, Ssymm's fell 86.3 -> 83.5), because pinning collapsed the rate intervals from 1.0-8.3% to 0.0-0.8% and this share subtracts them: it has THREE terms, and variance reduction is indistinguishable from improvement in the one no artifact prints (#6, and the argmin moved with it: Ssyrk -> Ssymm)"
+  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest of SIX admissible judged rows in the founding campaign's take four (keel-zen5 Ssymm, 46.8150% net of BOTH intervals, recomputed from the archives under #116's honest CI bounds) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. What it cannot see is stated inside it (§5 rule 12): no Intel silicon derived it, keel-skx being DERIV=0 and gnr characterization, and the two models it has spread 46.8-75.4%, so one fleet bar is set by the weakest host — per-host convergence is the post-tag option named above. Rule 19 admitted all six: widest share interval 0.3 points against the ${BASELINE_MARGIN}-point cap"
+  info "  the bar FELL 6.8 points from the suspended 51.0 and 95.0% of the fall is the DENOMINATOR, not the kernels: #115 lifted the ceiling's fork/join out of its own timed region, so the reference rose 1999.5 -> 2291 GFLOP/s (+14.6%) on the host that sets the bar, while that row's rate fell 1081 -> 1073 (-0.74%). One term at a time on the argmin: the new rate over the OLD ceiling would have typed 50.8, the old rate over the NEW ceiling 44.6. The measured share has THREE terms and this is the reference term moving; the era boundary is what keeps it out of the drift budget (§5 rule 17(d))"
+  info "  the ceiling's rise is the INSTRUMENT and not the mask, adjudicated by the control host: keel-skx's spread enumeration is degenerate (its L3 is per socket, so the mask returns the same 0..7 the confined form did) and its ceiling rose the MOST, +23.4%, which a mask that did not change cannot cause. So the +14.6% is attributable to #115 (§5 rule 18) rather than to placement, and the two changes that landed together are separable after all"
 else
   info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). This branch has fired THREE times: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor, at era $P5_ERA's boundary, where 57.8 could not be inherited because a bar from another instrument's rows books the methodology delta as host drift, and now at the 2026-08-22 spread amendment, which retires 51.0 for the same reason one bar in: it was typed from rows whose eight cores were confined to one cache domain, so its denominator was measured by an instrument this run does not use"
 fi
 if [[ -n "$STRSM_FLOOR" ]]; then
   info "judged at >= ${STRSM_FLOOR}x: $P5_MEASURED — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)"
+  info "  DERIVATION of ${STRSM_FLOOR}x: the lowest of THREE judged rows in the founding campaign's take four (keel-zen5 6.4699x net of CI, recomputed under #116; keel-zen4 6.6357x, keel-skx 6.8311x) less ${STRSM_MARGIN}x, this class's declared slack in its own units — 7.403x, the lowest of the nine readings that ratified 7.0x, less that 7.0x, so it predates these rows by six days and answers the units question the suspension left open. All three rows were admissible under rule 19: intervals 0.229/0.220/0.040x wide against the ${STRSM_MARGIN}x cap, and the slack is 1.8x the argmin's own interval"
+  info "  ${STRSM_FLOOR}x IS NOT THE RETIRED ${SCALE_FLOOR_RETIRED}x RETURNING, and it lands within 1.1% of it by coincidence: that constant was a CROSS-HOST quality bar on the whole judged class and was retired for a RANK INVERSION -- it refused Zen 4 at 65.9% of 8x its own core peak and passed Granite Rapids at 34.3%, measuring the wrong quantity by construction. This is a per-routine regression bar on $P5_MEASURED alone, derived on different silicon under a different placement, and none of the grounds for that retirement is disturbed by the arithmetic landing nearby (#37, #6)"
 else
   info "measured and reported, floor deferred to this measurement plus a stated model: $P5_MEASURED (#37). This is a SUSPENSION and not an absence: 7.0x WAS ratified 2026-08-16 and is retired here, made era-scoped by the 2026-08-22 ruling on #6 because its denominator is the 1-thread arm this fleet has measured bimodal and placement-sensitive, and rule 5's own controls are silent on that arm"
 fi

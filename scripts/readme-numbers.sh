@@ -51,13 +51,17 @@ CAP_END='<!-- keel-caption: end -->'
 #
 # 51.0 was TYPED 2026-08-22 from rows measured under the mask's confined first form, and
 # SUSPENDED the same day when the spread amendment changed the instrument its denominator was
-# measured with. STRSM_FLOOR is suspended beside it, made era-scoped by the same ruling.
-# gate-p5.sh carries both derivations and is the authority; emptied here in the same commit
-# because the check below reads those lines back verbatim, so this is a second edit and not a
-# second decision. The published shares this caption governs are regenerated separately, as
-# medians over this era's archives (#6): a bar and the rows it judges are not one act.
-CEIL_FRACTION=
-STRSM_FLOOR=
+# measured with. STRSM_FLOOR was suspended beside it, made era-scoped by the same ruling.
+# BOTH ARE TYPED AGAIN 2026-08-22 from the founding campaign's take four, recomputed under
+# #116: 44.2 from six admissible rows and 6.067x from three judged hosts. gate-p5.sh carries
+# both derivations and is the authority; restated here in the same commit because the check
+# below reads those lines back verbatim, so this is a second edit and not a second decision.
+# 6.067x is not SCALE_FLOOR_RETIRED coming back — it lands within 1.1% of it by coincidence,
+# and the caption below names the retired one AS retired, which is why the check reads all
+# three. The published shares this caption governs are regenerated separately, as medians
+# over this era's archives (#6): a bar and the rows it judges are not one act.
+CEIL_FRACTION=44.2
+STRSM_FLOOR=6.067
 SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'
 

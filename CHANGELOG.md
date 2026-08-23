@@ -9,6 +9,32 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Both of P5's scaling bars are TYPED, in one commit, from one run's rows: `CEIL_FRACTION = 44.2` and
+  `STRSM_FLOOR = 6.067x`** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`; the pinned8 era re-founded on
+  the spread mask and `instrument=v2`). Derived from the founding campaign's take four, **recomputed from the
+  archived raw samples under #116's honest CI bounds** rather than from a fresh fleet run: the share bar is the
+  argmin of six admissible rows, `keel-zen5` `Ssymm` at 46.8150% net of both intervals, less the same 2.6
+  points; the ratio bar is the argmin of three judged rows, `keel-zen5` at 6.4699x net of CI, less the 0.403x
+  `STRSM_MARGIN` that predates these readings by six days. **The share bar fell 6.8 points from the suspended
+  51.0 and 95.0% of that fall is the denominator** — #115 lifted the ceiling's fork/join out of its own timed
+  region, so the reference rose +14.6% while the bar-setting rate fell 0.74%; the new rate over the old ceiling
+  would have typed 50.8, the old rate over the new ceiling 44.6. A lower bar because the reference got more
+  honest, not because the nest got slower. **`6.067x` lands within 1.1% of the retired cross-host `6.0x` by
+  coincidence and says so at the constant**: different quantity, different placement, different silicon, and
+  the rank inversion that retired 6.0x is untouched — carried to three decimals precisely so it is not
+  typographically confusable with the number `readme-numbers.sh` publishes *as* retired. Both bars are enforced
+  on the next run, which is the property that lets them fail.
+- **The spread amendment's own motivating prediction is refuted by the run it was made to enable** (§5 rule 11;
+  DESIGN.md §4/P5). Of the four substantive pre-registered predictions, three fell. Every 8-thread rate on both
+  EPYC hosts *dropped past its own interval* — 8 rows of 8, `keel-zen5` -0.7 to -4.0%, `keel-zen4` -4.0 to
+  -7.3% — where the L3-capacity argument predicted rises, and no kernel changed in the range, so the mask owns
+  the delta. The re-derived bar landed 6.8 points *below* the 51.0 it was predicted to exceed, and no `Strsm`
+  ratio cleared 7.0x net of CI. **The control did more than confirm: it made the largest move attributable.**
+  `keel-skx`'s mask is degenerate (per-socket L3, same `0..7` both ways) and its rates moved -2.1% to +0.5%,
+  yet its ceiling rose the *most*, +23.4% — which a mask that did not change cannot cause. So the ceiling's
+  rise belongs to #115's instrument repair, not to placement, and two amendments that landed together are
+  separable after all. The amendment itself stands on the grounds that survive: a standing placement bars
+  flattery-shopping whether or not it happens to be faster, which was never the claim under test.
 - **The founding campaign ran twice on the same commit and fleet, and the pair is what made the instrument
   legible** (`6ba6566`, 2026-08-22/23; `build/campaign-6ba6566.log`, `build/campaign-c30-6ba6566.log`).
   Take three at `-count=10`: 56 PASS / 3 FAIL / 5 UNMEASURED / 4 BASELINE / 5 REPORTED. Take four at
