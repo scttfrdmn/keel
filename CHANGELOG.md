@@ -676,6 +676,14 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **The README generator read a verdict line's prefix and not its prose, so a run judged by no bar published
+  as clearing bars derived from it** (`scripts/readme-numbers.sh`, #6/#37). Take four's rows are prefixed
+  `PASS` and say `NO FRACTION IN FORCE` / `NO FLOOR IN FORCE` in the same sentence — `PASS` only because
+  nothing failed, and nothing failed because `44.2%` and `6.067x` were typed *from* that run. New `REPORTED`
+  class (prose outranks prefix, one classifier for both verdict shapes) plus a `BASELINE` parse that no longer
+  refuses a whole log for want of a ratio no baseline row has. The caption now names both unjudged classes
+  separately, keeps one denominator across all four branches, and refuses to headline `0 of 12 clear` for a
+  run nothing tested. Positive control: the phrase appears 10x in take four, 0x in the confirmation log.
 - **The gates divided by a CI bound above every sample ever taken** (#116, 2026-08-22; DESIGN.md §5 rule 20,
   `docs/rulings.md` rule 20). `bench_ratio_lo` reconstructed a bound as `center × (1 + ci)`, but benchstat's
   median CI is `[x_(r), x_(n+1−r)]` — **both bounds order statistics, so neither can lie outside the data** —

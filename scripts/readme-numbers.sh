@@ -86,6 +86,24 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
          -v retired="$SCALE_FLOOR_RETIRED" -v src="$(basename "$LOG")" '
   function strip(s) { gsub(/\033\[[0-9;]*m/, "", s); return s }
 
+  # A verdict line'"'"'s PREFIX and its PROSE can disagree about whether anything judged the
+  # row, and the prefix is the one that lies. Take four (rev 6ba6566) prints
+  #   PASS [keel-zen5] Sgemm reaches 48.0% ... -- measured and REPORTED, NO FRACTION IN FORCE (#6)
+  # where PASS means only that nothing failed, and nothing failed because no bar existed:
+  # 44.2% and 6.067x were derived FROM that run. So the prose outranks the prefix. Reading
+  # the prefix alone republished those 9 rows as clearing bars that postdate them -- the
+  # mirror of the case guarded below, which is bars empty here and shortfalls in the log.
+  # One function for BOTH verdict shapes, because a fix to one of two classifiers is a fix
+  # to half the logs. Positive control: the phrase appears 10x in take four and 0x in the
+  # confirmation log, so this cannot move a judged run'"'"'s caption, and does not.
+  function vclass(line, rest) {
+    if (rest ~ /NO FRACTION IN FORCE|NO FLOOR IN FORCE/) return "REPORTED"
+    if (line ~ /^ *BASELINE/) return "BASELINE"
+    if (line ~ /^ *FAIL/)     return "FAIL"
+    if (line ~ /^ *PASS/)     return "PASS"
+    return "OTHER"
+  }
+
   # Every line the gate emits per host is tagged [host.local]; the provenance line
   # is the one whose first field after the tag is the CPU model.
   {
@@ -94,6 +112,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # a sample path: "green on this commit (sha)" prints only when GREEN, so reds lost the rev.
     if (match(line, /bench-gate-p5-[0-9a-f]{7,40}-/)) { rev = substr(line, RSTART + 14, RLENGTH - 15) }
     if (match(line, /^-- scaling at 8 cores on [0-9]+\^3/)) { nsz = substr(line, RSTART + 25, RLENGTH - 27) }
+    if (era == "" && match(line, /in era [a-z0-9]+/)) { era = substr(line, RSTART + 7, RLENGTH - 7) }
     if (match(line, /\[[a-zA-Z0-9_.-]+\]/) == 0) next
     host = substr(line, RSTART + 1, RLENGTH - 2)
     rest = substr(line, RSTART + RLENGTH + 1)
@@ -136,7 +155,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # exists to name -- came out wrong.
       ci = ""
       if (match(rest, /[0-9.]+x net of CI/)) { ci = substr(rest, RSTART, RLENGTH); sub(/x net of CI$/, "", ci) }
-      verdict[host, r] = (line ~ /^ *FAIL/) ? "FAIL" : (line ~ /^ *PASS/) ? "PASS" : "OTHER"
+      verdict[host, r] = vclass(line, rest)
       # Both ratios must parse as numbers. A ratio that came out as prose would be
       # published as prose, and the row it describes is the one a reader checks.
       if (pt !~ /^[0-9]+\.?[0-9]*$/ || ci !~ /^[0-9]+\.?[0-9]*$/)
@@ -157,12 +176,17 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       ce = ""; if (match(rest, /ceiling \([0-9.]+ GFLOP\/s\)/))  { ce = substr(rest, RSTART, RLENGTH); sub(/^ceiling \(/, "", ce); sub(/ GFLOP\/s\)$/, "", ce) }
       pt = ""; if (match(rest, /scaling [0-9.]+x/))              { pt = substr(rest, RSTART + 8, RLENGTH - 9) }
       ci = ""; if (match(rest, /[0-9.]+x net of CI/))            { ci = substr(rest, RSTART, RLENGTH); sub(/x net of CI$/, "", ci) }
-      verdict[host, r] = (line ~ /^ *FAIL/) ? "FAIL" : (line ~ /^ *PASS/) ? "PASS" : "OTHER"
+      verdict[host, r] = vclass(line, rest)
       if (match(rest, /measured [0-9]+-thread/)) { nt = substr(rest, RSTART + 9, RLENGTH - 16) }
       # Same refusal as above, extended to the two new numbers: a fraction or a
-      # ceiling that came out as prose would be published as prose.
-      if (fr !~ /^[0-9]+\.?[0-9]*$/ || ce !~ /^[0-9]+\.?[0-9]*$/ || pt !~ /^[0-9]+\.?[0-9]*$/ || ci !~ /^[0-9]+\.?[0-9]*$/)
-        { printf "readme-numbers: [%s] %s ceiling verdict line did not yield four numbers (frac=%s, ceiling=%s, point=%s, net=%s)\n", host, r, fr, ce, pt, ci > "/dev/stderr"; bad = 1 }
+      # ceiling that came out as prose would be published as prose. A BASELINE row
+      # carries only the first two -- nothing judged it, so it has no ratio to print --
+      # and demanding four refused the WHOLE log, which is why this generator could not
+      # read the era it was written to publish. Predicted in this file 2026-08-22 and
+      # confirmed by running it against the founding confirmation log 2026-08-23.
+      want = (verdict[host, r] == "BASELINE") ? 2 : 4
+      if (fr !~ /^[0-9]+\.?[0-9]*$/ || ce !~ /^[0-9]+\.?[0-9]*$/ || (want == 4 && (pt !~ /^[0-9]+\.?[0-9]*$/ || ci !~ /^[0-9]+\.?[0-9]*$/)))
+        { printf "readme-numbers: [%s] %s ceiling verdict line did not yield %d numbers (frac=%s, ceiling=%s, point=%s, net=%s)\n", host, r, want, fr, ce, pt, ci > "/dev/stderr"; bad = 1 }
       frr[host, r] = fr; ptr[host, r] = pt; cir[host, r] = ci
       # One ceiling per host, printed once per judged routine: three printings of one
       # measurement are one witness (§5 rule 10), so they cross-check and never corroborate.
@@ -222,6 +246,14 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
         # Re-adjudicating those runs is its own deliverable working from the archived
         # samples, not something this generator may do by silently keeping the old bar.
         if (!((h, r) in verdict)) { printf "readme-numbers: [%s] %s has rates but no scaling verdict in this log, so its disclosure cannot be derived (a pre-2026-08-20 log has no ceiling verdict to publish)\n", h, r > "/dev/stderr"; exit 3 }
+        # Counted, not skipped: a BASELINE pair is measured and unjudged, and the caption
+        # below subtracts it from the population it says "clears the bars" rather than
+        # letting it ride inside that claim. REPORTED is the second way to be unjudged and
+        # is counted apart from it, because the two have different causes and a reader owed
+        # the reason cannot get it from a merged count: BASELINE means this silicon had no
+        # reference artifact in the era, REPORTED means the bar itself did not exist yet.
+        if (verdict[h, r] == "BASELINE") nb++
+        if (verdict[h, r] == "REPORTED") nu++
         if (verdict[h, r] == "FAIL") {
           # THREE KINDS NOW, because the two classes are judged by different
           # instruments. The judged class is compared net of CI against its own
@@ -315,6 +347,15 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     tb = (tf == "" \
       ? "Strsm is reported against its own 1-thread rate with no floor in force (#37)" \
       : sprintf("Strsm must scale >= %sx (#37)", tf))
+    # ONE SPELLING OF EACH UNJUDGED DISCLOSURE, shared by every branch that can reach it.
+    # The era is read off the log rather than named here: a generator that hardcodes the
+    # era would keep publishing "pinned8" into the era after it.
+    bc = (nb == 0 ? "" : sprintf(" A further %d of those pairs %s RECORDED as a candidate baseline in era %s and judged by nothing, so those rows are published as measurements and not as passes (#6).", nb, (nb == 1 ? "is" : "are"), (era == "" ? "the one this log names no id for" : era)))
+    # Second unjudged class, second sentence: these rows ran BEFORE the bars existed, so no
+    # verdict is available to publish at any strictness. Saying so is not optional -- their
+    # gate lines are prefixed PASS, and that prefix is what made this caption claim they
+    # cleared bars derived from them.
+    bc = bc (nu == 0 ? "" : sprintf(" A further %d %s measured under no bar at all -- that run predates the bars it would be judged by, which were derived from it -- so %s no verdict.", nu, (nu == 1 ? "pair was" : "pairs were"), (nu == 1 ? "it is REPORTED and carries" : "they are REPORTED and carry")))
     if (cf == "" && tf == "" && nl + nn + ns > 0) {
       # The log disagrees with this tree about whether a bar exists. The constants readback
       # above compares this script with gate-p5.sh and cannot see this: the rows come from a
@@ -339,10 +380,30 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # program refuses the whole log, which is the blocker on regenerating the README as
       # medians over this era (#6). Found 2026-08-22 by driving this branch, not by reading it.
       printf "NONE of the %d routine-host pairs those %d rows form was judged: both bars scripts/gate-p5.sh would enforce are suspended for re-derivation from this era (%s; %s), so every number above is REPORTED and the absence of a shortfall below is not a pass. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
-    } else if (nl + nn + ns == 0) {
+    } else if (nl + nn + ns == 0 && nr - nb - nu == 0) {
+      # NOTHING WAS JUDGED, yet bars are in force in this tree -- so the branch above cannot
+      # fire and the "N of M clear" branches would headline "0 of the 12 pairs clear the bars",
+      # which reads as total failure where in truth nothing was tested. A zero numerator over
+      # an untested population is not a result, and printing it as one is the same false
+      # attribution this commit removes, one branch over. Reachable with the founding run as
+      # sole input, which is exactly how it was found.
+      printf "NONE of the %d routine-host pairs those %d rows form was judged against the bars scripts/gate-p5.sh now enforces (%s; %s), so no number above is a pass and the absence of a shortfall is not one either.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, bc, retired > "/dev/stderr"
+    } else if (nl + nn + ns == 0 && nb == 0 && nu == 0) {
       printf "Every one of the %d routine-host pairs those %d rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
+    } else if (nl + nn + ns == 0) {
+      # EVERY JUDGED PAIR CLEARED, and some pairs were not judged at all. "Every one of the
+      # N pairs clears the bars" over a population containing BASELINE rows is the vacuous
+      # pass §5 rule 8 forbids -- it would read as 12 verdicts where the gate rendered 9.
+      # So the judged count is the subject and the recorded count is named beside it, in
+      # the SAME words the shortfall branch below uses, because two spellings of one
+      # disclosure is the drift this whole script exists to end.
+      printf "%d of the %d routine-host pairs those %d rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr - nb - nu, nr, nrow, jb, tb, bc, retired > "/dev/stderr"
     } else {
-      printf "%d of the %d routine-host pairs those %d rows form %s not clear the bars scripts/gate-p5.sh enforces (%s; %s; both judged net of confidence intervals). ", nl + nn + ns, nr, nrow, (nl + nn + ns == 1 ? "does" : "do"), jb, tb > "/dev/stderr"
+      # nr, not nr - nb: "the N pairs those M rows form" is a structural claim about the
+      # table -- 24 rows form 12 pairs however many of them anything judged -- so subtracting
+      # the baselines here would make the phrase false while the branch above kept it true,
+      # which is one caption reading two denominators out of the same six words.
+      printf "%d of the %d routine-host pairs those %d rows form %s not clear the bars scripts/gate-p5.sh enforces (%s; %s; both judged net of confidence intervals).%s ", nl + nn + ns, nr, nrow, (nl + nn + ns == 1 ? "does" : "do"), jb, tb, bc > "/dev/stderr"
       if (ns > 0) {
         s = ""; for (k = 1; k <= ns; k++) s = s (k > 1 ? "; " : "") short[k]
         printf "%d of the judged routines %s short of %s own host'"'"'s ceiling: %s. ", ns, (ns == 1 ? "falls" : "fall"), (ns == 1 ? "its" : "their"), s > "/dev/stderr"
