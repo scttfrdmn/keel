@@ -811,11 +811,13 @@ which is what makes the range disclosure load-bearing rather than decorative.
 
 `bench_describe` now prints the observed min/max beside every reading, and names the anomaly:
 
-    2291 GFLOP/s +/- 0.0% [1989, 2296] RANK-WINDOW-BLIND(span 13.40% under a 0.00% interval)
+    2291 GFLOP/s +/- 0.0% [1989, 2296] RANK-WINDOW-BLIND(span 13.40% under a 0.0% interval)
 
-Three properties are deliberate. It is **unthresholded** — any exact-zero interval under any
-nonzero span fires it — because a triviality cutoff would be the tuned-after-the-fact constant §5
-is built against, and a reader dismissing a 0.01% span can do so from the printed span. The
+Three properties are deliberate. It is **unthresholded** — a printed-width zero under a span
+exceeding one quantum of that same display fires it (see the amendment below; as adopted it was
+narrower, keying on an *exact* zero) — because a triviality cutoff would be the
+tuned-after-the-fact constant §5 is built against, and a reader dismissing a 0.01% span can do so
+from the printed span. The
 **range is not an interval**: it is what was observed, it survives on a row whose CI is unbounded,
 and no criterion divides by it, which is what lets it be read off archived CSVs without moving a
 historical verdict. And it **moves no verdict** — stated as a limit, not a feature: a blind
@@ -824,6 +826,42 @@ reading still adjudicates, and the anomaly only makes it visible to whoever must
 The empty-field guard is the non-obvious part. Pre-#116 archives have three columns, and `%.4g` of
 an empty awk field renders a confident `[0, 0]`; the guard exits before the range on any row that
 does not carry one.
+
+### Amendment, 2026-08-28: the printed line is the assertion
+
+The clause above reserved "the tuned middle" to a ruling. The ruling dissolved the middle instead
+of splitting it: **the marker keys on the width as printed**, so the trigger is a printed-width
+zero under a span exceeding one quantum of that same display.
+
+The reasoning that got there started from the wrong end. My objection to widening the trigger was
+that testing the printed value "installs a cutoff chosen by a format string" — the right suspicion,
+aimed at the right object, resolved by noticing what the format string actually does. It is not
+*choosing* the sensitivity; it is **defining the assertion**. A reader's trust attaches to the line
+in front of them, so the printed line is what the marker must defend, and `± 0.003%` renders
+`0.0%` and makes the identical claim to that reader as an exact zero. The four exact zeros were
+never a privileged class — they were an artifact of testing the stored value rather than the
+published one. Symmetrically, the anomaly is restated as *the range refuting the printed claim*: a
+span the interval could not have concealed if it meant what it displays. Both halves now come off
+the same line, and the quantum is the display's own resolution, which is why nothing is left to
+tune. Same move as #110's band-top, where the resolution of the display defined what a rounded
+value could support.
+
+Reach, measured rather than claimed — 114 stored CI readings across the 24 archived-era CSVs:
+
+    prints as 0.0%   16
+    exactly 0.00%     4     <- what the trigger saw before
+    the reserved middle  12
+
+Direction (rule 15): exact-zero is a strict subset of display-zero, so this can only add markers.
+No row that was named goes silent, and it remains output — no verdict moves.
+
+Coverage, with what it cannot see (rule 12): `bench_describe` **had no test before this
+amendment**, which is why the band went unseen — the marker was driven by hand once and nothing
+re-drove it. `scripts/remote-exec-test.sh` §9f now fixtures six cases, three of them real readings,
+the discriminating pair being the `0.00%`/`0.07%` keel-skx printed across this era's two archives.
+Unexercised: the archived path, because **no persisted CSV anywhere in the tree carries the seven
+columns the range needs** — every one predates #116 — so the archive cannot witness this renderer
+and the fixture is the whole of its coverage.
 
 ### The tally printer (same ruling)
 

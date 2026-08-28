@@ -876,6 +876,45 @@ ci_case "an absent rate does not read as under the ceiling" \
 # predicate must not claim a second cause (§5 rule 6).
 ci_case "a zero ceiling is not this branch's finding" "ok|" 0 "Sgemm=612.9"
 
+# The renderer this exercises had NO test before now, which is why the display-zero band
+# went unseen: rule 20's marker was driven by hand once and nothing re-drove it, and no
+# persisted CSV in the tree has the seven columns it needs (every one predates #116), so
+# the archive cannot witness it either. Rows 1, 2 and 4 are real readings -- zen5's
+# founding ceiling sample, and the 0.00%/0.07% pair keel-skx printed across the era's two
+# archives, which is the discriminating pair the ruling turns on.
+head_ "9f. rule 20: the marker keys on the width as PRINTED (ruled 2026-08-28)"
+bd_case() {     # note, expected, csv-body
+  local note="$1" want="$2" body="$3" got f
+  f="$(mktemp)" || return
+  printf ',GFLOP/s\n%s\n' "$body" > "$f"
+  got="$(bench_describe Judged "$f" GFLOP/s)"
+  rm -f "$f"
+  [[ "$got" == "$want" ]] && pass_ "$note" || fail_ "$note -> [$got], expected [$want]"
+}
+bd_case "an exact zero under a 13.40% span is still named" \
+  "2291 GFLOP/s +/- 0.0% [1989, 2296] RANK-WINDOW-BLIND(span 13.40% under a 0.0% interval)" \
+  "Judged,2291,0.00%,2291,2291,1989,2296"
+# THE ARM THE RULING ADDS. 0.03% makes the identical claim to a reader as an exact zero,
+# so it earns identical scrutiny; before the ruling this row printed clean.
+bd_case "a width of 0.03% prints 0.0% and is named on the same terms" \
+  "2291 GFLOP/s +/- 0.0% [1989, 2296] RANK-WINDOW-BLIND(span 13.40% under a 0.0% interval)" \
+  "Judged,2291,0.03%,2291,2291,1989,2296"
+# The other half of the conjunction: a span the display's own resolution can support is
+# not a refutation of anything, so it is not an anomaly.
+bd_case "a span inside one display quantum is not an anomaly" \
+  "2291 GFLOP/s +/- 0.0% [2291, 2292]" \
+  "Judged,2291,0.00%,2291,2291,2291,2292"
+bd_case "a width that prints 0.1% asserts nothing the range refutes" \
+  "2291 GFLOP/s +/- 0.1% [1989, 2296]" \
+  "Judged,2291,0.07%,2291,2291,1989,2296"
+# A pre-#116 CSV has three columns: no range, hence no marker, and above all no
+# fabricated "[0, 0]" over a range nobody measured.
+bd_case "a three-column archive prints no range and invents none" \
+  "2291 GFLOP/s +/- 0.0%" "Judged,2291,0.00%"
+bd_case "an unbounded interval says so instead of printing a width" \
+  "2291 GFLOP/s (no CI: too few or too noisy samples)" \
+  "Judged,2291,∞,∞,∞,1989,2296"
+
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"

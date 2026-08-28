@@ -475,7 +475,17 @@ bench_describe() {
       split(s, a, " ")
       label = (unit == "sec/op") ? "s" : unit
       if (a[2] == "inf") { printf "%.4g %s (no CI: too few or too noisy samples)", a[1], label; exit }
-      printf "%.4g %s +/- %.1f%%", a[1], label, a[2] * 100
+      # THE PRINTED WIDTH IS THE ASSERTION, so the marker below keys on it and not on the
+      # stored value (ruled 2026-08-28, #6). A width of 0.003% renders "0.0%" and makes the
+      # identical claim to a reader as an exact zero, so it earns identical scrutiny: the
+      # exact zeros are not a privileged class. QUANTUM is the resolution of the display
+      # ITSELF -- what "0.0%" can support -- so it is neither tuned nor an accident of the
+      # format string, it is what that format string already asserts. Same move as the
+      # band-top in #110, where the resolution of the display defined what a rounded value
+      # could support.
+      QUANTUM = 0.1
+      width = sprintf("%.1f", a[2] * 100)
+      printf "%.4g %s +/- %s%%", a[1], label, width
       # THE RANGE PRINTS BESIDE THE INTERVAL (DESIGN.md §5 rule 20). Guarded on
       # non-empty because a pre-#116 archived CSV has three columns, and "%.4g" of
       # an empty field would render a confident "[0, 0]" over a range nobody
@@ -486,12 +496,13 @@ bench_describe() {
       # stopped looking, never a quiet host: benchstat bounds the median with order
       # statistics [x_(r), x_(n+1-r)], and as n grows r moves inward FAST (n=10 ->
       # [2,9], n=30 -> [10,21]), so a contaminant that cost three verdicts at n=10
-      # sat inside a +/-0.00% reading at n=30 while still in the sample. Named, not
-      # thresholded: any nonzero span under a zero interval is disclosed, because
-      # picking a triviality cutoff is exactly the tuned constant §5 forbids, and an
-      # over-eager disclosure fails safe where a silent one does not.
-      if (a[2] + 0 == 0 && a[6] + 0 > a[5] + 0)
-        printf " RANK-WINDOW-BLIND(span %.2f%% under a 0.00%% interval)", 100 * (a[6] - a[5]) / a[1]
+      # sat inside a +/-0.0% reading at n=30 while still in the sample. What names the
+      # anomaly is THE RANGE REFUTING THE PRINTED CLAIM -- a span the interval could not
+      # have hidden if it meant what it displays -- so both halves are read off the printed
+      # line: the width as printed, and a span that clears one quantum of that same display.
+      span = 100 * (a[6] - a[5]) / a[1]
+      if (width + 0 == 0 && span > QUANTUM)
+        printf " RANK-WINDOW-BLIND(span %.2f%% under a %s%% interval)", span, width
     }'
 }
 

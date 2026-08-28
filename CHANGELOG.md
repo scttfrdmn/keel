@@ -182,6 +182,14 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **Rule 20's `RANK-WINDOW-BLIND` marker keys on the width as *printed*, not as stored** (`scripts/bench.sh`,
+  DESIGN.md §5 rule 20 amended 2026-08-28, ruling on #6). The printed line is the assertion, so `± 0.003%`
+  renders `0.0%`, makes a reader the identical claim as an exact zero, and earns identical scrutiny; the
+  second half is the range refuting that claim, at one quantum of the same display. **16 of 114 archived CI
+  readings print as `0.0%` and only 4 are exact**, so the reserved middle was 12 readings wide. Output only,
+  and exact-zero ⊂ display-zero, so no marker is lost and no verdict moves. `bench_describe` had no test
+  before this; six fixtures now cover it (`remote-exec-test.sh` §9f) and the archived path stays unexercised —
+  no CSV in the tree carries #116's seven columns.
 - **The published numbers are per-row medians over an era's archives, and the verdicts beside them still are
   not** (`scripts/readme-numbers.sh`, #6; the ratified repair). The generator now takes any number of
   `gate-p5` logs and reduces each cell across them (§5 rule 16), every cell naming its own estimator —
