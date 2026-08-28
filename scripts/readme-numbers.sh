@@ -67,9 +67,16 @@ ROUTINES='Sgemm Ssyrk Ssymm Strsm'
 
 die() { echo "readme-numbers: $*" >&2; exit 1; }
 
-LOG="${1:-}"
-DRY="${2:-}"
-[[ -n "$LOG" && -r "$LOG" ]] || die "usage: $0 <gate-p5 log> [-n]"
+# MORE THAN ONE LOG IS THE NORMAL CASE (#6): the published rows are rule-16 medians over an
+# era's archives, so the estimator needs the whole era at once. One log still works and is
+# still N=1 -- stated as N=1, because the point of naming the estimator per row is that a
+# reader can tell one draw from a median without counting this script's arguments.
+LOGS=(); DRY=""
+for a in "$@"; do
+  if [[ "$a" == "-n" ]]; then DRY="-n"; else LOGS+=("$a"); fi
+done
+(( ${#LOGS[@]} > 0 )) || die "usage: $0 <gate-p5 log> [<gate-p5 log> ...] [-n]"
+for l in "${LOGS[@]}"; do [[ -r "$l" ]] || die "cannot read $l"; done
 
 # The floors are read back out of the gate rather than trusted here. A published
 # disclosure naming 6.0x while the gate enforces something else is exactly the
@@ -83,8 +90,30 @@ for pair in "CEIL_FRACTION=$CEIL_FRACTION" "STRSM_FLOOR=$STRSM_FLOOR" "SCALE_FLO
 done
 
 BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR" \
-         -v retired="$SCALE_FLOOR_RETIRED" -v src="$(basename "$LOG")" '
+         -v retired="$SCALE_FLOOR_RETIRED" '
   function strip(s) { gsub(/\033\[[0-9;]*m/, "", s); return s }
+  function bn(p) { sub(/^.*\//, "", p); return p }
+  # The estimator, named in the cell beside the rate it produced. N=1 says "one draw" in
+  # words rather than "median of 1", which is true but reads as a pooled figure.
+  function est(k) { return (k == 1 ? "one draw (N=1)" : sprintf("median of N=%d archives", k)) }
+
+  # Rule-16 median over the era'"'"'s archives, pooled over the FILE LIST rather than over a
+  # draw counter: the array is keyed (..., FILENAME) throughout, so the pool is exactly the
+  # set of logs that carried the key and a log missing a row contributes nothing instead of
+  # shifting every later draw'"'"'s index. N is 2 at the founding, so an insertion sort is the
+  # whole algorithm; the even case averages the two middles rather than silently picking one,
+  # which is the difference between a median and a preference for whichever log was typed
+  # first. Every published rate goes through here even at N=1 -- one code path, so there is
+  # no "single log" special case to diverge from the pooled one. Sets MEDN so a caller can
+  # state the estimator'"'"'s N beside the number instead of assuming it.
+  function med(a, kp,   i, j, c, s, t) {
+    c = 0
+    for (i = 1; i <= nf; i++) if ((kp, flist[i]) in a) { s[++c] = a[kp, flist[i]] + 0 }
+    MEDN = c
+    if (c == 0) return ""
+    for (i = 2; i <= c; i++) { t = s[i]; for (j = i - 1; j >= 1 && s[j] > t; j--) s[j + 1] = s[j]; s[j + 1] = t }
+    return (c % 2) ? s[(c + 1) / 2] : (s[c / 2] + s[c / 2 + 1]) / 2
+  }
 
   # A verdict line'"'"'s PREFIX and its PROSE can disagree about whether anything judged the
   # row, and the prefix is the one that lies. Take four (rev 6ba6566) prints
@@ -106,11 +135,16 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
 
   # Every line the gate emits per host is tagged [host.local]; the provenance line
   # is the one whose first field after the tag is the CPU model.
+  # PER-FILE, not per-run: with two logs every array keyed only by (host, routine) has the
+  # second file overwriting the first, so provenance would depend on argument order and the
+  # rule-10 identity checks below would compare a value against one from another machine-day.
+  FNR == 1 { if (!(FILENAME in fseen)) { fseen[FILENAME] = 1; flist[++nf] = FILENAME } }
+
   {
     line = strip($0)
     # Run-wide provenance, before the host-tag guard or the guard skips it. The sha comes off
     # a sample path: "green on this commit (sha)" prints only when GREEN, so reds lost the rev.
-    if (match(line, /bench-gate-p5-[0-9a-f]{7,40}-/)) { rev = substr(line, RSTART + 14, RLENGTH - 15) }
+    if (match(line, /bench-gate-p5-[0-9a-f]{7,40}-/)) { frev[FILENAME] = substr(line, RSTART + 14, RLENGTH - 15) }
     if (match(line, /^-- scaling at 8 cores on [0-9]+\^3/)) { nsz = substr(line, RSTART + 25, RLENGTH - 27) }
     if (era == "" && match(line, /in era [a-z0-9]+/)) { era = substr(line, RSTART + 7, RLENGTH - 7) }
     if (match(line, /\[[a-zA-Z0-9_.-]+\]/) == 0) next
@@ -128,9 +162,17 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # rates: ROUTINE: 1 thread X GFLOP/s +/- p%, 8 threads Y GFLOP/s +/- q%
     if (match(rest, /^[A-Za-z]+: 1 thread /)) {
       r = rest; sub(/:.*$/, "", r)
+      # CLEARED FIRST. t1/t8 were assigned only on a match and never reset, so a line whose
+      # "8 threads" clause failed to parse published the 8-thread rate of the PREVIOUS routine
+      # as this one -- a wrong number with no missing-data symptom anywhere. Reachable by any
+      # future edit to the rate line the gate emits, which is exactly the change nothing here
+      # would catch. Now a failed parse refuses the log instead of borrowing the rate above it.
+      t1 = ""; t8 = ""
       if (match(rest, /1 thread [0-9.]+/))  { t1 = substr(rest, RSTART + 9, RLENGTH - 9) }
       if (match(rest, /8 threads [0-9.]+/)) { t8 = substr(rest, RSTART + 10, RLENGTH - 10) }
-      one[host, r] = t1; eight[host, r] = t8
+      if (t1 == "" || t8 == "")
+        { printf "readme-numbers: [%s] %s rate line yielded no %s-thread rate in %s\n", host, r, (t1 == "" ? "1" : "8"), bn(FILENAME) > "/dev/stderr"; bad = 1 }
+      one[host, r, FILENAME] = t1; eight[host, r, FILENAME] = t8
     }
 
     # The scaling verdict is EXTRACTED, never recomputed. The first draft of this
@@ -155,12 +197,13 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # exists to name -- came out wrong.
       ci = ""
       if (match(rest, /[0-9.]+x net of CI/)) { ci = substr(rest, RSTART, RLENGTH); sub(/x net of CI$/, "", ci) }
-      verdict[host, r] = vclass(line, rest)
+      vc = vd[host, r, FILENAME] = vclass(line, rest)
+      if (vc == "PASS" || vc == "FAIL") hasjudged[FILENAME] = 1
       # Both ratios must parse as numbers. A ratio that came out as prose would be
       # published as prose, and the row it describes is the one a reader checks.
       if (pt !~ /^[0-9]+\.?[0-9]*$/ || ci !~ /^[0-9]+\.?[0-9]*$/)
         { printf "readme-numbers: [%s] %s verdict line did not yield two ratios (point=%s, net=%s)\n", host, r, pt, ci > "/dev/stderr"; bad = 1 }
-      ptr[host, r] = pt; cir[host, r] = ci
+      ptr[host, r, FILENAME] = pt; cir[host, r, FILENAME] = ci
     }
 
     # The JUDGED class changed shape with the criterion (#6, 2026-08-20): it no longer
@@ -176,7 +219,8 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       ce = ""; if (match(rest, /ceiling \([0-9.]+ GFLOP\/s\)/))  { ce = substr(rest, RSTART, RLENGTH); sub(/^ceiling \(/, "", ce); sub(/ GFLOP\/s\)$/, "", ce) }
       pt = ""; if (match(rest, /scaling [0-9.]+x/))              { pt = substr(rest, RSTART + 8, RLENGTH - 9) }
       ci = ""; if (match(rest, /[0-9.]+x net of CI/))            { ci = substr(rest, RSTART, RLENGTH); sub(/x net of CI$/, "", ci) }
-      verdict[host, r] = vclass(line, rest)
+      vc = vd[host, r, FILENAME] = vclass(line, rest)
+      if (vc == "PASS" || vc == "FAIL") hasjudged[FILENAME] = 1
       if (match(rest, /measured [0-9]+-thread/)) { nt = substr(rest, RSTART + 9, RLENGTH - 16) }
       # Same refusal as above, extended to the two new numbers: a fraction or a
       # ceiling that came out as prose would be published as prose. A BASELINE row
@@ -184,15 +228,19 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # and demanding four refused the WHOLE log, which is why this generator could not
       # read the era it was written to publish. Predicted in this file 2026-08-22 and
       # confirmed by running it against the founding confirmation log 2026-08-23.
-      want = (verdict[host, r] == "BASELINE") ? 2 : 4
+      want = (vc == "BASELINE") ? 2 : 4
       if (fr !~ /^[0-9]+\.?[0-9]*$/ || ce !~ /^[0-9]+\.?[0-9]*$/ || (want == 4 && (pt !~ /^[0-9]+\.?[0-9]*$/ || ci !~ /^[0-9]+\.?[0-9]*$/)))
         { printf "readme-numbers: [%s] %s ceiling verdict line did not yield %d numbers (frac=%s, ceiling=%s, point=%s, net=%s)\n", host, r, want, fr, ce, pt, ci > "/dev/stderr"; bad = 1 }
-      frr[host, r] = fr; ptr[host, r] = pt; cir[host, r] = ci
+      frr[host, r, FILENAME] = fr; ptr[host, r, FILENAME] = pt; cir[host, r, FILENAME] = ci
       # One ceiling per host, printed once per judged routine: three printings of one
       # measurement are one witness (§5 rule 10), so they cross-check and never corroborate.
-      if ((host in ceil8) && ceil8[host] != ce)
-        { printf "readme-numbers: [%s] prints two 8-thread ceilings in one run, %s and %s\n", host, ceil8[host], ce > "/dev/stderr"; bad = 1 }
-      ceil8[host] = ce
+      # SCOPED TO THE FILE, because across archives two ceilings for one host is the normal
+      # case and not a defect -- zen5 measured 2291 in take four and 2292 in the confirmation
+      # run. Left unscoped, the check that exists to catch one run contradicting itself would
+      # have failed the era for the ordinary fact that a measurement moved between days.
+      if (((host, FILENAME) in ceil8) && ceil8[host, FILENAME] != ce)
+        { printf "readme-numbers: [%s] prints two 8-thread ceilings in one run (%s), %s and %s\n", host, bn(FILENAME), ceil8[host, FILENAME], ce > "/dev/stderr"; bad = 1 }
+      ceil8[host, FILENAME] = ce
     }
 
     # peak, printed once per routine per host, beside the 8-thread percent the gate computes
@@ -201,10 +249,12 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       pc = rest; sub(/^.*: /, "", pc); sub(/%.*$/, "", pc)
       pk = rest; sub(/^.*peak \(/, "", pk); sub(/ GFLOP.*$/, "", pk)
       # Four printings of one measurement are ONE witness (DESIGN.md §5 rule 10), so
-      # they are used as a consistency check and never as corroboration.
-      if ((host in peak) && peak[host] != pk)
-        { printf "readme-numbers: [%s] prints two single-thread peaks in one run, %s and %s\n", host, peak[host], pk > "/dev/stderr"; bad = 1 }
-      peak[host] = pk; gpc[host, r] = pc
+      # they are used as a consistency check and never as corroboration. Scoped to the file
+      # for the same reason as the ceiling above: within a run this must hold, across the
+      # era it must not be required to.
+      if (((host, FILENAME) in peak) && peak[host, FILENAME] != pk)
+        { printf "readme-numbers: [%s] prints two single-thread peaks in one run (%s), %s and %s\n", host, bn(FILENAME), peak[host, FILENAME], pk > "/dev/stderr"; bad = 1 }
+      peak[host, FILENAME] = pk; gpc[host, r, FILENAME] = pc
     }
   }
 
@@ -213,31 +263,69 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     n = split(routines, R, " ")
     if (nh == 0) { print "readme-numbers: the log names no host with a provenance line" > "/dev/stderr"; exit 3 }
 
+    # WHICH LOG RENDERED THE VERDICTS. Rates pool across the era; verdicts do not, because
+    # a verdict belongs to the run whose gate rendered it and averaging two is meaningless.
+    # Exactly one input may be a judged log. Zero is legal -- the founding run is judged by
+    # nothing and the caption has a branch saying so -- but TWO is refused rather than
+    # resolved: with two, whichever file awk read last would silently own the disclosure,
+    # and "the verdicts came from the log you happened to type second" is not provenance.
+    # This is the file'"'"'s own rule at the constants: a bar and the rows it judges are not
+    # one act.
+    jf = ""; njf = 0
+    for (i = 1; i <= nf; i++) if (flist[i] in hasjudged) { njf++; jf = flist[i] }
+    if (njf > 1) {
+      printf "readme-numbers: %d of the %d logs carry bar verdicts, so the disclosure has no single provenance; pass one judged log plus any number of unjudged archives\n", njf, nf > "/dev/stderr"
+      exit 3
+    }
+    # No judged log: the verdict classes are still needed (REPORTED/BASELINE both live in
+    # the caption), so read them from the last archive, which is the only one there is to
+    # read them from. Named here rather than defaulted silently.
+    if (jf == "") jf = flist[nf]
+    # The verdict AND the figures that state it. frr/ptr/cir are the numbers the shortfall
+    # strings quote, so they belong to the same run as the verdict quoting them -- pooling
+    # those would print a median ratio inside a sentence about one run'"'"'s FAIL.
+    for (kk in vd)  { split(kk, K, SUBSEP); if (K[3] == jf) verdict[K[1], K[2]] = vd[kk] }
+    for (kk in frr) { split(kk, K, SUBSEP); if (K[3] == jf) fr1[K[1], K[2]] = frr[kk] }
+    for (kk in ptr) { split(kk, K, SUBSEP); if (K[3] == jf) pt1[K[1], K[2]] = ptr[kk] }
+    for (kk in cir) { split(kk, K, SUBSEP); if (K[3] == jf) ci1[K[1], K[2]] = cir[kk] }
+
     print "| CPU | benchmark | threads | GFLOP/s | denominator |"
     print "| --- | --- | --- | --- | --- |"
     for (i = 1; i <= nh; i++) {
       h = order[i]
-      if (!(h in peak)) { printf "readme-numbers: [%s] has no measured single-thread peak\n", h > "/dev/stderr"; exit 3 }
-      p1 = peak[h] + 0; p8 = p1 * 8
+      p1 = med(peak, h)
+      if (p1 == "") { printf "readme-numbers: [%s] has no measured single-thread peak\n", h > "/dev/stderr"; exit 3 }
+      p8 = p1 * 8
       for (j = 1; j <= n; j++) {
         r = R[j]
-        a = one[h, r]; b = eight[h, r]
+        a = med(one, h SUBSEP r); an = MEDN
+        b = med(eight, h SUBSEP r); bn8 = MEDN
         # A thin block is not a table with one row fewer; it is a published table
         # that silently dropped a host. Same refusal the docs-gen.sh extractions make.
-        if (a == "" || b == "") { printf "readme-numbers: [%s] %s has no 1-thread/8-thread pair in this log\n", h, r > "/dev/stderr"; exit 3 }
+        if (a == "" || b == "") { printf "readme-numbers: [%s] %s has no 1-thread/8-thread pair in these logs\n", h, r > "/dev/stderr"; exit 3 }
 
         # The 1-thread percent is computed because the gate does not print it. The
         # 8-thread percent the gate DOES print, so it is recomputed and checked --
         # this script auditing its own denominator against the one the instrument used.
-        c8 = (b + 0) / p8 * 100
-        if ((h, r) in gpc) {
-          d = c8 - (gpc[h, r] + 0); if (d < 0) d = -d
-          if (d > 0.15) { printf "readme-numbers: [%s] %s 8-thread share computes to %.1f%% but the gate printed %s%%\n", h, r, c8, gpc[h, r] > "/dev/stderr"; exit 3 }
+        # CHECKED PER ARCHIVE, against that archive'"'"'s own peak and its own printed share:
+        # the pooled median matches no single log by construction, so comparing the pooled
+        # share against one log'"'"'s printed share would fire on every honest N>1 pool. Same
+        # instrument, moved inside the loop that has a denominator it can be right about.
+        for (q = 1; q <= nf; q++) {
+          f = flist[q]
+          if (!((h, r, f) in gpc) || !((h, f) in peak) || !((h, r, f) in eight)) continue
+          fc8 = (eight[h, r, f] + 0) / (peak[h, f] * 8) * 100
+          d = fc8 - (gpc[h, r, f] + 0); if (d < 0) d = -d
+          if (d > 0.15) { printf "readme-numbers: [%s] %s 8-thread share computes to %.1f%% in %s but that run printed %s%%\n", h, r, fc8, bn(f), gpc[h, r, f] > "/dev/stderr"; exit 3 }
         }
-        printf "| %s | %s | 1 | %s | %.1f%% of %s GFLOP/s, the 1-thread avx512 microkernel peak measured in the same run |\n", \
-          model[h], r, a, (a + 0) / p1 * 100, peak[h]
-        printf "| %s | %s | 8 | %s | %.1f%% of %.1f GFLOP/s, that same peak x 8 cores |\n", \
-          model[h], r, b, c8, p8
+        c8 = (b + 0) / p8 * 100
+        # N rides on every row, per the ratified repair (#6): the estimator is part of the
+        # number. "median of 2" and a lone draw are different claims and a reader cannot tell
+        # them apart from the rate alone -- which is the whole defect that repair addressed.
+        printf "| %s | %s | 1 | %.4g | %.1f%% of %.4g GFLOP/s, the 1-thread avx512 microkernel peak; %s |\n", \
+          model[h], r, a, (a + 0) / p1 * 100, p1, est(an)
+        printf "| %s | %s | 8 | %.4g | %.1f%% of %.1f GFLOP/s, that same peak x 8 cores; %s |\n", \
+          model[h], r, b, c8, p8, est(bn8)
 
         # A row with no verdict is not a passing row. Fail closed: the caption would
         # otherwise be silent about exactly the row the gate could not judge.
@@ -266,7 +354,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
           # deferred-empty, so the day a fraction is ratified and any row missed it,
           # criterion 9 would have gone red for a reason unrelated to the shortfall.
           if (r != "Strsm") {
-            short[++ns] = sprintf("%s %s at %s%% of its own measured %s-thread ceiling", model[h], r, frr[h, r], (nt == "" ? "8" : nt))
+            short[++ns] = sprintf("%s %s at %s%% of its own measured %s-thread ceiling", model[h], r, fr1[h, r], (nt == "" ? "8" : nt))
           } else {
             # Strsm keeps the ratio bar and so keeps the distinction, which asks for
             # different things: a point estimate already under the floor is a
@@ -274,8 +362,8 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
             # verdict decided by the noise the measurement itself carries, and the
             # remedy for that is precision (DESIGN.md §4, line 130) rather than a
             # discussion about the nest.
-            if (ptr[h, r] + 0 >= tf + 0) near[++nn] = sprintf("%s %s (%sx, %sx net of CI)", model[h], r, ptr[h, r], cir[h, r])
-            else low[++nl] = sprintf("%s %s at %sx (%sx net of CI)", model[h], r, ptr[h, r], cir[h, r])
+            if (pt1[h, r] + 0 >= tf + 0) near[++nn] = sprintf("%s %s (%sx, %sx net of CI)", model[h], r, pt1[h, r], ci1[h, r])
+            else low[++nl] = sprintf("%s %s at %sx (%sx net of CI)", model[h], r, pt1[h, r], ci1[h, r])
           }
         }
       }
@@ -300,9 +388,29 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # /rev `[0-9a-f]{7,40}`/ to date doc-site/numbers.md, and dies with "the page has no
     # run to date itself by" if it cannot find one. The generated sentence has to satisfy
     # the parser that was already reading the hand-written one.
-    printf "All %d rows come from one run — `scripts/gate-p5.sh` at rev `%s`, log in `build/%s` — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. The 1-thread and 8-thread rows for a routine are the two arms of that run'"'"'s scaling ratio, so they are directly comparable to each other; rows from different CPUs are not, because the peaks differ.\n\n", \
-      nrow, (rev == "" ? "unrecorded" : rev), src, (nsz == "" ? "4096" : nsz), \
-      (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host") > "/dev/stderr"
+    # The judged run leads, and not for style: docs-gen.sh:92 takes the FIRST match and exits,
+    # so whichever rev is named first is the one that as-of dates the whole numbers page. That
+    # is the judged run, because the verdicts on the page are its verdicts.
+    src = ""; jrev = (jf in frev ? frev[jf] : "")
+    src = sprintf("`build/%s`", bn(jf))
+    for (q = 1; q <= nf; q++) if (flist[q] != jf) {
+      src = src sprintf(", `build/%s`", bn(flist[q]))
+      others = others (others == "" ? "" : ", ") sprintf("`%s`", (flist[q] in frev ? frev[flist[q]] : "unrecorded"))
+    }
+    # ONE RUN vs AN ERA is a different provenance claim, so it is a different sentence rather
+    # than the same sentence with a plural. At N=1 the old wording is still exactly right and
+    # still printed; the pooled wording names the estimator, both revs, and -- the part a
+    # reader cannot recover from the table -- that the verdicts come from ONE of the archives
+    # while the rates come from all of them.
+    if (nf == 1) {
+      printf "All %d rows come from one run — `scripts/gate-p5.sh` at rev `%s`, log in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. The 1-thread and 8-thread rows for a routine are the two arms of that run'"'"'s scaling ratio, so they are directly comparable to each other; rows from different CPUs are not, because the peaks differ.\n\n", \
+        nrow, (jrev == "" ? "unrecorded" : jrev), src, (nsz == "" ? "4096" : nsz), \
+        (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host") > "/dev/stderr"
+    } else {
+      printf "All %d rows are per-row medians over the %d archived runs of one era — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N. The 1-thread and 8-thread rows for a routine pool the same archives, so their ratio is a ratio of like estimators; rows from different CPUs are not comparable, because the peaks differ. The verdicts below are the judged run'"'"'s alone — a verdict belongs to the gate that rendered it and two cannot be averaged.\n\n", \
+        nrow, nf, (jrev == "" ? "unrecorded" : jrev), others, src, (nsz == "" ? "4096" : nsz), \
+        (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host") > "/dev/stderr"
+    }
     # THE COLUMN DENOMINATOR IS NOT THE CRITERION DENOMINATOR, and after #6 that has
     # to be said in the caption rather than inferred from the column. "8x the 1-thread
     # peak" is a true statement about what the percent divides by and an unattainable
@@ -321,19 +429,29 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # arrived as a rank inversion and is now a spread.
       cl = ""; gp = ""
       for (i = 1; i <= nh; i++) {
-        h = order[i]; if (!(h in ceil8) || !(h in peak)) continue
-        lo = ""; hi = ""; nj = 0
-        for (j = 1; j <= n; j++) if ((h, R[j]) in frr) {
-          v = frr[h, R[j]] + 0; nj++
+        h = order[i]
+        # The ceiling and the peak are both pooled, and the RATIO of the two is what this
+        # prints -- so both must come from the same pool or the gap between the denominators
+        # would be a gap between eras. med() over the same file list gives that for free.
+        hc = med(ceil8, h); hp = med(peak, h)
+        if (hc == "" || hp == "") continue
+        lo = ""; hi = ""
+        # The shares are the JUDGED run'"'"'s, not the pool'"'"'s: they are the readings the bar
+        # compared against, and a median share would not be the number anything judged.
+        for (j = 1; j <= n; j++) if ((h, R[j]) in fr1) {
+          v = fr1[h, R[j]] + 0
           if (lo == "" || v < lo) lo = v; if (hi == "" || v > hi) hi = v
         }
         if (lo == "") continue
         cl = cl (cl == "" ? "" : "; ") sprintf("%s %.1f-%.1f%%", model[h], lo, hi)
-        gp = gp (gp == "" ? "" : ", ") sprintf("%.0f%%", 100 * (ceil8[h] + 0) / (8 * peak[h]))
+        gp = gp (gp == "" ? "" : ", ") sprintf("%.0f%%", 100 * hc / (8 * hp))
       }
       sub(/, ([^,]*)$/, " and&", gp); sub(/ and, /, " and ", gp)
       if (cl != "")
-        printf "Measured this run, as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings'"'"' own rates are deliberately not republished here: nothing in the table above re-measures them, and a rate no instrument re-checks is a claim rather than a measurement (§7 rule 7, and criterion 9 is what noticed). They are in the gate log this caption names, and publishing them here means first making them re-measured rows.\n\n", (nt == "" ? "8" : nt), cl, gp, retired > "/dev/stderr"
+        # "In the judged run", not "this run": these shares are the readings the bar compared
+        # against, so they come from one archive while the table above pools every archive.
+        # Under pooling "this run" has no referent, and the shares would read as medians.
+        printf "Measured in the judged run, as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings'"'"' own rates are deliberately not republished here: nothing in the table above re-measures them, and a rate no instrument re-checks is a claim rather than a measurement (§7 rule 7, and criterion 9 is what noticed). They are in the gate %s this caption names, and publishing them here means first making them re-measured rows.\n\n", (nt == "" ? "8" : nt), cl, gp, retired, (nf == 1 ? "log" : "logs") > "/dev/stderr"
     }
     # The bars in words, not as a ">= %s" with a hole in it. Either may be deferred to
     # its own measurement and both have been, at different times and for the same
@@ -419,10 +537,25 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       print "These are published shortfalls against bars checked on every gate run, not regressions against an earlier reading." > "/dev/stderr"
     }
   }
-' "$LOG" 2>build/.readme-numbers.cap)" || { cat build/.readme-numbers.cap >&2; die "the log did not yield a complete block; README.md is untouched"; }
+' "${LOGS[@]}" 2>build/.readme-numbers.cap)" || { cat build/.readme-numbers.cap >&2; die "the logs did not yield a complete block; README.md is untouched"; }
 
 CAPTION="$(awk 'f {print} /^CAPTION:$/ {f=1}' build/.readme-numbers.cap)"
 [[ -n "$CAPTION" ]] || die "no caption was derived, and a block without its disclosure is the drift this script exists to end"
+
+# A HOST LEAVES THE BLOCK WITHOUT ANY ROW FAILING. Rows are medians over one era's
+# archives, so a host with no archive in that era is not thin -- it is absent, and
+# absence is the one change 24 green rows cannot report. Derived against the LAST
+# PUBLISHED block, not the working copy: comparing to README.md on disk would print
+# this on the first run and drop it on the second, which is the silent loss it guards.
+# Fails closed -- an unreadable HEAD says so rather than saying nobody left.
+models() { awk -F' *\\| *' '/^\| .* \| [0-9]+ \| /{print $2}' | sort -u; }
+if OLD_README="$(git show HEAD:README.md 2>/dev/null)" && [[ -n "$OLD_README" ]]; then
+  GONE="$(comm -23 <(printf '%s\n' "$OLD_README" | models) <(printf '%s\n' "$BLOCK" | models) \
+    | awk '{s = s (NR > 1 ? "; " : "") $0} END {printf "%s", s}')"
+  [[ -z "$GONE" ]] || CAPTION="$CAPTION"$'\n\n'"In the previously published block and not in this one: $GONE. A host with no archive in an era cannot be a median over it, so it leaves the table rather than being marked inside it; the era's stated exclusions are in \`scripts/measurement-eras.tsv\`."
+else
+  CAPTION="$CAPTION"$'\n\n'"Whether a host left the block since the last published one is undetermined here: \`git show HEAD:README.md\` was unreadable."
+fi
 
 if [[ "$DRY" == "-n" ]]; then
   printf '%s\n%s\n%s\n\n%s\n%s\n%s\n' "$NUM_BEGIN" "$BLOCK" "$NUM_END" "$CAP_BEGIN" "$CAPTION" "$CAP_END"
@@ -452,4 +585,4 @@ splice "$NUM_BEGIN" "$NUM_END" build/.readme-numbers.block
 splice "$CAP_BEGIN" "$CAP_END" build/.readme-numbers.caption
 # Counted on the threads column, not on a leading "| [A-Z]", which also matches the
 # "| CPU | benchmark |" header and reported 25 rows for 24.
-echo "readme-numbers: README.md rewritten from $LOG ($(printf '%s\n' "$BLOCK" | grep -cE '^\| .* \| [0-9]+ \| ') rows)"
+echo "readme-numbers: README.md rewritten from ${#LOGS[@]} log(s) — ${LOGS[*]} ($(printf '%s\n' "$BLOCK" | grep -cE '^\| .* \| [0-9]+ \| ') rows)"

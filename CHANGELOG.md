@@ -182,6 +182,22 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The published numbers are per-row medians over an era's archives, and the verdicts beside them still are
+  not** (`scripts/readme-numbers.sh`, #6; the ratified repair). The generator now takes any number of
+  `gate-p5` logs and reduces each cell across them (§5 rule 16), every cell naming its own estimator —
+  currently `median of N=2 archives` on all 24 rows, over rev `969c360` (judged) and `6ba6566`. Verdicts do
+  **not** pool: a verdict belongs to the gate that rendered it and two cannot be averaged, so the judged log
+  is identified **by content** rather than by position, two judged logs are refused outright, and argument
+  order is provably irrelevant — both orders print skx `Sgemm` 1T as `66.01`, which is `(66.18 + 65.84)/2`
+  recomputed by hand. The cross-check against each run's own printed share moved per-archive, because a
+  pooled median matches no single log by construction. **Host coverage moved with the era**: `keel-skx`'s
+  eight rows are born, and `Intel(R) Xeon(R) 6975P-C` leaves with 8 free archives and 0 pinned — a stated
+  exclusion in `scripts/measurement-eras.tsv` since 2026-08-22, not an unmet condition. A departing host is
+  the one change 24 green rows cannot report, so the generator diffs the CPU-model set against the **last
+  published** block — not the working copy, which would print the notice on the first run and drop it on the
+  second — and says it in the caption, failing closed when `HEAD` is unreadable. **Confirmation semantics,
+  stated because they are weaker than a green:** rows regenerated *from* these archives agree with these
+  archives by construction, so criterion 9's meaningful green arrives on the **next** judged run.
 - **`scripts/detach.sh` forwards no environment, so a detached run can be a different program than the
   same command typed directly** (measured 2026-08-22; no code change, recorded and worked around at the
   call site). The generated runner is `cd $ROOT` plus a `printf '%q '` of argv and nothing else, so a
@@ -676,6 +692,14 @@ While the major version is 0, minor versions may contain breaking changes.
   should have run before writing the sentence.
 
 ### Fixed
+- **A failed 8-thread parse published the previous routine's rate** (`scripts/readme-numbers.sh`, #6). `t1`
+  and `t8` were never cleared between rate lines, so a line whose `8 threads` match missed carried the last
+  successful routine's figures into the table under the new routine's name — silently, because a stale float
+  reads exactly like a measured one. Both are now cleared explicitly and the mismatch refuses the run;
+  controlled by mangling one rate line, which fires on all three hosts. Found while auditing a check added in
+  the same pass and then deleted as unreachable — `one` and `eight` parse from the same line, so their pools
+  are symmetric by construction. The unreachable check was apparatus that could not pay its way, and taking
+  it out is what exposed the reachable defect beneath it.
 - **The README generator read a verdict line's prefix and not its prose, so a run judged by no bar published
   as clearing bars derived from it** (`scripts/readme-numbers.sh`, #6/#37). Take four's rows are prefixed
   `PASS` and say `NO FRACTION IN FORCE` / `NO FLOOR IN FORCE` in the same sentence — `PASS` only because
