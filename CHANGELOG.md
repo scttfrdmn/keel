@@ -182,6 +182,18 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **The share denominator was the one reading in the log with no range and no marker**
+  (`scripts/gate-p5.sh`, `scripts/remote-exec-test.sh` §9g, ruled 2026-08-28 on #6). The per-host ceiling
+  line hand-built its own `+/- %.2f%%` and never called `bench_describe`, so rule 20's disclosure — the
+  range beside the interval, and `RANK-WINDOW-BLIND` when a printed zero sits under a span refuting it —
+  reached every judged rate and **not** the number all three of them are divided by. keel-skx's
+  confirmation run printed `ceiling: compute 1444 GFLOP/s +/- 0.00%` on exactly that line. Routed through
+  the one renderer; the nine verdict lines that cite the ceiling now cite `CEIL8P`, the disclosure's own
+  value token, because `%.4g` and benchstat's raw CSV field differ on a 5-significant-figure rate and a
+  log stating its denominator two ways is the defect one layer along. **No fixture over `bench_describe`
+  could have caught this** — the renderer was correct and simply unreached — so §9g extracts the three
+  lines from `gate-p5.sh`'s own bytes and evals them with `info` stubbed, plus a positive-controlled
+  static check that no site still renders the raw field.
 - **Era `pinned8` is CLOSED, and `keel-skx` is the first host in `scripts/host-baselines.tsv`**
   (`scripts/measurement-eras.tsv`, `scripts/judged-runs.tsv`, `archive/pinned8/`, #6). The spread arm's
   21 archives are preserved and indexed (`INDEX-spread.tsv`: 9 `ladder` at `instrument=v2`, 12

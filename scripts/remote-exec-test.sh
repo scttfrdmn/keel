@@ -915,6 +915,65 @@ bd_case "an unbounded interval says so instead of printing a width" \
   "2291 GFLOP/s (no CI: too few or too noisy samples)" \
   "Judged,2291,∞,∞,∞,1989,2296"
 
+# §9f exercises the renderer; this exercises the CALL SITE, which is where the defect was.
+# gate-p5.sh:867 hand-built `+/- %.2f%%` and never called bench_describe, so the ceiling was
+# the one reading in the log with no range and no marker -- and no fixture over bench_describe
+# could have found that, because the renderer was correct and simply unreached. So the three
+# lines are EXTRACTED FROM THE GATE'S OWN BYTES and eval'd with `info` stubbed, the technique
+# exercise-dead-host.sh uses on criterion 5b for the same reason: a copy of the line here would
+# certify the copy (§5, uniformity is not correctness).
+head_ "9g. rule 20 reaches the share denominator, driven from gate-p5.sh's bytes"
+CEIL_SITE="$(sed -n '/^ *CEIL8D="\$(bench_describe/,/^ *info "\[\$host\] ceiling: compute \$CEIL8D/p' scripts/gate-p5.sh)"
+if [[ "$(grep -c . <<<"$CEIL_SITE")" -ne 3 ]]; then
+  fail_ "the ceiling disclosure could not be extracted from gate-p5.sh (got $(grep -c . <<<"$CEIL_SITE") lines, want 3)"
+else
+  ceil_case() {  # note, expected-substring, csv-body
+    local note="$1" want="$2" body="$3" out f
+    f="$(mktemp)" || return
+    printf ',GFLOP/s\n%s\n' "$body" > "$f"
+    out="$(
+      info() { printf '%s\n' "$1"; }
+      compute_name() { printf 'Ceiling/compute/avx512/threads=%s' "$1"; }
+      BENCHCSV="$f" P5_THREADS=8 host=keel-skx CEIL1=193.3 SCALE_FLOOR_RETIRED=6.0
+      CEIL8="$(bench_gflops "$(compute_name 8)" "$BENCHCSV")"
+      eval "$CEIL_SITE"
+      printf 'CEIL8P=%s CEIL8=%s\n' "$CEIL8P" "$CEIL8"
+    )"
+    rm -f "$f"
+    [[ "$out" == *"$want"* ]] && pass_ "$note" || fail_ "$note -> [$out], wanted [$want]"
+  }
+  # The reading that motivated the fix: keel-skx's confirmation ceiling printed `+/- 0.00%` on
+  # the denominator of all three of its shares. Under the routed line it is NAMED.
+  ceil_case "the skx confirmation ceiling now carries its range and the marker" \
+    "compute 1444 GFLOP/s +/- 0.0% [1398, 1451] RANK-WINDOW-BLIND(span 3.67% under a 0.0% interval) measured at 8 threads" \
+    "Ceiling/compute/avx512/threads=8,1444,0.00%,1444,1444,1398,1451"
+  # Take four's 0.07%: prints 0.1%, asserts nothing the range refutes, so no marker. The
+  # negative control -- without it the section passes on a predicate that names everything.
+  ceil_case "the take-four ceiling prints 0.1% and is not named" \
+    "compute 1444 GFLOP/s +/- 0.1% [1398, 1451] measured at 8 threads" \
+    "Ceiling/compute/avx512/threads=8,1444,0.07%,1444,1444,1398,1451"
+  # MAKE THE QUANTITY MOVE. Both renderings read 1444 above, so agreement there certifies
+  # nothing; benchstat emits 5 significant figures on some rates, and on one of those the
+  # display token and the raw arithmetic field DIFFER. That difference is the whole reason
+  # the nine verdict lines were repointed at CEIL8P: otherwise the log states its denominator
+  # twice, two ways. The expected token is the MEASURED one -- I predicted 66.57 and `%.4g`
+  # gives 66.56, rounding half to even on the binary value, so the digit here is read off the
+  # instrument and not off the arithmetic I did in my head.
+  ceil_case "a 5-significant-figure median renders differently than it divides" \
+    "CEIL8P=66.56 CEIL8=66.565" \
+    "Ceiling/compute/avx512/threads=8,66.565,0.10%,66.5,66.6,66.5,66.6"
+  # The forgotten-site check, static because no run can prove a site absent: a repointing is
+  # nine mechanical edits and the ninth is the one that gets missed. Positive-controlled in the
+  # same tool first, since a pattern that matches nothing greens exactly like a clean tree.
+  if ! grep -qE '\$CEIL8 GFLOP/s' <<<'x $CEIL8 GFLOP/s x'; then
+    fail_ "the forgotten-site pattern does not match its own positive control"
+  elif grep -qE '\$CEIL8 GFLOP/s' scripts/gate-p5.sh; then
+    fail_ "gate-p5.sh still renders the denominator from the raw field: $(grep -cE '\$CEIL8 GFLOP/s' scripts/gate-p5.sh) site(s)"
+  else
+    pass_ "no verdict line renders the denominator from the raw field instead of the disclosure's"
+  fi
+fi
+
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"

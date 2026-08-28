@@ -864,8 +864,19 @@ else
     # criterion does not care which it is -- the point is that the shortfall is real and
     # measured rather than assumed to be zero.
     # Published because a summary that drops its CI makes its own correction unsizable (#6).
-    CEIL8CI="$(bench_stat "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s | awk '{ if ($2 == "inf") print "unbounded"; else printf "%.2f%%", $2*100 }')"
-    info "[$host] ceiling: compute $CEIL8 GFLOP/s +/- ${CEIL8CI} measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading. That shortfall is what the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here"
+    # ONE RENDERER FOR THE DENOMINATOR (ruled 2026-08-28, #6). This line hand-built its own
+    # `+/- %.2f%%` and never called bench_describe, so the ceiling — the denominator of every
+    # share below — was the one reading in the log carrying no range and no RANK-WINDOW-BLIND
+    # marker: rule 20's concealment class, uncovered on the number where it matters most,
+    # having printed +/- 0.00% on keel-skx's confirmation run. CEIL8P is that same phrase's
+    # value token, so the nine verdict lines below cite the denominator in the rendering the
+    # disclosure printed instead of a second one — benchstat's CSV field carries 5 significant
+    # figures on some rates, so `%.4g` and the raw field are not identical by luck. Reached
+    # only with a measured ceiling, the empty check above having already continued, which is
+    # also why the "not measured" phrase cannot reach CEIL8P.
+    CEIL8D="$(bench_describe "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s)"
+    CEIL8P="${CEIL8D%% *}"
+    info "[$host] ceiling: compute $CEIL8D measured at $P5_THREADS threads, against $CEIL1 at 1 thread — $(awk -v a="$CEIL8" -v b="$CEIL1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the 1-thread reading. That shortfall is what the retired ${SCALE_FLOOR_RETIRED}x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here"
     for p in dot axpy; do
       bw="$(bench_stat "$(stream_name "$p" "$P5_THREADS")" "$BENCHCSV" GB/s)"
       bw1="$(bench_stat "$(stream_name "$p" 1)" "$BENCHCSV" GB/s)"
@@ -922,7 +933,7 @@ else
     done
     CEIL_IMP="$(bench_ceiling_refused "$CEIL8" "$CEIL_PAIRS")" || CEIL_IMP=""
     if [[ -n "$CEIL_IMP" ]]; then
-      info "[$host] ceiling: REFUSED as a denominator — $CEIL8 GFLOP/s is below the ${P5_THREADS}-thread rate of $CEIL_IMP. Every share row on this host is unmeasured below; the scaling readings still print, and Strsm's floor still applies, because neither divides by this number"
+      info "[$host] ceiling: REFUSED as a denominator — $CEIL8P GFLOP/s is below the ${P5_THREADS}-thread rate of $CEIL_IMP. Every share row on this host is unmeasured below; the scaling readings still print, and Strsm's floor still applies, because neither divides by this number"
     fi
 
     HOST_CLEARED=1
@@ -1076,13 +1087,13 @@ else
       # pass. So this cannot be expressed as a bar: at no confidence level is dividing by an
       # impossible ceiling a verdict, and there is no CI at which it becomes one.
       if [[ -n "$CEIL_IMP" ]]; then
-        unmeasured "[$host] $r: no share of the ${P5_THREADS}-thread ceiling is computable — the ceiling reading $CEIL8 GFLOP/s sits BELOW a rate it denominates ($CEIL_IMP), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that $r regressed"
+        unmeasured "[$host] $r: no share of the ${P5_THREADS}-thread ceiling is computable — the ceiling reading $CEIL8P GFLOP/s sits BELOW a rate it denominates ($CEIL_IMP), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that $r regressed"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
       fi
       ratio="$(bench_ratio_lo "$many" "$(compute_name "$P5_THREADS")" "$BENCHCSV" GFLOP/s)"
       if [[ -z "$ratio" ]]; then
-        unmeasured "[$host] $r: no bounded fraction of the ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) can be formed — an unbounded rate or a non-positive ceiling, and the printed ceiling says which. Either is a broken denominator rather than a verdict"
+        unmeasured "[$host] $r: no bounded fraction of the ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s) can be formed — an unbounded rate or a non-positive ceiling, and the printed ceiling says which. Either is a broken denominator rather than a verdict"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
       fi
@@ -1104,7 +1115,7 @@ else
       fi
       SHARE_WIDTH="$(awk -v r="$ratio_raw" -v n="$ratio" 'BEGIN{ printf "%.2f", 100*(r-n) }')"
       if awk -v w="$SHARE_WIDTH" -v c="$BASELINE_MARGIN" 'BEGIN{exit !(w > c)}'; then
-        reported "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), scaling ${pt}x / ${lo}x — NOISE-LIMITED, NOT JUDGED: the intervals cost this share ${SHARE_WIDTH} points (raw $(awk -v x="$ratio_raw" 'BEGIN{printf "%.1f", 100*x}')% net to ${frac}%), which exceeds the ${BASELINE_MARGIN}-point margin every bar here is set by, so no comparison at this bar has the resolution to decide it. The reading stands and is archived; what is refused is the verdict, not the number"
+        reported "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), scaling ${pt}x / ${lo}x — NOISE-LIMITED, NOT JUDGED: the intervals cost this share ${SHARE_WIDTH} points (raw $(awk -v x="$ratio_raw" 'BEGIN{printf "%.1f", 100*x}')% net to ${frac}%), which exceeds the ${BASELINE_MARGIN}-point margin every bar here is set by, so no comparison at this bar has the resolution to decide it. The reading stands and is archived; what is refused is the verdict, not the number"
         HOST_NOISY_ROWS=$((HOST_NOISY_ROWS + 1))
         continue
       fi
@@ -1130,7 +1141,7 @@ else
         # UNEXERCISED: an unreadable model means remote_probe failed, and a host that
         # cannot answer a probe did not produce the benchmark rows this line stands after
         # — so the branch is written fail-closed and stated as unreached (§5 rule 12).
-        unmeasured "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), but the CPU model is unreadable so no bar can be keyed to this host: the reading is unjudged rather than cleared (#6)"
+        unmeasured "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), but the CPU model is unreadable so no bar can be keyed to this host: the reading is unjudged rather than cleared (#6)"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
       elif [[ "$DERIV" -eq 1 && -n "$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT" "$P5_ERA")" ]]; then
@@ -1157,7 +1168,7 @@ else
           # printed as a debt below rather than absorbed (judged-runs.tsv states the trade).
           [[ "$HOST_BASE" -eq 0 ]] && baseline_candidate "$WITNESS_CANDIDATES" \
             "$hcpu" "$P5_ERA" "$P5_REV" "$(date -u +%Y-%m-%d)" "$host" "$BENCH_ARCHIVE"
-          baseline "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), and this silicon has no registered baseline and no witness row in era $P5_ERA: the fleet bar's reference artifact predates its admission to this era, so the reading is RECORDED as its candidate baseline rather than judged (#6). Candidate rows: $BASELINE_CANDIDATES and $WITNESS_CANDIDATES"
+          baseline "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), and this silicon has no registered baseline and no witness row in era $P5_ERA: the fleet bar's reference artifact predates its admission to this era, so the reading is RECORDED as its candidate baseline rather than judged (#6). Candidate rows: $BASELINE_CANDIDATES and $WITNESS_CANDIDATES"
           HOST_BASE=1
         else
           BASELINE_OWING="$BASELINE_OWING $host/$BCRIT"
@@ -1178,11 +1189,11 @@ else
         # The STRSM_FLOOR precedent (#37): measured, reported, and the input to setting
         # the bar rather than a bar itself. Named as unjudged so no reader can mistake a
         # silent pass for cleared coverage — this class HAS no floor in force right now.
-        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, NO FRACTION IN FORCE (#6): 51.0 was typed 2026-08-22 from confined-mask rows and is suspended at the spread amendment the same day, so this reading is an input to re-deriving it, and neither that bar nor the retired ${SCALE_FLOOR_RETIRED}x floor is applied"
+        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, NO FRACTION IN FORCE (#6): 51.0 was typed 2026-08-22 from confined-mask rows and is suspended at the spread amendment the same day, so this reading is an input to re-deriving it, and neither that bar nor the retired ${SCALE_FLOOR_RETIRED}x floor is applied"
       elif awk -v v="$frac" -v f="$BBAR" 'BEGIN{exit !(v >= f)}'; then
-        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (>= ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"
+        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s) (>= ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"
       else
-        fail "[$host] $r reaches only ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8 GFLOP/s) (< ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"
+        fail "[$host] $r reaches only ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s) (< ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"
         HOST_CLEARED=0
         HOST_MISSED=1
       fi
