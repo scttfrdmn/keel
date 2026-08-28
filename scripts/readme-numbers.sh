@@ -391,10 +391,16 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # The judged run leads, and not for style: docs-gen.sh:92 takes the FIRST match and exits,
     # so whichever rev is named first is the one that as-of dates the whole numbers page. That
     # is the judged run, because the verdicts on the page are its verdicts.
+    # THE PATH AS INVOKED, not a basename under a hardcoded `build/`. This said `build/`
+    # literally, which is right on the machine that ran the gate and a dead citation
+    # everywhere else, because build/ is gitignored — the #114 defect at the PUBLICATION
+    # layer: 24 green rows citing evidence no reader could open. Printing the argument
+    # makes the sentence as verifiable as the caller chose to make it, and preserving the
+    # logs into archive/ is what makes that choice available (era pinned8, 2026-08-28).
     src = ""; jrev = (jf in frev ? frev[jf] : "")
-    src = sprintf("`build/%s`", bn(jf))
+    src = sprintf("`%s`", jf)
     for (q = 1; q <= nf; q++) if (flist[q] != jf) {
-      src = src sprintf(", `build/%s`", bn(flist[q]))
+      src = src sprintf(", `%s`", flist[q])
       others = others (others == "" ? "" : ", ") sprintf("`%s`", (flist[q] in frev ? frev[flist[q]] : "unrecorded"))
     }
     # ONE RUN vs AN ERA is a different provenance claim, so it is a different sentence rather

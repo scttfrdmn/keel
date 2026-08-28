@@ -1,0 +1,51 @@
+keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+keel-bench-cpu: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz
+keel-bench-cores: 8 logical
+keel-bench-governor: unknown (no cpufreq)
+keel-bench-clock-mhz: 1197-3426 (snapshot, not sustained)
+keel-bench-platform: linux/amd64
+keel-bench-backend: avx512 (available: avx512 avx2 scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: avx512: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: avx2: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: scalar: unavailable (no cpuinfo_max_freq)
+keel-bench-gomaxprocs: 8
+keel-bench-kern: 2x32/avx512 (available: 4x32/avx512 2x32/avx512 4x32/scalar 2x32/scalar)
+keel-bench-kern-class: issue insns-per-fma=4.625 (avx512 without vbmi2+vpopcntdq (Skylake-X / Cascade Lake / Cooper Lake generation))
+keel-bench-kern-audit: 4x32/avx512=6.250 2x32/avx512=4.625
+keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+goos: linux
+goarch: amd64
+pkg: github.com/scttfrdmn/keel/bench
+cpu: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz
+BenchmarkPeak/avx512-8         	    8115	    130805 ns/op	       192.4 GFLOP/s
+BenchmarkPeak/avx512-8         	    8996	    130578 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9200	    130694 ns/op	       192.6 GFLOP/s
+BenchmarkPeak/avx512-8         	    9106	    130584 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9064	    130547 ns/op	       192.8 GFLOP/s
+BenchmarkPeak/avx512-8         	    9224	    130560 ns/op	       192.8 GFLOP/s
+BenchmarkPeak/avx512-8         	    9076	    130664 ns/op	       192.6 GFLOP/s
+BenchmarkPeak/avx512-8         	    9006	    130620 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9070	    130529 ns/op	       192.8 GFLOP/s
+BenchmarkPeak/avx512-8         	    8971	    130669 ns/op	       192.6 GFLOP/s
+BenchmarkPeak/avx512-8         	    9123	    130518 ns/op	       192.8 GFLOP/s
+BenchmarkPeak/avx512-8         	    8967	    130514 ns/op	       192.8 GFLOP/s
+BenchmarkPeak/avx512-8         	    8980	    130814 ns/op	       192.4 GFLOP/s
+BenchmarkPeak/avx512-8         	    9145	    130512 ns/op	       192.8 GFLOP/s
+BenchmarkPeak/avx512-8         	    9024	    130575 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9075	    130473 ns/op	       192.9 GFLOP/s
+BenchmarkPeak/avx512-8         	    9108	    130582 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9187	    130474 ns/op	       192.9 GFLOP/s
+BenchmarkPeak/avx512-8         	    9063	    130549 ns/op	       192.8 GFLOP/s
+BenchmarkPeak/avx512-8         	    9087	    131136 ns/op	       191.9 GFLOP/s
+BenchmarkPeak/avx512-8         	    9241	    130611 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9090	    130612 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9154	    130663 ns/op	       192.6 GFLOP/s
+BenchmarkPeak/avx512-8         	    8977	    130575 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9061	    130672 ns/op	       192.6 GFLOP/s
+BenchmarkPeak/avx512-8         	    9056	    130576 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    9051	    130693 ns/op	       192.6 GFLOP/s
+BenchmarkPeak/avx512-8         	    9232	    130489 ns/op	       192.9 GFLOP/s
+BenchmarkPeak/avx512-8         	    9015	    130602 ns/op	       192.7 GFLOP/s
+BenchmarkPeak/avx512-8         	    8961	    130685 ns/op	       192.6 GFLOP/s
+PASS

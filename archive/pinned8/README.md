@@ -23,8 +23,9 @@ evidence that the amendment was needed.
 offered. None of these 24 do, so the two arms are separable by their own witnesses with no edit
 to either, which is the membership discipline this file already uses one field over.
 
-The free half of the transition is `archive/free-placement/` (35 archives). What this directory
-does *not* do is close the era — see "why `transition_archive` is still `—`".
+The free half of the transition is `archive/free-placement/` (35 archives). These 24 confined files
+do *not* by themselves close the era; the spread arm that does now sits beside them — see
+"`transition_archive` is filled and the era is CLOSED".
 
 ## Membership is a measured predicate, not a revision range
 
@@ -70,12 +71,37 @@ BASELINE-REGISTERED exercise, which drove that host repeatedly. Those archives a
 regardless: the era's arm is every reading the instrument took, not only the readings a criterion
 judged, exactly as the free arm includes its `clock-window` files.
 
-## Why `transition_archive` is still `—`
+## `transition_archive` is filled and the era is CLOSED (2026-08-28)
 
-**Because the campaign that fills it has not run yet.** The column wants the fleet measured under
-the old instrument and the new one, and as of the 2026-08-22 amendment the new instrument is the
-spread mask — so the pinned half of the transition is the spread-form campaign, not these 24
-files. They are the arm of a form that no longer defines the era.
+**It was empty because the campaign that fills it had not run.** The column wants the fleet
+measured under the old instrument and the new one, and from the 2026-08-22 amendment the new
+instrument is the spread mask — so the pinned half of the transition is the spread-form campaign,
+not the 24 confined files, which are the arm of a form that no longer defines the era.
+
+That campaign has now run and **its 21 archives are preserved here**, indexed in
+`INDEX-spread.tsv`: 9 `ladder` sweeps at `instrument=v2` (three revs × three judged hosts) and 12
+`clock-window` peak logs from the same runs. Both arms preserve both `kind`s, which is what lets
+them be enumerated on the same terms. Membership is the **measured predicate** in both directions —
+spread self-identifies by carrying `doms=`/`nodedoms=`, confined by lacking it — so the two indexes
+partition this directory and each is the other's complement rather than a list someone maintained.
+
+The three judged CPU models are present in **both** arms, which is the condition itself:
+
+| cpu_model | free | confined | spread |
+|---|---|---|---|
+| `AMD EPYC 9R14` | 11 | 4 | 3 |
+| `AMD EPYC 9R45` | 10 | 5 | 3 |
+| `Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz` | 6 | 15 | 3 |
+| `Intel(R) Xeon(R) 6975P-C` | 8 | 0 | 0 |
+
+**What actually forced the preservation was not this column.** The published README rows cited
+their own evidence as `build/` paths, and `build/` is gitignored — so 24 published numbers rested
+on logs present on one operator's machine and nowhere in the repo. That is #114's defect arriving
+at the *publication* layer rather than the witness layer: right for the reader who ran the gate,
+unverifiable for every other one. Preserving the arm fixes the era condition and the provenance
+citation with one act, and the README was regenerated against the `archive/` paths so its sentence
+resolves for anyone with a clone. The three driver logs the generator reads are preserved beside
+the archives for the same reason: a citation to a file nobody else has is not provenance.
 
 The **gnr question is settled and is no longer why this column is empty.** `Intel(R) Xeon(R)
 6975P-C` appears 8 times in the free arm and 0 times here because `keel-gnr` was ruled a
@@ -85,9 +111,12 @@ record rather than an unmet condition, since the era certifies nothing about a h
 govern. A pinned-era gnr re-measure stays available as characterization work (#104/#112) and is
 not owed to this column.
 
-Note what provisional does not cost: the era table says PROVISIONAL "is a disclosure, not a
-permission — it does not widen what BASELINE covers", and what bounds BASELINE is
-`scripts/judged-runs.tsv`, one row per `(host, era)`, provisional or not.
+Note what provisional never cost, now that it is behind us: the era table says PROVISIONAL "is a
+disclosure, not a permission — it does not widen what BASELINE covers", and what bounds BASELINE is
+`scripts/judged-runs.tsv`, one row per `(host, era)`, provisional or not. Closing the era therefore
+loosened nothing; it landed the row that **spends** keel-skx's one BASELINE, which is the opposite
+direction. That row and the three baselines beside it went in together on purpose: a witness with no
+baseline is the `owing` state, which gate-p5 renders **FAIL**.
 
 ## This set is not closed, unlike the free arm — but its confined subset is
 

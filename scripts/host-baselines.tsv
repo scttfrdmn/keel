@@ -52,15 +52,36 @@
 # convergence for them is a post-tag option, not something smuggled in with this
 # mechanism.
 #
-# THERE ARE NO DATA ROWS YET, and that is a measurement state rather than an
-# oversight — now for a second reason, and the two are worth keeping apart. The first:
-# keel-skx's share baseline cannot be imported from the free-instrument runs that
-# measured it (5ec5fea, 33de3b2), because a published reference is an estimator, never
-# a draw (§5 rule 16), and both of those are single draws. The second, and it is why
-# the file is empty for the WHOLE FLEET rather than for one host: the current era is
-# `pinned8`, opened 2026-08-21, and no row can exist in an era before the run that
-# measures it. Every host renders BASELINE on the transition run, by design and once.
-# The rows below are born from that run's pinned arm (#6).
+# THE FIRST ROWS LANDED 2026-08-28, and what unblocked them is worth recording, because
+# both of the reasons this file was empty had to be discharged and only one of them was
+# about waiting. The first: keel-skx's share baseline cannot be imported from the
+# free-instrument runs that measured it (5ec5fea, 33de3b2), because a published reference
+# is an estimator, never a draw (§5 rule 16), and both of those are single draws. That is
+# now satisfied by a median over the era's TWO judged archives. The second, and it is why
+# the file was empty for the WHOLE FLEET rather than for one host: no row can exist in an
+# era before the run that measures it, so every host rendered BASELINE on the transition
+# run, by design and once. Era `pinned8` now has both arms preserved and is closed.
+#
+# THE VALUES ARE NOT THE PRINTED SHARES, and this is the non-obvious part of the
+# derivation. A share is net of BOTH intervals (bench_ratio_lo: the rate's low bound over
+# the ceiling's high bound), so it is a function of the CI instrument — and #116, which
+# fixed a mirrored one-sided median CI, landed at b13f398, BETWEEN the era's two judged
+# revs. Take four (6ba6566) therefore PRINTED shares computed with the over-wide pre-#116
+# bounds, and pooling those printed numbers with 969c360's would have averaged across an
+# instrument change: the cross-denominator error this file's era column exists to prevent,
+# arriving through the pool instead of through the era. So take four is recomputed from its
+# archived raw samples under the current instrument, exactly as CEIL_FRACTION was
+# (969c360's commit message; §5 rule 16). Positive control: the same recomputation
+# reproduces 969c360's printed 31.2/31.5/30.6 to the digit. The correction moves every
+# affected row UP — 29.7→30.4 and 29.8→30.1, Ssyrk unchanged — which is the direction an
+# over-wide interval predicts, and it matters because pooling the printed values would have
+# registered baselines 0.35 and 0.15 points LOW on two of three criteria, i.e. a
+# permanently looser bar with nothing to reopen it (§5 rule 15: the flattering direction is
+# the half nobody re-examines).
+#
+# NO ROW FOR keel-zen4 OR keel-zen5, deliberately and not by omission: both are in
+# CEIL_DERIVED_FROM, and gate-p5 FAILS a host claimed by both that list and this registry
+# rather than picking a winner. They are the artifact, so they stay on the fleet bar.
 #
 # columns, tab-separated:
 #   1 cpu_model  the exact string the host reports, as gate-p5 greps it
@@ -72,3 +93,6 @@
 #   7 as_of      the date the row was landed
 #   8 grounds    why this host has its own baseline rather than the fleet's
 cpu_model	criterion	era	baseline	estimator	source	as_of	grounds
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	share/Sgemm	pinned8	30.80	median of N=2 archived judged runs in era pinned8: 969c360 (31.2, as printed) and 6ba6566 take four (30.4, RECOMPUTED from its archived raw samples under #116 because its printed 29.7 used the pre-b13f398 mirrored CI). Both rows admissible under §5 rule 19: share intervals 0.10/0.00 points against the 2.6-point cap	archive/pinned8/bench-gate-p5-969c360-keel-skx-20260823T045149Z-1.txt + archive/pinned8/bench-gate-p5-6ba6566-keel-skx-20260823T004407Z-1.txt	2026-08-28	admitted after CEIL_FRACTION's derivation set (DERIV=0), so the fleet bar's reference artifact predates this host's admission to this era (§5 rule 17)
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	share/Ssyrk	pinned8	31.40	median of N=2 archived judged runs in era pinned8: 969c360 (31.5, as printed) and 6ba6566 take four (31.3, recomputed from its archived raw samples under #116 for uniformity with the other two rows; this is the one criterion the correction left unmoved, its printed value having been 31.3 as well). Both rows admissible under §5 rule 19: share intervals 0.10/0.00 points against the 2.6-point cap	archive/pinned8/bench-gate-p5-969c360-keel-skx-20260823T045149Z-1.txt + archive/pinned8/bench-gate-p5-6ba6566-keel-skx-20260823T004407Z-1.txt	2026-08-28	admitted after CEIL_FRACTION's derivation set (DERIV=0), so the fleet bar's reference artifact predates this host's admission to this era (§5 rule 17)
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	share/Ssymm	pinned8	30.35	median of N=2 archived judged runs in era pinned8: 969c360 (30.6, as printed) and 6ba6566 take four (30.1, RECOMPUTED from its archived raw samples under #116 because its printed 29.8 used the pre-b13f398 mirrored CI). Both rows admissible under §5 rule 19: share intervals 0.20/0.10 points against the 2.6-point cap	archive/pinned8/bench-gate-p5-969c360-keel-skx-20260823T045149Z-1.txt + archive/pinned8/bench-gate-p5-6ba6566-keel-skx-20260823T004407Z-1.txt	2026-08-28	admitted after CEIL_FRACTION's derivation set (DERIV=0), so the fleet bar's reference artifact predates this host's admission to this era (§5 rule 17)

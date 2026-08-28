@@ -51,3 +51,4 @@
 #   5 host       the hostname that produced it — provenance, never a key
 #   6 archive    the archived log the run is recomputable from
 cpu_model	era	rev	as_of	host	archive
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	pinned8	969c360	2026-08-23	keel-skx	archive/pinned8/bench-gate-p5-969c360-keel-skx-20260823T045149Z-1.txt

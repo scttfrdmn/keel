@@ -182,6 +182,21 @@ While the major version is 0, minor versions may contain breaking changes.
   had the shape of a real bandwidth saturation finding.
 
 ### Changed
+- **Era `pinned8` is CLOSED, and `keel-skx` is the first host in `scripts/host-baselines.tsv`**
+  (`scripts/measurement-eras.tsv`, `scripts/judged-runs.tsv`, `archive/pinned8/`, #6). The spread arm's
+  21 archives are preserved and indexed (`INDEX-spread.tsv`: 9 `ladder` at `instrument=v2`, 12
+  `clock-window`), which fills `transition_archive`; all three judged CPU models appear in both arms
+  (9R14 11/4/3, 9R45 10/5/3, 8124M 6/15/3) and gnr's 8-free/0-pinned stays the stated exclusion.
+  **What forced the preservation was a live defect, not the era condition**: the published README rows
+  cited their evidence as `build/` paths and `build/` is gitignored, so 24 green numbers rested on logs
+  no reader could open — #114 at the *publication* layer. `readme-numbers.sh` now cites the path as
+  invoked instead of a basename under a hardcoded `build/`, and the page was regenerated against the
+  preserved logs; **no rate moved**. skx's three share baselines are **30.80 / 31.40 / 30.35**, medians
+  over the era's two judged archives — with take four **recomputed under #116**, because a share is net
+  of both intervals and the #116 fix landed *between* the two revs, so pooling its printed 29.7/31.3/29.8
+  would have averaged across a CI-instrument change and registered two of three baselines 0.35 and 0.15
+  points **low**, i.e. permanently looser. Baselines and witness landed together: a witness alone is the
+  `owing` state, which is FAIL.
 - **Rule 20's `RANK-WINDOW-BLIND` marker keys on the width as *printed*, not as stored** (`scripts/bench.sh`,
   DESIGN.md §5 rule 20 amended 2026-08-28, ruling on #6). The printed line is the assertion, so `± 0.003%`
   renders `0.0%`, makes a reader the identical claim as an exact zero, and earns identical scrutiny; the
