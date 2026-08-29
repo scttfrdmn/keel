@@ -9,6 +9,23 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **The provisioner installed a toolchain that cannot build the tree, and read an existing one as "new enough"**
+  (`scripts/provision-openblas.sh`). Its default was `go1.26.5` and its floor `GO_MIN_MINOR=26`, both correct when
+  1.26 was the first release with the simd experiment and both stale since T23's rename: from `fed1e70` the tree
+  does not compile on 1.26 at all. The two arms that care are the ones a *host's own* toolchain compiles, because
+  cgo forbids cross-building them — gate-p5's `-race` leg and gate-p3's openblas-tagged harness. Both died on
+  antares in `p5-preflight-1689d0b`, the second as `cannot use bp[0:16] (value of type []float32) as *[16]float32
+  value in argument to archsimd.LoadFloat32x16`, which took gate-p3 RED, gate-p4 RED with it, and gate-p5 RED.
+  The floor was the sharper half: gating on the minor only, a host already carrying 1.26.5 read as new enough and
+  was *linked rather than upgraded*, so the provisioner would have called a host ready for a harness it cannot
+  build. Default now `go1.27.0` (stable, published for linux/amd64) and floor `27`. Verified in situ under
+  `--check`, which now says `go on the ssh PATH is go1.26.5, and the harness needs go1.27.0 or newer` and predicts
+  gate-p3 will fail those hosts by name — the condition caught before a fleet run instead of during one.
+- **The same floor admitted a prerelease, which `#70` rules inadmissible.** `^go1\.` plus `split` on `.` gave
+  `go1.27rc3` a minor of 27, and janus and antares carry exactly that version alongside their `/usr/local/go`, so
+  the hole had a host to bite. Anchored to digits at both ends; 11 cases exercised against the shipped function,
+  `go1.27rc3` / `go1.27rc1` / `go1.30rc1` / `go1.27beta1` all refused, `go1.27.0` / `go1.27.1` / `go1.28.0`
+  admitted.
 - **`scripts/detach.sh` dropped the caller's environment, so a detached run could measure a different fleet than
   the one it was told to** — and it did: `KEEL_REMOTE_HOSTS=antares scripts/detach.sh run … -- ./scripts/gate-p5.sh`
   ran the gate against a stale `.keel-hosts` and produced a log of `UNMEASURED` against `keel-skx`, a host that no

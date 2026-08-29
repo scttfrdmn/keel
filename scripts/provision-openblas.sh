@@ -37,7 +37,9 @@
 #
 # Environment:
 #   KEEL_GO_VERSION   the toolchain to install if the host has none new enough
-#                     (default go1.26.5; must support GOEXPERIMENT=simd)
+#                     (default go1.27.0; must build the tree under GOEXPERIMENT=simd,
+#                     which since T23's archsimd rename means 1.27.x and not merely
+#                     "a toolchain with the experiment" — see main() for the two arms)
 #   KEEL_GO_SHA256    the tarball digest to enforce. If unset, the digest is taken
 #                     from go.dev/dl/?mode=json -- see verify_go_tarball for exactly
 #                     what that does and does not prove.
@@ -154,10 +156,18 @@ fieldof() {
   }' <<<"$2"
 }
 
-# go_new_enough VERSION — "go1.26.5" or newer on the 1.x line.
+# go_new_enough VERSION — minor >= $GO_MIN_MINOR on the 1.x line. Minor only, so it
+# reads "1.27.x" and not "go1.27.0 exactly": the rename this floor tracks landed in the
+# minor, so any patch release of it builds the tree.
 go_new_enough() {
   awk -v v="$1" -v min="$GO_MIN_MINOR" 'BEGIN {
-    if (v !~ /^go1\./) exit 1
+    # A PRERELEASE IS REFUSED, and this is the ruling and not a taste. #70, 2026-08-16:
+    # "rc3 is not admitted" — admitting one means a green certifying a floor the
+    # toolchain does not name. The old pattern was `^go1\.` and split() on ".", so
+    # `go1.27rc3` yielded a minor of 27 and passed; janus and antares carry exactly that
+    # version alongside their /usr/local/go, so the hole had a host to bite. Anchored at
+    # both ends, digits only.
+    if (v !~ /^go1\.[0-9]+(\.[0-9]+)?$/) exit 1
     sub(/^go1\./, "", v)
     split(v, p, ".")
     exit !(p[1] + 0 >= min)
@@ -353,8 +363,24 @@ main() {
   # shellcheck source=scripts/remote.sh
   source scripts/remote.sh
 
-  GO_VERSION="${KEEL_GO_VERSION:-go1.26.5}"
-  GO_MIN_MINOR=26            # 1.26 is the first release with the simd experiment
+  # go1.27.0, and the floor moved with it (2026-08-28). 1.26 WAS the first release with
+  # the simd experiment, which is why the floor was 26 — but T23 swapped the archsimd
+  # names, so from fed1e70 the tree does not compile on 1.26 at all. Two natively-built
+  # fleet arms are the ones that care, because they are the only ones a host's own
+  # toolchain compiles: gate-p5's `-race` leg (cgo, so it cannot be cross-built) and
+  # gate-p3's openblas-tagged harness (cgo likewise). Both died on antares' go1.26.5 in
+  # the p5-preflight-1689d0b run, the second one as `cannot use bp[0:16] (value of type
+  # []float32) as *[16]float32 value in argument to archsimd.LoadFloat32x16` — the 1.26
+  # compiler rejecting 1.27-form source. That took gate-p3 RED, gate-p4 RED with it, and
+  # gate-p5 RED, so a stale default here is what stands between the fleet and a P5
+  # certificate.
+  #
+  # `go_new_enough` is the sharper half. It gates on the MINOR only, so a host already
+  # carrying 1.26.5 read as "new enough" and was linked rather than upgraded — the
+  # provisioner would have declared a host ready for a harness it cannot build. Bumping
+  # the default alone would have left that path intact.
+  GO_VERSION="${KEEL_GO_VERSION:-go1.27.0}"
+  GO_MIN_MINOR=27            # not 26: 1.26 predates T23's archsimd rename (#70)
   GO_TARBALL="$GO_VERSION.linux-amd64.tar.gz"
   SRC_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 
