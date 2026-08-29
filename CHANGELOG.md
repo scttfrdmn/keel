@@ -59,6 +59,47 @@ While the major version is 0, minor versions may contain breaking changes.
   `:1219` before landing `p5-clean-b5cef4f`'s five witness rows, which would have converted three green BASELINE
   verdicts into reds and pinned column 6 to a gitignored path. The line now states the both-or-neither rule and
   why one run cannot satisfy it; the rows are not landed.
+- **`docs/hosts.md` recorded `vesta` as `unmeasured` for a reason that never happened, and the host had a
+  toolchain the whole time.** The sentence said vesta "answered neither `vesta` nor `vesta.local`", so two
+  read-backs of three. The log says otherwise: `provision-vesta-b5cef4f.log` reached `vesta.local` on the first
+  attempt and read its state correctly — `distro=ubuntu go=none (/usr/local/go=none) … governor=powersave` — and
+  then printed `could not read an answer from the terminal` at `confirm "run it?"`, because the run was detached.
+  A launcher unable to obtain consent was transcribed as a host unable to answer, which is the instrument
+  reporting in the subject's voice; the fix was `--yes` and no network changed. `confirm()` needs no repair — it
+  fails closed and its message is accurate — but the interaction of two of our own scripts is now written down:
+  `detach.sh` supplies a tmux pane, so `confirm()`'s `: </dev/tty` open *succeeds* and the `read` behind it hits
+  EOF, taking the one branch whose wording names a terminal instead of the absence of one. Corrected with the
+  present state, verified two ways: `go version go1.27.0 linux/amd64` read back off `vesta.local` on a fresh
+  connection, digest `675c26c4…` matched against `$KEEL_GO_SHA256`, and `gate-p5`'s own provenance stamping all
+  three `-race` rows `go1.27.0` — three of three.
+- **Addressing a lab host by its bare name silently splits one machine into two, and nothing in the tree said
+  so.** Measured 2026-08-29: every lab host resolves the bare name to a Tailscale address and the `.local` name to
+  a LAN one (`vesta` → `100.82.237.84` vs `vesta.local` → `192.168.6.153`; `janus` and `antares` likewise). The
+  cost is not connectivity — both forms reach the machine — it is provenance. The hostname is column 5 of a
+  witness row and is interpolated into the archive filename, and `build/witness-candidates-b5cef4f.tsv` is the
+  proof: rows 2 and 4 are the same Ryzen AI MAX+ 395 under `antares` and `antares.local`, citing
+  `bench-gate-p5-…-antares-…` and `bench-gate-p5-…-antares.local-…`. What keeps this out of correctness is the
+  registry key `(cpu_model, era)`, identical on both rows by design — the hostname is "provenance, never a key" —
+  but a reader reconciling archives by host counts a fleet member that does not exist. The trust state differs per
+  form too: vesta's reimage invalidated the key `known_hosts` holds for its Tailscale address, so the bare form
+  warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and survives only because pubkey auth still succeeds. Recorded in
+  `docs/hosts.md` beside the `.keel-hosts` configuration it governs. **The measurement above is dated because the
+  machine moved under it**: `grep -c vesta /etc/hosts` is 0 today, and reading that as "the `/etc/hosts` pin I
+  blamed on `#70` never existed" is the error this bullet nearly shipped as a retraction. `/etc/hosts` has
+  `mtime=2026-08-28T22:38:44Z` — *after* that comment — and `/etc/hosts.bak` preserves the quoted line verbatim,
+  `100.78.211.16  vesta.local vesta`. So the `#70` attribution was right and is now spent, not withdrawn: the pin
+  named **both** forms, which is why `.local` failed too, and the tailnet address moved out from under it
+  (`100.78.211.16` → `100.82.237.84`). Reimage and pin are one mechanism in series, not two competing ones. A past
+  claim can only be judged against the artifact *as it stood*, and both witnesses to that — an mtime and a `.bak`
+  — were adjacent to the file being read.
+- **`docs/hosts.md` called the amd64 requirement the toolchain's, and it is keel's.** The row read
+  "`simd/archsimd` is amd64-only on go1.26.5", true when written and stale since: on go1.27.0
+  `$GOROOT/src/simd/archsimd` ships 9 arm64 files (`ops_arm64.go`, `types_arm64.go`, `slice_gen_arm64.go`, …)
+  tagged `goexperiment.simd` alone, and the portable `simd` package two more. What is amd64-only is every backend
+  in `internal/vec` (`//go:build goexperiment.simd && amd64`). The distinction matters because it moves where the
+  blocker is: a NEON port is a kernel this repo has not written, and the *binding* constraint is neither the
+  toolchain nor the kernel but that `CEIL_FRACTION`, `STRSM_FLOOR` and `SYRK_FLOOR` were all derived on amd64, so
+  an arm64 host is judged outside its derivation set on every bar at once.
 - **The same floor admitted a prerelease, which `#70` rules inadmissible.** `^go1\.` plus `split` on `.` gave
   `go1.27rc3` a minor of 27, and janus and antares carry exactly that version alongside their `/usr/local/go`, so
   the hole had a host to bite. Anchored to digits at both ends; 11 cases exercised against the shipped function,

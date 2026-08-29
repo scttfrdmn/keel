@@ -25,8 +25,20 @@ stating plainly:
     2026-08-28, installed under #70's ruling with `go1.27rc3` *removed* rather than
     left beside it: an inadmissible toolchain on disk is a wrong-binary selection
     waiting for a PATH ambiguity, and since T23's rename 1.26 cannot compile this
-    tree at all. `vesta` answered neither `vesta` nor `vesta.local`, so its state
-    is `unmeasured` rather than assumed to match — two read-backs of three.
+    tree at all. `vesta` carries it too as of 2026-08-29 — same digest against
+    `$KEEL_GO_SHA256`, `go version go1.27.0 linux/amd64` read back off the host,
+    and corroborated independently by `gate-p5`'s own provenance stamp on all
+    three `-race` rows. *This sentence said `vesta` was `unmeasured` because it
+    "answered neither `vesta` nor `vesta.local`", and that was never what
+    happened*: `provision-vesta-b5cef4f.log` reached `vesta.local` on the first
+    try and read its state correctly (`go=none … governor=powersave`), then hit
+    `confirm()` with no answerable terminal, because the run was detached. A
+    launcher that cannot obtain consent reported as a host that cannot be
+    reached — the instrument speaking in the subject's voice, and the reason the
+    fix was `--yes`, not a network change. Detached provisioning needs `--yes`:
+    `detach.sh` gives the run a tmux pane, so `confirm()`'s `/dev/tty` open
+    *succeeds* and its `read` then hits EOF, which is the one branch whose
+    message names a terminal rather than the absence of one.
     `janus` additionally keeps `~/sdk/go1.25.0` and `~/sdk/go1.26.5`, reachable
     only through their own `go1.X` shims and not from the harness's PATH:
     recorded rather than removed, because the ruling named rc3.
@@ -47,11 +59,34 @@ gitignored — see `.keel-hosts.example`) or `$KEEL_REMOTE_HOSTS`, which takes
 precedence. Real hostnames are infrastructure, not source, so they are not
 checked in.
 
+**Name a LAN host by its `.local` form, always, and never by the bare name.**
+The two are not synonyms here: measured 2026-08-29, every lab host resolves the
+bare name to a Tailscale address and the `.local` name to a LAN one — `vesta`
+→ `100.82.237.84`, `vesta.local` → `192.168.6.153`, and likewise `janus`
+(`100.89.76.28` / `192.168.6.180`) and `antares` (`100.107.102.112` /
+`192.168.6.176`). Two consequences, and the second is the one that costs
+something:
+
+- The trust state differs per form. `vesta`'s reimage invalidated the key
+  `known_hosts` holds for its Tailscale address, so the bare form warns
+  `REMOTE HOST IDENTIFICATION HAS CHANGED` while `.local` connects clean. It
+  degrades to a warning only because pubkey auth still succeeds; under a
+  stricter `StrictHostKeyChecking` the same host is up and refusing.
+- **The form leaks into provenance, so one machine becomes two.** The hostname
+  is column 5 of a witness row and is interpolated into the archive filename,
+  and `build/witness-candidates-b5cef4f.tsv` holds proof: rows 2 and 4 are the
+  same Ryzen AI MAX+ 395 under `antares` and `antares.local`, pointing at
+  `bench-gate-p5-…-antares-…` and `bench-gate-p5-…-antares.local-…`. The
+  registry key `(cpu_model, era)` is what saves this from being a correctness
+  bug — it is the same on both rows, by design (`host-baselines.tsv`: the
+  hostname is "provenance, never a key") — but a reader reconciling archives by
+  host sees a fleet with one more member than it has.
+
 ## Requirements for a target
 
 | Requirement | Why |
 |---|---|
-| amd64 | `simd/archsimd` is amd64-only on go1.26.5 |
+| amd64 | **keel's** constraint, not the toolchain's — corrected 2026-08-29, having read `amd64-only` since it was written against go1.26.5. On go1.27.0 `$GOROOT/src/simd/archsimd` ships 9 arm64 files (`ops_arm64.go`, `types_arm64.go`, `slice_gen_arm64.go`, …) and the portable `simd` package two more, all tagged `goexperiment.simd` alone. What is amd64-only is every backend in `internal/vec` (`//go:build goexperiment.simd && amd64`, 6 files, plus the `!amd64` scalar fallbacks). So a NEON port is a kernel this repo has not written, not a facility the experiment withholds — and the *blocking* half is neither: every judged bar (`CEIL_FRACTION`, `STRSM_FLOOR`, `SYRK_FLOOR`) was derived on amd64, so an arm64 host would be judged wholly outside its derivation set on every bar at once. DESIGN.md §5 rule 17 is the rule that already forbids this for the *share* criteria, host by host; extending it to the *ratio* criteria is legislated post-tag, from principle, and arm64 is gated behind that extension rather than behind a NEON kernel |
 | AVX2 + FMA | the AVX2 backend; `archsimd.X86.AVX2() && .FMA()` |
 | AVX-512 F/CD/BW/DQ/VL | the bundle `archsimd.X86.AVX512()` gates on — all five, or the backend does not register |
 | key-based ssh from the dev host | `remote.sh` uses `BatchMode=yes`; it never prompts and never handles credentials |
