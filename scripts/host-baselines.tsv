@@ -16,7 +16,7 @@
 #
 # THE GATE PROPOSES ROWS AND NEVER WRITES THIS FILE. An instrument minting the
 # reference it will judge against is self-certification, so gate-p5 emits a fully
-# formed candidate row to build/baseline-candidates-<rev>.tsv and stops there;
+# formed candidate row to build/baseline-candidates-<rev>-<run>.tsv and stops there;
 # landing it is a reviewed commit act, exactly like every reference artifact before
 # it. The three states it decides between come from the archive, not from a flag:
 #

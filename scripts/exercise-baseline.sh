@@ -342,10 +342,13 @@ build_substitution() {
 run_pass() {
   local n="$1" reason="$2"
   local plog="$DIR/pass$n.log"
-  # The candidate files are per-rev and appended to, so three passes at one rev would
-  # pile into one file and no emission would be attributable to the pass that made it.
-  rm -f "build/baseline-candidates-$REV.tsv" "build/witness-candidates-$REV.tsv"
+  # A per-pass RUN_STAMP, EXPORTED so the candidate files land under a name this driver set
+  # rather than one it guessed. It replaces an `rm -f` of the previous pass's files: the gate
+  # is run-stamped now, so passes cannot pile into one file, and the workaround that used to
+  # hide that from this harness alone is gone with it.
+  local stamp="exercise-pass$n" f kind
   set +e
+  RUN_STAMP="$stamp" \
   KEEL_REMOTE_HOSTS="$HOST" \
   KEEL_INSTRUMENT_EXERCISE="$reason" \
   KEEL_INSTRUMENT_BASELINE_DIR="$DIR" \
@@ -354,8 +357,10 @@ run_pass() {
   set -e
   strip "$plog" >"$DIR/pass$n.txt"
   cat "$DIR/pass$n.txt" >>"$LOG"
-  for f in "build/baseline-candidates-$REV.tsv" "build/witness-candidates-$REV.tsv"; do
-    if [[ -e "$f" ]]; then cp "$f" "$DIR/pass$n-$(basename "$f")"; fi
+  # Destination names stay unstamped: four sites below read pass$n-<kind>-candidates-$REV.tsv.
+  for kind in baseline witness; do
+    f="build/$kind-candidates-$REV-$stamp.tsv"
+    if [[ -e "$f" ]]; then cp "$f" "$DIR/pass$n-$kind-candidates-$REV.tsv"; fi
   done
   # The delegated chain is collected per pass by asking each log which log it names, down
   # two levels: gate-p5 names gate-p4's, gate-p4 names gate-p3's. Two levels because the

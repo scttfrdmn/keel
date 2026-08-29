@@ -39,6 +39,17 @@ While the major version is 0, minor versions may contain breaking changes.
   the audit test that writes under the export's own `internal/vec`, and the not-found branch driven from `/tmp`
   (`shapegen: no go.mod in /tmp or any parent`, rc=2). Two failures there against three here is arm-dependent and
   not a miscount: the floor arm sets no `GOEXPERIMENT`, so it does not build `audit_simd_test.go`.
+- **The candidate files accumulated across runs, so landing one could pin a registry row to a contaminated
+  archive.** `gate-p5` named them by revision alone and `baseline_candidate` appends, so two runs at one rev piled
+  into one file: after `p5-clean-b5cef4f` the witness file held three rows from a clean run beside two from a run
+  whose hosts had been sshed into mid-measurement, with duplicate `(cpu_model, era)` keys and nothing in the file
+  distinguishing them. Column 6 is the archive a witness is recomputable from, so the reviewed-commit safeguard
+  held only for a reviewer who remembered which timestamp was clean. Now `-<rev>-<RUN_STAMP>`. The accumulation was
+  *already known*: `exercise-baseline.sh` documented it and `rm -f`'d the previous pass's files, which protected the
+  synthetic path and left the production path — the one whose rows get landed — unprotected. That workaround is
+  deleted rather than explained. Driven with a negative control: two hosts in one run still append to one file
+  (2 rows), a second run writes its own (1 row, no cross-run archive leak), and the old unstamped name reproduces
+  the defect at 2 rows in 1 file.
 - **The same floor admitted a prerelease, which `#70` rules inadmissible.** `^go1\.` plus `split` on `.` gave
   `go1.27rc3` a minor of 27, and janus and antares carry exactly that version alongside their `/usr/local/go`, so
   the hole had a host to bite. Anchored to digits at both ends; 11 cases exercised against the shipped function,

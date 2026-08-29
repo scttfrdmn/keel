@@ -145,8 +145,12 @@ BASELINE_REGISTRY="$BASELINE_DIR/host-baselines.tsv"
 BASELINE_WITNESS="$BASELINE_DIR/judged-runs.tsv"
 BASELINE_ERAS="$BASELINE_DIR/measurement-eras.tsv"
 P5_REV="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-BASELINE_CANDIDATES="build/baseline-candidates-$P5_REV.tsv"
-WITNESS_CANDIDATES="build/witness-candidates-$P5_REV.tsv"
+# RUN-STAMPED, not merely rev-stamped, because baseline_candidate APPENDS. Two runs at one
+# rev piled into one file with nothing in it to tell a clean run's rows from a contaminated
+# run's, and column 6 is the archive a witness is recomputable from -- so landing it pins a
+# permanent registry row to whichever run got there first (2026-08-29).
+BASELINE_CANDIDATES="build/baseline-candidates-$P5_REV-$RUN_STAMP.tsv"
+WITNESS_CANDIDATES="build/witness-candidates-$P5_REV-$RUN_STAMP.tsv"
 # Resolved once, and empty is a legitimate answer meaning "this tree's era ledger does not
 # resolve" — checked as its own criterion below rather than defaulted, because defaulting
 # would judge under whichever era happened to parse.

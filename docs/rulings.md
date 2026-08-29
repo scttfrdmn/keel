@@ -459,7 +459,7 @@ other host — which is the era clause operating, not the exemption being renewe
 
 **The instrument proposes references and never writes them.** An instrument that mints the
 reference it will judge against has certified itself, so `gate-p5` emits a fully formed
-candidate row to `build/baseline-candidates-<rev>.tsv` and stops. Landing it is a reviewed
+candidate row to `build/baseline-candidates-<rev>-<run>.tsv` and stops. Landing it is a reviewed
 commit act, exactly as `CEIL_FRACTION` and every README row were. `scripts/baseline-test.sh`
 asserts that **both** tracked files — the registry and the witness index — have no data rows
 and were not written, which makes this the one property whose violation is not a wrong number
