@@ -77,20 +77,19 @@ cmd_run() {
   rm -f "$status"
 
   # THE CALLER'S ENVIRONMENT IS CARRIED, and the runner file is the record of it.
-  # Measured both branches 2026-08-28: `tmux new-session` seeds a session from the
-  # SERVER's environment, so an override reaches the run only when this very call is
-  # what starts the server. With `exit-empty off` below pinning the server forever,
-  # that makes the first detached run of a machine's life carry its overrides and
-  # every later one drop them, silently. It cost a gate-p5 pre-flight:
-  # `KEEL_REMOTE_HOSTS=antares` vanished, the gate read a stale `.keel-hosts`, and it
-  # produced a log of UNMEASURED against an unreachable host — a fleet outage to read,
-  # a launcher defect in fact. The run was no longer the program that was launched,
-  # which is the one thing this script exists to guarantee.
-  #
-  # Enumerated rather than `export -p`, so `build/<name>.cmd` can be READ as a
-  # statement of what was measured. PATH is in the list because it decides which `go`
-  # builds the arms (remote.sh's builder_toolchain) and it matches the server's today
-  # only because one profile happened to start both.
+  # `tmux new-session` seeds a session from the SERVER's environment, and with
+  # `exit-empty off` below pinning that server forever, the server's env stays whatever
+  # the first detached run of the machine's life happened to hold. Both directions bite
+  # and they are SEPARATE defects: an override the caller sets is dropped unless this
+  # very call starts the server (cost a gate-p5 pre-flight, 2026-08-28), and a var the
+  # caller does NOT set is inherited from the server and outranks the run's own
+  # configuration (cost the first release run, 2026-08-29: a stale
+  # `KEEL_REMOTE_HOSTS=antares` beat the `.keel-hosts` `aws-fleet.sh up` had just
+  # written, so a $24/hr three-host fleet idled while the gate measured a lab box).
+  # So the runner CLEARS the whole KEEL_/BENCH_ namespace before re-exporting the
+  # carried set: the run is then the program that was launched — the one thing this
+  # script exists to guarantee — and `build/<name>.cmd` a COMPLETE statement of it, not
+  # just of the deltas. PATH is carried because it picks the `go` building the arms.
   local carried=() v
   for v in PATH GOEXPERIMENT GOMAXPROCS $(compgen -v | grep -E '^(KEEL_|BENCH_)' || true); do
     [[ -n "${!v+set}" ]] && carried+=("$v")
@@ -112,6 +111,7 @@ cmd_run() {
   {
     echo '#!/usr/bin/env bash'
     printf 'cd %q || exit 3\n' "$ROOT"
+    echo 'for v in $(compgen -v | grep -E "^(KEEL_|BENCH_)" || true); do unset "$v"; done'
     for v in "${carried[@]}"; do printf 'export %s=%q\n' "$v" "${!v}"; done
     printf 'signalled=\n'
     # shellcheck disable=SC2016  # deliberately unexpanded: this is the runner's source

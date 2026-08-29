@@ -9,6 +9,26 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **A detached run inherited its host list from a daemon older than the run, and measured the wrong machine.**
+  `tmux new-session` seeds a session from the tmux *server's* environment, and that server held
+  `KEEL_REMOTE_HOSTS=antares` from an earlier single-host session. `remote.sh:35` gives that variable precedence
+  over `.keel-hosts`, so the first release run (`release-a-d88486a`) launched `c5n.18xlarge` + `c7a.48xlarge` +
+  `c8a.48xlarge` at a combined $24.0873/hr, wrote a correct `.keel-hosts` naming all three, and then benchmarked a
+  lab box: `37 PASS / 0 FAIL / 1 UNMEASURED / 4 BASELINE`, `gate-p5: RED`. **RED with zero FAILs was the tell** —
+  the UNMEASURED reads "all 1 configured host(s)" where three were paid for. The fleet then idled to its 8h TTL,
+  bounding the spend at $192.70 for zero AWS evidence; the exact figure is unverifiable because terminated
+  instances have aged out of the EC2 API. The same comment block diagnosed this mechanism correctly on 2026-08-28
+  and fixed **half** of it: an override the caller *sets* is dropped unless that call starts the server. The
+  complement is a separate defect — a variable the caller does *not* set is injected by the server and outranks the
+  run's own configuration — and it is the worse one, because the dropped-override branch fails toward the
+  configured fleet while this one fails toward whatever was last measured. The runner now clears the whole
+  `KEEL_`/`BENCH_` namespace before re-exporting the carried set, so `build/<name>.cmd` is a complete statement of
+  the environment and not just of the deltas. Driven in both directions against the real stale value before it was
+  cleared: bare `tmux new-session` reproduced `KRH=[antares]` / `hosts=[antares]`, and the fixed launcher gave
+  `KRH=[unset]` / `hosts=[keel-zen5 keel-zen4 keel-skx]`. Scope stated rather than implied (§5 rule 12): `AWS_*` is
+  deliberately *not* cleared, since `aws-fleet.sh:37` pins `AWS_PROFILE` itself and nothing there selects what gets
+  measured. The stale global was also removed with `tmux set-environment -gu`, but the launcher fix is the durable
+  half — the server outlives any one cleanup.
 - **The provisioner installed a toolchain that cannot build the tree, and read an existing one as "new enough"**
   (`scripts/provision-openblas.sh`). Its default was `go1.26.5` and its floor `GO_MIN_MINOR=26`, both correct when
   1.26 was the first release with the simd experiment and both stale since T23's rename: from `fed1e70` the tree
