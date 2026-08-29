@@ -88,6 +88,15 @@ While the major version is 0, minor versions may contain breaking changes.
   asserted a behaviour of *another file*, where nothing checked that the behaviour existed.
 
 ### Added
+- **Every gate now records which Go compiled the binary the fleet ran, read off the artifact** (`builder_toolchain`
+  in `scripts/remote.sh`, called by `remote_build_test_or_fail`; issue #58). `go version <ELF>` reports the compiler
+  *and* the GOEXPERIMENT out of the cross-compiled test binary — `go1.27.0-X:simd` — where a bare `go version`
+  reports the driver in the calling shell, a different fact that `GOTOOLCHAIN` can make differ. This closes a real
+  gap rather than a decorative one: the dev host cross-compiles everything the fleet runs, its `go` moved from
+  1.26.x to 1.27.0, and no archive name carries a compiler field (rev and run stamp only). Printed on *change*, so a
+  toolchain that moves mid-run announces itself; exercised across five arms, including a seeded stale value to make
+  the quantity move and an unreadable artifact to prove the reading is left undisturbed. Deliberately not set inside
+  `remote_build_test`: every caller redirects that function's stdout to a build log, and two call it in a subshell.
 - **Both of P5's scaling bars are TYPED, in one commit, from one run's rows: `CEIL_FRACTION = 44.2` and
   `STRSM_FLOOR = 6.067x`** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`; the pinned8 era re-founded on
   the spread mask and `instrument=v2`). Derived from the founding campaign's take four, **recomputed from the

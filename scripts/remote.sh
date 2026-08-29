@@ -499,6 +499,30 @@ remote_build_test() {
     go test -c -o "$out" "$pkg"
 }
 
+# builder_toolchain BIN — record which Go compiled BIN, read off BIN (issue #58).
+#
+# Not `go version`, which reports the driver in THIS shell: a different fact, and
+# GOTOOLCHAIN can make them differ. `go version <file>` reports the compiler and the
+# GOEXPERIMENT out of the artifact the fleet executes -- `go1.27.0-X:simd` -- which is
+# the one the numbers came from. It is absent from every archive name (rev and run
+# stamp only), and the dev host cross-compiles everything the fleet runs, so this is
+# the whole provenance of the compiler for the whole campaign.
+#
+# On change, not per call: ten builds a gate would print ten identical lines, and a
+# value that moves MID-RUN is the finding this exists to catch. Deliberately NOT set
+# inside remote_build_test, for two reasons that are each sufficient: every caller
+# redirects that function's stdout to a build log, so an info() there would land
+# outside the gate log; and two callers invoke it in a subshell, where an assignment
+# dies with the subshell exactly as the tally constraint above describes.
+KEEL_BUILDER_GO=""
+builder_toolchain() {
+  local v
+  v="$(go version "$1" 2>/dev/null | awk '{print $2}')"
+  [[ -n "$v" && "$v" != "$KEEL_BUILDER_GO" ]] || return 0
+  info "builder toolchain ${KEEL_BUILDER_GO:+CHANGED mid-run from $KEEL_BUILDER_GO to }$v, read off $(basename "$1") and not off this shell's go"
+  KEEL_BUILDER_GO="$v"
+}
+
 # remote_build_test_or_fail PKG OUT LOG PASS_MSG FAIL_MSG — the guarded form of the call
 # above, ten times over: build, render one verdict either way, and on failure indent the
 # last 20 log lines. Both messages are parameters and neither is normalised — each site
@@ -508,6 +532,7 @@ remote_build_test() {
 remote_build_test_or_fail() {
   if remote_build_test "$1" "$2" >"$3" 2>&1; then
     pass "$4"
+    builder_toolchain "$2"
   else
     fail "$5"
     sed 's/^/        /' "$3" | tail -20
