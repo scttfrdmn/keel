@@ -11,10 +11,26 @@ hardware. This file records how that happens and on which machines.
 with `go test -c`, ships it over `scp`, and runs it. Two consequences worth
 stating plainly:
 
-- **No toolchain is installed on the remote host.** `CGO_ENABLED=0` makes a
-  static, pure-Go ELF binary; the host needs nothing but `sshd`. The compiler
-  whose output gets executed is the same one the gate just version-checked, so
-  there is no second toolchain to drift.
+- **Almost no toolchain is needed on the remote host.** `CGO_ENABLED=0` makes a
+  static, pure-Go ELF binary, so for every criterion but one the host needs
+  nothing but `sshd`, and the compiler in every published denominator is the dev
+  host's. *Corrected 2026-08-28*, twice over, because this read "**No toolchain is
+  installed on the remote host**" and ended "the compiler whose output gets
+  executed is the same one the gate just version-checked, so there is no second
+  toolchain to drift":
+  - There **is** a second toolchain, and gate-p5's `-race` arm requires it.
+    `go test -c -race` under `CGO_ENABLED=0` is refused outright — `go: -race
+    requires cgo` — so that one arm ships `git archive HEAD` and builds on the
+    host. `janus` and `antares` both carry `/usr/local/go` = `go1.26.5` with
+    `go1.27rc3` alongside; `vesta` did not answer ssh on 2026-08-28, so its state
+    is `unmeasured` rather than assumed to match.
+  - The drift argument was backwards. The version the gate printed was the
+    **host's** (`gate-p5.sh:639`), which is the compiler that produces *nothing*
+    except that `-race` arm — so the one binary whose provenance mattered was the
+    one no check read. `builder_toolchain` (`scripts/remote.sh`, `b0e5b37`) is what
+    makes the sentence's premise true for the first time: it reads `go version
+    <ELF>` off the cross-compiled artifact, reporting compiler *and* GOEXPERIMENT
+    (`go1.27.0-X:simd`), and prints on change so a mid-run move announces itself.
 - **It works for benchmarks too.** `go test -c` includes `Benchmark*`, so
   P1's ≥4× check and P2's percent-of-peak measurement run the same way. What
   cannot cross the wire is anything needing local `perf`/`ssa.html`

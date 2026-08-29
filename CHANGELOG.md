@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **`docs/hosts.md` said no toolchain is installed on the remote hosts, and that the gate version-checks the
+  compiler whose output runs — both false, the second interestingly so.** There is a second toolchain and gate-p5's
+  `-race` arm needs it (`go test -c -race` under `CGO_ENABLED=0` is refused outright), so `janus` and `antares` carry
+  `/usr/local/go` = `go1.26.5`; `vesta` did not answer ssh on 2026-08-28 and is `unmeasured`, not assumed. And the
+  drift argument ran backwards: the version the gate printed was the **host's**, which is the compiler that produces
+  nothing *except* that one arm — so the binary whose provenance mattered was the one no check read. `b0e5b37` is
+  what makes the sentence's premise true for the first time.
 - **CI's runner may or may not have AVX-512, and it is drawn per run** (`.github/workflows/ci.yml`). Two runs of
   one workflow forty minutes apart read back `avx512 avx2 scalar` (`33225065217`, red — T27) and `avx2 scalar`
   (`33226797681`, green). The consequence outruns the erratum: **the green run never executed the path the red
