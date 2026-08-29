@@ -8,7 +8,19 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-29
+
+The first tagged release. `[Unreleased]` had grown to 26 session groups over 4,875 lines;
+per CONTRIBUTING.md the collapse to canonical type headers happens at the version cut and
+never before, so this section is that one-time editorial pass. Every bullet below is the
+text it had when it landed — the pass regrouped lines and rewrote none, checked by
+comparing the multiset of non-blank content lines before and after (4,783 either side, 0
+lost, 0 invented). Session provenance therefore lives in the git history from here, which
+is where it was always recoverable; what a reader of a release wants is one Added/Changed/
+Removed/Fixed set, and that is what this is.
+
 ### Added
+
 - **`aws-fleet.sh up` refuses to launch while `$KEEL_REMOTE_HOSTS` is set**, unless
   `--measure-the-override` names that as the intent. `remote.sh:35` ranks that variable above the
   `.keel-hosts` the launch writes, so a set value bills a fleet and measures something else — $192.70
@@ -34,221 +46,6 @@ While the major version is 0, minor versions may contain breaking changes.
   under `scripts/` names it), so rule 21's own fix can regress silently; filed as `#122` rather than
   repaired here, because the tag delta may not add shell.
 
-### Fixed
-- **A detached run inherited its host list from a daemon older than the run, and measured the wrong machine.**
-  `tmux new-session` seeds a session from the tmux *server's* environment, and that server held
-  `KEEL_REMOTE_HOSTS=antares` from an earlier single-host session. `remote.sh:35` gives that variable precedence
-  over `.keel-hosts`, so the first release run (`release-a-d88486a`) launched `c5n.18xlarge` + `c7a.48xlarge` +
-  `c8a.48xlarge` at a combined $24.0873/hr, wrote a correct `.keel-hosts` naming all three, and then benchmarked a
-  lab box: `37 PASS / 0 FAIL / 1 UNMEASURED / 4 BASELINE`, `gate-p5: RED`. **RED with zero FAILs was the tell** —
-  the UNMEASURED reads "all 1 configured host(s)" where three were paid for. The fleet then idled to its 8h TTL,
-  bounding the spend at $192.70 for zero AWS evidence; the exact figure is unverifiable because terminated
-  instances have aged out of the EC2 API. The same comment block diagnosed this mechanism correctly on 2026-08-28
-  and fixed **half** of it: an override the caller *sets* is dropped unless that call starts the server. The
-  complement is a separate defect — a variable the caller does *not* set is injected by the server and outranks the
-  run's own configuration — and it is the worse one, because the dropped-override branch fails toward the
-  configured fleet while this one fails toward whatever was last measured. The runner now clears the whole
-  `KEEL_`/`BENCH_` namespace before re-exporting the carried set, so `build/<name>.cmd` is a complete statement of
-  the environment and not just of the deltas. Driven in both directions against the real stale value before it was
-  cleared: bare `tmux new-session` reproduced `KRH=[antares]` / `hosts=[antares]`, and the fixed launcher gave
-  `KRH=[unset]` / `hosts=[keel-zen5 keel-zen4 keel-skx]`. Scope stated rather than implied (§5 rule 12): `AWS_*` is
-  deliberately *not* cleared, since `aws-fleet.sh:37` pins `AWS_PROFILE` itself and nothing there selects what gets
-  measured. The stale global was also removed with `tmux set-environment -gu`, but the launcher fix is the durable
-  half — the server outlives any one cleanup.
-- **The provisioner installed a toolchain that cannot build the tree, and read an existing one as "new enough"**
-  (`scripts/provision-openblas.sh`). Its default was `go1.26.5` and its floor `GO_MIN_MINOR=26`, both correct when
-  1.26 was the first release with the simd experiment and both stale since T23's rename: from `fed1e70` the tree
-  does not compile on 1.26 at all. The two arms that care are the ones a *host's own* toolchain compiles, because
-  cgo forbids cross-building them — gate-p5's `-race` leg and gate-p3's openblas-tagged harness. Both died on
-  antares in `p5-preflight-1689d0b`, the second as `cannot use bp[0:16] (value of type []float32) as *[16]float32
-  value in argument to archsimd.LoadFloat32x16`, which took gate-p3 RED, gate-p4 RED with it, and gate-p5 RED.
-  The floor was the sharper half: gating on the minor only, a host already carrying 1.26.5 read as new enough and
-  was *linked rather than upgraded*, so the provisioner would have called a host ready for a harness it cannot
-  build. Default now `go1.27.0` (stable, published for linux/amd64) and floor `27`. Verified in situ under
-  `--check`, which now says `go on the ssh PATH is go1.26.5, and the harness needs go1.27.0 or newer` and predicts
-  gate-p3 will fail those hosts by name — the condition caught before a fleet run instead of during one. Then
-  discharged on the fleet (#70 authorized): `antares` and `janus` read back `go1.27.0` on a fresh connection rather
-  than off the install's own output, digest matched against `$KEEL_GO_SHA256` as an independent pin, `go1.27rc3`
-  removed rather than left beside, and `verify` natively built the very harness that had failed. `vesta` answered
-  neither name, so it is `unmeasured` — two read-backs of three, not three.
-- **A named P5 criterion could never render a verdict, and the condition was already in the tree as a footnote.**
-  With `go1.27.0` installed the `-race` leg finally *built*, and then failed three `tools/shapegen` tests
-  identically on both hosts: `locating the repo root: exit status 128`. `repoRoot()` shelled out to `git rev-parse
-  --show-toplevel`, and that leg ships the tree by `git archive HEAD`, which has no `.git`. The same failure was
-  measured the same day in CI's floor arm and recorded at `ci.yml:71` as "the transport, not the toolchain" —
-  true, and shelved there as an oddity awaiting anyone who reproduced the floor off an export. What that missed is
-  that a *second* arm ships by the same transport, so the cost was not an odd red but a criterion that could never
-  be measured on any benchmark host. `repoRoot` now walks up for `go.mod`, which its own comment always named:
-  `git rev-parse` returns the *repository* root, a different thing that coincides with the module root only in a
-  checkout. Everything these tests read is present in the export; only the lookup wasn't. Driven in all three
-  states before landing — reproduced in an extracted export (2 FAIL), all three pass there afterwards including
-  the audit test that writes under the export's own `internal/vec`, and the not-found branch driven from `/tmp`
-  (`shapegen: no go.mod in /tmp or any parent`, rc=2). Two failures there against three here is arm-dependent and
-  not a miscount: the floor arm sets no `GOEXPERIMENT`, so it does not build `audit_simd_test.go`.
-- **The candidate files accumulated across runs, so landing one could pin a registry row to a contaminated
-  archive.** `gate-p5` named them by revision alone and `baseline_candidate` appends, so two runs at one rev piled
-  into one file: after `p5-clean-b5cef4f` the witness file held three rows from a clean run beside two from a run
-  whose hosts had been sshed into mid-measurement, with duplicate `(cpu_model, era)` keys and nothing in the file
-  distinguishing them. Column 6 is the archive a witness is recomputable from, so the reviewed-commit safeguard
-  held only for a reviewer who remembered which timestamp was clean. Now `-<rev>-<RUN_STAMP>`. The accumulation was
-  *already known*: `exercise-baseline.sh` documented it and `rm -f`'d the previous pass's files, which protected the
-  synthetic path and left the production path — the one whose rows get landed — unprotected. That workaround is
-  deleted rather than explained. Driven with a negative control: two hosts in one run still append to one file
-  (2 rows), a second run writes its own (1 row, no cross-run archive leak), and the old unstamped name reproduces
-  the defect at 2 rows in 1 file.
-- **The BASELINE summary line told the operator to land the witness rows, and following it manufactures the FAIL
-  it was written to prevent.** It names only `witness-candidates`, so a reader who lands those and stops has
-  produced exactly the *owing* state — a tracked witness for `(cpu_model, era)` with no baseline row — which
-  `gate-p5` renders as an unmet-registration FAIL. Landing both in the same commit is not the escape either: a
-  baseline candidate emitted from a single run says so in its own estimator column (`SINGLE DRAW … NOT landable
-  as-is (§5 rule 16)`), so a fleet with one archived run in an era can supply neither half. Caught by reading
-  `:1219` before landing `p5-clean-b5cef4f`'s five witness rows, which would have converted three green BASELINE
-  verdicts into reds and pinned column 6 to a gitignored path. The line now states the both-or-neither rule and
-  why one run cannot satisfy it; the rows are not landed.
-- **`docs/hosts.md` recorded `vesta` as `unmeasured` for a reason that never happened, and the host had a
-  toolchain the whole time.** The sentence said vesta "answered neither `vesta` nor `vesta.local`", so two
-  read-backs of three. The log says otherwise: `provision-vesta-b5cef4f.log` reached `vesta.local` on the first
-  attempt and read its state correctly — `distro=ubuntu go=none (/usr/local/go=none) … governor=powersave` — and
-  then printed `could not read an answer from the terminal` at `confirm "run it?"`, because the run was detached.
-  A launcher unable to obtain consent was transcribed as a host unable to answer, which is the instrument
-  reporting in the subject's voice; the fix was `--yes` and no network changed. `confirm()` needs no repair — it
-  fails closed and its message is accurate — but the interaction of two of our own scripts is now written down:
-  `detach.sh` supplies a tmux pane, so `confirm()`'s `: </dev/tty` open *succeeds* and the `read` behind it hits
-  EOF, taking the one branch whose wording names a terminal instead of the absence of one. Corrected with the
-  present state, verified two ways: `go version go1.27.0 linux/amd64` read back off `vesta.local` on a fresh
-  connection, digest `675c26c4…` matched against `$KEEL_GO_SHA256`, and `gate-p5`'s own provenance stamping all
-  three `-race` rows `go1.27.0` — three of three.
-- **Addressing a lab host by its bare name silently splits one machine into two, and nothing in the tree said
-  so.** Measured 2026-08-29: every lab host resolves the bare name to a Tailscale address and the `.local` name to
-  a LAN one (`vesta` → `100.82.237.84` vs `vesta.local` → `192.168.6.153`; `janus` and `antares` likewise). The
-  cost is not connectivity — both forms reach the machine — it is provenance. The hostname is column 5 of a
-  witness row and is interpolated into the archive filename, and `build/witness-candidates-b5cef4f.tsv` is the
-  proof: rows 2 and 4 are the same Ryzen AI MAX+ 395 under `antares` and `antares.local`, citing
-  `bench-gate-p5-…-antares-…` and `bench-gate-p5-…-antares.local-…`. What keeps this out of correctness is the
-  registry key `(cpu_model, era)`, identical on both rows by design — the hostname is "provenance, never a key" —
-  but a reader reconciling archives by host counts a fleet member that does not exist. The trust state differs per
-  form too: vesta's reimage invalidated the key `known_hosts` holds for its Tailscale address, so the bare form
-  warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and survives only because pubkey auth still succeeds. Recorded in
-  `docs/hosts.md` beside the `.keel-hosts` configuration it governs. **The measurement above is dated because the
-  machine moved under it**: `grep -c vesta /etc/hosts` is 0 today, and reading that as "the `/etc/hosts` pin I
-  blamed on `#70` never existed" is the error this bullet nearly shipped as a retraction. `/etc/hosts` has
-  `mtime=2026-08-28T22:38:44Z` — *after* that comment — and `/etc/hosts.bak` preserves the quoted line verbatim,
-  `100.78.211.16  vesta.local vesta`. So the `#70` attribution was right and is now spent, not withdrawn: the pin
-  named **both** forms, which is why `.local` failed too, and the tailnet address moved out from under it
-  (`100.78.211.16` → `100.82.237.84`). Reimage and pin are one mechanism in series, not two competing ones. A past
-  claim can only be judged against the artifact *as it stood*, and both witnesses to that — an mtime and a `.bak`
-  — were adjacent to the file being read.
-- **`docs/hosts.md` called the amd64 requirement the toolchain's, and it is keel's.** The row read
-  "`simd/archsimd` is amd64-only on go1.26.5", true when written and stale since: on go1.27.0
-  `$GOROOT/src/simd/archsimd` ships 9 arm64 files (`ops_arm64.go`, `types_arm64.go`, `slice_gen_arm64.go`, …)
-  tagged `goexperiment.simd` alone, and the portable `simd` package two more. What is amd64-only is every backend
-  in `internal/vec` (`//go:build goexperiment.simd && amd64`). The distinction matters because it moves where the
-  blocker is: a NEON port is a kernel this repo has not written, and the *binding* constraint is neither the
-  toolchain nor the kernel but that `CEIL_FRACTION`, `STRSM_FLOOR` and `SYRK_FLOOR` were all derived on amd64, so
-  an arm64 host is judged outside its derivation set on every bar at once.
-- **The same floor admitted a prerelease, which `#70` rules inadmissible.** `^go1\.` plus `split` on `.` gave
-  `go1.27rc3` a minor of 27, and janus and antares carry exactly that version alongside their `/usr/local/go`, so
-  the hole had a host to bite. Anchored to digits at both ends; 11 cases exercised against the shipped function,
-  `go1.27rc3` / `go1.27rc1` / `go1.30rc1` / `go1.27beta1` all refused, `go1.27.0` / `go1.27.1` / `go1.28.0`
-  admitted.
-- **`scripts/detach.sh` dropped the caller's environment, so a detached run could measure a different fleet than
-  the one it was told to** — and it did: `KEEL_REMOTE_HOSTS=antares scripts/detach.sh run … -- ./scripts/gate-p5.sh`
-  ran the gate against a stale `.keel-hosts` and produced a log of `UNMEASURED` against `keel-skx`, a host that no
-  longer resolves. That reads as a fleet outage and is a launcher defect. The mechanism makes it worse than a flat
-  drop: `tmux new-session` seeds a session from the **server's** environment, so an override arrives only when that
-  call is what starts the server, and `exit-empty off` pins the server for the machine's lifetime. Measured both
-  branches on 2026-08-28 — no server: `KEEL_REMOTE_HOSTS=[antares]`; server already up: `[unset]` — so the first
-  detached run of a host's life honours its overrides and every later one silently does not. The runner script now
-  carries an enumerated environment (`PATH`, `GOEXPERIMENT`, `GOMAXPROCS`, `KEEL_*`, `BENCH_*`), which makes
-  `build/<name>.cmd` readable as a statement of what was measured, and the launcher echoes the names it carried.
-  `PATH` is on the list because it picks the `go` that builds the arms; it matched the server's here only because
-  one profile started both. Proven on the branch that failed, with a server already up.
-- **`docs/hosts.md` said no toolchain is installed on the remote hosts, and that the gate version-checks the
-  compiler whose output runs — both false, the second interestingly so.** There is a second toolchain and gate-p5's
-  `-race` arm needs it (`go test -c -race` under `CGO_ENABLED=0` is refused outright), so `janus` and `antares` carry
-  `/usr/local/go` = `go1.26.5`; `vesta` did not answer ssh on 2026-08-28 and is `unmeasured`, not assumed. And the
-  drift argument ran backwards: the version the gate printed was the **host's**, which is the compiler that produces
-  nothing *except* that one arm — so the binary whose provenance mattered was the one no check read. `b0e5b37` is
-  what makes the sentence's premise true for the first time.
-- **CI's runner may or may not have AVX-512, and it is drawn per run** (`.github/workflows/ci.yml`). Two runs of
-  one workflow forty minutes apart read back `avx512 avx2 scalar` (`33225065217`, red — T27) and `avx2 scalar`
-  (`33226797681`, green). The consequence outruns the erratum: **the green run never executed the path the red
-  run failed on**, so CI green is not evidence for the T27 fix — the fleet is — and a red AVX-512 finding here
-  can be converted to green by a retry landing on other silicon. The design is unchanged, because its
-  rejected-options paragraph already said "whatever hardware the runner lottery deals"; what was wrong was a flat
-  claim about the fleet sitting two paragraphs above an argument assuming the opposite. Three prose sites and the
-  Level-3 summary branch now key off the printed availability rows instead of asserting a cause.
-- **`gate-p5`'s race criterion called a compile failure "a test failure under instrumentation"**
-  (`scripts/gate-p5.sh`). The `-race` arm is built natively on each host — it must be, since `-race` needs cgo and
-  `remote_build_test` is `CGO_ENABLED=0` — so it is the one place the *host's* toolchain compiles keel. The port
-  made the tree need go1.27's archsimd names while the fleet's `/usr/local/go` is go1.26.5, so from `fed1e70` every
-  host takes this path, and it fell to the `else`: a sentence about a test that never ran and instrumentation never
-  applied. Now a fourth verdict state, `UNMEASURED` either way, so no judgment changes — the reader's causal story
-  does. Exercised on a real `go1.26.5` failure from `janus` plus three controls proving the new arm does not capture
-  the neighbouring cases; the marker is deliberately `[build failed]` and not `^go: `, since the real log carries two
-  `go: downloading` lines.
-- **`Sasum`'s AVX-512 tail returned `-0`, because the ternlog rewrite transposes `AndNot`'s operands**
-  (`internal/vec/vec_avx512.go`, `internal/vec/vec_avx2.go`; docs/toolchain-notes T27). `ssa.rewriteTern`
-  folds a tree of vector logical ops into one `VPTERNLOGD` and builds the imm8 in `computeTT`, whose
-  `sloAndNot` case reads `Args[0]` as the non-negated operand — AMD64's `VPANDND` carries the negated one
-  there, so the immediate is the one for `y &^ x`. Abs now spells itself `And` against the complement mask:
-  the fused immediate for three ANDs is `0x80`, bit 7 alone, **invariant under every permutation of the
-  inputs**, so a pass that transposes them has no wrong answer available. `AndNot` is the only
-  non-commutative op in that switch and so the only one exposed. **Two logical ops in one expression is the
-  whole trigger** — a lone `AndNot` is left unfused and is correct — and go1.27.0's `LoadFloat32x16Part`
-  supplies the second, since `Masked` is an `And`. Three claims here replace a first story that was wrong in
-  mechanism ("go1.27.0 swaps `VPANDND`'s operands", refuted by there being no `VPANDND` in the object code at
-  all): the bug reproduces identically **under go1.26.5**, so the 1.27 floor exposed it rather than caused
-  it; `archsimd`'s own `Float32x16.Abs()` escapes only because the rewrite skips unsigned vectors
-  (golang/go#79666, open), i.e. its correctness rests on a second bug; and the AVX2 twin was never wrong,
-  because `VPTERNLOGD` is an AVX-512 encoding at every width and keel's AVX2 routines compile under an AVX2
-  feature context — so its move is prophylactic and retracts no measurement. Verified in the shipped kernel:
-  9 `VPANDND` became 9 `VPANDD` at identical displacements and the single ternlog kept its slot with `$112`
-  becoming `$128`, so **no rate is re-measured**. 56 package-runs green afterwards (7 packages × 4 dispatch
-  pins × 2 AVX-512 hosts, `avx512` active and asserted), against three failing tests before.
-- **keel is ported to the `go1.27.0` `simd/archsimd` API, which the dev host moved to between sessions**
-  (`internal/vec/{gemm,vec_avx2,vec_avx512,vec_scalar}*.go`, `tools/shapegen/emit.go`, `internal/block/block.go`;
-  docs/toolchain-notes T23 amendment). The load/store surface renames with a **swap** — the slice forms take the
-  bare names, the array forms they displace gain an `Array` suffix — so the array-form sites had to be rewritten
-  *before* the slice sweep, or the two APIs merge into one name. 51 type errors, the same count T23 measured
-  against `rc3`, so the rename table is identical between rc3 and final. keel's own `vec.Load512`/`StorePart512`
-  surface keeps its names **and** signatures: the `…Part` wrappers absorb archsimd's new lane count rather than
-  passing it on, so nothing outside `internal/vec` changed. **`gemm_amd64.go` is generated and `tools/shapegen`
-  emits it**, which T23's file inventory missed — `internal/kern`'s fixed-point test caught the generator
-  drifting from its output. Two 1.27 facts recorded and deliberately not acted on: `paFloat32x16` now carries
-  `//go:nocheckptr` (CL 761120, merged, which closed golang/go#78413 — the still-open golang/go#80856 is a
-  duplicate), and that settles `-d=checkptr` **only**, because golang/go#42880 records that `-race` does *not*
-  obey `go:nocheckptr` — so the `-race` half is now predicted still broken, and an AVX-512 host's `-race` run
-  stays the decisive branch; and `(Float32x16) Abs()` now exists, retiring the bitcast workaround at #54's
-  convenience rather than during a freeze.
-- **The vector path's floor is now Go 1.27, and CI is where that is stated** (`.github/workflows/ci.yml`,
-  `Makefile`, `DESIGN.md` §4/P0 + §"standing orders" 1, `CLAUDE.md`, `README.md`, `doc.go`,
-  `doc-site/{index,limits,troubleshooting}.md`). Because the rename is a *swap*, no source satisfies both
-  toolchains: CI still pinned `1.26.x` and so failed the port with the same 51 errors mirrored. `go.mod` cannot
-  carry this requirement — `archsimd` ships with the toolchain and is not a module dependency — so CI's pin is
-  the tree's only machine-checked statement of which API keel is written against. The scalar path's floor stays
-  Go 1.26. Two user-facing docs said the *opposite* as of 2026-08-16 ("use Go 1.26.x for the vector path") and
-  are corrected, with the direction change called out, since it has now pointed both ways in twelve days.
-- **`make build` cross-builds `GOOS=linux GOARCH=amd64`** (`Makefile`, `CLAUDE.md`). The dev host is
-  darwin/arm64, where the build tags exclude `gemm_amd64.go` and both vector backends, so the session-start
-  smoke build greened on a tree that compiled nowhere a benchmark runs — which is how the `archsimd` rename
-  reached a \$3.888/hr fleet run before it reached a compiler error. Verified by reintroducing one 1.26 name:
-  native-only build passes, `make build` fails naming the line.
-- **`baseline-test.sh`'s boundary control asserts *unchanged* rather than *empty*** (`scripts/baseline-test.sh`).
-  It checked that the tracked registry and witness index hold zero data rows, using emptiness as a proxy for
-  "this script did not write them". `f0e9e0b`'s three reviewed baseline rows and one witness row — the
-  registration the whole BASELINE-REGISTERED class exists to serve — broke the proxy, gate-p5 fail-closed on
-  every bar, and the first registered-baseline verdicts were never computed. Now a `cksum` taken before the
-  first fixture and compared after. Both branches driven on purpose: a forged registry row and a
-  **single-newline** write to the witness index each turn the run red.
-- **CI runs `make lint`, not a hand-copied subset of it** (`.github/workflows/ci.yml`, `scripts/gate-p5.sh`).
-  The workflow listed three of the target's four steps and never gained the fourth, `baseline-test.sh`. So
-  gate-p5's comment beside that check — "lint runs on every push … and catches a broken reader before a
-  \$24/hr fleet renders a bar from it" — was false for the week it mattered, and the bill was the run above.
-  The comment is corrected in place rather than deleted, because what made it durable is worth naming: it
-  asserted a behaviour of *another file*, where nothing checked that the behaviour existed.
-
-### Added
 - **The `go 1.26` floor is now measured, and it is TRUE** (`.github/workflows/ci.yml`, new `floor` job). Four files
   say `go.mod`'s directive is the *scalar* path's floor and cannot express "1.27 if `GOEXPERIMENT=simd`"; nothing
   checked it, because both existing jobs pin 1.27.x — so after T23's rename the floor was a claim no instrument
@@ -439,869 +236,6 @@ While the major version is 0, minor versions may contain breaking changes.
   process and reused, the same arm reads **196 GB/s**. Recorded because the wrong number was *plausible*: it
   had the shape of a real bandwidth saturation finding.
 
-### Changed
-- **The share denominator was the one reading in the log with no range and no marker**
-  (`scripts/gate-p5.sh`, `scripts/remote-exec-test.sh` §9g, ruled 2026-08-28 on #6). The per-host ceiling
-  line hand-built its own `+/- %.2f%%` and never called `bench_describe`, so rule 20's disclosure — the
-  range beside the interval, and `RANK-WINDOW-BLIND` when a printed zero sits under a span refuting it —
-  reached every judged rate and **not** the number all three of them are divided by. keel-skx's
-  confirmation run printed `ceiling: compute 1444 GFLOP/s +/- 0.00%` on exactly that line. Routed through
-  the one renderer; the nine verdict lines that cite the ceiling now cite `CEIL8P`, the disclosure's own
-  value token, because `%.4g` and benchstat's raw CSV field differ on a 5-significant-figure rate and a
-  log stating its denominator two ways is the defect one layer along. **No fixture over `bench_describe`
-  could have caught this** — the renderer was correct and simply unreached — so §9g extracts the three
-  lines from `gate-p5.sh`'s own bytes and evals them with `info` stubbed, plus a positive-controlled
-  static check that no site still renders the raw field.
-- **Era `pinned8` is CLOSED, and `keel-skx` is the first host in `scripts/host-baselines.tsv`**
-  (`scripts/measurement-eras.tsv`, `scripts/judged-runs.tsv`, `archive/pinned8/`, #6). The spread arm's
-  21 archives are preserved and indexed (`INDEX-spread.tsv`: 9 `ladder` at `instrument=v2`, 12
-  `clock-window`), which fills `transition_archive`; all three judged CPU models appear in both arms
-  (9R14 11/4/3, 9R45 10/5/3, 8124M 6/15/3) and gnr's 8-free/0-pinned stays the stated exclusion.
-  **What forced the preservation was a live defect, not the era condition**: the published README rows
-  cited their evidence as `build/` paths and `build/` is gitignored, so 24 green numbers rested on logs
-  no reader could open — #114 at the *publication* layer. `readme-numbers.sh` now cites the path as
-  invoked instead of a basename under a hardcoded `build/`, and the page was regenerated against the
-  preserved logs; **no rate moved**. skx's three share baselines are **30.80 / 31.40 / 30.35**, medians
-  over the era's two judged archives — with take four **recomputed under #116**, because a share is net
-  of both intervals and the #116 fix landed *between* the two revs, so pooling its printed 29.7/31.3/29.8
-  would have averaged across a CI-instrument change and registered two of three baselines 0.35 and 0.15
-  points **low**, i.e. permanently looser. Baselines and witness landed together: a witness alone is the
-  `owing` state, which is FAIL.
-- **Rule 20's `RANK-WINDOW-BLIND` marker keys on the width as *printed*, not as stored** (`scripts/bench.sh`,
-  DESIGN.md §5 rule 20 amended 2026-08-28, ruling on #6). The printed line is the assertion, so `± 0.003%`
-  renders `0.0%`, makes a reader the identical claim as an exact zero, and earns identical scrutiny; the
-  second half is the range refuting that claim, at one quantum of the same display. **16 of 114 archived CI
-  readings print as `0.0%` and only 4 are exact**, so the reserved middle was 12 readings wide. Output only,
-  and exact-zero ⊂ display-zero, so no marker is lost and no verdict moves. `bench_describe` had no test
-  before this; six fixtures now cover it (`remote-exec-test.sh` §9f) and the archived path stays unexercised —
-  no CSV in the tree carries #116's seven columns.
-- **The published numbers are per-row medians over an era's archives, and the verdicts beside them still are
-  not** (`scripts/readme-numbers.sh`, #6; the ratified repair). The generator now takes any number of
-  `gate-p5` logs and reduces each cell across them (§5 rule 16), every cell naming its own estimator —
-  currently `median of N=2 archives` on all 24 rows, over rev `969c360` (judged) and `6ba6566`. Verdicts do
-  **not** pool: a verdict belongs to the gate that rendered it and two cannot be averaged, so the judged log
-  is identified **by content** rather than by position, two judged logs are refused outright, and argument
-  order is provably irrelevant — both orders print skx `Sgemm` 1T as `66.01`, which is `(66.18 + 65.84)/2`
-  recomputed by hand. The cross-check against each run's own printed share moved per-archive, because a
-  pooled median matches no single log by construction. **Host coverage moved with the era**: `keel-skx`'s
-  eight rows are born, and `Intel(R) Xeon(R) 6975P-C` leaves with 8 free archives and 0 pinned — a stated
-  exclusion in `scripts/measurement-eras.tsv` since 2026-08-22, not an unmet condition. A departing host is
-  the one change 24 green rows cannot report, so the generator diffs the CPU-model set against the **last
-  published** block — not the working copy, which would print the notice on the first run and drop it on the
-  second — and says it in the caption, failing closed when `HEAD` is unreadable. **Confirmation semantics,
-  stated because they are weaker than a green:** rows regenerated *from* these archives agree with these
-  archives by construction, so criterion 9's meaningful green arrives on the **next** judged run.
-- **`scripts/detach.sh` forwards no environment, so a detached run can be a different program than the
-  same command typed directly** (measured 2026-08-22; no code change, recorded and worked around at the
-  call site). The generated runner is `cd $ROOT` plus a `printf '%q '` of argv and nothing else, so a
-  `KEEL_*` variable exported in the caller's shell is simply absent inside the tmux session. Found by
-  launching the founding campaign's fleet with `KEEL_FLEET` set to the judged sizes and watching it bring
-  up the **exploration** sizes instead (`c7a.2xlarge`, `c8a.2xlarge`); killed, torn down twice, both
-  instances confirmed `terminated` by instance-id, ≈$0.09. Then positively controlled rather than
-  reasoned: the detached run printed `KEEL_PROBE_VAR=[<unset>]` where the identical command run directly
-  printed `[set-by-caller]`. Compounded by `tmux set-option -s exit-empty off` (line 114), which keeps the
-  server alive between sessions, so a later run inherits whichever caller first started it. The fix is not
-  invisible forwarding: launches that need a variable use the inline `env VAR=... ./script` form at the
-  call site, which costs no `scripts/` lines and is what a judged run wants anyway — a stray `KEEL_*`
-  in an operator's shell cannot leak into a measurement it does not name.
-- **Ceiling readings taken before the hoist are marked `instrument=v1` and era-scoped, NOT re-adjudicated**
-  (ruled 2026-08-22 on #115; `scripts/measurement-eras.tsv`, DESIGN §5 rule 18). The v1 bias was host- and
-  mask-dependent **and varied per run** — that variance *was* the ceiling scatter that drew attention in the
-  first place — so no correction formula recovers an archived share honestly, and one applied anyway would
-  publish a precision the data never had. Nothing needed recovering: **no bar was typed from those readings, no
-  registry row landed from them, no verdict rests on them.** The counterfactual is recorded because it is the
-  argument for the pre-commitment discipline rather than for the repair — **had `CEIL_FRACTION` been typed at
-  the 74.3% the v1 ceilings supported, this repair would now be forcing a published bar retraction with every
-  verdict derived from it.** A defect in a denominator resolved into a version label. The version is emitted by
-  the instrument in its own declaration row (`instrument=v2`), not only in prose, because a reader comparing two
-  archives needs the noun's version where they read the number. `pinned8` is therefore founded a **third** time
-  and still has never closed; a fresh era id was considered and refused, since the era id bounds
-  *registrations* while the artifact fields (`doms=`/`nodedoms=`, `instrument=`) bound *configurations*, and
-  the re-founding returns nobody's exemption — `scripts/judged-runs.tsv` has no data rows and
-  `scripts/host-baselines.tsv` is header-only, so no host has ever spent a `BASELINE` in this era.
-- **§5 rule 5's spread mask is FINAL as the standing judged placement, and its cost is now stated as measured
-  rather than as asserted** (ruled 2026-08-22 on #6; §7 rule 7 extended with it). T-52 removed the only standing
-  argument against spread — the ceiling scatter was the harness, not the placement — so the choice was decided
-  on spread's own profile: deterministic, and bandwidth-honest on the L1 rows by 5.96×/4.65×, which a confined
-  mask would have buried. **The ruling's "4–6% GEMM cost" did not survive being recomputed from the archives and
-  is not what landed.** Median-of-medians on the judged 8-thread rows at n=4096, confined against spread, as
-  `Sgemm / Ssyrk / Ssymm`: keel-zen4 **4.32 / 5.49 / 4.30%**, keel-zen5 **1.16 / 3.40 / 0.46%**, keel-skx
-  **1.70 / 0.30 / 1.17%**. keel-skx is a **null band, not a third data point** — its two masks are byte-identical
-  (`nodedoms=1`), so its 0.30–1.70% is what this cross-era, cross-revision comparison reads when the mask does
-  not change at all. zen4 clears that band; **zen5 straddles it**, so the honest statement is a few percent on
-  Zen 4 and at-or-near the noise floor on Zen 5, and one fleet-wide figure would have been zen4's number wearing
-  the fleet's name. The one-L3-copy-per-CCD mechanism is recorded as **unmeasured** beside it. **A fourth
-  limitation is stated inside the number, and it is an argument against spread that T-52 did not remove**
-  (§5 rule 12): the GEMM-class rows are tight under spread (CIs **0.045–0.41%**, two outliers at 1.41% and
-  1.85%) but **`Strsm` is not, and this mask is why** — its 8-thread interval goes ±2.32/2.97% → ±6.52/9.48/11.84%
-  on zen4 and ±0.75/0.87% → ±5.13/10.28/13.24% on zen5, a 3–15× widening, while **keel-skx's identical-mask
-  control does not move** (±0.50–1.30% → ±0.82–1.00%). In raw samples on zen5 that is 399–412 GFLOP/s confined
-  against 334–455 spread: a 3.3% total spread becoming 36%, consistent with this mask reweighting the bimodal
-  distribution T-45 and T-52 both found rather than with a new cost. It bears on one decision and not on the
-  placement, so it is disclosed rather than netted out: **whether `Strsm` can be judged at all under a mask
-  that gives it a 5–13% interval is open, and `STRSM_FLOOR` stays empty until it is answered.**
-- **Both of P5's bars are SUSPENDED TO EMPTY for the era-founding run, and one of them was RED when it happened**
-  (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; ruled on #6, 2026-08-22). `CEIL_FRACTION`
-  goes because its denominator is the compute ceiling *measured under the mask in force* and the confined mask is a
-  different instrument; **counted rather than assumed, 51.0 judged exactly one run** (`build/gate-p5-d2fe477.log`:
-  six rows, two models, all PASS, and the argmin row read 53.6% again — clearing by exactly its own 2.6-point
-  margin, a reproduction to one decimal rather than a defect). `STRSM_FLOOR` joins it and becomes era-scoped, for
-  a reason of its own: it is a ratio over the **1-thread** rate, the one arm this fleet has measured bimodal and
-  placement-sensitive, and rule 5's controls are explicitly silent there. **The suspension removes three live
-  FAILs — zen5 6.982/6.756, zen4 7.257/6.881, skx 6.806/6.637 against 7.0× — and that is disclosed first because
-  it is the shape of a criterion weakened to pass.** What makes it a re-derivation: the ruling scoping the bar to
-  the era was made with those three reds already on the record, and §5 rule 17(d) predates them. **Pre-committed:
-  if the spread rows land below 7.0× net of CI, the value does not get typed** — a bar under 7.0 would be
-  loosening after a red, so it goes to Scott as a finding and the class stays REPORTED. `BASELINE_MARGIN` is
-  deliberately **not** suspended: 2.6 points is an *input* to the formula rather than an output of the run, so the
-  circularity clause has nothing to say about it, and what suspends it this era is the artifact — both registries
-  are header-only for `pinned8`, so the branch that subtracts it cannot execute. Five predictions are
-  pre-registered in DESIGN §4/P5 before the run (§5 rule 11), including **the control that tests the amendment
-  hardest: `keel-skx` must not move**, its L3 being per socket so the spread enumeration is degenerate there.
-- **The README caption could print "every pair clears the bars" when NO bar was in force** (`readme-numbers.sh`).
-  Vacuously true, and it reads as a pass — §5 rule 8's defect published in the one file a reader checks. Both
-  suspended bars now render in words (the `>= %sx` hole was already anticipated for the ceiling bar and not for
-  Strsm), and the both-suspended case prints **NONE of the pairs was judged**. A second, worse case was found by
-  driving it: the bars are read from this tree and the rows from a **log**, so a log written while a bar was in
-  force carries FAIL verdicts a suspended bar cannot produce — the constants read-back compares two scripts and
-  cannot see it. That combination now **refuses** rather than choosing which sentence to publish. Stated inside
-  the number (§5 rule 12): the both-suspended branch is **unexercised by any archived log** — every log in
-  `build/` predates the suspension and now takes the refusal instead, so the string was rendered against one of
-  them before the refusal landed, which proves formatting and not reachability. **And the founding run will not
-  reach it either**, which is the find that matters: a `BASELINE` verdict line carries no scaling clause, so this
-  program refuses the whole log the moment one host renders BASELINE — `keel-skx` does, this era, which makes it
-  the blocker on regenerating the README as medians over this era (#6).
-- **§5 rule 5's mask is AMENDED to one core per cache domain, and `pinned8` finalizes on the spread form**
-  (2026-08-22, ruled on #6; `scripts/remote.sh`, `DESIGN.md` §5 rule 5, `docs/hosts.md`, `docs/gates.md`,
-  `scripts/measurement-eras.tsv`). The 2026-08-21 form took the first eight distinct physical cores of one NUMA
-  node in ascending order, and **on EPYC 9R45 that is definitionally one CCD** — sysfs reports `index3`'s
-  `shared_cpu_list` as exactly eight cores wide, so "eight cores, one node" and "one L3" were the same set by
-  construction rather than by accident, on the host the fleet's widest readings come from. Measured against it
-  (T-45, three controls): 8-thread stream **dot 56.26 → 335.48 GB/s (5.96×)** and **axpy 75.89 → 353.0 GB/s
-  (4.65×)** one-core-per-CCD, with the repeat arm reproducing to **0.10%**, the 1T arms invariant across masks, and
-  arm A's 1T axpy matching the untouched harness to **0.01%** (66.29 vs 66.30) — so the delta is placement and
-  not the instrument. The spread arm also **exceeds free placement by 1.69× / 1.55×**, which is what makes this
-  publication honesty and not precision: the confined mask would have regenerated the README's bandwidth-bound
-  `dot`/`axpy` rows several-fold low, and **§5 rule 16 forbids a systematically underselling reference in exactly
-  the spirit it forbids the max-draw overselling one**. The enumeration is stated in the law as a function of
-  topology alone — partition a node's distinct physical cores by their **highest cache `level`** (keyed on the
-  lowest cpu id in `shared_cpu_list`), order domains ascending by that key, round-robin one core per domain per
-  pass taking the lowest unused core — so nothing here is a chosen mask. `level`, never `index3` by number, is
-  `bench/ceiling_test.go`'s `llcBytes` discipline reused: the harness makes no microarchitecture claim it would
-  have to maintain. **A missing cache level now refuses exactly as missing thread siblings does** (status 121,
-  amended refusal string), because falling back to consecutive cores would file a confined reading under this
-  era's label — the era-ledger forgery one layer in from free placement. **On `keel-skx` the amendment is
-  degenerate and that is the correctness argument**: one L3 domain per socket means the spread form returns
-  consecutive `0..7`, byte-identical to the old answer and the right mask there, so this refines the 2026-08-21
-  form rather than replacing it — and the new arms are therefore driven by fixtures written on purpose (a
-  12-domain EPYC node, a 2-domain wrap-around, a cache-blind cpu, no cache at all) instead of resting on an
-  unchanged expectation. The 24 archives at `archive/pinned8/` are preserved unedited as the **provisional
-  confined arm**, superseded by the amendment, and they **self-identify** by carrying no `doms=` field: the two
-  arms are separable by their own witnesses with no file touched. `transition_archive` stays `—` because the
-  spread-form campaign is now what fills it; the gnr hole no longer figures, the 2026-08-22 ruling having scoped
-  the both-arms condition to **judged** hosts, so `keel-gnr` is a stated exclusion in the era row rather than an
-  unmet condition.
-- **The pin line records the mask's SHAPE, because `GOMAXPROCS` cannot witness it** (`scripts/remote.sh`,
-  `scripts/bench.sh`, `scripts/gate-p5.sh`, criterion 4). Amending the banner surfaced the gap: the gate would
-  have asserted a spread its archive could not show, since `gomaxprocs=8` reads identically under a confined and
-  a spread mask — the field the old criterion cross-checked is blind to the very defect the amendment fixes. The
-  line now carries `doms=` (each selected core's domain, in mask order) and `nodedoms=` (how many the chosen node
-  offered), and the invariant `distinct(doms) == min(width, nodedoms)` **and** `max_count − min_count ≤ 1` is
-  checked off the artifact per row. **The surprise: a fully confined mask has imbalance 0, not 7.** Eight cores
-  in one domain are perfectly *balanced* over that one domain — predicted 7, the fixture read 0 — so balance
-  cannot see confinement at all and `nodedoms` is load-bearing rather than belt-and-braces; the two terms catch
-  disjoint defects. A row missing both fields is **`unmeasured`, not a failure**, naming the provisional confined
-  arm as exactly that shape, since a pre-amendment archive is not a broken post-amendment one (§5 rule 6). The
-  invariant was lifted into `bench.sh` as `bench_pin_spread` so it is drivable from log fixtures: the criterion
-  needs a fleet, and the confined arm it must still classify is a shape **no working host can now produce**.
-  `remote-exec-test.sh` grew section 9d over that seam (7 cases) and every pre-existing pin fixture gained cache
-  topology, without which all of them would have started refusing. **`scripts/` budget, disclosed rather than
-  netted out** (CLAUDE.md, "the apparatus pays its own way"): this pair of entries lands net shell with **no**
-  library, kernel or routine beside it: **+279 net lines in `scripts/`, moving `gate-docs.sh`'s reported ratio
-  1.63× → 1.66×** as measured 2026-08-22, and the move is attributable to the numerator alone because the library
-  term does not change in this commit (`verify_test.go` is a test and is not counted). It is the instrument the
-  era's founding campaign is about to be measured with, so deferring it wastes fleet time rather than lines, and
-  the paydown is owed post-tag — but the ratio moved the wrong way and saying so is the rule's whole mechanism.
-- **The `pinned8` era's arm is preserved and tracked at `archive/pinned8/` — 24 archives, `INDEX.tsv`, mapped to the
-  free arm by `cpu_model`** (#6). It existed only as untracked `build/` output, one `make clean` from gone, on an era
-  whose evidentiary half cost a three-host fleet to measure. Membership is the **measured predicate "carries a
-  `keel-pin:` line"**, not a revision range: what makes an archive pinned is that the mask applied to it, and that
-  line is the only witness. Applying the predicate also returned exactly 35 *unpinned* archives whose names match the
-  35 already in `archive/free-placement/`, an independent check that the free arm was preserved whole. All 24 report
-  the same `mask=0,1,2,3,4,5,6,7 width=8` and `gomaxprocs=8`, which is what rule 5's "fleet-wide and never
-  selectively" looks like in the evidence. **The count corrects a figure published hours earlier on #6 as 15**: that
-  was the two runs in front of me, and the predicate found `e64b34e`'s nine as well.
-- **`transition_archive` stays `—` and `pinned8` stays PROVISIONAL, deliberately** (`scripts/measurement-eras.tsv`;
-  #6). Granite Rapids (`Intel(R) Xeon(R) 6975P-C`) appears 8 times in the free arm and 0 times in the pinned one,
-  being a characterization host absent from the pinned fleet, so "the same fleet measured under the old instrument
-  and the new one" holds for three of the four models the free era touched. That is arguably consistent with the
-  condition rather than a breach — a characterization host is not part of the fleet the era governs — but reading it
-  as met is a judgment about what "the same fleet" means, and certifying a condition with a stated hole in it is not
-  a call to make in the commit that files the evidence for it. Preserving is unambiguous and done; closing is asked.
-- **The reported 8-thread stream ceiling is a single-CCD figure, ~6× below the socket, because §5 rule 5's affinity
-  mask packs all 8 threads into one CCD** (`keel-zen5`, EPYC 9R45; #6). sysfs gives `shared_cpu_list` for
-  `index3` as exactly 8 cores wide, so `keel_pin_mask`'s "first 8 distinct physical cores in order inside one NUMA
-  node" is definitionally one L3 domain. A three-arm probe — mask `0-7`, then `0,8,16,…,56`, then `0-7` again —
-  measures 8-thread **dot 56.26 → 335.48 GB/s (5.96×)** and **axpy 75.89 → 353.0 GB/s (4.65×)**, which fully accounts
-  for the era's collapse at `be5bb91` (dot 198.7 → 56.525, axpy 227.4 → 76.195) and then some: the spread arm
-  *exceeds* the free era's own reading by 1.69× and 1.55×, so scheduler placement was leaving CCD bandwidth on the
-  table before the mask existed too. Three controls: the repeated first arm reproduces itself to 0.10%
-  (so not drift or thermal), the 1-thread arms are invariant across masks (so not the instrument), and arm A's
-  1-thread axpy matches the gate harness to 0.01% (66.29 vs 66.30). **Consequence is forward-looking**: the figure is
-  inert today — `scripts/gate-p5.sh` reports it and keeps the `min()` on the compute term alone, which stays the
-  strict direction — but it is documented there as a candidate for that `min()`, and promoting a 6×-low bandwidth
-  into a ceiling would understate the ceiling in the flattering direction. The compute ceiling is unaffected,
-  needing no cross-CCD traffic, so DESIGN.md's strict-direction argument survives. **No headroom multiple is quoted
-  here on purpose**: converting GB/s to a FLOP/s bound needs a declared DRAM traffic count, and as that same line
-  says, no benchmark declares one — the honest statement is the measured bandwidth ratio, not a modelled headroom
-  derived from a denominator this tree does not have. **The mask was not changed** — rule 5 is
-  law and it pins fleet-wide, never selectively, so whether to spread across CCDs is Scott's call (#6). `keel-zen4`
-  is *inferred, not probed*: its harness bandwidth fell comparably (103.25 → 39.265 GB/s at 8 threads) on the same
-  vendor topology. `keel-skx`, which has no CCDs, *gained* under pinning (52.5 → 88.0 GB/s) and is the negative
-  control. Probe is ad-hoc and deliberately untracked: it varies rule 5's mask and carries no provenance block, so
-  it is **not citable as a keel measurement** and adds no `scripts/` lines.
-- **The headline criterion's PASS and FAIL lines named a denominator retired two days earlier** (`scripts/gate-p5.sh`;
-  #6). Both said hosts cleared "their class's bar … against their own single-thread rate", but the judged share has
-  divided by each host's own measured 8-thread ceiling since the 2026-08-20 ruling; only `Strsm` still divides by a
-  single-thread rate, and `$BARS` spans both classes. Each bar now names its own denominator instead, and the
-  `gate-p4`-is-RED caveat — which disclaimed only what "divides by a single-thread rate" — now disclaims measured
-  rates generally, having stopped reaching the headline criterion at all. Worst on the **green** path: the PASS
-  string is what ships verbatim in a gate-green closing comment. A **fourth site** turned up afterwards, while
-  adjudicating the confirmation log (`gate-p5.sh:1189`): it justified `NINDET = 0` by that same retired denominator
-  — "this criterion's denominator is the host's own single-thread rate, of which there is exactly one". The
-  conclusion survives, since each class still has exactly one denominator and so there is no candidate split, but
-  the reason named the wrong one now that the criterion spans both classes. Lower severity than the three verdict
-  strings by §5 rule 14 — a comment ships to the next editor, not into a closing comment — and fixed rather than
-  filed, at no net `scripts/` lines.
-- **`CEIL_FRACTION = 51.0`, typed for `pinned8` from the era-founding run, with its derivation set narrowed from
-  three CPU models to two** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; #6). The minimum
-  judged row on `build/gate-p5-be5bb91.log` is `keel-zen5` `Ssymm` at 53.6% net of both intervals, less the same
-  2.6 points of margin. **The bar fell 6.8 points and the cause is the denominator, not the kernels:** on both
-  derivation hosts the ceiling outran every judged rate, so all six raw shares fell — zen5 1568.5 → 1999.5 GFLOP/s,
-  +27.5%, against +6.2/+17.5/+9.0%; zen4 713.6 → 817.4, +14.5%, against +9.7/+13.7/+5.7%. zen4 is not zen5's mirror
-  image but the same phenomenon: two of its net-of-interval shares rose regardless, pinning having collapsed the rate
-  intervals (1.0–8.3% → 0.0–0.8%), and a share net of both intervals has three terms. The argmin moved with it,
-  `Ssyrk` → `Ssymm`. `Intel(R) Xeon(R) 6975P-C` leaves `CEIL_DERIVED_FROM`: `gnr` is characterization, and
-  characterization hosts are "never mixed into the citable set" — the 2026-08-21 ruling applied, not a new decision,
-  and no verdict moves because the model is not in the fleet. Stated inside the number (§5 rule 12): **no Intel
-  silicon derived this bar**, and the two models that did spread 53.6–89.9%, so one fleet bar is set by the weakest
-  host. `keel-skx` does not register beside it — one draw is not an estimator (§5 rule 16) and its witness row may
-  not land without its baseline, so it re-renders `BASELINE` on the confirmation run, printed as a debt by design.
-  Found by exercising the twin against that log and **left for the README regeneration to fix, in the file it already
-  has to touch**: `readme-numbers.sh` dies on a `BASELINE` verdict line, because that branch prints no `scaling …x /
-  …x net of CI` clause and the parser requires four numbers. It fails closed, so nothing is published wrongly — but
-  no log containing a BASELINE host can generate a caption at all, and the fix is a *counted* exclusion ("a published
-  row is born from a judged run") rather than a skip, since a parser silent about what it never read greens like a
-  clean one. Pre-existing: the era-founding run is simply the first log this class has ever appeared in.
-- **`CEIL_FRACTION` is retired at the era boundary, and empty is its pre-registered state rather than its
-  fallback** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; ruled 2026-08-21 on #6, the
-  same day 57.8 was ratified — §5 rule 17(d), a derived constant re-derives by its own formula over new-era
-  inputs). 57.8 came from free-placement medians on the three `CEIL_DERIVED_FROM` models, and those models are
-  `DERIV=1` — the fleet-bar hosts the BASELINE-REGISTERED class deliberately does not shield. Left standing it
-  would judge their *pinned* readings against a *free* bar: the methodology delta booked as host drift, arriving
-  through the bar rather than through the registry, which is the one error the era boundary exists to prevent.
-  **Counted rather than assumed, it judged one complete run** — `gate-p5-33de3b2.log`, nine rows, no `keel-pin`
-  line, and its RED is the observation that minted rule 17; `gate-p5-fdd23d4.log` cites it in the preamble and
-  never reached a judged row. It never judged a pinned reading and now never will. Nor can the `pinned8` value be
-  pre-typed, which is a construction and not a scheduling problem: the formula's inputs are the era-founding run's
-  own outputs, so a bar derived from the rows it judges is cleared by its own argmin by exactly the margin every
-  time, certifying arithmetic rather than silicon. So the transition run **reports** through the branch already in
-  the gate, a reviewed commit types the value from those rows with its derivation printed, and the confirmation run
-  is the first this era judges — #37's rhythm, and 57.8's own. Both copies empty together because
-  `readme-numbers.sh` reads the gate's line back verbatim and dies on disagreement, which is why the second file is
-  a second edit and not a second decision. The preamble's empty-fraction line had also kept the *previous*
-  deferral's reason ("until the bandwidth term is measured on the fleet"), false since the ceiling was measured, so
-  it now names the live cause; the era-founding log is this era's constitution and may not carry a stale one. The
-  historical re-adjudication is undisturbed — a free-placement bar over free-placement archives is intra-era by
-  construction, so its 35-of-105 stands and does not become a cross-era claim.
-- **The BASELINE-REGISTERED class gets a synthetic driver before the era-founding run, not after it**
-  (`scripts/exercise-baseline.sh`, ordered by Scott's ruling of 2026-08-21 on #6). The class decides which bar
-  governs a host from the contents of two tracked files, and **its row loop had never executed**: no `frac`
-  computed inside it, `new`/`owing`/`registered` all unentered. Its live debut would otherwise have been the
-  pinning transition — the era-founding campaign — where a wiring bug costs a fleet-wide re-run and muddies the
-  both-arms archive that campaign exists to produce. Three passes on one real host through the
-  `KEEL_INSTRUMENT_BASELINE_DIR` seam: empty registry and empty witness (BASELINE on both criteria of the class,
-  with the candidate rows a reviewed commit would land); witness landed and registry still empty (`BASELINE is
-  spent` on both, plus the debt line — the branch #114's fix created, and unexercised a repo with one landed row
-  would have renewed BASELINE instead); registry landed from pass 1's own fracs **with a wrong-era decoy row at
-  99.0 written above the real rows**, so one pass drives the registered state and both arms of era scoping, since
-  `baseline_lookup` returns the first match and a decoy below the real row would prove nothing. The discriminator
-  is textual and declared before the run: a bar of `frac − 2.6` naming era `pinned8` confirms scoping, a bar of
-  96.4 naming `free-placement` refutes it. The preflight spends no sweep and drives **both** of the seam's
-  fail-closed refusals with `env -u`, so neither can pass by inheriting a variable the driver happens to have
-  set; it also asserts from gate-p5's own bytes that the seam resolves *before* the gate's first remote call, and
-  reads `CEIL_DERIVED_FROM`, `P5_JUDGED` and `BASELINE_MARGIN` out of the gate rather than restating them. Each
-  read-back is keyed to its own pass's phrase and reports NO on no match, and the run finishes with a stamp audit
-  over the parent *and* the three delegated logs — `^  TOKEN  ` followed by `[synthetic] `, plus zero signed
-  `gate-pN:` lines anywhere.
-- **The BASELINE-REGISTERED witness was a glob over gitignored output, so it was right on one machine and wrong
-  everywhere else** (#114, fixed 2026-08-21 on Scott's direction, folded into the era commit). `baseline_prior`
-  asked `build/bench-gate-p5-*-<host>-*.txt` whether a host had been judged before. `build/` is gitignored, so on
-  a fresh clone, on CI, or on a second operator's machine the answer is always *no*: every host is new forever and
-  `BASELINE` renews on every run. **A per-machine witness defeats single-shot exactly as thoroughly as the
-  permanent exemption the class was built to kill**, and more quietly, because it fails only for readers who are
-  not the operator. The witness is now `scripts/judged-runs.tsv` — tracked, keyed `(cpu_model, era)`, proposed by
-  the gate beside the baseline row it spends. The trade is stated where the old scope disclosure was, not deleted:
-  **automatic-and-invisible for reviewed-and-visible**. A session that lands neither row leaves the host
-  unregistered and re-renders `BASELINE`; the debt line gate-p5 already prints is what makes that repeat visible,
-  and the message that used to say "spent — this run's own archive is the prior log" now says spent *only once the
-  witness lands*, because the old wording over-promised in the same direction the defect did. Keyed on the CPU
-  model rather than the hostname, deviating from the ruling's wording on purpose and recording why: the registry
-  next door keys on the probe string, and a hostname key would hand a renamed host a second exemption.
-- **A baseline now belongs to the era of the instrument that measured it, and the pinning adoption is an era
-  boundary** (DESIGN.md §5 rule 17 clause (d), ruled 2026-08-21 on #6). Read literally, "one `BASELINE` per host,
-  ever" said skx must be judged against a baseline imported from `5ec5fea`/`33de3b2`. Scott's ruling refuses that
-  on **misattribution** grounds rather than on convenience: those are free-placement readings, §5 rule 5 pinned
-  placement fleet-wide the same day, so judging pinned readings against unpinned baselines would book **the
-  methodology delta as host drift** — the cross-denominator sin the registry exists to prevent, arriving through
-  the registry. An instrument change is therefore the "dated re-registration citing a named change" door opened
-  fleet-wide: every host renders `BASELINE` once per era, registrations land from the new instrument's medians
-  with rule 16's estimator honestly stated, derived constants re-derive by the same formula over new-era inputs.
-  **The loophole guard is a reader and not a paragraph:** an era exists only via a dated §5/§7 amendment plus a
-  both-arms transition archive, both recorded in `scripts/measurement-eras.tsv`; a current era citing no amendment
-  resolves to *nothing* and gate-p5 renders `FAIL`; and resolution deliberately does **not** skip a malformed row
-  to reach a valid one, because falling back is precisely the misattribution the clause forbids. `free-placement`,
-  the era before eras, is named retroactively and left undated — it was not a concept while it ran. Consequence
-  for this tree: the registry is empty for the whole fleet rather than for one host, and the transition run's
-  green is the first green under `pinned8`.
-- **21 mutants driven against the new readers, 21 killed, and a 22nd deleted for being unkillable.** Three
-  survived the first pass and every one was a **blind fixture rather than redundant code**: an empty-era guard
-  with no era-less registry row to match, a width check with no row one column short, and an empty-key guard with
-  no empty-keyed witness row. Each got the row that makes the guard matter. The fourth survivor was genuine — an
-  unnamed-era check whose deletion changed nothing observable, since an empty name prints an empty line and every
-  caller reads that as no era — so it was deleted rather than explained, and the fixture asserting the outcome
-  stands. One fixture case was also **vacuous on the first pass**: the rename case re-asserted a neighbour under
-  a new label, since the hostname is not an argument at all; it now moves the host column and shows the answer
-  does not move. Fixtures 22 → 50. Mutation is a session act with no standing harness, and gate-p5's pass line
-  says so inside the number (§5 rule 12).
-- **Apparatus ledger for this commit, both lines** (the standing clause, ruled recorded-owed-parked): **+236 net
-  `*.sh` lines against zero library lines**, ratio **1.49x → 1.52x**. A third figure the counter cannot see:
-  **114 lines of tracked `.tsv`** (the era ledger, the witness index, the registry's new header) which
-  `gate-docs.sh` does not count, because its shell term is `*.sh`. So the apparatus grew by ~350 lines and the
-  report shows 236 — disclosed as a share rather than left to be diffed, and whether the counter should widen is
-  Scott's call, not a fix to slip in beside the thing being measured. The paydown lift is owed post-tag.
-- **The apparatus-ratio report could not see a new script until it was committed, so it understated the cost of
-  the commit being prepared.** `gate-docs.sh` counted *tracked* `*.sh`, so `scripts/baseline-test.sh` (131 lines)
-  was invisible while it was still untracked. `820eac0`'s message therefore published **1.47x**; the correct
-  figure for that commit is **1.45x → 1.49x** (shell 12693 → 13062, library 8778 unmoved). Both readings came
-  from the same instrument minutes apart and the delta is exactly the new file's line count, so the arithmetic
-  reconciles — but the metric that polices new shell was blind to new shell at the only moment consulting it
-  could change a decision. That is the gameable-denominator hazard already recorded here, running in the other
-  direction: not a denominator that absorbs the cost, a numerator not yet told about it. **Fixed
-  rather than disclosed**: both terms now count `git ls-files -co --exclude-standard`, so the reporter sees a
-  script the moment it exists. Both sides gained the flag, because correcting only the shell term would have
-  been a redefinition letting untracked Go pay the ratio down. Proved by making the quantity move — a 7-line
-  untracked probe raised `shell` by exactly 7 and removing it restored the reading, since a constant that is
-  merely readable certifies nothing.
-- **31 citations in this commit named `#6` only after `gh issue view` refuted `#33`/`#34`/`#36`, which were task
-  ids.** Same failure mode as `ddd642f` (2026-08-18, "17 citations pointed at the wrong issue"), against the
-  same number `#33`, three days later — so the recorded lesson did not prevent the recurrence. It cannot be linted away
-  either: task ids and this repo's issue numbers occupy the same low integers and are syntactically identical,
-  so no local check can discriminate them, and `#33` resolves to a real open-shaped issue with a plausible
-  subject. The discriminator is a network query or a human reading, which is why the rule is *never carry the
-  number into prose* rather than *check it later*. Caught before commit; the blind substitution was refused
-  because seven tracked files cite the genuine `#33` (the coretype-sweep defect), so only lines this diff added
-  were rewritten.
-- **A criterion may not judge a host its reference artifact predates: the BASELINE-REGISTERED class**
-  (#6, ruled 2026-08-21; DESIGN.md §5 rule 17, `docs/rulings.md` rule 17). gate-p5 convicted `keel-skx` for
-  publishing no README row — a row that is *born* from a judged run, so the host's first judged run could not
-  have had one, and the criterion was reading its admission date. Now three states, decided from the archive
-  and never from a flag: no registry row and no prior archived judged log is newness (`BASELINE`, a fifth
-  verdict colour that does not raise `FAIL`); no row **with** a prior log is an unmet registration (`FAIL`);
-  a row is judged at `baseline − 2.6`, the same margin `CEIL_FRACTION` uses, derivation printed. The
-  exemption closes structurally rather than by vigilance — the run that renders `BASELINE` creates the prior
-  log that forbids it next time — and the consequence is immediate: this machine's archive already holds two
-  judged skx runs, so **skx renders `FAIL` today, not `BASELINE`**, its exemption having been spent by the
-  runs that found the problem. The gate emits a fully formed candidate row to
-  `build/baseline-candidates-<rev>.tsv` and never writes `scripts/host-baselines.tsv`; the registry ships with
-  **zero data rows**, because skx's share baseline cannot be imported from `5ec5fea` or `33de3b2` — those are
-  single draws under the instrument the pinning-transition campaign replaces, and a published reference is an estimator, never a draw
-  (§5 rule 16). Two limitations stated inside the number: the prior-log witness is per **operator machine**,
-  not per repository (`build/` is gitignored, and the widening action — a tracked judged-run index — is
-  named and filed as #114); and the unreadable-CPU branch resolves to `UNMEASURED` fail-closed and is
-  unexercised.
-- **The scaling aggregate's denominator now excludes BASELINE hosts, and two of its sentences were wrong**
-  (#6, 2026-08-21). `fleet_coverage` passes only when `nclear` equals its denominator, so leaving a
-  green-compatible host in `NHOSTS` would have resolved every such fleet to `partial` and blocked green
-  silently, by arithmetic, one function from the branch that renders the verdict. Rendering the six fleet
-  shapes rather than reading them — the practice this file's own comment records — caught two further
-  defects the change introduced: a healthy fleet's headline PASS carried `0 of 3 rendered BASELINE`, noise
-  that invites a reader to think the class fired; and an all-new fleet printed "no host produced a judgeable
-  set of scaling ratios … 0 produced no complete set of ratios", of which the first clause is false about the
-  mechanism and the second contradicts it. All-BASELINE is now its own sentence, and a zero denominator
-  resolves to `UNMEASURED` — a fleet on which no host has a bar has measured nothing judged.
-- **Both delegated verdict tallies gained a BASELINE column on the day the vocabulary did** (2026-08-21).
-  `gate-p4.sh` over gate-p3's log and `gate-p5.sh` over gate-p4's each counted three columns where the
-  vocabulary now has four. Neither can see a `BASELINE` yet — gate-p5 alone emits them — which is exactly the
-  condition under which a missing column is invisible, and the reason to widen on the day the helper lands
-  rather than on the day a delegate first uses one. The stale `gate-p5.sh:987` cross-citation in that comment
-  was repointed at the line it names.
-- **`scripts/baseline-test.sh`: 22 fixtures, five mutants driven** (#6, 2026-08-21). The registry ships empty,
-  so a healthy run cannot reach the `registered` branch at all and a green gate would say nothing about the
-  code that will set a per-host bar. Each of five mutations — a dropped `NF >= 7` guard, a dropped header
-  skip, a dropped self-citation guard, a lost host-name anchor, a truncating append — was caught by exactly
-  the one case aimed at it. Wired into both `make lint` and gate-p5, deliberately: lint runs on every push
-  and catches a broken reader before a $24/hr fleet renders a bar from it, and the gate's copy is what makes
-  the published log self-certifying.
-- **§5 rule 16: a published reference is an estimator, never a draw** (ruling on #6, 2026-08-21; `DESIGN.md` §5,
-  `docs/rulings.md` rule 16). `gate-p5` criterion 9 convicted two `keel-zen4` README rows on `33de3b2`, and both
-  published values were the **maximum** of their six-run history on the same physical instance (`Ssymm/8T`
-  610.8…**654.3**, `Strsm/1T` 35.66…**37.61**), so a 5% band was spent on the reference's own bias — and neither
-  disagreement resolves at the intervals the two runs actually measured (`Ssymm/8T` |diff| 38.90 against 45.21 of
-  half-widths; `Strsm/1T` 1.95 against 4.00). Single-draw publication makes the check measure the reference draw's
-  *altitude within its own spread* rather than the code, with a sign set by luck: "a high draw manufactures future
-  reds exactly as a low draw would manufacture future flattery." The ratified repair is **median over the archived
-  runs, each row stating its estimator** — a repair and not an amendment, because the band is untouched at 5% and
-  the criterion's standard was always "today within 5% of what this host does". The **interval-aware variant was
-  drafted, computed and refused** on direction: all four rows in question tie at their archived intervals, so it
-  would have retired two reds and convicted nothing, and a correction that only acquits on the data in hand is a
-  loosening wearing rigour's vocabulary. Its first computation was itself wrong — it assumed the reference carried
-  *this* run's tighter interval — which is why the recomputation is what refused it. The 7.1% peak-to-peak spread
-  stays **unmeasured** as to noise-versus-code-change: the archive's one same-revision repeat spread 0.71%, which
-  does not decompose it, and the ruling rests on the estimator argument alone.
-- **§5 rule 5: placement is pinned, fleet-wide and never selectively; §7 rule 7 gains placement and estimator to
-  what a reported number must state** (ruling on #6, 2026-08-21; `DESIGN.md` §5/§7, `docs/hosts.md`). Every judged
-  invocation runs under an affinity mask of eight distinct physical cores in one NUMA node, and the ceiling arm
-  under the identical one — a share whose numerator and denominator came from different placement methodologies is
-  not a share. Four independent readings that the free instrument was reporting the draw: `keel-zen4`'s `Strsm`
-  verdict red at `5ec5fea` and green at `33de3b2` on unchanged code; `keel-zen5`'s `Ssyrk` clearing by 0.4 points a
-  bar its derivation set 2.6 below every healthy row, at ±5.0% where the ladder read ±0.90%; `keel-skx`'s `Strsm`
-  clearing 7.0 at its median and failing net of CI; and criterion 9's band narrower than the spread it judges. A
-  red that turns green under a tighter estimator of the same quantity is supersession working, so it is disclosed
-  with both readings side by side rather than avoided — the transition campaign runs **both** arms and archives
-  both. Stated as a falsifiable prediction (§5 rule 15): the pinned arm's intervals must narrow materially, or the
-  adoption is refuted by its own transition run and reverts. Two limitations inside the number (§5 rule 12): the
-  mask pins `threads=1` rows to a *node* and not a core, so the ±0.11% a one-core probe read for skx's 1T `Sgemm`
-  (against ±14.6% unpinned, at `-count=20` versus the gate's 10) is not what it promises; and Go reports the mask's
-  width as `GOMAXPROCS`, so rows carry `-8` where the free arm carried `-192` or `-72`.
-- **§5 rule 12 gains clause (c): a hole no future action can close goes inside the number and is never filed as a
-  debt** (ruling on #6, 2026-08-21; `DESIGN.md` §5, `docs/rulings.md` rule 12). Scott had filed the archive's
-  inability to resolve a `gnr`-class row — true share would have to reach **153.9%**, i.e. never — as a post-tag
-  refinement for #113's re-measured ceiling row, which is a *forward-looking* instrument pointed at twelve finished
-  runs. His own correction is the rule: "a permanently unfixable limitation filed as a debt is a lie about the
-  future — it goes inside the number instead," because a debt entry promises eventual payment and an unpayable one
-  reads as *known, scheduled* where the truth is *known, permanent*. The operational test is to **name the future
-  action that would remove the limitation**; a forward-looking instrument aimed at completed runs is the tell that
-  there isn't one. Two things the clause leaves alone: the debt correctly scoped to what a future action *can*
-  reach (`gnr` and `spr` carrying ceilings dated to `651d1bd` with nothing re-measuring them, #113's row
-  conditional on #111's readmission ruling), and the enforced bar, which divides by each host's measured 8-thread
-  ceiling — `k` appears only in the retrospective proxy, so 58.5% is vacuous for no host it judges. Recorded with
-  the session's mirror-image error beside it: the loose `k` was attributed to `zen4` because zen4's name sat next
-  to the 35 resolving rows, when zen4 owns them *because* its proxy is the tightest of the three (0.765 against
-  gnr's 0.380). Adjacency is not attribution.
-- **The ceiling's 8-thread form is RATIFIED as the amendment: the deviation was the ruling's own law applied to
-  itself** (ruling on #6 Q1, 2026-08-21; `DESIGN.md` §4/P5). The literal `8 × 1T` denominator is *"measured
-  denominators, never formulas"* violated by the sentence that states it — arithmetic blind to the all-core
-  frequency, shared-cache and memory-controller effects only an 8-thread run reveals. Its consequence is
-  disqualifying rather than merely loose: Granite Rapids reads **32.8–33.2%** of its ceiling under the formula
-  and **86.3–87.4%** under the measured form, and that 33% *is* the front-end deficit #104 already owns, judged
-  by P2's derived-ceiling criterion. Under the formula it would leak into the *scaling* verdict too, double-counting
-  one cause across two criteria (§5 rule 6). The **54-point swing is recorded as the amendment's grounds**, because
-  a move that large is exactly what a thumb on the scale looks like; it inverts the ordering the bullet's own
-  falsifier depended on, and that is a diagnosis of the formula, not of the refinement.
-- **`CEIL_FRACTION = 58.5`, typed as a REGRESSION BAR on `STRSM_FLOOR`'s precedent; ≥90% is REFUSED** (ruling on
-  #6 Q2, 2026-08-21; `scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5). All nine judged rows
-  sit below 90%, and a fraction no observation reaches is an aspiration rather than a floor — pre-registration
-  protects a *standard* from post-hoc tuning, it does not immunise a *model* from nine-of-nine contrary readings.
-  A blocked GEMM at the gate's 4096³ carries pack, sync and imbalance costs an embarrassingly-parallel compute
-  ceiling does not model, so the rows are reporting the real overhead band. Derived from the lowest judged row of
-  `build/gate-p5-651d1bd.log` — `keel-zen5` `Ssyrk` at **61.1%**, already net of CI since the numerator is
-  `bench_gflops_lo` — less **2.6 points** of margin, with the derivation printed on every run. Derived from one
-  run and **enforced on later ones**, so it can genuinely fail, and **invariant to Q3's judged-set change**:
-  `gnr`'s rows sit 25 points above the minimum, so dropping them leaves 61.1% where it stood.
-- **Re-adjudicating the archive under the ratified bar resolves 35 of 105 rows, and one host's resolving power is
-  structurally zero** (#6, 2026-08-21; supersedes the 2026-08-20 *"resolves none of them"* entry below, which was
-  written against the refused ≥90%). The population is now defined **structurally** — every archived `gate-p5` log
-  carrying no measured-ceiling row, which is **12 files**, not the eleven that clause claimed — so it does not go
-  false with each new run: 105 judged rows, **23.8%** to **74.9%**, of which **35 definitively cleared their own
-  ceilings** and 70 stay unresolved. Since `published_share = k × true_share` with `k` = ceiling/(8×1T) per host,
-  the archive can resolve a `zen4`-class row that truly reached **76.5%**, a `zen5`-class row at **85.3%** and a
-  `gnr`-class row at **153.9%** — that is, never. All 35 are Zen 4 rows for precisely that reason: the
-  concentration measures how loose the proxy denominator is per µarch and is **not** a ranking of the hosts
-  (§5 rule 12 wants that stated inside the number, not beside it).
-- **`gnr` drops to CHARACTERIZATION and the signing fleet's Intel arm comes from wave 2** (ruling on #6 Q3,
-  2026-08-21; `scripts/aws-fleet.sh`, `docs/hosts.md`). Tagging v0.1.0 with a disclosed red is out — CONTRIBUTING's
-  tag condition is green gates — and unparking #111 is out under the freeze's own test, because the feed-bound
-  class needs its own derived-OpenBLAS-ratio legislation and *the certificate does not need this host*. What it
-  needs is an Intel AVX-512 arm judged under machinery that already exists, and **SKX and ICX are issue-bound
-  silicon — janus's class — whose roofline exception has been law since P2**. The candidates launch at their
-  family's largest non-metal size — **c5n.18xlarge (36 cores) and c6i.32xlarge (64 cores)**, each equal to its
-  metal sibling's core count — because `remote.sh` classifies anything smaller `correctness`, so one read-back both
-  classifies the µarch and justifies the `KEEL_EVIDENTIARY_SIZES` addition that lets it be judged at all; a
-  read-back at the 8-core exploration size would have certified nothing. `aws-fleet.sh`'s `FLEET` gains the two
-  roles at the exploration size and is relabelled as what it is — a launcher list, not an admission list, since the
-  first draft of this entry called it the signing fleet at 2xlarge and would have booted a fleet no gate may judge.
-  Whichever lands in the issue-bound class joins the judged set, both if both do. `gnr` and `spr` sit beside each
-  other as labelled characterization rows on antares's consumer-row precedent. The cost is stated rather than
-  absorbed: `gnr`'s scaling rows are **no longer re-measured by any gate**, they are dated to `651d1bd`, and being
-  non-citable is what that fact earns them. Keeping it in-fleet as measured-but-unjudged is **not available in the
-  instrument** — `$SENTINELS` restricts criterion 5's verdict only, while #111 lives in gate-p3's `OB_*` criterion,
-  which judges every host in `.keel-hosts` with no such branch. Building one is filed, not done here.
-- **The published block is re-measured on the judged fleet under the derived ceiling, and the caption now carries
-  the criterion's own readings** (#6, 2026-08-20; `build/gate-p5-651d1bd.log`, 24 rows from one run on
-  c7a.48xlarge / c8a.48xlarge / c8i.96xlarge). Measured 8-thread ceilings and what the judged routines reached of
-  them: **Zen 4 713.6 GFLOP/s, 82.5-90.0%**; **Zen 5 1568.5 GFLOP/s, 61.1-65.3%**; **Granite Rapids 742.2
-  GFLOP/s, 86.3-87.4%**. Those ceilings are **76%, 68% and 38%** of 8x each host's own 1-thread peak — a
-  different factor per host, which is the retired floor's defect in measured form rather than as the rank
-  inversion that motivated the ruling. The caption had been publishing the 8x-1T share it calls "not a score"
-  while withholding every share the gate judges by.
-- **P5's 6.0x cross-host scaling floor is RETIRED; the judged three are compared to a ceiling measured on
-  each host** (ruling on #6, 2026-08-20; `DESIGN.md` §4/P5, `CEIL_FRACTION` in `scripts/gate-p5.sh`). The
-  falsifier is a rank inversion, not a miscalibration: at `ce43bca` the floor refused Zen 4 holding **65.9%**
-  of 8x its own core peak and passed Granite Rapids holding **34.3%**, monotone across all three hosts, and no
-  AMD host has cleared it in any log here. A fixed T8/T1 ratio rewards a *bad single-thread baseline* — the
-  host whose one thread already saturates its memory system has no ratio headroom left. The bar becomes
-  `min(8-thread measured compute, measured bandwidth bound)` from `BenchmarkCeiling`, judged
-  achieved-against-own-ceiling with the derivation printed. **`CEIL_FRACTION` is empty**, deferred to the
-  fleet measurement on #37's ratified precedent: the fraction is computed, printed and reported, and no host
-  fails on it. The memory term is not yet in the `min()` and the omission is strict — `min(c,b) <= c`, so the
-  printed fraction is a lower bound and cannot pass a host the full ceiling would fail — but the bandwidth
-  rows are measured every run anyway, because a term that can only *rescue* a host must not be the unmeasured
-  one. `scripts/readme-numbers.sh` now refuses to regenerate the published block from a pre-ruling log rather
-  than republishing it under a bar that no longer exists; `docs/gates.md`'s verbatim P5 lift is annotated, not
-  edited, since an archive that gets quietly corrected is neither.
-
-- **Running `BenchmarkCeiling` for the first time refuted two sentences written beside it** (#6, 2026-08-20;
-  §5 rule 11). (1) The read-only `dot` probe was called the unambiguous half of the bandwidth bracket, and on
-  the dev host's scalar path it read **32.7 GB/s at one thread against `axpy`'s 44.6** — the read-only probe
-  slower than the read-modify-write one, which no memory system does. `Sdot`'s own throughput was the limit,
-  not memory: a probe below the memory bound measures the probe. At 8 threads they converge (190.6 vs 193.0),
-  which is what both being memory-limited looks like, so the arm is a bandwidth reading only where its
-  8-thread figure sits near `axpy`'s. (2) `gate-p5` called the 8-thread compute shortfall "the clock droop
-  with core count"; the dev host read **53.5% of 8x its 1-thread rate**, far past any licence-level clock
-  change, because 8 threads there land on a mix of performance and efficiency cores. Core heterogeneity, SMT
-  siblings and shared-cache pressure all land in that one number and the gate separates none of them, so it
-  now reports the shortfall and attributes nothing (§5 rule 6).
-- **Re-adjudicating the historical scaling verdicts under the derived form resolves none of them, and that is
-  the finding** (#6, 2026-08-20). Neither half of the ceiling was ever measured — `grep` across all eleven
-  archived `gate-p5` logs finds no 8-thread compute row, because `BenchmarkPeak` has only ever had a 1-thread
-  arm — so the only recoverable denominator is `8 x 1T`, which the clock droop makes an *upper* bound on the
-  true 8-thread ceiling. Every archived share is therefore a **lower bound** on achieved-against-own-ceiling,
-  which resolves in one direction only: at-or-above the fraction is a definitive clear, below it is
-  **unresolved and never a retroactive failure**. Recomputed from the logs: 105 judged rows spanning
-  **23.8%** (`janus` `Ssyrk`, `175098d`) to **74.9%** (`vesta` `Ssyrk`, `117b78f`), **none** at 90%. This
-  corrects a claim committed to `DESIGN.md` §4/P5 hours earlier in the same session, that the compute half was
-  recoverable for every archived run; it is not, and the check that refuted it was a `grep` this session
-  should have run before writing the sentence.
-
-### Fixed
-- **A failed 8-thread parse published the previous routine's rate** (`scripts/readme-numbers.sh`, #6). `t1`
-  and `t8` were never cleared between rate lines, so a line whose `8 threads` match missed carried the last
-  successful routine's figures into the table under the new routine's name — silently, because a stale float
-  reads exactly like a measured one. Both are now cleared explicitly and the mismatch refuses the run;
-  controlled by mangling one rate line, which fires on all three hosts. Found while auditing a check added in
-  the same pass and then deleted as unreachable — `one` and `eight` parse from the same line, so their pools
-  are symmetric by construction. The unreachable check was apparatus that could not pay its way, and taking
-  it out is what exposed the reachable defect beneath it.
-- **The README generator read a verdict line's prefix and not its prose, so a run judged by no bar published
-  as clearing bars derived from it** (`scripts/readme-numbers.sh`, #6/#37). Take four's rows are prefixed
-  `PASS` and say `NO FRACTION IN FORCE` / `NO FLOOR IN FORCE` in the same sentence — `PASS` only because
-  nothing failed, and nothing failed because `44.2%` and `6.067x` were typed *from* that run. New `REPORTED`
-  class (prose outranks prefix, one classifier for both verdict shapes) plus a `BASELINE` parse that no longer
-  refuses a whole log for want of a ratio no baseline row has. The caption now names both unjudged classes
-  separately, keeps one denominator across all four branches, and refuses to headline `0 of 12 clear` for a
-  run nothing tested. Positive control: the phrase appears 10x in take four, 0x in the confirmation log.
-- **The gates divided by a CI bound above every sample ever taken** (#116, 2026-08-22; DESIGN.md §5 rule 20,
-  `docs/rulings.md` rule 20). `bench_ratio_lo` reconstructed a bound as `center × (1 + ci)`, but benchstat's
-  median CI is `[x_(r), x_(n+1−r)]` — **both bounds order statistics, so neither can lie outside the data** —
-  and `ciFraction` reports the *wider* half-width. keel-zen5's ceiling reached 296.5 GFLOP/s down and 0.5 up;
-  mirrored, that made a denominator of **2588** against a sample max of 2295 (2296 over 30 draws). `benchci`
-  now emits the honest `lo`/`hi` plus the observed `min`/`max`, and the consumers read the bounds instead of
-  reconstructing them. `ciFraction` is **unchanged on purpose**: it is benchstat's display quantity and
-  `-verify` still agrees on all 42 cells, so no historical `±%` moved. Direction, per §5 rule 15: the old form
-  could only deflate a share (`hi_den ≥ center_den`), so it never manufactured a pass — zen5's ceiling share
-  was 42.7% and is 48.25% — which is why it survived, and why the care owed its favorable direction is
-  procedural.
-- **A zero-width interval can mean the rank window stopped looking, so every reading now prints its range**
-  (same ruling). At n=30 the zen5 contaminant **recurred** (1989 is in the sample) yet
-  `[x_(10), x_(21)] = [2291, 2291]` reported **±0.00%** over a span of 13.40%: raising `-count` concealed the
-  defect it was ordered to resolve. The rank pair marches inward faster than any variance argument — `[2, 9]`
-  of 10, `[10, 21]` of 30, `[36, 55]` of 90 — so at fixed 20% contamination the width goes ±21% → ±0% → ±0%.
-  `bench_describe` prints `[min, max]` beside every reading and names `RANK-WINDOW-BLIND(span …)`, driven on
-  purpose rather than inferred. Unthresholded deliberately, and it moves no verdict. **Sensitivity measured,
-  not claimed: the exact-zero trigger names 1 of the 3 blind rows in that log** — `avx2` (span 7.42%) and
-  `scalar` (13.34%) sit under *nearly* zero ±0.087% intervals — and the threshold-free widening was refuted in
-  the same log, firing on three healthy rows too, since the rank pair excludes an extreme by construction.
-  A second finding fell out: the contaminant reaches the **scalar** arm, so it is not an AVX-512 frequency
-  artifact. Also repaired en route:
-  `clock_series`'s field-count guard would have reported "unbounded" on every host on every run the moment
-  `bench_stat` grew a column — found by enumerating its 29 call sites, not by a test.
-- **Every gate now prints its own verdict arithmetic** (ruled 2026-08-22 on #6: *"the run that signs v0.1.0
-  prints its own arithmetic"*). The previous campaign's headline tally was the operator's grep, disclosed as
-  such. The five verdict primitives count, and `gate_verdict` calls `gate_tally` from one site, so all six
-  gates gained it at once; a **zero total sets `FAIL`**, since a gate that reached a verdict without rendering
-  one adjudicated nothing. Cross-checked against an ANSI-stripped grep of the same gate-p0 log (11/1/4/0/0,
-  exact), with `BASELINE`, `REPORTED` and the zero-total anomaly driven separately.
-- **The 8-thread compute ceiling under-reads by 10–37%, and it is the harness, not the machine** (#115,
-  2026-08-22). `computeArm` re-forks 8 goroutines and joins them every one of `b.N` iterations.
-  `BenchmarkT52Hoist` is the same arm with the fork lifted out of the loop — same work, same flops formula,
-  `b.N` joins reduced to one — and paired against the shipped arm on each host under each mask it reads
-  **1.290 → 1.010** (keel-zen4 spread), **1.599 → 1.014** (keel-zen5 spread), **1.147 → 1.029** and
-  **1.157 → 1.007** confined, as multiples of eight times each host's own 1-thread rate. Duty cycle rises to
-  **0.97–0.99** on all six arms, so the lost time is workers *parked*: **the spread-mask collapse is a
-  fork/join cost, and the spread-vs-confined gap goes from 0.143 to −0.019 and from 0.442 to 0.007.**
-  Placement was correct throughout — 8 running threads on 8 distinct masked cpus — and keel-skx, whose two
-  masks are byte-identical, is flat in every arm both before and after. `internal/par/par.go:109` forks per
-  call too, so the routines share the shape; what differs is op duration, **204 ms for
-  `Scale/Sgemm/n=4096/threads=8` against 268 µs for the ceiling**, a factor of 762, which makes a ~60 µs
-  fork/join **22% of a ceiling op and 0.03% of a routine op**. Both sides of every judged share pay it and
-  only the denominator pays it at a rate that matters — so **this is the cause of the impossible denominator
-  below, not a second finding** (§5 rule 14: severity is a function of deployment context). Hoisting the
-  shipped arm changes the criterion's denominator, so it is blocked on a ruling.
-- **A ceiling below a rate it denominates is now refused, not divided** (#6, 2026-08-22). `gate-p5`'s share
-  criterion published three plausible passes over an impossible denominator on `keel-zen4`: the measured
-  8-thread ceiling read **461.4 GFLOP/s ± 62.68%** while the three judged 8-thread rates read 675.1, 704.3 and
-  662.3 — **146.3%, 152.6% and 143.5% of it** — and the criterion printed 89.8%, 93.7% and 88.1%, because
-  `bench_ratio_lo` divides the numerator's *lower* bound by the denominator's *upper* bound. That construction
-  is correct for a floor and inverts here into a plausibility generator: the wider the ceiling's interval, the
-  more comfortable the impossible share looks. `bench_ceiling_impossible` and `bench_ceiling_refused` compare
-  the **points**, deliberately not the intervals — there is no confidence level at which dividing by an
-  impossible ceiling becomes a verdict — and the criterion answers `unmeasured`, naming a mismeasured
-  denominator rather than a regression. **Host-level and not per-row**, which the second pass is what decides:
-  it read 690.85 with `Ssyrk` at 101.6% and `Sgemm`/`Ssymm` at 97.5%/95.8%, and a per-row test would have let
-  those two PASS against a denominator their own sibling proves is not a ceiling. Twice lucky is not a method.
-  Six fixture arms in `remote-exec-test.sh` §9e carry both passes' own rows, `keel-zen5` from the same run as
-  the healthy control, a rate exactly at the ceiling (reached, not impossible), an absent rate, and a zero
-  ceiling left to the branch that already owns it. Third member of #110's family — an instrument whose output
-  was decided by something other than the quantity it names.
-- **The spread mask's shape was computed and then thrown away, because the runner read the mask through a
-  command substitution** (`scripts/remote.sh`, found by the era-founding run at `450a783` on all three judged
-  hosts). `keel_pin_mask` returns the mask on stdout and records its *shape* — `KEEL_PIN_DOMLIST`,
-  `KEEL_PIN_NODEDOMS` — in globals, deliberately, because stdout is what every other caller parses. The
-  runner then called it as `KEEL_MASK=$(keel_pin_mask 8)`, and a command substitution is a **subshell**: the
-  mask came back and the shape died with the child. Every host measured under a *correct* spread mask
-  (`0,8,16,24,32,40,48,56` on both EPYCs, the degenerate `0,1,2,3,4,5,6,7` on `keel-skx`) and recorded
-  `doms= nodedoms=`, which `gate-p5`'s new shape criterion correctly called **UNMEASURED on all three** —
-  fail-closed, so the cost was host-minutes and not a false verdict. The mask is now a global too
-  (`KEEL_PIN_MASK`), cleared on entry with the other two so a refusal cannot leave a stale mask behind, and
-  one in-shell call yields all three fields the pin line needs: "mask recorded, shape absent" is no longer
-  representable. **The fixtures passed throughout and were never wrong** — they called the selector directly,
-  which is the one form that keeps globals, i.e. the form the runner did *not* use; `shape_case` now redirects
-  stdout to a file instead and asserts the global mask and the printed mask are the same string. Driven
-  end-to-end on `keel-zen4`, `keel-zen5` and `keel-skx` after the fix: all three pin lines carry their shape
-  and all three satisfy `distinct(doms) == min(width, nodedoms)` with imbalance 0. The founding run's numbers
-  are **discarded rather than salvaged**, though the mask under them was right: reconstructing a shape after
-  the fact from a host's topology is exactly what recording it was meant to replace (§5 rule 5).
-- **`benchci -verify` failed on every pinned host, because the mask's own provenance line is a CSV field
-  with commas in it** (`tools/benchci/main.go`, found on the era-founding run at `be5bb91`). `remote_exec`
-  prints `keel-pin: mask=0,1,2,3,4,5,6,7 width=8` *inside* the benchmark block, which makes it a
-  configuration line; `benchstat -format=csv` therefore quotes it; and `verifyAgainstBenchstat` split
-  benchstat's output on commas, so the line arrived as **eight fields** and was recorded as a data cell named
-  `"keel-pin: mask=0` that no summarizer can reproduce. The gate went red for a metadata line, with the
-  statistics untouched. **The guard that should have caught it was passing by luck**: every earlier
-  comma-bearing configuration line (`keel-bench-clock-mhz`, `keel-bench-peak-method`, the `Ceiling/stream`
-  names) happens to split into exactly two fields and was absorbed by a `len < 3` test, so the parser had
-  been wrong since it was written and no archive had yet exercised it. The tool **wrote** its CSV with
-  `encoding/csv` and **read** benchstat's with `strings.Split`; it now reads with the same package it writes
-  with, and a CSV it cannot parse is an error rather than a skip — unparsed input greens exactly like clean
-  input. Verified on all three pinned archives and on three `free-placement` archives as a regression
-  control; `verify_test.go` asserts the config-line case, the fail-closed case, and both directions of the
-  differential, and each was **driven against a reverted parser**, which reproduces the gate log's failure
-  line verbatim.
-- **The scaling aggregate printed a negative host count — `-1 produced no ratio`** (`scripts/gate-p5.sh`,
-  found on the same run). BASELINE is decided per (host, criterion), and keel-skx rendered it on the share
-  class while being judged and *missing* the `Strsm` bar in the same run — the first fleet where one host
-  splits across classes. The per-host subtraction from the judged denominator counted it anyway, so the host
-  sat in two buckets and `SCALE_NOCOVER`, the one term still **derived** rather than counted, went to −1.
-  That is #90's second finding recurring at the last place it could: the miss count was moved to a counter
-  in 2026-08-16 precisely so derivation could not come back, and this term was missed. Now two counters —
-  `SCALE_HOSTS_BASE` reports how many hosts rendered the class, `SCALE_HOSTS_BASEONLY` counts those it was
-  the *whole* of the verdict for, and only the latter leaves the denominator. A residual that still goes
-  negative now **fails** with the bucket tally printed, rather than being published as a quantity. Driving
-  the six fleet shapes through the corrected arithmetic also found a **second, never-reached instance**: a
-  host that clears both bars while rendering BASELINE on the README criterion broke the old form identically.
-  `gate-p5.sh` has no standing harness, so those shapes were rendered as a session act and not a landed one
-  (§5 rule 12). The verdict does not move — `be5bb91` is RED either way; what was wrong was the sentence and
-  the denominator under it.
-- **The gate told every reader that nothing was pinned, one line above every number the mask shaped**
-  (2026-08-22). `804fb75` put the affinity mask in `remote_exec` and added the readback criterion, and left
-  `gate-p5`'s per-host provenance line saying *"nothing is pinned either way, placement is the scheduler's"* —
-  printed once per host, immediately above that host's ratios, and it would have been printed into the founding
-  log of the `pinned8` era. The line now states the hazard the mask removes (`smt=2` means eight goroutines
-  *unmasked* could span four physical cores and their siblings) and then the mask that removes it, reading
-  `$KEEL_PIN_WIDTH` from `remote.sh` rather than retyping `8`. `docs/gates.md`'s criterion 4 is corrected the same
-  way, including the refusal — no `taskset` or no eight-core node is status 121 and nothing measured. Neither site
-  says issue #15 is closed, because it is not: the *decision* it asked for was ruled and implemented, and #15
-  closes on vesta's rows being re-measured under the mask, since an adoption closes on measurement rather than on
-  a ruling. That reasoning is now recorded on #15 itself with the four measured grounds, including the
-  **±0.11% pinned against ±14.6% unpinned** probe that is #15's own phenomenon.
-- **The exercise driver's own `[synthetic]` stamp defeated the driver's own reader, and the audit then claimed
-  coverage it did not have** (found live on the first firing, 2026-08-22). `run_pass` collected the delegated
-  gate's log by matching `^ *full output: build/gate-p4-under-p5-…`, but `instrument_exercise` stamps `info`
-  lines too, so `[synthetic] ` sits between the indent and the phrase and the anchored pattern matched nothing on
-  all three passes. It **failed closed** — the driver said the delegate was uncollected rather than tallying files
-  it had never read — and then `stamp_audit`, skipping absent files with `continue`, totalled three parent logs
-  and concluded *"all 129 verdict lines carry `[synthetic]` … parent or delegate"*. The disclosure existed three
-  screens earlier, once per pass, and the summary line contradicted it. Now: the extractor tolerates any prefix
-  before the phrase and walks the chain **two levels** (gate-p5 names gate-p4's log, gate-p4 names gate-p3's),
-  because surviving two delegations is precisely what the lifted `export` is for; and the audit prints the file
-  count beside the total, asserts the expected nine, and calls a missing log **NO on coverage** rather than
-  reporting the surviving lines as clean. Both branches driven against this run's real bytes: nine logs / **420
-  verdict lines / 0 unstamped / 0 signed**, and with one log removed it refuses rather than reporting 382.
-- **#78's fix rev-stamped the delegated gate logs and left two runs at one rev overwriting each other, which is
-  the same defect past its own fix** (found 2026-08-21 from the other end, while writing the exercise driver's
-  own `#78` control). `build/gate-p4-under-p5-<rev>.log` and `build/gate-p3-under-p4-<rev>.log` stopped a run at
-  one revision from destroying a run at another — and the collision that remained is the *ordinary* case here,
-  not a corner: DESIGN.md §4 allows one immediate re-run of a failing throughput sentinel with **both outputs
-  archived**, and an instrument exercise runs one gate three times over at one rev. Both paths now carry
-  `RUN_STAMP`, a per-process UTC stamp defined once in `scripts/remote.sh` and deliberately **not exported**, so
-  a delegated gate stamps its own log with its own process's stamp while a driver that wants one stamp across a
-  chain can set it in the environment. `bench_csv`'s identical stamp — landed hours earlier, from the archive
-  side of the same defect — now defers to it, so one process's samples and its delegated logs are joinable by
-  stamp instead of merely being distinct. **Two independent discoveries of one naming rule** (§5 rule 10): the
-  archive path was caught by measurement, this one by writing a control that had to know where a log would land.
-- **Two runs at one rev on one host wrote one archive path, so the second overwrote the first's samples**
-  (found 2026-08-21 while building the synthetic exercise, measured rather than reasoned). `bench_csv` keyed the
-  path on gate, rev, host and a counter — and the counter was per *process*, so it discriminated archives inside
-  a run and nothing at all between runs. Two shells sourcing `scripts/bench.sh` and calling the function both
-  printed `build/bench-<gate>-804fb75-keel-probe-1.txt`, the second `cp` silently replaced the first's numbers,
-  and the gate printed the path as that run's own archive either way. The two things this project most often does
-  with one rev are exactly the two that collide: DESIGN.md §4's one-immediate-re-run allowance for a failing
-  throughput sentinel says **both outputs archived**, which the naming made impossible, and an instrument exercise
-  runs one gate three times over to drive three states. A per-process UTC run stamp now sits between the host and
-  the counter; it goes at the **end** because `readme-numbers.sh` reads the rev by offset from `bench-gate-p5-`
-  and both `build/bench-gate-p5-*-<host>-*.txt` globs still match, so an appended field costs no reader.
-- **The fleet-wide CPU affinity mask was law, doc and measurement era three times over, and no line of code
-  applied it** (§5 rule 5, found and implemented 2026-08-21 while building the synthetic exercise of the
-  BASELINE-REGISTERED class, ruled on #6).
-  `docs/hosts.md` said in the present tense that *"every judged benchmark invocation on every host runs under a
-  CPU affinity mask of eight distinct physical cores"*; `scripts/measurement-eras.tsv` had already opened a
-  `pinned8` era for it; DESIGN §5 rule 5 carried its falsification condition. `git grep taskset` over the whole
-  tree returned four CHANGELOG lines, three doc paragraphs, and two comments saying P2 needs none. **Three
-  artifacts asserting a mechanism and zero implementing it is one witness restated three times** (§5 rule 10) —
-  grep for a mechanism before publishing the number that depends on it. Now: `remote_exec` — the single launcher
-  all 20 remote call sites funnel through, so no gate can deviate — selects a mask of eight first-thread cores
-  inside *one* NUMA node for every invocation carrying `-test.bench`, and **refuses rather than falling back**
-  (no `taskset`, no sibling lists, or fewer than eight cores in any one node ⇒ status 121, nothing measured),
-  because a silent free-placement fallback produces precisely the artifact the era ledger exists to make
-  impossible: a free-placement reading wearing a `pinned8` label. Correctness runs (`-test.v`) stay free — a mask
-  cannot make a wrong answer right, and pinning them would refuse the test suite on small hosts for nothing
-  measured. The mask is printed into the benchmark log immediately before the binary, so it travels into the
-  archive with the numbers it shaped, and `gate-p5` reads placement back **twice** — the mask the harness asked
-  for (`bench_pin`) against the width Go saw through its own affinity (`bench_gomaxprocs`) — because a requested
-  mask that did not take is invisible to the side that requested it. A declined mask and a broken sweep are told
-  apart there, being opposite causes of one `unmeasured` (§5 rule 6). Nine selector fixtures in
-  `scripts/remote-exec-test.sh` drive shapes no fleet host has, and one of them **created a branch**: the first
-  version fell back to `sib=$c` when a topology had no `thread_siblings_list`, which hands back eight cpus that
-  may be four hyperthreaded cores — and the `GOMAXPROCS` readback cannot catch that, since the width is 8 either
-  way. Distinctness unprovable now abandons the node. Every keel benchmark number published before this commit
-  was measured under free placement, which is what the era boundary is for.
-- **skx's judged shortfall factors onto the one term nothing excuses, and two published skx figures were a bad
-  draw** (#6, 2026-08-21; `build/onethread-decomp-3fceaa9.log`). Pinning the 1-thread arm shows the ladder's
-  `keel1` of 59.16 ±15.12% was low: the truth is 66.56 ±0.11%, so skx's 1T efficiency rises 30.83% → **34.72%**
-  and its normalized scaling falls 1.406 → **1.248**; the 43.34% share does not move, both inputs being
-  8-thread. In the form that reads no 1T keel rate at all, `share = (µkernel/ceil1)(keel8/8µkernel)(8·ceil1/ceil8)`
-  = 0.4633 × 0.5822 × 1.6067, only the middle term has headroom — the nest needs +33.4% while the issue-bound
-  kernel would need 118.6 GFLOP/s against a ~93 cap. **"Fleet's best parallelizer" is withdrawn**: skx scales
-  5.6% better than zen5, not 16%, the rest being credit for its own ceiling droop.
-- **`gate-p5.sh` published an unbounded ceiling interval by formatting an infinity.** `bench_stat` returns
-  `inf` when benchstat established none, which `printf "%.2f"` renders per-awk rather than as the absent
-  measurement it is; it now prints `+/- unbounded`, matching `bench_gflops_lo`'s existing contract that an
-  unbounded reading is not measured. Both branches exercised deliberately.
-- **`docs/hosts.md` called janus "the only Intel part, the only issue-bound one" — a count stated as a
-  permanent property**, false by four Intel hosts and a second issue-bound one without any edit. The clause is
-  now dated and followed by bound-class rows for all six measured hosts. Two consequences recorded there:
-  issue-boundedness tracks the µarch (janus 46.0% of peak, keel-skx 46.1%, same front end, one instrument, so
-  one witness), and **ICX measured fma-bound**, refuting half the premise that launched wave 2.
-- **The ceiling-share criterion divided a CI-deducted rate by a bare point estimate, flattering every judged
-  share; `CEIL_FRACTION` re-types from 58.5 to 57.8 as a consequence** (#6, 2026-08-21, ratified as a repair
-  rather than an amendment). `gate-p5.sh` formed the share as `bench_gflops_lo / bench_gflops` — the numerator
-  net of its interval, the denominator's interval simply dropped. `bench.sh`'s own contract forbids exactly
-  that, in the docstring of the function used: *"Do not use it to build a ratio"*, with `bench_ratio_lo` named
-  as the remedy and the fraction-of-peak case named as the example. **The standard that adjudicates this
-  predates the run and is the library's, not the criterion's**, which is why restoring it is a bug fix and not
-  a post-hoc rewrite — and the direction seals it, since the correction is strictly stricter. A census of both
-  call sites confirms one violation, not a pattern: `gate-p3.sh:1024` divides nothing, compares across two
-  CSVs with no shared denominator, and sits inside the stated exemption.
-  **The bar re-derives because its input did.** 57.8 was never a free constant but a formula — *lowest judged
-  row less 2.6 points* — whose input the defective site computed. Re-deriving all nine judged rows of
-  `build/gate-p5-651d1bd.log` through `bench_ratio_lo` moves them down **0.7 to 4.3 points**, in proportion to
-  each host's ceiling CI (`zen5` 1.12% → −0.7, `zen4` 2.07% → −1.8, `gnr` 5.11% → −4.2): **the noisiest
-  denominator was the most flattered**, which is #86's flip hazard reappearing one gate later. The minimum row
-  goes 61.1% → **60.4%** (`keel-zen5` `Ssyrk`), the **argmin does not move**, and 60.4 − 2.6 = **57.8**. The
-  bar's *definition* is unchanged; its input honesty improved. Verified before it shipped: the instrument
-  reproduces all nine *published* shares to the printed digit (§5 rule 11), so the corrected column is a
-  correction and not a second method. The archive re-adjudication is unmoved — **the same 35 of 105 rows
-  resolve**, since none lands in the 57.8–58.5 band — and its per-host resolving thresholds re-derive to 75.6%
-  (`zen4`-class), 84.3% (`zen5`), 152.1% (`gnr`, still *never*).
-  **`CEIL_FRACTION = 58.5` is superseded wherever it still reads as live** — the entries below it in this same
-  release, which record the ratification honestly as of that hour, name the value it was ratified at.
-- **The gate now prints the ceiling's confidence interval, so this class of correction is never unsizable
-  again** (#6, 2026-08-21). Sizing the repair above needed the ceiling CIs, and the gate log had never carried
-  them — only raw `go test` benchmark logs did, which no archive policy promises to keep. They survived here by
-  luck. This is the `BENCHLOG` law's corollary collecting a second time: **a summary that drops the CI it was
-  built from makes its own correction unsizable.** One line, no new machinery: the repair makes the old
-  non-positive-ceiling branch unreachable, and deleting it pays for this print exactly, so `scripts/` closes the
-  session at **net zero** — which matters because this session lands no routine or kernel to spend against.
-- **Four citations of "#22" for the re-measured ceiling row pointed at a closed edges-campaign issue; the work is
-  now filed as #113** (2026-08-21). The number was a **task-tracker id transcribed into prose as an issue
-  number** — GitHub #22 is *"Edges: measure masked C update against zero-padded panels + temp tile"*, closed, and
-  every one of the tree's twenty-odd pre-existing #22 citations correctly means that campaign. Only today's four
-  meant the ceiling row. The failure is a known one with a known control, and the control was run and still
-  missed: I grepped `#[0-9]+` out of the diff and checked each number against `gh issue view`, but skipped #22 as
-  already-known because it had appeared in the ruling I was implementing. **A number arriving from upstream is
-  not a verified number** — it inherits whatever produced it, and this one came from a task list. Worse than a
-  dangling reference: #22's real subject is edge handling in the single-thread nest, adjacent enough to P5 that
-  the citation reads plausibly. #113 states its own scope limit under §5 rule 12 clause (c) — it is
-  forward-looking and explicitly does *not* claim to reach the archive.
-  **A second instance surfaced hours later, and this time the control caught it.** `gate-p5.sh`'s
-  ceiling-share comment said *"#17 re-adjudicates them against this"*; GitHub #17 is the T9 anchor-NOP
-  finding, while **task** #17 was "re-adjudicate every historical scaling verdict" — the same
-  transcription, pre-existing in the tree rather than authored today. Grepping `#[0-9]+` out of the diff
-  and checking each against `gh issue view` is what found it, on a line the repair happened to touch.
-  Repointed to **DESIGN.md §4/P5**, where the re-adjudication actually lives as law, since it has no
-  issue of its own. The tree's other twenty-two pre-existing `#17` citations all correctly mean T9 (counted
-  2026-08-21), so this is one site — and the class is now **two instances with two different task ids**,
-  which is what makes it a class rather than an accident.
-- **The caption fixing one honesty defect published three rates no instrument re-measures, and `gate-p5`
-  criterion 9 caught it on the re-run** (#6, 2026-08-20). `0bbf964` put the ceilings in README's caption, which
-  sits *outside* the block criterion 9 re-measures, so they were claims: criterion 9 passed at `651d1bd` and
-  failed at `0bbf964` on the same README. The caption now states shares only, says why the rates are absent, and
-  names the log that carries them. A **second, latent** instance was found and driven on purpose in the same
-  scan — the ceiling-shortfall sentence also printed `GFLOP/s`, unreachable only because `CEIL_FRACTION` ships
-  deferred-empty, so ratifying a fraction would have reddened criterion 9 for a reason unrelated to the
-  shortfall. Publishing the ceilings in README means first making them re-measured rows: `compute_name` already
-  emits `Ceiling/compute/avx512/threads=8`, but the block's row checker hardwires `scale_name`, so it needs a
-  resolver keyed on the published benchmark column plus a validating fleet run. Not done here, and not because
-  it is wrong.
-- **`gate-docs`' apparatus ratio was blind to the largest apparatus directory in the tree, and its comment said
-  otherwise** (2026-08-20). `library` is tracked `*.go` less `*_test.go` and `bench/` is 1655 lines of which
-  only `openblas.go`'s 106 ever reached it, so **1549 lines of benchmark harness — including the 372-line
-  ceiling instrument landed the same day — were counted in neither term**: a cap policed by a reporter that
-  cannot see the spending. `bench/` now moves whole, tests included. The reported ratio goes **1.97x → 2.23x**;
-  the historical `shell / library` line is unchanged so the published 1.6x series stays comparable. The old
-  comment claimed the library side held `bench/` and `internal/spill` "flattering the ratio by ~100 lines" —
-  right for `bench/`'s 106, silent about `internal/spill`'s **837**, which are disclosed and deliberately *not*
-  moved, since correcting a count is not licence to redraw a boundary in the same commit.
-- **Rule 5's new magnitude gate reached a correct verdict through a self-contradicting sentence** (#6,
-  2026-08-20). `bench.sh`'s non-declining `printf` was unconditional, so at one resolved step it printed *"1 of
-  2 adjacent steps resolves a decline … so the windows are ties"* — a sentence whose own count denies its
-  conclusion. Split: no resolved step is a tie, one resolved step is a non-monotone excursion, and rule 5 passes
-  it because rule 5 names a *monotone* decline. Message-only; all four branches were driven and every verdict
-  word is unchanged. Only `keel-gnr` exposed it — both AMD hosts took the tie path, where the wording was right.
-- **`DESIGN.md` §4/P5 stated the retired denominator as the ceiling's formula, one sentence above the text
-  contradicting it** (#6, 2026-08-20). The headline read `min(8 × measured 1-thread compute, …)` while its own
-  sub-bullet said the compute arm is measured *at 8 threads*. The headline now states the implemented form, and
-  the deviation from the ruling's literal text is recorded with its measured consequence: the two forms put
-  Granite Rapids at 33% and 87% of its ceiling respectively, a 54-point swing that **inverts the rank ordering
-  the bullet's own falsifier depended on**, so it is carried as an open question rather than settled in-tree.
-- **`aws-fleet.sh up` could not resume a half-launched fleet, so finishing one cost terminating it**
-  (2026-08-20). Roles launch in sequence with `--wait-for-ssh`, and the first judged launch was killed between
-  its second and third instance; `up` then refused to run at all while any `keel-` instance was alive, leaving
-  the only route to a complete fleet the termination of two healthy 48xlarges that were fine. `up` now skips a
-  role already running and dies only on a running instance the requested `FLEET` does not name — which is the
-  forgotten fleet the guard was written for, and is still fatal. Same argument that made `cmd_wire` idempotent,
-  learned the same way, one step earlier in the same script.
-- **§5 rule 5's clock check was flagging coin flips as thermal events; it now judges at full precision
-  against a floor its own intervals set** (ruling on #6, 2026-08-20). The test asked only `head > middle >
-  tail` on the `GFLOP/s` column, whose quantum at 245 is coarser than any decline it ever reported — it
-  refused two of four `keel-gnr` triples across a 0.14% total spread, where a random triple is strictly
-  decreasing one time in six. It now reads `sec/op` at `tools/benchci`'s full float64 (42× finer from the
-  same samples, `docs/toolchain-notes.md` T26) and counts a step only where the two windows' intervals are
-  disjoint, floor `(1+cA)/(1-cB)-1`, so no threshold is added and none is tunable. `keel-gnr`'s refused
-  triple replays as `stable` (-0.0019% against a 0.2311% floor) and a 2%/3% droop still refuses.
-
-### Added
 - **README's twelve-row block is republished from the judged AWS campaign: 24 rows, three new CPUs, rev `ce43bca`.**
   `scripts/readme-numbers.sh build/gate-p5-ce43bca.log` regenerated both marked regions and `docs-gen.sh` extracted
   `doc-site/numbers.md` from them, so the published rates now describe EPYC 9R14, EPYC 9R45 and Xeon 6975P-C instead
@@ -1424,356 +358,6 @@ While the major version is 0, minor versions may contain breaking changes.
   untracked emitter, so the honest-accounting sentence beside it was measured on a tree that did not yet contain the
   thing being accounted for. Naming its own cost by 257 lines too few is the defect this entry claims to avoid.
 
-### Changed
-- **`scripts/aws-fleet.sh` launches through `spawn` instead of raw `aws ec2 run-instances`, and the fleet is selected by
-  the launcher's own name.** Scott's directive, 2026-08-19: *"instances via truffle/spawn under `AWS_PROFILE=aws`
-  exclusively."* Three things this script guarded now belong to the launcher and are better there — the dead-man switch is
-  `--ttl` enforced by spawn's reaper rather than a `shutdown -h` baked into userdata that depended on the guest's own init
-  working, the key pair and security group are spawn's, and `--wait-for-ssh` replaces a poll loop. The launched **name**
-  (positional — `--name` exists but cobra wants `spawn launch <name>`) equals the ssh
-  alias by construction, because that string is the key `spawn_probe` joins a provenance line on: a fleet this script can
-  find is exactly a fleet admission can vouch for. `spawn list` reports **no** `tags` field, so the `Project=keel` tag
-  selection used by `up`'s guard, `status` and `down` is re-keyed to the `keel-` name prefix, which preserves the property
-  the tag was for (not a list this script wrote, so `down` still works after a lost `.keel-hosts`). New knobs:
-  `KEEL_FLEET_TTL` (default `8h`), `KEEL_FLEET_DRYRUN=1` (appends `--estimate-only`, so the invocation that spends is
-  validated *as the shipped command* and not as a hand-typed mirror of it — flag validation only: spawn's rate table has
-  no `32xlarge`/`96xlarge` key, so those fall to its xlarge default and read **32x / 90x low**, spawn#543; `48xlarge` and
-  `24xlarge` are present and land within 7%, so the error is per-size and always in the understating direction),
-  `KEEL_SSH_CONFIG` (so the block writer can be
-  driven against a throwaway file rather than the operator's real config — that step is the one that failed once *after*
-  three instances were already billing). `KEEL_FLEET_MARKET`'s default flips to `on-demand` now that the judged tier is
-  the normal case, and `ondemand` is an accepted alias because that is the spelling `spawn_probe` writes into a provenance
-  line. One `aws` call survives, an SSM parameter read for the Ubuntu 24.04 AMI: not an instance operation, and pinned
-  rather than taking spawn's AL2023 default because `provision-openblas.sh`'s package maps do not cover `amzn` and would
-  reach `unrecognized distro id` after the fleet was billing — changing the OS also changes which OpenBLAS build every
-  published ratio is measured against. Two defects found before any spend: **every `ssh` in the verification loop takes
-  `-n`**, because `ssh` reads the loop's stdin, which is the herestring holding the remaining hosts — measured at 1 host
-  visited of 3, and the loop *succeeded*, handing a silently partial verification to a judged run; and `--region` is
-  passed to `launch`, since an AMI id is region-scoped and spawn's own default region would have failed on an
-  invalid-AMI error naming neither variable. The name goes **positionally** (`spawn launch <name>`); `--name` also exists
-  and its help says "required", which is how this was first written and what the launcher rejected. Apparatus ledger:
-  **+21 net `scripts/` lines against 0 library lines**, so the prediction that this rewrite would pay back the previous
-  commit's +286 is **refuted** — it deleted 155 lines and added 176, the deletions code and the additions mostly the
-  comments justifying the delegation, which is the "prefer deleting a line to explaining one" rule failing in the
-  direction the rule exists to catch. Correction to `1ff4130`'s message: the baseline it published as "shell 12322" was a
-  mid-work worktree reading; `git ls-files`-counted `*.sh` was **12007** at `HEAD~1` and **12293** after that commit. The
-  ratio it printed, 1.40×, is right at either number, but a budget figure is the thing under review here and a stale
-  numerator is not available as a rounding detail.
-- **§5 rule 15: a conservativeness claim about an instrument is a testable claim, so direction-of-error is a
-  measurement** (#110, `docs/rulings.md` rule 15). Scott's ruling on the second defect, the one in the writing rather
-  than the arithmetic: *"'safe direction' asserted from reasoning, inverted by the instrument's actual behavior,
-  published without being run against the thing it described."* Why this is the worst place to skip §5 rule 11 and not
-  the most forgivable — conservativeness is self-recommending, so a bound believed pessimistic is never asked for
-  evidence, and if the sign is backwards the word "conservative" is exactly what stops the next reader looking. The two
-  prose sites the previous entry left open are corrected as *substantive*, dated, with the original visible: `DESIGN.md`
-  §4 and `scripts/gate-p3.sh`'s instrument-exercise header both asserted a **measured** interval was `zero-width`,
-  reading width 0 off a reported `± 0%` that means "narrower than 0.5%". **The archive refutes the categorical form on
-  the same host and the same comparison** — janus reads `[1.014x, 1.034x]` around 1.026 in one archived run, non-zero
-  width, from a run whose CIs did not happen to round to `0%`. The conclusion survives *with a denominator it never had*:
-  1.10 − 1.034 = **0.066** of margin against ~**0.010** of quantization width, about six quanta, so
-  `KEEL_INSTRUMENT_WIDEN_CI` is still needed to reach the three-state renderings — for a measured reason instead of an
-  impossibility one. `docs/spill-report.md`'s `[1.836x, 1.836x]` loses the word and keeps the number: **0.736** of margin
-  against ~0.02, thirty-odd quanta clear. Five *other* `zero-width` sites (`roofline.sh` ×4, `roofline-test.sh`) are
-  deliberately untouched — they describe a fixture given **no bounds**, which the input format *defines* as zero-width,
-  so they are constructions and not readings, and correcting them would assert something false about a definition. One
-  word, two meanings, one of them a measurement. Also recorded: antares's `[1.077x, 1.100x]` sits flush with the 1.10
-  bar, well inside one quantum, and its class does not move only because the collapse rule added 2026-08-16 for an
-  unrelated reason yields `fma-bound` on *both* branches — a rule written to stop an `UNMEASURED` the data settles is
-  what kept this defect off that verdict, which was luck in the precise sense that nobody had checked.
-- **The archive re-read finds three moved verdicts, not one, and two were invisible to the first pattern** (#110).
-  `benchci -bandtop` is the only instrument that can read a run whose samples were destroyed, which is every run to
-  date; it states each rounded row as the interval its rounding supports and re-adjudicates at the pessimistic edge.
-  Over all **16** archived gate-p5 logs, **192 rows**, **3 verdicts move** — janus `Strsm` `7.0101 PASS → 6.9404 FAIL`
-  (the flip on camera), plus vesta and antares `Ssymm` at `6.0170 → 5.9562` and `6.0307 → 5.9703`, both against the 6.0
-  bar, both on `boost off` runs. The two new ones were found by the tool *refusing* ten of the sixteen logs rather than
-  by review: the first pattern required `ROUTINE: 1 thread …` and those ten carry a `boost off — ` annotation there,
-  which names a different measurement condition and is now captured and printed rather than skipped. Fail-closed on a
-  zero row count earned its place — a pattern narrower than its input greens exactly like a clean parse when the only
-  report is a count. Every band-top line prints "only ever toward FAIL" with the moved count beside it, so §5 rule 15's
-  own sign claim is checkable on each run instead of asserted once: widening an interval cannot raise a floor net of CI.
-  Band-top is for history **only**, per the ruling — forward runs have samples.
-- **This session's apparatus spending, and the trap in the number that reports it** (#110). Net `scripts/` **+68**,
-  `tools/` **+494**, library **±0** — the cap is violated, ruling-mandated, with the offsetting lift owed and named here
-  rather than argued away. The instructive part is that `gate-docs.sh`'s two ratio lines move in **opposite directions**
-  on this one change: the historical line reads 1.44× → **1.37×**, an apparent 0.07 *improvement*, because its
-  denominator is all tracked non-test Go and it therefore absorbs the new instrument as though it were library. The
-  apparatus line, whose denominator excludes `tools/`, reads 1.80× → **1.88×** with that denominator **identical at 7217
-  on both sides** — which is what makes the comparison clean and the zero-library-lines claim exact. A session can
-  improve the ratio it is capped by, by spending. That is the flattery the second line was added to expose, caught
-  paying out.
-- **T21's consequence is corrected: an integer-percent CI is lenient for a floor, not conservative** (#110). It read
-  *"no shipped criterion is wrong because of this"*; with the CI read as 0 the check becomes median ≥ floor, which is
-  **easier** to pass than median net of CI ≥ floor. The gate has since produced the verdict that sentence excluded —
-  `janus` Strsm flipped FAIL → PASS between two runs on a **0.014%** move in the point estimate (7.0098 → 7.0101),
-  because one arm's reported CI crossed 0.5% from `1%` to `0%` and with both arms at `0%` `bench_ratio_lo` returns the
-  raw ratio, which is the degeneracy DESIGN.md's P4 clause exists to prevent. All 48 CI readings in the two logs are
-  integer percents; `benchmath.Summary` holds float64 bounds and `benchtab.ToCSV` reuses the `%.0f%%` *display* string
-  for the machine-readable column. One rounding step is worth 0.1386 on a 7.0 ratio against margins of 0.011 and 0.081.
-  Left as a dated correction, not a rewrite: T21's observation and repro are right, its reasoning was published without
-  being run against the instrument it described (§5 rule 11). §4's new escalation bullet no longer claims a `0%` reading
-  was never undecidable — it is *more* likely undecidable, since the band can straddle the bar. Unfixed pending a
-  decision: `bench_ratio_lo`, and the `zero-width`-interval justifications at `DESIGN.md:116` and `gate-p3.sh:30`, which
-  are properties of the formatter and not of `janus`. *(All three are fixed as of the two entries above, in the same
-  unreleased cycle; this sentence is kept because it is what the decision was requested against. The ruling arrived the
-  same day: `tools/benchci` supplies the resolution, and the two prose sites are corrected substantively under §5 rule
-  15.)*
-- **README's 24 published rates are re-measured at `335ea9d`, and their caption is now generated with them** (#6).
-  Ruled 2026-08-19: criterion 9 had already ordered the re-measure, because the three stale `Ssymm` rows disagreed with
-  the shipped tree by 5.06–9.43% *on the gate's own denominator* — `(a−b)/b` with **this run's** value as base, not the
-  published row, which understated the breach 3:1 and put all three outside `README_TOL` rather than one. The regenerated
-  caption names 4 of 12 scaling ratios below the floor and splits them by cause: 3 sit below it outright, 1 clears the
-  point estimate and misses only net of CI. Two prose claims that had decayed against the numbers beside them are gone:
-  the floor was "missed on the two hosts that keep the most of their single-thread peak" (five rows, three hosts, and
-  `antares` keeps the *least*), and a stale row "cannot survive a gate run" (it turns the gate red; it does not thereby
-  cease to exist). One denominator defect was in the emitter's own first caption — "All 12 rows" over a 24-row table,
-  since 12 counts ratios and 24 counts rows, and the conflation is older than the script. `scripts/docs-gen.sh` extracts
-  the caption region onto `doc-site/numbers.md` and dies without it: rows published without their floor disclosure are
-  not a thinner page, they are a flattering one. Both fail-closed branches were driven on purpose, not inferred.
-- **`CONTRIBUTING.md` states when `[Unreleased]`'s session grouping collapses**: at the version cut and never before.
-  Ruled 2026-08-19 after an attempt to merge `[Unreleased]`'s 21 session-grouped `### Added/Changed/Fixed` sections into
-  four canonical ones churned 3128 lines and was reverted. Session groups are provenance for this project's ledger; a
-  release section is the deliverable users read. Two formats, two readers, one scheduled conversion.
-- **`solveRight`'s row loop moves to the outside; bit-identical, 4.90× locally** (#37). The strided nest re-walked B's
-  live window once per `(j, p)` pair, so every scalar operation touched a different cache line and the rate sat at
-  0.213–0.232 GFLOP/s across a 16× change in `MB` — flat, because nothing about it varied with the block. The sweep at
-  `e8662ba` carries its own control: `solveLeft` and `solveRight` do *identical* flop counts on identical partitions and
-  differed by 7.6–12.4× (0.224 against 2.20 GFLOP/s at `MB`=64 on vesta), same scalar arithmetic, the one structural
-  difference being that solveLeft's inner loop was already unit-stride. Rows of X are independent, so hoisting the row
-  loop reassociates nothing: `TestSolveRightInterchangeIsBitIdentical` holds the new nest against the old one verbatim
-  over 6 shapes × 8 flag combinations by `math.Float32bits`, with no tolerance in it, and the test is shown to fail on a
-  1-ulp reversal of the `p` loop. `BenchmarkSolveRightInterchange` runs both arms in one binary and one process, since
-  the quantity is a ratio and a cross-build ratio would carry these hosts' layout noise. **Measured on three
-  `evidentiary` hosts** (`build/trsm37-8441a18.log`, `evidentiary=3 correctness=0 unknown=0 of 3 configured`): the
-  isolated solve is **4.21× / 4.97× / 5.77×** faster on Zen 4 / Skylake-X / Zen 5, and `Strsm` side=R at n=2048, MB=64,
-  1 thread is **2.51× faster end-to-end** on vesta, its solve 2.94–3.07× (two estimators whose 4.5% spread *is* the
-  T22 layout systematic, under T22's 7.04% Zen 4 bound). `solveRight`'s share of the call falls 90.7% → 77.4% for
-  3.17% of the flops. `side=L` is byte-identical across the two commits and moves up to 5.1%, so this table's
-  cross-commit floor is measured at ~5% and not the ~2% first asserted (§7 rule 7). What remains is the accumulator's
-  serial dependency, which caps the scalar arm at one element per subtract latency and is what #37's vector arm
-  addresses by widening across rows; its headroom is host-dependent, since post-interchange Skylake-X's two solves sit
-  1.21× apart against Zen 4's 3.20×.
-
-### Fixed
-- **The README emitter lost its revision on exactly the runs it is used for.** `readme-numbers.sh` read the sha out of
-  `"gate-p4 is green on this commit (<sha>)"` — a sentence `gate-p5.sh:888` prints only on the GREEN branch, while a
-  red run prints `(exit N)` instead. So every publication from a red log silently captioned itself rev `unrecorded`,
-  and the campaign's whole purpose is publishing runs that carry disclosed shortfalls. The sha now comes off an
-  archived sample path (`bench-gate-p5-<rev>-…`), which every run writes regardless of verdict; verified by driving
-  both arms — `ce43bca` on the real log, `unrecorded` on a copy with those lines stripped, so the parse is reading the
-  source it names rather than matching something else. Net zero lines in `scripts/`. Residual, disclosed rather than
-  fixed: a missing rev still publishes the word instead of failing closed, and it is `docs-gen.sh:89` that dies on it,
-  one file downstream.
-- **Provisioning waits on apt's lock, because the launcher's readiness signal is necessary and not sufficient.**
-  `keel-gnr` (c8i.96xlarge) died on `E: Unable to lock directory /var/lib/apt/lists/` with no OpenBLAS, on a
-  $17.99/hour host, after `cmd_wire` had reported `cloud-init settled`: `cloud-init status --wait` returned done at
-  06:42 and cloud-init (pid 5253) went on running apt until 06:48:24, its last line being spawn's `--command` tmux
-  install — so `--command` runs *under* cloud-init, not after it, and the launcher's comment saying otherwise was
-  wrong. The gate is on the **lock**, not on cloud-init: three guesses at the holder (esm-cache, unattended-upgrades,
-  apt-daily) were each refuted by the journal, and waiting on the lock is right without knowing which. Two fixes were
-  measured and rejected first — `DPkg::Lock::Timeout` covers the dpkg frontend lock, not the lists directory, and
-  apt-get still fails in under a second with `-o DPkg::Lock::Timeout=300` set; a `flock` reproduction of a held lock
-  held nothing at all, because `flock(2)` and apt's `fcntl` record locks are independent lock families. Both arms of
-  the new gate were driven on purpose on a live host: it waited 21s where it had failed in 1s, and returned
-  EX_TEMPFAIL against a lock held past its cap, so a host that cannot start apt fails by name instead of dying inside it.
-- **The `evidentiary` grant arm claimed a size it never checked, and only a positive control on a deliberately wrong type
-  could show it.** Its preamble read *"`<type>` is a full-size instance of an approved family"*, but membership in one
-  flat list — `KEEL_EVIDENTIARY_SIZES` — is the entire test `host_admission` performs; nothing there evaluates size. The
-  list's members *are* full-size, so the sentence was true of every host the arm had ever run on, which is precisely why a
-  healthy fleet could never expose it. Driving it on a live `c7a.medium` with that type temporarily admitted printed
-  "c7a.medium is a full-size instance" in a real admission preamble. Now the sentence names the check performed —
-  admitted *by the allowlist*, whose members are full-size types added one justifying read-back at a time. This is the
-  same defect, and the same repair, as the rejection arm one branch down, whose "not a full-size instance of an approved
-  family" was a conjunction over two properties the classifier never separates: a verdict must be able to say which of
-  its causes fired (§5 rule 6). It is also the first end-to-end exercise of the grant arm and of the
-  witness-contradiction arm against a **live launcher record** rather than a fixture — the contradiction arm was driven by
-  forging `instance=c7a.48xlarge` onto a real `spawn=…:c7a.medium:ondemand` line, and reached `unknown` ⇒ `unmeasured`
-  naming both readings.
-- **Bare metal reaches the evidentiary class by a named arm; the default stays restrictive** (#106). `host_admission`
-  read the class from `instance=` alone, so bare metal — which has no EC2 identity — fell through the `case` default to
-  `correctness`, and a re-admission run would have demoted vesta/janus/antares by a classifier bug rather than by
-  evidence. Driven against the pre-fix code on the same line the lab hosts produce: `correctness` before, `evidentiary`
-  after. The probe gains a `virt=` field (the `hypervisor` CPU flag, read from `/proc/cpuinfo`'s `flags` line, `?` where
-  there is no such line — an absent instrument must not grant what it cannot see), and the class now reads
-  `instance=`, `virt=` and `governor=` from one provenance line. Scott's condition, ruled 2026-08-19: **name the class,
-  do not widen the default** — a permissive default would trade a false demotion for a false admission and invert the
-  allowlist's safety property, so `instance=none` still fails closed unless `virt=metal` *and* `governor=performance`.
-  Four arms must refuse and are driven doing it (`remote-exec-test.sh` case 8/8b, 33 checks): bare metal under
-  `powersave` (#79's case), bare metal with no cpufreq at all, a `hypervisor`-flagged guest, and the default arm on a
-  provenance line with no `virt=` field. The four refusals are checked to name four *distinct* causes, since the
-  hardcoded parenthetical this replaces told a bare-metal host it was "not a full-size instance". The governor
-  conjunct is now a second derivation of a fact `assert_governor` also derives, so the two are pinned to agree over
-  every governor state rather than assumed to (§5 rule 10). Fixture-only, stated: the guest arm has no live host to
-  read (the AWS fleet's last guest is retired), so *that a real guest emits `virt=guest`* is an inference from
-  `CPUID.1:ECX.31` tested against a line the fixture wrote.
-- **`shapegen` reports a candidate dir it cannot delete instead of discarding the error** (#107, following #39). The
-  gate's lint criterion caught `defer os.RemoveAll(dir)` at `tools/shapegen/main.go:174` — the same unchecked-cleanup
-  defect #39 already fixed in `spill-audit`, reintroduced by a new file. #39's resolution is followed rather than
-  re-derived: report on stderr, keep the primary error, never fail an audit over a cleanup, because a `chmod` on a
-  scratch dir must not suppress a report that was produced correctly. Driven on purpose rather than inferred from a
-  green run — `internal/vec` made unwritable mid-compile, and the branch prints the real path and errno; the healthy
-  `-frontier` run still prints `4.625 34 2x32 u=4 broadcast`, exit 0, no dir left behind. `-sweep` calls `audit` once
-  per candidate, so the silent form accumulated dot-directories 34 at a time.
-
-### Changed
-- **`DESIGN.md` §5 gains rule 14: a defect's severity is a function of its deployment context, not its code**, appended
-  so no ordinal moved (#106). #106's "latent, not active" was true when written and false once #109 made the lab a
-  signing tier, with no byte of the defect changed; re-admitting against the unrepaired classifier would have demoted
-  all three lab hosts by a bug's signature instead of by evidence. Incident in `docs/rulings.md`, rule 14.
-- **`DESIGN.md` §5 gains rule 13: two cost terms are comparable only at their rates**, appended so no ordinal moved
-  (#37). A count is not a time, so ordering two terms by their counts predicts a direction only the rates can supply —
-  rule 7's flop-share-is-not-a-time-share one level up. Clause (b) is Scott's: a constant whose optimum depends on
-  another term's rate is tuned jointly with that term, **once**. `MB` therefore stays 64 and the interim 17–33% is
-  priced on #37. Incident in `docs/rulings.md`, rule 13.
-- **The `MB` sweep refutes the prediction that motivated it: smaller is faster today** (#37). At the shipped `MB`=64,
-  n=2048, 1 thread, the diagonal solves take 53.2% of the time for 3.17% of the work (2.1 GFLOP/s, 1.3% of peak), and
-  `MB`=32 is 17–33% faster on all three hosts. Both predicted *directions* held; the conclusion did not, because the
-  countable term was weighted over the un-rate-checked one. `MB` must not be retuned apart from #37: at a 8× faster
-  solve the best point moves to `MB`=128. Right side costs 3.3–5.9× the left at identical flops. Reported-class.
-- **`DESIGN.md` §5 gains rules 10, 11 and 12**, appended so no ordinal moved (#36). Rule 10: cross-site agreement
-  certifies propagation, never truth. Rule 11: an instrument's output overrules its author's claims about it. Rule 12: a
-  coverage claim enumerates what it cannot see. 11 and 12 were fused for one commit; split so neither can be miscited.
-- **`BenchmarkSymmNarrow`'s wide-n control holds at one thread only, and a flop share is not a time share** (#36). Every
-  shipped kernel has NR=32 and the nest pads n out to it, so n=1 measured 35.9× the n=1024 row's per-column time; at
-  GOMAXPROCS=8 every row moved, the control included. Both corrections are in the fixture's own comment.
-- **`Ssymm` reads its symmetric operand in place rather than reflecting it into a dense square** (#36).
-  `internal/pack.ASymPanels`/`BSymPanelsPart` split each run at the diagonal, dropping an O(d²) allocation (67 MB at
-  n=4096; measured 16,904,645 → 127,365 B/op at n=2048) and a d² pass over A. Bit-for-bit identical, pinned by
-  `TestSymPackMatchesExpansion`. Fixture: `BenchmarkSymmNarrow`.
-- **`tools/shapegen -uarch NAME:WIDTH:PORTS:LATENCY` scores a sweep against any front end**, default unchanged at
-  `skylake-x:4:2:4`. The SPR and arm64 constants are deliberately *not* listed in the source: taken on the command
-  line, each re-sweep records them in its own log beside whoever sourced them instead of minting three integers.
-- **Issue width is a load-bearing input to P2's "unreachable", not a background constant.** Re-scoring the same 140
-  audited shapes at width 6 moves the frontier off the shipped 2×32 ×4 — which becomes dependency-bound at 32.00
-  flops/cycle — onto 3×32 ×2 at 38.40, and the ceiling from 43% of the FMA peak to 60%. Predicted before the run.
-- **The shape objective was missing its dependency term.** Ranking is now
-  `cycles = max(I/W, F/P, (F/A)·L)`, and the measured answer corrects this project's own guess: the shipped 2×32 ×4 is
-  *issue*-bound at 18.50 cycles, not latency-bound, so the corrected objective and the old insns/FMA one agree on the
-  frontier. The amendment reorders only the low-accumulator corner (2×48 ×2 above 1×48 ×8, 24.77 against 24.00).
-- **gate-p2's `SWEEP_BEST_IPF` is corrected 4.438 → 4.625, and stops being a trusted constant** (#107, ruled
-  2026-08-18). 4.438 was attributed to Permute 2×64 ×2, which needs `MR·U == 16` to read its A panel the way the
-  shipped kernels read theirs — 16 index vectors live against the 15 SIMD values go1.26.x allocates (T10) — so it
-  named a kernel that cannot exist. `e1c6340`'s enumeration re-derives the best *emittable* zero-spill figure as
-  4.625. The correction is **adverse**: 4.625 sits further from janus's required ≤3.88 than 4.438 did. Both gates now
-  reconcile their own copy against `shapegen -frontier` on every run and fail on mismatch.
-- **That repair loosens the amendment's stated worst case, opposite in sign to the shaping argument it settles.** The
-  bound `0.90 × 2.25 ÷ (SWEEP_BEST_IPF × 1.05)` moves 43.5% → 41.7% of peak. No host's verdict changes and the floor
-  the shipped 2×32 actually faces is unchanged at 43.8%, computed from its own audited `I_b`; only the cap the guard
-  permits rose. 4.625 *is* that shape's figure, so criterion 5b now reads ratio 1.000 and its live content is drift
-  off the frontier rather than distance from it — 4×32 at 6.250 is still refused.
-- **"2×32 is latency-bound" was wrong and had been published upstream.** On SPR its chain floors the body at 16.00
-  cycles where it measures 30.24 — 1.89× too loose to bind — and it uses 54.4% of its instruction supply against
-  4×32's 94.9%, clock-free against the peak loop. Corrected in `docs/spill-report.md` §10.2, which argued the
-  inversion without ever recording 2×32's 61.45 GFLOP/s against the 232.3 peak, and on golang/go#80829.
-- **17 citations minted the 4.438 → 4.625 repair against `#33`, which is a live unrelated gate defect.** The number
-  was a *task* id, and the task tool prints its ids in issue syntax, so it transcribes with no doubt-step. Repointed
-  to #107; `52a69af`'s pushed commit message still carries the wrong one and cannot be. Recorded rather than quietly
-  fixed because a citation landing on a real-but-different issue reads as well-formed.
-- **CI never ran `gofmt`, so an unformatted file sat at HEAD through green runs** — `internal/spill/spill.go`'s var
-  block lost its alignment when a comment split it. Added to the stock job in *gating* form, since `gofmt -l` exits 0
-  whether or not it lists anything, and both branches driven on purpose before landing.
-- **`layout-ensemble.sh` cleared a benchmark it never graded instead of demoting it.** `grade_pad` iterates the
-  token→symbol map, so a row outside that map — reachable via `KEEL_L1_FILTER` — printed unlabelled and citable while
-  the comment above the map claimed the opposite. Demoted in `grade_rows` now, geomean inheriting it.
-- **`gate-docs.sh` prints an apparatus line beside the historical shell/library one**, moving `tools/*.go` across.
-  An instrument counted on the library side would flatter the ratio it is counted by; both lines print so the
-  published 1.6× series stays comparable.
-
-### Fixed
-- **`rows_per_bench` moved from `retention.sh` to `bench.sh`, beside the `KEEL_BENCH_COUNT` it reads back** (#49). A
-  driver that sourced `bench.sh` for the count then could not count its own log — #49's shape a second time, in a
-  caller. All nine `bench.sh` consumers now get the read-back, one line lighter in `scripts/`.
-- **gate-p4's criterion 7 aggregate was the one fleet aggregate that never got #90's coverage clause.**
-  `SYRK_MEASURED` is counted after three `continue` paths, so a host that produced no bounded ratio is absent from
-  every counter and the fail and indeterminate lines read fleet-wide over a proper subset — *"1 of 3 gate hosts are
-  below the bar (0 cleared, 0 undecidable)"* with two hosts silent. All three now append `fleet_shortfall`, as
-  gate-p2's 5b and gate-p3's criterion 6 do.
-- **A gate could sign a synthetic run** — #78's forgeable certificate, reachable from the environment with nothing
-  edited. The verdict line read each gate's *own* instrument flag, so the four gates without one had no withhold
-  branch, and `VERDICT_STAMP` is seeded from the environment: `VERDICT_STAMP='[synthetic] ' bash scripts/gate-p0.sh`
-  stamped every criterion line and still signed the run `gate-p0: RED`. `gate_verdict` now decides on the stamp,
-  which covers every instrument mode added later with no per-gate branch to forget.
-- **Ctrl-C did not stop any gate, and a SIGTERM to gate-p5 deleted its scratch directory and let it keep running.**
-  A group SIGINT killed the `go test` child and the gate resumed at rc=0; gate-p5's `EXIT INT TERM` cleanup handler
-  removed `$BINDIR` and also resumed. The signal traps now `exit`, and exiting runs the one EXIT trap: rc=130 and
-  rc=143, neither resuming. Measured on bash 3.2.57 and 5.3.15 — the claim the old form rested on, that bash skips
-  the EXIT trap on an untrapped fatal signal, is false on both.
-
-### Removed
-- **`remote_build_test_or_fail` replaces the eleven guarded cross-compile blocks in gate-p0 through gate-p5** (D1),
-  beside the `remote_build_test` it wraps. Both messages are parameters: gate-p5's two say *"cross-compile of **the**
-  linux/amd64 …"* where p0–p4 omit the article, so normalising either would have moved a gate's output. The first
-  survey said *ten* — it enumerated `gate-p1.sh` through `gate-p5.sh` and never looked at gate-p0. **−34 lines in
-  `scripts/`**, with gate-p0's four five-line verdict blocks collapsed to the one-liner the other five gates already
-  use: 30 of 30 arms byte-identical, and gate-p0's whole 43-line output unchanged live but for its disk reading.
-- **`gate_verdict` replaces the verdict tail of all six gates** (D1), in `scripts/remote.sh` beside the four verdict
-  helpers it belongs with. gate-p2's go/no-go tail and p2/p3's withhold wording are parameters, so no gate's output
-  text moves on any path reachable today — proven over FAIL × stamp × flag, 16 identical and 12 intended. **−19
-  lines in `scripts/`.**
-- **`gate_tmpdir` replaces the six scratch paths and the cleanup trap in gate-p1 through gate-p5** (D1); each gate's
-  own tail (`AUDITKERN`, `SWEEPLOG`, `ALTCSV`, `KERNBIN`, …) stays where it was. **−7 lines in `scripts/`** — 35
-  lines of duplication out, most of it back as the measurement the fix rests on.
-- **`assert_kern_audit_drift` replaces the registry-drift check in gate-p3 and gate-p4** (D1), whose executable
-  lines were byte-identical; the fail message's trailing clause is a parameter, so neither gate's output text moves.
-  **−10 lines in `scripts/`**, and the caller-visible `DRIFT_CHECKED` is now documented rather than incidental.
-- **`test_verdict` replaces eight copies of the pass/fail/paste-the-tail triple** around every gate's `go test` run,
-  in all six gates (D1). The phrase is a parameter, not a normalisation: gate-p5 says *"every test passes"* where
-  p3/p4 say *"all tests pass"*, and editing that would have changed three gates' output. **−25 lines in `scripts/`.**
-- **Seven byte-identical gate helpers now live in `scripts/gate-lib.sh`** (Workstream D1's lift): `require_bench`,
-  `audit_ipf`, `audit_ipf_tile`, `field`, `marker`, `marker_all`, `set_has`, out of gate-p2/p3/p4/p5. The comments
-  diverged only in bookkeeping about the duplication itself, a tax quadratic in the copies. **−69 lines in
-  `scripts/`**, 1.63× → 1.62×.
-- **One `marker_row` replaces five copies of one awk, and the flop-count pair is shared** (Workstream D1):
-  `p4_line`/`p5_line`/`bench_line` plus two *inlined* copies — one of them in gate-p4 three hundred lines below
-  gate-p4's own helper — and `flops_expect`/`flops_formula`, of which gate-p5's was already a strict superset.
-  **−81 lines in `scripts/`**, 1.62× → 1.61×.
-- **The boost apparatus is retired and gate-p5 can measure the fleet again** (#66, ruled 2026-08-17 —
-  *"the cloud does not have that"*): `remote_boost`/`remote_boost_set`, the second boost-on pass, and the
-  precondition that refused every guest are gone; criterion 9 now reads the one sweep there is. The 2026-08-15
-  finding stands and the handicap is disclosed beside the ratio instead of removed. **−167 lines in `scripts/`.**
-- **Citation *pinning* is retired; resolution stays.** `docs/citation-targets.txt` → `docs/citation-externals.txt`
-  (declarations only); `DESIGN.md` §5 rule 9 and §7 amended, because they mandated the instrument; control `T3`
-  removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
-
-### Changed
-- **The 115-shape generator behind the spill frontier is not in the tree and never was** (#107): only the audit half
-  is, so the report's part 4 table cannot be regenerated and neither can `SWEEP_BEST_IPF=4.438`, which gate-p2
-  criterion 5b reads.
-  Recorded in the report; the rebuild's in-tree/out-of-tree question is Scott's.
-- **`docs/spill-report.md` is reopened (part 10): P2 and P3 are both red on the first evidentiary host**, a full-size
-  `c7i.48xlarge` — 34.2% of measured peak and a 51.0% mission ratio. 55% needs ≤ 4.09 insns/FMA against the shipped
-  6.25, and golang/go#80829 plus #80830 together reach only 50.0%. The report's part 9 stands for the retired fleet.
-- **gate-p3's mission ratio is now decided by the admission machinery, not merely taken on an admitted host**
-  (#104/#30): `admission_readback` and `adm_judgeable` in `remote.sh` gate both of criterion 6's verdict paths,
-  gate-p2's inline copy calls them, and a not-admitted host has its own tally so the aggregate stops calling it a
-  host that produced no ratio. gate-p5's scaling floor is **not** wired yet and says so.
-- **The evidentiary host class is full-size, not bare metal, and a correctness-class number is
-  reported-not-judged whatever it reads** (#104, ruled 2026-08-17): retiring metal had left the class empty
-  while the harness went on judging perf on any guest that answered — which is how `c7i.4xlarge`'s 34.2%
-  became a P2 STOP. Class is read before the number is trusted, and an unreadable class is `unmeasured`.
-- **The harness reads the class it is told to check** (#104): the provenance line carries `instance=` (IMDSv2;
-  `none` for no EC2 identity, `?` for no way to ask), `host_admission` resolves it against a declared
-  `KEEL_EVIDENTIARY_SIZES`, and gate-p2's criterion 5b reports rather than judges a non-admitted host. **No
-  currently provisioned instance type is admitted**, so P2's floor is now `unmeasured` fleet-wide rather than
-  missed. gate-p3's and gate-p5's judged perf criteria are the same shape and are **not yet** wired.
-
-### Fixed
-- **`aws-fleet.sh up` handed over hosts whose own boot-time `apt-get` was still running**, so the first judged
-  on-demand campaign died at `Could not get lock /var/lib/apt/lists/lock ... held by process 3085 (apt-get)` —
-  the launcher's userdata racing the provisioner. `wire` now waits on `cloud-init status --wait` per host.
-- **The spill parser silently moved a function's body onto the one before it** (#99, *not* dormant as filed —
-  `type:.eq.[2]interface {}` and `type:.eq.[4]interface {}` are unmatched headers in the audited packages today):
-  `^(\S+) STEXT` cannot match a symbol holding a space, which every generic instantiated over a struct shape does.
-  Headers now parse in full, an unparsable one is an error rather than a skip, and `Find` resolves a short name
-  through an instantiation's type-argument list. Re-audited: gate-p2's `0 vector stack refs` is unchanged.
-- **The P4 sweeps' large-size arm never ran a right-side solve, on any host** (#64): `cs[ri%len(cs)]` aliased
-  every runner into the front of a corner list that varies `side` slowest, and `max(ri)` is 2 on a scalar host
-  and 4 on an AVX-512 one. `cornerFor` spreads them instead, so `Strsm`/`Ssymm` `side=R` and `Ssyrk` `uplo=L`
-  now run at n=500 — the only size where the blocked path runs at all. **`Ssyrk` was affected too**, contrary to
-  the issue: 4 corners varying `uplo` slowest leave `uplo=L` unreached below 4 runners, and its own comment
-  claimed all four were covered. `TestSweepCornerCoverage` asserts the index space spans the leading flag at
-  every runner count from 2 to 8, and names the corners a given host does not reach.
-
-### Added
 - **`aws-fleet.sh` launches on-demand for judged runs** (`KEEL_FLEET_MARKET`, ruled 2026-08-17), tags each instance
   with its market and shows it in `status`. An unrecognized or empty market is refused, not defaulted; `KEEL_FLEET`
   specs are shape-checked, since a whitespace-only line passed `-z` and launched an instance with no role or type.
@@ -1808,142 +392,6 @@ While the major version is 0, minor versions may contain breaking changes.
   skips every host. The `continue` is inside the loop holding criterion 9, so re-measuring the README rate
   block — the ruled precondition for the v0.1.0 tag — went dark. Fixed below.
 
-### Changed
-- **Every gate's provenance line now records cores, SMT width and sockets, not just `nproc`** (#82): read from
-  `thread_siblings_list` (with `core_cpus_list` as the fallback), because `GOMAXPROCS=8` is 8 cores on a
-  1-thread/core arm and 4 on a 2-thread/core one. Replaces gate-p5's private `lscpu` ssh — one round trip
-  fewer, one fewer package assumed present, and the fact reaches every gate's archive rather than one. Whether
-  P5 *requires* SMT off, or only that the state be recorded, is still open on #82.
-- **The four phase gates' front matter moved to `docs/gates.md`, verbatim.** 855 comment lines standing above
-  zero lines of code — `gate-p4.sh` ran 226 of them before its first statement — become one page plus a
-  ~12-line pointer per script; every gate body below `set -euo pipefail` is byte-identical to its predecessor.
-  **−809 lines in `scripts/`**, 1.61× → 1.50×. Not published: the prose was repo-only before the move.
-- **A rule and a ruling are now different files.** `DESIGN.md` §5 rules 6–9 keep their operative clauses at
-  their existing ordinals — no citation moved — and their incident histories move to `docs/rulings.md`,
-  published as a record page rather than dropped off the site. §5 falls from 2,275 words to 1,530.
-
-### Fixed
-- **Fourteen `#23`/`#24` citations named the wrong issue**: they were local task ids, and GitHub #23 (same-host
-  OpenBLAS ruling) and #24 (the 2×32/4×32 dispatch class) both exist and are *also* cited correctly in this
-  tree, so one number carried two meanings. Clock sites now cite `§5 rule 5 as amended 2026-08-16`, the fleet
-  cites #12. `citation-lint` resolves only `§N`, so nothing could have caught this.
-- **"No cpufreq interface" and "the governor will not read" shared one verdict**, which §5 rule 5's
-  2026-08-16 amendment forbids: the first is a virtualized guest that does not own the knob, the second a
-  defect on a host that has it. `remote_probe` now emits three tokens and `assert_governor` has a fifth
-  state, `nocpufreq`. It still blocks — the amendment licenses a substitute instrument, not an exemption,
-  and that instrument (`BenchmarkPeak` head/middle/tail) was unbuilt as this shipped. Proven by a
-  *changed* reading: this dev machine moved `unreadable` → `nocpufreq`, and the other four states are
-  driven from synthetic probe lines because no one host can produce them all.
-- **gate-p5's `KEEL_FORCE=nonsense` check certified a refusal it never observed.** It reads *nonzero* as PASS,
-  so ssh's 255 for a dead host printed PASS; #62 only made the class nameable. `vanished` is now tested first
-  there and beside the existing `else` at four more sites, printing UNMEASURED — same verdict, right cause.
-- **A non-matching glob aborted the entire remote probe under zsh**, so a host that answered perfectly was
-  reported `unreachable`: sshd runs the *login* shell, and `ssh h 'for d in /nope/*; do :; done; echo B'`
-  never reaches `echo B`. Every enumeration in `remote_probe` now goes through `find` with a quoted `-name`.
-  The fleet's AMIs default to bash, which is why this had not fired — one contributor's host, once, as an
-  unattributable UNMEASURED.
-- **Seven of the eleven `gate-pN.sh:<line>` citations in other files were already stale, by 4 to 273 lines.**
-  Exposed because relocating the headers shifted every line: re-pointing by arithmetic landed one on
-  `done <<<"$HOSTS"`, so all eleven were resolved by content instead. No checker follows — a line-existence
-  check would have passed on all seven, which is the argument that retired pinning.
-- **Adding a record page needed four hand-kept copies of one list, and two failed silently.** `fake_tree` and
-  the gitignore-coverage check now derive from `docs-gen.sh`'s own `records()` table; the missing `.gitignore`
-  entry staged a symlink to `DESIGN.md` clean, which is how it was found.
-- **The pre-public audit's `.local`-hostname enumeration named three files and there are six** (#95).
-  Conclusion unchanged — non-routable LAN names, no IP or key — but `DESIGN.md:73`'s `janus.local` is
-  hand-written prose, not a pasted log, so the don't-falsify-the-evidence argument never covered it and
-  it broke keel's own key-by-CPU-model convention; fixed to `janus`. The first search greened because
-  `git grep -E '\.local\b'` matches nothing (`\b` is not POSIX ERE).
-- **`remote.sh`'s "no gate defines its own" verdict helpers was a universal claim `gate-docs.sh` falsifies.**
-  Scoped to the six gates that source it, with the reason gate-docs is legitimately outside (own vocabulary, no
-  host, delegated by nothing, no instrument-exercise mode so no `VERDICT_STAMP` to honour) — and the standing
-  precondition recorded at gate-docs' own definition site, where adding an exercise would make the hole real.
-- **Four statements in the docs were false against the code**, each fixed rather than filed: `parallel.go`
-  and `p5_test.go` claimed every published number was measured at `GOMAXPROCS=1` (README publishes an
-  8-thread arm per Level-3 routine), `DESIGN.md` §2's heading said 15 routines over a table summing to 12,
-  and `doc.go` promised the two backend prints always agree — on AVX2-only silicon, which is what CI runs,
-  it prints `avx2 scalar` (#40). README's undated "currently missed" scaling floor is now dated to the run
-  it describes.
-- **A kernel emitting `NaN` passed the two tests whose job is to catch a wrong kernel** (#98):
-  `math.Abs(got-want) > tol` is false against NaN. Non-finite results are now rejected before the
-  magnitude comparison, and a *matched* NaN/`Inf` pair no longer counts as backend agreement. The two
-  differential tests stay unexercised on arm64, which has no vector backend to differentiate against.
-- **`Snrm2` returned up to 24.78% relative error for small inputs** (#97): gradual underflow leaves a
-  *subnormal*, so the `s > 0` rescue guard let a sum that had lost significance take the fast path.
-  Now guarded by `s >= n·2^-126`. The AVX-512/AVX2 accumulations of this path are unexercised on arm64.
-- **All 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` pointed at anchors that do not
-  exist, and the gate's exclusion for them came out in the same commit** (#93). The headings carry their
-  titles (`## T1 — simd/archsimd is amd64-only; …`), so both renderers slugify the whole line and the
-  anchor that exists is `#t1--simdarchsimd-is-amd64-only-…`. Clicking `T18` in the summary table reloaded
-  the page. **Dead in GitHub's rendering of the file too**, since before there was a site — the site build
-  is only what surfaced it, which is the render-don't-assume rule reaching prose. Fixed with an explicit
-  `<a name="tn" id="tn"></a>` before each heading rather than by rewriting the links, because GitHub and
-  the `toc` extension slugify the em dash differently and no single spelling of the link satisfies both;
-  `attr_list`'s `{ #t1 }` is unsuitable for the same reason, MkDocs honouring it and GitHub not. The form
-  was verified through GitHub's own markdown pipeline before 25 of them were written (`gh api /markdown`
-  returns `<a name="user-content-t1" id="user-content-t1">` beside `href="#t1"`, the pair GitHub's
-  fragment remapping resolves), and through a site build afterwards.
-  **The un-exclusion is the other half of this commit, by ruling:** *"an exclusion that outlives its
-  defect becomes a permanent blind spot with a good excuse."* `gate-docs.sh`'s anchor check no longer
-  exempts the records pages, and `mkdocs.yml` raises `validation.links.anchors` to `warn` so `strict`
-  errors on one. Both branches were driven on purpose before either was trusted: with `warn`, mkdocs
-  fails the build; with the setting lowered back to `info`, the gate's grep over the build log is what
-  fails. Lowering it does not buy silence, it moves which check goes red.
-- **gate-p2's criterion 5b aggregate divided by the hosts that answered and never named the fleet it
-  was asked about** (#90), so with `antares.local` unreachable it printed *"every host that produced a
-  judgeable throughput reading cleared its floor (2/2)"* — arithmetically true, and reading as
-  fleet-wide over two thirds of the fleet. `gate-p2.sh` had no `NHOSTS` at all; both counters are grown
-  inside the per-host loop by hosts that answered. **The dead-host exercise found this on its first run,
-  in the line it was built to fire**, which is the argument for the exercise: five green P2 runs could
-  not have found it, because a complete fleet renders that branch identically either way. The new
-  `fleet_shortfall` in `roofline.sh` appends the clause naming how many of the configured hosts produced
-  no judgeable reading and what fraction of the fleet the line therefore covers; six fixtures
-  (36–41, 70 total) cover it, including the case a healthy fleet drives — complete coverage prints
-  *nothing*, so a helper that appended unconditionally would look right until the log that matters. The
-  fraction stays over the survivors: they are the honest numerator of what was judged, and the defect
-  was the missing statement of how many were asked. **The verdict is untouched**, and the run as a whole
-  was never fooled — the absent host tripped three separate criteria, `FAIL=1`, and a real run would
-  have printed `gate-p2: RED`. So this was message-level, not a green certificate over a partial fleet.
-  gate-p3's OpenBLAS aggregate had the identical shape and was fixed at its own call site in `64a05e1`
-  (`OB_NOCOVER`); this is the sibling that fix left standing, and the helper is shared so there cannot
-  be a third.
-- **And then the verdict itself: a partial fleet now resolves to `UNMEASURED`, and both fleet aggregates
-  decide absence in one place** (#90, ruled 2026-08-16 — the open question the entry above left for
-  Scott). *"A PASS reading `(2/2)` over a three-host fleet is a message-level truth carrying a
-  fleet-level assertion — the criterion's claim is about the fleet, and a fleet with an absent member
-  hasn't measured that claim."* §5 rule 6 gives the absent measurement its one available verdict;
-  criterion 6's aggregate already spoke this way, and **two aggregates with different absence semantics
-  is the divergent-copies defect relocated to the verdict layer** — the thing `fleet_shortfall` had just
-  been built to end. So `p3_coverage` is renamed `fleet_coverage` (the phase prefix was the invitation to
-  grow a p2 twin) and criterion 5b calls it instead of its own inline three-branch `if`. gate-p2 gained
-  the `N_INDET` counter it never had: its indeterminate branch used to `continue` without counting, so
-  "the run could not classify this host" and "this host never answered" were one invisible leftover, and
-  the new UNMEASURED names them separately. **Not a weakening** — `unmeasured()` sets `FAIL`, so
-  UNMEASURED blocks green identically; a partial fleet simply stops being *describable* as a whole one,
-  and per-host PASSes stand as measured. Five p2-shaped fixtures added (31–35, 70 total) because the two
-  callers feed the function different shapes — p2 excludes an indeterminate host from the measured count
-  where criterion 6 includes it, so the same fleet arrives as `3 2 2 0 1` from one and `3 3 2 0 1` from
-  the other. All five of criterion 5b's renderings and all nine of the exercise driver's read-back
-  outcomes were driven before this landed, by extracting the verdict lines from `gate-p2.sh`'s own bytes
-  and feeding them to the read-back — the call-site half is what a fixture cannot reach, and it is where
-  the previous fix was verified by reading alone.
-  **The branch fired in a real gate** (`build/instrument-exercise-dead-host-73c40c8.log`, 128 lines):
-  `antares.local` unreachable, vesta and janus genuinely measuring and clearing their own floors
-  (4×32 at 96.7% of measured peak FMA-bound; 2×32 at 94.6% of a 48.6% issue roofline), and criterion 5b
-  printed `UNMEASURED … 2 of 3 configured hosts cleared it and none measured below it, but 1 produced no
-  floor verdict (0 indeterminate, 1 with no judgeable reading at all)`. The driver's read-back reports
-  **YES** against three independent checks: the configured count matches `.keel-hosts`, at least one host
-  is reported absent, and cleared + indeterminate + absent accounts for the whole fleet. Discipline
-  audited from the log rather than asserted: **25 of 25 verdict lines stamped `[synthetic]`, zero
-  unstamped**, `GREEN`/`RED` never emitted, `VERDICT WITHHELD` the only verdict token, exit 2. Reproducible
-  against the first run at `5ade3ff`: vesta 96.6% → 96.7% of peak, janus 94.8% → 94.6% of its roofline.
-  **One defect found by that audit and fixed here:** the read-back's own YES prose wrapped so a line
-  *began* with `UNMEASURED`, and a verdict-line count over the log read 26 where the gate emitted 25 — the
-  driver's commentary about a verdict counted as a verdict. Rewrapped, with the constraint stated: no line
-  of a synthetic log's own report may begin with a verdict token. Same class as the `GREEN`/`RED` grep that
-  hit the banner's promise text, in the one file where a log being mistakable for certification matters most.
-
-### Added
 - **`citation-lint.sh` now WARNs when a scoped quote marker names a form that is not on its line**, and
   the one dead token in the tree is gone. A scope is matched *literally*: the token `7.7` is a string,
   not a notation, so it does not suppress §7 rule 7 even though both spellings resolve to the same rule <!-- citation-lint:quote -->
@@ -2108,780 +556,6 @@ While the major version is 0, minor versions may contain breaking changes.
   INDETERMINATE on the very run meant to prove the fix. A second exercise run at the new revision is
   owed to the code that replaced the branch, and the first run's log stands as the record of the finding.
 
-### Changed
-- **`gate-docs.sh` now prints `shell N / library M / ratio R` on every push, and a standing order in
-  `CLAUDE.md` caps net additions to `scripts/`**: a session may not grow the apparatus unless it also lands
-  a routine, a kernel, or a library fix. Reported, never a verdict — a red ratio would reward paying down
-  shell instead of shipping. The instrument costs 20 shell lines and says so: 1.63× → **1.64×**.
-- **DESIGN.md §7 is no longer titled "Claude Code kickoff prompt"** (H4). It opened *"Paste below into a
-  fresh CC session in an empty repo… it does not assume this document is present"* — a prompt living inside
-  the document it disclaimed, for a repo that is not empty. Framing deleted, eight rules kept verbatim at
-  frozen ordinals: rules 2/4/7/8 are pinned and cited from ~40 sites, so renumbering is not a formatting
-  choice. Verified by diffing all eight parsed rule leads against HEAD — byte-identical.
-- **Two standing rules amended rather than obeyed literally** (2026-08-16 ruling: *retire any rules we do not
-  really need*). The issue-per-discovery rule (`CONTRIBUTING.md`, `CLAUDE.md`) now says a discovery whose fix
-  is smaller than its issue gets **fixed** and recorded — the word carrying the intent was always *silent*,
-  never *small*. `docs/toolchain-notes.md` entries get the CHANGELOG's 1–3-line cap on prose, with the repro
-  never abridged and the causal analysis in the issue; existing entries stay as dated records.
-- **DESIGN.md §5 rule 5 now demands a stable clock rather than a `performance` governor** (amended
-  2026-08-16, forced by the ruling to measure on AWS instances). No guest can satisfy the old wording: there
-  is no `cpufreq` directory, so `remote.sh:410` resolves to `unmeasured` and blocks every gate — correctly,
-  but it makes the pivot impossible rather than merely awkward. Where `cpufreq` is readable the governor
-  assertion is unchanged; where it is absent, stability comes from `BenchmarkPeak` sampled at head, middle
-  and tail. Same benchmark, no new bar. The harness half is not written yet — see the follow-up tasks.
-- **Nine sites that stated rule 5 as "the performance governor" now state it as the rule reads**, each
-  saying which instrument applies to the hosts it actually describes (`gate-p1/p2/p3/p4`, `bench.sh`,
-  `provision-openblas.sh`, `docs/hosts.md`, and §4's own #31 ruling record). The two *printed* pass lines
-  are deliberately left claiming the governor: they must name the instrument that ran, so they change with
-  the harness, not before it.
-- **Every GitHub Action in both workflows moved to a Node 24 major**, in one sweep and outside any feature
-  work: `checkout@v4→v7`, `setup-go@v5→v7`, `setup-python@v5→v7`, `upload-artifact@v4→v7`,
-  `configure-pages@v5→v6`, `upload-pages-artifact@v3→v5`, `deploy-pages@v4→v5`. Node 20 was deprecated on
-  the runners (changelog 2025-09-19) and the old majors were **already being forced onto Node 24 with a
-  warning annotation on every run** — read off the annotations of run `31986295744` rather than inferred,
-  so the bump changes the declared runtime and not the one that was executing. Ruled 2026-08-16:
-  *"deprecated runner images eventually become broken CI, and broken CI during the tag window would be the
-  worst possible timing for infrastructure this project depends on for its certificate."* Both workflows
-  together, because half a sweep is an inconsistency with no gate benefit.
-  **Two things in the path were behavioural, and neither was taken on trust.** `setup-go` v6 sets
-  `GOTOOLCHAIN=local` (actions/setup-go#460), so `go` can no longer silently download a newer toolchain to
-  satisfy `go.mod` — it errors. That is the behaviour this project wants, since a silent substitution makes
-  the Go version a fact about the runner instead of about the pin, and `go 1.26` in `go.mod` against
-  `go-version: 1.26.x` needs no download; both jobs now print `go version` and `go env GOTOOLCHAIN`, on the
-  same read-back-not-reasoning grounds as #88's dispatch markers. `upload-pages-artifact` v4 stopped
-  including hidden files, which would publish a site missing a dotfile and say nothing; `find build/site
-  -name '.*'` returns zero on a real build, so no `include-hidden-files` is set, and the pinned
-  `mkdocs-material==9.6.22` is what makes that a stable fact rather than a lucky one. The deploy job's
-  gating condition is byte-for-byte unchanged: this sweep publishes nothing.
-- **`doc.go` rewritten for someone with a matrix to multiply, and `types.go`'s four flag types documented
-  at all** (#92, ruled 2026-08-16: *"users will not care about the design notes. They want straight usable
-  information"*). The test each paragraph now has to pass is **"would a person with a matrix to multiply
-  still be reading?"** — so the package comment leads with the two build modes, the row-major/`ld`
-  convention as a picture of an actual array, and a minimal `Sgemm` call, and it no longer contains the
-  paragraphs about what took two phases to establish or why the Level-3 chain has two rungs. Nothing was
-  deleted from the project's account of itself; the reasoning that had accumulated in godoc moved to
-  comments that `go doc` does not render (`L1Chain`, `WorkersLastCall`), which is where a gate's grounds
-  belong. `types.go` had **no doc comments whatsoever** on `Transpose`, `Uplo`, `Side`, `Diag` or their
-  eight constants — the flags every call site passes were the least documented part of the API.
-  **No performance number appears in godoc any more.** A doc comment is a contract and a rate is a
-  measurement; the `# Numbers` section became one link to the site's numbers page, which is generated
-  from the block gate-p5 re-measures. Read back rather than assumed: `go doc` rendered for all 38
-  exported symbols, 38 leading with their own name (const groups checked for naming each member), and the
-  read-back's matcher was self-tested against a non-matching lead first, because a checker that cannot
-  say CHECK proves nothing when it says ok.
-- **`DESIGN.md` §4/P2 now specifies the tile orientation that shipped, and states the naming convention
-  in the same sentence** (#16, ruled 2026-08-16). The doc had said `MR=32, NR=6` — *"a pre-implementation
-  fossil in BLIS's column-major orientation, written before the row-major decision propagated through the
-  design"*, and **there is no intended column-major internal C**. It now reads MR=6, NR=32 with the
-  convention inline (a tile `MR`×`NR` is MR rows × NR columns of row-major C, vectors along N), because
-  stating the convention is what stops the question recurring: the discrepancy had been re-derived by a
-  reader at least twice, and both times the doc gave an orientation instead of a rule. **The amendment
-  falsified three sibling sites, found by sweeping on purpose rather than by anything reporting them:**
-  `KERNEL.md` §2 called the reflection a departure that DESIGN.md had just ratified; `internal/spill/README.md`
-  documented a spill-audit invocation in which **not one of four tokens was real** (`cmd/spillaudit`,
-  `-fn`, `./internal/kern`, `Kernel32x6` — the command is `spill-audit -func`, the package is
-  `./internal/vec`, and no kernel ever bore that name), so the documented command could not run and was
-  corrected and then *executed* to confirm; `docs/spill-report.md` described DESIGN.md's planned tile and
-  the spilling kernel as if they were different tiles. They are the same tile, now named consistently.
-  One more correction landed in the amendment itself: the reflected 12-accumulator tile **is** `Kernel6x32`
-  and **is not** comfortable for the allocator — 90 vector stack refs, 50 register copies, 5.62 insns per
-  arithmetic op, 30.5% of measured peak on Zen 4 against 96.6% for `Kernel4x32` — so the doc's tile is a
-  falsified prediction and now reads as one instead of as description.
-- **All four verdict helpers now live in `scripts/remote.sh`, and no gate defines its own.** `remote.sh`
-  warned in one breath that `VERDICT_STAMP` applies "in each gate's own pass/fail/info" and in the next
-  that "an overridden copy is a copy and copies drift" — and the drift had already happened:
-  `unmeasured` was shared and stamped, while `pass`/`fail`/`info` were copied into all six gates and
-  **only gate-p3's copy applied the stamp**, because gate-p3 is where the exercise that needed it was
-  written. So gate-p2's first synthetic run would have printed PASS lines indistinguishable from a real
-  certificate — the exact forgery the stamp prevents, in the one place a banner does not help. The five
-  identical copies were **not** corrected in place: uniformity across copies is not correctness, the
-  five agreeing copies were the wrong ones and the odd one out was right, so a sixth good copy would
-  have left the defect available to gate-p6. Verified output-neutral by running gate-p0 either side of
-  the lift and diffing (identical), then verified load-bearing by arming the stamp and confirming zero
-  unstamped verdict lines — a check that was impossible to pass before.
-- **The collapse rule now reaches criterion 6: an undecidable Sgemm classification whose two candidate
-  denominators agree yields a verdict, `why=agree-anyway`** (ruled 2026-08-16). #86 gave the gate a
-  three-state grade and a rule for the class decision: `UNMEASURED` is for verdicts that *vary* over
-  the uncertainty, so a doubt whose resolutions all lead to the same verdict is immaterial
-  (`why=falsifiedanyway`, `why=samemixanyway`). Criterion 6 had not inherited it — an indeterminate
-  class went straight to `UNMEASURED` even when both candidate denominators put the host on the same
-  side of the 60% bar, which spends the scarcity three-state grading exists to protect. Now the log
-  prints both candidates side by side, each graded **on its own net-of-CI bound and never the point
-  estimate** (a collapse justified by a midpoint would be exactly the noise-driven verdict the
-  amendment prevents), and agreement decides. **Symmetric**: two agreeing misses collapse to `FAIL`,
-  so a slow host cannot shelter behind a class the run could not derive. A candidate with no bounded
-  ratio supplies no agreement — assent by omission would let a missing measurement buy a pass — so
-  that stays `UNMEASURED` with both branches printed. The decision is `p3_collapse` in
-  `scripts/roofline.sh` with 7 fixtures, not an if-chain inline in a gate.
-- **Criterion 6's fleet aggregate no longer reports a host that produced no measurement as a host that
-  measured slow.** Found while rewording that aggregate for the collapse above, and it is the same
-  label defect ruling #37 turned up in P5's scaling aggregate, pointing the other way: the miss count
-  was **derived** as `nhosts - cleared - indeterminate`, so a fleet with one slow host and one host
-  that never produced a ratio (no OpenBLAS reference, no benchstat interval) printed *"2 measured
-  below it"* — a right verdict carrying a false claim about keel's speed. Worse, the `UNMEASURED`
-  branch required `cleared + indeterminate == nhosts` exactly, so a fleet with a no-coverage host and
-  **zero** misses fell through to `FAIL` and blamed speed for a hole. Every exit from the per-host
-  loop now increments exactly one tally, the leftover is named as a leftover, and the aggregate is
-  `p3_coverage` in `scripts/roofline.sh` with 6 more fixtures — extracted for `p3_collapse`'s stated
-  reason, that an if-chain able to turn a `FAIL` into an `UNMEASURED` is not shown correct by a
-  healthy run driving one of its branches. Confirmed discriminating rather than assumed: replayed
-  against the old inline logic, the no-coverage fixture is `FAIL` there and `partial` here. The
-  printed sentence itself is verified by reading, not by fixture, and the comment says so.
-- **CI's `GOEXPERIMENT=simd` job now states the size of its own claim: dispatch is pinned to scalar and
-  the read-back is asserted and published** (#88, ruled 2026-08-16). GitHub's runners have no AVX-512,
-  so that job built keel with the simd toolchain and then ran **the scalar fallback** — while its name
-  implied the vector kernels had run, and nothing in the log said which backend registered. #87's
-  SIGILL was that gap biting. Both obvious fixes were rejected: asserting *"a vector backend
-  registered"* fails spuriously on whatever the runner lottery deals, and merely documenting
-  *"scalar-ish under a simd toolchain"* leaves the green's meaning varying run to run. Instead
-  **determinism plus read-back** — the judged leg runs `KEEL_FORCE=scalar` and then asserts the
-  markers agree (`keel-l1-active` = `scalar`, `keel-sgemm-active` = `*/scalar`), so the claim is
-  identical every run *and* the pin is proven to have taken rather than assumed, which is
-  `dispatch.go`'s no-silent-downgrade property checked from outside. A missing marker fails in its own
-  right, as in the gates: "the tests passed" and "here is what they covered" are two different facts.
-  The job summary spells out what is claimed (all paths compile; correctness verified on scalar,
-  deterministically) and what is not (that any vector kernel executed) — vector-backend evidence
-  stays on the three-host fleet. A second leg runs the suite under default dispatch with the selected
-  backend **reported and not judged**: correctness still counts, but which backend produced it is a
-  fact about the machine, and it is the one path by which a future AVX-512 runner would add real
-  vector coverage and say so unprompted. Two verification details, both found by checking rather than
-  assuming: `go test` shows a passing package's stdout **only under `-v`**, so the read-back comes
-  from a probe whose `-run` pattern deliberately matches nothing (TestMain still speaks, exit 0)
-  rather than from `-v` over tens of thousands of subtests; and `-count=1` is load-bearing, because
-  the test cache **replays a previous run's recorded stdout** and would publish a read-back taken
-  under a different environment. `set -o pipefail` is stated where a status crosses a pipe into
-  `tee`, this repo having shipped that particular swallowed verdict three times in other forms. The
-  assertion was driven through all four of its branches — correct scalar read-back, wrong Level-1
-  backend, wrong Level-3 backend, markers absent — with the passing case as the positive control that
-  proves it discriminates. **The read-back falsified a claim on its first run.** The job's own comment
-  said the vector path "is not exercised here at all"; the opportunistic leg read back
-  `keel-l1-active: avx2`. GitHub's runners lack AVX-512 but *have* AVX2, so Level 1 selects a vector
-  backend while the Level-3 microkernels fall back — vector code has been running in CI all along, one
-  level below where anyone was looking. The summary now reports each level separately rather than as
-  one vector-or-not bit, since a true "this runner exercised a vector path" would have concealed which.
-  That is the case for printing a read-back instead of reasoning about a dispatch: the reasoning here
-  was wrong, cheaply, in public.
-- **`Strsm`'s scaling floor is ratified at 7.0×, and the model the deferral asked for is recorded as
-  *falsified* rather than restated** (#37/#89; `DESIGN.md` §4/P5 carries the grounds). `gate-p5.sh`
-  deferred `STRSM_FLOOR` to "this measurement plus a stated model" for five phases, and the
-  measurement arrived nine times over — three runs × three µarchs, `n=4096`, `threads=8`, boost off
-  both arms, **7.403–7.668× net of CI**, recomputed from the logs rather than carried. The stated
-  model is the work split the gate prints, `rank_update=0.98413 diag_solve=0.01587`; read
-  `diag_solve` as an Amdahl serial fraction, as "state the model behind the number" asks, and at
-  p=8 it implies a ceiling of **7.2001×** that **all nine readings clear** — the lowest by +2.82%.
-  A ceiling the data walks through is a dead premise, not a premise needing adjustment, and **the
-  favourable direction makes it no less a falsification**: §5 rule 7's objection to a check that
-  cannot come out badly applies exactly as well to a bound that cannot come out binding. What the
-  arithmetic says mechanically is a finding about the nest — the implied serial fractions
-  (0.619–1.152%) sit *below* the 1.587% work share, which is the signature of diagonal solves that
-  overlap the rank updates, because `Trsm` splits right-hand sides at the top (`MB=64 < MC=144`
-  leaves the `ic` loop one iteration) and the solves ride that split. The replacement model is
-  #65's per-`(jc, pc)` B-packing residue plus the makespan tail of the last claimed unit, measured
-  at that 0.62–1.15%. **7.0× is a regression bar, not a derived threshold**: derived *from* the
-  falsified ceiling it would be theatre, whereas set 0.403× (5.76%) below the lowest of nine
-  observations it is margin — the same thing the ≥6× floor is. 7.4× was rejected as unshippable at
-  0.04% of headroom. The gate keeps printing the work split, now saying in words that it is a work
-  split and not a serial fraction, and reprints the ceiling it would imply beside the reading that
-  clears it, **recomputed from each run's own declared split** so the comparison is about the
-  current run; judged by nothing, since a future reading *below* that ceiling would refute nothing.
-  One label defect fixed in passing: `HOST_CLEARED` is lowered by a miss against either bar, so
-  typing the constant silently widened what the scaling aggregate covers while its sentence still
-  named only the judged three — both aggregate lines now name both bars, because a pass that
-  credits less than it verified is the same defect as one that credits more.
-- **The host classification is graded in three states, so a class the measurement cannot decide
-  reports `UNMEASURED` instead of picking a side** (#86; ruled: *"a verdict cannot be more certain
-  than the least certain link in its derivation chain"*, and `DESIGN.md` §4/P3 records the grounds).
-  The class is an *input* four criteria divide by, and on 2026-08-15 one noisy reading of it moved
-  all four: janus's ceiling spread crossed `converge_max` (1.10), the convergence test returned
-  `why=diverge`, the host reclassified fma-bound, and the gate then (a) failed the class-agreement
-  check telling the operator to fix `internal/kern.HostClass`'s fingerprint, which was right;
-  (b) faced the sentinel with the flat 55% instead of 90% of its roofline, failing at 42.7% of
-  peak; (c) switched criterion 6b's denominator from `roofline 105.52` to `openblas 194.35`,
-  turning **75.1% PASS into 39.5% FAIL**; and (d) followed with criterion 6's aggregate. Against a
-  *fixed* denominator those same two readings differ by **1.3 points** (39.5% vs 40.8% of plain
-  OpenBLAS, `build/gate-p3-under-p4-708ddbb-run1.log:131` and `-708ddbb.log:130`). The 35-point
-  swing was the denominator. So the two comparisons that *select* the class — ceiling spread vs
-  `converge_max`, and attainment vs 1.0, the falsification test — now consume `bench_ratio_lo`
-  and `bench_ratio_hi` (#67's measured bounds, not a symmetry assumption) and grade three ways:
-  clear on either side keeps its verdict, an interval spanning the bar yields class
-  `indeterminate` and `RESULT=unmeasured`. `p3_denominator` gained a fourth exit
-  (`classindeterminate`) so an undecided class cannot fall through to a confident `fma-bound`,
-  and `p3_ratio_lo` fails closed on it. The *result* boundaries — 90% of roofline, the flat 55% —
-  stay two-state with `DESIGN.md` §4's one archived re-run, because that allowance was priced for
-  one verdict and a propagating input spends four. Re-measuring an `indeterminate` is therefore
-  not the allowance being spent: there is no verdict to overturn.
-- **A straddle whose two branches agree now decides the class anyway, instead of reporting
-  `indeterminate` on a comparison it did not need** (#86, the converse edge of the same law).
-  The amendment above withheld a class whenever the ceiling spread's interval crossed
-  `converge_max` — including when *both* readings of that crossing led to the same class:
-  converged means the ceiling exists and attainment above it falsifies it (fma-bound), while not
-  converged means no ceiling was established (fma-bound). Neither branch reads `roof`, and the
-  flat floor that applies is the same expression in both. Reported as `why=falsifiedanyway` /
-  `why=samemixanyway` with the straddling interval still printed, so the record says *could not
-  decide this, did not need to*. The collapse is tested over the **whole** interval —
-  `roof_hi = pmax_hi / I` is the highest ceiling the reading admits and falsification must hold
-  at every point of it — never at the midpoint, and it can only move a host from `indeterminate`
-  to a class both branches already gave. Found by a real reading grazing the bar, not by review:
-  on 2026-08-16 antares measured a spread interval of `[1.077, 1.100]` against the 1.10 bar while
-  retiring at 162.2%–165.2% of the roofline that interval implies
-  (`build/gate-p3-86-e53f7cc.log:79-80`). One rounding step higher and a host falsifying its claimed
-  ceiling by 62% would have been reported "classification indeterminate". Three fixtures cover
-  both directions of the collapse and the case that must stay undecided
-  (`scripts/roofline-test.sh`, 43 fixtures).
-- **`gate-p3` can be made to exercise its own three-state renderings, and such a run issues no
-  verdict** (#86). `KEEL_INSTRUMENT_WIDEN_CI=<pct>` widens every ceiling-set mix's
-  percent-of-peak interval to at least ±pct around its own point estimate before classification,
-  leaving every shipped threshold untouched and printed. It exists because on this fleet the
-  `indeterminate` renderings are otherwise unreachable — janus's class-selecting interval is
-  zero-width, so no value of the 1.10 bar can sit inside it — and an unexercised branch in the
-  instrument that issues the certificates is untested code. The synthetic input is therefore on
-  the *measurement* side, reproducing the 2026-08-15 condition of a host reading noisily rather
-  than a bar nobody would ship. Such a run prints a banner naming the override, stamps every
-  verdict line `[synthetic]`, prints **neither `GREEN` nor `RED`**, and exits 2; its log belongs
-  at `build/instrument-exercise-*` and never on a `gate-pN-<rev>` path (#78). `VERDICT_STAMP` is
-  one shared variable read by `unmeasured` in `scripts/remote.sh` and by each gate's own
-  `pass`/`fail`/`info`, rather than a per-gate override of those helpers, because an overridden
-  copy is a copy and copies drift.
-- **`gate-p3` prints the ceiling spread, the mix spread and the attainment interval it decided
-  the class on** (#86). It read all three into `_`-prefixed discards, so when the classification
-  flipped, the quantity that flipped it was in no log and had to be bounded backwards out of the
-  threshold — which is how the first reconstruction of the incident above blamed the 90%
-  attainment floor rather than the convergence test three fields earlier. §5 rule 8's "publish the
-  underlying pair beside the derived figure", applied to a class instead of a percentage.
-- **The performance-governor check is now one function, `assert_governor` in `scripts/remote.sh`,
-  called from all five measuring gates** (#83; ruled: *"four better copies are the same failure
-  mode with a better master, and the next labelling defect propagates just as cleanly — the fix
-  for copy-drift is ending the copying"*). Four gates reported an **unreachable** host as
-  `scaling_governor is unreadable`: the right verdict class with a false cause, because a host
-  that answers always yields a `governor=` field, so empty probe output means the host never
-  spoke. `gate-p5`'s copy was the divergent one and also the *correct* one — it established that
-  a reading exists before parsing for one — so the lift's shape came from the outlier, not from
-  the four that agreed. The helper exposes `GOV_STATE` (`performance` | `wrong` | `unreadable` |
-  `unreachable`) and **always returns 0**: an exit code is an implicit verdict channel, and under
-  `set -euo pipefail` a helper returning non-zero for "criterion not met" becomes the gate's own
-  status in tail position and kills the run with *no verdict line at all* — an absent verdict, not
-  a wrong one, indistinguishable from a kill (#76, #80). Enumerated before the lift: **five
-  independent drifts across the ten copies** (two sites × five gates) — a `§5.4` citation <!-- citation-lint:quote --> naming a
-  section `DESIGN.md` does not have (#85), `info "governor=${gov:-unknown}"` printing a reading for
-  a host that answered nothing, "preamble checked it" vs "preamble read it", a `sudo tee`
-  remediation hint present in one gate and absent in four (the lifted version prints the union),
-  and `gate-p5`'s better parse. Agreement among four copies was never evidence about any of them.
-- **Every measuring host must now be under the performance governor, asserted per host, in
-  `gate-p1` and `gate-p2`** (#77; ruled before the green because a criterion that moves
-  between runs for a naming reason is a defect in the instrument). Both gates read the
-  governor and then asserted only that *some* host had cleared its bar under `performance` —
-  a criterion any single machine satisfied on the others' behalf, which therefore said
-  nothing about the others. It is not hypothetical: both archived green `gate-p1` logs have
-  the Zen 5 host on `powersave`, and one of their rates is published at `CHANGELOG.md:2151`
-  (#79). The fix is `gate-p4.sh:562`'s three-way, copied rather than reinvented so the two
-  read alike: PASS per host, FAIL for a wrong governor, UNMEASURED for an unreadable one,
-  in a preamble over the whole fleet — plus a silent re-read at the moment of measurement,
-  because a governor that changed in between belongs to a machine somebody started using.
-  `PERF_GOV_HOST` is deleted from both gates; nothing now records a precondition as a host
-  name. Note that Scott's suggested mechanism (hostname normalization, `.local` drift, a
-  DHCP-sensitive ordering) was not the mechanism — it was last-writer-wins over the hosts
-  that *pass*, with a stable host list — and a canonical-name fix would have left the hole
-  exactly as it is.
-- **Seven single-witness gate aggregates became three-way over coverage state** (#73 tier C;
-  `gate-p0` ×1, `-p1` ×2, `-p2` ×2, `-p3` ×2). An aggregate whose only state was "did any host clear
-  this" collapsed two different facts into one FAIL: a fleet that looked and came back short,
-  and a fleet with nothing to ask. `fail "no target ran the Sgemm sweep green with the avx512
-  backend"` on three hosts that have no AVX-512 is an assertion about *keel* made from the
-  absence of a measurement. Each now counts hosts that **produced** the reading beside hosts
-  that **satisfied** it — `N_RATIO`/`N_CLEARED`, `N_JUDGED`, `N_FULLCAP`, `AVX512_SEEN`,
-  `N_FORCED` — so zero readings reads UNMEASURED and readings that came back short read FAIL
-  with the shortfall counted. The discriminators are witnesses the library already prints,
-  verified from source rather than inferred by analogy: `keel-backends-available`
-  (`internal/vec/vec_diff_test.go:82`), `keel-l1-available` (`l1_test.go:144`), and — where
-  no availability marker exists — the *exercised* marker, which is runtime-filtered because
-  `vectorKernels()` returns nil unless `vec.HasAVX512()` (`internal/kern/kern_amd64.go:34`).
-  A first draft of the `gate-p2` counter used a `keel-kern-available` marker that does not
-  exist; it would have made the count always zero, i.e. masked a real FAIL as UNMEASURED,
-  which is the one substitution this taxonomy exists to prevent. The count is seven by this
-  rule, stated so it is reproducible: added aggregate-level `unmeasured` branches in the diff
-  — those with no `[$host]` or `[$name]` prefix — one per conversion, 1+2+2+2. It said "Six"
-  in the commit that landed the change, written from the plan instead of from the diff, which
-  is DESIGN.md §5 rule 8's own failure mode inside the batch that was auditing for it.
-  Tally movement in the verified logs at `68fc493`, since an added assertion must be shown
-  non-perturbing: `gate-p0` unchanged at 19/0/0; `gate-p1` 26→29 and `gate-p2` 22→25, each
-  three per-host governor PASS plus one aggregate replaced 1-for-1; delegated `gate-p3` 48→49;
-  delegated `gate-p4` unchanged at 65/0/0; `gate-p5` unchanged at 65/0/4. The p3 delta is the
-  one that needed explaining and it is not a strengthening: that aggregate was previously
-  `[[ -n "$SCALAR_FORCED" ]] || fail ...`, a **fail-only guard, silent on success**, so
-  converting it to a three-way necessarily prints a PASS on a healthy fleet where the other
-  six had a PASS to replace. No blocking power changed — the per-host `fail` at
-  `gate-p3.sh:707` already blocked for a host that failed the forced run — and the old
-  aggregate was satisfiable by any *single* host, which is #77's single-witness shape in a
-  second place, harmless there only because the per-host verdict covered it.
-- **`gate-p0` now reads the backend-availability marker instead of inferring the CPU from the
-  run** (#73). Every unexercised backend was reported as `unavailable here` — a claim about
-  the silicon deduced from a claim about the test run — so a backend the host *has* and the
-  suite *skipped* was indistinguishable from one the host lacks. Available-and-unexercised is
-  now a FAIL, absent is an `info`, and a missing availability marker is UNMEASURED with the
-  wording of the fallthrough branch changed too: without that marker there is nothing to
-  license the word "unavailable", so it no longer restates as a finding the inference the
-  UNMEASURED line one row above says cannot be drawn.
-- **A stated-assumptions ledger, printed beside every gate's verdict** (#73 tier C, ruled
-  2026-08-15; `scripts/remote.sh`, all six gates). A precondition with **no read-back
-  mechanism at all** — nothing to check, as distinct from something unreadable — gets no
-  verdict: three verdicts (PASS/FAIL/UNMEASURED) plus an `assumed, unverifiable:` line, so
-  the certificate enumerates what it is trusting instead of trusting it silently. A fourth
-  verdict category would blur the one distinction UNMEASURED keeps sharp — *could have
-  looked, could not read* — and would blur it in the direction that matters, since
-  UNMEASURED blocks. `assumed()` sets no `FAIL`, prints at the `info` indent, and is
-  invisible to the anchored tallies the delegating gates count with (driven and checked:
-  a log carrying a full ledger tallies 1/0/1 against 1 PASS and 1 UNMEASURED). Two entries
-  qualify, both circular rather than merely inconvenient: the configured host set being the
-  intended fleet, and each name reaching the machine it is meant to reach — every witness of
-  a host's identity is reported *by* the host under test. The admission test is deliberately
-  hard, and two candidates failed it while it was written: machine load (#81) and SMT state
-  (#82) are both readable, therefore both are missing criteria and are filed as such rather
-  than laundered into the ledger.
-- **Delegated gate logs are revision-stamped** (#78, before the green). `gate-p5` wrote its
-  delegated `gate-p4` log to a fixed path and `gate-p4` did the same for `gate-p3`, so each
-  run destroyed the only copy of the previous run's evidence. It bit during #73's own
-  verification: the run being verified overwrote the reference it was to be compared
-  against, and the diff survived only because an unrelated standalone `gate-p4` log happened
-  to exist — which is not an archival strategy. #68 remains orthogonal and open: a stamped
-  filename cannot distinguish a clean tree from a dirty one at the same revision, and a
-  self-describing log that has been overwritten is still gone. Two defects, two fixes.
-- **The converse sweep: 74 gate sites that report a reason the gate could not look now print
-  UNMEASURED, under one rule written down where the primitive lives** (ruled 2026-08-15 on
-  #73; `scripts/remote.sh`). #72 relabeled the 21 sites whose own message text already said
-  "unmeasured" under a FAIL label. This is the other direction — every site whose message
-  gives a *reason it could not measure* and prints FAIL anyway — and it lands before the
-  first green rather than after, because unlike #72 it is not verdict-neutral by
-  construction: it checks preconditions that were previously assumed, and a certificate
-  issued by a gate carrying unchecked preconditions is a green with an asterisk. The rule,
-  and it is a rule and not a phrase list: **FAIL when the gate obtained the reading the
-  criterion asks for and the reading is wrong** — a test that ran and failed, a set that was
-  enumerated and is short, a governor that answered `powersave`; **UNMEASURED when the
-  reading does not exist** — the host did not answer, the run died, the marker is absent,
-  benchstat established no interval, there was no host to ask. Tie-break for an arguable
-  site: does the sentence assert something about *keel* or about the *measurement*? Only the
-  first may be FAIL, and "keel does not reach 60% of OpenBLAS" is a claim about keel that a
-  run with no hosts has not earned. **This harmonises the older governor rule rather than
-  weakening it**: "unreadable counts as unmet" was written before UNMEASURED existed as a
-  third column, and its intent — unreadability is not an exemption — is preserved exactly,
-  since `unmeasured()` sets `FAIL=1` on the same line `fail` does. An unreadable governor
-  still stops the gate; it stops *asserting the governor was wrong* when the truth is nobody
-  could look. Distribution: 2 in `gate-p0`, 6 in `gate-p1`, 7 in `gate-p2`, 27 in `gate-p3`,
-  19 in `gate-p4`, 13 in `gate-p5`. **Four of them were split rather than relabeled**, because
-  one branch was two facts wearing one label: a boost knob nobody could read against one that
-  did not move (`gate-p5`), a forced run that failed before reporting its dispatch against one
-  that reported it and failed anyway (`gate-p5` — the marker is the discriminator), and a
-  governor unreadable at measurement time against one that changed mid-run (`gate-p3`,
-  `gate-p4`). Both branches of each still block. What **stays** FAIL is the audited residue,
-  not what the grep missed: every "missing from the sweep", "lattice is incomplete", "does
-  not match its own enumeration", "not on the allowlist", "below the bar", "governor is
-  `powersave`", "only N of M configured targets ran" and every failed build or failed test —
-  all readings the gate has. `gate-p5.sh:534` is the paired case worth reading beside its
-  twin: **$ncpu CPUs were read** and the criterion names more, so the environment is wrong
-  and the label says so, two lines below the unreadable-count branch that now says
-  UNMEASURED. The sweep was audited in two batches: #73's own 37-site population, then the 37
-  sites in the same *conditions* whose wording had kept them out of it — a phrase-defined
-  population is not condition-closed, and relabeling `no execution hosts, so the scaling
-  criterion cannot be evaluated` while leaving `P5 needs an amd64 host … none configured`
-  three hundred lines up would have replaced one same-event-opposite-label defect with
-  another.
-- **21 gate criteria that already said "unmeasured" in their own message text now say it in
-  their label, and no gate's path to green moved** (ruled 2026-08-15 on #72; `DESIGN.md`
-  §5.6). Auditing every `fail` call across the six gates for what it *asserts* turned up 21
-  whose message says the criterion could not be resolved — no toolchain, no reachable host,
-  a run that died before it measured — under a label that says a check ran and observed a
-  violation. Two of them indict themselves: `bench_expect`'s docs in `scripts/bench.sh` say
-  an absent measurement has "exactly one verdict available to it — unmeasured" six lines
-  above a caller printing FAIL, and `gate-p5`'s `race_verdict` header argues that collapsing
-  its three states "sends whoever reads it looking for a race that is not there" immediately
-  above the branches that collapse them. **Relabeling is not amendment**: `unmeasured()`
-  sets `FAIL=1` exactly as each gate's `fail` does, so every one of these still blocks its
-  gate, and what makes a criterion green is untouched — including the four `-race` criteria,
-  whose non-amendable hard-red ruling of 2026-08-12 stands unchanged. What moves is the
-  attributed cause, and a gate red for the wrong reason is as untrustworthy as one green for
-  the wrong reason. Distribution: 13 in `gate-p5`, 6 in `gate-p3`, 2 in `gate-p4`. The sites
-  are an audited list, not a grep: `gate-p5.sh:595` matches the same pattern and stays a
-  FAIL, because "an unmeasured rung has appeared at Level 3" is a noun phrase about the rung
-  and that check ran and observed a real violation — a blanket substitution would have
-  relabeled a real miss as not-measured, the one direction of this change that *would* have
-  been a weakening. `unmeasured()` is lifted to `scripts/remote.sh`, the file all six gates
-  source; `gate-p5` did not define the primitive at all while 13 of its sites needed it, and
-  minting a third divergent copy of a verdict primitive is how the delegated tally came to
-  count two columns where the log had three. Also fixed in the same commit: `race_verdict`'s
-  citation of #22's edge campaign as the checkptr remediation, which is the wrong address —
-  the fix is upstream CL 761120 shipping in `go1.27`, so the path is #70's floor then #69's
-  port (T23), and a red verdict that cites a campaign which will never resolve it is
-  misattribution's little sibling. **Proven not to weaken anything by rerunning it**, which
-  is the only form of proof this change admits: `gate-p5` went from 65 PASS / 4 FAIL / 0
-  UNMEASURED to 65 PASS / **0 FAIL / 4 UNMEASURED**, both RED, both 215 lines, with the four
-  messages identical line-for-line once the labels are normalised — the sole textual
-  difference being the remediation pointer this commit deliberately corrected. Delegated
-  `gate-p4: GREEN 65/0/0` and `gate-p3: GREEN 48/0/0` on both sides, unchanged.
-  `build/gate-p5-8954f6d.log` against the archived `gate-p5-117b78f`.
-- **`gate-p4`'s tally of the delegated P3 gate is anchored and has a third column** (#71).
-  It counted with a bare `grep -c 'FAIL'`, which also matches any summary line inside
-  `gate-p3`'s log, so a green delegate could be reported with a FAIL it did not have — the
-  defect `gate-p5`'s tally of `gate-p4` already had fixed, in the file one level down. It
-  now strips colour, anchors on `^  PASS  ` / `^  FAIL  ` / `^  UNMEASURED  `, and prints
-  UNMEASURED as its own column, which it must: six of `gate-p3`'s misses became UNMEASURED
-  above, and a two-column tally would have shown them as neither. The RED excerpt below it
-  quotes both FAIL and UNMEASURED lines for the same reason.
-- **gate-p4's criterion 7 is graded in three states, and the bar did not move** (ruled
-  2026-08-15 on #67; `DESIGN.md` §4/P4). `Ssyrk ≥ 85% of Sgemm` was judged net of CI, which
-  answers one question — "is the whole interval above the bar?" — and its negative answer
-  was being read as "Ssyrk is too slow". Those are different claims, and §5.6 forbids one
-  verdict standing for two causes. It had already bitten: janus read 87.6% raw with
-  ±4.0%/±3.0% intervals and FAILed at a bound of 81.6%, then read 87.0% raw at ±0.0% on the
-  same tree at the same commit and PASSed. **The raw quantity agreed to within 0.6 points;
-  the FAIL was reporting the weather**, and it spent §4's single re-run allowance to find
-  that out. So: **PASS** when the interval sits at or above the bar — `bench_ratio_lo >=
-  0.85`, unchanged bit for bit — **FAIL** when the whole interval sits below it, and a new
-  **UNMEASURED** when it straddles. The third state is carved out of the old FAIL and never
-  out of the old PASS, so nothing that was below the bar can clear it on a lucky draw; that
-  is why the raw ratio is *not* graded in place of the bound. Replayed against all six
-  archived criterion-7 readings before landing: five stayed PASS, the noisy janus reading
-  moved FAIL → UNMEASURED, and every synthetic edge case (exactly on the bar, unbounded
-  arm, denominator interval reaching zero, missing benchmark) lands where it should.
-  New in `scripts/bench.sh`: `bench_ratio_hi`, `bench_ratio_grade`, `bench_ratio_headroom`.
-  The gate now also prints, per host per run, the interval, both observed CIs and the
-  **flip-headroom** — the symmetric CI at which the bound would land exactly on the bar,
-  `(raw − bar)/(raw + bar)`: 4.17% on the 7950X3D, 1.16% on the i9-9960X, 1.85% on the AI
-  MAX+ 395, against intervals those hosts produce up to 1.0%, 3.0% and 2.0% in one run. Two
-  of three were deciding this criterion on how quiet the machine was and nothing in the log
-  said so. And where the headroom is under 0.5% with an arm whose CI printed `0.0%`, the
-  gate says the verdict lies inside benchstat's integer-percent rounding (T21) rather than
-  letting the bound read as exact. The remedy for UNMEASURED is precision — one archived
-  re-run, then a higher `-count` for this criterion on a chronically undecidable host —
-  never a wider judgment. `gate-p5`'s delegated tally counts the new label as its own
-  column, because a tally with two columns would have made a straddled interval vanish.
-- **`docs/toolchain-notes.md` gains T23 and T24, and T17's "no keel change at all" is
-  corrected: `go1.27` moves the floor, but keel does not compile on it yet.** The
-  2026-08-15 ruling makes go1.27 keel's minimum and orders `-race` on the vector path as
-  the first act under it. Probed on all three benchmark hosts with `go1.27rc3` installed
-  to its own prefix (`/usr/local/go1.27rc3`, leaving `/usr/local/go` on `go1.26.5` so no
-  published number's compiler moves silently — #58), and the probe was written with four
-  outcomes rather than two: `compile-fail` / `checkptr` / `data-race` / `clean`. It came
-  back **`compile-fail`, identically on all three hosts**, which a two-outcome probe would
-  have reported as "checkptr still broken". `simd/archsimd`'s load/store were renamed with
-  a **swap** — the slice forms took over the bare names (`LoadFloat32x16Slice` →
-  `LoadFloat32x16`, `StoreSlice` → `Store`), the displaced array forms gained an `Array`
-  suffix, and the `…SlicePart` forms became `…Part` *and grew a return value* — because
-  `archsimd` is converging on the naming convention of the portable `simd` package that
-  1.27 also ships. `go build -gcflags=-e ./...` gives 51 errors, all type errors, in 3
-  files: 39 pure renames, 4 renames that gain a return value, 8 array-form sites that need
-  the `Array` suffix. **Every one is compile-caught**, because `*[N]float32` and
-  `[]float32` are mutually unassignable, so the swap cannot rebind silently — the property
-  that makes "it still compiles" sufficient evidence here and insufficient in general.
-  So the chain to the four `-race` criteria is **floor → port `internal/vec` → `-race` →
-  criteria**, not floor → `-race` → criteria, and the criteria are `unmeasured` on 1.27
-  rather than clear. The port is specified but **held**: `go1.27.0` final does not exist
-  yet (go.dev/dl has rc3 as tip, 1.26.6 as stable), the ruling's own condition is 1.27.0
-  final installed and read back on all three hosts, and landing it now would break three
-  hosts on `go1.26.5` and the dev host on `go1.26.6` at once. The consolation is DESIGN.md
-  §3's shim bet paying off against a real API break: 3 files, 51 lines, **zero change to
-  keel's own API** (T5, T17, T23, T24; #42, #22).
-- **T5 resolves the way it guessed and the conclusion drawn from it does not: 1.27 ships
-  the portable `simd` package, and DESIGN.md §8's plan to park the ARM64 kernel behind it
-  needs revisiting rather than resuming** (T24). The package is there with amd64, arm64 and
-  wasm backends plus a pure-Go emulated fallback, one vector type per primitive numeric
-  type, and a bridge both ways (`ToArch() any`, `Float32sFromArch[T]`). But its vector
-  length is a **runtime** quantity — `simd.VectorBitSize()`, `simd.Emulated()`,
-  `(x Float32s) Len() int`, no compile-time constant anywhere — and a register-blocked
-  microkernel is exactly the thing that cannot be vector-length-agnostic: `MR`, `NR` and
-  `Lanes = 16` are constants because the accumulator tile is a fixed set of named
-  registers, which is the whole content of the P2 spill audit. There is also no
-  `GetLo`/`GetHi` on `Float32s`, so `HSum`'s bit-exact fold tree is not expressible either.
-  The kernel stays on `archsimd`. The interesting half is the other one: an
-  emulated-plus-arm64 vector path is the first thing that could run a *vector* differential
-  test **on the dev host**, which T1 has forced onto ssh since P0 — but an emulated FMA
-  that fuses where hardware does not would be a worse oracle than none, so that is filed as
-  a question, not adopted. fixed upstream in go1.27, and the
-  `-race` doubt that would have made the fix useless is measured away.** CL 761120 marks all
-  30 `archsimd` `pa*` helpers `//go:nocheckptr`; the pragma count in
-  `src/simd/archsimd/unsafe_helpers.go` is 30 on `go1.27rc1` and 0 in go1.26.6, so every
-  1.26.x reproduces T17 and 1.27 does not. golang/go#42880 (*"-race does not obey
-  go:nocheckptr"*, open since 2020) appeared to mean the fix silences `-d=checkptr` but not
-  `-race` — which would have left keel's four `-race` criteria blocked on a five-year-old
-  issue rather than on a merged CL. Reading that thread instead of its title settles it the
-  other way: the failing conversion there was inside a *function literal*, where no `//go:`
-  directive can attach, and `-race` was incidental. Measured on a declared cross-package
-  helper carrying T17's exact conversion, the pragma suppresses the fatal under `-race` and
-  under `-d=checkptr`, while the no-pragma control fatals under both — and the mechanism is
-  `inline/inl.go:349-351` refusing to inline a `go:nocheckptr` function under any
-  `Checkptr != 0` build, confirmed by counting `CALL`s in the object code (0 uninstrumented,
-  1 under each instrumented arm). **So the copy-into-a-full-width-array workaround is a
-  1.26.x bridge, not a permanent spelling**, and its price — all ten Level-1 kernels losing
-  `nosplit`, `internal/l1` +15.5% static instructions — is paid only while keel builds on
-  1.26.x. `checkptr`-cleanliness as an admissibility condition on #22's candidates is
-  satisfied by the toolchain rather than by a workaround, so the masked-partial candidate
-  gets measured as written (#42, #22).
-- **The scaling criterion's two arms now run in one frequency regime, and the boost-on
-  speedup prints beside the verdict** (ruled on #66; `DESIGN.md` §4/P5). As first
-  written, "≥6× single-thread throughput at 8 cores" divided an 8-thread rate by a
-  1-thread rate taken on an idle machine — but one thread runs at a boost clock eight
-  threads physically cannot reach, so the criterion asked the nest to overcome silicon
-  boost policy before it was allowed to demonstrate scaling. **A denominator measured in
-  a regime the numerator cannot legally enter is not a ratio, it is a handicap.**
-
-  The diagnosis came from the shape of the misses rather than from their inconvenience:
-  the two hosts that missed are the two retaining the *most* of their own single-thread
-  peak (Zen 4 92%, Zen 5 59%), while Skylake-X at 35% cleared all four routines twice.
-  Scaling deficits do not sort themselves by single-thread excellence; boost tables do.
-
-  `scripts/gate-p5.sh` now sets `cpufreq/boost` (AMD) or `intel_pstate/no_turbo` (Intel)
-  off per host, **reads the knob back** — unreadable or unmoved counts as *unmet*, never
-  as satisfied, exactly as `scaling_governor` is re-read at measurement time — judges
-  ≥6× there, restores boost, and takes a **second pass boost-on** whose wall-clock
-  speedup against the idle single-thread rate prints at equal prominence as
-  reported-never-judged. That second number is what a caller experiences and no reader
-  gets the pass without it. Hosts are restored on `EXIT INT TERM`, because a gate that
-  dies mid-window must not leave a machine de-boosted for the delegated gate-p4/p3/p2
-  runs, which are boost-on measurements.
-
-  **Stated rather than buried: this makes the criterion easier.** Smoke-measured on the
-  Ryzen 9 7950X3D at n=4096 Sgemm (`-test.count=3 -test.benchtime=0.4s`, a §5 rule 5
-  smoke run informing no gate): 1 thread 152.6/151.7/152.6 → 122.7/122.4/122.3 GFLOP/s,
-  8 threads 905.2/895.0 → 774.6/772.9. So boost off costs the 1-thread arm 19.8% and the
-  8-thread arm 14.0%, and the ratio rises 5.90× → 6.32× — which is enough to move vesta
-  Sgemm's 5.74× miss across the floor, and is *not* obviously enough for the two Ssymm
-  misses at 5.63× and 5.34×. The gate decides that, not this paragraph. The de-boosted
-  regime also lowers the formula cross-check (`cpuinfo_max_freq` 5.76 → 4.20 GHz, peak
-  368.9 → 268.9), so the boost-off pass's percent-of-peak lines are quoted against a
-  de-boosted peak measured in the same pass. The justification is not that the new number is nicer
-  but that the old one was not a ratio — and the honest consequence is that boost-off
-  ratios are **not comparable** to the three boost-on runs already in the record. The
-  README's published rates stay boost-on, since a published row is a claim about what a
-  caller gets, and criterion 9 re-measures them against the boost-on pass accordingly.
-- **`DESIGN.md` §5 gains rule 8: a summary is a cache with no invalidation protocol.**
-  Derived figures are recomputed from the log at the moment of writing, never carried
-  forward from prose. Third documented instance across two authors, which is what makes
-  it a named trap rather than a slip.
-- **`DESIGN.md` §5 gains rule 9: a citation is a claim about where the grounds are, and
-  it is checked like any other claim** (#85). Every gate cites `DESIGN.md` for its
-  authority, so a citation landing on the wrong rule misdirects every reader who follows
-  it while looking exactly like a correct one. The rule names three non-interchangeable
-  instruments — **resolution** (does it land), **pinning** (has it moved), and
-  **mint-verification** (was it ever right, which cannot be automated) — and legislates
-  the forward convention: new citations use the explicit `§5 rule 5` form; audited-correct
-  `§X.Y` shorthand stays byte-for-byte; a citation naming another document is declared,
-  not guessed at.
-- **`make lint` and CI's stock job now run `scripts/citation-lint.sh`** (#85), which
-  resolves every `DESIGN.md` rule citation in the tree against `DESIGN.md`'s actual
-  structure and pins each distinct form beside the first words of the item it lands on
-  (`docs/citation-targets.txt`). It lives in the stock job because it needs a git
-  checkout but no toolchain, so it cannot be skipped.
-  - **The premise the check was opened on was false, and that changed the law rather
-    than the sweep.** The 18 `§5.4` citations were assumed to be a *renumbering* casualty. <!-- citation-lint:quote -->
-    They are not: `git show 4643b63:DESIGN.md` shows the methodology rule was already
-    item **5** in the same commit that wrote the first `§5.4`, and §7's eight leads are <!-- citation-lint:quote -->
-    byte-identical from `6a862d7` to `HEAD`. Nothing was ever renumbered — the ordinals
-    were **mis-minted at birth**. So a pin certifies *stability*, never
-    *birth-correctness*, and would have frozen all 18 defects with perfect fidelity while
-    passing forever. The baseline is therefore **audited**, once, at the meaning level:
-    every citation's ordinal read against the content the citing site actually invokes,
-    with the audit's date and census recorded in the pin file so a later reader knows the
-    freeze rested on a reading rather than an assumption.
-  - **Census: 120 sites; 8 naming another document; 112 `DESIGN`-bound, of which 92 land
-    on the content they invoke and 20 were mis-minted.** Sixteen were rewritten to the
-    explicit form (14 × `§5.4`, plus two found *inside* populations that resolved <!-- citation-lint:quote -->
-    perfectly: `DESIGN.md`'s own §7 citation of the tolerances rule where it argued the
-    denominator rule, and `l1_test.go`'s §5 citation of the differential rule where it
-    argued the tolerance-model rule). Four are deliberate quotations of the bad form and
-    are **marked, never normalised** — the record of the defect is the point, same law as
-    #79. The 25 audited-correct shorthand sites were left untouched: rewriting a correct
-    citation in the document the gates cite as grounds is churn dressed as rigour.
-  - **The two mis-minted sites outside the `§5.4` population were found by an instrument <!-- citation-lint:quote -->
-    the other two cannot supply: cross-site argument identity.** `scripts/gate-p5.sh` and
-    `DESIGN.md` made the *same* argument — "an advertised chain whose middle link no gate
-    can back is a claim, not a measurement" — under two different rule numbers, and
-    reading the rule bodies picked the denominator rule over the tolerances rule. Content
-    adjudicates, not majority.
-  - **Scoping to the document a citation actually names is the check's load-bearing
-    feature, and it was proven by near-miss.** An earlier draft condemned `§X.Y` *by form*,
-    on the true observation that `DESIGN.md` has no subsections. That draft would have
-    demanded 25 zero-semantic edits to correct citations **and** filed a peer-reviewed
-    paper's section numbering (Van Zee & van de Geijn, TOMS 2015 §4.3) as a defect in
-    keel's constitution — the false-defect class #63's near-filing established the norm
-    against. Such references are now **declared** in the pin file, each declaration
-    carrying **the number of sites it covers**, so an exemption cannot silently widen:
-    fewer means it is stale, more means it has grown to cover a citation nobody read,
-    and the fix is to read the new site and bump the count deliberately. The invariant
-    is not "exactly one site" — `CHANGELOG.md` legitimately cites the paper twice — it
-    is *exactly the number someone read*. That check caught its own documentation: this
-    entry added two more `§4.3` references, the count went red, and reading them found <!-- citation-lint:quote(4.3) -->
-    one that does not cite the paper at all (it names the notation while explaining the
-    marker) and so belonged in a quote marker rather than the exemption.
-- **`scripts/citation-lint-test.sh` drives all ten of the lint's branches on purpose**
-  (#85). A healthy tree reaches exactly one of them, so a green from the lint alone is
-  not evidence that any check but the clean path works — and three of these controls guard
-  a *silent* failure rather than a loud one. Two defects were caught by running it rather
-  than reading it: rewrapping a comment moved a `citation-lint:quote` marker one line off
-  its citation, which stops suppression with no diff to notice; and the harness's own
-  `EXIT` trap referenced a `local` variable out of scope, leaking its temp directory. An
-  earlier draft also restored with `git checkout --`, which reverted two files to `HEAD`
-  and discarded uncommitted work — file backups cannot do that.
-- **The check's coverage is bounded by `git ls-files`, and that bound bit immediately**
-  (#85). `sites()` enumerates tracked files only, so a new file's citations are invisible
-  until it is committed: both new scripts were untracked while being written, the lint
-  could not see its own sources, and **the commit that added them turned a green tree
-  red** — 4 unresolvable mentions of the BLIS `§4.3` appeared the instant they became <!-- citation-lint:quote(4.3) -->
-  tracked. The verification that missed it is worth naming too, because it is a repeat:
-  `make lint 2>&1 | tail -2` returns *`tail`'s* exit status, so a failing build read as a
-  passing one, the same swallowed-verdict shape as a `permission denied` once read as a
-  clean grep. A green from this check means *"every citation in a tracked file"*, and
-  `git status` is part of reading it. The commit that recorded all this then repeated the
-  shape a third way: `make lint; git add …` commits whether the lint passed or not, so a
-  second red tree reached `main` and was fixed in the commit after. A verification that
-  does not gate the action it precedes is a report, not a check — `&&`, always.
-- **The quote marker takes a scoped form, `citation-lint:quote(5.4)`** (#85), because
-  line granularity is too coarse for this document: `DESIGN.md`'s numbered rules are
-  single 2000-character lines, and §5 rule 9 quotes `§5.4` on a line that also carries a <!-- citation-lint:quote(5.4) -->
-  live `§5 rule 5` and an external `§4.3`. A bare marker there would have stopped <!-- citation-lint:quote(4.3,5 rule 5) -->
-  checking all three while printing nothing — over-suppression by construction, the same
-  failure the declaration-narrowness check guards on the other side.
-- **Every `gate-p2` classification branch now publishes the measured interval beside the
-  point estimate, or states why it has none** (#86, `scripts/gate-p2.sh`). Three branches
-  still reported the point spread alone — `samemix`, `falsified` and `nearceiling` — and
-  `falsified`/`falsifiedanyway` reported a point attainment where an interval was
-  available. §5 rule 8's publish-the-pair clause has no per-branch exemption, and the
-  branch a reader reaches is exactly the branch whose numbers they need: a pair present
-  in eight renderings and absent in the ninth reads as *"this one had no interval"*
-  rather than *"this one forgot"*. `nomixes` is the one true exemption — no ceiling was
-  established, so there is no spread to bracket — and now says so in its own text. The
-  invariant is recorded above the `case` so the next reader sees a rule rather than a
-  pattern; it has drifted twice.
-
-### Fixed
-- **The citation lint's pin file was reproducible only on the platform that wrote it**
-  (#87, `scripts/citation-lint.sh`, `docs/citation-targets.txt`). Each pin recorded
-  `substr(text, 1, 56)` of its rule, and `substr` counts *bytes* in BSD awk and
-  *characters* in an awk built against a UTF-8 locale. DESIGN.md §7 rule 2 contains an em
-  dash, so the macOS-generated pin held 54 characters where the runner computed 56, and
-  the very first CI run that ever reached this script failed T1 — on a tree that was
-  clean. `LC_ALL=C` is not the fix: BSD awk is byte-oriented whatever the locale. The lead
-  is now the first ten whitespace-separated words, which is the same number under every
-  implementation and cannot truncate mid-character and commit an invalid byte to a tracked
-  file. Checked by computing all 17 leads under both semantics and diffing them: identical,
-  where the old form differed on the em-dash line. Only BSD awk is installed here, so that
-  equality is a check against character semantics rather than against a second awk — CI is
-  the empirical confirmation.
-- **`go test ./...` died with `SIGILL` on any amd64 CPU without AVX-512** (#87,
-  `internal/kern/kern_amd64.go`). `vectorKernels()` returns `nil` unless
-  `vec.HasAVX512()`; `referenceTiles()`, fourteen lines below it, carried no such guard,
-  and `ReferenceTile`'s `Fn` is `vec.Kernel6x32` — `archsimd.Float32x16` throughout, with
-  no scalar fallback inside it. `Measured()` is `Kernels()` plus that tile and six test and
-  benchmark sites iterate `Measured()`, so those hosts executed EVEX-encoded instructions
-  (`instruction bytes: 0x62 0xf1 0xfd 0x48 …`) and crashed in `internal/kern` and
-  `internal/block`. **Dispatch was never at risk** — `Kernels()` is guarded, `Preferred`
-  cannot rank a tile whose `InsnsPerFMA` is zero, and nothing ships this tile — but the
-  suites were unrunnable for anyone on pre-Skylake-X Intel or pre-Zen-4 AMD. The guard goes
-  on the registry rather than into six `t.Skip`s: `Measured()`'s contract is *"the kernels
-  this host can run"*, and one that hands out an unrunnable kernel is the defect. Typechecked
-  for `linux/amd64` under `GOEXPERIMENT=simd`; **it cannot be run here** — the dev host is
-  arm64 and all three gate hosts have AVX-512, so CI is the only instrument that can
-  confirm it, which is most of the explanation for how it survived three days.
-- **`TestP5Determinism` expected a worker count that moved with the host's core count**
-  (#87, `p5_test.go`). `Workers` takes a *unit* count and returns
-  `min(GOMAXPROCS(0), units)`; the assertion passed `procs` as the unit count *and*
-  evaluated it outside the `withProcs` closure, so it read the ambient GOMAXPROCS. At ≥ 8
-  cores it coincidentally equals `procs`; on a 2-core runner it was 2 against an actual 3
-  and 8, and the library was right in all ten failing lines. Now asserts `workers == procs`,
-  which is host-independent because `par.Workers` reads `GOMAXPROCS(0)` and not `NumCPU`,
-  and which holds for every shape here because each has more units than `max(p5Threads)`
-  (`m=1200` over `MC=144` is 9 ic blocks against 8 threads). Shrink `p5M` and it goes red
-  correctly — the arm would have stopped partitioning max-way. Reproduced and fixed under
-  `GOMAXPROCS=2`, re-checked at 1 and 4.
-- **`gate-p0` exited 1 with no verdict line at all when a host failed its tests while
-  exercising all three backends** (#80; `scripts/gate-p0.sh`). `[[ "$ok" -eq 0 ]] &&
-  FULL_COVER_TARGET="$name"` was the last command of `record_target`, so on a failing run the
-  AND-list's non-zero status became the function's return status — and `set -e`, which
-  exempts every command of an AND-OR list but the last, does *not* exempt a function call.
-  The gate died after that host's final PASS, before its verdict section, exiting 1; since
-  RED also exits 1, the log reads as a truncated red gate rather than as a harness that
-  died. It is the #76 family in a different construct, so #76's fix does not cover it. It had
-  never fired because it needs a failing test *and* complete coverage: the dev host never has
-  complete coverage and the remote hosts had not failed. Driven on the extracted function to
-  confirm both the death and the fix, and all seven tail-position `&&` sites in `scripts/`
-  were audited — this was the only one whose status could escape (the other six have code
-  following them in the same body). The five untouched sites stay `&&` on purpose: rewriting
-  them would obscure which one mattered.
-- **A host that stopped answering mid-loop killed the gate with exit 255 instead of producing
-  a verdict, and the delegating gate reported the death as its delegate's RED** (#76;
-  `scripts/gate-p1.sh`, `-p2`, `-p3`, `-p4`, `-p5`, `scripts/remote.sh`). Ten command
-  substitutions read a value over ssh without guarding the status — `gov="$(remote_probe
-  "$host" | sed -n 's/.*governor=…/\1/p')"` — and every gate runs under `set -euo pipefail`,
-  so an unreachable host terminated the gate at that line: no verdict line, no verdict, exit
-  255. That is the failure mode `DESIGN.md` §5.6 forbids by name — a killed run is
-  unmeasured, never an exit code — and it had two further consequences. The
-  unreadable-value UNMEASURED branches #73 had just finished writing were **unreachable in
-  precisely the case they exist for**, because the gate died two lines above them. And
-  `gate-p4`/`gate-p5` turned the death into `gate-pN is RED (exit 255)`: a red attributed to
-  keel for a host that hung up. Found by the #73 sweep's own positive-exercise probe —
-  `KEEL_REMOTE_HOSTS=keel-no-such-host.invalid ./scripts/gate-p1.sh` stopped after 21 lines
-  with no verdict — which is the argument for exercising a relabel rather than only
-  tally-diffing it: the probe was looking for the new label and found a defect underneath it.
-  Three parts to the fix. **(1)** All ten substitutions guarded with `|| true`, the idiom
-  already in-tree at `gate-p0.sh:189`, so the value comes back empty and empty is a reading
-  nobody got, which each caller already knows how to print: seven governor reads (`gate-p1`,
-  `-p2`, `-p3` ×2, `-p4` ×2, `-p5`), `gate-p5`'s CPU-model read, and `gate-p3`'s
-  `ob_preflight` and `ob_coretype_sweep`. #76 enumerated eight; the two OpenBLAS preflight
-  helpers have the identical shape and were missed in it. The rule is now written on
-  `remote_probe` itself rather than left to each caller to remember. **(2)** The delegating
-  gates read their delegate three ways instead of two: exit 0 *with* a `GREEN` line is PASS,
-  exit 1 *with* a `RED` line is FAIL, and anything else — 255 under a dead ssh, 128+n under a
-  signal — is **UNMEASURED**, because a gate that died before reaching its own verdict has not
-  issued one for this gate to relay. Both witnesses are checked, status and printed line,
-  since a delegate that exits 0 having printed nothing has certified nothing. **(3)** Two
-  sites the guard makes reachable, which #73's sweep could not see: `gate-p5`'s
-  measurement-time governor check printed `'${gov:-unknown}'` inside one collapsed FAIL, so a
-  sweep reading messages had no way to notice it could not look — now split exactly like its
-  `gate-p3`/`gate-p4` twins — and `gate-p5`'s README re-measurement, where an unreadable CPU
-  model matches no published row and would have been reported as `README.md publishes no row
-  for ''`, a claim about the README earned by a host that stopped answering. Verified by
-  re-running the probe: `gate-p0`, `-p1` and `-p2` now each reach `RED` and exit 1 against an
-  unresolvable host, printing UNMEASURED for the target and keeping the aggregate coverage
-  FAIL beneath it; before the fix `-p1` and `-p2` died at 255. The delegated UNMEASURED branch
-  is a backstop and is verified by inspection only — now that the deaths it catches are fixed,
-  no known input produces one, though the pre-fix `gate-p1` produced exactly that condition.
-  Also corrected: four stale line citations in `remote.sh`'s split-site list, which pointed 4
-  to 11 lines above the `if`s they name, and the two delegated-tally cross-references.
-- **`DESIGN.md` §5 rule 8 cited the wrong instance, produced by the rule itself.** The rule
-  landed in `2eda333` naming a #65 correction that "took its Sgemm gains from the wrong row
-  (`+2.1 / +6.2 / +5.6%` against the actual `+2.0 / +3.2 / +3.5%`)". Both sets are correct
-  figures of *different quantities*: the first are 8-thread rate deltas, the second are
-  changes in the 8-thread scaling ratio net of CI, which is what the table those cells came
-  from says in its own caption. All twelve published cells were right, the withdrawn
-  `16.2 / 6.7 / 10.9` ratio was right, and the `15.6 / 3.1 / 7.0` that replaced it is
-  withdrawn in its turn — retracted on #21. What supplied the false confirmation was a
-  coincidence: Ssymm/janus's ratio delta is +6.21% and Sgemm/janus's rate delta is +6.22%,
-  so a matching figure read as a copied cell. One pair of logs answers "how much did Sgemm
-  gain on janus" three ways — +6.22% (8-thread rate, 466.2 → 495.2 GFLOP/s), +4.22% (raw
-  ratio, 6.211 → 6.473), +3.20% (ratio net of CI, 6.090 → 6.285) — because the change moved
-  the 1-thread denominator too (75.06 → 76.50, +1.92%). That the serial arm moved at all is
-  itself worth having: parallelising the shared B pack was not expected to touch the
-  1-thread path, and on janus it did. Rule 8 gains the clause naming its own failure mode:
-  **recompute the same quantity, not merely from the same log** — it instructs distrust of
-  the published figure and trust in the fresh recomputation, so a quantity mismatch converts
-  directly into a confident false correction. A disagreement with a published number is a
-  question, not a verdict. The rule's occurrence count stays at three, but the third is now
-  a `gate-p5: 64 PASS / 7 FAIL` tally carried out of a session summary and published in
-  prose against the log's `64 PASS / 5 FAIL` — a genuine instance of the carry-forward trap,
-  found while correcting the misattributed one.
-- **`remote_boost_set` wrote nothing and returned success**, in its first form, on all
-  three hosts. `$KEEL_SSH_OPTS` carries `-n`, which redirects ssh's stdin from
-  `/dev/null`, so feeding the remote `sh -s` from a heredoc gave it immediate EOF: it
-  executed nothing and exited 0. Only reading the knob back caught it — the same
-  argument `scripts/remote.sh` already made about the governor, now with a second
-  instance behind it. The value is spliced into the remote script instead, after
-  validation against a two-element allowlist so the interpolation cannot carry shell
-  metacharacters.
-- **`gate-p5.sh` could have checked one host's README rows against another host's
-  rates.** `BENCHCSV_ON` is a fixed path reused across the host loop, and the boost-on
-  pass is allowed to fail without skipping the host, so a stale file would have produced
-  a green with the wrong provenance. It is truncated per host and the README criterion
-  reports *unmeasured* when that pass produced nothing, rather than agreeing with
-  whatever was left behind.
-
-### Added
 - **Issue #22's candidate C: the fringe add-back is vectorized, behind the kernel's own
   dispatch.** A tile that crosses the edge of the matrix or the edge of a triangle is
   computed at full MR×NR into a scratch tile, and only its live sub-rectangle is added back
@@ -3232,82 +906,6 @@ While the major version is 0, minor versions may contain breaking changes.
   in the tmux server, so letting the server exit with the last session would strand any
   later `wait` on a channel nobody will ever signal.
 
-### Fixed
-- **The six `internal/l1` reductions lost 4.5–17.4% at n=256** when the `>` guards landed,
-  on all three hosts, and now have an exact-fit epilogue of their own. `Sdot`, `Sasum` and
-  `Snrm2` regressed by +6.2/+13.7/+9.4%, +9.6/+12.8/+17.4% and +4.5/+6.6/+9.8% on Zen 4 /
-  Skylake-X / Zen 5 respectively (`build/l1ab-a2b76eb.log`). 256 is an exact multiple of
-  `step512`, so where `>=` consumed it in four unrolled iterations, `>` stops with 64
-  elements left and hands them to the 16-wide mop-up loop — which accumulates into `a0`
-  alone, replacing four independent FMAs with a four-deep dependent chain at ~4-cycle
-  latency. That is the stall the four-accumulator design exists to prevent, reintroduced in
-  the tail; the prediction that the mop-up loop made an epilogue unnecessary was wrong, and
-  is corrected in place rather than quietly dropped. The epilogue runs the unrolled body once
-  at `step` width with all four accumulators live and ends with `x = x[:0]` — truncating a
-  length cannot produce a past-the-end pointer, so it costs no conditional bump, and the
-  mop-up loop and partial tail below fall through untaken. No partial op is involved, so
-  #42's `checkptr` blast radius is unchanged. All six hot loops are byte-identical to before
-  the epilogue (same instruction ranges, still 0 bounds-check exits / 0 calls / 0 vector
-  stack references), and the four surviving `IsSliceInBounds` are the same four `y = y[:len(x)]`
-  precondition re-slices as before. The existing differential suite already covers the new
-  branch: dropping the epilogue's `a3` term fails `TestSdot` at n=64, 128 and 4096.
-
-  Verified on all three hosts: the three routines improved at n=256 on 9/9 host×routine cells,
-  by 14.9/22.3/18.8% (`Sdot`), 14.4/15.6/22.7% (`Sasum`) and 10.5/22.4/5.4% (`Snrm2`) on Zen 4 /
-  Skylake-X / Zen 5, so all three are now at or below their pre-#47 timings except `Snrm2` on
-  Zen 5, which remains 3.8% above it. **This commit is nevertheless net negative on one host**:
-  geomean sec/op moved −2.36% on Zen 4 and −3.49% on Skylake-X but **+2.52% on Zen 5**, because
-  `Saxpy` and `Sscal` — which this diff does not touch, and whose disassembly is byte-identical
-  across the two builds — lost up to 45.06% and 19.40% there. That is a code-placement effect,
-  not a semantic one: `avx512Dot` grew by 160 bytes, which is a multiple of Go's 32-byte function
-  alignment but not of 64, flipping every later function's entry from 64-byte-aligned to 64+32.
-  It is `golang/go#8717`, keel #61 and `docs/toolchain-notes.md` T22, and it is disclosed here
-  rather than netted out because the fix is not what caused it and reverting the fix would only
-  re-win the placement lottery while restoring the dependent-chain stall.
-
-### Changed
-- **All ten `internal/l1` vector loops now guard with `>` rather than `>=`**, which removes
-  the branchless conditional pointer bump that bounds-check elimination had bought them
-  (T19, #47). Under `>=`, `x = x[16:]` may leave the slice empty and an empty slice may not
-  carry a past-the-end pointer, so the advance compiles to `MOVQ`/`NEGQ`/`SARQ`/`ANDL`/`ADDQ`
-  — five instructions computing an offset that is 64 on every iteration but the last, paid
-  twice by the routines that advance two slices. Under `>` the emptiness case is gone and it
-  collapses to `ADDQ $64, AX`. Steady-state loop instructions (linux/amd64, go1.26.6, whole
-  body including T9's NOPs): `avx512Axpy` 26 → **15**, `avx512Scal` 16 → **9**, `avx512Dot`
-  52 → **44**, `avx512Asum` 29 → **25**, `avx512SumSq` 34 → **29**, and the avx2 twins 29 →
-  18, 19 → 12, 52 → 44, 41 → 37, 33 → 29. Vector-op counts are unchanged in all ten, and all
-  ten still audit at 0 bounds-check exits, 0 calls and 0 vector stack references. The
-  reductions gain least because their advance amortizes over 64 elements where Axpy's and
-  Scal's amortizes over 16 — which is the shape of #47's regression, since Saxpy was the
-  routine that lost 40.65%.
-
-  A `>` guard exits with a full vector unconsumed, and the partial tail cannot absorb it:
-  `LoadFloat32x16SlicePart` is documented as equivalent to a full load at 16 or more
-  elements, so it would silently ignore a 17th. The two loop shapes handle that differently.
-  The reductions' existing 16-wide mop-up loop keeps its `>=` guard and drains the ≤64
-  elements in at most four iterations, which was expected to leave their tail unaffected and
-  did not — see the `### Fixed` entry above, which is the measured correction. Axpy and Scal
-  have no second loop and get an explicit exact-fit epilogue running the body once at *full*
-  width. Leaving that to the masked tail instead was rejected on the deciding ground that it
-  would make **every** exact-multiple call execute a partial op where today only ragged
-  lengths do, and partial ops are what #42 makes fatal under `-race`: the epilogue holds that
-  frequency where it was rather than trading instructions for a wider `checkptr` blast
-  radius. Two other shapes were measured and rejected — an early `return` on exact fit to
-  hand `prove` a `len != 16` fact (unused: Scal 16 → 15, Axpy *worse* at 27), and dropping
-  the redundant `&& len(y) > 16` conjunct (Axpy 15 → 24, so the conjunct is load-bearing).
-
-### Fixed
-- `scripts/l1-bench.sh` **exited 1 on a fully successful run and leaked a git worktree and
-  a temp dir on every invocation** (#55). `WORKTREE` was `local` to the function while the
-  single-quoted `EXIT` trap expanded it at exit, in global scope, where the local no longer
-  existed — so under `set -u` the trap died on its *first* command and `rm -rf "$BINDIR"`
-  never ran, defeating the intent stated in the comment directly above it. Found by the #47
-  A/B: every number printed on all three hosts, then `WORKTREE: unbound variable` and exit
-  1. Same species as #33 and DESIGN.md §5.6 — a successful run that reports failure
-  corrupts the record exactly as much as the reverse, because any wrapper reading the exit
-  status sees a failed measurement next to a complete log.
-
-### Added
 - `TestNoWritePastEnd` — a sentinel past the end of every writing routine's slice, at each
   length where a vector loop can end on an exact fit (0, 1, 7, 8, 9, 15, 16, 17, 24, 31, 32,
   33, 47, 48, 63, 64, 65, 80, 96, 127, 128, 129, 1024) on every available backend. The
@@ -4180,159 +1778,1448 @@ While the major version is 0, minor versions may contain breaking changes.
   would mutate a tree another long-running measurement may be reading, and it would
   make the two arms differ by whatever else happened to be dirty.
 
-### Fixed
-- **The feed decomposition's residual column reached −23.40 ns/call and the
-  instrument said nothing about it.** `rest` is the only column whose *sign* carries
-  information: it holds the nest's remaining real work (beta pass, fringe branch,
-  mask checks), which is positive, plus the interaction between C traffic and panel
-  feed, which is not sign-definite. On janus at 2×32 — the shipped shape, and the
-  memory-bound one — it runs `+0.20 → −7.40 → −23.40 → −21.50`, i.e. the two
-  streams overlap in time, so isolating each one overstates it and the C-traffic and
-  panel-feed columns are *upper bounds* there, not estimates. At 4×32 on the same
-  host it runs `+4.35 → +6.10 → +10.00 → +14.50`, which is unaccounted nest work
-  and would make those columns lower bounds. Either reading changes what the two
-  columns above mean, so `feed_rest` now names the dominant sign, its size, and
-  which direction it biases the steps — printed last, because it says how far the
-  three columns above it can be trusted. A reader should not have to derive the
-  sub-additivity of a decomposition from a column the decomposition printed.
-- **Three of `BenchmarkFeed`'s arms describe their panels as L1-resident, and above
-  `kc=128` they are not.** One kernel call needs an MR×kk A panel and an NR×kk B
-  panel, so the reused pair is `(MR+NR)·kk·4` bytes: at NR=32 that is 17 KB at
-  kc=128 but 34, 51 and 68 KB at 256, 384 and 512, against a 32 KB L1d on Skylake-X
-  and Zen 4. Where the premise fails, both panel arms feed from L2 and
-  `cold-panels − loops` is a difference of *locality within one level* rather than of
-  level — which is what the vesta run's panel-feed column looks like: resolved and
-  positive at kc=128, and at or below its noise floor (or negative) at every larger
-  KC. The size cannot be fixed by allocating less, because kk is fixed by the call
-  multiset every arm must share. So it is printed instead: a `keel-feed-panels:`
-  marker per point gives reused-panel, rotating-C and real-panel byte counts,
-  `remote_probe` now reports each host's private cache sizes from sysfs (no host
-  record carried them, and Zen 5's L1d is 48 KB where Zen 4's is 32 KB, so a
-  from-memory constant would have been wrong), and the panel-feed column says to read
-  itself against both. Every doc comment that claimed L1 residency for these buffers
-  now says "reused panel pair" and where the residency actually holds.
-- **The feed decomposition's noise floor printed as `0%`, which is not a number**
-  (T21). benchstat rounds its confidence interval to a whole percent, so `0%` means
-  only "under 0.5%" — and `scripts/retention.sh feed` was printing that percent as
-  the column a reader uses to tell a resolved step from noise. On vesta it read `0%`
-  on seven of eight rows, which says every step is resolved, including the ±0.60 ns
-  ones; read correctly it bounds the floor at 0.5% of the arm, up to 4.4 ns on the
-  4×32 kc=512 row — larger than three of the four panel-feed steps that row reports.
-  The column is now `worst-ci` *and* a `floor` in nanoseconds, computed as
-  `(p+0.5)% × the arm it belongs to` so the bound errs toward calling a step
-  unresolved, steps below their row's floor are marked `*`, and each term says how
-  many of its points are unresolved or negative before the reader reaches its spread.
-  A negative cost is now named as an arm defect rather than reported as a cost. No
-  gate verdict is affected: gates compare a median *net of* its CI against a floor,
-  so a CI rounded down to zero can only make a passing threshold harder to reach —
-  but for a *difference between two arms* the rounding is not conservative, and the
-  whole feed instrument is differences.
-- **`benchstat` was silently declining to compare the two arms of every A/B run**
-  (#50, T20). It groups results into one table per distinct *configuration*, where a
-  configuration is every `key: value` line in the log — and keel's provenance
-  preamble, which exists so that no number ships without its denominator, is in that
-  namespace. One of its markers, `keel-bench-clock-mhz`, is a live snapshot of the
-  CPU's frequency range and so differs between any two runs on one host by
-  construction. Two files that differ in one config key are printed as two
-  independent one-column tables: no delta, no percentage, no p-value, exit status 0.
-  The first run of `scripts/l1-bench.sh` produced three hosts × two builds × 20
-  benchmarks of correct medians and not one comparison among them. `bench_compare`
-  in `scripts/bench.sh` now ignores the keys that describe the run rather than the
-  build (`$KEEL_BENCH_IGNORE`) **and then checks that a `vs base` column actually
-  appeared**, printing `NOT COMPARED` plus the offending keys when it did not. No
-  gate verdict was affected: gates aggregate a single log, where a forked table
-  cannot lose a comparison. `scripts/l1-bench.sh` now goes through it, and its
-  claim that "the deltas carry p-values" — printed above two tables that contained
-  no deltas — is gone.
-- **`scripts/retention.sh sweep` ran at `-count=10` while its header printed the
-  `-count=5` it documents** (#49). `scripts/bench.sh` is sourced first and defaults
-  `KEEL_BENCH_COUNT` to 10, so the sweep's own `${KEEL_BENCH_COUNT:-5}` could see
-  neither the caller's setting nor its own default. The caller's value is now
-  captured *before* sourcing, and the header prints two separate things: the count
-  that was requested, and — per host, counted out of the log itself — the number of
-  sample rows that actually arrived. A parameter read back out of the measurement
-  cannot be shadowed by whatever set it. (The affected sweep is unharmed: 10 is the
-  stronger discipline, so the error was in the safe direction, and its numbers stand
-  as the exploratory numbers they were labelled.)
-- **The sweep's `<- shipped` marker could never fire**, found while fixing #49: it
-  matched the shipped triple's literal name, whose `nc=4096` is larger than any NC on
-  the grid, so no row was ever marked — which reads as "the shipped point is not on
-  the grid". It now marks the shipped KC/MC at the grid's largest NC, read back from
-  the CSV, and the label says exactly that rather than implying more.
-- **`scripts/retention.sh`, `scripts/l1-bench.sh`, `scripts/roofline-test.sh`,
-  `scripts/provision-openblas.sh` and `scripts/bootstrap-github.sh` now define
-  everything in functions and end with `main "$@"`** (#51, the convention; the six
-  gate scripts are tracked there and go last, each needing a green run of its own).
-  Bash
-  reads a script incrementally as it executes it, so editing one mid-run can corrupt
-  the parse position of the running copy — a hazard that had become a rule to
-  remember ("never edit a running instrument"). Forcing a whole-file parse before any
-  work begins makes the instrument immune instead. `scripts/roofline.sh` was on the
-  list and is off it: it is three function definitions and no top-level work, so it
-  is already immune as a sourced library. One behaviour change to declare rather than
-  slip in: `provision-openblas.sh --help` prints a fixed line range of its own header,
-  so that range was narrowed to end before the new wrapper comment.
-- **`spill-audit` could not see a bounds check whose panic block was aligned**, and
-  `gate-p2.sh` turns that count into a passing criterion — so the instrument
-  certifying "0 surviving bounds checks in the steady-state K-loop" had a false-clean
-  mode (#46). `Parse` drops `NOP` lines as zero-length pseudo-instructions, which is
-  right for the T9 inlining marker but wrong for *alignment padding*: that owns its
-  own offset and is several bytes wide. `reachesPanic` matched the branch target
-  exactly, so when the compiler aligned an out-of-line panic block the branch pointed
-  at padding, no instruction was found there, and the exit went uncounted. Targets now
-  resolve to the first instruction at or after the offset, which finds the same
-  instruction wherever an exact match existed — the change can only find *more* exits,
-  never fewer. Regression test added to the hand-written listing
-  (`TestAuditSeesAPanicBehindAlignmentPadding`), verified to fail against the old
-  resolver.
-
-  **The P2 criterion holds.** Re-audited with the fixed detector, `Kernel2x32` and
-  `Kernel4x32` still report 0 bounds-check exits and 0 calls, and the three peak
-  kernels are still register-only. P2's green was correct — but for a period it was
-  correct without being verifiable, and those are not the same thing. Two published
-  counts *are* revised, both in `internal/l1` (#47): `avx512Scal` and `avx2Scal` were
-  reported clean and carry one each.
-
-- **All ten `internal/l1` vector loops now compile with zero surviving bounds
-  checks** (#47). They were written in P1, before P2 wrote the "pre-sliced panels"
-  rule for kernels, and they were index-driven: a `for i := 0; i+64 <= len(x); i += 64`
-  guard with `x[i+16 : i+32]` sub-slices. `prove` does not discharge those. From
-  `i+64 <= len(x)` and `len(x) <= cap(x)` it will not take the step to
-  `i+64 <= cap(x)`, and `i <= i+16` needs no-overflow reasoning it also does not do,
-  so an unrolled body paid one check per offset sub-slice — `avx512Dot` ran 69
-  instructions to issue four FMAs. Every loop is now driven by `len(x)` with
-  *constant* offsets (`x[16:32]`, never `x[i+16:i+32]`) and re-slices at the bottom,
-  which is the idiom `internal/vec`'s microkernels already use for their panels.
-  The two-slice routines (`Dot`, `Axpy`) re-slice `y` to `len(x)` once above the
-  loop *and* carry `len(y) >= step` in the guard: the re-slice alone is not enough,
-  because the prover loses `len(y) == len(x)` across `y = y[step:]`, which left
-  seven of `y`'s checks standing after `x`'s had all gone. `check_bce` on
-  `l1_amd64.go` goes from 60 reports to 4 — one `IsSliceInBounds` per two-slice
-  routine, which is the `y = y[:len(x)]` precondition itself, hoisted out of the
-  loop and paid once per call instead of per iteration. (`l1.go`'s 21 are the
-  scalar reference path and are untouched.) `spill-audit` reports 0
-  bounds-check exits for all ten vector kernels, where it previously reported
-  them for all ten.
-
-  **The instruction counts do not all improve, and T19 is why.** Excluding T9's
-  1-byte inlining NOPs: `avx512Asum` 41→20, `avx512Dot` 61→32, `avx512SumSq`
-  42→21, `avx2Asum` 45→24, `avx2Dot` 61→32, `avx2SumSq` 42→21 — the six unrolled
-  reductions roughly halve. But `avx512Axpy` 16→21, `avx2Axpy` 17→22,
-  `avx512Scal` 11→12, `avx2Scal` 12→13. A slice advance guarded by `>=` costs
-  seven instructions, not two, because the loop may leave the slice exactly empty
-  and a slice's data pointer must not pass the end of its allocation, so the
-  pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) — see
-  docs/toolchain-notes.md T19, which has the three-function repro. An unrolled body
-  amortizes that over four vector ops; a non-unrolled one cannot, and `Axpy`
-  advances two slices. The `>` form collapses the advance to a single `ADDQ`, and
-  is applicable here because the tail already absorbs a full vector through
-  `LoadPart`/`StorePart` — but it moves the last full vector onto the masked path,
-  so it is a second change wanting its own measurement rather than a free win.
-  Runtime numbers for all five routines at L1-, L2-, L3- and memory-resident sizes
-  are #47's remaining deliverable; the reassociation order is unchanged, so the
-  results are bit-identical, not merely within tolerance.
-
 ### Changed
+
+- **The share denominator was the one reading in the log with no range and no marker**
+  (`scripts/gate-p5.sh`, `scripts/remote-exec-test.sh` §9g, ruled 2026-08-28 on #6). The per-host ceiling
+  line hand-built its own `+/- %.2f%%` and never called `bench_describe`, so rule 20's disclosure — the
+  range beside the interval, and `RANK-WINDOW-BLIND` when a printed zero sits under a span refuting it —
+  reached every judged rate and **not** the number all three of them are divided by. keel-skx's
+  confirmation run printed `ceiling: compute 1444 GFLOP/s +/- 0.00%` on exactly that line. Routed through
+  the one renderer; the nine verdict lines that cite the ceiling now cite `CEIL8P`, the disclosure's own
+  value token, because `%.4g` and benchstat's raw CSV field differ on a 5-significant-figure rate and a
+  log stating its denominator two ways is the defect one layer along. **No fixture over `bench_describe`
+  could have caught this** — the renderer was correct and simply unreached — so §9g extracts the three
+  lines from `gate-p5.sh`'s own bytes and evals them with `info` stubbed, plus a positive-controlled
+  static check that no site still renders the raw field.
+- **Era `pinned8` is CLOSED, and `keel-skx` is the first host in `scripts/host-baselines.tsv`**
+  (`scripts/measurement-eras.tsv`, `scripts/judged-runs.tsv`, `archive/pinned8/`, #6). The spread arm's
+  21 archives are preserved and indexed (`INDEX-spread.tsv`: 9 `ladder` at `instrument=v2`, 12
+  `clock-window`), which fills `transition_archive`; all three judged CPU models appear in both arms
+  (9R14 11/4/3, 9R45 10/5/3, 8124M 6/15/3) and gnr's 8-free/0-pinned stays the stated exclusion.
+  **What forced the preservation was a live defect, not the era condition**: the published README rows
+  cited their evidence as `build/` paths and `build/` is gitignored, so 24 green numbers rested on logs
+  no reader could open — #114 at the *publication* layer. `readme-numbers.sh` now cites the path as
+  invoked instead of a basename under a hardcoded `build/`, and the page was regenerated against the
+  preserved logs; **no rate moved**. skx's three share baselines are **30.80 / 31.40 / 30.35**, medians
+  over the era's two judged archives — with take four **recomputed under #116**, because a share is net
+  of both intervals and the #116 fix landed *between* the two revs, so pooling its printed 29.7/31.3/29.8
+  would have averaged across a CI-instrument change and registered two of three baselines 0.35 and 0.15
+  points **low**, i.e. permanently looser. Baselines and witness landed together: a witness alone is the
+  `owing` state, which is FAIL.
+- **Rule 20's `RANK-WINDOW-BLIND` marker keys on the width as *printed*, not as stored** (`scripts/bench.sh`,
+  DESIGN.md §5 rule 20 amended 2026-08-28, ruling on #6). The printed line is the assertion, so `± 0.003%`
+  renders `0.0%`, makes a reader the identical claim as an exact zero, and earns identical scrutiny; the
+  second half is the range refuting that claim, at one quantum of the same display. **16 of 114 archived CI
+  readings print as `0.0%` and only 4 are exact**, so the reserved middle was 12 readings wide. Output only,
+  and exact-zero ⊂ display-zero, so no marker is lost and no verdict moves. `bench_describe` had no test
+  before this; six fixtures now cover it (`remote-exec-test.sh` §9f) and the archived path stays unexercised —
+  no CSV in the tree carries #116's seven columns.
+- **The published numbers are per-row medians over an era's archives, and the verdicts beside them still are
+  not** (`scripts/readme-numbers.sh`, #6; the ratified repair). The generator now takes any number of
+  `gate-p5` logs and reduces each cell across them (§5 rule 16), every cell naming its own estimator —
+  currently `median of N=2 archives` on all 24 rows, over rev `969c360` (judged) and `6ba6566`. Verdicts do
+  **not** pool: a verdict belongs to the gate that rendered it and two cannot be averaged, so the judged log
+  is identified **by content** rather than by position, two judged logs are refused outright, and argument
+  order is provably irrelevant — both orders print skx `Sgemm` 1T as `66.01`, which is `(66.18 + 65.84)/2`
+  recomputed by hand. The cross-check against each run's own printed share moved per-archive, because a
+  pooled median matches no single log by construction. **Host coverage moved with the era**: `keel-skx`'s
+  eight rows are born, and `Intel(R) Xeon(R) 6975P-C` leaves with 8 free archives and 0 pinned — a stated
+  exclusion in `scripts/measurement-eras.tsv` since 2026-08-22, not an unmet condition. A departing host is
+  the one change 24 green rows cannot report, so the generator diffs the CPU-model set against the **last
+  published** block — not the working copy, which would print the notice on the first run and drop it on the
+  second — and says it in the caption, failing closed when `HEAD` is unreadable. **Confirmation semantics,
+  stated because they are weaker than a green:** rows regenerated *from* these archives agree with these
+  archives by construction, so criterion 9's meaningful green arrives on the **next** judged run.
+- **`scripts/detach.sh` forwards no environment, so a detached run can be a different program than the
+  same command typed directly** (measured 2026-08-22; no code change, recorded and worked around at the
+  call site). The generated runner is `cd $ROOT` plus a `printf '%q '` of argv and nothing else, so a
+  `KEEL_*` variable exported in the caller's shell is simply absent inside the tmux session. Found by
+  launching the founding campaign's fleet with `KEEL_FLEET` set to the judged sizes and watching it bring
+  up the **exploration** sizes instead (`c7a.2xlarge`, `c8a.2xlarge`); killed, torn down twice, both
+  instances confirmed `terminated` by instance-id, ≈$0.09. Then positively controlled rather than
+  reasoned: the detached run printed `KEEL_PROBE_VAR=[<unset>]` where the identical command run directly
+  printed `[set-by-caller]`. Compounded by `tmux set-option -s exit-empty off` (line 114), which keeps the
+  server alive between sessions, so a later run inherits whichever caller first started it. The fix is not
+  invisible forwarding: launches that need a variable use the inline `env VAR=... ./script` form at the
+  call site, which costs no `scripts/` lines and is what a judged run wants anyway — a stray `KEEL_*`
+  in an operator's shell cannot leak into a measurement it does not name.
+- **Ceiling readings taken before the hoist are marked `instrument=v1` and era-scoped, NOT re-adjudicated**
+  (ruled 2026-08-22 on #115; `scripts/measurement-eras.tsv`, DESIGN §5 rule 18). The v1 bias was host- and
+  mask-dependent **and varied per run** — that variance *was* the ceiling scatter that drew attention in the
+  first place — so no correction formula recovers an archived share honestly, and one applied anyway would
+  publish a precision the data never had. Nothing needed recovering: **no bar was typed from those readings, no
+  registry row landed from them, no verdict rests on them.** The counterfactual is recorded because it is the
+  argument for the pre-commitment discipline rather than for the repair — **had `CEIL_FRACTION` been typed at
+  the 74.3% the v1 ceilings supported, this repair would now be forcing a published bar retraction with every
+  verdict derived from it.** A defect in a denominator resolved into a version label. The version is emitted by
+  the instrument in its own declaration row (`instrument=v2`), not only in prose, because a reader comparing two
+  archives needs the noun's version where they read the number. `pinned8` is therefore founded a **third** time
+  and still has never closed; a fresh era id was considered and refused, since the era id bounds
+  *registrations* while the artifact fields (`doms=`/`nodedoms=`, `instrument=`) bound *configurations*, and
+  the re-founding returns nobody's exemption — `scripts/judged-runs.tsv` has no data rows and
+  `scripts/host-baselines.tsv` is header-only, so no host has ever spent a `BASELINE` in this era.
+- **§5 rule 5's spread mask is FINAL as the standing judged placement, and its cost is now stated as measured
+  rather than as asserted** (ruled 2026-08-22 on #6; §7 rule 7 extended with it). T-52 removed the only standing
+  argument against spread — the ceiling scatter was the harness, not the placement — so the choice was decided
+  on spread's own profile: deterministic, and bandwidth-honest on the L1 rows by 5.96×/4.65×, which a confined
+  mask would have buried. **The ruling's "4–6% GEMM cost" did not survive being recomputed from the archives and
+  is not what landed.** Median-of-medians on the judged 8-thread rows at n=4096, confined against spread, as
+  `Sgemm / Ssyrk / Ssymm`: keel-zen4 **4.32 / 5.49 / 4.30%**, keel-zen5 **1.16 / 3.40 / 0.46%**, keel-skx
+  **1.70 / 0.30 / 1.17%**. keel-skx is a **null band, not a third data point** — its two masks are byte-identical
+  (`nodedoms=1`), so its 0.30–1.70% is what this cross-era, cross-revision comparison reads when the mask does
+  not change at all. zen4 clears that band; **zen5 straddles it**, so the honest statement is a few percent on
+  Zen 4 and at-or-near the noise floor on Zen 5, and one fleet-wide figure would have been zen4's number wearing
+  the fleet's name. The one-L3-copy-per-CCD mechanism is recorded as **unmeasured** beside it. **A fourth
+  limitation is stated inside the number, and it is an argument against spread that T-52 did not remove**
+  (§5 rule 12): the GEMM-class rows are tight under spread (CIs **0.045–0.41%**, two outliers at 1.41% and
+  1.85%) but **`Strsm` is not, and this mask is why** — its 8-thread interval goes ±2.32/2.97% → ±6.52/9.48/11.84%
+  on zen4 and ±0.75/0.87% → ±5.13/10.28/13.24% on zen5, a 3–15× widening, while **keel-skx's identical-mask
+  control does not move** (±0.50–1.30% → ±0.82–1.00%). In raw samples on zen5 that is 399–412 GFLOP/s confined
+  against 334–455 spread: a 3.3% total spread becoming 36%, consistent with this mask reweighting the bimodal
+  distribution T-45 and T-52 both found rather than with a new cost. It bears on one decision and not on the
+  placement, so it is disclosed rather than netted out: **whether `Strsm` can be judged at all under a mask
+  that gives it a 5–13% interval is open, and `STRSM_FLOOR` stays empty until it is answered.**
+- **Both of P5's bars are SUSPENDED TO EMPTY for the era-founding run, and one of them was RED when it happened**
+  (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; ruled on #6, 2026-08-22). `CEIL_FRACTION`
+  goes because its denominator is the compute ceiling *measured under the mask in force* and the confined mask is a
+  different instrument; **counted rather than assumed, 51.0 judged exactly one run** (`build/gate-p5-d2fe477.log`:
+  six rows, two models, all PASS, and the argmin row read 53.6% again — clearing by exactly its own 2.6-point
+  margin, a reproduction to one decimal rather than a defect). `STRSM_FLOOR` joins it and becomes era-scoped, for
+  a reason of its own: it is a ratio over the **1-thread** rate, the one arm this fleet has measured bimodal and
+  placement-sensitive, and rule 5's controls are explicitly silent there. **The suspension removes three live
+  FAILs — zen5 6.982/6.756, zen4 7.257/6.881, skx 6.806/6.637 against 7.0× — and that is disclosed first because
+  it is the shape of a criterion weakened to pass.** What makes it a re-derivation: the ruling scoping the bar to
+  the era was made with those three reds already on the record, and §5 rule 17(d) predates them. **Pre-committed:
+  if the spread rows land below 7.0× net of CI, the value does not get typed** — a bar under 7.0 would be
+  loosening after a red, so it goes to Scott as a finding and the class stays REPORTED. `BASELINE_MARGIN` is
+  deliberately **not** suspended: 2.6 points is an *input* to the formula rather than an output of the run, so the
+  circularity clause has nothing to say about it, and what suspends it this era is the artifact — both registries
+  are header-only for `pinned8`, so the branch that subtracts it cannot execute. Five predictions are
+  pre-registered in DESIGN §4/P5 before the run (§5 rule 11), including **the control that tests the amendment
+  hardest: `keel-skx` must not move**, its L3 being per socket so the spread enumeration is degenerate there.
+- **The README caption could print "every pair clears the bars" when NO bar was in force** (`readme-numbers.sh`).
+  Vacuously true, and it reads as a pass — §5 rule 8's defect published in the one file a reader checks. Both
+  suspended bars now render in words (the `>= %sx` hole was already anticipated for the ceiling bar and not for
+  Strsm), and the both-suspended case prints **NONE of the pairs was judged**. A second, worse case was found by
+  driving it: the bars are read from this tree and the rows from a **log**, so a log written while a bar was in
+  force carries FAIL verdicts a suspended bar cannot produce — the constants read-back compares two scripts and
+  cannot see it. That combination now **refuses** rather than choosing which sentence to publish. Stated inside
+  the number (§5 rule 12): the both-suspended branch is **unexercised by any archived log** — every log in
+  `build/` predates the suspension and now takes the refusal instead, so the string was rendered against one of
+  them before the refusal landed, which proves formatting and not reachability. **And the founding run will not
+  reach it either**, which is the find that matters: a `BASELINE` verdict line carries no scaling clause, so this
+  program refuses the whole log the moment one host renders BASELINE — `keel-skx` does, this era, which makes it
+  the blocker on regenerating the README as medians over this era (#6).
+- **§5 rule 5's mask is AMENDED to one core per cache domain, and `pinned8` finalizes on the spread form**
+  (2026-08-22, ruled on #6; `scripts/remote.sh`, `DESIGN.md` §5 rule 5, `docs/hosts.md`, `docs/gates.md`,
+  `scripts/measurement-eras.tsv`). The 2026-08-21 form took the first eight distinct physical cores of one NUMA
+  node in ascending order, and **on EPYC 9R45 that is definitionally one CCD** — sysfs reports `index3`'s
+  `shared_cpu_list` as exactly eight cores wide, so "eight cores, one node" and "one L3" were the same set by
+  construction rather than by accident, on the host the fleet's widest readings come from. Measured against it
+  (T-45, three controls): 8-thread stream **dot 56.26 → 335.48 GB/s (5.96×)** and **axpy 75.89 → 353.0 GB/s
+  (4.65×)** one-core-per-CCD, with the repeat arm reproducing to **0.10%**, the 1T arms invariant across masks, and
+  arm A's 1T axpy matching the untouched harness to **0.01%** (66.29 vs 66.30) — so the delta is placement and
+  not the instrument. The spread arm also **exceeds free placement by 1.69× / 1.55×**, which is what makes this
+  publication honesty and not precision: the confined mask would have regenerated the README's bandwidth-bound
+  `dot`/`axpy` rows several-fold low, and **§5 rule 16 forbids a systematically underselling reference in exactly
+  the spirit it forbids the max-draw overselling one**. The enumeration is stated in the law as a function of
+  topology alone — partition a node's distinct physical cores by their **highest cache `level`** (keyed on the
+  lowest cpu id in `shared_cpu_list`), order domains ascending by that key, round-robin one core per domain per
+  pass taking the lowest unused core — so nothing here is a chosen mask. `level`, never `index3` by number, is
+  `bench/ceiling_test.go`'s `llcBytes` discipline reused: the harness makes no microarchitecture claim it would
+  have to maintain. **A missing cache level now refuses exactly as missing thread siblings does** (status 121,
+  amended refusal string), because falling back to consecutive cores would file a confined reading under this
+  era's label — the era-ledger forgery one layer in from free placement. **On `keel-skx` the amendment is
+  degenerate and that is the correctness argument**: one L3 domain per socket means the spread form returns
+  consecutive `0..7`, byte-identical to the old answer and the right mask there, so this refines the 2026-08-21
+  form rather than replacing it — and the new arms are therefore driven by fixtures written on purpose (a
+  12-domain EPYC node, a 2-domain wrap-around, a cache-blind cpu, no cache at all) instead of resting on an
+  unchanged expectation. The 24 archives at `archive/pinned8/` are preserved unedited as the **provisional
+  confined arm**, superseded by the amendment, and they **self-identify** by carrying no `doms=` field: the two
+  arms are separable by their own witnesses with no file touched. `transition_archive` stays `—` because the
+  spread-form campaign is now what fills it; the gnr hole no longer figures, the 2026-08-22 ruling having scoped
+  the both-arms condition to **judged** hosts, so `keel-gnr` is a stated exclusion in the era row rather than an
+  unmet condition.
+- **The pin line records the mask's SHAPE, because `GOMAXPROCS` cannot witness it** (`scripts/remote.sh`,
+  `scripts/bench.sh`, `scripts/gate-p5.sh`, criterion 4). Amending the banner surfaced the gap: the gate would
+  have asserted a spread its archive could not show, since `gomaxprocs=8` reads identically under a confined and
+  a spread mask — the field the old criterion cross-checked is blind to the very defect the amendment fixes. The
+  line now carries `doms=` (each selected core's domain, in mask order) and `nodedoms=` (how many the chosen node
+  offered), and the invariant `distinct(doms) == min(width, nodedoms)` **and** `max_count − min_count ≤ 1` is
+  checked off the artifact per row. **The surprise: a fully confined mask has imbalance 0, not 7.** Eight cores
+  in one domain are perfectly *balanced* over that one domain — predicted 7, the fixture read 0 — so balance
+  cannot see confinement at all and `nodedoms` is load-bearing rather than belt-and-braces; the two terms catch
+  disjoint defects. A row missing both fields is **`unmeasured`, not a failure**, naming the provisional confined
+  arm as exactly that shape, since a pre-amendment archive is not a broken post-amendment one (§5 rule 6). The
+  invariant was lifted into `bench.sh` as `bench_pin_spread` so it is drivable from log fixtures: the criterion
+  needs a fleet, and the confined arm it must still classify is a shape **no working host can now produce**.
+  `remote-exec-test.sh` grew section 9d over that seam (7 cases) and every pre-existing pin fixture gained cache
+  topology, without which all of them would have started refusing. **`scripts/` budget, disclosed rather than
+  netted out** (CLAUDE.md, "the apparatus pays its own way"): this pair of entries lands net shell with **no**
+  library, kernel or routine beside it: **+279 net lines in `scripts/`, moving `gate-docs.sh`'s reported ratio
+  1.63× → 1.66×** as measured 2026-08-22, and the move is attributable to the numerator alone because the library
+  term does not change in this commit (`verify_test.go` is a test and is not counted). It is the instrument the
+  era's founding campaign is about to be measured with, so deferring it wastes fleet time rather than lines, and
+  the paydown is owed post-tag — but the ratio moved the wrong way and saying so is the rule's whole mechanism.
+- **The `pinned8` era's arm is preserved and tracked at `archive/pinned8/` — 24 archives, `INDEX.tsv`, mapped to the
+  free arm by `cpu_model`** (#6). It existed only as untracked `build/` output, one `make clean` from gone, on an era
+  whose evidentiary half cost a three-host fleet to measure. Membership is the **measured predicate "carries a
+  `keel-pin:` line"**, not a revision range: what makes an archive pinned is that the mask applied to it, and that
+  line is the only witness. Applying the predicate also returned exactly 35 *unpinned* archives whose names match the
+  35 already in `archive/free-placement/`, an independent check that the free arm was preserved whole. All 24 report
+  the same `mask=0,1,2,3,4,5,6,7 width=8` and `gomaxprocs=8`, which is what rule 5's "fleet-wide and never
+  selectively" looks like in the evidence. **The count corrects a figure published hours earlier on #6 as 15**: that
+  was the two runs in front of me, and the predicate found `e64b34e`'s nine as well.
+- **`transition_archive` stays `—` and `pinned8` stays PROVISIONAL, deliberately** (`scripts/measurement-eras.tsv`;
+  #6). Granite Rapids (`Intel(R) Xeon(R) 6975P-C`) appears 8 times in the free arm and 0 times in the pinned one,
+  being a characterization host absent from the pinned fleet, so "the same fleet measured under the old instrument
+  and the new one" holds for three of the four models the free era touched. That is arguably consistent with the
+  condition rather than a breach — a characterization host is not part of the fleet the era governs — but reading it
+  as met is a judgment about what "the same fleet" means, and certifying a condition with a stated hole in it is not
+  a call to make in the commit that files the evidence for it. Preserving is unambiguous and done; closing is asked.
+- **The reported 8-thread stream ceiling is a single-CCD figure, ~6× below the socket, because §5 rule 5's affinity
+  mask packs all 8 threads into one CCD** (`keel-zen5`, EPYC 9R45; #6). sysfs gives `shared_cpu_list` for
+  `index3` as exactly 8 cores wide, so `keel_pin_mask`'s "first 8 distinct physical cores in order inside one NUMA
+  node" is definitionally one L3 domain. A three-arm probe — mask `0-7`, then `0,8,16,…,56`, then `0-7` again —
+  measures 8-thread **dot 56.26 → 335.48 GB/s (5.96×)** and **axpy 75.89 → 353.0 GB/s (4.65×)**, which fully accounts
+  for the era's collapse at `be5bb91` (dot 198.7 → 56.525, axpy 227.4 → 76.195) and then some: the spread arm
+  *exceeds* the free era's own reading by 1.69× and 1.55×, so scheduler placement was leaving CCD bandwidth on the
+  table before the mask existed too. Three controls: the repeated first arm reproduces itself to 0.10%
+  (so not drift or thermal), the 1-thread arms are invariant across masks (so not the instrument), and arm A's
+  1-thread axpy matches the gate harness to 0.01% (66.29 vs 66.30). **Consequence is forward-looking**: the figure is
+  inert today — `scripts/gate-p5.sh` reports it and keeps the `min()` on the compute term alone, which stays the
+  strict direction — but it is documented there as a candidate for that `min()`, and promoting a 6×-low bandwidth
+  into a ceiling would understate the ceiling in the flattering direction. The compute ceiling is unaffected,
+  needing no cross-CCD traffic, so DESIGN.md's strict-direction argument survives. **No headroom multiple is quoted
+  here on purpose**: converting GB/s to a FLOP/s bound needs a declared DRAM traffic count, and as that same line
+  says, no benchmark declares one — the honest statement is the measured bandwidth ratio, not a modelled headroom
+  derived from a denominator this tree does not have. **The mask was not changed** — rule 5 is
+  law and it pins fleet-wide, never selectively, so whether to spread across CCDs is Scott's call (#6). `keel-zen4`
+  is *inferred, not probed*: its harness bandwidth fell comparably (103.25 → 39.265 GB/s at 8 threads) on the same
+  vendor topology. `keel-skx`, which has no CCDs, *gained* under pinning (52.5 → 88.0 GB/s) and is the negative
+  control. Probe is ad-hoc and deliberately untracked: it varies rule 5's mask and carries no provenance block, so
+  it is **not citable as a keel measurement** and adds no `scripts/` lines.
+- **The headline criterion's PASS and FAIL lines named a denominator retired two days earlier** (`scripts/gate-p5.sh`;
+  #6). Both said hosts cleared "their class's bar … against their own single-thread rate", but the judged share has
+  divided by each host's own measured 8-thread ceiling since the 2026-08-20 ruling; only `Strsm` still divides by a
+  single-thread rate, and `$BARS` spans both classes. Each bar now names its own denominator instead, and the
+  `gate-p4`-is-RED caveat — which disclaimed only what "divides by a single-thread rate" — now disclaims measured
+  rates generally, having stopped reaching the headline criterion at all. Worst on the **green** path: the PASS
+  string is what ships verbatim in a gate-green closing comment. A **fourth site** turned up afterwards, while
+  adjudicating the confirmation log (`gate-p5.sh:1189`): it justified `NINDET = 0` by that same retired denominator
+  — "this criterion's denominator is the host's own single-thread rate, of which there is exactly one". The
+  conclusion survives, since each class still has exactly one denominator and so there is no candidate split, but
+  the reason named the wrong one now that the criterion spans both classes. Lower severity than the three verdict
+  strings by §5 rule 14 — a comment ships to the next editor, not into a closing comment — and fixed rather than
+  filed, at no net `scripts/` lines.
+- **`CEIL_FRACTION = 51.0`, typed for `pinned8` from the era-founding run, with its derivation set narrowed from
+  three CPU models to two** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; #6). The minimum
+  judged row on `build/gate-p5-be5bb91.log` is `keel-zen5` `Ssymm` at 53.6% net of both intervals, less the same
+  2.6 points of margin. **The bar fell 6.8 points and the cause is the denominator, not the kernels:** on both
+  derivation hosts the ceiling outran every judged rate, so all six raw shares fell — zen5 1568.5 → 1999.5 GFLOP/s,
+  +27.5%, against +6.2/+17.5/+9.0%; zen4 713.6 → 817.4, +14.5%, against +9.7/+13.7/+5.7%. zen4 is not zen5's mirror
+  image but the same phenomenon: two of its net-of-interval shares rose regardless, pinning having collapsed the rate
+  intervals (1.0–8.3% → 0.0–0.8%), and a share net of both intervals has three terms. The argmin moved with it,
+  `Ssyrk` → `Ssymm`. `Intel(R) Xeon(R) 6975P-C` leaves `CEIL_DERIVED_FROM`: `gnr` is characterization, and
+  characterization hosts are "never mixed into the citable set" — the 2026-08-21 ruling applied, not a new decision,
+  and no verdict moves because the model is not in the fleet. Stated inside the number (§5 rule 12): **no Intel
+  silicon derived this bar**, and the two models that did spread 53.6–89.9%, so one fleet bar is set by the weakest
+  host. `keel-skx` does not register beside it — one draw is not an estimator (§5 rule 16) and its witness row may
+  not land without its baseline, so it re-renders `BASELINE` on the confirmation run, printed as a debt by design.
+  Found by exercising the twin against that log and **left for the README regeneration to fix, in the file it already
+  has to touch**: `readme-numbers.sh` dies on a `BASELINE` verdict line, because that branch prints no `scaling …x /
+  …x net of CI` clause and the parser requires four numbers. It fails closed, so nothing is published wrongly — but
+  no log containing a BASELINE host can generate a caption at all, and the fix is a *counted* exclusion ("a published
+  row is born from a judged run") rather than a skip, since a parser silent about what it never read greens like a
+  clean one. Pre-existing: the era-founding run is simply the first log this class has ever appeared in.
+- **`CEIL_FRACTION` is retired at the era boundary, and empty is its pre-registered state rather than its
+  fallback** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5; ruled 2026-08-21 on #6, the
+  same day 57.8 was ratified — §5 rule 17(d), a derived constant re-derives by its own formula over new-era
+  inputs). 57.8 came from free-placement medians on the three `CEIL_DERIVED_FROM` models, and those models are
+  `DERIV=1` — the fleet-bar hosts the BASELINE-REGISTERED class deliberately does not shield. Left standing it
+  would judge their *pinned* readings against a *free* bar: the methodology delta booked as host drift, arriving
+  through the bar rather than through the registry, which is the one error the era boundary exists to prevent.
+  **Counted rather than assumed, it judged one complete run** — `gate-p5-33de3b2.log`, nine rows, no `keel-pin`
+  line, and its RED is the observation that minted rule 17; `gate-p5-fdd23d4.log` cites it in the preamble and
+  never reached a judged row. It never judged a pinned reading and now never will. Nor can the `pinned8` value be
+  pre-typed, which is a construction and not a scheduling problem: the formula's inputs are the era-founding run's
+  own outputs, so a bar derived from the rows it judges is cleared by its own argmin by exactly the margin every
+  time, certifying arithmetic rather than silicon. So the transition run **reports** through the branch already in
+  the gate, a reviewed commit types the value from those rows with its derivation printed, and the confirmation run
+  is the first this era judges — #37's rhythm, and 57.8's own. Both copies empty together because
+  `readme-numbers.sh` reads the gate's line back verbatim and dies on disagreement, which is why the second file is
+  a second edit and not a second decision. The preamble's empty-fraction line had also kept the *previous*
+  deferral's reason ("until the bandwidth term is measured on the fleet"), false since the ceiling was measured, so
+  it now names the live cause; the era-founding log is this era's constitution and may not carry a stale one. The
+  historical re-adjudication is undisturbed — a free-placement bar over free-placement archives is intra-era by
+  construction, so its 35-of-105 stands and does not become a cross-era claim.
+- **The BASELINE-REGISTERED class gets a synthetic driver before the era-founding run, not after it**
+  (`scripts/exercise-baseline.sh`, ordered by Scott's ruling of 2026-08-21 on #6). The class decides which bar
+  governs a host from the contents of two tracked files, and **its row loop had never executed**: no `frac`
+  computed inside it, `new`/`owing`/`registered` all unentered. Its live debut would otherwise have been the
+  pinning transition — the era-founding campaign — where a wiring bug costs a fleet-wide re-run and muddies the
+  both-arms archive that campaign exists to produce. Three passes on one real host through the
+  `KEEL_INSTRUMENT_BASELINE_DIR` seam: empty registry and empty witness (BASELINE on both criteria of the class,
+  with the candidate rows a reviewed commit would land); witness landed and registry still empty (`BASELINE is
+  spent` on both, plus the debt line — the branch #114's fix created, and unexercised a repo with one landed row
+  would have renewed BASELINE instead); registry landed from pass 1's own fracs **with a wrong-era decoy row at
+  99.0 written above the real rows**, so one pass drives the registered state and both arms of era scoping, since
+  `baseline_lookup` returns the first match and a decoy below the real row would prove nothing. The discriminator
+  is textual and declared before the run: a bar of `frac − 2.6` naming era `pinned8` confirms scoping, a bar of
+  96.4 naming `free-placement` refutes it. The preflight spends no sweep and drives **both** of the seam's
+  fail-closed refusals with `env -u`, so neither can pass by inheriting a variable the driver happens to have
+  set; it also asserts from gate-p5's own bytes that the seam resolves *before* the gate's first remote call, and
+  reads `CEIL_DERIVED_FROM`, `P5_JUDGED` and `BASELINE_MARGIN` out of the gate rather than restating them. Each
+  read-back is keyed to its own pass's phrase and reports NO on no match, and the run finishes with a stamp audit
+  over the parent *and* the three delegated logs — `^  TOKEN  ` followed by `[synthetic] `, plus zero signed
+  `gate-pN:` lines anywhere.
+- **The BASELINE-REGISTERED witness was a glob over gitignored output, so it was right on one machine and wrong
+  everywhere else** (#114, fixed 2026-08-21 on Scott's direction, folded into the era commit). `baseline_prior`
+  asked `build/bench-gate-p5-*-<host>-*.txt` whether a host had been judged before. `build/` is gitignored, so on
+  a fresh clone, on CI, or on a second operator's machine the answer is always *no*: every host is new forever and
+  `BASELINE` renews on every run. **A per-machine witness defeats single-shot exactly as thoroughly as the
+  permanent exemption the class was built to kill**, and more quietly, because it fails only for readers who are
+  not the operator. The witness is now `scripts/judged-runs.tsv` — tracked, keyed `(cpu_model, era)`, proposed by
+  the gate beside the baseline row it spends. The trade is stated where the old scope disclosure was, not deleted:
+  **automatic-and-invisible for reviewed-and-visible**. A session that lands neither row leaves the host
+  unregistered and re-renders `BASELINE`; the debt line gate-p5 already prints is what makes that repeat visible,
+  and the message that used to say "spent — this run's own archive is the prior log" now says spent *only once the
+  witness lands*, because the old wording over-promised in the same direction the defect did. Keyed on the CPU
+  model rather than the hostname, deviating from the ruling's wording on purpose and recording why: the registry
+  next door keys on the probe string, and a hostname key would hand a renamed host a second exemption.
+- **A baseline now belongs to the era of the instrument that measured it, and the pinning adoption is an era
+  boundary** (DESIGN.md §5 rule 17 clause (d), ruled 2026-08-21 on #6). Read literally, "one `BASELINE` per host,
+  ever" said skx must be judged against a baseline imported from `5ec5fea`/`33de3b2`. Scott's ruling refuses that
+  on **misattribution** grounds rather than on convenience: those are free-placement readings, §5 rule 5 pinned
+  placement fleet-wide the same day, so judging pinned readings against unpinned baselines would book **the
+  methodology delta as host drift** — the cross-denominator sin the registry exists to prevent, arriving through
+  the registry. An instrument change is therefore the "dated re-registration citing a named change" door opened
+  fleet-wide: every host renders `BASELINE` once per era, registrations land from the new instrument's medians
+  with rule 16's estimator honestly stated, derived constants re-derive by the same formula over new-era inputs.
+  **The loophole guard is a reader and not a paragraph:** an era exists only via a dated §5/§7 amendment plus a
+  both-arms transition archive, both recorded in `scripts/measurement-eras.tsv`; a current era citing no amendment
+  resolves to *nothing* and gate-p5 renders `FAIL`; and resolution deliberately does **not** skip a malformed row
+  to reach a valid one, because falling back is precisely the misattribution the clause forbids. `free-placement`,
+  the era before eras, is named retroactively and left undated — it was not a concept while it ran. Consequence
+  for this tree: the registry is empty for the whole fleet rather than for one host, and the transition run's
+  green is the first green under `pinned8`.
+- **21 mutants driven against the new readers, 21 killed, and a 22nd deleted for being unkillable.** Three
+  survived the first pass and every one was a **blind fixture rather than redundant code**: an empty-era guard
+  with no era-less registry row to match, a width check with no row one column short, and an empty-key guard with
+  no empty-keyed witness row. Each got the row that makes the guard matter. The fourth survivor was genuine — an
+  unnamed-era check whose deletion changed nothing observable, since an empty name prints an empty line and every
+  caller reads that as no era — so it was deleted rather than explained, and the fixture asserting the outcome
+  stands. One fixture case was also **vacuous on the first pass**: the rename case re-asserted a neighbour under
+  a new label, since the hostname is not an argument at all; it now moves the host column and shows the answer
+  does not move. Fixtures 22 → 50. Mutation is a session act with no standing harness, and gate-p5's pass line
+  says so inside the number (§5 rule 12).
+- **Apparatus ledger for this commit, both lines** (the standing clause, ruled recorded-owed-parked): **+236 net
+  `*.sh` lines against zero library lines**, ratio **1.49x → 1.52x**. A third figure the counter cannot see:
+  **114 lines of tracked `.tsv`** (the era ledger, the witness index, the registry's new header) which
+  `gate-docs.sh` does not count, because its shell term is `*.sh`. So the apparatus grew by ~350 lines and the
+  report shows 236 — disclosed as a share rather than left to be diffed, and whether the counter should widen is
+  Scott's call, not a fix to slip in beside the thing being measured. The paydown lift is owed post-tag.
+- **The apparatus-ratio report could not see a new script until it was committed, so it understated the cost of
+  the commit being prepared.** `gate-docs.sh` counted *tracked* `*.sh`, so `scripts/baseline-test.sh` (131 lines)
+  was invisible while it was still untracked. `820eac0`'s message therefore published **1.47x**; the correct
+  figure for that commit is **1.45x → 1.49x** (shell 12693 → 13062, library 8778 unmoved). Both readings came
+  from the same instrument minutes apart and the delta is exactly the new file's line count, so the arithmetic
+  reconciles — but the metric that polices new shell was blind to new shell at the only moment consulting it
+  could change a decision. That is the gameable-denominator hazard already recorded here, running in the other
+  direction: not a denominator that absorbs the cost, a numerator not yet told about it. **Fixed
+  rather than disclosed**: both terms now count `git ls-files -co --exclude-standard`, so the reporter sees a
+  script the moment it exists. Both sides gained the flag, because correcting only the shell term would have
+  been a redefinition letting untracked Go pay the ratio down. Proved by making the quantity move — a 7-line
+  untracked probe raised `shell` by exactly 7 and removing it restored the reading, since a constant that is
+  merely readable certifies nothing.
+- **31 citations in this commit named `#6` only after `gh issue view` refuted `#33`/`#34`/`#36`, which were task
+  ids.** Same failure mode as `ddd642f` (2026-08-18, "17 citations pointed at the wrong issue"), against the
+  same number `#33`, three days later — so the recorded lesson did not prevent the recurrence. It cannot be linted away
+  either: task ids and this repo's issue numbers occupy the same low integers and are syntactically identical,
+  so no local check can discriminate them, and `#33` resolves to a real open-shaped issue with a plausible
+  subject. The discriminator is a network query or a human reading, which is why the rule is *never carry the
+  number into prose* rather than *check it later*. Caught before commit; the blind substitution was refused
+  because seven tracked files cite the genuine `#33` (the coretype-sweep defect), so only lines this diff added
+  were rewritten.
+- **A criterion may not judge a host its reference artifact predates: the BASELINE-REGISTERED class**
+  (#6, ruled 2026-08-21; DESIGN.md §5 rule 17, `docs/rulings.md` rule 17). gate-p5 convicted `keel-skx` for
+  publishing no README row — a row that is *born* from a judged run, so the host's first judged run could not
+  have had one, and the criterion was reading its admission date. Now three states, decided from the archive
+  and never from a flag: no registry row and no prior archived judged log is newness (`BASELINE`, a fifth
+  verdict colour that does not raise `FAIL`); no row **with** a prior log is an unmet registration (`FAIL`);
+  a row is judged at `baseline − 2.6`, the same margin `CEIL_FRACTION` uses, derivation printed. The
+  exemption closes structurally rather than by vigilance — the run that renders `BASELINE` creates the prior
+  log that forbids it next time — and the consequence is immediate: this machine's archive already holds two
+  judged skx runs, so **skx renders `FAIL` today, not `BASELINE`**, its exemption having been spent by the
+  runs that found the problem. The gate emits a fully formed candidate row to
+  `build/baseline-candidates-<rev>.tsv` and never writes `scripts/host-baselines.tsv`; the registry ships with
+  **zero data rows**, because skx's share baseline cannot be imported from `5ec5fea` or `33de3b2` — those are
+  single draws under the instrument the pinning-transition campaign replaces, and a published reference is an estimator, never a draw
+  (§5 rule 16). Two limitations stated inside the number: the prior-log witness is per **operator machine**,
+  not per repository (`build/` is gitignored, and the widening action — a tracked judged-run index — is
+  named and filed as #114); and the unreadable-CPU branch resolves to `UNMEASURED` fail-closed and is
+  unexercised.
+- **The scaling aggregate's denominator now excludes BASELINE hosts, and two of its sentences were wrong**
+  (#6, 2026-08-21). `fleet_coverage` passes only when `nclear` equals its denominator, so leaving a
+  green-compatible host in `NHOSTS` would have resolved every such fleet to `partial` and blocked green
+  silently, by arithmetic, one function from the branch that renders the verdict. Rendering the six fleet
+  shapes rather than reading them — the practice this file's own comment records — caught two further
+  defects the change introduced: a healthy fleet's headline PASS carried `0 of 3 rendered BASELINE`, noise
+  that invites a reader to think the class fired; and an all-new fleet printed "no host produced a judgeable
+  set of scaling ratios … 0 produced no complete set of ratios", of which the first clause is false about the
+  mechanism and the second contradicts it. All-BASELINE is now its own sentence, and a zero denominator
+  resolves to `UNMEASURED` — a fleet on which no host has a bar has measured nothing judged.
+- **Both delegated verdict tallies gained a BASELINE column on the day the vocabulary did** (2026-08-21).
+  `gate-p4.sh` over gate-p3's log and `gate-p5.sh` over gate-p4's each counted three columns where the
+  vocabulary now has four. Neither can see a `BASELINE` yet — gate-p5 alone emits them — which is exactly the
+  condition under which a missing column is invisible, and the reason to widen on the day the helper lands
+  rather than on the day a delegate first uses one. The stale `gate-p5.sh:987` cross-citation in that comment
+  was repointed at the line it names.
+- **`scripts/baseline-test.sh`: 22 fixtures, five mutants driven** (#6, 2026-08-21). The registry ships empty,
+  so a healthy run cannot reach the `registered` branch at all and a green gate would say nothing about the
+  code that will set a per-host bar. Each of five mutations — a dropped `NF >= 7` guard, a dropped header
+  skip, a dropped self-citation guard, a lost host-name anchor, a truncating append — was caught by exactly
+  the one case aimed at it. Wired into both `make lint` and gate-p5, deliberately: lint runs on every push
+  and catches a broken reader before a $24/hr fleet renders a bar from it, and the gate's copy is what makes
+  the published log self-certifying.
+- **§5 rule 16: a published reference is an estimator, never a draw** (ruling on #6, 2026-08-21; `DESIGN.md` §5,
+  `docs/rulings.md` rule 16). `gate-p5` criterion 9 convicted two `keel-zen4` README rows on `33de3b2`, and both
+  published values were the **maximum** of their six-run history on the same physical instance (`Ssymm/8T`
+  610.8…**654.3**, `Strsm/1T` 35.66…**37.61**), so a 5% band was spent on the reference's own bias — and neither
+  disagreement resolves at the intervals the two runs actually measured (`Ssymm/8T` |diff| 38.90 against 45.21 of
+  half-widths; `Strsm/1T` 1.95 against 4.00). Single-draw publication makes the check measure the reference draw's
+  *altitude within its own spread* rather than the code, with a sign set by luck: "a high draw manufactures future
+  reds exactly as a low draw would manufacture future flattery." The ratified repair is **median over the archived
+  runs, each row stating its estimator** — a repair and not an amendment, because the band is untouched at 5% and
+  the criterion's standard was always "today within 5% of what this host does". The **interval-aware variant was
+  drafted, computed and refused** on direction: all four rows in question tie at their archived intervals, so it
+  would have retired two reds and convicted nothing, and a correction that only acquits on the data in hand is a
+  loosening wearing rigour's vocabulary. Its first computation was itself wrong — it assumed the reference carried
+  *this* run's tighter interval — which is why the recomputation is what refused it. The 7.1% peak-to-peak spread
+  stays **unmeasured** as to noise-versus-code-change: the archive's one same-revision repeat spread 0.71%, which
+  does not decompose it, and the ruling rests on the estimator argument alone.
+- **§5 rule 5: placement is pinned, fleet-wide and never selectively; §7 rule 7 gains placement and estimator to
+  what a reported number must state** (ruling on #6, 2026-08-21; `DESIGN.md` §5/§7, `docs/hosts.md`). Every judged
+  invocation runs under an affinity mask of eight distinct physical cores in one NUMA node, and the ceiling arm
+  under the identical one — a share whose numerator and denominator came from different placement methodologies is
+  not a share. Four independent readings that the free instrument was reporting the draw: `keel-zen4`'s `Strsm`
+  verdict red at `5ec5fea` and green at `33de3b2` on unchanged code; `keel-zen5`'s `Ssyrk` clearing by 0.4 points a
+  bar its derivation set 2.6 below every healthy row, at ±5.0% where the ladder read ±0.90%; `keel-skx`'s `Strsm`
+  clearing 7.0 at its median and failing net of CI; and criterion 9's band narrower than the spread it judges. A
+  red that turns green under a tighter estimator of the same quantity is supersession working, so it is disclosed
+  with both readings side by side rather than avoided — the transition campaign runs **both** arms and archives
+  both. Stated as a falsifiable prediction (§5 rule 15): the pinned arm's intervals must narrow materially, or the
+  adoption is refuted by its own transition run and reverts. Two limitations inside the number (§5 rule 12): the
+  mask pins `threads=1` rows to a *node* and not a core, so the ±0.11% a one-core probe read for skx's 1T `Sgemm`
+  (against ±14.6% unpinned, at `-count=20` versus the gate's 10) is not what it promises; and Go reports the mask's
+  width as `GOMAXPROCS`, so rows carry `-8` where the free arm carried `-192` or `-72`.
+- **§5 rule 12 gains clause (c): a hole no future action can close goes inside the number and is never filed as a
+  debt** (ruling on #6, 2026-08-21; `DESIGN.md` §5, `docs/rulings.md` rule 12). Scott had filed the archive's
+  inability to resolve a `gnr`-class row — true share would have to reach **153.9%**, i.e. never — as a post-tag
+  refinement for #113's re-measured ceiling row, which is a *forward-looking* instrument pointed at twelve finished
+  runs. His own correction is the rule: "a permanently unfixable limitation filed as a debt is a lie about the
+  future — it goes inside the number instead," because a debt entry promises eventual payment and an unpayable one
+  reads as *known, scheduled* where the truth is *known, permanent*. The operational test is to **name the future
+  action that would remove the limitation**; a forward-looking instrument aimed at completed runs is the tell that
+  there isn't one. Two things the clause leaves alone: the debt correctly scoped to what a future action *can*
+  reach (`gnr` and `spr` carrying ceilings dated to `651d1bd` with nothing re-measuring them, #113's row
+  conditional on #111's readmission ruling), and the enforced bar, which divides by each host's measured 8-thread
+  ceiling — `k` appears only in the retrospective proxy, so 58.5% is vacuous for no host it judges. Recorded with
+  the session's mirror-image error beside it: the loose `k` was attributed to `zen4` because zen4's name sat next
+  to the 35 resolving rows, when zen4 owns them *because* its proxy is the tightest of the three (0.765 against
+  gnr's 0.380). Adjacency is not attribution.
+- **The ceiling's 8-thread form is RATIFIED as the amendment: the deviation was the ruling's own law applied to
+  itself** (ruling on #6 Q1, 2026-08-21; `DESIGN.md` §4/P5). The literal `8 × 1T` denominator is *"measured
+  denominators, never formulas"* violated by the sentence that states it — arithmetic blind to the all-core
+  frequency, shared-cache and memory-controller effects only an 8-thread run reveals. Its consequence is
+  disqualifying rather than merely loose: Granite Rapids reads **32.8–33.2%** of its ceiling under the formula
+  and **86.3–87.4%** under the measured form, and that 33% *is* the front-end deficit #104 already owns, judged
+  by P2's derived-ceiling criterion. Under the formula it would leak into the *scaling* verdict too, double-counting
+  one cause across two criteria (§5 rule 6). The **54-point swing is recorded as the amendment's grounds**, because
+  a move that large is exactly what a thumb on the scale looks like; it inverts the ordering the bullet's own
+  falsifier depended on, and that is a diagnosis of the formula, not of the refinement.
+- **`CEIL_FRACTION = 58.5`, typed as a REGRESSION BAR on `STRSM_FLOOR`'s precedent; ≥90% is REFUSED** (ruling on
+  #6 Q2, 2026-08-21; `scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, `DESIGN.md` §4/P5). All nine judged rows
+  sit below 90%, and a fraction no observation reaches is an aspiration rather than a floor — pre-registration
+  protects a *standard* from post-hoc tuning, it does not immunise a *model* from nine-of-nine contrary readings.
+  A blocked GEMM at the gate's 4096³ carries pack, sync and imbalance costs an embarrassingly-parallel compute
+  ceiling does not model, so the rows are reporting the real overhead band. Derived from the lowest judged row of
+  `build/gate-p5-651d1bd.log` — `keel-zen5` `Ssyrk` at **61.1%**, already net of CI since the numerator is
+  `bench_gflops_lo` — less **2.6 points** of margin, with the derivation printed on every run. Derived from one
+  run and **enforced on later ones**, so it can genuinely fail, and **invariant to Q3's judged-set change**:
+  `gnr`'s rows sit 25 points above the minimum, so dropping them leaves 61.1% where it stood.
+- **Re-adjudicating the archive under the ratified bar resolves 35 of 105 rows, and one host's resolving power is
+  structurally zero** (#6, 2026-08-21; supersedes the 2026-08-20 *"resolves none of them"* entry below, which was
+  written against the refused ≥90%). The population is now defined **structurally** — every archived `gate-p5` log
+  carrying no measured-ceiling row, which is **12 files**, not the eleven that clause claimed — so it does not go
+  false with each new run: 105 judged rows, **23.8%** to **74.9%**, of which **35 definitively cleared their own
+  ceilings** and 70 stay unresolved. Since `published_share = k × true_share` with `k` = ceiling/(8×1T) per host,
+  the archive can resolve a `zen4`-class row that truly reached **76.5%**, a `zen5`-class row at **85.3%** and a
+  `gnr`-class row at **153.9%** — that is, never. All 35 are Zen 4 rows for precisely that reason: the
+  concentration measures how loose the proxy denominator is per µarch and is **not** a ranking of the hosts
+  (§5 rule 12 wants that stated inside the number, not beside it).
+- **`gnr` drops to CHARACTERIZATION and the signing fleet's Intel arm comes from wave 2** (ruling on #6 Q3,
+  2026-08-21; `scripts/aws-fleet.sh`, `docs/hosts.md`). Tagging v0.1.0 with a disclosed red is out — CONTRIBUTING's
+  tag condition is green gates — and unparking #111 is out under the freeze's own test, because the feed-bound
+  class needs its own derived-OpenBLAS-ratio legislation and *the certificate does not need this host*. What it
+  needs is an Intel AVX-512 arm judged under machinery that already exists, and **SKX and ICX are issue-bound
+  silicon — janus's class — whose roofline exception has been law since P2**. The candidates launch at their
+  family's largest non-metal size — **c5n.18xlarge (36 cores) and c6i.32xlarge (64 cores)**, each equal to its
+  metal sibling's core count — because `remote.sh` classifies anything smaller `correctness`, so one read-back both
+  classifies the µarch and justifies the `KEEL_EVIDENTIARY_SIZES` addition that lets it be judged at all; a
+  read-back at the 8-core exploration size would have certified nothing. `aws-fleet.sh`'s `FLEET` gains the two
+  roles at the exploration size and is relabelled as what it is — a launcher list, not an admission list, since the
+  first draft of this entry called it the signing fleet at 2xlarge and would have booted a fleet no gate may judge.
+  Whichever lands in the issue-bound class joins the judged set, both if both do. `gnr` and `spr` sit beside each
+  other as labelled characterization rows on antares's consumer-row precedent. The cost is stated rather than
+  absorbed: `gnr`'s scaling rows are **no longer re-measured by any gate**, they are dated to `651d1bd`, and being
+  non-citable is what that fact earns them. Keeping it in-fleet as measured-but-unjudged is **not available in the
+  instrument** — `$SENTINELS` restricts criterion 5's verdict only, while #111 lives in gate-p3's `OB_*` criterion,
+  which judges every host in `.keel-hosts` with no such branch. Building one is filed, not done here.
+- **The published block is re-measured on the judged fleet under the derived ceiling, and the caption now carries
+  the criterion's own readings** (#6, 2026-08-20; `build/gate-p5-651d1bd.log`, 24 rows from one run on
+  c7a.48xlarge / c8a.48xlarge / c8i.96xlarge). Measured 8-thread ceilings and what the judged routines reached of
+  them: **Zen 4 713.6 GFLOP/s, 82.5-90.0%**; **Zen 5 1568.5 GFLOP/s, 61.1-65.3%**; **Granite Rapids 742.2
+  GFLOP/s, 86.3-87.4%**. Those ceilings are **76%, 68% and 38%** of 8x each host's own 1-thread peak — a
+  different factor per host, which is the retired floor's defect in measured form rather than as the rank
+  inversion that motivated the ruling. The caption had been publishing the 8x-1T share it calls "not a score"
+  while withholding every share the gate judges by.
+- **P5's 6.0x cross-host scaling floor is RETIRED; the judged three are compared to a ceiling measured on
+  each host** (ruling on #6, 2026-08-20; `DESIGN.md` §4/P5, `CEIL_FRACTION` in `scripts/gate-p5.sh`). The
+  falsifier is a rank inversion, not a miscalibration: at `ce43bca` the floor refused Zen 4 holding **65.9%**
+  of 8x its own core peak and passed Granite Rapids holding **34.3%**, monotone across all three hosts, and no
+  AMD host has cleared it in any log here. A fixed T8/T1 ratio rewards a *bad single-thread baseline* — the
+  host whose one thread already saturates its memory system has no ratio headroom left. The bar becomes
+  `min(8-thread measured compute, measured bandwidth bound)` from `BenchmarkCeiling`, judged
+  achieved-against-own-ceiling with the derivation printed. **`CEIL_FRACTION` is empty**, deferred to the
+  fleet measurement on #37's ratified precedent: the fraction is computed, printed and reported, and no host
+  fails on it. The memory term is not yet in the `min()` and the omission is strict — `min(c,b) <= c`, so the
+  printed fraction is a lower bound and cannot pass a host the full ceiling would fail — but the bandwidth
+  rows are measured every run anyway, because a term that can only *rescue* a host must not be the unmeasured
+  one. `scripts/readme-numbers.sh` now refuses to regenerate the published block from a pre-ruling log rather
+  than republishing it under a bar that no longer exists; `docs/gates.md`'s verbatim P5 lift is annotated, not
+  edited, since an archive that gets quietly corrected is neither.
+
+- **Running `BenchmarkCeiling` for the first time refuted two sentences written beside it** (#6, 2026-08-20;
+  §5 rule 11). (1) The read-only `dot` probe was called the unambiguous half of the bandwidth bracket, and on
+  the dev host's scalar path it read **32.7 GB/s at one thread against `axpy`'s 44.6** — the read-only probe
+  slower than the read-modify-write one, which no memory system does. `Sdot`'s own throughput was the limit,
+  not memory: a probe below the memory bound measures the probe. At 8 threads they converge (190.6 vs 193.0),
+  which is what both being memory-limited looks like, so the arm is a bandwidth reading only where its
+  8-thread figure sits near `axpy`'s. (2) `gate-p5` called the 8-thread compute shortfall "the clock droop
+  with core count"; the dev host read **53.5% of 8x its 1-thread rate**, far past any licence-level clock
+  change, because 8 threads there land on a mix of performance and efficiency cores. Core heterogeneity, SMT
+  siblings and shared-cache pressure all land in that one number and the gate separates none of them, so it
+  now reports the shortfall and attributes nothing (§5 rule 6).
+- **Re-adjudicating the historical scaling verdicts under the derived form resolves none of them, and that is
+  the finding** (#6, 2026-08-20). Neither half of the ceiling was ever measured — `grep` across all eleven
+  archived `gate-p5` logs finds no 8-thread compute row, because `BenchmarkPeak` has only ever had a 1-thread
+  arm — so the only recoverable denominator is `8 x 1T`, which the clock droop makes an *upper* bound on the
+  true 8-thread ceiling. Every archived share is therefore a **lower bound** on achieved-against-own-ceiling,
+  which resolves in one direction only: at-or-above the fraction is a definitive clear, below it is
+  **unresolved and never a retroactive failure**. Recomputed from the logs: 105 judged rows spanning
+  **23.8%** (`janus` `Ssyrk`, `175098d`) to **74.9%** (`vesta` `Ssyrk`, `117b78f`), **none** at 90%. This
+  corrects a claim committed to `DESIGN.md` §4/P5 hours earlier in the same session, that the compute half was
+  recoverable for every archived run; it is not, and the check that refuted it was a `grep` this session
+  should have run before writing the sentence.
+
+- **`scripts/aws-fleet.sh` launches through `spawn` instead of raw `aws ec2 run-instances`, and the fleet is selected by
+  the launcher's own name.** Scott's directive, 2026-08-19: *"instances via truffle/spawn under `AWS_PROFILE=aws`
+  exclusively."* Three things this script guarded now belong to the launcher and are better there — the dead-man switch is
+  `--ttl` enforced by spawn's reaper rather than a `shutdown -h` baked into userdata that depended on the guest's own init
+  working, the key pair and security group are spawn's, and `--wait-for-ssh` replaces a poll loop. The launched **name**
+  (positional — `--name` exists but cobra wants `spawn launch <name>`) equals the ssh
+  alias by construction, because that string is the key `spawn_probe` joins a provenance line on: a fleet this script can
+  find is exactly a fleet admission can vouch for. `spawn list` reports **no** `tags` field, so the `Project=keel` tag
+  selection used by `up`'s guard, `status` and `down` is re-keyed to the `keel-` name prefix, which preserves the property
+  the tag was for (not a list this script wrote, so `down` still works after a lost `.keel-hosts`). New knobs:
+  `KEEL_FLEET_TTL` (default `8h`), `KEEL_FLEET_DRYRUN=1` (appends `--estimate-only`, so the invocation that spends is
+  validated *as the shipped command* and not as a hand-typed mirror of it — flag validation only: spawn's rate table has
+  no `32xlarge`/`96xlarge` key, so those fall to its xlarge default and read **32x / 90x low**, spawn#543; `48xlarge` and
+  `24xlarge` are present and land within 7%, so the error is per-size and always in the understating direction),
+  `KEEL_SSH_CONFIG` (so the block writer can be
+  driven against a throwaway file rather than the operator's real config — that step is the one that failed once *after*
+  three instances were already billing). `KEEL_FLEET_MARKET`'s default flips to `on-demand` now that the judged tier is
+  the normal case, and `ondemand` is an accepted alias because that is the spelling `spawn_probe` writes into a provenance
+  line. One `aws` call survives, an SSM parameter read for the Ubuntu 24.04 AMI: not an instance operation, and pinned
+  rather than taking spawn's AL2023 default because `provision-openblas.sh`'s package maps do not cover `amzn` and would
+  reach `unrecognized distro id` after the fleet was billing — changing the OS also changes which OpenBLAS build every
+  published ratio is measured against. Two defects found before any spend: **every `ssh` in the verification loop takes
+  `-n`**, because `ssh` reads the loop's stdin, which is the herestring holding the remaining hosts — measured at 1 host
+  visited of 3, and the loop *succeeded*, handing a silently partial verification to a judged run; and `--region` is
+  passed to `launch`, since an AMI id is region-scoped and spawn's own default region would have failed on an
+  invalid-AMI error naming neither variable. The name goes **positionally** (`spawn launch <name>`); `--name` also exists
+  and its help says "required", which is how this was first written and what the launcher rejected. Apparatus ledger:
+  **+21 net `scripts/` lines against 0 library lines**, so the prediction that this rewrite would pay back the previous
+  commit's +286 is **refuted** — it deleted 155 lines and added 176, the deletions code and the additions mostly the
+  comments justifying the delegation, which is the "prefer deleting a line to explaining one" rule failing in the
+  direction the rule exists to catch. Correction to `1ff4130`'s message: the baseline it published as "shell 12322" was a
+  mid-work worktree reading; `git ls-files`-counted `*.sh` was **12007** at `HEAD~1` and **12293** after that commit. The
+  ratio it printed, 1.40×, is right at either number, but a budget figure is the thing under review here and a stale
+  numerator is not available as a rounding detail.
+- **§5 rule 15: a conservativeness claim about an instrument is a testable claim, so direction-of-error is a
+  measurement** (#110, `docs/rulings.md` rule 15). Scott's ruling on the second defect, the one in the writing rather
+  than the arithmetic: *"'safe direction' asserted from reasoning, inverted by the instrument's actual behavior,
+  published without being run against the thing it described."* Why this is the worst place to skip §5 rule 11 and not
+  the most forgivable — conservativeness is self-recommending, so a bound believed pessimistic is never asked for
+  evidence, and if the sign is backwards the word "conservative" is exactly what stops the next reader looking. The two
+  prose sites the previous entry left open are corrected as *substantive*, dated, with the original visible: `DESIGN.md`
+  §4 and `scripts/gate-p3.sh`'s instrument-exercise header both asserted a **measured** interval was `zero-width`,
+  reading width 0 off a reported `± 0%` that means "narrower than 0.5%". **The archive refutes the categorical form on
+  the same host and the same comparison** — janus reads `[1.014x, 1.034x]` around 1.026 in one archived run, non-zero
+  width, from a run whose CIs did not happen to round to `0%`. The conclusion survives *with a denominator it never had*:
+  1.10 − 1.034 = **0.066** of margin against ~**0.010** of quantization width, about six quanta, so
+  `KEEL_INSTRUMENT_WIDEN_CI` is still needed to reach the three-state renderings — for a measured reason instead of an
+  impossibility one. `docs/spill-report.md`'s `[1.836x, 1.836x]` loses the word and keeps the number: **0.736** of margin
+  against ~0.02, thirty-odd quanta clear. Five *other* `zero-width` sites (`roofline.sh` ×4, `roofline-test.sh`) are
+  deliberately untouched — they describe a fixture given **no bounds**, which the input format *defines* as zero-width,
+  so they are constructions and not readings, and correcting them would assert something false about a definition. One
+  word, two meanings, one of them a measurement. Also recorded: antares's `[1.077x, 1.100x]` sits flush with the 1.10
+  bar, well inside one quantum, and its class does not move only because the collapse rule added 2026-08-16 for an
+  unrelated reason yields `fma-bound` on *both* branches — a rule written to stop an `UNMEASURED` the data settles is
+  what kept this defect off that verdict, which was luck in the precise sense that nobody had checked.
+- **The archive re-read finds three moved verdicts, not one, and two were invisible to the first pattern** (#110).
+  `benchci -bandtop` is the only instrument that can read a run whose samples were destroyed, which is every run to
+  date; it states each rounded row as the interval its rounding supports and re-adjudicates at the pessimistic edge.
+  Over all **16** archived gate-p5 logs, **192 rows**, **3 verdicts move** — janus `Strsm` `7.0101 PASS → 6.9404 FAIL`
+  (the flip on camera), plus vesta and antares `Ssymm` at `6.0170 → 5.9562` and `6.0307 → 5.9703`, both against the 6.0
+  bar, both on `boost off` runs. The two new ones were found by the tool *refusing* ten of the sixteen logs rather than
+  by review: the first pattern required `ROUTINE: 1 thread …` and those ten carry a `boost off — ` annotation there,
+  which names a different measurement condition and is now captured and printed rather than skipped. Fail-closed on a
+  zero row count earned its place — a pattern narrower than its input greens exactly like a clean parse when the only
+  report is a count. Every band-top line prints "only ever toward FAIL" with the moved count beside it, so §5 rule 15's
+  own sign claim is checkable on each run instead of asserted once: widening an interval cannot raise a floor net of CI.
+  Band-top is for history **only**, per the ruling — forward runs have samples.
+- **This session's apparatus spending, and the trap in the number that reports it** (#110). Net `scripts/` **+68**,
+  `tools/` **+494**, library **±0** — the cap is violated, ruling-mandated, with the offsetting lift owed and named here
+  rather than argued away. The instructive part is that `gate-docs.sh`'s two ratio lines move in **opposite directions**
+  on this one change: the historical line reads 1.44× → **1.37×**, an apparent 0.07 *improvement*, because its
+  denominator is all tracked non-test Go and it therefore absorbs the new instrument as though it were library. The
+  apparatus line, whose denominator excludes `tools/`, reads 1.80× → **1.88×** with that denominator **identical at 7217
+  on both sides** — which is what makes the comparison clean and the zero-library-lines claim exact. A session can
+  improve the ratio it is capped by, by spending. That is the flattery the second line was added to expose, caught
+  paying out.
+- **T21's consequence is corrected: an integer-percent CI is lenient for a floor, not conservative** (#110). It read
+  *"no shipped criterion is wrong because of this"*; with the CI read as 0 the check becomes median ≥ floor, which is
+  **easier** to pass than median net of CI ≥ floor. The gate has since produced the verdict that sentence excluded —
+  `janus` Strsm flipped FAIL → PASS between two runs on a **0.014%** move in the point estimate (7.0098 → 7.0101),
+  because one arm's reported CI crossed 0.5% from `1%` to `0%` and with both arms at `0%` `bench_ratio_lo` returns the
+  raw ratio, which is the degeneracy DESIGN.md's P4 clause exists to prevent. All 48 CI readings in the two logs are
+  integer percents; `benchmath.Summary` holds float64 bounds and `benchtab.ToCSV` reuses the `%.0f%%` *display* string
+  for the machine-readable column. One rounding step is worth 0.1386 on a 7.0 ratio against margins of 0.011 and 0.081.
+  Left as a dated correction, not a rewrite: T21's observation and repro are right, its reasoning was published without
+  being run against the instrument it described (§5 rule 11). §4's new escalation bullet no longer claims a `0%` reading
+  was never undecidable — it is *more* likely undecidable, since the band can straddle the bar. Unfixed pending a
+  decision: `bench_ratio_lo`, and the `zero-width`-interval justifications at `DESIGN.md:116` and `gate-p3.sh:30`, which
+  are properties of the formatter and not of `janus`. *(All three are fixed as of the two entries above, in the same
+  unreleased cycle; this sentence is kept because it is what the decision was requested against. The ruling arrived the
+  same day: `tools/benchci` supplies the resolution, and the two prose sites are corrected substantively under §5 rule
+  15.)*
+- **README's 24 published rates are re-measured at `335ea9d`, and their caption is now generated with them** (#6).
+  Ruled 2026-08-19: criterion 9 had already ordered the re-measure, because the three stale `Ssymm` rows disagreed with
+  the shipped tree by 5.06–9.43% *on the gate's own denominator* — `(a−b)/b` with **this run's** value as base, not the
+  published row, which understated the breach 3:1 and put all three outside `README_TOL` rather than one. The regenerated
+  caption names 4 of 12 scaling ratios below the floor and splits them by cause: 3 sit below it outright, 1 clears the
+  point estimate and misses only net of CI. Two prose claims that had decayed against the numbers beside them are gone:
+  the floor was "missed on the two hosts that keep the most of their single-thread peak" (five rows, three hosts, and
+  `antares` keeps the *least*), and a stale row "cannot survive a gate run" (it turns the gate red; it does not thereby
+  cease to exist). One denominator defect was in the emitter's own first caption — "All 12 rows" over a 24-row table,
+  since 12 counts ratios and 24 counts rows, and the conflation is older than the script. `scripts/docs-gen.sh` extracts
+  the caption region onto `doc-site/numbers.md` and dies without it: rows published without their floor disclosure are
+  not a thinner page, they are a flattering one. Both fail-closed branches were driven on purpose, not inferred.
+- **`CONTRIBUTING.md` states when `[Unreleased]`'s session grouping collapses**: at the version cut and never before.
+  Ruled 2026-08-19 after an attempt to merge `[Unreleased]`'s 21 session-grouped `### Added/Changed/Fixed` sections into
+  four canonical ones churned 3128 lines and was reverted. Session groups are provenance for this project's ledger; a
+  release section is the deliverable users read. Two formats, two readers, one scheduled conversion.
+- **`solveRight`'s row loop moves to the outside; bit-identical, 4.90× locally** (#37). The strided nest re-walked B's
+  live window once per `(j, p)` pair, so every scalar operation touched a different cache line and the rate sat at
+  0.213–0.232 GFLOP/s across a 16× change in `MB` — flat, because nothing about it varied with the block. The sweep at
+  `e8662ba` carries its own control: `solveLeft` and `solveRight` do *identical* flop counts on identical partitions and
+  differed by 7.6–12.4× (0.224 against 2.20 GFLOP/s at `MB`=64 on vesta), same scalar arithmetic, the one structural
+  difference being that solveLeft's inner loop was already unit-stride. Rows of X are independent, so hoisting the row
+  loop reassociates nothing: `TestSolveRightInterchangeIsBitIdentical` holds the new nest against the old one verbatim
+  over 6 shapes × 8 flag combinations by `math.Float32bits`, with no tolerance in it, and the test is shown to fail on a
+  1-ulp reversal of the `p` loop. `BenchmarkSolveRightInterchange` runs both arms in one binary and one process, since
+  the quantity is a ratio and a cross-build ratio would carry these hosts' layout noise. **Measured on three
+  `evidentiary` hosts** (`build/trsm37-8441a18.log`, `evidentiary=3 correctness=0 unknown=0 of 3 configured`): the
+  isolated solve is **4.21× / 4.97× / 5.77×** faster on Zen 4 / Skylake-X / Zen 5, and `Strsm` side=R at n=2048, MB=64,
+  1 thread is **2.51× faster end-to-end** on vesta, its solve 2.94–3.07× (two estimators whose 4.5% spread *is* the
+  T22 layout systematic, under T22's 7.04% Zen 4 bound). `solveRight`'s share of the call falls 90.7% → 77.4% for
+  3.17% of the flops. `side=L` is byte-identical across the two commits and moves up to 5.1%, so this table's
+  cross-commit floor is measured at ~5% and not the ~2% first asserted (§7 rule 7). What remains is the accumulator's
+  serial dependency, which caps the scalar arm at one element per subtract latency and is what #37's vector arm
+  addresses by widening across rows; its headroom is host-dependent, since post-interchange Skylake-X's two solves sit
+  1.21× apart against Zen 4's 3.20×.
+
+- **`DESIGN.md` §5 gains rule 14: a defect's severity is a function of its deployment context, not its code**, appended
+  so no ordinal moved (#106). #106's "latent, not active" was true when written and false once #109 made the lab a
+  signing tier, with no byte of the defect changed; re-admitting against the unrepaired classifier would have demoted
+  all three lab hosts by a bug's signature instead of by evidence. Incident in `docs/rulings.md`, rule 14.
+- **`DESIGN.md` §5 gains rule 13: two cost terms are comparable only at their rates**, appended so no ordinal moved
+  (#37). A count is not a time, so ordering two terms by their counts predicts a direction only the rates can supply —
+  rule 7's flop-share-is-not-a-time-share one level up. Clause (b) is Scott's: a constant whose optimum depends on
+  another term's rate is tuned jointly with that term, **once**. `MB` therefore stays 64 and the interim 17–33% is
+  priced on #37. Incident in `docs/rulings.md`, rule 13.
+- **The `MB` sweep refutes the prediction that motivated it: smaller is faster today** (#37). At the shipped `MB`=64,
+  n=2048, 1 thread, the diagonal solves take 53.2% of the time for 3.17% of the work (2.1 GFLOP/s, 1.3% of peak), and
+  `MB`=32 is 17–33% faster on all three hosts. Both predicted *directions* held; the conclusion did not, because the
+  countable term was weighted over the un-rate-checked one. `MB` must not be retuned apart from #37: at a 8× faster
+  solve the best point moves to `MB`=128. Right side costs 3.3–5.9× the left at identical flops. Reported-class.
+- **`DESIGN.md` §5 gains rules 10, 11 and 12**, appended so no ordinal moved (#36). Rule 10: cross-site agreement
+  certifies propagation, never truth. Rule 11: an instrument's output overrules its author's claims about it. Rule 12: a
+  coverage claim enumerates what it cannot see. 11 and 12 were fused for one commit; split so neither can be miscited.
+- **`BenchmarkSymmNarrow`'s wide-n control holds at one thread only, and a flop share is not a time share** (#36). Every
+  shipped kernel has NR=32 and the nest pads n out to it, so n=1 measured 35.9× the n=1024 row's per-column time; at
+  GOMAXPROCS=8 every row moved, the control included. Both corrections are in the fixture's own comment.
+- **`Ssymm` reads its symmetric operand in place rather than reflecting it into a dense square** (#36).
+  `internal/pack.ASymPanels`/`BSymPanelsPart` split each run at the diagonal, dropping an O(d²) allocation (67 MB at
+  n=4096; measured 16,904,645 → 127,365 B/op at n=2048) and a d² pass over A. Bit-for-bit identical, pinned by
+  `TestSymPackMatchesExpansion`. Fixture: `BenchmarkSymmNarrow`.
+- **`tools/shapegen -uarch NAME:WIDTH:PORTS:LATENCY` scores a sweep against any front end**, default unchanged at
+  `skylake-x:4:2:4`. The SPR and arm64 constants are deliberately *not* listed in the source: taken on the command
+  line, each re-sweep records them in its own log beside whoever sourced them instead of minting three integers.
+- **Issue width is a load-bearing input to P2's "unreachable", not a background constant.** Re-scoring the same 140
+  audited shapes at width 6 moves the frontier off the shipped 2×32 ×4 — which becomes dependency-bound at 32.00
+  flops/cycle — onto 3×32 ×2 at 38.40, and the ceiling from 43% of the FMA peak to 60%. Predicted before the run.
+- **The shape objective was missing its dependency term.** Ranking is now
+  `cycles = max(I/W, F/P, (F/A)·L)`, and the measured answer corrects this project's own guess: the shipped 2×32 ×4 is
+  *issue*-bound at 18.50 cycles, not latency-bound, so the corrected objective and the old insns/FMA one agree on the
+  frontier. The amendment reorders only the low-accumulator corner (2×48 ×2 above 1×48 ×8, 24.77 against 24.00).
+- **gate-p2's `SWEEP_BEST_IPF` is corrected 4.438 → 4.625, and stops being a trusted constant** (#107, ruled
+  2026-08-18). 4.438 was attributed to Permute 2×64 ×2, which needs `MR·U == 16` to read its A panel the way the
+  shipped kernels read theirs — 16 index vectors live against the 15 SIMD values go1.26.x allocates (T10) — so it
+  named a kernel that cannot exist. `e1c6340`'s enumeration re-derives the best *emittable* zero-spill figure as
+  4.625. The correction is **adverse**: 4.625 sits further from janus's required ≤3.88 than 4.438 did. Both gates now
+  reconcile their own copy against `shapegen -frontier` on every run and fail on mismatch.
+- **That repair loosens the amendment's stated worst case, opposite in sign to the shaping argument it settles.** The
+  bound `0.90 × 2.25 ÷ (SWEEP_BEST_IPF × 1.05)` moves 43.5% → 41.7% of peak. No host's verdict changes and the floor
+  the shipped 2×32 actually faces is unchanged at 43.8%, computed from its own audited `I_b`; only the cap the guard
+  permits rose. 4.625 *is* that shape's figure, so criterion 5b now reads ratio 1.000 and its live content is drift
+  off the frontier rather than distance from it — 4×32 at 6.250 is still refused.
+- **"2×32 is latency-bound" was wrong and had been published upstream.** On SPR its chain floors the body at 16.00
+  cycles where it measures 30.24 — 1.89× too loose to bind — and it uses 54.4% of its instruction supply against
+  4×32's 94.9%, clock-free against the peak loop. Corrected in `docs/spill-report.md` §10.2, which argued the
+  inversion without ever recording 2×32's 61.45 GFLOP/s against the 232.3 peak, and on golang/go#80829.
+- **17 citations minted the 4.438 → 4.625 repair against `#33`, which is a live unrelated gate defect.** The number
+  was a *task* id, and the task tool prints its ids in issue syntax, so it transcribes with no doubt-step. Repointed
+  to #107; `52a69af`'s pushed commit message still carries the wrong one and cannot be. Recorded rather than quietly
+  fixed because a citation landing on a real-but-different issue reads as well-formed.
+- **CI never ran `gofmt`, so an unformatted file sat at HEAD through green runs** — `internal/spill/spill.go`'s var
+  block lost its alignment when a comment split it. Added to the stock job in *gating* form, since `gofmt -l` exits 0
+  whether or not it lists anything, and both branches driven on purpose before landing.
+- **`layout-ensemble.sh` cleared a benchmark it never graded instead of demoting it.** `grade_pad` iterates the
+  token→symbol map, so a row outside that map — reachable via `KEEL_L1_FILTER` — printed unlabelled and citable while
+  the comment above the map claimed the opposite. Demoted in `grade_rows` now, geomean inheriting it.
+- **`gate-docs.sh` prints an apparatus line beside the historical shell/library one**, moving `tools/*.go` across.
+  An instrument counted on the library side would flatter the ratio it is counted by; both lines print so the
+  published 1.6× series stays comparable.
+
+- **The 115-shape generator behind the spill frontier is not in the tree and never was** (#107): only the audit half
+  is, so the report's part 4 table cannot be regenerated and neither can `SWEEP_BEST_IPF=4.438`, which gate-p2
+  criterion 5b reads.
+  Recorded in the report; the rebuild's in-tree/out-of-tree question is Scott's.
+- **`docs/spill-report.md` is reopened (part 10): P2 and P3 are both red on the first evidentiary host**, a full-size
+  `c7i.48xlarge` — 34.2% of measured peak and a 51.0% mission ratio. 55% needs ≤ 4.09 insns/FMA against the shipped
+  6.25, and golang/go#80829 plus #80830 together reach only 50.0%. The report's part 9 stands for the retired fleet.
+- **gate-p3's mission ratio is now decided by the admission machinery, not merely taken on an admitted host**
+  (#104/#30): `admission_readback` and `adm_judgeable` in `remote.sh` gate both of criterion 6's verdict paths,
+  gate-p2's inline copy calls them, and a not-admitted host has its own tally so the aggregate stops calling it a
+  host that produced no ratio. gate-p5's scaling floor is **not** wired yet and says so.
+- **The evidentiary host class is full-size, not bare metal, and a correctness-class number is
+  reported-not-judged whatever it reads** (#104, ruled 2026-08-17): retiring metal had left the class empty
+  while the harness went on judging perf on any guest that answered — which is how `c7i.4xlarge`'s 34.2%
+  became a P2 STOP. Class is read before the number is trusted, and an unreadable class is `unmeasured`.
+- **The harness reads the class it is told to check** (#104): the provenance line carries `instance=` (IMDSv2;
+  `none` for no EC2 identity, `?` for no way to ask), `host_admission` resolves it against a declared
+  `KEEL_EVIDENTIARY_SIZES`, and gate-p2's criterion 5b reports rather than judges a non-admitted host. **No
+  currently provisioned instance type is admitted**, so P2's floor is now `unmeasured` fleet-wide rather than
+  missed. gate-p3's and gate-p5's judged perf criteria are the same shape and are **not yet** wired.
+
+- **Every gate's provenance line now records cores, SMT width and sockets, not just `nproc`** (#82): read from
+  `thread_siblings_list` (with `core_cpus_list` as the fallback), because `GOMAXPROCS=8` is 8 cores on a
+  1-thread/core arm and 4 on a 2-thread/core one. Replaces gate-p5's private `lscpu` ssh — one round trip
+  fewer, one fewer package assumed present, and the fact reaches every gate's archive rather than one. Whether
+  P5 *requires* SMT off, or only that the state be recorded, is still open on #82.
+- **The four phase gates' front matter moved to `docs/gates.md`, verbatim.** 855 comment lines standing above
+  zero lines of code — `gate-p4.sh` ran 226 of them before its first statement — become one page plus a
+  ~12-line pointer per script; every gate body below `set -euo pipefail` is byte-identical to its predecessor.
+  **−809 lines in `scripts/`**, 1.61× → 1.50×. Not published: the prose was repo-only before the move.
+- **A rule and a ruling are now different files.** `DESIGN.md` §5 rules 6–9 keep their operative clauses at
+  their existing ordinals — no citation moved — and their incident histories move to `docs/rulings.md`,
+  published as a record page rather than dropped off the site. §5 falls from 2,275 words to 1,530.
+
+- **`gate-docs.sh` now prints `shell N / library M / ratio R` on every push, and a standing order in
+  `CLAUDE.md` caps net additions to `scripts/`**: a session may not grow the apparatus unless it also lands
+  a routine, a kernel, or a library fix. Reported, never a verdict — a red ratio would reward paying down
+  shell instead of shipping. The instrument costs 20 shell lines and says so: 1.63× → **1.64×**.
+- **DESIGN.md §7 is no longer titled "Claude Code kickoff prompt"** (H4). It opened *"Paste below into a
+  fresh CC session in an empty repo… it does not assume this document is present"* — a prompt living inside
+  the document it disclaimed, for a repo that is not empty. Framing deleted, eight rules kept verbatim at
+  frozen ordinals: rules 2/4/7/8 are pinned and cited from ~40 sites, so renumbering is not a formatting
+  choice. Verified by diffing all eight parsed rule leads against HEAD — byte-identical.
+- **Two standing rules amended rather than obeyed literally** (2026-08-16 ruling: *retire any rules we do not
+  really need*). The issue-per-discovery rule (`CONTRIBUTING.md`, `CLAUDE.md`) now says a discovery whose fix
+  is smaller than its issue gets **fixed** and recorded — the word carrying the intent was always *silent*,
+  never *small*. `docs/toolchain-notes.md` entries get the CHANGELOG's 1–3-line cap on prose, with the repro
+  never abridged and the causal analysis in the issue; existing entries stay as dated records.
+- **DESIGN.md §5 rule 5 now demands a stable clock rather than a `performance` governor** (amended
+  2026-08-16, forced by the ruling to measure on AWS instances). No guest can satisfy the old wording: there
+  is no `cpufreq` directory, so `remote.sh:410` resolves to `unmeasured` and blocks every gate — correctly,
+  but it makes the pivot impossible rather than merely awkward. Where `cpufreq` is readable the governor
+  assertion is unchanged; where it is absent, stability comes from `BenchmarkPeak` sampled at head, middle
+  and tail. Same benchmark, no new bar. The harness half is not written yet — see the follow-up tasks.
+- **Nine sites that stated rule 5 as "the performance governor" now state it as the rule reads**, each
+  saying which instrument applies to the hosts it actually describes (`gate-p1/p2/p3/p4`, `bench.sh`,
+  `provision-openblas.sh`, `docs/hosts.md`, and §4's own #31 ruling record). The two *printed* pass lines
+  are deliberately left claiming the governor: they must name the instrument that ran, so they change with
+  the harness, not before it.
+- **Every GitHub Action in both workflows moved to a Node 24 major**, in one sweep and outside any feature
+  work: `checkout@v4→v7`, `setup-go@v5→v7`, `setup-python@v5→v7`, `upload-artifact@v4→v7`,
+  `configure-pages@v5→v6`, `upload-pages-artifact@v3→v5`, `deploy-pages@v4→v5`. Node 20 was deprecated on
+  the runners (changelog 2025-09-19) and the old majors were **already being forced onto Node 24 with a
+  warning annotation on every run** — read off the annotations of run `31986295744` rather than inferred,
+  so the bump changes the declared runtime and not the one that was executing. Ruled 2026-08-16:
+  *"deprecated runner images eventually become broken CI, and broken CI during the tag window would be the
+  worst possible timing for infrastructure this project depends on for its certificate."* Both workflows
+  together, because half a sweep is an inconsistency with no gate benefit.
+  **Two things in the path were behavioural, and neither was taken on trust.** `setup-go` v6 sets
+  `GOTOOLCHAIN=local` (actions/setup-go#460), so `go` can no longer silently download a newer toolchain to
+  satisfy `go.mod` — it errors. That is the behaviour this project wants, since a silent substitution makes
+  the Go version a fact about the runner instead of about the pin, and `go 1.26` in `go.mod` against
+  `go-version: 1.26.x` needs no download; both jobs now print `go version` and `go env GOTOOLCHAIN`, on the
+  same read-back-not-reasoning grounds as #88's dispatch markers. `upload-pages-artifact` v4 stopped
+  including hidden files, which would publish a site missing a dotfile and say nothing; `find build/site
+  -name '.*'` returns zero on a real build, so no `include-hidden-files` is set, and the pinned
+  `mkdocs-material==9.6.22` is what makes that a stable fact rather than a lucky one. The deploy job's
+  gating condition is byte-for-byte unchanged: this sweep publishes nothing.
+- **`doc.go` rewritten for someone with a matrix to multiply, and `types.go`'s four flag types documented
+  at all** (#92, ruled 2026-08-16: *"users will not care about the design notes. They want straight usable
+  information"*). The test each paragraph now has to pass is **"would a person with a matrix to multiply
+  still be reading?"** — so the package comment leads with the two build modes, the row-major/`ld`
+  convention as a picture of an actual array, and a minimal `Sgemm` call, and it no longer contains the
+  paragraphs about what took two phases to establish or why the Level-3 chain has two rungs. Nothing was
+  deleted from the project's account of itself; the reasoning that had accumulated in godoc moved to
+  comments that `go doc` does not render (`L1Chain`, `WorkersLastCall`), which is where a gate's grounds
+  belong. `types.go` had **no doc comments whatsoever** on `Transpose`, `Uplo`, `Side`, `Diag` or their
+  eight constants — the flags every call site passes were the least documented part of the API.
+  **No performance number appears in godoc any more.** A doc comment is a contract and a rate is a
+  measurement; the `# Numbers` section became one link to the site's numbers page, which is generated
+  from the block gate-p5 re-measures. Read back rather than assumed: `go doc` rendered for all 38
+  exported symbols, 38 leading with their own name (const groups checked for naming each member), and the
+  read-back's matcher was self-tested against a non-matching lead first, because a checker that cannot
+  say CHECK proves nothing when it says ok.
+- **`DESIGN.md` §4/P2 now specifies the tile orientation that shipped, and states the naming convention
+  in the same sentence** (#16, ruled 2026-08-16). The doc had said `MR=32, NR=6` — *"a pre-implementation
+  fossil in BLIS's column-major orientation, written before the row-major decision propagated through the
+  design"*, and **there is no intended column-major internal C**. It now reads MR=6, NR=32 with the
+  convention inline (a tile `MR`×`NR` is MR rows × NR columns of row-major C, vectors along N), because
+  stating the convention is what stops the question recurring: the discrepancy had been re-derived by a
+  reader at least twice, and both times the doc gave an orientation instead of a rule. **The amendment
+  falsified three sibling sites, found by sweeping on purpose rather than by anything reporting them:**
+  `KERNEL.md` §2 called the reflection a departure that DESIGN.md had just ratified; `internal/spill/README.md`
+  documented a spill-audit invocation in which **not one of four tokens was real** (`cmd/spillaudit`,
+  `-fn`, `./internal/kern`, `Kernel32x6` — the command is `spill-audit -func`, the package is
+  `./internal/vec`, and no kernel ever bore that name), so the documented command could not run and was
+  corrected and then *executed* to confirm; `docs/spill-report.md` described DESIGN.md's planned tile and
+  the spilling kernel as if they were different tiles. They are the same tile, now named consistently.
+  One more correction landed in the amendment itself: the reflected 12-accumulator tile **is** `Kernel6x32`
+  and **is not** comfortable for the allocator — 90 vector stack refs, 50 register copies, 5.62 insns per
+  arithmetic op, 30.5% of measured peak on Zen 4 against 96.6% for `Kernel4x32` — so the doc's tile is a
+  falsified prediction and now reads as one instead of as description.
+- **All four verdict helpers now live in `scripts/remote.sh`, and no gate defines its own.** `remote.sh`
+  warned in one breath that `VERDICT_STAMP` applies "in each gate's own pass/fail/info" and in the next
+  that "an overridden copy is a copy and copies drift" — and the drift had already happened:
+  `unmeasured` was shared and stamped, while `pass`/`fail`/`info` were copied into all six gates and
+  **only gate-p3's copy applied the stamp**, because gate-p3 is where the exercise that needed it was
+  written. So gate-p2's first synthetic run would have printed PASS lines indistinguishable from a real
+  certificate — the exact forgery the stamp prevents, in the one place a banner does not help. The five
+  identical copies were **not** corrected in place: uniformity across copies is not correctness, the
+  five agreeing copies were the wrong ones and the odd one out was right, so a sixth good copy would
+  have left the defect available to gate-p6. Verified output-neutral by running gate-p0 either side of
+  the lift and diffing (identical), then verified load-bearing by arming the stamp and confirming zero
+  unstamped verdict lines — a check that was impossible to pass before.
+- **The collapse rule now reaches criterion 6: an undecidable Sgemm classification whose two candidate
+  denominators agree yields a verdict, `why=agree-anyway`** (ruled 2026-08-16). #86 gave the gate a
+  three-state grade and a rule for the class decision: `UNMEASURED` is for verdicts that *vary* over
+  the uncertainty, so a doubt whose resolutions all lead to the same verdict is immaterial
+  (`why=falsifiedanyway`, `why=samemixanyway`). Criterion 6 had not inherited it — an indeterminate
+  class went straight to `UNMEASURED` even when both candidate denominators put the host on the same
+  side of the 60% bar, which spends the scarcity three-state grading exists to protect. Now the log
+  prints both candidates side by side, each graded **on its own net-of-CI bound and never the point
+  estimate** (a collapse justified by a midpoint would be exactly the noise-driven verdict the
+  amendment prevents), and agreement decides. **Symmetric**: two agreeing misses collapse to `FAIL`,
+  so a slow host cannot shelter behind a class the run could not derive. A candidate with no bounded
+  ratio supplies no agreement — assent by omission would let a missing measurement buy a pass — so
+  that stays `UNMEASURED` with both branches printed. The decision is `p3_collapse` in
+  `scripts/roofline.sh` with 7 fixtures, not an if-chain inline in a gate.
+- **Criterion 6's fleet aggregate no longer reports a host that produced no measurement as a host that
+  measured slow.** Found while rewording that aggregate for the collapse above, and it is the same
+  label defect ruling #37 turned up in P5's scaling aggregate, pointing the other way: the miss count
+  was **derived** as `nhosts - cleared - indeterminate`, so a fleet with one slow host and one host
+  that never produced a ratio (no OpenBLAS reference, no benchstat interval) printed *"2 measured
+  below it"* — a right verdict carrying a false claim about keel's speed. Worse, the `UNMEASURED`
+  branch required `cleared + indeterminate == nhosts` exactly, so a fleet with a no-coverage host and
+  **zero** misses fell through to `FAIL` and blamed speed for a hole. Every exit from the per-host
+  loop now increments exactly one tally, the leftover is named as a leftover, and the aggregate is
+  `p3_coverage` in `scripts/roofline.sh` with 6 more fixtures — extracted for `p3_collapse`'s stated
+  reason, that an if-chain able to turn a `FAIL` into an `UNMEASURED` is not shown correct by a
+  healthy run driving one of its branches. Confirmed discriminating rather than assumed: replayed
+  against the old inline logic, the no-coverage fixture is `FAIL` there and `partial` here. The
+  printed sentence itself is verified by reading, not by fixture, and the comment says so.
+- **CI's `GOEXPERIMENT=simd` job now states the size of its own claim: dispatch is pinned to scalar and
+  the read-back is asserted and published** (#88, ruled 2026-08-16). GitHub's runners have no AVX-512,
+  so that job built keel with the simd toolchain and then ran **the scalar fallback** — while its name
+  implied the vector kernels had run, and nothing in the log said which backend registered. #87's
+  SIGILL was that gap biting. Both obvious fixes were rejected: asserting *"a vector backend
+  registered"* fails spuriously on whatever the runner lottery deals, and merely documenting
+  *"scalar-ish under a simd toolchain"* leaves the green's meaning varying run to run. Instead
+  **determinism plus read-back** — the judged leg runs `KEEL_FORCE=scalar` and then asserts the
+  markers agree (`keel-l1-active` = `scalar`, `keel-sgemm-active` = `*/scalar`), so the claim is
+  identical every run *and* the pin is proven to have taken rather than assumed, which is
+  `dispatch.go`'s no-silent-downgrade property checked from outside. A missing marker fails in its own
+  right, as in the gates: "the tests passed" and "here is what they covered" are two different facts.
+  The job summary spells out what is claimed (all paths compile; correctness verified on scalar,
+  deterministically) and what is not (that any vector kernel executed) — vector-backend evidence
+  stays on the three-host fleet. A second leg runs the suite under default dispatch with the selected
+  backend **reported and not judged**: correctness still counts, but which backend produced it is a
+  fact about the machine, and it is the one path by which a future AVX-512 runner would add real
+  vector coverage and say so unprompted. Two verification details, both found by checking rather than
+  assuming: `go test` shows a passing package's stdout **only under `-v`**, so the read-back comes
+  from a probe whose `-run` pattern deliberately matches nothing (TestMain still speaks, exit 0)
+  rather than from `-v` over tens of thousands of subtests; and `-count=1` is load-bearing, because
+  the test cache **replays a previous run's recorded stdout** and would publish a read-back taken
+  under a different environment. `set -o pipefail` is stated where a status crosses a pipe into
+  `tee`, this repo having shipped that particular swallowed verdict three times in other forms. The
+  assertion was driven through all four of its branches — correct scalar read-back, wrong Level-1
+  backend, wrong Level-3 backend, markers absent — with the passing case as the positive control that
+  proves it discriminates. **The read-back falsified a claim on its first run.** The job's own comment
+  said the vector path "is not exercised here at all"; the opportunistic leg read back
+  `keel-l1-active: avx2`. GitHub's runners lack AVX-512 but *have* AVX2, so Level 1 selects a vector
+  backend while the Level-3 microkernels fall back — vector code has been running in CI all along, one
+  level below where anyone was looking. The summary now reports each level separately rather than as
+  one vector-or-not bit, since a true "this runner exercised a vector path" would have concealed which.
+  That is the case for printing a read-back instead of reasoning about a dispatch: the reasoning here
+  was wrong, cheaply, in public.
+- **`Strsm`'s scaling floor is ratified at 7.0×, and the model the deferral asked for is recorded as
+  *falsified* rather than restated** (#37/#89; `DESIGN.md` §4/P5 carries the grounds). `gate-p5.sh`
+  deferred `STRSM_FLOOR` to "this measurement plus a stated model" for five phases, and the
+  measurement arrived nine times over — three runs × three µarchs, `n=4096`, `threads=8`, boost off
+  both arms, **7.403–7.668× net of CI**, recomputed from the logs rather than carried. The stated
+  model is the work split the gate prints, `rank_update=0.98413 diag_solve=0.01587`; read
+  `diag_solve` as an Amdahl serial fraction, as "state the model behind the number" asks, and at
+  p=8 it implies a ceiling of **7.2001×** that **all nine readings clear** — the lowest by +2.82%.
+  A ceiling the data walks through is a dead premise, not a premise needing adjustment, and **the
+  favourable direction makes it no less a falsification**: §5 rule 7's objection to a check that
+  cannot come out badly applies exactly as well to a bound that cannot come out binding. What the
+  arithmetic says mechanically is a finding about the nest — the implied serial fractions
+  (0.619–1.152%) sit *below* the 1.587% work share, which is the signature of diagonal solves that
+  overlap the rank updates, because `Trsm` splits right-hand sides at the top (`MB=64 < MC=144`
+  leaves the `ic` loop one iteration) and the solves ride that split. The replacement model is
+  #65's per-`(jc, pc)` B-packing residue plus the makespan tail of the last claimed unit, measured
+  at that 0.62–1.15%. **7.0× is a regression bar, not a derived threshold**: derived *from* the
+  falsified ceiling it would be theatre, whereas set 0.403× (5.76%) below the lowest of nine
+  observations it is margin — the same thing the ≥6× floor is. 7.4× was rejected as unshippable at
+  0.04% of headroom. The gate keeps printing the work split, now saying in words that it is a work
+  split and not a serial fraction, and reprints the ceiling it would imply beside the reading that
+  clears it, **recomputed from each run's own declared split** so the comparison is about the
+  current run; judged by nothing, since a future reading *below* that ceiling would refute nothing.
+  One label defect fixed in passing: `HOST_CLEARED` is lowered by a miss against either bar, so
+  typing the constant silently widened what the scaling aggregate covers while its sentence still
+  named only the judged three — both aggregate lines now name both bars, because a pass that
+  credits less than it verified is the same defect as one that credits more.
+- **The host classification is graded in three states, so a class the measurement cannot decide
+  reports `UNMEASURED` instead of picking a side** (#86; ruled: *"a verdict cannot be more certain
+  than the least certain link in its derivation chain"*, and `DESIGN.md` §4/P3 records the grounds).
+  The class is an *input* four criteria divide by, and on 2026-08-15 one noisy reading of it moved
+  all four: janus's ceiling spread crossed `converge_max` (1.10), the convergence test returned
+  `why=diverge`, the host reclassified fma-bound, and the gate then (a) failed the class-agreement
+  check telling the operator to fix `internal/kern.HostClass`'s fingerprint, which was right;
+  (b) faced the sentinel with the flat 55% instead of 90% of its roofline, failing at 42.7% of
+  peak; (c) switched criterion 6b's denominator from `roofline 105.52` to `openblas 194.35`,
+  turning **75.1% PASS into 39.5% FAIL**; and (d) followed with criterion 6's aggregate. Against a
+  *fixed* denominator those same two readings differ by **1.3 points** (39.5% vs 40.8% of plain
+  OpenBLAS, `build/gate-p3-under-p4-708ddbb-run1.log:131` and `-708ddbb.log:130`). The 35-point
+  swing was the denominator. So the two comparisons that *select* the class — ceiling spread vs
+  `converge_max`, and attainment vs 1.0, the falsification test — now consume `bench_ratio_lo`
+  and `bench_ratio_hi` (#67's measured bounds, not a symmetry assumption) and grade three ways:
+  clear on either side keeps its verdict, an interval spanning the bar yields class
+  `indeterminate` and `RESULT=unmeasured`. `p3_denominator` gained a fourth exit
+  (`classindeterminate`) so an undecided class cannot fall through to a confident `fma-bound`,
+  and `p3_ratio_lo` fails closed on it. The *result* boundaries — 90% of roofline, the flat 55% —
+  stay two-state with `DESIGN.md` §4's one archived re-run, because that allowance was priced for
+  one verdict and a propagating input spends four. Re-measuring an `indeterminate` is therefore
+  not the allowance being spent: there is no verdict to overturn.
+- **A straddle whose two branches agree now decides the class anyway, instead of reporting
+  `indeterminate` on a comparison it did not need** (#86, the converse edge of the same law).
+  The amendment above withheld a class whenever the ceiling spread's interval crossed
+  `converge_max` — including when *both* readings of that crossing led to the same class:
+  converged means the ceiling exists and attainment above it falsifies it (fma-bound), while not
+  converged means no ceiling was established (fma-bound). Neither branch reads `roof`, and the
+  flat floor that applies is the same expression in both. Reported as `why=falsifiedanyway` /
+  `why=samemixanyway` with the straddling interval still printed, so the record says *could not
+  decide this, did not need to*. The collapse is tested over the **whole** interval —
+  `roof_hi = pmax_hi / I` is the highest ceiling the reading admits and falsification must hold
+  at every point of it — never at the midpoint, and it can only move a host from `indeterminate`
+  to a class both branches already gave. Found by a real reading grazing the bar, not by review:
+  on 2026-08-16 antares measured a spread interval of `[1.077, 1.100]` against the 1.10 bar while
+  retiring at 162.2%–165.2% of the roofline that interval implies
+  (`build/gate-p3-86-e53f7cc.log:79-80`). One rounding step higher and a host falsifying its claimed
+  ceiling by 62% would have been reported "classification indeterminate". Three fixtures cover
+  both directions of the collapse and the case that must stay undecided
+  (`scripts/roofline-test.sh`, 43 fixtures).
+- **`gate-p3` can be made to exercise its own three-state renderings, and such a run issues no
+  verdict** (#86). `KEEL_INSTRUMENT_WIDEN_CI=<pct>` widens every ceiling-set mix's
+  percent-of-peak interval to at least ±pct around its own point estimate before classification,
+  leaving every shipped threshold untouched and printed. It exists because on this fleet the
+  `indeterminate` renderings are otherwise unreachable — janus's class-selecting interval is
+  zero-width, so no value of the 1.10 bar can sit inside it — and an unexercised branch in the
+  instrument that issues the certificates is untested code. The synthetic input is therefore on
+  the *measurement* side, reproducing the 2026-08-15 condition of a host reading noisily rather
+  than a bar nobody would ship. Such a run prints a banner naming the override, stamps every
+  verdict line `[synthetic]`, prints **neither `GREEN` nor `RED`**, and exits 2; its log belongs
+  at `build/instrument-exercise-*` and never on a `gate-pN-<rev>` path (#78). `VERDICT_STAMP` is
+  one shared variable read by `unmeasured` in `scripts/remote.sh` and by each gate's own
+  `pass`/`fail`/`info`, rather than a per-gate override of those helpers, because an overridden
+  copy is a copy and copies drift.
+- **`gate-p3` prints the ceiling spread, the mix spread and the attainment interval it decided
+  the class on** (#86). It read all three into `_`-prefixed discards, so when the classification
+  flipped, the quantity that flipped it was in no log and had to be bounded backwards out of the
+  threshold — which is how the first reconstruction of the incident above blamed the 90%
+  attainment floor rather than the convergence test three fields earlier. §5 rule 8's "publish the
+  underlying pair beside the derived figure", applied to a class instead of a percentage.
+- **The performance-governor check is now one function, `assert_governor` in `scripts/remote.sh`,
+  called from all five measuring gates** (#83; ruled: *"four better copies are the same failure
+  mode with a better master, and the next labelling defect propagates just as cleanly — the fix
+  for copy-drift is ending the copying"*). Four gates reported an **unreachable** host as
+  `scaling_governor is unreadable`: the right verdict class with a false cause, because a host
+  that answers always yields a `governor=` field, so empty probe output means the host never
+  spoke. `gate-p5`'s copy was the divergent one and also the *correct* one — it established that
+  a reading exists before parsing for one — so the lift's shape came from the outlier, not from
+  the four that agreed. The helper exposes `GOV_STATE` (`performance` | `wrong` | `unreadable` |
+  `unreachable`) and **always returns 0**: an exit code is an implicit verdict channel, and under
+  `set -euo pipefail` a helper returning non-zero for "criterion not met" becomes the gate's own
+  status in tail position and kills the run with *no verdict line at all* — an absent verdict, not
+  a wrong one, indistinguishable from a kill (#76, #80). Enumerated before the lift: **five
+  independent drifts across the ten copies** (two sites × five gates) — a `§5.4` citation <!-- citation-lint:quote --> naming a
+  section `DESIGN.md` does not have (#85), `info "governor=${gov:-unknown}"` printing a reading for
+  a host that answered nothing, "preamble checked it" vs "preamble read it", a `sudo tee`
+  remediation hint present in one gate and absent in four (the lifted version prints the union),
+  and `gate-p5`'s better parse. Agreement among four copies was never evidence about any of them.
+- **Every measuring host must now be under the performance governor, asserted per host, in
+  `gate-p1` and `gate-p2`** (#77; ruled before the green because a criterion that moves
+  between runs for a naming reason is a defect in the instrument). Both gates read the
+  governor and then asserted only that *some* host had cleared its bar under `performance` —
+  a criterion any single machine satisfied on the others' behalf, which therefore said
+  nothing about the others. It is not hypothetical: both archived green `gate-p1` logs have
+  the Zen 5 host on `powersave`, and one of their rates is published at `CHANGELOG.md:2151`
+  (#79). The fix is `gate-p4.sh:562`'s three-way, copied rather than reinvented so the two
+  read alike: PASS per host, FAIL for a wrong governor, UNMEASURED for an unreadable one,
+  in a preamble over the whole fleet — plus a silent re-read at the moment of measurement,
+  because a governor that changed in between belongs to a machine somebody started using.
+  `PERF_GOV_HOST` is deleted from both gates; nothing now records a precondition as a host
+  name. Note that Scott's suggested mechanism (hostname normalization, `.local` drift, a
+  DHCP-sensitive ordering) was not the mechanism — it was last-writer-wins over the hosts
+  that *pass*, with a stable host list — and a canonical-name fix would have left the hole
+  exactly as it is.
+- **Seven single-witness gate aggregates became three-way over coverage state** (#73 tier C;
+  `gate-p0` ×1, `-p1` ×2, `-p2` ×2, `-p3` ×2). An aggregate whose only state was "did any host clear
+  this" collapsed two different facts into one FAIL: a fleet that looked and came back short,
+  and a fleet with nothing to ask. `fail "no target ran the Sgemm sweep green with the avx512
+  backend"` on three hosts that have no AVX-512 is an assertion about *keel* made from the
+  absence of a measurement. Each now counts hosts that **produced** the reading beside hosts
+  that **satisfied** it — `N_RATIO`/`N_CLEARED`, `N_JUDGED`, `N_FULLCAP`, `AVX512_SEEN`,
+  `N_FORCED` — so zero readings reads UNMEASURED and readings that came back short read FAIL
+  with the shortfall counted. The discriminators are witnesses the library already prints,
+  verified from source rather than inferred by analogy: `keel-backends-available`
+  (`internal/vec/vec_diff_test.go:82`), `keel-l1-available` (`l1_test.go:144`), and — where
+  no availability marker exists — the *exercised* marker, which is runtime-filtered because
+  `vectorKernels()` returns nil unless `vec.HasAVX512()` (`internal/kern/kern_amd64.go:34`).
+  A first draft of the `gate-p2` counter used a `keel-kern-available` marker that does not
+  exist; it would have made the count always zero, i.e. masked a real FAIL as UNMEASURED,
+  which is the one substitution this taxonomy exists to prevent. The count is seven by this
+  rule, stated so it is reproducible: added aggregate-level `unmeasured` branches in the diff
+  — those with no `[$host]` or `[$name]` prefix — one per conversion, 1+2+2+2. It said "Six"
+  in the commit that landed the change, written from the plan instead of from the diff, which
+  is DESIGN.md §5 rule 8's own failure mode inside the batch that was auditing for it.
+  Tally movement in the verified logs at `68fc493`, since an added assertion must be shown
+  non-perturbing: `gate-p0` unchanged at 19/0/0; `gate-p1` 26→29 and `gate-p2` 22→25, each
+  three per-host governor PASS plus one aggregate replaced 1-for-1; delegated `gate-p3` 48→49;
+  delegated `gate-p4` unchanged at 65/0/0; `gate-p5` unchanged at 65/0/4. The p3 delta is the
+  one that needed explaining and it is not a strengthening: that aggregate was previously
+  `[[ -n "$SCALAR_FORCED" ]] || fail ...`, a **fail-only guard, silent on success**, so
+  converting it to a three-way necessarily prints a PASS on a healthy fleet where the other
+  six had a PASS to replace. No blocking power changed — the per-host `fail` at
+  `gate-p3.sh:707` already blocked for a host that failed the forced run — and the old
+  aggregate was satisfiable by any *single* host, which is #77's single-witness shape in a
+  second place, harmless there only because the per-host verdict covered it.
+- **`gate-p0` now reads the backend-availability marker instead of inferring the CPU from the
+  run** (#73). Every unexercised backend was reported as `unavailable here` — a claim about
+  the silicon deduced from a claim about the test run — so a backend the host *has* and the
+  suite *skipped* was indistinguishable from one the host lacks. Available-and-unexercised is
+  now a FAIL, absent is an `info`, and a missing availability marker is UNMEASURED with the
+  wording of the fallthrough branch changed too: without that marker there is nothing to
+  license the word "unavailable", so it no longer restates as a finding the inference the
+  UNMEASURED line one row above says cannot be drawn.
+- **A stated-assumptions ledger, printed beside every gate's verdict** (#73 tier C, ruled
+  2026-08-15; `scripts/remote.sh`, all six gates). A precondition with **no read-back
+  mechanism at all** — nothing to check, as distinct from something unreadable — gets no
+  verdict: three verdicts (PASS/FAIL/UNMEASURED) plus an `assumed, unverifiable:` line, so
+  the certificate enumerates what it is trusting instead of trusting it silently. A fourth
+  verdict category would blur the one distinction UNMEASURED keeps sharp — *could have
+  looked, could not read* — and would blur it in the direction that matters, since
+  UNMEASURED blocks. `assumed()` sets no `FAIL`, prints at the `info` indent, and is
+  invisible to the anchored tallies the delegating gates count with (driven and checked:
+  a log carrying a full ledger tallies 1/0/1 against 1 PASS and 1 UNMEASURED). Two entries
+  qualify, both circular rather than merely inconvenient: the configured host set being the
+  intended fleet, and each name reaching the machine it is meant to reach — every witness of
+  a host's identity is reported *by* the host under test. The admission test is deliberately
+  hard, and two candidates failed it while it was written: machine load (#81) and SMT state
+  (#82) are both readable, therefore both are missing criteria and are filed as such rather
+  than laundered into the ledger.
+- **Delegated gate logs are revision-stamped** (#78, before the green). `gate-p5` wrote its
+  delegated `gate-p4` log to a fixed path and `gate-p4` did the same for `gate-p3`, so each
+  run destroyed the only copy of the previous run's evidence. It bit during #73's own
+  verification: the run being verified overwrote the reference it was to be compared
+  against, and the diff survived only because an unrelated standalone `gate-p4` log happened
+  to exist — which is not an archival strategy. #68 remains orthogonal and open: a stamped
+  filename cannot distinguish a clean tree from a dirty one at the same revision, and a
+  self-describing log that has been overwritten is still gone. Two defects, two fixes.
+- **The converse sweep: 74 gate sites that report a reason the gate could not look now print
+  UNMEASURED, under one rule written down where the primitive lives** (ruled 2026-08-15 on
+  #73; `scripts/remote.sh`). #72 relabeled the 21 sites whose own message text already said
+  "unmeasured" under a FAIL label. This is the other direction — every site whose message
+  gives a *reason it could not measure* and prints FAIL anyway — and it lands before the
+  first green rather than after, because unlike #72 it is not verdict-neutral by
+  construction: it checks preconditions that were previously assumed, and a certificate
+  issued by a gate carrying unchecked preconditions is a green with an asterisk. The rule,
+  and it is a rule and not a phrase list: **FAIL when the gate obtained the reading the
+  criterion asks for and the reading is wrong** — a test that ran and failed, a set that was
+  enumerated and is short, a governor that answered `powersave`; **UNMEASURED when the
+  reading does not exist** — the host did not answer, the run died, the marker is absent,
+  benchstat established no interval, there was no host to ask. Tie-break for an arguable
+  site: does the sentence assert something about *keel* or about the *measurement*? Only the
+  first may be FAIL, and "keel does not reach 60% of OpenBLAS" is a claim about keel that a
+  run with no hosts has not earned. **This harmonises the older governor rule rather than
+  weakening it**: "unreadable counts as unmet" was written before UNMEASURED existed as a
+  third column, and its intent — unreadability is not an exemption — is preserved exactly,
+  since `unmeasured()` sets `FAIL=1` on the same line `fail` does. An unreadable governor
+  still stops the gate; it stops *asserting the governor was wrong* when the truth is nobody
+  could look. Distribution: 2 in `gate-p0`, 6 in `gate-p1`, 7 in `gate-p2`, 27 in `gate-p3`,
+  19 in `gate-p4`, 13 in `gate-p5`. **Four of them were split rather than relabeled**, because
+  one branch was two facts wearing one label: a boost knob nobody could read against one that
+  did not move (`gate-p5`), a forced run that failed before reporting its dispatch against one
+  that reported it and failed anyway (`gate-p5` — the marker is the discriminator), and a
+  governor unreadable at measurement time against one that changed mid-run (`gate-p3`,
+  `gate-p4`). Both branches of each still block. What **stays** FAIL is the audited residue,
+  not what the grep missed: every "missing from the sweep", "lattice is incomplete", "does
+  not match its own enumeration", "not on the allowlist", "below the bar", "governor is
+  `powersave`", "only N of M configured targets ran" and every failed build or failed test —
+  all readings the gate has. `gate-p5.sh:534` is the paired case worth reading beside its
+  twin: **$ncpu CPUs were read** and the criterion names more, so the environment is wrong
+  and the label says so, two lines below the unreadable-count branch that now says
+  UNMEASURED. The sweep was audited in two batches: #73's own 37-site population, then the 37
+  sites in the same *conditions* whose wording had kept them out of it — a phrase-defined
+  population is not condition-closed, and relabeling `no execution hosts, so the scaling
+  criterion cannot be evaluated` while leaving `P5 needs an amd64 host … none configured`
+  three hundred lines up would have replaced one same-event-opposite-label defect with
+  another.
+- **21 gate criteria that already said "unmeasured" in their own message text now say it in
+  their label, and no gate's path to green moved** (ruled 2026-08-15 on #72; `DESIGN.md`
+  §5.6). Auditing every `fail` call across the six gates for what it *asserts* turned up 21
+  whose message says the criterion could not be resolved — no toolchain, no reachable host,
+  a run that died before it measured — under a label that says a check ran and observed a
+  violation. Two of them indict themselves: `bench_expect`'s docs in `scripts/bench.sh` say
+  an absent measurement has "exactly one verdict available to it — unmeasured" six lines
+  above a caller printing FAIL, and `gate-p5`'s `race_verdict` header argues that collapsing
+  its three states "sends whoever reads it looking for a race that is not there" immediately
+  above the branches that collapse them. **Relabeling is not amendment**: `unmeasured()`
+  sets `FAIL=1` exactly as each gate's `fail` does, so every one of these still blocks its
+  gate, and what makes a criterion green is untouched — including the four `-race` criteria,
+  whose non-amendable hard-red ruling of 2026-08-12 stands unchanged. What moves is the
+  attributed cause, and a gate red for the wrong reason is as untrustworthy as one green for
+  the wrong reason. Distribution: 13 in `gate-p5`, 6 in `gate-p3`, 2 in `gate-p4`. The sites
+  are an audited list, not a grep: `gate-p5.sh:595` matches the same pattern and stays a
+  FAIL, because "an unmeasured rung has appeared at Level 3" is a noun phrase about the rung
+  and that check ran and observed a real violation — a blanket substitution would have
+  relabeled a real miss as not-measured, the one direction of this change that *would* have
+  been a weakening. `unmeasured()` is lifted to `scripts/remote.sh`, the file all six gates
+  source; `gate-p5` did not define the primitive at all while 13 of its sites needed it, and
+  minting a third divergent copy of a verdict primitive is how the delegated tally came to
+  count two columns where the log had three. Also fixed in the same commit: `race_verdict`'s
+  citation of #22's edge campaign as the checkptr remediation, which is the wrong address —
+  the fix is upstream CL 761120 shipping in `go1.27`, so the path is #70's floor then #69's
+  port (T23), and a red verdict that cites a campaign which will never resolve it is
+  misattribution's little sibling. **Proven not to weaken anything by rerunning it**, which
+  is the only form of proof this change admits: `gate-p5` went from 65 PASS / 4 FAIL / 0
+  UNMEASURED to 65 PASS / **0 FAIL / 4 UNMEASURED**, both RED, both 215 lines, with the four
+  messages identical line-for-line once the labels are normalised — the sole textual
+  difference being the remediation pointer this commit deliberately corrected. Delegated
+  `gate-p4: GREEN 65/0/0` and `gate-p3: GREEN 48/0/0` on both sides, unchanged.
+  `build/gate-p5-8954f6d.log` against the archived `gate-p5-117b78f`.
+- **`gate-p4`'s tally of the delegated P3 gate is anchored and has a third column** (#71).
+  It counted with a bare `grep -c 'FAIL'`, which also matches any summary line inside
+  `gate-p3`'s log, so a green delegate could be reported with a FAIL it did not have — the
+  defect `gate-p5`'s tally of `gate-p4` already had fixed, in the file one level down. It
+  now strips colour, anchors on `^  PASS  ` / `^  FAIL  ` / `^  UNMEASURED  `, and prints
+  UNMEASURED as its own column, which it must: six of `gate-p3`'s misses became UNMEASURED
+  above, and a two-column tally would have shown them as neither. The RED excerpt below it
+  quotes both FAIL and UNMEASURED lines for the same reason.
+- **gate-p4's criterion 7 is graded in three states, and the bar did not move** (ruled
+  2026-08-15 on #67; `DESIGN.md` §4/P4). `Ssyrk ≥ 85% of Sgemm` was judged net of CI, which
+  answers one question — "is the whole interval above the bar?" — and its negative answer
+  was being read as "Ssyrk is too slow". Those are different claims, and §5.6 forbids one
+  verdict standing for two causes. It had already bitten: janus read 87.6% raw with
+  ±4.0%/±3.0% intervals and FAILed at a bound of 81.6%, then read 87.0% raw at ±0.0% on the
+  same tree at the same commit and PASSed. **The raw quantity agreed to within 0.6 points;
+  the FAIL was reporting the weather**, and it spent §4's single re-run allowance to find
+  that out. So: **PASS** when the interval sits at or above the bar — `bench_ratio_lo >=
+  0.85`, unchanged bit for bit — **FAIL** when the whole interval sits below it, and a new
+  **UNMEASURED** when it straddles. The third state is carved out of the old FAIL and never
+  out of the old PASS, so nothing that was below the bar can clear it on a lucky draw; that
+  is why the raw ratio is *not* graded in place of the bound. Replayed against all six
+  archived criterion-7 readings before landing: five stayed PASS, the noisy janus reading
+  moved FAIL → UNMEASURED, and every synthetic edge case (exactly on the bar, unbounded
+  arm, denominator interval reaching zero, missing benchmark) lands where it should.
+  New in `scripts/bench.sh`: `bench_ratio_hi`, `bench_ratio_grade`, `bench_ratio_headroom`.
+  The gate now also prints, per host per run, the interval, both observed CIs and the
+  **flip-headroom** — the symmetric CI at which the bound would land exactly on the bar,
+  `(raw − bar)/(raw + bar)`: 4.17% on the 7950X3D, 1.16% on the i9-9960X, 1.85% on the AI
+  MAX+ 395, against intervals those hosts produce up to 1.0%, 3.0% and 2.0% in one run. Two
+  of three were deciding this criterion on how quiet the machine was and nothing in the log
+  said so. And where the headroom is under 0.5% with an arm whose CI printed `0.0%`, the
+  gate says the verdict lies inside benchstat's integer-percent rounding (T21) rather than
+  letting the bound read as exact. The remedy for UNMEASURED is precision — one archived
+  re-run, then a higher `-count` for this criterion on a chronically undecidable host —
+  never a wider judgment. `gate-p5`'s delegated tally counts the new label as its own
+  column, because a tally with two columns would have made a straddled interval vanish.
+- **`docs/toolchain-notes.md` gains T23 and T24, and T17's "no keel change at all" is
+  corrected: `go1.27` moves the floor, but keel does not compile on it yet.** The
+  2026-08-15 ruling makes go1.27 keel's minimum and orders `-race` on the vector path as
+  the first act under it. Probed on all three benchmark hosts with `go1.27rc3` installed
+  to its own prefix (`/usr/local/go1.27rc3`, leaving `/usr/local/go` on `go1.26.5` so no
+  published number's compiler moves silently — #58), and the probe was written with four
+  outcomes rather than two: `compile-fail` / `checkptr` / `data-race` / `clean`. It came
+  back **`compile-fail`, identically on all three hosts**, which a two-outcome probe would
+  have reported as "checkptr still broken". `simd/archsimd`'s load/store were renamed with
+  a **swap** — the slice forms took over the bare names (`LoadFloat32x16Slice` →
+  `LoadFloat32x16`, `StoreSlice` → `Store`), the displaced array forms gained an `Array`
+  suffix, and the `…SlicePart` forms became `…Part` *and grew a return value* — because
+  `archsimd` is converging on the naming convention of the portable `simd` package that
+  1.27 also ships. `go build -gcflags=-e ./...` gives 51 errors, all type errors, in 3
+  files: 39 pure renames, 4 renames that gain a return value, 8 array-form sites that need
+  the `Array` suffix. **Every one is compile-caught**, because `*[N]float32` and
+  `[]float32` are mutually unassignable, so the swap cannot rebind silently — the property
+  that makes "it still compiles" sufficient evidence here and insufficient in general.
+  So the chain to the four `-race` criteria is **floor → port `internal/vec` → `-race` →
+  criteria**, not floor → `-race` → criteria, and the criteria are `unmeasured` on 1.27
+  rather than clear. The port is specified but **held**: `go1.27.0` final does not exist
+  yet (go.dev/dl has rc3 as tip, 1.26.6 as stable), the ruling's own condition is 1.27.0
+  final installed and read back on all three hosts, and landing it now would break three
+  hosts on `go1.26.5` and the dev host on `go1.26.6` at once. The consolation is DESIGN.md
+  §3's shim bet paying off against a real API break: 3 files, 51 lines, **zero change to
+  keel's own API** (T5, T17, T23, T24; #42, #22).
+- **T5 resolves the way it guessed and the conclusion drawn from it does not: 1.27 ships
+  the portable `simd` package, and DESIGN.md §8's plan to park the ARM64 kernel behind it
+  needs revisiting rather than resuming** (T24). The package is there with amd64, arm64 and
+  wasm backends plus a pure-Go emulated fallback, one vector type per primitive numeric
+  type, and a bridge both ways (`ToArch() any`, `Float32sFromArch[T]`). But its vector
+  length is a **runtime** quantity — `simd.VectorBitSize()`, `simd.Emulated()`,
+  `(x Float32s) Len() int`, no compile-time constant anywhere — and a register-blocked
+  microkernel is exactly the thing that cannot be vector-length-agnostic: `MR`, `NR` and
+  `Lanes = 16` are constants because the accumulator tile is a fixed set of named
+  registers, which is the whole content of the P2 spill audit. There is also no
+  `GetLo`/`GetHi` on `Float32s`, so `HSum`'s bit-exact fold tree is not expressible either.
+  The kernel stays on `archsimd`. The interesting half is the other one: an
+  emulated-plus-arm64 vector path is the first thing that could run a *vector* differential
+  test **on the dev host**, which T1 has forced onto ssh since P0 — but an emulated FMA
+  that fuses where hardware does not would be a worse oracle than none, so that is filed as
+  a question, not adopted. fixed upstream in go1.27, and the
+  `-race` doubt that would have made the fix useless is measured away.** CL 761120 marks all
+  30 `archsimd` `pa*` helpers `//go:nocheckptr`; the pragma count in
+  `src/simd/archsimd/unsafe_helpers.go` is 30 on `go1.27rc1` and 0 in go1.26.6, so every
+  1.26.x reproduces T17 and 1.27 does not. golang/go#42880 (*"-race does not obey
+  go:nocheckptr"*, open since 2020) appeared to mean the fix silences `-d=checkptr` but not
+  `-race` — which would have left keel's four `-race` criteria blocked on a five-year-old
+  issue rather than on a merged CL. Reading that thread instead of its title settles it the
+  other way: the failing conversion there was inside a *function literal*, where no `//go:`
+  directive can attach, and `-race` was incidental. Measured on a declared cross-package
+  helper carrying T17's exact conversion, the pragma suppresses the fatal under `-race` and
+  under `-d=checkptr`, while the no-pragma control fatals under both — and the mechanism is
+  `inline/inl.go:349-351` refusing to inline a `go:nocheckptr` function under any
+  `Checkptr != 0` build, confirmed by counting `CALL`s in the object code (0 uninstrumented,
+  1 under each instrumented arm). **So the copy-into-a-full-width-array workaround is a
+  1.26.x bridge, not a permanent spelling**, and its price — all ten Level-1 kernels losing
+  `nosplit`, `internal/l1` +15.5% static instructions — is paid only while keel builds on
+  1.26.x. `checkptr`-cleanliness as an admissibility condition on #22's candidates is
+  satisfied by the toolchain rather than by a workaround, so the masked-partial candidate
+  gets measured as written (#42, #22).
+- **The scaling criterion's two arms now run in one frequency regime, and the boost-on
+  speedup prints beside the verdict** (ruled on #66; `DESIGN.md` §4/P5). As first
+  written, "≥6× single-thread throughput at 8 cores" divided an 8-thread rate by a
+  1-thread rate taken on an idle machine — but one thread runs at a boost clock eight
+  threads physically cannot reach, so the criterion asked the nest to overcome silicon
+  boost policy before it was allowed to demonstrate scaling. **A denominator measured in
+  a regime the numerator cannot legally enter is not a ratio, it is a handicap.**
+
+  The diagnosis came from the shape of the misses rather than from their inconvenience:
+  the two hosts that missed are the two retaining the *most* of their own single-thread
+  peak (Zen 4 92%, Zen 5 59%), while Skylake-X at 35% cleared all four routines twice.
+  Scaling deficits do not sort themselves by single-thread excellence; boost tables do.
+
+  `scripts/gate-p5.sh` now sets `cpufreq/boost` (AMD) or `intel_pstate/no_turbo` (Intel)
+  off per host, **reads the knob back** — unreadable or unmoved counts as *unmet*, never
+  as satisfied, exactly as `scaling_governor` is re-read at measurement time — judges
+  ≥6× there, restores boost, and takes a **second pass boost-on** whose wall-clock
+  speedup against the idle single-thread rate prints at equal prominence as
+  reported-never-judged. That second number is what a caller experiences and no reader
+  gets the pass without it. Hosts are restored on `EXIT INT TERM`, because a gate that
+  dies mid-window must not leave a machine de-boosted for the delegated gate-p4/p3/p2
+  runs, which are boost-on measurements.
+
+  **Stated rather than buried: this makes the criterion easier.** Smoke-measured on the
+  Ryzen 9 7950X3D at n=4096 Sgemm (`-test.count=3 -test.benchtime=0.4s`, a §5 rule 5
+  smoke run informing no gate): 1 thread 152.6/151.7/152.6 → 122.7/122.4/122.3 GFLOP/s,
+  8 threads 905.2/895.0 → 774.6/772.9. So boost off costs the 1-thread arm 19.8% and the
+  8-thread arm 14.0%, and the ratio rises 5.90× → 6.32× — which is enough to move vesta
+  Sgemm's 5.74× miss across the floor, and is *not* obviously enough for the two Ssymm
+  misses at 5.63× and 5.34×. The gate decides that, not this paragraph. The de-boosted
+  regime also lowers the formula cross-check (`cpuinfo_max_freq` 5.76 → 4.20 GHz, peak
+  368.9 → 268.9), so the boost-off pass's percent-of-peak lines are quoted against a
+  de-boosted peak measured in the same pass. The justification is not that the new number is nicer
+  but that the old one was not a ratio — and the honest consequence is that boost-off
+  ratios are **not comparable** to the three boost-on runs already in the record. The
+  README's published rates stay boost-on, since a published row is a claim about what a
+  caller gets, and criterion 9 re-measures them against the boost-on pass accordingly.
+- **`DESIGN.md` §5 gains rule 8: a summary is a cache with no invalidation protocol.**
+  Derived figures are recomputed from the log at the moment of writing, never carried
+  forward from prose. Third documented instance across two authors, which is what makes
+  it a named trap rather than a slip.
+- **`DESIGN.md` §5 gains rule 9: a citation is a claim about where the grounds are, and
+  it is checked like any other claim** (#85). Every gate cites `DESIGN.md` for its
+  authority, so a citation landing on the wrong rule misdirects every reader who follows
+  it while looking exactly like a correct one. The rule names three non-interchangeable
+  instruments — **resolution** (does it land), **pinning** (has it moved), and
+  **mint-verification** (was it ever right, which cannot be automated) — and legislates
+  the forward convention: new citations use the explicit `§5 rule 5` form; audited-correct
+  `§X.Y` shorthand stays byte-for-byte; a citation naming another document is declared,
+  not guessed at.
+- **`make lint` and CI's stock job now run `scripts/citation-lint.sh`** (#85), which
+  resolves every `DESIGN.md` rule citation in the tree against `DESIGN.md`'s actual
+  structure and pins each distinct form beside the first words of the item it lands on
+  (`docs/citation-targets.txt`). It lives in the stock job because it needs a git
+  checkout but no toolchain, so it cannot be skipped.
+  - **The premise the check was opened on was false, and that changed the law rather
+    than the sweep.** The 18 `§5.4` citations were assumed to be a *renumbering* casualty. <!-- citation-lint:quote -->
+    They are not: `git show 4643b63:DESIGN.md` shows the methodology rule was already
+    item **5** in the same commit that wrote the first `§5.4`, and §7's eight leads are <!-- citation-lint:quote -->
+    byte-identical from `6a862d7` to `HEAD`. Nothing was ever renumbered — the ordinals
+    were **mis-minted at birth**. So a pin certifies *stability*, never
+    *birth-correctness*, and would have frozen all 18 defects with perfect fidelity while
+    passing forever. The baseline is therefore **audited**, once, at the meaning level:
+    every citation's ordinal read against the content the citing site actually invokes,
+    with the audit's date and census recorded in the pin file so a later reader knows the
+    freeze rested on a reading rather than an assumption.
+  - **Census: 120 sites; 8 naming another document; 112 `DESIGN`-bound, of which 92 land
+    on the content they invoke and 20 were mis-minted.** Sixteen were rewritten to the
+    explicit form (14 × `§5.4`, plus two found *inside* populations that resolved <!-- citation-lint:quote -->
+    perfectly: `DESIGN.md`'s own §7 citation of the tolerances rule where it argued the
+    denominator rule, and `l1_test.go`'s §5 citation of the differential rule where it
+    argued the tolerance-model rule). Four are deliberate quotations of the bad form and
+    are **marked, never normalised** — the record of the defect is the point, same law as
+    #79. The 25 audited-correct shorthand sites were left untouched: rewriting a correct
+    citation in the document the gates cite as grounds is churn dressed as rigour.
+  - **The two mis-minted sites outside the `§5.4` population were found by an instrument <!-- citation-lint:quote -->
+    the other two cannot supply: cross-site argument identity.** `scripts/gate-p5.sh` and
+    `DESIGN.md` made the *same* argument — "an advertised chain whose middle link no gate
+    can back is a claim, not a measurement" — under two different rule numbers, and
+    reading the rule bodies picked the denominator rule over the tolerances rule. Content
+    adjudicates, not majority.
+  - **Scoping to the document a citation actually names is the check's load-bearing
+    feature, and it was proven by near-miss.** An earlier draft condemned `§X.Y` *by form*,
+    on the true observation that `DESIGN.md` has no subsections. That draft would have
+    demanded 25 zero-semantic edits to correct citations **and** filed a peer-reviewed
+    paper's section numbering (Van Zee & van de Geijn, TOMS 2015 §4.3) as a defect in
+    keel's constitution — the false-defect class #63's near-filing established the norm
+    against. Such references are now **declared** in the pin file, each declaration
+    carrying **the number of sites it covers**, so an exemption cannot silently widen:
+    fewer means it is stale, more means it has grown to cover a citation nobody read,
+    and the fix is to read the new site and bump the count deliberately. The invariant
+    is not "exactly one site" — `CHANGELOG.md` legitimately cites the paper twice — it
+    is *exactly the number someone read*. That check caught its own documentation: this
+    entry added two more `§4.3` references, the count went red, and reading them found <!-- citation-lint:quote(4.3) -->
+    one that does not cite the paper at all (it names the notation while explaining the
+    marker) and so belonged in a quote marker rather than the exemption.
+- **`scripts/citation-lint-test.sh` drives all ten of the lint's branches on purpose**
+  (#85). A healthy tree reaches exactly one of them, so a green from the lint alone is
+  not evidence that any check but the clean path works — and three of these controls guard
+  a *silent* failure rather than a loud one. Two defects were caught by running it rather
+  than reading it: rewrapping a comment moved a `citation-lint:quote` marker one line off
+  its citation, which stops suppression with no diff to notice; and the harness's own
+  `EXIT` trap referenced a `local` variable out of scope, leaking its temp directory. An
+  earlier draft also restored with `git checkout --`, which reverted two files to `HEAD`
+  and discarded uncommitted work — file backups cannot do that.
+- **The check's coverage is bounded by `git ls-files`, and that bound bit immediately**
+  (#85). `sites()` enumerates tracked files only, so a new file's citations are invisible
+  until it is committed: both new scripts were untracked while being written, the lint
+  could not see its own sources, and **the commit that added them turned a green tree
+  red** — 4 unresolvable mentions of the BLIS `§4.3` appeared the instant they became <!-- citation-lint:quote(4.3) -->
+  tracked. The verification that missed it is worth naming too, because it is a repeat:
+  `make lint 2>&1 | tail -2` returns *`tail`'s* exit status, so a failing build read as a
+  passing one, the same swallowed-verdict shape as a `permission denied` once read as a
+  clean grep. A green from this check means *"every citation in a tracked file"*, and
+  `git status` is part of reading it. The commit that recorded all this then repeated the
+  shape a third way: `make lint; git add …` commits whether the lint passed or not, so a
+  second red tree reached `main` and was fixed in the commit after. A verification that
+  does not gate the action it precedes is a report, not a check — `&&`, always.
+- **The quote marker takes a scoped form, `citation-lint:quote(5.4)`** (#85), because
+  line granularity is too coarse for this document: `DESIGN.md`'s numbered rules are
+  single 2000-character lines, and §5 rule 9 quotes `§5.4` on a line that also carries a <!-- citation-lint:quote(5.4) -->
+  live `§5 rule 5` and an external `§4.3`. A bare marker there would have stopped <!-- citation-lint:quote(4.3,5 rule 5) -->
+  checking all three while printing nothing — over-suppression by construction, the same
+  failure the declaration-narrowness check guards on the other side.
+- **Every `gate-p2` classification branch now publishes the measured interval beside the
+  point estimate, or states why it has none** (#86, `scripts/gate-p2.sh`). Three branches
+  still reported the point spread alone — `samemix`, `falsified` and `nearceiling` — and
+  `falsified`/`falsifiedanyway` reported a point attainment where an interval was
+  available. §5 rule 8's publish-the-pair clause has no per-branch exemption, and the
+  branch a reader reaches is exactly the branch whose numbers they need: a pair present
+  in eight renderings and absent in the ninth reads as *"this one had no interval"*
+  rather than *"this one forgot"*. `nomixes` is the one true exemption — no ceiling was
+  established, so there is no spread to bracket — and now says so in its own text. The
+  invariant is recorded above the `case` so the next reader sees a rule rather than a
+  pattern; it has drifted twice.
+
+- **All ten `internal/l1` vector loops now guard with `>` rather than `>=`**, which removes
+  the branchless conditional pointer bump that bounds-check elimination had bought them
+  (T19, #47). Under `>=`, `x = x[16:]` may leave the slice empty and an empty slice may not
+  carry a past-the-end pointer, so the advance compiles to `MOVQ`/`NEGQ`/`SARQ`/`ANDL`/`ADDQ`
+  — five instructions computing an offset that is 64 on every iteration but the last, paid
+  twice by the routines that advance two slices. Under `>` the emptiness case is gone and it
+  collapses to `ADDQ $64, AX`. Steady-state loop instructions (linux/amd64, go1.26.6, whole
+  body including T9's NOPs): `avx512Axpy` 26 → **15**, `avx512Scal` 16 → **9**, `avx512Dot`
+  52 → **44**, `avx512Asum` 29 → **25**, `avx512SumSq` 34 → **29**, and the avx2 twins 29 →
+  18, 19 → 12, 52 → 44, 41 → 37, 33 → 29. Vector-op counts are unchanged in all ten, and all
+  ten still audit at 0 bounds-check exits, 0 calls and 0 vector stack references. The
+  reductions gain least because their advance amortizes over 64 elements where Axpy's and
+  Scal's amortizes over 16 — which is the shape of #47's regression, since Saxpy was the
+  routine that lost 40.65%.
+
+  A `>` guard exits with a full vector unconsumed, and the partial tail cannot absorb it:
+  `LoadFloat32x16SlicePart` is documented as equivalent to a full load at 16 or more
+  elements, so it would silently ignore a 17th. The two loop shapes handle that differently.
+  The reductions' existing 16-wide mop-up loop keeps its `>=` guard and drains the ≤64
+  elements in at most four iterations, which was expected to leave their tail unaffected and
+  did not — see the `### Fixed` entry above, which is the measured correction. Axpy and Scal
+  have no second loop and get an explicit exact-fit epilogue running the body once at *full*
+  width. Leaving that to the masked tail instead was rejected on the deciding ground that it
+  would make **every** exact-multiple call execute a partial op where today only ragged
+  lengths do, and partial ops are what #42 makes fatal under `-race`: the epilogue holds that
+  frequency where it was rather than trading instructions for a wider `checkptr` blast
+  radius. Two other shapes were measured and rejected — an early `return` on exact fit to
+  hand `prove` a `len != 16` fact (unused: Scal 16 → 15, Axpy *worse* at 27), and dropping
+  the redundant `&& len(y) > 16` conjunct (Axpy 15 → 24, so the conjunct is load-bearing).
+
 - **`internal/pack`'s contiguous branch no longer calls `memmove` for short runs**
   (#21). `copy()` on a slice of statically-unknown length is a `runtime.memmove`
   call — confirmed in the object code (`pack.go:169 CALL runtime.memmove`) — which is
@@ -4882,3 +3769,1109 @@ While the major version is 0, minor versions may contain breaking changes.
   #12 all moved to the P5 milestone with their sorting recorded on each. With every
   earlier milestone empty of open issues, **milestones P0, P1, P2, P3 and P4 are
   closed**; P5 is the only open one.
+
+### Removed
+
+- **`remote_build_test_or_fail` replaces the eleven guarded cross-compile blocks in gate-p0 through gate-p5** (D1),
+  beside the `remote_build_test` it wraps. Both messages are parameters: gate-p5's two say *"cross-compile of **the**
+  linux/amd64 …"* where p0–p4 omit the article, so normalising either would have moved a gate's output. The first
+  survey said *ten* — it enumerated `gate-p1.sh` through `gate-p5.sh` and never looked at gate-p0. **−34 lines in
+  `scripts/`**, with gate-p0's four five-line verdict blocks collapsed to the one-liner the other five gates already
+  use: 30 of 30 arms byte-identical, and gate-p0's whole 43-line output unchanged live but for its disk reading.
+- **`gate_verdict` replaces the verdict tail of all six gates** (D1), in `scripts/remote.sh` beside the four verdict
+  helpers it belongs with. gate-p2's go/no-go tail and p2/p3's withhold wording are parameters, so no gate's output
+  text moves on any path reachable today — proven over FAIL × stamp × flag, 16 identical and 12 intended. **−19
+  lines in `scripts/`.**
+- **`gate_tmpdir` replaces the six scratch paths and the cleanup trap in gate-p1 through gate-p5** (D1); each gate's
+  own tail (`AUDITKERN`, `SWEEPLOG`, `ALTCSV`, `KERNBIN`, …) stays where it was. **−7 lines in `scripts/`** — 35
+  lines of duplication out, most of it back as the measurement the fix rests on.
+- **`assert_kern_audit_drift` replaces the registry-drift check in gate-p3 and gate-p4** (D1), whose executable
+  lines were byte-identical; the fail message's trailing clause is a parameter, so neither gate's output text moves.
+  **−10 lines in `scripts/`**, and the caller-visible `DRIFT_CHECKED` is now documented rather than incidental.
+- **`test_verdict` replaces eight copies of the pass/fail/paste-the-tail triple** around every gate's `go test` run,
+  in all six gates (D1). The phrase is a parameter, not a normalisation: gate-p5 says *"every test passes"* where
+  p3/p4 say *"all tests pass"*, and editing that would have changed three gates' output. **−25 lines in `scripts/`.**
+- **Seven byte-identical gate helpers now live in `scripts/gate-lib.sh`** (Workstream D1's lift): `require_bench`,
+  `audit_ipf`, `audit_ipf_tile`, `field`, `marker`, `marker_all`, `set_has`, out of gate-p2/p3/p4/p5. The comments
+  diverged only in bookkeeping about the duplication itself, a tax quadratic in the copies. **−69 lines in
+  `scripts/`**, 1.63× → 1.62×.
+- **One `marker_row` replaces five copies of one awk, and the flop-count pair is shared** (Workstream D1):
+  `p4_line`/`p5_line`/`bench_line` plus two *inlined* copies — one of them in gate-p4 three hundred lines below
+  gate-p4's own helper — and `flops_expect`/`flops_formula`, of which gate-p5's was already a strict superset.
+  **−81 lines in `scripts/`**, 1.62× → 1.61×.
+- **The boost apparatus is retired and gate-p5 can measure the fleet again** (#66, ruled 2026-08-17 —
+  *"the cloud does not have that"*): `remote_boost`/`remote_boost_set`, the second boost-on pass, and the
+  precondition that refused every guest are gone; criterion 9 now reads the one sweep there is. The 2026-08-15
+  finding stands and the handicap is disclosed beside the ratio instead of removed. **−167 lines in `scripts/`.**
+- **Citation *pinning* is retired; resolution stays.** `docs/citation-targets.txt` → `docs/citation-externals.txt`
+  (declarations only); `DESIGN.md` §5 rule 9 and §7 amended, because they mandated the instrument; control `T3`
+  removed with its ordinal left vacant. **−182 lines in `scripts/`** — not the plan's −600 — and 1.64× → 1.61×.
+
+### Fixed
+
+- **A detached run inherited its host list from a daemon older than the run, and measured the wrong machine.**
+  `tmux new-session` seeds a session from the tmux *server's* environment, and that server held
+  `KEEL_REMOTE_HOSTS=antares` from an earlier single-host session. `remote.sh:35` gives that variable precedence
+  over `.keel-hosts`, so the first release run (`release-a-d88486a`) launched `c5n.18xlarge` + `c7a.48xlarge` +
+  `c8a.48xlarge` at a combined $24.0873/hr, wrote a correct `.keel-hosts` naming all three, and then benchmarked a
+  lab box: `37 PASS / 0 FAIL / 1 UNMEASURED / 4 BASELINE`, `gate-p5: RED`. **RED with zero FAILs was the tell** —
+  the UNMEASURED reads "all 1 configured host(s)" where three were paid for. The fleet then idled to its 8h TTL,
+  bounding the spend at $192.70 for zero AWS evidence; the exact figure is unverifiable because terminated
+  instances have aged out of the EC2 API. The same comment block diagnosed this mechanism correctly on 2026-08-28
+  and fixed **half** of it: an override the caller *sets* is dropped unless that call starts the server. The
+  complement is a separate defect — a variable the caller does *not* set is injected by the server and outranks the
+  run's own configuration — and it is the worse one, because the dropped-override branch fails toward the
+  configured fleet while this one fails toward whatever was last measured. The runner now clears the whole
+  `KEEL_`/`BENCH_` namespace before re-exporting the carried set, so `build/<name>.cmd` is a complete statement of
+  the environment and not just of the deltas. Driven in both directions against the real stale value before it was
+  cleared: bare `tmux new-session` reproduced `KRH=[antares]` / `hosts=[antares]`, and the fixed launcher gave
+  `KRH=[unset]` / `hosts=[keel-zen5 keel-zen4 keel-skx]`. Scope stated rather than implied (§5 rule 12): `AWS_*` is
+  deliberately *not* cleared, since `aws-fleet.sh:37` pins `AWS_PROFILE` itself and nothing there selects what gets
+  measured. The stale global was also removed with `tmux set-environment -gu`, but the launcher fix is the durable
+  half — the server outlives any one cleanup.
+- **The provisioner installed a toolchain that cannot build the tree, and read an existing one as "new enough"**
+  (`scripts/provision-openblas.sh`). Its default was `go1.26.5` and its floor `GO_MIN_MINOR=26`, both correct when
+  1.26 was the first release with the simd experiment and both stale since T23's rename: from `fed1e70` the tree
+  does not compile on 1.26 at all. The two arms that care are the ones a *host's own* toolchain compiles, because
+  cgo forbids cross-building them — gate-p5's `-race` leg and gate-p3's openblas-tagged harness. Both died on
+  antares in `p5-preflight-1689d0b`, the second as `cannot use bp[0:16] (value of type []float32) as *[16]float32
+  value in argument to archsimd.LoadFloat32x16`, which took gate-p3 RED, gate-p4 RED with it, and gate-p5 RED.
+  The floor was the sharper half: gating on the minor only, a host already carrying 1.26.5 read as new enough and
+  was *linked rather than upgraded*, so the provisioner would have called a host ready for a harness it cannot
+  build. Default now `go1.27.0` (stable, published for linux/amd64) and floor `27`. Verified in situ under
+  `--check`, which now says `go on the ssh PATH is go1.26.5, and the harness needs go1.27.0 or newer` and predicts
+  gate-p3 will fail those hosts by name — the condition caught before a fleet run instead of during one. Then
+  discharged on the fleet (#70 authorized): `antares` and `janus` read back `go1.27.0` on a fresh connection rather
+  than off the install's own output, digest matched against `$KEEL_GO_SHA256` as an independent pin, `go1.27rc3`
+  removed rather than left beside, and `verify` natively built the very harness that had failed. `vesta` answered
+  neither name, so it is `unmeasured` — two read-backs of three, not three.
+- **A named P5 criterion could never render a verdict, and the condition was already in the tree as a footnote.**
+  With `go1.27.0` installed the `-race` leg finally *built*, and then failed three `tools/shapegen` tests
+  identically on both hosts: `locating the repo root: exit status 128`. `repoRoot()` shelled out to `git rev-parse
+  --show-toplevel`, and that leg ships the tree by `git archive HEAD`, which has no `.git`. The same failure was
+  measured the same day in CI's floor arm and recorded at `ci.yml:71` as "the transport, not the toolchain" —
+  true, and shelved there as an oddity awaiting anyone who reproduced the floor off an export. What that missed is
+  that a *second* arm ships by the same transport, so the cost was not an odd red but a criterion that could never
+  be measured on any benchmark host. `repoRoot` now walks up for `go.mod`, which its own comment always named:
+  `git rev-parse` returns the *repository* root, a different thing that coincides with the module root only in a
+  checkout. Everything these tests read is present in the export; only the lookup wasn't. Driven in all three
+  states before landing — reproduced in an extracted export (2 FAIL), all three pass there afterwards including
+  the audit test that writes under the export's own `internal/vec`, and the not-found branch driven from `/tmp`
+  (`shapegen: no go.mod in /tmp or any parent`, rc=2). Two failures there against three here is arm-dependent and
+  not a miscount: the floor arm sets no `GOEXPERIMENT`, so it does not build `audit_simd_test.go`.
+- **The candidate files accumulated across runs, so landing one could pin a registry row to a contaminated
+  archive.** `gate-p5` named them by revision alone and `baseline_candidate` appends, so two runs at one rev piled
+  into one file: after `p5-clean-b5cef4f` the witness file held three rows from a clean run beside two from a run
+  whose hosts had been sshed into mid-measurement, with duplicate `(cpu_model, era)` keys and nothing in the file
+  distinguishing them. Column 6 is the archive a witness is recomputable from, so the reviewed-commit safeguard
+  held only for a reviewer who remembered which timestamp was clean. Now `-<rev>-<RUN_STAMP>`. The accumulation was
+  *already known*: `exercise-baseline.sh` documented it and `rm -f`'d the previous pass's files, which protected the
+  synthetic path and left the production path — the one whose rows get landed — unprotected. That workaround is
+  deleted rather than explained. Driven with a negative control: two hosts in one run still append to one file
+  (2 rows), a second run writes its own (1 row, no cross-run archive leak), and the old unstamped name reproduces
+  the defect at 2 rows in 1 file.
+- **The BASELINE summary line told the operator to land the witness rows, and following it manufactures the FAIL
+  it was written to prevent.** It names only `witness-candidates`, so a reader who lands those and stops has
+  produced exactly the *owing* state — a tracked witness for `(cpu_model, era)` with no baseline row — which
+  `gate-p5` renders as an unmet-registration FAIL. Landing both in the same commit is not the escape either: a
+  baseline candidate emitted from a single run says so in its own estimator column (`SINGLE DRAW … NOT landable
+  as-is (§5 rule 16)`), so a fleet with one archived run in an era can supply neither half. Caught by reading
+  `:1219` before landing `p5-clean-b5cef4f`'s five witness rows, which would have converted three green BASELINE
+  verdicts into reds and pinned column 6 to a gitignored path. The line now states the both-or-neither rule and
+  why one run cannot satisfy it; the rows are not landed.
+- **`docs/hosts.md` recorded `vesta` as `unmeasured` for a reason that never happened, and the host had a
+  toolchain the whole time.** The sentence said vesta "answered neither `vesta` nor `vesta.local`", so two
+  read-backs of three. The log says otherwise: `provision-vesta-b5cef4f.log` reached `vesta.local` on the first
+  attempt and read its state correctly — `distro=ubuntu go=none (/usr/local/go=none) … governor=powersave` — and
+  then printed `could not read an answer from the terminal` at `confirm "run it?"`, because the run was detached.
+  A launcher unable to obtain consent was transcribed as a host unable to answer, which is the instrument
+  reporting in the subject's voice; the fix was `--yes` and no network changed. `confirm()` needs no repair — it
+  fails closed and its message is accurate — but the interaction of two of our own scripts is now written down:
+  `detach.sh` supplies a tmux pane, so `confirm()`'s `: </dev/tty` open *succeeds* and the `read` behind it hits
+  EOF, taking the one branch whose wording names a terminal instead of the absence of one. Corrected with the
+  present state, verified two ways: `go version go1.27.0 linux/amd64` read back off `vesta.local` on a fresh
+  connection, digest `675c26c4…` matched against `$KEEL_GO_SHA256`, and `gate-p5`'s own provenance stamping all
+  three `-race` rows `go1.27.0` — three of three.
+- **Addressing a lab host by its bare name silently splits one machine into two, and nothing in the tree said
+  so.** Measured 2026-08-29: every lab host resolves the bare name to a Tailscale address and the `.local` name to
+  a LAN one (`vesta` → `100.82.237.84` vs `vesta.local` → `192.168.6.153`; `janus` and `antares` likewise). The
+  cost is not connectivity — both forms reach the machine — it is provenance. The hostname is column 5 of a
+  witness row and is interpolated into the archive filename, and `build/witness-candidates-b5cef4f.tsv` is the
+  proof: rows 2 and 4 are the same Ryzen AI MAX+ 395 under `antares` and `antares.local`, citing
+  `bench-gate-p5-…-antares-…` and `bench-gate-p5-…-antares.local-…`. What keeps this out of correctness is the
+  registry key `(cpu_model, era)`, identical on both rows by design — the hostname is "provenance, never a key" —
+  but a reader reconciling archives by host counts a fleet member that does not exist. The trust state differs per
+  form too: vesta's reimage invalidated the key `known_hosts` holds for its Tailscale address, so the bare form
+  warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and survives only because pubkey auth still succeeds. Recorded in
+  `docs/hosts.md` beside the `.keel-hosts` configuration it governs. **The measurement above is dated because the
+  machine moved under it**: `grep -c vesta /etc/hosts` is 0 today, and reading that as "the `/etc/hosts` pin I
+  blamed on `#70` never existed" is the error this bullet nearly shipped as a retraction. `/etc/hosts` has
+  `mtime=2026-08-28T22:38:44Z` — *after* that comment — and `/etc/hosts.bak` preserves the quoted line verbatim,
+  `100.78.211.16  vesta.local vesta`. So the `#70` attribution was right and is now spent, not withdrawn: the pin
+  named **both** forms, which is why `.local` failed too, and the tailnet address moved out from under it
+  (`100.78.211.16` → `100.82.237.84`). Reimage and pin are one mechanism in series, not two competing ones. A past
+  claim can only be judged against the artifact *as it stood*, and both witnesses to that — an mtime and a `.bak`
+  — were adjacent to the file being read.
+- **`docs/hosts.md` called the amd64 requirement the toolchain's, and it is keel's.** The row read
+  "`simd/archsimd` is amd64-only on go1.26.5", true when written and stale since: on go1.27.0
+  `$GOROOT/src/simd/archsimd` ships 9 arm64 files (`ops_arm64.go`, `types_arm64.go`, `slice_gen_arm64.go`, …)
+  tagged `goexperiment.simd` alone, and the portable `simd` package two more. What is amd64-only is every backend
+  in `internal/vec` (`//go:build goexperiment.simd && amd64`). The distinction matters because it moves where the
+  blocker is: a NEON port is a kernel this repo has not written, and the *binding* constraint is neither the
+  toolchain nor the kernel but that `CEIL_FRACTION`, `STRSM_FLOOR` and `SYRK_FLOOR` were all derived on amd64, so
+  an arm64 host is judged outside its derivation set on every bar at once.
+- **The same floor admitted a prerelease, which `#70` rules inadmissible.** `^go1\.` plus `split` on `.` gave
+  `go1.27rc3` a minor of 27, and janus and antares carry exactly that version alongside their `/usr/local/go`, so
+  the hole had a host to bite. Anchored to digits at both ends; 11 cases exercised against the shipped function,
+  `go1.27rc3` / `go1.27rc1` / `go1.30rc1` / `go1.27beta1` all refused, `go1.27.0` / `go1.27.1` / `go1.28.0`
+  admitted.
+- **`scripts/detach.sh` dropped the caller's environment, so a detached run could measure a different fleet than
+  the one it was told to** — and it did: `KEEL_REMOTE_HOSTS=antares scripts/detach.sh run … -- ./scripts/gate-p5.sh`
+  ran the gate against a stale `.keel-hosts` and produced a log of `UNMEASURED` against `keel-skx`, a host that no
+  longer resolves. That reads as a fleet outage and is a launcher defect. The mechanism makes it worse than a flat
+  drop: `tmux new-session` seeds a session from the **server's** environment, so an override arrives only when that
+  call is what starts the server, and `exit-empty off` pins the server for the machine's lifetime. Measured both
+  branches on 2026-08-28 — no server: `KEEL_REMOTE_HOSTS=[antares]`; server already up: `[unset]` — so the first
+  detached run of a host's life honours its overrides and every later one silently does not. The runner script now
+  carries an enumerated environment (`PATH`, `GOEXPERIMENT`, `GOMAXPROCS`, `KEEL_*`, `BENCH_*`), which makes
+  `build/<name>.cmd` readable as a statement of what was measured, and the launcher echoes the names it carried.
+  `PATH` is on the list because it picks the `go` that builds the arms; it matched the server's here only because
+  one profile started both. Proven on the branch that failed, with a server already up.
+- **`docs/hosts.md` said no toolchain is installed on the remote hosts, and that the gate version-checks the
+  compiler whose output runs — both false, the second interestingly so.** There is a second toolchain and gate-p5's
+  `-race` arm needs it (`go test -c -race` under `CGO_ENABLED=0` is refused outright), so `janus` and `antares` carry
+  `/usr/local/go` = `go1.26.5`; `vesta` did not answer ssh on 2026-08-28 and is `unmeasured`, not assumed. And the
+  drift argument ran backwards: the version the gate printed was the **host's**, which is the compiler that produces
+  nothing *except* that one arm — so the binary whose provenance mattered was the one no check read. `b0e5b37` is
+  what makes the sentence's premise true for the first time.
+- **CI's runner may or may not have AVX-512, and it is drawn per run** (`.github/workflows/ci.yml`). Two runs of
+  one workflow forty minutes apart read back `avx512 avx2 scalar` (`33225065217`, red — T27) and `avx2 scalar`
+  (`33226797681`, green). The consequence outruns the erratum: **the green run never executed the path the red
+  run failed on**, so CI green is not evidence for the T27 fix — the fleet is — and a red AVX-512 finding here
+  can be converted to green by a retry landing on other silicon. The design is unchanged, because its
+  rejected-options paragraph already said "whatever hardware the runner lottery deals"; what was wrong was a flat
+  claim about the fleet sitting two paragraphs above an argument assuming the opposite. Three prose sites and the
+  Level-3 summary branch now key off the printed availability rows instead of asserting a cause.
+- **`gate-p5`'s race criterion called a compile failure "a test failure under instrumentation"**
+  (`scripts/gate-p5.sh`). The `-race` arm is built natively on each host — it must be, since `-race` needs cgo and
+  `remote_build_test` is `CGO_ENABLED=0` — so it is the one place the *host's* toolchain compiles keel. The port
+  made the tree need go1.27's archsimd names while the fleet's `/usr/local/go` is go1.26.5, so from `fed1e70` every
+  host takes this path, and it fell to the `else`: a sentence about a test that never ran and instrumentation never
+  applied. Now a fourth verdict state, `UNMEASURED` either way, so no judgment changes — the reader's causal story
+  does. Exercised on a real `go1.26.5` failure from `janus` plus three controls proving the new arm does not capture
+  the neighbouring cases; the marker is deliberately `[build failed]` and not `^go: `, since the real log carries two
+  `go: downloading` lines.
+- **`Sasum`'s AVX-512 tail returned `-0`, because the ternlog rewrite transposes `AndNot`'s operands**
+  (`internal/vec/vec_avx512.go`, `internal/vec/vec_avx2.go`; docs/toolchain-notes T27). `ssa.rewriteTern`
+  folds a tree of vector logical ops into one `VPTERNLOGD` and builds the imm8 in `computeTT`, whose
+  `sloAndNot` case reads `Args[0]` as the non-negated operand — AMD64's `VPANDND` carries the negated one
+  there, so the immediate is the one for `y &^ x`. Abs now spells itself `And` against the complement mask:
+  the fused immediate for three ANDs is `0x80`, bit 7 alone, **invariant under every permutation of the
+  inputs**, so a pass that transposes them has no wrong answer available. `AndNot` is the only
+  non-commutative op in that switch and so the only one exposed. **Two logical ops in one expression is the
+  whole trigger** — a lone `AndNot` is left unfused and is correct — and go1.27.0's `LoadFloat32x16Part`
+  supplies the second, since `Masked` is an `And`. Three claims here replace a first story that was wrong in
+  mechanism ("go1.27.0 swaps `VPANDND`'s operands", refuted by there being no `VPANDND` in the object code at
+  all): the bug reproduces identically **under go1.26.5**, so the 1.27 floor exposed it rather than caused
+  it; `archsimd`'s own `Float32x16.Abs()` escapes only because the rewrite skips unsigned vectors
+  (golang/go#79666, open), i.e. its correctness rests on a second bug; and the AVX2 twin was never wrong,
+  because `VPTERNLOGD` is an AVX-512 encoding at every width and keel's AVX2 routines compile under an AVX2
+  feature context — so its move is prophylactic and retracts no measurement. Verified in the shipped kernel:
+  9 `VPANDND` became 9 `VPANDD` at identical displacements and the single ternlog kept its slot with `$112`
+  becoming `$128`, so **no rate is re-measured**. 56 package-runs green afterwards (7 packages × 4 dispatch
+  pins × 2 AVX-512 hosts, `avx512` active and asserted), against three failing tests before.
+- **keel is ported to the `go1.27.0` `simd/archsimd` API, which the dev host moved to between sessions**
+  (`internal/vec/{gemm,vec_avx2,vec_avx512,vec_scalar}*.go`, `tools/shapegen/emit.go`, `internal/block/block.go`;
+  docs/toolchain-notes T23 amendment). The load/store surface renames with a **swap** — the slice forms take the
+  bare names, the array forms they displace gain an `Array` suffix — so the array-form sites had to be rewritten
+  *before* the slice sweep, or the two APIs merge into one name. 51 type errors, the same count T23 measured
+  against `rc3`, so the rename table is identical between rc3 and final. keel's own `vec.Load512`/`StorePart512`
+  surface keeps its names **and** signatures: the `…Part` wrappers absorb archsimd's new lane count rather than
+  passing it on, so nothing outside `internal/vec` changed. **`gemm_amd64.go` is generated and `tools/shapegen`
+  emits it**, which T23's file inventory missed — `internal/kern`'s fixed-point test caught the generator
+  drifting from its output. Two 1.27 facts recorded and deliberately not acted on: `paFloat32x16` now carries
+  `//go:nocheckptr` (CL 761120, merged, which closed golang/go#78413 — the still-open golang/go#80856 is a
+  duplicate), and that settles `-d=checkptr` **only**, because golang/go#42880 records that `-race` does *not*
+  obey `go:nocheckptr` — so the `-race` half is now predicted still broken, and an AVX-512 host's `-race` run
+  stays the decisive branch; and `(Float32x16) Abs()` now exists, retiring the bitcast workaround at #54's
+  convenience rather than during a freeze.
+- **The vector path's floor is now Go 1.27, and CI is where that is stated** (`.github/workflows/ci.yml`,
+  `Makefile`, `DESIGN.md` §4/P0 + §"standing orders" 1, `CLAUDE.md`, `README.md`, `doc.go`,
+  `doc-site/{index,limits,troubleshooting}.md`). Because the rename is a *swap*, no source satisfies both
+  toolchains: CI still pinned `1.26.x` and so failed the port with the same 51 errors mirrored. `go.mod` cannot
+  carry this requirement — `archsimd` ships with the toolchain and is not a module dependency — so CI's pin is
+  the tree's only machine-checked statement of which API keel is written against. The scalar path's floor stays
+  Go 1.26. Two user-facing docs said the *opposite* as of 2026-08-16 ("use Go 1.26.x for the vector path") and
+  are corrected, with the direction change called out, since it has now pointed both ways in twelve days.
+- **`make build` cross-builds `GOOS=linux GOARCH=amd64`** (`Makefile`, `CLAUDE.md`). The dev host is
+  darwin/arm64, where the build tags exclude `gemm_amd64.go` and both vector backends, so the session-start
+  smoke build greened on a tree that compiled nowhere a benchmark runs — which is how the `archsimd` rename
+  reached a \$3.888/hr fleet run before it reached a compiler error. Verified by reintroducing one 1.26 name:
+  native-only build passes, `make build` fails naming the line.
+- **`baseline-test.sh`'s boundary control asserts *unchanged* rather than *empty*** (`scripts/baseline-test.sh`).
+  It checked that the tracked registry and witness index hold zero data rows, using emptiness as a proxy for
+  "this script did not write them". `f0e9e0b`'s three reviewed baseline rows and one witness row — the
+  registration the whole BASELINE-REGISTERED class exists to serve — broke the proxy, gate-p5 fail-closed on
+  every bar, and the first registered-baseline verdicts were never computed. Now a `cksum` taken before the
+  first fixture and compared after. Both branches driven on purpose: a forged registry row and a
+  **single-newline** write to the witness index each turn the run red.
+- **CI runs `make lint`, not a hand-copied subset of it** (`.github/workflows/ci.yml`, `scripts/gate-p5.sh`).
+  The workflow listed three of the target's four steps and never gained the fourth, `baseline-test.sh`. So
+  gate-p5's comment beside that check — "lint runs on every push … and catches a broken reader before a
+  \$24/hr fleet renders a bar from it" — was false for the week it mattered, and the bill was the run above.
+  The comment is corrected in place rather than deleted, because what made it durable is worth naming: it
+  asserted a behaviour of *another file*, where nothing checked that the behaviour existed.
+
+- **A failed 8-thread parse published the previous routine's rate** (`scripts/readme-numbers.sh`, #6). `t1`
+  and `t8` were never cleared between rate lines, so a line whose `8 threads` match missed carried the last
+  successful routine's figures into the table under the new routine's name — silently, because a stale float
+  reads exactly like a measured one. Both are now cleared explicitly and the mismatch refuses the run;
+  controlled by mangling one rate line, which fires on all three hosts. Found while auditing a check added in
+  the same pass and then deleted as unreachable — `one` and `eight` parse from the same line, so their pools
+  are symmetric by construction. The unreachable check was apparatus that could not pay its way, and taking
+  it out is what exposed the reachable defect beneath it.
+- **The README generator read a verdict line's prefix and not its prose, so a run judged by no bar published
+  as clearing bars derived from it** (`scripts/readme-numbers.sh`, #6/#37). Take four's rows are prefixed
+  `PASS` and say `NO FRACTION IN FORCE` / `NO FLOOR IN FORCE` in the same sentence — `PASS` only because
+  nothing failed, and nothing failed because `44.2%` and `6.067x` were typed *from* that run. New `REPORTED`
+  class (prose outranks prefix, one classifier for both verdict shapes) plus a `BASELINE` parse that no longer
+  refuses a whole log for want of a ratio no baseline row has. The caption now names both unjudged classes
+  separately, keeps one denominator across all four branches, and refuses to headline `0 of 12 clear` for a
+  run nothing tested. Positive control: the phrase appears 10x in take four, 0x in the confirmation log.
+- **The gates divided by a CI bound above every sample ever taken** (#116, 2026-08-22; DESIGN.md §5 rule 20,
+  `docs/rulings.md` rule 20). `bench_ratio_lo` reconstructed a bound as `center × (1 + ci)`, but benchstat's
+  median CI is `[x_(r), x_(n+1−r)]` — **both bounds order statistics, so neither can lie outside the data** —
+  and `ciFraction` reports the *wider* half-width. keel-zen5's ceiling reached 296.5 GFLOP/s down and 0.5 up;
+  mirrored, that made a denominator of **2588** against a sample max of 2295 (2296 over 30 draws). `benchci`
+  now emits the honest `lo`/`hi` plus the observed `min`/`max`, and the consumers read the bounds instead of
+  reconstructing them. `ciFraction` is **unchanged on purpose**: it is benchstat's display quantity and
+  `-verify` still agrees on all 42 cells, so no historical `±%` moved. Direction, per §5 rule 15: the old form
+  could only deflate a share (`hi_den ≥ center_den`), so it never manufactured a pass — zen5's ceiling share
+  was 42.7% and is 48.25% — which is why it survived, and why the care owed its favorable direction is
+  procedural.
+- **A zero-width interval can mean the rank window stopped looking, so every reading now prints its range**
+  (same ruling). At n=30 the zen5 contaminant **recurred** (1989 is in the sample) yet
+  `[x_(10), x_(21)] = [2291, 2291]` reported **±0.00%** over a span of 13.40%: raising `-count` concealed the
+  defect it was ordered to resolve. The rank pair marches inward faster than any variance argument — `[2, 9]`
+  of 10, `[10, 21]` of 30, `[36, 55]` of 90 — so at fixed 20% contamination the width goes ±21% → ±0% → ±0%.
+  `bench_describe` prints `[min, max]` beside every reading and names `RANK-WINDOW-BLIND(span …)`, driven on
+  purpose rather than inferred. Unthresholded deliberately, and it moves no verdict. **Sensitivity measured,
+  not claimed: the exact-zero trigger names 1 of the 3 blind rows in that log** — `avx2` (span 7.42%) and
+  `scalar` (13.34%) sit under *nearly* zero ±0.087% intervals — and the threshold-free widening was refuted in
+  the same log, firing on three healthy rows too, since the rank pair excludes an extreme by construction.
+  A second finding fell out: the contaminant reaches the **scalar** arm, so it is not an AVX-512 frequency
+  artifact. Also repaired en route:
+  `clock_series`'s field-count guard would have reported "unbounded" on every host on every run the moment
+  `bench_stat` grew a column — found by enumerating its 29 call sites, not by a test.
+- **Every gate now prints its own verdict arithmetic** (ruled 2026-08-22 on #6: *"the run that signs v0.1.0
+  prints its own arithmetic"*). The previous campaign's headline tally was the operator's grep, disclosed as
+  such. The five verdict primitives count, and `gate_verdict` calls `gate_tally` from one site, so all six
+  gates gained it at once; a **zero total sets `FAIL`**, since a gate that reached a verdict without rendering
+  one adjudicated nothing. Cross-checked against an ANSI-stripped grep of the same gate-p0 log (11/1/4/0/0,
+  exact), with `BASELINE`, `REPORTED` and the zero-total anomaly driven separately.
+- **The 8-thread compute ceiling under-reads by 10–37%, and it is the harness, not the machine** (#115,
+  2026-08-22). `computeArm` re-forks 8 goroutines and joins them every one of `b.N` iterations.
+  `BenchmarkT52Hoist` is the same arm with the fork lifted out of the loop — same work, same flops formula,
+  `b.N` joins reduced to one — and paired against the shipped arm on each host under each mask it reads
+  **1.290 → 1.010** (keel-zen4 spread), **1.599 → 1.014** (keel-zen5 spread), **1.147 → 1.029** and
+  **1.157 → 1.007** confined, as multiples of eight times each host's own 1-thread rate. Duty cycle rises to
+  **0.97–0.99** on all six arms, so the lost time is workers *parked*: **the spread-mask collapse is a
+  fork/join cost, and the spread-vs-confined gap goes from 0.143 to −0.019 and from 0.442 to 0.007.**
+  Placement was correct throughout — 8 running threads on 8 distinct masked cpus — and keel-skx, whose two
+  masks are byte-identical, is flat in every arm both before and after. `internal/par/par.go:109` forks per
+  call too, so the routines share the shape; what differs is op duration, **204 ms for
+  `Scale/Sgemm/n=4096/threads=8` against 268 µs for the ceiling**, a factor of 762, which makes a ~60 µs
+  fork/join **22% of a ceiling op and 0.03% of a routine op**. Both sides of every judged share pay it and
+  only the denominator pays it at a rate that matters — so **this is the cause of the impossible denominator
+  below, not a second finding** (§5 rule 14: severity is a function of deployment context). Hoisting the
+  shipped arm changes the criterion's denominator, so it is blocked on a ruling.
+- **A ceiling below a rate it denominates is now refused, not divided** (#6, 2026-08-22). `gate-p5`'s share
+  criterion published three plausible passes over an impossible denominator on `keel-zen4`: the measured
+  8-thread ceiling read **461.4 GFLOP/s ± 62.68%** while the three judged 8-thread rates read 675.1, 704.3 and
+  662.3 — **146.3%, 152.6% and 143.5% of it** — and the criterion printed 89.8%, 93.7% and 88.1%, because
+  `bench_ratio_lo` divides the numerator's *lower* bound by the denominator's *upper* bound. That construction
+  is correct for a floor and inverts here into a plausibility generator: the wider the ceiling's interval, the
+  more comfortable the impossible share looks. `bench_ceiling_impossible` and `bench_ceiling_refused` compare
+  the **points**, deliberately not the intervals — there is no confidence level at which dividing by an
+  impossible ceiling becomes a verdict — and the criterion answers `unmeasured`, naming a mismeasured
+  denominator rather than a regression. **Host-level and not per-row**, which the second pass is what decides:
+  it read 690.85 with `Ssyrk` at 101.6% and `Sgemm`/`Ssymm` at 97.5%/95.8%, and a per-row test would have let
+  those two PASS against a denominator their own sibling proves is not a ceiling. Twice lucky is not a method.
+  Six fixture arms in `remote-exec-test.sh` §9e carry both passes' own rows, `keel-zen5` from the same run as
+  the healthy control, a rate exactly at the ceiling (reached, not impossible), an absent rate, and a zero
+  ceiling left to the branch that already owns it. Third member of #110's family — an instrument whose output
+  was decided by something other than the quantity it names.
+- **The spread mask's shape was computed and then thrown away, because the runner read the mask through a
+  command substitution** (`scripts/remote.sh`, found by the era-founding run at `450a783` on all three judged
+  hosts). `keel_pin_mask` returns the mask on stdout and records its *shape* — `KEEL_PIN_DOMLIST`,
+  `KEEL_PIN_NODEDOMS` — in globals, deliberately, because stdout is what every other caller parses. The
+  runner then called it as `KEEL_MASK=$(keel_pin_mask 8)`, and a command substitution is a **subshell**: the
+  mask came back and the shape died with the child. Every host measured under a *correct* spread mask
+  (`0,8,16,24,32,40,48,56` on both EPYCs, the degenerate `0,1,2,3,4,5,6,7` on `keel-skx`) and recorded
+  `doms= nodedoms=`, which `gate-p5`'s new shape criterion correctly called **UNMEASURED on all three** —
+  fail-closed, so the cost was host-minutes and not a false verdict. The mask is now a global too
+  (`KEEL_PIN_MASK`), cleared on entry with the other two so a refusal cannot leave a stale mask behind, and
+  one in-shell call yields all three fields the pin line needs: "mask recorded, shape absent" is no longer
+  representable. **The fixtures passed throughout and were never wrong** — they called the selector directly,
+  which is the one form that keeps globals, i.e. the form the runner did *not* use; `shape_case` now redirects
+  stdout to a file instead and asserts the global mask and the printed mask are the same string. Driven
+  end-to-end on `keel-zen4`, `keel-zen5` and `keel-skx` after the fix: all three pin lines carry their shape
+  and all three satisfy `distinct(doms) == min(width, nodedoms)` with imbalance 0. The founding run's numbers
+  are **discarded rather than salvaged**, though the mask under them was right: reconstructing a shape after
+  the fact from a host's topology is exactly what recording it was meant to replace (§5 rule 5).
+- **`benchci -verify` failed on every pinned host, because the mask's own provenance line is a CSV field
+  with commas in it** (`tools/benchci/main.go`, found on the era-founding run at `be5bb91`). `remote_exec`
+  prints `keel-pin: mask=0,1,2,3,4,5,6,7 width=8` *inside* the benchmark block, which makes it a
+  configuration line; `benchstat -format=csv` therefore quotes it; and `verifyAgainstBenchstat` split
+  benchstat's output on commas, so the line arrived as **eight fields** and was recorded as a data cell named
+  `"keel-pin: mask=0` that no summarizer can reproduce. The gate went red for a metadata line, with the
+  statistics untouched. **The guard that should have caught it was passing by luck**: every earlier
+  comma-bearing configuration line (`keel-bench-clock-mhz`, `keel-bench-peak-method`, the `Ceiling/stream`
+  names) happens to split into exactly two fields and was absorbed by a `len < 3` test, so the parser had
+  been wrong since it was written and no archive had yet exercised it. The tool **wrote** its CSV with
+  `encoding/csv` and **read** benchstat's with `strings.Split`; it now reads with the same package it writes
+  with, and a CSV it cannot parse is an error rather than a skip — unparsed input greens exactly like clean
+  input. Verified on all three pinned archives and on three `free-placement` archives as a regression
+  control; `verify_test.go` asserts the config-line case, the fail-closed case, and both directions of the
+  differential, and each was **driven against a reverted parser**, which reproduces the gate log's failure
+  line verbatim.
+- **The scaling aggregate printed a negative host count — `-1 produced no ratio`** (`scripts/gate-p5.sh`,
+  found on the same run). BASELINE is decided per (host, criterion), and keel-skx rendered it on the share
+  class while being judged and *missing* the `Strsm` bar in the same run — the first fleet where one host
+  splits across classes. The per-host subtraction from the judged denominator counted it anyway, so the host
+  sat in two buckets and `SCALE_NOCOVER`, the one term still **derived** rather than counted, went to −1.
+  That is #90's second finding recurring at the last place it could: the miss count was moved to a counter
+  in 2026-08-16 precisely so derivation could not come back, and this term was missed. Now two counters —
+  `SCALE_HOSTS_BASE` reports how many hosts rendered the class, `SCALE_HOSTS_BASEONLY` counts those it was
+  the *whole* of the verdict for, and only the latter leaves the denominator. A residual that still goes
+  negative now **fails** with the bucket tally printed, rather than being published as a quantity. Driving
+  the six fleet shapes through the corrected arithmetic also found a **second, never-reached instance**: a
+  host that clears both bars while rendering BASELINE on the README criterion broke the old form identically.
+  `gate-p5.sh` has no standing harness, so those shapes were rendered as a session act and not a landed one
+  (§5 rule 12). The verdict does not move — `be5bb91` is RED either way; what was wrong was the sentence and
+  the denominator under it.
+- **The gate told every reader that nothing was pinned, one line above every number the mask shaped**
+  (2026-08-22). `804fb75` put the affinity mask in `remote_exec` and added the readback criterion, and left
+  `gate-p5`'s per-host provenance line saying *"nothing is pinned either way, placement is the scheduler's"* —
+  printed once per host, immediately above that host's ratios, and it would have been printed into the founding
+  log of the `pinned8` era. The line now states the hazard the mask removes (`smt=2` means eight goroutines
+  *unmasked* could span four physical cores and their siblings) and then the mask that removes it, reading
+  `$KEEL_PIN_WIDTH` from `remote.sh` rather than retyping `8`. `docs/gates.md`'s criterion 4 is corrected the same
+  way, including the refusal — no `taskset` or no eight-core node is status 121 and nothing measured. Neither site
+  says issue #15 is closed, because it is not: the *decision* it asked for was ruled and implemented, and #15
+  closes on vesta's rows being re-measured under the mask, since an adoption closes on measurement rather than on
+  a ruling. That reasoning is now recorded on #15 itself with the four measured grounds, including the
+  **±0.11% pinned against ±14.6% unpinned** probe that is #15's own phenomenon.
+- **The exercise driver's own `[synthetic]` stamp defeated the driver's own reader, and the audit then claimed
+  coverage it did not have** (found live on the first firing, 2026-08-22). `run_pass` collected the delegated
+  gate's log by matching `^ *full output: build/gate-p4-under-p5-…`, but `instrument_exercise` stamps `info`
+  lines too, so `[synthetic] ` sits between the indent and the phrase and the anchored pattern matched nothing on
+  all three passes. It **failed closed** — the driver said the delegate was uncollected rather than tallying files
+  it had never read — and then `stamp_audit`, skipping absent files with `continue`, totalled three parent logs
+  and concluded *"all 129 verdict lines carry `[synthetic]` … parent or delegate"*. The disclosure existed three
+  screens earlier, once per pass, and the summary line contradicted it. Now: the extractor tolerates any prefix
+  before the phrase and walks the chain **two levels** (gate-p5 names gate-p4's log, gate-p4 names gate-p3's),
+  because surviving two delegations is precisely what the lifted `export` is for; and the audit prints the file
+  count beside the total, asserts the expected nine, and calls a missing log **NO on coverage** rather than
+  reporting the surviving lines as clean. Both branches driven against this run's real bytes: nine logs / **420
+  verdict lines / 0 unstamped / 0 signed**, and with one log removed it refuses rather than reporting 382.
+- **#78's fix rev-stamped the delegated gate logs and left two runs at one rev overwriting each other, which is
+  the same defect past its own fix** (found 2026-08-21 from the other end, while writing the exercise driver's
+  own `#78` control). `build/gate-p4-under-p5-<rev>.log` and `build/gate-p3-under-p4-<rev>.log` stopped a run at
+  one revision from destroying a run at another — and the collision that remained is the *ordinary* case here,
+  not a corner: DESIGN.md §4 allows one immediate re-run of a failing throughput sentinel with **both outputs
+  archived**, and an instrument exercise runs one gate three times over at one rev. Both paths now carry
+  `RUN_STAMP`, a per-process UTC stamp defined once in `scripts/remote.sh` and deliberately **not exported**, so
+  a delegated gate stamps its own log with its own process's stamp while a driver that wants one stamp across a
+  chain can set it in the environment. `bench_csv`'s identical stamp — landed hours earlier, from the archive
+  side of the same defect — now defers to it, so one process's samples and its delegated logs are joinable by
+  stamp instead of merely being distinct. **Two independent discoveries of one naming rule** (§5 rule 10): the
+  archive path was caught by measurement, this one by writing a control that had to know where a log would land.
+- **Two runs at one rev on one host wrote one archive path, so the second overwrote the first's samples**
+  (found 2026-08-21 while building the synthetic exercise, measured rather than reasoned). `bench_csv` keyed the
+  path on gate, rev, host and a counter — and the counter was per *process*, so it discriminated archives inside
+  a run and nothing at all between runs. Two shells sourcing `scripts/bench.sh` and calling the function both
+  printed `build/bench-<gate>-804fb75-keel-probe-1.txt`, the second `cp` silently replaced the first's numbers,
+  and the gate printed the path as that run's own archive either way. The two things this project most often does
+  with one rev are exactly the two that collide: DESIGN.md §4's one-immediate-re-run allowance for a failing
+  throughput sentinel says **both outputs archived**, which the naming made impossible, and an instrument exercise
+  runs one gate three times over to drive three states. A per-process UTC run stamp now sits between the host and
+  the counter; it goes at the **end** because `readme-numbers.sh` reads the rev by offset from `bench-gate-p5-`
+  and both `build/bench-gate-p5-*-<host>-*.txt` globs still match, so an appended field costs no reader.
+- **The fleet-wide CPU affinity mask was law, doc and measurement era three times over, and no line of code
+  applied it** (§5 rule 5, found and implemented 2026-08-21 while building the synthetic exercise of the
+  BASELINE-REGISTERED class, ruled on #6).
+  `docs/hosts.md` said in the present tense that *"every judged benchmark invocation on every host runs under a
+  CPU affinity mask of eight distinct physical cores"*; `scripts/measurement-eras.tsv` had already opened a
+  `pinned8` era for it; DESIGN §5 rule 5 carried its falsification condition. `git grep taskset` over the whole
+  tree returned four CHANGELOG lines, three doc paragraphs, and two comments saying P2 needs none. **Three
+  artifacts asserting a mechanism and zero implementing it is one witness restated three times** (§5 rule 10) —
+  grep for a mechanism before publishing the number that depends on it. Now: `remote_exec` — the single launcher
+  all 20 remote call sites funnel through, so no gate can deviate — selects a mask of eight first-thread cores
+  inside *one* NUMA node for every invocation carrying `-test.bench`, and **refuses rather than falling back**
+  (no `taskset`, no sibling lists, or fewer than eight cores in any one node ⇒ status 121, nothing measured),
+  because a silent free-placement fallback produces precisely the artifact the era ledger exists to make
+  impossible: a free-placement reading wearing a `pinned8` label. Correctness runs (`-test.v`) stay free — a mask
+  cannot make a wrong answer right, and pinning them would refuse the test suite on small hosts for nothing
+  measured. The mask is printed into the benchmark log immediately before the binary, so it travels into the
+  archive with the numbers it shaped, and `gate-p5` reads placement back **twice** — the mask the harness asked
+  for (`bench_pin`) against the width Go saw through its own affinity (`bench_gomaxprocs`) — because a requested
+  mask that did not take is invisible to the side that requested it. A declined mask and a broken sweep are told
+  apart there, being opposite causes of one `unmeasured` (§5 rule 6). Nine selector fixtures in
+  `scripts/remote-exec-test.sh` drive shapes no fleet host has, and one of them **created a branch**: the first
+  version fell back to `sib=$c` when a topology had no `thread_siblings_list`, which hands back eight cpus that
+  may be four hyperthreaded cores — and the `GOMAXPROCS` readback cannot catch that, since the width is 8 either
+  way. Distinctness unprovable now abandons the node. Every keel benchmark number published before this commit
+  was measured under free placement, which is what the era boundary is for.
+- **skx's judged shortfall factors onto the one term nothing excuses, and two published skx figures were a bad
+  draw** (#6, 2026-08-21; `build/onethread-decomp-3fceaa9.log`). Pinning the 1-thread arm shows the ladder's
+  `keel1` of 59.16 ±15.12% was low: the truth is 66.56 ±0.11%, so skx's 1T efficiency rises 30.83% → **34.72%**
+  and its normalized scaling falls 1.406 → **1.248**; the 43.34% share does not move, both inputs being
+  8-thread. In the form that reads no 1T keel rate at all, `share = (µkernel/ceil1)(keel8/8µkernel)(8·ceil1/ceil8)`
+  = 0.4633 × 0.5822 × 1.6067, only the middle term has headroom — the nest needs +33.4% while the issue-bound
+  kernel would need 118.6 GFLOP/s against a ~93 cap. **"Fleet's best parallelizer" is withdrawn**: skx scales
+  5.6% better than zen5, not 16%, the rest being credit for its own ceiling droop.
+- **`gate-p5.sh` published an unbounded ceiling interval by formatting an infinity.** `bench_stat` returns
+  `inf` when benchstat established none, which `printf "%.2f"` renders per-awk rather than as the absent
+  measurement it is; it now prints `+/- unbounded`, matching `bench_gflops_lo`'s existing contract that an
+  unbounded reading is not measured. Both branches exercised deliberately.
+- **`docs/hosts.md` called janus "the only Intel part, the only issue-bound one" — a count stated as a
+  permanent property**, false by four Intel hosts and a second issue-bound one without any edit. The clause is
+  now dated and followed by bound-class rows for all six measured hosts. Two consequences recorded there:
+  issue-boundedness tracks the µarch (janus 46.0% of peak, keel-skx 46.1%, same front end, one instrument, so
+  one witness), and **ICX measured fma-bound**, refuting half the premise that launched wave 2.
+- **The ceiling-share criterion divided a CI-deducted rate by a bare point estimate, flattering every judged
+  share; `CEIL_FRACTION` re-types from 58.5 to 57.8 as a consequence** (#6, 2026-08-21, ratified as a repair
+  rather than an amendment). `gate-p5.sh` formed the share as `bench_gflops_lo / bench_gflops` — the numerator
+  net of its interval, the denominator's interval simply dropped. `bench.sh`'s own contract forbids exactly
+  that, in the docstring of the function used: *"Do not use it to build a ratio"*, with `bench_ratio_lo` named
+  as the remedy and the fraction-of-peak case named as the example. **The standard that adjudicates this
+  predates the run and is the library's, not the criterion's**, which is why restoring it is a bug fix and not
+  a post-hoc rewrite — and the direction seals it, since the correction is strictly stricter. A census of both
+  call sites confirms one violation, not a pattern: `gate-p3.sh:1024` divides nothing, compares across two
+  CSVs with no shared denominator, and sits inside the stated exemption.
+  **The bar re-derives because its input did.** 57.8 was never a free constant but a formula — *lowest judged
+  row less 2.6 points* — whose input the defective site computed. Re-deriving all nine judged rows of
+  `build/gate-p5-651d1bd.log` through `bench_ratio_lo` moves them down **0.7 to 4.3 points**, in proportion to
+  each host's ceiling CI (`zen5` 1.12% → −0.7, `zen4` 2.07% → −1.8, `gnr` 5.11% → −4.2): **the noisiest
+  denominator was the most flattered**, which is #86's flip hazard reappearing one gate later. The minimum row
+  goes 61.1% → **60.4%** (`keel-zen5` `Ssyrk`), the **argmin does not move**, and 60.4 − 2.6 = **57.8**. The
+  bar's *definition* is unchanged; its input honesty improved. Verified before it shipped: the instrument
+  reproduces all nine *published* shares to the printed digit (§5 rule 11), so the corrected column is a
+  correction and not a second method. The archive re-adjudication is unmoved — **the same 35 of 105 rows
+  resolve**, since none lands in the 57.8–58.5 band — and its per-host resolving thresholds re-derive to 75.6%
+  (`zen4`-class), 84.3% (`zen5`), 152.1% (`gnr`, still *never*).
+  **`CEIL_FRACTION = 58.5` is superseded wherever it still reads as live** — the entries below it in this same
+  release, which record the ratification honestly as of that hour, name the value it was ratified at.
+- **The gate now prints the ceiling's confidence interval, so this class of correction is never unsizable
+  again** (#6, 2026-08-21). Sizing the repair above needed the ceiling CIs, and the gate log had never carried
+  them — only raw `go test` benchmark logs did, which no archive policy promises to keep. They survived here by
+  luck. This is the `BENCHLOG` law's corollary collecting a second time: **a summary that drops the CI it was
+  built from makes its own correction unsizable.** One line, no new machinery: the repair makes the old
+  non-positive-ceiling branch unreachable, and deleting it pays for this print exactly, so `scripts/` closes the
+  session at **net zero** — which matters because this session lands no routine or kernel to spend against.
+- **Four citations of "#22" for the re-measured ceiling row pointed at a closed edges-campaign issue; the work is
+  now filed as #113** (2026-08-21). The number was a **task-tracker id transcribed into prose as an issue
+  number** — GitHub #22 is *"Edges: measure masked C update against zero-padded panels + temp tile"*, closed, and
+  every one of the tree's twenty-odd pre-existing #22 citations correctly means that campaign. Only today's four
+  meant the ceiling row. The failure is a known one with a known control, and the control was run and still
+  missed: I grepped `#[0-9]+` out of the diff and checked each number against `gh issue view`, but skipped #22 as
+  already-known because it had appeared in the ruling I was implementing. **A number arriving from upstream is
+  not a verified number** — it inherits whatever produced it, and this one came from a task list. Worse than a
+  dangling reference: #22's real subject is edge handling in the single-thread nest, adjacent enough to P5 that
+  the citation reads plausibly. #113 states its own scope limit under §5 rule 12 clause (c) — it is
+  forward-looking and explicitly does *not* claim to reach the archive.
+  **A second instance surfaced hours later, and this time the control caught it.** `gate-p5.sh`'s
+  ceiling-share comment said *"#17 re-adjudicates them against this"*; GitHub #17 is the T9 anchor-NOP
+  finding, while **task** #17 was "re-adjudicate every historical scaling verdict" — the same
+  transcription, pre-existing in the tree rather than authored today. Grepping `#[0-9]+` out of the diff
+  and checking each against `gh issue view` is what found it, on a line the repair happened to touch.
+  Repointed to **DESIGN.md §4/P5**, where the re-adjudication actually lives as law, since it has no
+  issue of its own. The tree's other twenty-two pre-existing `#17` citations all correctly mean T9 (counted
+  2026-08-21), so this is one site — and the class is now **two instances with two different task ids**,
+  which is what makes it a class rather than an accident.
+- **The caption fixing one honesty defect published three rates no instrument re-measures, and `gate-p5`
+  criterion 9 caught it on the re-run** (#6, 2026-08-20). `0bbf964` put the ceilings in README's caption, which
+  sits *outside* the block criterion 9 re-measures, so they were claims: criterion 9 passed at `651d1bd` and
+  failed at `0bbf964` on the same README. The caption now states shares only, says why the rates are absent, and
+  names the log that carries them. A **second, latent** instance was found and driven on purpose in the same
+  scan — the ceiling-shortfall sentence also printed `GFLOP/s`, unreachable only because `CEIL_FRACTION` ships
+  deferred-empty, so ratifying a fraction would have reddened criterion 9 for a reason unrelated to the
+  shortfall. Publishing the ceilings in README means first making them re-measured rows: `compute_name` already
+  emits `Ceiling/compute/avx512/threads=8`, but the block's row checker hardwires `scale_name`, so it needs a
+  resolver keyed on the published benchmark column plus a validating fleet run. Not done here, and not because
+  it is wrong.
+- **`gate-docs`' apparatus ratio was blind to the largest apparatus directory in the tree, and its comment said
+  otherwise** (2026-08-20). `library` is tracked `*.go` less `*_test.go` and `bench/` is 1655 lines of which
+  only `openblas.go`'s 106 ever reached it, so **1549 lines of benchmark harness — including the 372-line
+  ceiling instrument landed the same day — were counted in neither term**: a cap policed by a reporter that
+  cannot see the spending. `bench/` now moves whole, tests included. The reported ratio goes **1.97x → 2.23x**;
+  the historical `shell / library` line is unchanged so the published 1.6x series stays comparable. The old
+  comment claimed the library side held `bench/` and `internal/spill` "flattering the ratio by ~100 lines" —
+  right for `bench/`'s 106, silent about `internal/spill`'s **837**, which are disclosed and deliberately *not*
+  moved, since correcting a count is not licence to redraw a boundary in the same commit.
+- **Rule 5's new magnitude gate reached a correct verdict through a self-contradicting sentence** (#6,
+  2026-08-20). `bench.sh`'s non-declining `printf` was unconditional, so at one resolved step it printed *"1 of
+  2 adjacent steps resolves a decline … so the windows are ties"* — a sentence whose own count denies its
+  conclusion. Split: no resolved step is a tie, one resolved step is a non-monotone excursion, and rule 5 passes
+  it because rule 5 names a *monotone* decline. Message-only; all four branches were driven and every verdict
+  word is unchanged. Only `keel-gnr` exposed it — both AMD hosts took the tie path, where the wording was right.
+- **`DESIGN.md` §4/P5 stated the retired denominator as the ceiling's formula, one sentence above the text
+  contradicting it** (#6, 2026-08-20). The headline read `min(8 × measured 1-thread compute, …)` while its own
+  sub-bullet said the compute arm is measured *at 8 threads*. The headline now states the implemented form, and
+  the deviation from the ruling's literal text is recorded with its measured consequence: the two forms put
+  Granite Rapids at 33% and 87% of its ceiling respectively, a 54-point swing that **inverts the rank ordering
+  the bullet's own falsifier depended on**, so it is carried as an open question rather than settled in-tree.
+- **`aws-fleet.sh up` could not resume a half-launched fleet, so finishing one cost terminating it**
+  (2026-08-20). Roles launch in sequence with `--wait-for-ssh`, and the first judged launch was killed between
+  its second and third instance; `up` then refused to run at all while any `keel-` instance was alive, leaving
+  the only route to a complete fleet the termination of two healthy 48xlarges that were fine. `up` now skips a
+  role already running and dies only on a running instance the requested `FLEET` does not name — which is the
+  forgotten fleet the guard was written for, and is still fatal. Same argument that made `cmd_wire` idempotent,
+  learned the same way, one step earlier in the same script.
+- **§5 rule 5's clock check was flagging coin flips as thermal events; it now judges at full precision
+  against a floor its own intervals set** (ruling on #6, 2026-08-20). The test asked only `head > middle >
+  tail` on the `GFLOP/s` column, whose quantum at 245 is coarser than any decline it ever reported — it
+  refused two of four `keel-gnr` triples across a 0.14% total spread, where a random triple is strictly
+  decreasing one time in six. It now reads `sec/op` at `tools/benchci`'s full float64 (42× finer from the
+  same samples, `docs/toolchain-notes.md` T26) and counts a step only where the two windows' intervals are
+  disjoint, floor `(1+cA)/(1-cB)-1`, so no threshold is added and none is tunable. `keel-gnr`'s refused
+  triple replays as `stable` (-0.0019% against a 0.2311% floor) and a 2%/3% droop still refuses.
+
+- **The README emitter lost its revision on exactly the runs it is used for.** `readme-numbers.sh` read the sha out of
+  `"gate-p4 is green on this commit (<sha>)"` — a sentence `gate-p5.sh:888` prints only on the GREEN branch, while a
+  red run prints `(exit N)` instead. So every publication from a red log silently captioned itself rev `unrecorded`,
+  and the campaign's whole purpose is publishing runs that carry disclosed shortfalls. The sha now comes off an
+  archived sample path (`bench-gate-p5-<rev>-…`), which every run writes regardless of verdict; verified by driving
+  both arms — `ce43bca` on the real log, `unrecorded` on a copy with those lines stripped, so the parse is reading the
+  source it names rather than matching something else. Net zero lines in `scripts/`. Residual, disclosed rather than
+  fixed: a missing rev still publishes the word instead of failing closed, and it is `docs-gen.sh:89` that dies on it,
+  one file downstream.
+- **Provisioning waits on apt's lock, because the launcher's readiness signal is necessary and not sufficient.**
+  `keel-gnr` (c8i.96xlarge) died on `E: Unable to lock directory /var/lib/apt/lists/` with no OpenBLAS, on a
+  $17.99/hour host, after `cmd_wire` had reported `cloud-init settled`: `cloud-init status --wait` returned done at
+  06:42 and cloud-init (pid 5253) went on running apt until 06:48:24, its last line being spawn's `--command` tmux
+  install — so `--command` runs *under* cloud-init, not after it, and the launcher's comment saying otherwise was
+  wrong. The gate is on the **lock**, not on cloud-init: three guesses at the holder (esm-cache, unattended-upgrades,
+  apt-daily) were each refuted by the journal, and waiting on the lock is right without knowing which. Two fixes were
+  measured and rejected first — `DPkg::Lock::Timeout` covers the dpkg frontend lock, not the lists directory, and
+  apt-get still fails in under a second with `-o DPkg::Lock::Timeout=300` set; a `flock` reproduction of a held lock
+  held nothing at all, because `flock(2)` and apt's `fcntl` record locks are independent lock families. Both arms of
+  the new gate were driven on purpose on a live host: it waited 21s where it had failed in 1s, and returned
+  EX_TEMPFAIL against a lock held past its cap, so a host that cannot start apt fails by name instead of dying inside it.
+- **The `evidentiary` grant arm claimed a size it never checked, and only a positive control on a deliberately wrong type
+  could show it.** Its preamble read *"`<type>` is a full-size instance of an approved family"*, but membership in one
+  flat list — `KEEL_EVIDENTIARY_SIZES` — is the entire test `host_admission` performs; nothing there evaluates size. The
+  list's members *are* full-size, so the sentence was true of every host the arm had ever run on, which is precisely why a
+  healthy fleet could never expose it. Driving it on a live `c7a.medium` with that type temporarily admitted printed
+  "c7a.medium is a full-size instance" in a real admission preamble. Now the sentence names the check performed —
+  admitted *by the allowlist*, whose members are full-size types added one justifying read-back at a time. This is the
+  same defect, and the same repair, as the rejection arm one branch down, whose "not a full-size instance of an approved
+  family" was a conjunction over two properties the classifier never separates: a verdict must be able to say which of
+  its causes fired (§5 rule 6). It is also the first end-to-end exercise of the grant arm and of the
+  witness-contradiction arm against a **live launcher record** rather than a fixture — the contradiction arm was driven by
+  forging `instance=c7a.48xlarge` onto a real `spawn=…:c7a.medium:ondemand` line, and reached `unknown` ⇒ `unmeasured`
+  naming both readings.
+- **Bare metal reaches the evidentiary class by a named arm; the default stays restrictive** (#106). `host_admission`
+  read the class from `instance=` alone, so bare metal — which has no EC2 identity — fell through the `case` default to
+  `correctness`, and a re-admission run would have demoted vesta/janus/antares by a classifier bug rather than by
+  evidence. Driven against the pre-fix code on the same line the lab hosts produce: `correctness` before, `evidentiary`
+  after. The probe gains a `virt=` field (the `hypervisor` CPU flag, read from `/proc/cpuinfo`'s `flags` line, `?` where
+  there is no such line — an absent instrument must not grant what it cannot see), and the class now reads
+  `instance=`, `virt=` and `governor=` from one provenance line. Scott's condition, ruled 2026-08-19: **name the class,
+  do not widen the default** — a permissive default would trade a false demotion for a false admission and invert the
+  allowlist's safety property, so `instance=none` still fails closed unless `virt=metal` *and* `governor=performance`.
+  Four arms must refuse and are driven doing it (`remote-exec-test.sh` case 8/8b, 33 checks): bare metal under
+  `powersave` (#79's case), bare metal with no cpufreq at all, a `hypervisor`-flagged guest, and the default arm on a
+  provenance line with no `virt=` field. The four refusals are checked to name four *distinct* causes, since the
+  hardcoded parenthetical this replaces told a bare-metal host it was "not a full-size instance". The governor
+  conjunct is now a second derivation of a fact `assert_governor` also derives, so the two are pinned to agree over
+  every governor state rather than assumed to (§5 rule 10). Fixture-only, stated: the guest arm has no live host to
+  read (the AWS fleet's last guest is retired), so *that a real guest emits `virt=guest`* is an inference from
+  `CPUID.1:ECX.31` tested against a line the fixture wrote.
+- **`shapegen` reports a candidate dir it cannot delete instead of discarding the error** (#107, following #39). The
+  gate's lint criterion caught `defer os.RemoveAll(dir)` at `tools/shapegen/main.go:174` — the same unchecked-cleanup
+  defect #39 already fixed in `spill-audit`, reintroduced by a new file. #39's resolution is followed rather than
+  re-derived: report on stderr, keep the primary error, never fail an audit over a cleanup, because a `chmod` on a
+  scratch dir must not suppress a report that was produced correctly. Driven on purpose rather than inferred from a
+  green run — `internal/vec` made unwritable mid-compile, and the branch prints the real path and errno; the healthy
+  `-frontier` run still prints `4.625 34 2x32 u=4 broadcast`, exit 0, no dir left behind. `-sweep` calls `audit` once
+  per candidate, so the silent form accumulated dot-directories 34 at a time.
+
+- **`rows_per_bench` moved from `retention.sh` to `bench.sh`, beside the `KEEL_BENCH_COUNT` it reads back** (#49). A
+  driver that sourced `bench.sh` for the count then could not count its own log — #49's shape a second time, in a
+  caller. All nine `bench.sh` consumers now get the read-back, one line lighter in `scripts/`.
+- **gate-p4's criterion 7 aggregate was the one fleet aggregate that never got #90's coverage clause.**
+  `SYRK_MEASURED` is counted after three `continue` paths, so a host that produced no bounded ratio is absent from
+  every counter and the fail and indeterminate lines read fleet-wide over a proper subset — *"1 of 3 gate hosts are
+  below the bar (0 cleared, 0 undecidable)"* with two hosts silent. All three now append `fleet_shortfall`, as
+  gate-p2's 5b and gate-p3's criterion 6 do.
+- **A gate could sign a synthetic run** — #78's forgeable certificate, reachable from the environment with nothing
+  edited. The verdict line read each gate's *own* instrument flag, so the four gates without one had no withhold
+  branch, and `VERDICT_STAMP` is seeded from the environment: `VERDICT_STAMP='[synthetic] ' bash scripts/gate-p0.sh`
+  stamped every criterion line and still signed the run `gate-p0: RED`. `gate_verdict` now decides on the stamp,
+  which covers every instrument mode added later with no per-gate branch to forget.
+- **Ctrl-C did not stop any gate, and a SIGTERM to gate-p5 deleted its scratch directory and let it keep running.**
+  A group SIGINT killed the `go test` child and the gate resumed at rc=0; gate-p5's `EXIT INT TERM` cleanup handler
+  removed `$BINDIR` and also resumed. The signal traps now `exit`, and exiting runs the one EXIT trap: rc=130 and
+  rc=143, neither resuming. Measured on bash 3.2.57 and 5.3.15 — the claim the old form rested on, that bash skips
+  the EXIT trap on an untrapped fatal signal, is false on both.
+
+- **`aws-fleet.sh up` handed over hosts whose own boot-time `apt-get` was still running**, so the first judged
+  on-demand campaign died at `Could not get lock /var/lib/apt/lists/lock ... held by process 3085 (apt-get)` —
+  the launcher's userdata racing the provisioner. `wire` now waits on `cloud-init status --wait` per host.
+- **The spill parser silently moved a function's body onto the one before it** (#99, *not* dormant as filed —
+  `type:.eq.[2]interface {}` and `type:.eq.[4]interface {}` are unmatched headers in the audited packages today):
+  `^(\S+) STEXT` cannot match a symbol holding a space, which every generic instantiated over a struct shape does.
+  Headers now parse in full, an unparsable one is an error rather than a skip, and `Find` resolves a short name
+  through an instantiation's type-argument list. Re-audited: gate-p2's `0 vector stack refs` is unchanged.
+- **The P4 sweeps' large-size arm never ran a right-side solve, on any host** (#64): `cs[ri%len(cs)]` aliased
+  every runner into the front of a corner list that varies `side` slowest, and `max(ri)` is 2 on a scalar host
+  and 4 on an AVX-512 one. `cornerFor` spreads them instead, so `Strsm`/`Ssymm` `side=R` and `Ssyrk` `uplo=L`
+  now run at n=500 — the only size where the blocked path runs at all. **`Ssyrk` was affected too**, contrary to
+  the issue: 4 corners varying `uplo` slowest leave `uplo=L` unreached below 4 runners, and its own comment
+  claimed all four were covered. `TestSweepCornerCoverage` asserts the index space spans the leading flag at
+  every runner count from 2 to 8, and names the corners a given host does not reach.
+
+- **Fourteen `#23`/`#24` citations named the wrong issue**: they were local task ids, and GitHub #23 (same-host
+  OpenBLAS ruling) and #24 (the 2×32/4×32 dispatch class) both exist and are *also* cited correctly in this
+  tree, so one number carried two meanings. Clock sites now cite `§5 rule 5 as amended 2026-08-16`, the fleet
+  cites #12. `citation-lint` resolves only `§N`, so nothing could have caught this.
+- **"No cpufreq interface" and "the governor will not read" shared one verdict**, which §5 rule 5's
+  2026-08-16 amendment forbids: the first is a virtualized guest that does not own the knob, the second a
+  defect on a host that has it. `remote_probe` now emits three tokens and `assert_governor` has a fifth
+  state, `nocpufreq`. It still blocks — the amendment licenses a substitute instrument, not an exemption,
+  and that instrument (`BenchmarkPeak` head/middle/tail) was unbuilt as this shipped. Proven by a
+  *changed* reading: this dev machine moved `unreadable` → `nocpufreq`, and the other four states are
+  driven from synthetic probe lines because no one host can produce them all.
+- **gate-p5's `KEEL_FORCE=nonsense` check certified a refusal it never observed.** It reads *nonzero* as PASS,
+  so ssh's 255 for a dead host printed PASS; #62 only made the class nameable. `vanished` is now tested first
+  there and beside the existing `else` at four more sites, printing UNMEASURED — same verdict, right cause.
+- **A non-matching glob aborted the entire remote probe under zsh**, so a host that answered perfectly was
+  reported `unreachable`: sshd runs the *login* shell, and `ssh h 'for d in /nope/*; do :; done; echo B'`
+  never reaches `echo B`. Every enumeration in `remote_probe` now goes through `find` with a quoted `-name`.
+  The fleet's AMIs default to bash, which is why this had not fired — one contributor's host, once, as an
+  unattributable UNMEASURED.
+- **Seven of the eleven `gate-pN.sh:<line>` citations in other files were already stale, by 4 to 273 lines.**
+  Exposed because relocating the headers shifted every line: re-pointing by arithmetic landed one on
+  `done <<<"$HOSTS"`, so all eleven were resolved by content instead. No checker follows — a line-existence
+  check would have passed on all seven, which is the argument that retired pinning.
+- **Adding a record page needed four hand-kept copies of one list, and two failed silently.** `fake_tree` and
+  the gitignore-coverage check now derive from `docs-gen.sh`'s own `records()` table; the missing `.gitignore`
+  entry staged a symlink to `DESIGN.md` clean, which is how it was found.
+- **The pre-public audit's `.local`-hostname enumeration named three files and there are six** (#95).
+  Conclusion unchanged — non-routable LAN names, no IP or key — but `DESIGN.md:73`'s `janus.local` is
+  hand-written prose, not a pasted log, so the don't-falsify-the-evidence argument never covered it and
+  it broke keel's own key-by-CPU-model convention; fixed to `janus`. The first search greened because
+  `git grep -E '\.local\b'` matches nothing (`\b` is not POSIX ERE).
+- **`remote.sh`'s "no gate defines its own" verdict helpers was a universal claim `gate-docs.sh` falsifies.**
+  Scoped to the six gates that source it, with the reason gate-docs is legitimately outside (own vocabulary, no
+  host, delegated by nothing, no instrument-exercise mode so no `VERDICT_STAMP` to honour) — and the standing
+  precondition recorded at gate-docs' own definition site, where adding an exercise would make the hole real.
+- **Four statements in the docs were false against the code**, each fixed rather than filed: `parallel.go`
+  and `p5_test.go` claimed every published number was measured at `GOMAXPROCS=1` (README publishes an
+  8-thread arm per Level-3 routine), `DESIGN.md` §2's heading said 15 routines over a table summing to 12,
+  and `doc.go` promised the two backend prints always agree — on AVX2-only silicon, which is what CI runs,
+  it prints `avx2 scalar` (#40). README's undated "currently missed" scaling floor is now dated to the run
+  it describes.
+- **A kernel emitting `NaN` passed the two tests whose job is to catch a wrong kernel** (#98):
+  `math.Abs(got-want) > tol` is false against NaN. Non-finite results are now rejected before the
+  magnitude comparison, and a *matched* NaN/`Inf` pair no longer counts as backend agreement. The two
+  differential tests stay unexercised on arm64, which has no vector backend to differentiate against.
+- **`Snrm2` returned up to 24.78% relative error for small inputs** (#97): gradual underflow leaves a
+  *subnormal*, so the `s > 0` rescue guard let a sum that had lost significance take the fast path.
+  Now guarded by `s >= n·2^-126`. The AVX-512/AVX2 accumulations of this path are unexercised on arm64.
+- **All 25 `[Tn](#tn)` cross-references in `docs/toolchain-notes.md` pointed at anchors that do not
+  exist, and the gate's exclusion for them came out in the same commit** (#93). The headings carry their
+  titles (`## T1 — simd/archsimd is amd64-only; …`), so both renderers slugify the whole line and the
+  anchor that exists is `#t1--simdarchsimd-is-amd64-only-…`. Clicking `T18` in the summary table reloaded
+  the page. **Dead in GitHub's rendering of the file too**, since before there was a site — the site build
+  is only what surfaced it, which is the render-don't-assume rule reaching prose. Fixed with an explicit
+  `<a name="tn" id="tn"></a>` before each heading rather than by rewriting the links, because GitHub and
+  the `toc` extension slugify the em dash differently and no single spelling of the link satisfies both;
+  `attr_list`'s `{ #t1 }` is unsuitable for the same reason, MkDocs honouring it and GitHub not. The form
+  was verified through GitHub's own markdown pipeline before 25 of them were written (`gh api /markdown`
+  returns `<a name="user-content-t1" id="user-content-t1">` beside `href="#t1"`, the pair GitHub's
+  fragment remapping resolves), and through a site build afterwards.
+  **The un-exclusion is the other half of this commit, by ruling:** *"an exclusion that outlives its
+  defect becomes a permanent blind spot with a good excuse."* `gate-docs.sh`'s anchor check no longer
+  exempts the records pages, and `mkdocs.yml` raises `validation.links.anchors` to `warn` so `strict`
+  errors on one. Both branches were driven on purpose before either was trusted: with `warn`, mkdocs
+  fails the build; with the setting lowered back to `info`, the gate's grep over the build log is what
+  fails. Lowering it does not buy silence, it moves which check goes red.
+- **gate-p2's criterion 5b aggregate divided by the hosts that answered and never named the fleet it
+  was asked about** (#90), so with `antares.local` unreachable it printed *"every host that produced a
+  judgeable throughput reading cleared its floor (2/2)"* — arithmetically true, and reading as
+  fleet-wide over two thirds of the fleet. `gate-p2.sh` had no `NHOSTS` at all; both counters are grown
+  inside the per-host loop by hosts that answered. **The dead-host exercise found this on its first run,
+  in the line it was built to fire**, which is the argument for the exercise: five green P2 runs could
+  not have found it, because a complete fleet renders that branch identically either way. The new
+  `fleet_shortfall` in `roofline.sh` appends the clause naming how many of the configured hosts produced
+  no judgeable reading and what fraction of the fleet the line therefore covers; six fixtures
+  (36–41, 70 total) cover it, including the case a healthy fleet drives — complete coverage prints
+  *nothing*, so a helper that appended unconditionally would look right until the log that matters. The
+  fraction stays over the survivors: they are the honest numerator of what was judged, and the defect
+  was the missing statement of how many were asked. **The verdict is untouched**, and the run as a whole
+  was never fooled — the absent host tripped three separate criteria, `FAIL=1`, and a real run would
+  have printed `gate-p2: RED`. So this was message-level, not a green certificate over a partial fleet.
+  gate-p3's OpenBLAS aggregate had the identical shape and was fixed at its own call site in `64a05e1`
+  (`OB_NOCOVER`); this is the sibling that fix left standing, and the helper is shared so there cannot
+  be a third.
+- **And then the verdict itself: a partial fleet now resolves to `UNMEASURED`, and both fleet aggregates
+  decide absence in one place** (#90, ruled 2026-08-16 — the open question the entry above left for
+  Scott). *"A PASS reading `(2/2)` over a three-host fleet is a message-level truth carrying a
+  fleet-level assertion — the criterion's claim is about the fleet, and a fleet with an absent member
+  hasn't measured that claim."* §5 rule 6 gives the absent measurement its one available verdict;
+  criterion 6's aggregate already spoke this way, and **two aggregates with different absence semantics
+  is the divergent-copies defect relocated to the verdict layer** — the thing `fleet_shortfall` had just
+  been built to end. So `p3_coverage` is renamed `fleet_coverage` (the phase prefix was the invitation to
+  grow a p2 twin) and criterion 5b calls it instead of its own inline three-branch `if`. gate-p2 gained
+  the `N_INDET` counter it never had: its indeterminate branch used to `continue` without counting, so
+  "the run could not classify this host" and "this host never answered" were one invisible leftover, and
+  the new UNMEASURED names them separately. **Not a weakening** — `unmeasured()` sets `FAIL`, so
+  UNMEASURED blocks green identically; a partial fleet simply stops being *describable* as a whole one,
+  and per-host PASSes stand as measured. Five p2-shaped fixtures added (31–35, 70 total) because the two
+  callers feed the function different shapes — p2 excludes an indeterminate host from the measured count
+  where criterion 6 includes it, so the same fleet arrives as `3 2 2 0 1` from one and `3 3 2 0 1` from
+  the other. All five of criterion 5b's renderings and all nine of the exercise driver's read-back
+  outcomes were driven before this landed, by extracting the verdict lines from `gate-p2.sh`'s own bytes
+  and feeding them to the read-back — the call-site half is what a fixture cannot reach, and it is where
+  the previous fix was verified by reading alone.
+  **The branch fired in a real gate** (`build/instrument-exercise-dead-host-73c40c8.log`, 128 lines):
+  `antares.local` unreachable, vesta and janus genuinely measuring and clearing their own floors
+  (4×32 at 96.7% of measured peak FMA-bound; 2×32 at 94.6% of a 48.6% issue roofline), and criterion 5b
+  printed `UNMEASURED … 2 of 3 configured hosts cleared it and none measured below it, but 1 produced no
+  floor verdict (0 indeterminate, 1 with no judgeable reading at all)`. The driver's read-back reports
+  **YES** against three independent checks: the configured count matches `.keel-hosts`, at least one host
+  is reported absent, and cleared + indeterminate + absent accounts for the whole fleet. Discipline
+  audited from the log rather than asserted: **25 of 25 verdict lines stamped `[synthetic]`, zero
+  unstamped**, `GREEN`/`RED` never emitted, `VERDICT WITHHELD` the only verdict token, exit 2. Reproducible
+  against the first run at `5ade3ff`: vesta 96.6% → 96.7% of peak, janus 94.8% → 94.6% of its roofline.
+  **One defect found by that audit and fixed here:** the read-back's own YES prose wrapped so a line
+  *began* with `UNMEASURED`, and a verdict-line count over the log read 26 where the gate emitted 25 — the
+  driver's commentary about a verdict counted as a verdict. Rewrapped, with the constraint stated: no line
+  of a synthetic log's own report may begin with a verdict token. Same class as the `GREEN`/`RED` grep that
+  hit the banner's promise text, in the one file where a log being mistakable for certification matters most.
+
+- **The citation lint's pin file was reproducible only on the platform that wrote it**
+  (#87, `scripts/citation-lint.sh`, `docs/citation-targets.txt`). Each pin recorded
+  `substr(text, 1, 56)` of its rule, and `substr` counts *bytes* in BSD awk and
+  *characters* in an awk built against a UTF-8 locale. DESIGN.md §7 rule 2 contains an em
+  dash, so the macOS-generated pin held 54 characters where the runner computed 56, and
+  the very first CI run that ever reached this script failed T1 — on a tree that was
+  clean. `LC_ALL=C` is not the fix: BSD awk is byte-oriented whatever the locale. The lead
+  is now the first ten whitespace-separated words, which is the same number under every
+  implementation and cannot truncate mid-character and commit an invalid byte to a tracked
+  file. Checked by computing all 17 leads under both semantics and diffing them: identical,
+  where the old form differed on the em-dash line. Only BSD awk is installed here, so that
+  equality is a check against character semantics rather than against a second awk — CI is
+  the empirical confirmation.
+- **`go test ./...` died with `SIGILL` on any amd64 CPU without AVX-512** (#87,
+  `internal/kern/kern_amd64.go`). `vectorKernels()` returns `nil` unless
+  `vec.HasAVX512()`; `referenceTiles()`, fourteen lines below it, carried no such guard,
+  and `ReferenceTile`'s `Fn` is `vec.Kernel6x32` — `archsimd.Float32x16` throughout, with
+  no scalar fallback inside it. `Measured()` is `Kernels()` plus that tile and six test and
+  benchmark sites iterate `Measured()`, so those hosts executed EVEX-encoded instructions
+  (`instruction bytes: 0x62 0xf1 0xfd 0x48 …`) and crashed in `internal/kern` and
+  `internal/block`. **Dispatch was never at risk** — `Kernels()` is guarded, `Preferred`
+  cannot rank a tile whose `InsnsPerFMA` is zero, and nothing ships this tile — but the
+  suites were unrunnable for anyone on pre-Skylake-X Intel or pre-Zen-4 AMD. The guard goes
+  on the registry rather than into six `t.Skip`s: `Measured()`'s contract is *"the kernels
+  this host can run"*, and one that hands out an unrunnable kernel is the defect. Typechecked
+  for `linux/amd64` under `GOEXPERIMENT=simd`; **it cannot be run here** — the dev host is
+  arm64 and all three gate hosts have AVX-512, so CI is the only instrument that can
+  confirm it, which is most of the explanation for how it survived three days.
+- **`TestP5Determinism` expected a worker count that moved with the host's core count**
+  (#87, `p5_test.go`). `Workers` takes a *unit* count and returns
+  `min(GOMAXPROCS(0), units)`; the assertion passed `procs` as the unit count *and*
+  evaluated it outside the `withProcs` closure, so it read the ambient GOMAXPROCS. At ≥ 8
+  cores it coincidentally equals `procs`; on a 2-core runner it was 2 against an actual 3
+  and 8, and the library was right in all ten failing lines. Now asserts `workers == procs`,
+  which is host-independent because `par.Workers` reads `GOMAXPROCS(0)` and not `NumCPU`,
+  and which holds for every shape here because each has more units than `max(p5Threads)`
+  (`m=1200` over `MC=144` is 9 ic blocks against 8 threads). Shrink `p5M` and it goes red
+  correctly — the arm would have stopped partitioning max-way. Reproduced and fixed under
+  `GOMAXPROCS=2`, re-checked at 1 and 4.
+- **`gate-p0` exited 1 with no verdict line at all when a host failed its tests while
+  exercising all three backends** (#80; `scripts/gate-p0.sh`). `[[ "$ok" -eq 0 ]] &&
+  FULL_COVER_TARGET="$name"` was the last command of `record_target`, so on a failing run the
+  AND-list's non-zero status became the function's return status — and `set -e`, which
+  exempts every command of an AND-OR list but the last, does *not* exempt a function call.
+  The gate died after that host's final PASS, before its verdict section, exiting 1; since
+  RED also exits 1, the log reads as a truncated red gate rather than as a harness that
+  died. It is the #76 family in a different construct, so #76's fix does not cover it. It had
+  never fired because it needs a failing test *and* complete coverage: the dev host never has
+  complete coverage and the remote hosts had not failed. Driven on the extracted function to
+  confirm both the death and the fix, and all seven tail-position `&&` sites in `scripts/`
+  were audited — this was the only one whose status could escape (the other six have code
+  following them in the same body). The five untouched sites stay `&&` on purpose: rewriting
+  them would obscure which one mattered.
+- **A host that stopped answering mid-loop killed the gate with exit 255 instead of producing
+  a verdict, and the delegating gate reported the death as its delegate's RED** (#76;
+  `scripts/gate-p1.sh`, `-p2`, `-p3`, `-p4`, `-p5`, `scripts/remote.sh`). Ten command
+  substitutions read a value over ssh without guarding the status — `gov="$(remote_probe
+  "$host" | sed -n 's/.*governor=…/\1/p')"` — and every gate runs under `set -euo pipefail`,
+  so an unreachable host terminated the gate at that line: no verdict line, no verdict, exit
+  255. That is the failure mode `DESIGN.md` §5.6 forbids by name — a killed run is
+  unmeasured, never an exit code — and it had two further consequences. The
+  unreadable-value UNMEASURED branches #73 had just finished writing were **unreachable in
+  precisely the case they exist for**, because the gate died two lines above them. And
+  `gate-p4`/`gate-p5` turned the death into `gate-pN is RED (exit 255)`: a red attributed to
+  keel for a host that hung up. Found by the #73 sweep's own positive-exercise probe —
+  `KEEL_REMOTE_HOSTS=keel-no-such-host.invalid ./scripts/gate-p1.sh` stopped after 21 lines
+  with no verdict — which is the argument for exercising a relabel rather than only
+  tally-diffing it: the probe was looking for the new label and found a defect underneath it.
+  Three parts to the fix. **(1)** All ten substitutions guarded with `|| true`, the idiom
+  already in-tree at `gate-p0.sh:189`, so the value comes back empty and empty is a reading
+  nobody got, which each caller already knows how to print: seven governor reads (`gate-p1`,
+  `-p2`, `-p3` ×2, `-p4` ×2, `-p5`), `gate-p5`'s CPU-model read, and `gate-p3`'s
+  `ob_preflight` and `ob_coretype_sweep`. #76 enumerated eight; the two OpenBLAS preflight
+  helpers have the identical shape and were missed in it. The rule is now written on
+  `remote_probe` itself rather than left to each caller to remember. **(2)** The delegating
+  gates read their delegate three ways instead of two: exit 0 *with* a `GREEN` line is PASS,
+  exit 1 *with* a `RED` line is FAIL, and anything else — 255 under a dead ssh, 128+n under a
+  signal — is **UNMEASURED**, because a gate that died before reaching its own verdict has not
+  issued one for this gate to relay. Both witnesses are checked, status and printed line,
+  since a delegate that exits 0 having printed nothing has certified nothing. **(3)** Two
+  sites the guard makes reachable, which #73's sweep could not see: `gate-p5`'s
+  measurement-time governor check printed `'${gov:-unknown}'` inside one collapsed FAIL, so a
+  sweep reading messages had no way to notice it could not look — now split exactly like its
+  `gate-p3`/`gate-p4` twins — and `gate-p5`'s README re-measurement, where an unreadable CPU
+  model matches no published row and would have been reported as `README.md publishes no row
+  for ''`, a claim about the README earned by a host that stopped answering. Verified by
+  re-running the probe: `gate-p0`, `-p1` and `-p2` now each reach `RED` and exit 1 against an
+  unresolvable host, printing UNMEASURED for the target and keeping the aggregate coverage
+  FAIL beneath it; before the fix `-p1` and `-p2` died at 255. The delegated UNMEASURED branch
+  is a backstop and is verified by inspection only — now that the deaths it catches are fixed,
+  no known input produces one, though the pre-fix `gate-p1` produced exactly that condition.
+  Also corrected: four stale line citations in `remote.sh`'s split-site list, which pointed 4
+  to 11 lines above the `if`s they name, and the two delegated-tally cross-references.
+- **`DESIGN.md` §5 rule 8 cited the wrong instance, produced by the rule itself.** The rule
+  landed in `2eda333` naming a #65 correction that "took its Sgemm gains from the wrong row
+  (`+2.1 / +6.2 / +5.6%` against the actual `+2.0 / +3.2 / +3.5%`)". Both sets are correct
+  figures of *different quantities*: the first are 8-thread rate deltas, the second are
+  changes in the 8-thread scaling ratio net of CI, which is what the table those cells came
+  from says in its own caption. All twelve published cells were right, the withdrawn
+  `16.2 / 6.7 / 10.9` ratio was right, and the `15.6 / 3.1 / 7.0` that replaced it is
+  withdrawn in its turn — retracted on #21. What supplied the false confirmation was a
+  coincidence: Ssymm/janus's ratio delta is +6.21% and Sgemm/janus's rate delta is +6.22%,
+  so a matching figure read as a copied cell. One pair of logs answers "how much did Sgemm
+  gain on janus" three ways — +6.22% (8-thread rate, 466.2 → 495.2 GFLOP/s), +4.22% (raw
+  ratio, 6.211 → 6.473), +3.20% (ratio net of CI, 6.090 → 6.285) — because the change moved
+  the 1-thread denominator too (75.06 → 76.50, +1.92%). That the serial arm moved at all is
+  itself worth having: parallelising the shared B pack was not expected to touch the
+  1-thread path, and on janus it did. Rule 8 gains the clause naming its own failure mode:
+  **recompute the same quantity, not merely from the same log** — it instructs distrust of
+  the published figure and trust in the fresh recomputation, so a quantity mismatch converts
+  directly into a confident false correction. A disagreement with a published number is a
+  question, not a verdict. The rule's occurrence count stays at three, but the third is now
+  a `gate-p5: 64 PASS / 7 FAIL` tally carried out of a session summary and published in
+  prose against the log's `64 PASS / 5 FAIL` — a genuine instance of the carry-forward trap,
+  found while correcting the misattributed one.
+- **`remote_boost_set` wrote nothing and returned success**, in its first form, on all
+  three hosts. `$KEEL_SSH_OPTS` carries `-n`, which redirects ssh's stdin from
+  `/dev/null`, so feeding the remote `sh -s` from a heredoc gave it immediate EOF: it
+  executed nothing and exited 0. Only reading the knob back caught it — the same
+  argument `scripts/remote.sh` already made about the governor, now with a second
+  instance behind it. The value is spliced into the remote script instead, after
+  validation against a two-element allowlist so the interpolation cannot carry shell
+  metacharacters.
+- **`gate-p5.sh` could have checked one host's README rows against another host's
+  rates.** `BENCHCSV_ON` is a fixed path reused across the host loop, and the boost-on
+  pass is allowed to fail without skipping the host, so a stale file would have produced
+  a green with the wrong provenance. It is truncated per host and the README criterion
+  reports *unmeasured* when that pass produced nothing, rather than agreeing with
+  whatever was left behind.
+
+- **The six `internal/l1` reductions lost 4.5–17.4% at n=256** when the `>` guards landed,
+  on all three hosts, and now have an exact-fit epilogue of their own. `Sdot`, `Sasum` and
+  `Snrm2` regressed by +6.2/+13.7/+9.4%, +9.6/+12.8/+17.4% and +4.5/+6.6/+9.8% on Zen 4 /
+  Skylake-X / Zen 5 respectively (`build/l1ab-a2b76eb.log`). 256 is an exact multiple of
+  `step512`, so where `>=` consumed it in four unrolled iterations, `>` stops with 64
+  elements left and hands them to the 16-wide mop-up loop — which accumulates into `a0`
+  alone, replacing four independent FMAs with a four-deep dependent chain at ~4-cycle
+  latency. That is the stall the four-accumulator design exists to prevent, reintroduced in
+  the tail; the prediction that the mop-up loop made an epilogue unnecessary was wrong, and
+  is corrected in place rather than quietly dropped. The epilogue runs the unrolled body once
+  at `step` width with all four accumulators live and ends with `x = x[:0]` — truncating a
+  length cannot produce a past-the-end pointer, so it costs no conditional bump, and the
+  mop-up loop and partial tail below fall through untaken. No partial op is involved, so
+  #42's `checkptr` blast radius is unchanged. All six hot loops are byte-identical to before
+  the epilogue (same instruction ranges, still 0 bounds-check exits / 0 calls / 0 vector
+  stack references), and the four surviving `IsSliceInBounds` are the same four `y = y[:len(x)]`
+  precondition re-slices as before. The existing differential suite already covers the new
+  branch: dropping the epilogue's `a3` term fails `TestSdot` at n=64, 128 and 4096.
+
+  Verified on all three hosts: the three routines improved at n=256 on 9/9 host×routine cells,
+  by 14.9/22.3/18.8% (`Sdot`), 14.4/15.6/22.7% (`Sasum`) and 10.5/22.4/5.4% (`Snrm2`) on Zen 4 /
+  Skylake-X / Zen 5, so all three are now at or below their pre-#47 timings except `Snrm2` on
+  Zen 5, which remains 3.8% above it. **This commit is nevertheless net negative on one host**:
+  geomean sec/op moved −2.36% on Zen 4 and −3.49% on Skylake-X but **+2.52% on Zen 5**, because
+  `Saxpy` and `Sscal` — which this diff does not touch, and whose disassembly is byte-identical
+  across the two builds — lost up to 45.06% and 19.40% there. That is a code-placement effect,
+  not a semantic one: `avx512Dot` grew by 160 bytes, which is a multiple of Go's 32-byte function
+  alignment but not of 64, flipping every later function's entry from 64-byte-aligned to 64+32.
+  It is `golang/go#8717`, keel #61 and `docs/toolchain-notes.md` T22, and it is disclosed here
+  rather than netted out because the fix is not what caused it and reverting the fix would only
+  re-win the placement lottery while restoring the dependent-chain stall.
+
+- `scripts/l1-bench.sh` **exited 1 on a fully successful run and leaked a git worktree and
+  a temp dir on every invocation** (#55). `WORKTREE` was `local` to the function while the
+  single-quoted `EXIT` trap expanded it at exit, in global scope, where the local no longer
+  existed — so under `set -u` the trap died on its *first* command and `rm -rf "$BINDIR"`
+  never ran, defeating the intent stated in the comment directly above it. Found by the #47
+  A/B: every number printed on all three hosts, then `WORKTREE: unbound variable` and exit
+  1. Same species as #33 and DESIGN.md §5.6 — a successful run that reports failure
+  corrupts the record exactly as much as the reverse, because any wrapper reading the exit
+  status sees a failed measurement next to a complete log.
+
+- **The feed decomposition's residual column reached −23.40 ns/call and the
+  instrument said nothing about it.** `rest` is the only column whose *sign* carries
+  information: it holds the nest's remaining real work (beta pass, fringe branch,
+  mask checks), which is positive, plus the interaction between C traffic and panel
+  feed, which is not sign-definite. On janus at 2×32 — the shipped shape, and the
+  memory-bound one — it runs `+0.20 → −7.40 → −23.40 → −21.50`, i.e. the two
+  streams overlap in time, so isolating each one overstates it and the C-traffic and
+  panel-feed columns are *upper bounds* there, not estimates. At 4×32 on the same
+  host it runs `+4.35 → +6.10 → +10.00 → +14.50`, which is unaccounted nest work
+  and would make those columns lower bounds. Either reading changes what the two
+  columns above mean, so `feed_rest` now names the dominant sign, its size, and
+  which direction it biases the steps — printed last, because it says how far the
+  three columns above it can be trusted. A reader should not have to derive the
+  sub-additivity of a decomposition from a column the decomposition printed.
+- **Three of `BenchmarkFeed`'s arms describe their panels as L1-resident, and above
+  `kc=128` they are not.** One kernel call needs an MR×kk A panel and an NR×kk B
+  panel, so the reused pair is `(MR+NR)·kk·4` bytes: at NR=32 that is 17 KB at
+  kc=128 but 34, 51 and 68 KB at 256, 384 and 512, against a 32 KB L1d on Skylake-X
+  and Zen 4. Where the premise fails, both panel arms feed from L2 and
+  `cold-panels − loops` is a difference of *locality within one level* rather than of
+  level — which is what the vesta run's panel-feed column looks like: resolved and
+  positive at kc=128, and at or below its noise floor (or negative) at every larger
+  KC. The size cannot be fixed by allocating less, because kk is fixed by the call
+  multiset every arm must share. So it is printed instead: a `keel-feed-panels:`
+  marker per point gives reused-panel, rotating-C and real-panel byte counts,
+  `remote_probe` now reports each host's private cache sizes from sysfs (no host
+  record carried them, and Zen 5's L1d is 48 KB where Zen 4's is 32 KB, so a
+  from-memory constant would have been wrong), and the panel-feed column says to read
+  itself against both. Every doc comment that claimed L1 residency for these buffers
+  now says "reused panel pair" and where the residency actually holds.
+- **The feed decomposition's noise floor printed as `0%`, which is not a number**
+  (T21). benchstat rounds its confidence interval to a whole percent, so `0%` means
+  only "under 0.5%" — and `scripts/retention.sh feed` was printing that percent as
+  the column a reader uses to tell a resolved step from noise. On vesta it read `0%`
+  on seven of eight rows, which says every step is resolved, including the ±0.60 ns
+  ones; read correctly it bounds the floor at 0.5% of the arm, up to 4.4 ns on the
+  4×32 kc=512 row — larger than three of the four panel-feed steps that row reports.
+  The column is now `worst-ci` *and* a `floor` in nanoseconds, computed as
+  `(p+0.5)% × the arm it belongs to` so the bound errs toward calling a step
+  unresolved, steps below their row's floor are marked `*`, and each term says how
+  many of its points are unresolved or negative before the reader reaches its spread.
+  A negative cost is now named as an arm defect rather than reported as a cost. No
+  gate verdict is affected: gates compare a median *net of* its CI against a floor,
+  so a CI rounded down to zero can only make a passing threshold harder to reach —
+  but for a *difference between two arms* the rounding is not conservative, and the
+  whole feed instrument is differences.
+- **`benchstat` was silently declining to compare the two arms of every A/B run**
+  (#50, T20). It groups results into one table per distinct *configuration*, where a
+  configuration is every `key: value` line in the log — and keel's provenance
+  preamble, which exists so that no number ships without its denominator, is in that
+  namespace. One of its markers, `keel-bench-clock-mhz`, is a live snapshot of the
+  CPU's frequency range and so differs between any two runs on one host by
+  construction. Two files that differ in one config key are printed as two
+  independent one-column tables: no delta, no percentage, no p-value, exit status 0.
+  The first run of `scripts/l1-bench.sh` produced three hosts × two builds × 20
+  benchmarks of correct medians and not one comparison among them. `bench_compare`
+  in `scripts/bench.sh` now ignores the keys that describe the run rather than the
+  build (`$KEEL_BENCH_IGNORE`) **and then checks that a `vs base` column actually
+  appeared**, printing `NOT COMPARED` plus the offending keys when it did not. No
+  gate verdict was affected: gates aggregate a single log, where a forked table
+  cannot lose a comparison. `scripts/l1-bench.sh` now goes through it, and its
+  claim that "the deltas carry p-values" — printed above two tables that contained
+  no deltas — is gone.
+- **`scripts/retention.sh sweep` ran at `-count=10` while its header printed the
+  `-count=5` it documents** (#49). `scripts/bench.sh` is sourced first and defaults
+  `KEEL_BENCH_COUNT` to 10, so the sweep's own `${KEEL_BENCH_COUNT:-5}` could see
+  neither the caller's setting nor its own default. The caller's value is now
+  captured *before* sourcing, and the header prints two separate things: the count
+  that was requested, and — per host, counted out of the log itself — the number of
+  sample rows that actually arrived. A parameter read back out of the measurement
+  cannot be shadowed by whatever set it. (The affected sweep is unharmed: 10 is the
+  stronger discipline, so the error was in the safe direction, and its numbers stand
+  as the exploratory numbers they were labelled.)
+- **The sweep's `<- shipped` marker could never fire**, found while fixing #49: it
+  matched the shipped triple's literal name, whose `nc=4096` is larger than any NC on
+  the grid, so no row was ever marked — which reads as "the shipped point is not on
+  the grid". It now marks the shipped KC/MC at the grid's largest NC, read back from
+  the CSV, and the label says exactly that rather than implying more.
+- **`scripts/retention.sh`, `scripts/l1-bench.sh`, `scripts/roofline-test.sh`,
+  `scripts/provision-openblas.sh` and `scripts/bootstrap-github.sh` now define
+  everything in functions and end with `main "$@"`** (#51, the convention; the six
+  gate scripts are tracked there and go last, each needing a green run of its own).
+  Bash
+  reads a script incrementally as it executes it, so editing one mid-run can corrupt
+  the parse position of the running copy — a hazard that had become a rule to
+  remember ("never edit a running instrument"). Forcing a whole-file parse before any
+  work begins makes the instrument immune instead. `scripts/roofline.sh` was on the
+  list and is off it: it is three function definitions and no top-level work, so it
+  is already immune as a sourced library. One behaviour change to declare rather than
+  slip in: `provision-openblas.sh --help` prints a fixed line range of its own header,
+  so that range was narrowed to end before the new wrapper comment.
+- **`spill-audit` could not see a bounds check whose panic block was aligned**, and
+  `gate-p2.sh` turns that count into a passing criterion — so the instrument
+  certifying "0 surviving bounds checks in the steady-state K-loop" had a false-clean
+  mode (#46). `Parse` drops `NOP` lines as zero-length pseudo-instructions, which is
+  right for the T9 inlining marker but wrong for *alignment padding*: that owns its
+  own offset and is several bytes wide. `reachesPanic` matched the branch target
+  exactly, so when the compiler aligned an out-of-line panic block the branch pointed
+  at padding, no instruction was found there, and the exit went uncounted. Targets now
+  resolve to the first instruction at or after the offset, which finds the same
+  instruction wherever an exact match existed — the change can only find *more* exits,
+  never fewer. Regression test added to the hand-written listing
+  (`TestAuditSeesAPanicBehindAlignmentPadding`), verified to fail against the old
+  resolver.
+
+  **The P2 criterion holds.** Re-audited with the fixed detector, `Kernel2x32` and
+  `Kernel4x32` still report 0 bounds-check exits and 0 calls, and the three peak
+  kernels are still register-only. P2's green was correct — but for a period it was
+  correct without being verifiable, and those are not the same thing. Two published
+  counts *are* revised, both in `internal/l1` (#47): `avx512Scal` and `avx2Scal` were
+  reported clean and carry one each.
+
+- **All ten `internal/l1` vector loops now compile with zero surviving bounds
+  checks** (#47). They were written in P1, before P2 wrote the "pre-sliced panels"
+  rule for kernels, and they were index-driven: a `for i := 0; i+64 <= len(x); i += 64`
+  guard with `x[i+16 : i+32]` sub-slices. `prove` does not discharge those. From
+  `i+64 <= len(x)` and `len(x) <= cap(x)` it will not take the step to
+  `i+64 <= cap(x)`, and `i <= i+16` needs no-overflow reasoning it also does not do,
+  so an unrolled body paid one check per offset sub-slice — `avx512Dot` ran 69
+  instructions to issue four FMAs. Every loop is now driven by `len(x)` with
+  *constant* offsets (`x[16:32]`, never `x[i+16:i+32]`) and re-slices at the bottom,
+  which is the idiom `internal/vec`'s microkernels already use for their panels.
+  The two-slice routines (`Dot`, `Axpy`) re-slice `y` to `len(x)` once above the
+  loop *and* carry `len(y) >= step` in the guard: the re-slice alone is not enough,
+  because the prover loses `len(y) == len(x)` across `y = y[step:]`, which left
+  seven of `y`'s checks standing after `x`'s had all gone. `check_bce` on
+  `l1_amd64.go` goes from 60 reports to 4 — one `IsSliceInBounds` per two-slice
+  routine, which is the `y = y[:len(x)]` precondition itself, hoisted out of the
+  loop and paid once per call instead of per iteration. (`l1.go`'s 21 are the
+  scalar reference path and are untouched.) `spill-audit` reports 0
+  bounds-check exits for all ten vector kernels, where it previously reported
+  them for all ten.
+
+  **The instruction counts do not all improve, and T19 is why.** Excluding T9's
+  1-byte inlining NOPs: `avx512Asum` 41→20, `avx512Dot` 61→32, `avx512SumSq`
+  42→21, `avx2Asum` 45→24, `avx2Dot` 61→32, `avx2SumSq` 42→21 — the six unrolled
+  reductions roughly halve. But `avx512Axpy` 16→21, `avx2Axpy` 17→22,
+  `avx512Scal` 11→12, `avx2Scal` 12→13. A slice advance guarded by `>=` costs
+  seven instructions, not two, because the loop may leave the slice exactly empty
+  and a slice's data pointer must not pass the end of its allocation, so the
+  pointer bump is made conditional (`NEGQ`/`SARQ $63`/`ANDL`) — see
+  docs/toolchain-notes.md T19, which has the three-function repro. An unrolled body
+  amortizes that over four vector ops; a non-unrolled one cannot, and `Axpy`
+  advances two slices. The `>` form collapses the advance to a single `ADDQ`, and
+  is applicable here because the tail already absorbs a full vector through
+  `LoadPart`/`StorePart` — but it moves the last full vector onto the masked path,
+  so it is a second change wanting its own measurement rather than a free win.
+  Runtime numbers for all five routines at L1-, L2-, L3- and memory-resident sizes
+  are #47's remaining deliverable; the reassociation order is unchanged, so the
+  results are bit-identical, not merely within tolerance.
