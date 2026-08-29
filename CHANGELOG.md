@@ -88,6 +88,15 @@ While the major version is 0, minor versions may contain breaking changes.
   asserted a behaviour of *another file*, where nothing checked that the behaviour existed.
 
 ### Added
+- **The `go 1.26` floor is now measured, and it is TRUE** (`.github/workflows/ci.yml`, new `floor` job). Four files
+  say `go.mod`'s directive is the *scalar* path's floor and cannot express "1.27 if `GOEXPERIMENT=simd`"; nothing
+  checked it, because both existing jobs pin 1.27.x — so after T23's rename the floor was a claim no instrument
+  could see, on the arm that rots quietly (the vector path breaks loudly). Measured on `antares`, a real go1.26.5
+  linux/amd64 host, before being automated: `go build ./...` and `go test ./...` both returned 0 at HEAD, and the
+  same tree under `GOEXPERIMENT=simd` returned 1 with the T23 errors. **That contrast is the floor's content**,
+  which is why the job must never set `GOEXPERIMENT`. Recorded because it will catch someone: the first attempt
+  shipped the tree by `git archive` and `tools/shapegen`'s two fixed-point tests failed at
+  `git rev-parse --show-toplevel` — a tarball has no `.git`, so that is the transport, not the toolchain.
 - **Every gate now records which Go compiled the binary the fleet ran, read off the artifact** (`builder_toolchain`
   in `scripts/remote.sh`, called by `remote_build_test_or_fail`; issue #58). `go version <ELF>` reports the compiler
   *and* the GOEXPERIMENT out of the cross-compiled test binary — `go1.27.0-X:simd` — where a bare `go version`

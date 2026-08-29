@@ -54,6 +54,38 @@ jobs:
       # no toolchain. The self-tests inside the target run before the lints they cover,
       # since a lint reaches only its clean path on a healthy tree.
       - run: make lint
+  # THE FLOOR ARM (added 2026-08-28). `go.mod` says `go 1.26` and four files say why —
+  # DESIGN.md §7, CLAUDE.md, README.md, doc-site/troubleshooting.md: that is the SCALAR
+  # path's floor, and go.mod cannot express "1.27 if GOEXPERIMENT=simd", so it states the
+  # one bound that holds unconditionally. Nothing checked it. Both jobs above pin 1.27.x,
+  # so after T23's rename the floor became a claim no instrument could see, on the arm
+  # most likely to rot: the vector path breaks loudly, the scalar path breaks silently.
+  #
+  # Measured before being automated, on antares (a real go1.26.5 linux/amd64 host), so
+  # this arm is known-green at the commit that adds it rather than hoped-green: both steps
+  # below returned 0, and the same tree under GOEXPERIMENT=simd returned 1 with the T23
+  # errors. That contrast IS the floor's content, which is why this job must never set
+  # GOEXPERIMENT — doing so would convert it into a duplicate of the simd job that fails.
+  #
+  # One trap, hit while measuring: the first attempt shipped the tree with `git archive`
+  # and `tools/shapegen`'s two fixed-point tests failed at `git rev-parse --show-toplevel`
+  # (exit 128), because a tarball has no `.git`. That is the transport, not the toolchain
+  # — re-run inside a real worktree it is rc=0. `actions/checkout` gives a worktree, so
+  # the arm is fine here, but anyone reproducing the floor off an export will see two
+  # unrelated reds.
+  floor:
+    name: scalar path on the go.mod floor (1.26.x)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with: { go-version: '1.26.x' }
+      # Printed because GOTOOLCHAIN=local is what makes this arm mean anything: without
+      # it, `go` may silently fetch a newer toolchain to satisfy go.mod and the job would
+      # certify 1.27 while claiming 1.26. The floor is the subject of the sentence.
+      - run: go version && go env GOTOOLCHAIN
+      - run: go build ./...
+      - run: go test ./...
   # What this job's green means, exactly (#88, ruled 2026-08-16): "the simd
   # toolchain compiles all paths, and correctness is verified on scalar,
   # deterministically." It does NOT mean the AVX-512 kernels ran — see the second
