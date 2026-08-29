@@ -8,6 +8,32 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **`aws-fleet.sh up` refuses to launch while `$KEEL_REMOTE_HOSTS` is set**, unless
+  `--measure-the-override` names that as the intent. `remote.sh:35` ranks that variable above the
+  `.keel-hosts` the launch writes, so a set value bills a fleet and measures something else — $192.70
+  of it. The guard is the first statement in `cmd_up`, fatal before the first billable call, because a
+  detached run's warning is read by nobody and the money is gone by the time anyone reads it. The flag
+  **honours** the override rather than clearing it: a flag that cleared it would be nothing but a way
+  past the guard. Driven in all four arms, including against the real stale value `antares`, with a
+  positive control — the launcher-presence check sits *above* `cmd_up`, so the obvious probe
+  (`KEEL_SPAWN=/nonexistent`) short-circuits before the guard and discriminates nothing.
+- **DESIGN.md §5 rule 21 and `docs/rulings.md` rule 21: a record of deltas cannot see an injection, so
+  what decides a measurement is stated totally.** Three findings from the first release campaign, in
+  one law. (a) An environment record that enumerates what the caller *changed* is blind by construction
+  to state that was already wrong — `build/<name>.cmd` was clean on the poisoned run. (b) Carry and
+  inherit are two directions of one line and two separate defects: a dropped override fails toward the
+  configured fleet, an injected one toward whatever was last measured, and the 2026-08-28 fix closed
+  only the benign half. (c) A stated assumption is not a check — the certificate's own
+  `stated assumptions (trusted, not verified)` block names "the configured host set is the fleet this
+  gate is meant to measure", the exact proposition the run violated; the disclosure bought the
+  diagnosis and prevented nothing, which is grounds to move a *what-is-measured* assumption off that
+  list and into a guard. (d) `RED` with zero `FAIL`s is the tally line stating that the apparatus, not
+  the subject, failed — readable only because the vocabulary separates a refusal from an absence.
+  Coverage stated per §5 rule 12: `detach.sh` has **no automated test at all** (verified — no file
+  under `scripts/` names it), so rule 21's own fix can regress silently; filed as `#122` rather than
+  repaired here, because the tag delta may not add shell.
+
 ### Fixed
 - **A detached run inherited its host list from a daemon older than the run, and measured the wrong machine.**
   `tmux new-session` seeds a session from the tmux *server's* environment, and that server held

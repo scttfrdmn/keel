@@ -9,22 +9,24 @@
 #   scripts/aws-fleet.sh status   # what is running, since when, and on which market
 #   scripts/aws-fleet.sh down     # terminate every keel- instance the launcher knows
 #
-# THIS SCRIPT SPENDS MONEY, and the expensive failure is not a wrong number, it is a
-# fleet nobody remembered. Two of the three guards that used to live here are now
-# `spawn`'s and are better there:
+# THIS SCRIPT SPENDS MONEY, and the expensive failure is not a wrong number: it is a fleet
+# nobody remembered, or one that bills while something else is measured. Two guards moved
+# to `spawn` and are better there -- `--ttl`, enforced by the launcher's own reaper rather
+# than a `shutdown -h` baked into userdata (firing mid-benchmark costs one reading, which
+# the gate reports `unmeasured`, #62; not existing costs a month of instance-hours, and the
+# old one depended on guest init); and `down` selecting by the LAUNCHER'S OWN NAME rather
+# than a list this script wrote, so it still finds instances after a lost .keel-hosts,
+# which is what selecting by tag was for before `spawn list` stopped reporting tags.
 #
-#   - the dead-man switch is `--ttl`, enforced by the launcher's own reaper rather than
-#     by a `shutdown -h` this script baked into userdata. A TTL that fires mid-benchmark
-#     costs one reading and #62 reports it `vanished`; a TTL that does not exist costs a
-#     month of instance-hours, and the old one depended on the guest's own init working.
-#   - `down` selects by the LAUNCHER'S OWN NAME, not by a list this script wrote, so it
-#     still finds instances after a lost .keel-hosts. That was the point of selecting by
-#     tag before, and `spawn list` reports no tags (see fleet_json).
+# Two are keel's own, and each was bought by a measured loss:
+#
 #   - `up` refuses to run beside a keel- instance THIS fleet does not name, and skips the
 #     roles it does. Two fleets is still the shape that produces a forgotten one, but an
 #     all-or-nothing launch makes the only route to a complete fleet the termination of a
-#     healthy one -- measured, 2026-08-20: the first judged launch was killed between its
-#     second and third instance and left two 48xlarges billing that `up` would not join.
+#     healthy one -- 2026-08-20: the first judged launch was killed between its second and
+#     third instance and left two 48xlarges billing that `up` would not join.
+#   - `up` refuses a set $KEEL_REMOTE_HOSTS unless `--measure-the-override` names it as the
+#     intent -- 2026-08-29, $192.70. See cmd_up and docs/rulings.md.
 #
 # The SOFTWARE half is not here: scripts/provision-openblas.sh installs Go and
 # libopenblas and verifies the openblas-tagged harness. This script's whole job is to
@@ -139,6 +141,15 @@ write_ssh_config() {
 }
 
 cmd_up() {
+  # AMBIENT ENVIRONMENT GETS NO VOTE IN WHAT IS MEASURED (2026-08-29, docs/rulings.md):
+  # remote.sh:35 ranks $KEEL_REMOTE_HOSTS above the .keel-hosts written below, so a set
+  # value bills a fleet and measures something else -- $192.70 of it. Fatal before the
+  # first billable call, since a detached run's warning is read by nobody; and the flag
+  # HONOURS the override, or it would just be a way past the guard.
+  local intent=; [[ "${1:-}" != --measure-the-override ]] || intent=1
+  [[ -z "${KEEL_REMOTE_HOSTS:-}" || -n "$intent" ]] || die "KEEL_REMOTE_HOSTS='$KEEL_REMOTE_HOSTS' outranks the .keel-hosts this launch writes, so the fleet would bill while those hosts were measured; unset it, or pass --measure-the-override if that is the intent"
+  [[ -z "$intent" ]] || say "measuring \$KEEL_REMOTE_HOSTS BY REQUEST; the fleet this launches will bill unmeasured"
+
   # Resumable, for the reason cmd_wire is idempotent and learned the same way. A role
   # already running is skipped in the loop below; a running instance $FLEET does not name
   # is still fatal, because that -- not a half-launched fleet -- is the forgotten one the
@@ -326,7 +337,7 @@ cmd_down() {
 }
 
 case "${1:-}" in
-  up)     cmd_up ;;
+  up)     shift; cmd_up "$@" ;;
   wire)   cmd_wire ;;
   status) cmd_status ;;
   down)   cmd_down ;;

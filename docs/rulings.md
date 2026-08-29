@@ -928,3 +928,119 @@ needs a constant chosen by looking at these widths — which is Scott's call und
 amend-only-with-a-predating-standard rule and is not taken here. The conservative one ships, its
 sensitivity stated in this table rather than in a claim, and the span prints on **every** row so
 that the two rows the trigger misses are still legible to anyone who reads the reading.
+
+## Rule 21 — a record of deltas cannot see an injection, so what decides a measurement is stated totally
+
+*Ruled 2026-08-29. keel's first release campaign, `detach.sh`-launched, which paid for three
+AWS instances and benchmarked a lab box. Scott's elevation of three findings off that run to
+permanent standing.*
+
+### What happened, and the tell
+
+`scripts/aws-fleet.sh up` launched a three-host judged fleet and wrote `.keel-hosts` correctly.
+`tmux new-session` seeds a session from the tmux **server's** environment, and that server —
+older than the run, pinned alive forever by `exit-empty off` — held `KEEL_REMOTE_HOSTS=antares`
+from an earlier single-host session. `scripts/remote.sh:35` ranks that variable above
+`.keel-hosts`. So the fleet billed at ~$24/hour while the gate measured a lab machine, and up to
+**$192.70** bought nothing, of which roughly $170 was idle billing *after* the run had already
+finished, because nothing woke anyone to read it.
+
+**The tell was `gate-p5: RED` with zero FAILs.** Nothing was judged and refused; a measurement
+was missing. The lone `UNMEASURED` said `all 1 configured host(s)` where three were paid for.
+That diagnosis is available from the tally line alone, before any log is opened, and it is
+available *only* because the verdict vocabulary distinguishes a refusal from an absence (rule 6).
+A gate whose failure states were one colour would have reported this as a regression in the code.
+So the first consequence is about output, not about environments: **the tally line is a
+diagnostic instrument, and RED with zero FAILs is its statement that the apparatus, not the
+subject, is what failed.**
+
+### A stated assumption is not a check, and what it buys is diagnosis rather than prevention
+
+The certificate this run was meant to produce ends with two lines headed *stated assumptions
+(trusted, not verified; not verdicts)*, the first of which reads: **"the configured host set is
+the fleet this gate is meant to measure."** That is exactly the proposition Run A violated. The
+disclosure was correct, current, and load-bearing in the diagnosis — and it prevented nothing,
+because a sentence naming what a gate trusts does not cause the gate to check it.
+
+This is not an argument against the disclosure; the disclosure is why the cause was found in
+minutes. It is an argument about what the disclosure is *for*. An assumption printed beside a
+verdict converts a mystery into a lookup. It does not convert a trusted proposition into a
+measured one, and treating it as though it does is how a known gap survives a run that costs
+money. Where the trusted proposition decides **what is measured**, the honest response to
+finding it in that list is to move it out of the list — which is what the guard below does.
+
+### The asymmetry: carry and inherit are two directions of one line, and the malignant half was left open
+
+The same comment block in `detach.sh` had diagnosed this mechanism correctly a day earlier, on
+2026-08-28, and fixed **half** of it: the direction in which an override the caller *sets* is
+dropped unless that very call happens to start the server. That is the benign half.
+
+  - **A dropped override fails toward the configured fleet** — toward `.keel-hosts`, toward the
+    thing the run was set up to measure. The cost is a wasted intention.
+  - **An injected one fails toward whatever was last measured** — toward a value chosen by an
+    unrelated session on an unknown date. The cost is a plausible measurement of the wrong
+    subject.
+
+Both directions are the same line of code and they are **separate defects**, because they fail
+toward different places. Closing the benign half is not partial progress on the malignant one; it
+is a fix whose success is evidence about the other direction only if someone tests the other
+direction. Nobody did, and the untested half is the one that bills.
+
+### A record of deltas cannot see an injection
+
+`build/<name>.cmd` — the runner file `detach.sh` writes, whose whole purpose is to be the record
+of what the run was — was **clean**. It enumerated what the caller had `export`ed, faithfully and
+completely. Ambient state that was already wrong before the caller arrived is invisible to that
+record *by construction*: there is no delta to enumerate, because nothing changed.
+
+So the provenance rule: **an environment record must be total rather than incremental.** The
+runner now clears the whole `KEEL_`/`BENCH_` namespace before re-exporting the carried set, which
+makes the launched program a complete statement of itself rather than a diff against an unknown
+base. This is the same blind spot as a checker that is silent about input it never parsed, moved
+from parsing to enumeration: in both cases the absent thing produces output identical to the
+healthy thing.
+
+The corollary binds two claims that read as one and are not: *"the launcher carries my
+overrides"* and *"the launcher cannot inject anything I did not set"* need two tests.
+
+### What landed
+
+  - `scripts/detach.sh` clears `KEEL_`/`BENCH_` wholesale in the generated runner, then
+    re-exports the carried set, and echoes the carried **names** back to the caller — the
+    failure it replaces was silent, so a caller who names a fleet sees it named back.
+  - `scripts/aws-fleet.sh`'s `up` **refuses to launch** while `$KEEL_REMOTE_HOSTS` is set, unless
+    `--measure-the-override` names that as the intent. Placed at the top of `cmd_up` so it is
+    fatal before the first billable call: a warning in a detached run is read by nobody, and the
+    money is spent by the time anyone reads it. The flag **honours** the override rather than
+    clearing it — a flag that cleared it would be nothing but a way past the guard, which is the
+    shape of an exemption wearing a checkbox.
+  - The namespace deliberately left alone is stated at the site: `PATH`, `GOEXPERIMENT` and
+    `GOMAXPROCS` are carried, `PATH` because it picks the `go` that builds the arms.
+
+### Coverage, and what stays unexercised (§5 rule 12)
+
+The guard was driven in all four arms before landing — override without the flag (refuses),
+override with the flag (announces, proceeds), no override (silent), and against the real stale
+value `antares` that cost the $192.70 (refuses) — and the probe needed a **positive control** to
+mean anything: the first attempt set `KEEL_SPAWN=/nonexistent-spawn`, which trips the
+launcher-presence check at top level *above* `cmd_up`, so every arm printed the same error and
+the test discriminated nothing. An executable stub passes that check and dies downstream at
+`fleet_json`, so "could not read the launcher's inventory" is the control proving the guard was
+reached rather than skipped.
+
+Three things this does not cover, stated rather than implied.
+
+  1. **No arm of that probe launches anything.** What is exercised is the guard's decision, not
+     its behaviour during a real launch, and deliberately so — the cheapest honest test of a
+     money-spending path stops before the money.
+  2. **`scripts/detach.sh` has no automated test at all**, verified rather than assumed: no file
+     under `scripts/` names it. Its runner-generation is the code that decides what every
+     detached measurement measures, and the only witness it has ever had is the pair of
+     hand-driven directions above. That is rule 20's `bench_describe` shape exactly — driven once
+     by hand, with nothing re-driving it — and it is the reason this rule's own fix could regress
+     silently. Not repaired here: this ruling lands inside a release freeze whose condition is
+     that the delta touch nothing the gate reads, and adding a test script is shell spent against
+     that condition. It is a named debt with an owner, not a limitation (`#122`).
+  3. **The tally-line tell is a reading discipline, not a check.** Nothing in the tree asserts
+     that RED-with-zero-FAILs means look for a missing measurement. What is in the tree is the
+     vocabulary that makes the inference possible; the inference itself lives here.
