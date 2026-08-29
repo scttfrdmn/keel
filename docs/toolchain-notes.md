@@ -2579,3 +2579,137 @@ further digit, wrote "I'm skeptical that the 0.05 ns/op has any accuracy behind
 it". keel's phantom throttle verdicts were 0.05 GFLOP/s steps, which is his point
 one column over and in agreement with it. A fifth digit is not the remedy anyway —
 the precision was already in the same row.
+
+## T27 (#117) — the ternlog rewrite transposes `AndNot`'s operands, so any fused expression containing one gets the truth table for `y &^ x`
+
+**Observation.** `ssa.rewriteTern` contracts a tree of vector logical ops into one
+`VPTERNLOGD` and builds the imm8 in `computeTT`, whose `sloAndNot` case reads
+`Args[0]` as the non-negated operand. AMD64's `VPANDND` carries the negated one
+there, so the immediate comes out for `Args[1] &^ Args[0]`. `AndNot` is the only
+non-commutative op in that switch and so the only one affected; a lone `AndNot`
+is left alone and is correct, and two ops in one tree is the whole trigger — no
+loop and no partial load are needed. **Present in go1.26.5 and go1.27.0 alike**,
+identical immediates, so it is not a regression of either.
+
+How it reached a shipped keel routine, which is a second fact: go1.27.0 reimplemented
+`LoadFloat32x16Part` as `LoadFloat32x16Array(...).Masked(mask)`, and `Masked` is an
+explicit vector `And`. That second logical op is what made `Sasum`'s
+`LoadPart512` + abs tail fusable, where go1.26.x had left one unfused `AndNot`. The
+compiler bug is old; the library change walked keel into it, and the tail returned
+`-0` in all sixteen lanes.
+
+Minimal repro. The inputs are the ternlog truth-table basis, so each result byte is
+the imm8 the hardware actually got and no arm can pass by expecting zero:
+
+```
+$ cat main.go
+// rewriteTern computes the wrong truth table for AndNot: it treats Args[0] as the
+// NON-negated operand, but AMD64's VPANDND carries the negated one there. No loop
+// and no partial load are needed — only a two-op logical tree for the pass to fuse.
+package main
+
+import (
+	"fmt"
+	"simd/archsimd"
+)
+
+//go:noinline
+func andThenAndNot(a, b, c archsimd.Int32x16) archsimd.Int32x16 { return a.And(b).AndNot(c) }
+
+//go:noinline
+func plainAndNot(a, c archsimd.Int32x16) archsimd.Int32x16 { return a.AndNot(c) }
+
+//go:noinline
+func orThenAndNot(a, b, c archsimd.Int32x16) archsimd.Int32x16 { return a.Or(b).AndNot(c) }
+
+//go:noinline
+func andNotThenAnd(a, b, c archsimd.Int32x16) archsimd.Int32x16 { return a.AndNot(b).And(c) }
+
+func lane0(v archsimd.Int32x16) int32 {
+	out := make([]int32, 16)
+	v.Store(out)
+	return out[0]
+}
+
+// The inputs are the ternlog truth-table basis, so every one of the eight
+// (a,b,c) bit-triples occurs in each byte and the result byte IS the imm8 the
+// hardware was given. got != want therefore names the wrong immediate directly,
+// and no arm can pass by having a zero expected value.
+const (
+	ta = uint32(0xf0f0f0f0)
+	tb = uint32(0xcccccccc)
+	tc = uint32(0xaaaaaaaa)
+)
+
+func i32(u uint32) int32 { return int32(u) }
+
+func row(name string, got, want uint32) {
+	flag := "ok"
+	if got != want {
+		flag = "WRONG"
+	}
+	fmt.Printf("  %-10s imm8 used = 0x%02x   want 0x%02x   %s\n", name, got&0xff, want&0xff, flag)
+}
+
+func main() {
+	a := archsimd.BroadcastInt32x16(i32(ta))
+	b := archsimd.BroadcastInt32x16(i32(tb))
+	c := archsimd.BroadcastInt32x16(i32(tc))
+	row("(a&b)&^c", uint32(lane0(andThenAndNot(a, b, c))), (ta&tb)&^tc)
+	row("a&^c", uint32(lane0(plainAndNot(a, c))), ta&^tc)
+	row("(a|b)&^c", uint32(lane0(orThenAndNot(a, b, c))), (ta|tb)&^tc)
+	row("(a&^b)&c", uint32(lane0(andNotThenAnd(a, b, c))), (ta&^tb)&tc)
+}
+
+$ go version
+go version go1.27.0 darwin/arm64
+$ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOEXPERIMENT=simd go build -o tern-min .
+$ ./tern-min                          # Intel i9-9960X (Skylake-X)
+  (a&b)&^c   imm8 used = 0x2a   want 0x40   WRONG
+  a&^c       imm8 used = 0x50   want 0x50   ok
+  (a|b)&^c   imm8 used = 0x02   want 0x54   WRONG
+  (a&^b)&c   imm8 used = 0x08   want 0x20   WRONG
+
+$ ./tern-min                          # AMD RYZEN AI MAX+ 395 (Zen 5): identical
+  (a&b)&^c   imm8 used = 0x2a   want 0x40   WRONG
+  a&^c       imm8 used = 0x50   want 0x50   ok
+  (a|b)&^c   imm8 used = 0x02   want 0x54   WRONG
+  (a&^b)&c   imm8 used = 0x08   want 0x20   WRONG
+
+$ GOTOOLCHAIN=local go version        # on the host, with `go 1.26` in go.mod and
+go version go1.26.5 linux/amd64       # lane0 using 1.26's Store(&arr) spelling (T23)
+$ GOEXPERIMENT=simd go build -o tm126 . && ./tm126
+  (a&b)&^c   imm8 used = 0x2a   want 0x40   WRONG
+  a&^c       imm8 used = 0x50   want 0x50   ok
+  (a|b)&^c   imm8 used = 0x02   want 0x54   WRONG
+  (a&^b)&c   imm8 used = 0x08   want 0x20   WRONG
+```
+
+Every wrong immediate above is `Args[1] &^ Args[0]` evaluated on the same inputs:
+`0xAA &^ 0xC0 = 0x2a`, `0xAA &^ 0xFC = 0x02`, `(0xCC &^ 0xF0) & 0xAA = 0x08`. keel's
+own `0x70` is the fourth: `absmask &^ (data & lanemask)` = `0xF0 & 0x77`.
+
+**What changed in the tree.** `AbsWith512`/`AbsWith256` spell abs as `And` against
+the complement mask, which `AbsMask512`/`AbsMask256` now build
+(`internal/vec/vec_avx2.go`, `vec_avx512.go`). The property relied on is the
+transposition's own harmlessness under commutativity, not that AND happens to work:
+the fused immediate for three ANDs is `0x80`, bit 7 alone, invariant under every
+permutation of the inputs. Verified in the shipped kernel — 9 `VPANDND` became 9
+`VPANDD` at identical displacements and the one ternlog kept its slot with `$112`
+becoming `$128`, so no rate is re-measured. The 256-bit twin was never wrong (it
+compiles to a plain `VPANDN`; the pass does not fuse it here) and moves anyway, so
+that correctness stops resting on a fusion continuing not to fire.
+
+**Upstream.** No report of a wrong immediate; searched before filing. Two open
+issues cover the *same pass* under-triggering:
+[#79666](https://github.com/golang/go/issues/79666) "TernLog rewrite does not trigger
+for unsigned vectors" and
+[#79767](https://github.com/golang/go/issues/79767) "`Not()` is not recognized in
+`rewriteTern()`". #79666 is not just precedent, it is the explanation of a control
+arm: `archsimd`'s own `Float32x16.Abs()` is `ToBits().AndNot(...)` on `Uint32x16`
+and measured correct, because the rewrite skips unsigned vectors entirely. The
+closed [#80140](https://github.com/golang/go/issues/80140) / [CL
+794680](https://go-review.googlesource.com/c/go/+/794680) "repair mask
+optimizations" is the nearest fixed neighbour. Filing, the refuted first story ("go1.27.0 swaps
+`VPANDND`'s operands") and two more retracted claims are on
+[#117](https://github.com/scttfrdmn/keel/issues/117).

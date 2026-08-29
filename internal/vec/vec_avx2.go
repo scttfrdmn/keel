@@ -68,13 +68,25 @@ func Abs256(x F32x8) F32x8 { return AbsWith256(x, AbsMask256()) }
 // I32x8 is the 256-bit int32 vector; see I32x16 on why the alias exists.
 type I32x8 = archsimd.Int32x8
 
-// AbsMask256 returns the float32 sign bit in every lane; see AbsMask512, which
-// this mirrors including the reason it is the caller's job to hoist it.
-func AbsMask256() I32x8 { return archsimd.BroadcastInt32x8(signMaskI32) }
+// AbsMask256 returns every float32 bit except the sign, in every lane; see
+// AbsMask512, which this mirrors including the reason it is the caller's job to
+// hoist it and the 2026-08-28 change of which bits it holds.
+func AbsMask256() I32x8 { return archsimd.BroadcastInt32x8(keepMaskI32) }
 
-// AbsWith256 is Abs256 with a caller-supplied mask; see AbsWith512.
+// AbsWith256 is Abs256 with a caller-supplied mask; see AbsWith512, including the
+// argument for And over AndNot (T27, #117).
+//
+// Here that change is PROPHYLACTIC and not a fix, which is a real distinction and
+// not modesty: this expression compiles to a plain VPANDN. rewriteTern only rewrites
+// roots in a block that carries the AVX-512 feature, since VPTERNLOGD is an AVX-512
+// encoding at every width, and keel's AVX2 routines are compiled under an AVX2
+// context. So avx2Asum's tail was never wrong and no measurement of it is retracted.
+// What the change buys is that correctness stops depending on that feature context
+// staying as it is. It moves with the 512-bit form for the ordinary reason too:
+// these two are each other's differential reference, and a twin that diverges is a
+// twin that stops checking anything.
 func AbsWith256(x F32x8, mask I32x8) F32x8 {
-	return x.AsInt32x8().AndNot(mask).AsFloat32x8()
+	return x.AsInt32x8().And(mask).AsFloat32x8()
 }
 
 // HSum256 sums all 8 lanes, in the fold order ScalarHSum specifies.

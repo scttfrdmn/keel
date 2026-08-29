@@ -81,27 +81,34 @@ func Max512(x, y F32x16) F32x16 { return x.Max(y) }
 // Min512 returns the lanewise minimum (VMINPS semantics; see ScalarMin).
 func Min512(x, y F32x16) F32x16 { return x.Min(y) }
 
-// signMaskI32 is the float32 sign bit as an int32, for building the abs mask.
-// Written as -1<<31 because the constant int32(1<<31) overflows.
+// signMaskI32 is the float32 sign bit as an int32. Written as -1<<31 because the
+// constant int32(1<<31) overflows.
 const signMaskI32 int32 = -1 << 31
+
+// keepMaskI32 is its complement: every float32 bit except the sign. Abs is built
+// from this and an AND rather than from signMaskI32 and an ANDN, because the ANDN
+// form is miscompiled when it is fused — see AbsWith512 and T27.
+const keepMaskI32 int32 = ^signMaskI32
 
 // Abs512 clears the sign bit of every lane.
 //
 // The archsimd API of go1.26.5 had no float32 Abs and no float32 bitwise ops
 // at all, so this bitcasts to the integer vector type, clears the sign bit
-// there, and bitcasts back. AndNot is documented as Go's `x &^ y` (lowering
-// to VPANDND), which mirrors ScalarAbs's `bits &^ signMask32` exactly rather
-// than merely approximating it. The As* conversions are reinterpretations
-// rather than data movement, so this is at most two instructions of real
-// work. Recorded in docs/toolchain-notes.md.
+// there, and bitcasts back. The As* conversions are reinterpretations rather
+// than data movement, so this is at most two instructions of real work.
+// Recorded in docs/toolchain-notes.md.
 //
-// go1.27.0 ADDS `(Float32x16) Abs()`, so the workaround above is obsolete —
-// and it is deliberately still here. Swapping it would change the object code
-// of a shipped path during the v0.1.0 freeze, on a routine whose bit-exactness
-// with ScalarAbs is a gate criterion, to buy nothing a measurement has asked
-// for. The retirement belongs with #54's AbsWith512/AbsMask512 retirement,
-// which is already waiting on CL 803220 and already knows to delete both
-// spellings at once.
+// go1.27.0 ADDS `(Float32x16) Abs()`, and it is still not used here — but the
+// reason changed on 2026-08-28 and is now narrower than the freeze. Abs()'s
+// emulated body is `ToBits().AndNot(broadcast)`, and T27 is a miscompilation of
+// AndNot inside any fused logical tree. That body is measured correct, for a
+// reason upstream has written down: the rewrite skips unsigned vectors
+// (golang/go#79666), and Abs() works on Uint32x16. So its correctness rests on a
+// second open bug, whose fix would expose the first. AbsWith512's AND form is
+// correct by the immediate's symmetry instead — a property of the encoding, not
+// of which optimizations currently fire. Adopting Abs() would also delete the
+// hoisted mask and change the loop's shape, owing a benchmark the freeze has no
+// reason to spend. The retirement still belongs with #54's, waiting on CL 803220.
 func Abs512(x F32x16) F32x16 { return AbsWith512(x, AbsMask512()) }
 
 // I32x16 is the 512-bit int32 vector, aliased for the same reason F32x16 is:
@@ -109,12 +116,16 @@ func Abs512(x F32x16) F32x16 { return AbsWith512(x, AbsMask512()) }
 // the mask's type, and only this package may import simd/archsimd.
 type I32x16 = archsimd.Int32x16
 
-// AbsMask512 returns the mask AbsWith512 wants: the float32 sign bit in every
-// lane. It is loop-invariant, and hoisting it is the *caller's* job because the
-// compiler will not do it — SIMD ops are not lifted by LICM (#54, T18,
+// AbsMask512 returns the mask AbsWith512 wants: every float32 bit EXCEPT the sign,
+// in every lane. It is loop-invariant, and hoisting it is the *caller's* job because
+// the compiler will not do it — SIMD ops are not lifted by LICM (#54, T18,
 // golang/go#79984). When CL 803220 lands this and AbsWith512 both retire and
 // Abs512 goes back to being the only spelling; #54 tracks that.
-func AbsMask512() I32x16 { return archsimd.BroadcastInt32x16(signMaskI32) }
+//
+// It held the sign bit itself until 2026-08-28, when the op it feeds changed. A
+// caller that hoists this must be rebuilt with it; nothing outside internal/vec
+// and internal/l1 can name it, so that is the whole audit.
+func AbsMask512() I32x16 { return archsimd.BroadcastInt32x16(keepMaskI32) }
 
 // AbsWith512 is Abs512 with the mask supplied by the caller rather than built
 // per call. Same two instructions of real work, minus the broadcast.
@@ -122,8 +133,25 @@ func AbsMask512() I32x16 { return archsimd.BroadcastInt32x16(signMaskI32) }
 // This is the only place the sign-bit trick is written; Abs512 delegates here,
 // so the two spellings cannot drift and the differential test against ScalarAbs
 // covers both.
+//
+// WHY `And` AND NOT `AndNot` (T27, #117). ScalarAbs spells this `bits &^
+// signMask32`, and `AsInt32x16().AndNot(AbsMask512())` was its exact mirror. That form is
+// miscompiled: ssa.rewriteTern transposes AndNot's operands when it folds a logical
+// tree into VPTERNLOGD, so the immediate is the one for `y &^ x`. Two logical ops in
+// one expression is the whole trigger, and go1.27.0's LoadPart512 supplies the
+// second (`Masked` is an And) — which is why Sasum's tail, and only its tail,
+// returned -0 in all sixteen lanes. The bug is in go1.26.5 too; the toolchain floor
+// did not cause this, it exposed it.
+//
+// `x & ^signMask` is the same value by de Morgan, and its fused immediate is 0x80 —
+// bit 7 alone, invariant under every permutation of the three inputs, so a pass that
+// transposes them has no wrong answer available. That, and not "AND happens to
+// work", is the property relied on: AndNot is the only non-commutative op in
+// rewriteTern's switch and the only one that can be broken this way. Measured in the
+// shipped kernel: 9 VPANDND became 9 VPANDD at identical displacements, so no rate
+// is re-measured.
 func AbsWith512(x F32x16, mask I32x16) F32x16 {
-	return x.AsInt32x16().AndNot(mask).AsFloat32x16()
+	return x.AsInt32x16().And(mask).AsFloat32x16()
 }
 
 // HSum512 sums all 16 lanes.

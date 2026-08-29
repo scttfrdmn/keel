@@ -9,6 +9,25 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **`Sasum`'s AVX-512 tail returned `-0`, because the ternlog rewrite transposes `AndNot`'s operands**
+  (`internal/vec/vec_avx512.go`, `internal/vec/vec_avx2.go`; docs/toolchain-notes T27). `ssa.rewriteTern`
+  folds a tree of vector logical ops into one `VPTERNLOGD` and builds the imm8 in `computeTT`, whose
+  `sloAndNot` case reads `Args[0]` as the non-negated operand — AMD64's `VPANDND` carries the negated one
+  there, so the immediate is the one for `y &^ x`. Abs now spells itself `And` against the complement mask:
+  the fused immediate for three ANDs is `0x80`, bit 7 alone, **invariant under every permutation of the
+  inputs**, so a pass that transposes them has no wrong answer available. `AndNot` is the only
+  non-commutative op in that switch and so the only one exposed. **Two logical ops in one expression is the
+  whole trigger** — a lone `AndNot` is left unfused and is correct — and go1.27.0's `LoadFloat32x16Part`
+  supplies the second, since `Masked` is an `And`. Three claims here replace a first story that was wrong in
+  mechanism ("go1.27.0 swaps `VPANDND`'s operands", refuted by there being no `VPANDND` in the object code at
+  all): the bug reproduces identically **under go1.26.5**, so the 1.27 floor exposed it rather than caused
+  it; `archsimd`'s own `Float32x16.Abs()` escapes only because the rewrite skips unsigned vectors
+  (golang/go#79666, open), i.e. its correctness rests on a second bug; and the AVX2 twin was never wrong,
+  because `VPTERNLOGD` is an AVX-512 encoding at every width and keel's AVX2 routines compile under an AVX2
+  feature context — so its move is prophylactic and retracts no measurement. Verified in the shipped kernel:
+  9 `VPANDND` became 9 `VPANDD` at identical displacements and the single ternlog kept its slot with `$112`
+  becoming `$128`, so **no rate is re-measured**. 56 package-runs green afterwards (7 packages × 4 dispatch
+  pins × 2 AVX-512 hosts, `avx512` active and asserted), against three failing tests before.
 - **keel is ported to the `go1.27.0` `simd/archsimd` API, which the dev host moved to between sessions**
   (`internal/vec/{gemm,vec_avx2,vec_avx512,vec_scalar}*.go`, `tools/shapegen/emit.go`, `internal/block/block.go`;
   docs/toolchain-notes T23 amendment). The load/store surface renames with a **swap** — the slice forms take the

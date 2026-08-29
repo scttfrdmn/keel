@@ -598,13 +598,13 @@ race_verdict() {
     # That address was #22's edge campaign until 2026-08-15, and it was wrong:
     # #22 ranks edge-handling candidates and cannot clear a checkptr fatal in
     # archsimd's own helpers. The fix is upstream CL 761120 (30 //go:nocheckptr
-    # on simd's unsafe_helpers.go), which ships in go1.27 — so the remediation
-    # path is #70, the go1.27.0 floor on all three hosts, and then #69, which
-    # ports internal/vec to 1.27's respelled load/store surface (T23) because
-    # keel does not compile under 1.27 until it does. A compiler fix is not yet
-    # a fix in keel's build, and citing the wrong remediation sends the reader
-    # to a campaign that will never resolve this.
-    unmeasured "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42, upstream golang/go#80856, fixed by CL 761120 in go1.27 — the path here is #69's port behind #70's toolchain floor; the criterion is not amendable)"
+    # on simd's unsafe_helpers.go), which ships in go1.27. Both keel-side steps
+    # have landed as of 2026-08-28 — #70's floor and #69's port — so a reader
+    # who sees this message is no longer waiting on either. What is left is
+    # whether the annotation reaches THIS consumer: golang/go#42880, open, says
+    # -race does not obey go:nocheckptr. So predict this still fires under
+    # -race and not under -d=checkptr, and treat the split as the finding.
+    unmeasured "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42, upstream golang/go#80856, fixed by CL 761120 in go1.27 — #69 and #70 have both landed, so what remains is golang/go#42880: -race does not obey go:nocheckptr; the criterion is not amendable)"
     sed -n '/checkptr: converted pointer straddles/,/^testing\.tRunner/p' "$log" | sed 's/^/        /' | head -20
   else
     unmeasured "$label the -race run failed without the detector reporting a race, so the criterion is unmeasured: a test that fails under instrumentation says nothing either way about whether keel has a race"
