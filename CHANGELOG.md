@@ -8,6 +8,19 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- DESIGN.md §5 rule 22 and `docs/rulings.md` rule 22: a criterion is applied by
+  the mechanism it names, not by the surface form of its wording. Ruled on the
+  v0.1.0 release report — the tag-delta condition's canonical form is *nothing in
+  the gate's input closure*, and the `scripts/` cap forbids apparatus sprawl
+  rather than compelling either of the two things its ledger arithmetic would.
+  Available only with the mechanism computed and positive-controlled, both
+  readings disclosed, and the reading accepted by the authority.
+
+### Changed
+- CONTRIBUTING.md states the certificate-transfer condition next to the tag
+  requirement, so the next release finds it where the release rules are.
+
 ## [0.1.0] - 2026-08-29
 
 The first tagged release. `[Unreleased]` had grown to 26 session groups over 4,875 lines;

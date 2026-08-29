@@ -1044,3 +1044,81 @@ Three things this does not cover, stated rather than implied.
   3. **The tally-line tell is a reading discipline, not a check.** Nothing in the tree asserts
      that RED-with-zero-FAILs means look for a missing measurement. What is in the tree is the
      vocabulary that makes the inference possible; the inference itself lives here.
+
+## Rule 22 — a criterion is applied by the mechanism it names, not by the surface form of its wording
+
+*Ruled 2026-08-29, on questions 2 and 3 of the v0.1.0 release report (`#95`). Two criteria, one
+correction: both were written in a shorthand that named a place, and both bind what the place was
+shorthand **for**.*
+
+### The criterion, and the two readings it had
+
+The condition set for tagging away from the certified rev was that the delta "must touch
+**nothing the gate reads** — no code, no scripts, and specifically not README.md". The delta
+contained `scripts/aws-fleet.sh`. Read by its letter the answer is a re-run: a script is in it.
+Read by its mechanism the answer is that the certificate transfers iff the gate would render
+identically on the tagged tree — a claim about what the gate **builds, executes and reads**, not
+about directory names.
+
+The two readings were not settled by preference. The gate's execution closure was computed by
+fixpoint from `gate-p5.sh` (9 scripts), each member was stripped of comments and of quoted-string
+contents, and the four delta files were searched for in what remained: **0 sites**. `README.md` —
+the gate's criterion 9 comparand, and so a file whose absence from the result would be absurd —
+returned **6**. That control is what makes the four zeros a reading instead of a broken
+instrument, and it earned its keep: the first run of this check handed nine paths to `grep` as one
+nonexistent filename and reported the answer I wanted about files it had never opened.
+
+Scott's ruling, and the canonical form the condition now has: *nothing in the gate's input
+closure.* `aws-fleet.sh` is the **launcher** — it decides which hosts exist before any gate runs,
+it computes nothing the certificate attests to, and the refusal added to it fires at launch time
+in runs that have not happened yet. Holding the letter over that computed boundary would have
+spent about $70 re-certifying a tree the gate provably renders identically on.
+
+### The same correction on the budget rule
+
+Question 3 was the `scripts/` cap: **+11** lines with no routine, kernel, or library fix to pay
+for them. Read as ledger arithmetic the rule offers two exits, and **both destroy something the
+rule exists to protect**. Compressing the new guard's comments deletes the lines recording what
+the $192.70 bought — evidence, spent to satisfy a line counter. Manufacturing a library fix to
+balance the ledger puts Go in the tag delta, and triggers exactly the re-run the first ruling
+had just declined. The cap exists to stop apparatus sprawl. So: accepted as a **disclosed
+overage**, on the post-tag paydown shelf with the rest.
+
+### The guardrail, which is the whole rule
+
+Nothing here licenses reading a rule loosely because it binds inconveniently. Three things held,
+and the rule is available only when all three do:
+
+1. **The mechanism is computed, not asserted** — and positive-controlled, so the check could have
+   come out otherwise (rule 7). "It's only a launcher" as a claim is worth nothing; a 9-script
+   closure with README.md at 6 sites is worth something.
+2. **Both readings are stated in the artifact, with the seam named.** The release notes and the
+   tag object both say in as many words that the delta includes a file under `scripts/`, and that
+   this satisfies the operative test while failing a literal reading of the condition.
+3. **The authority accepts the reading.** The disclosure was written and pushed *before* any
+   ruling, so what was ruled on had the letter-violation in front of it.
+
+One step away from this rule is deciding the lenient reading silently and reporting only the
+conclusion — which in the artifact is **indistinguishable from having done the work**. The
+distinguishing evidence is that the seam is named somewhere a reader who disagrees can act on it.
+
+This is rule 14's move applied to a criterion rather than to a defect: rule 14 grades a defect by
+what consults it and not by its code; this grades a file by what depends on it and not by the
+directory it sits in.
+
+### Coverage, and what stays unseen (§5 rule 12)
+
+The closure is over **statically named** script invocations, and three things bound it.
+
+1. **No `eval` in executable position anywhere in the closure** — verified, not assumed. The one
+   occurrence of the word is prose at `scripts/roofline.sh:515`; the control is that three files
+   under `scripts/` do contain it, so the pattern finds the word where it exists.
+2. **The gate executes shell that exists in no tracked file.** `gate-p3.sh:295` pipes a heredoc to
+   `bash -s` over ssh, and `remote.sh:1453` writes a runner and ships it to the host. Both
+   *generators* are closure members, so a delta file could reach the far side only as text in one
+   of the nine — which is what was searched. This is not a hole in the result; it is why the
+   search had to be over generators rather than over an inventory of what runs.
+3. **Nothing in the tree recomputes the closure.** It was computed once, by hand, for one release.
+   The next release recomputes it rather than citing this number, because the closure is a
+   property of the scripts at that revision. Not filed: the method above is the deliverable, and a
+   fix smaller than its issue gets fixed rather than filed.

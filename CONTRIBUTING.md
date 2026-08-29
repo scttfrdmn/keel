@@ -44,6 +44,13 @@ both kinds of contributor.
   content that has stopped moving.
 - Releases are tagged `vX.Y.Z`; v0.1.0 requires gates P0–P5 green plus the
   scalar-only build passing on a stock toolchain.
+- **A gate certificate transfers to a tag that is not the certified rev iff
+  nothing in the gate's *input closure* changed** — what it builds, executes and
+  reads, computed by fixpoint over the gate script, not judged by directory name
+  (canonical form ruled 2026-08-29; DESIGN.md §5 rule 22). The certified rev's
+  full SHA, the delta's exact file list, and a runnable `git diff --stat` go in
+  the release notes; any file that passes that test while failing a literal
+  reading of the condition is named there rather than resolved silently.
 
 ## License
 Apache-2.0. New files carry the two-line header:
