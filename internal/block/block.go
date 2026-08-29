@@ -37,11 +37,16 @@
 // DESIGN.md §4/P3 leaves this open — "masked loads/stores … or a scalar fringe;
 // read the API, then choose" — so here is the reading and the choice.
 //
-// go1.26.5's archsimd *does* support masking well: there are Mask8x16-style mask
-// types, Masked/Merge forms of the arithmetic ops, LoadMaskedFloat32x16 and
-// StoreMasked, and — closest of all to this problem —
-// LoadFloat32x16SlicePart/StoreSlicePart in slice_gen_amd64.go, which build the
-// mask from a short slice's length for you. The ability is not the constraint.
+// archsimd *does* support masking well: there are Mask8x16-style mask types,
+// Masked/Merge forms of the arithmetic ops, StoreArrayMasked, and — closest of
+// all to this problem — LoadFloat32x16Part/StorePart in slice_gen_amd64.go,
+// which build the mask from a short slice's length for you. The ability is not
+// the constraint.
+//
+// Names updated for go1.27.0, which dropped the `Slice` infix and renamed the
+// masked forms (docs/toolchain-notes T23). The reading was first taken against
+// go1.26.5 and the *choice* below does not turn on any of these names — the
+// argument is about cost elsewhere, so a rename cannot revise it.
 //
 // The constraint is what a masked edge would cost *elsewhere*. Masking the C
 // update means a second family of microkernels — one per shape, taking a valid

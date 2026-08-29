@@ -8,6 +8,21 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **keel is ported to the `go1.27.0` `simd/archsimd` API, which the dev host moved to between sessions**
+  (`internal/vec/{gemm,vec_avx2,vec_avx512,vec_scalar}*.go`, `tools/shapegen/emit.go`, `internal/block/block.go`;
+  docs/toolchain-notes T23 amendment). The load/store surface renames with a **swap** — the slice forms take the
+  bare names, the array forms they displace gain an `Array` suffix — so the array-form sites had to be rewritten
+  *before* the slice sweep, or the two APIs merge into one name. 51 type errors, the same count T23 measured
+  against `rc3`, so the rename table is identical between rc3 and final. keel's own `vec.Load512`/`StorePart512`
+  surface keeps its names **and** signatures: the `…Part` wrappers absorb archsimd's new lane count rather than
+  passing it on, so nothing outside `internal/vec` changed. **`gemm_amd64.go` is generated and `tools/shapegen`
+  emits it**, which T23's file inventory missed — `internal/kern`'s fixed-point test caught the generator
+  drifting from its output. Two 1.27 facts recorded and deliberately not acted on: `paFloat32x16` now carries
+  `//go:nocheckptr`, which *predicts* golang/go#80856's `-race` failure is gone but is undecided until an
+  AVX-512 host runs it; and `(Float32x16) Abs()` now exists, retiring the bitcast workaround at #54's
+  convenience rather than during a freeze.
+
 ### Added
 - **Both of P5's scaling bars are TYPED, in one commit, from one run's rows: `CEIL_FRACTION = 44.2` and
   `STRSM_FLOOR = 6.067x`** (`scripts/gate-p5.sh`, `scripts/readme-numbers.sh`; the pinned8 era re-founded on

@@ -34,7 +34,7 @@ func ScalarBroadcast(v float32) Block {
 
 // ScalarLoad loads Lanes elements from s.
 //
-// Like the archsimd LoadFloat32x16Slice it mirrors, it requires
+// Like the archsimd LoadFloat32x16 it mirrors, it requires
 // len(s) >= Lanes and panics otherwise: the kernels pre-slice their packed
 // panels to exact length outside the loop, so a short slice here is a bug in
 // the caller rather than a case to silently zero-fill. Use ScalarLoadPart
@@ -44,7 +44,7 @@ func ScalarLoad(s []float32) Block {
 }
 
 // ScalarLoadPart loads min(len(s), Lanes) elements from s and fills the
-// remaining lanes with +0, matching LoadFloat32x16SlicePart. This is the
+// remaining lanes with +0, matching LoadFloat32x16Part. This is the
 // edge-kernel path for M%MR and N%NR remainders (DESIGN.md §4/P3).
 func ScalarLoadPart(s []float32) Block {
 	var r Block
@@ -63,7 +63,7 @@ func ScalarStore(s []float32, x Block) {
 }
 
 // ScalarStorePart stores as many of x's lanes as fit in s, matching
-// StoreSlicePart.
+// StorePart.
 func ScalarStorePart(s []float32, x Block) {
 	n := len(s)
 	if n > Lanes {

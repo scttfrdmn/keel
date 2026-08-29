@@ -91,28 +91,28 @@ func Kernel2x32(kc int, a, b, c []float32, ldc int) {
 
 	for len(ap) >= 8 && len(bp) >= 128 {
 		// k + 0
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[0:16]), archsimd.LoadFloat32x16Slice(bp[16:32])
+		bl, bh = archsimd.LoadFloat32x16(bp[0:16]), archsimd.LoadFloat32x16(bp[16:32])
 		av = archsimd.BroadcastFloat32x16(ap[0])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[1])
 		c1l, c1h = av.MulAdd(bl, c1l), av.MulAdd(bh, c1h)
 
 		// k + 1
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[32:48]), archsimd.LoadFloat32x16Slice(bp[48:64])
+		bl, bh = archsimd.LoadFloat32x16(bp[32:48]), archsimd.LoadFloat32x16(bp[48:64])
 		av = archsimd.BroadcastFloat32x16(ap[2])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[3])
 		c1l, c1h = av.MulAdd(bl, c1l), av.MulAdd(bh, c1h)
 
 		// k + 2
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[64:80]), archsimd.LoadFloat32x16Slice(bp[80:96])
+		bl, bh = archsimd.LoadFloat32x16(bp[64:80]), archsimd.LoadFloat32x16(bp[80:96])
 		av = archsimd.BroadcastFloat32x16(ap[4])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[5])
 		c1l, c1h = av.MulAdd(bl, c1l), av.MulAdd(bh, c1h)
 
 		// k + 3
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[96:112]), archsimd.LoadFloat32x16Slice(bp[112:128])
+		bl, bh = archsimd.LoadFloat32x16(bp[96:112]), archsimd.LoadFloat32x16(bp[112:128])
 		av = archsimd.BroadcastFloat32x16(ap[6])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[7])
@@ -124,7 +124,7 @@ func Kernel2x32(kc int, a, b, c []float32, ldc int) {
 	// Remainder: kc mod 4 k-steps. Correctness for user-supplied k, not a hot
 	// path — P3 chooses KC as a multiple of the unroll.
 	for len(ap) >= 2 && len(bp) >= 32 {
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[0:16]), archsimd.LoadFloat32x16Slice(bp[16:32])
+		bl, bh = archsimd.LoadFloat32x16(bp[0:16]), archsimd.LoadFloat32x16(bp[16:32])
 		av = archsimd.BroadcastFloat32x16(ap[0])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[1])
@@ -135,11 +135,11 @@ func Kernel2x32(kc int, a, b, c []float32, ldc int) {
 	// C += the accumulated tile, one row at a time. Outside the K-loop, so the
 	// bounds checks here cost nothing per k and are left alone.
 	r := c[0*ldc : 0*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c0l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c0h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c0l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c0h).Store(r[16:32])
 	r = c[1*ldc : 1*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c1l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c1h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c1l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c1h).Store(r[16:32])
 }
 
 // Kernel4x32 computes C += A·B for one 4x32 tile, one k-step per pass.
@@ -170,7 +170,7 @@ func Kernel4x32(kc int, a, b, c []float32, ldc int) {
 	bp := b[:kc*32]
 
 	for len(ap) >= 4 && len(bp) >= 32 {
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[0:16]), archsimd.LoadFloat32x16Slice(bp[16:32])
+		bl, bh = archsimd.LoadFloat32x16(bp[0:16]), archsimd.LoadFloat32x16(bp[16:32])
 		av = archsimd.BroadcastFloat32x16(ap[0])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[1])
@@ -183,17 +183,17 @@ func Kernel4x32(kc int, a, b, c []float32, ldc int) {
 	}
 
 	r := c[0*ldc : 0*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c0l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c0h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c0l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c0h).Store(r[16:32])
 	r = c[1*ldc : 1*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c1l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c1h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c1l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c1h).Store(r[16:32])
 	r = c[2*ldc : 2*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c2l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c2h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c2l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c2h).Store(r[16:32])
 	r = c[3*ldc : 3*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c3l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c3h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c3l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c3h).Store(r[16:32])
 }
 
 // Kernel6x32 is DESIGN.md §4/P2's tile — 12 accumulators, unrolled 4 — and it
@@ -223,7 +223,7 @@ func Kernel6x32(kc int, a, b, c []float32, ldc int) {
 
 	for len(ap) >= 24 && len(bp) >= 128 {
 		// k + 0
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[0:16]), archsimd.LoadFloat32x16Slice(bp[16:32])
+		bl, bh = archsimd.LoadFloat32x16(bp[0:16]), archsimd.LoadFloat32x16(bp[16:32])
 		av = archsimd.BroadcastFloat32x16(ap[0])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[1])
@@ -238,7 +238,7 @@ func Kernel6x32(kc int, a, b, c []float32, ldc int) {
 		c5l, c5h = av.MulAdd(bl, c5l), av.MulAdd(bh, c5h)
 
 		// k + 1
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[32:48]), archsimd.LoadFloat32x16Slice(bp[48:64])
+		bl, bh = archsimd.LoadFloat32x16(bp[32:48]), archsimd.LoadFloat32x16(bp[48:64])
 		av = archsimd.BroadcastFloat32x16(ap[6])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[7])
@@ -253,7 +253,7 @@ func Kernel6x32(kc int, a, b, c []float32, ldc int) {
 		c5l, c5h = av.MulAdd(bl, c5l), av.MulAdd(bh, c5h)
 
 		// k + 2
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[64:80]), archsimd.LoadFloat32x16Slice(bp[80:96])
+		bl, bh = archsimd.LoadFloat32x16(bp[64:80]), archsimd.LoadFloat32x16(bp[80:96])
 		av = archsimd.BroadcastFloat32x16(ap[12])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[13])
@@ -268,7 +268,7 @@ func Kernel6x32(kc int, a, b, c []float32, ldc int) {
 		c5l, c5h = av.MulAdd(bl, c5l), av.MulAdd(bh, c5h)
 
 		// k + 3
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[96:112]), archsimd.LoadFloat32x16Slice(bp[112:128])
+		bl, bh = archsimd.LoadFloat32x16(bp[96:112]), archsimd.LoadFloat32x16(bp[112:128])
 		av = archsimd.BroadcastFloat32x16(ap[18])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[19])
@@ -286,7 +286,7 @@ func Kernel6x32(kc int, a, b, c []float32, ldc int) {
 	}
 
 	for len(ap) >= 6 && len(bp) >= 32 {
-		bl, bh = archsimd.LoadFloat32x16Slice(bp[0:16]), archsimd.LoadFloat32x16Slice(bp[16:32])
+		bl, bh = archsimd.LoadFloat32x16(bp[0:16]), archsimd.LoadFloat32x16(bp[16:32])
 		av = archsimd.BroadcastFloat32x16(ap[0])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
 		av = archsimd.BroadcastFloat32x16(ap[1])
@@ -303,21 +303,21 @@ func Kernel6x32(kc int, a, b, c []float32, ldc int) {
 	}
 
 	r := c[0*ldc : 0*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c0l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c0h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c0l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c0h).Store(r[16:32])
 	r = c[1*ldc : 1*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c1l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c1h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c1l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c1h).Store(r[16:32])
 	r = c[2*ldc : 2*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c2l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c2h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c2l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c2h).Store(r[16:32])
 	r = c[3*ldc : 3*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c3l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c3h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c3l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c3h).Store(r[16:32])
 	r = c[4*ldc : 4*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c4l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c4h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c4l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c4h).Store(r[16:32])
 	r = c[5*ldc : 5*ldc+32]
-	archsimd.LoadFloat32x16Slice(r[0:16]).Add(c5l).StoreSlice(r[0:16])
-	archsimd.LoadFloat32x16Slice(r[16:32]).Add(c5h).StoreSlice(r[16:32])
+	archsimd.LoadFloat32x16(r[0:16]).Add(c5l).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c5h).Store(r[16:32])
 }

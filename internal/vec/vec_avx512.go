@@ -8,7 +8,8 @@ package vec
 import "simd/archsimd"
 
 // AVX-512 backend (512-bit, 16 float32 lanes), written against the *read*
-// archsimd API of go1.26.5. Every identifier below was copied from
+// archsimd API of go1.27.0 (ported from go1.26.5 per the T23 rename table;
+// the table held unchanged from go1.27rc3 to final). Every identifier below was copied from
 // `go doc simd/archsimd` output and the sources under
 // $(go env GOROOT)/src/simd/archsimd/, per the standing order in DESIGN.md
 // §4/P0 — none is recalled.
@@ -33,17 +34,20 @@ type F32x16 = archsimd.Float32x16
 // panics otherwise (the underlying slice-to-array conversion does). That is
 // the intended contract: kernels pre-slice packed panels to exact length
 // outside the K-loop so the bounds check is eliminated (DESIGN.md §4/P2).
-func Load512(s []float32) F32x16 { return archsimd.LoadFloat32x16Slice(s) }
+func Load512(s []float32) F32x16 { return archsimd.LoadFloat32x16(s) }
 
 // LoadPart512 loads min(len(s), 16) elements and zero-fills the rest — the
-// edge-kernel path for M%MR and N%NR remainders.
-func LoadPart512(s []float32) F32x16 { return archsimd.LoadFloat32x16SlicePart(s) }
+// edge-kernel path for M%MR and N%NR remainders. The lane count archsimd
+// returns is discarded: this wrapper's contract is "as many as fit", and every
+// caller already knows len(s). Go 1.27 renamed the slice forms and gave them a
+// count (docs/toolchain-notes T23); the zero-fill semantics are unchanged.
+func LoadPart512(s []float32) F32x16 { v, _ := archsimd.LoadFloat32x16Part(s); return v }
 
 // Store512 stores all 16 lanes into s, which must have at least 16 elements.
-func Store512(s []float32, x F32x16) { x.StoreSlice(s) }
+func Store512(s []float32, x F32x16) { x.Store(s) }
 
 // StorePart512 stores as many lanes as fit in s.
-func StorePart512(s []float32, x F32x16) { x.StoreSlicePart(s) }
+func StorePart512(s []float32, x F32x16) { _ = x.StorePart(s) }
 
 // Broadcast512 returns v in all 16 lanes.
 func Broadcast512(v float32) F32x16 { return archsimd.BroadcastFloat32x16(v) }
@@ -83,13 +87,21 @@ const signMaskI32 int32 = -1 << 31
 
 // Abs512 clears the sign bit of every lane.
 //
-// The archsimd API of go1.26.5 has no float32 Abs and no float32 bitwise ops
+// The archsimd API of go1.26.5 had no float32 Abs and no float32 bitwise ops
 // at all, so this bitcasts to the integer vector type, clears the sign bit
 // there, and bitcasts back. AndNot is documented as Go's `x &^ y` (lowering
 // to VPANDND), which mirrors ScalarAbs's `bits &^ signMask32` exactly rather
 // than merely approximating it. The As* conversions are reinterpretations
 // rather than data movement, so this is at most two instructions of real
 // work. Recorded in docs/toolchain-notes.md.
+//
+// go1.27.0 ADDS `(Float32x16) Abs()`, so the workaround above is obsolete —
+// and it is deliberately still here. Swapping it would change the object code
+// of a shipped path during the v0.1.0 freeze, on a routine whose bit-exactness
+// with ScalarAbs is a gate criterion, to buy nothing a measurement has asked
+// for. The retirement belongs with #54's AbsWith512/AbsMask512 retirement,
+// which is already waiting on CL 803220 and already knows to delete both
+// spellings at once.
 func Abs512(x F32x16) F32x16 { return AbsWith512(x, AbsMask512()) }
 
 // I32x16 is the 512-bit int32 vector, aliased for the same reason F32x16 is:
@@ -126,7 +138,7 @@ func HSum512(x F32x16) float32 {
 	h8 := x.GetLo().Add(x.GetHi())   // lanes i + i+8
 	h4 := h8.GetLo().Add(h8.GetHi()) // lanes i + i+4
 	var a [4]float32
-	h4.Store(&a)
+	h4.StoreArray(&a)
 	a[0] += a[2] // lanes i + i+2
 	a[1] += a[3]
 	return a[0] + a[1] // final pair
@@ -156,11 +168,11 @@ func AVX512MulAdd(x, y, z Block) Block {
 	return blockOf512(FMA512(load512(x), load512(y), load512(z)))
 }
 
-func load512(b Block) F32x16 { return archsimd.LoadFloat32x16((*[Lanes]float32)(&b)) }
+func load512(b Block) F32x16 { return archsimd.LoadFloat32x16Array((*[Lanes]float32)(&b)) }
 
 func blockOf512(v F32x16) Block {
 	var b Block
-	v.Store((*[Lanes]float32)(&b))
+	v.StoreArray((*[Lanes]float32)(&b))
 	return b
 }
 

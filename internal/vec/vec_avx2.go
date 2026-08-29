@@ -8,7 +8,7 @@ package vec
 import "simd/archsimd"
 
 // AVX2 backend (256-bit, 8 float32 lanes), written against the *read*
-// archsimd API of go1.26.5 — identifiers copied from `go doc`, never
+// archsimd API of go1.27.0 (ported per T23) — identifiers copied from `go doc`, never
 // recalled (DESIGN.md §4/P0).
 //
 // The Block test layer here is 16 lanes wide like every other backend, done
@@ -22,16 +22,17 @@ type F32x8 = archsimd.Float32x8
 // ---------------------------------------------------------------- hot layer
 
 // Load256 loads 8 float32 from s, which must have at least 8 elements.
-func Load256(s []float32) F32x8 { return archsimd.LoadFloat32x8Slice(s) }
+func Load256(s []float32) F32x8 { return archsimd.LoadFloat32x8(s) }
 
-// LoadPart256 loads min(len(s), 8) elements and zero-fills the rest.
-func LoadPart256(s []float32) F32x8 { return archsimd.LoadFloat32x8SlicePart(s) }
+// LoadPart256 loads min(len(s), 8) elements and zero-fills the rest. The lane
+// count is discarded for the reason LoadPart512 states.
+func LoadPart256(s []float32) F32x8 { v, _ := archsimd.LoadFloat32x8Part(s); return v }
 
 // Store256 stores all 8 lanes into s, which must have at least 8 elements.
-func Store256(s []float32, x F32x8) { x.StoreSlice(s) }
+func Store256(s []float32, x F32x8) { x.Store(s) }
 
 // StorePart256 stores as many lanes as fit in s.
-func StorePart256(s []float32, x F32x8) { x.StoreSlicePart(s) }
+func StorePart256(s []float32, x F32x8) { _ = x.StorePart(s) }
 
 // Broadcast256 returns v in all 8 lanes.
 func Broadcast256(v float32) F32x8 { return archsimd.BroadcastFloat32x8(v) }
@@ -80,7 +81,7 @@ func AbsWith256(x F32x8, mask I32x8) F32x8 {
 func HSum256(x F32x8) float32 {
 	h4 := x.GetLo().Add(x.GetHi()) // lanes i + i+4
 	var a [4]float32
-	h4.Store(&a)
+	h4.StoreArray(&a)
 	a[0] += a[2] // lanes i + i+2
 	a[1] += a[3]
 	return a[0] + a[1] // final pair
@@ -159,14 +160,14 @@ func AVX2HSum(x Block) float32 {
 }
 
 func halves256(b Block) (lo, hi F32x8) {
-	return archsimd.LoadFloat32x8((*[8]float32)(b[0:8])),
-		archsimd.LoadFloat32x8((*[8]float32)(b[8:16]))
+	return archsimd.LoadFloat32x8Array((*[8]float32)(b[0:8])),
+		archsimd.LoadFloat32x8Array((*[8]float32)(b[8:16]))
 }
 
 func blockOf256(lo, hi F32x8) Block {
 	var b Block
-	lo.Store((*[8]float32)(b[0:8]))
-	hi.Store((*[8]float32)(b[8:16]))
+	lo.StoreArray((*[8]float32)(b[0:8]))
+	hi.StoreArray((*[8]float32)(b[8:16]))
 	return b
 }
 

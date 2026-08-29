@@ -205,7 +205,7 @@ func (s Shape) Emit() string {
 		p("\t%s c[%d*ldc : %d*ldc+%d]", assign, r, r, s.NR())
 		for j, acc := range s.accNames(r) {
 			lo, hi := j*16, j*16+16
-			p("\tarchsimd.LoadFloat32x16Slice(r[%d:%d]).Add(%s).StoreSlice(r[%d:%d])", lo, hi, acc, lo, hi)
+			p("\tarchsimd.LoadFloat32x16(r[%d:%d]).Add(%s).Store(r[%d:%d])", lo, hi, acc, lo, hi)
 		}
 	}
 	p("}")
@@ -226,14 +226,14 @@ func (s Shape) emitBody(p func(string, ...any), u int, label bool) {
 		loads := make([]string, s.V)
 		for j := range loads {
 			off := k*s.NR() + j*16
-			loads[j] = fmt.Sprintf("archsimd.LoadFloat32x16Slice(bp[%d:%d])", off, off+16)
+			loads[j] = fmt.Sprintf("archsimd.LoadFloat32x16(bp[%d:%d])", off, off+16)
 		}
 		p("\t\t%s = %s", strings.Join(bn, ", "), strings.Join(loads, ", "))
 
 		if s.Form == Permute && k == 0 {
 			// One 16-lane load per body serves every row of every k-step. Guarded
 			// by PermuteWindowExact, so the loop condition guarantees the read.
-			p("\t\taw = archsimd.LoadFloat32x16Slice(ap[0:16])")
+			p("\t\taw = archsimd.LoadFloat32x16(ap[0:16])")
 		}
 		for r := 0; r < s.MR; r++ {
 			i := k*s.MR + r

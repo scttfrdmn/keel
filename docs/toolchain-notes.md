@@ -2260,6 +2260,39 @@ changes to keel's own API**: `vec.Load512`, `vec.LoadPart512`, `vec.Store512`,
 nothing outside `internal/vec` is touched. Five
 files reference `simd/archsimd`; two of those references are comments.
 
+**Amendment, 2026-08-28 — the hold ended by accident, and the port landed.** This
+entry closed by *holding* the port: `go1.27.0` final did not exist, and landing it
+would have broken the dev host and all three benchmark hosts at once. Instead
+`go1.27.0` final arrived on the **dev host alone**, via Homebrew, between sessions
+— and the dev host is the one that cross-compiles every judged binary, so the hold
+was overtaken rather than lifted. The failure surfaced as a $3.888/hr fleet run
+that measured nothing (`build/confirm-skx-7142b6f.log`, 6 FAIL / 12 UNMEASURED).
+
+```
+$ go version
+go version go1.27.0 darwin/arm64
+$ GOEXPERIMENT=simd go build ./...                        # darwin/arm64: silent
+$ GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go build -gcflags=-e ./... 2>&1 | grep -c .
+51
+```
+
+**What changed in the tree.** The port above landed verbatim — 51 errors, the same
+count as against `rc3`, so the rename table and the 8-site array inventory are
+**identical between rc3 and final**. `tools/shapegen/emit.go` had to be ported too,
+which this entry's file inventory missed: `gemm_amd64.go` is generated, and
+`internal/kern`'s fixed-point test is what caught the generator drifting from its
+output. Two further 1.27 API facts, both recorded and neither acted on: `paFloat32x16`
+now carries `//go:nocheckptr`, which predicts golang/go#80856's `-race` failure is
+gone (undecided — no AVX-512 host has run it); and `(Float32x16) Abs()` now exists,
+retiring this project's bitcast workaround at #54's convenience, not during a freeze.
+
+**The line that does not generalise.** The first paragraph says clobbering
+`/usr/local/go` "would silently re-point every host-invoked gate step and every
+published number's compiler". That is exactly what happened, and *nothing in the
+apparatus noticed*: no archive header records a compiler (17 `keel-bench-*`
+provenance fields, none of them the toolchain), so a build-breaking upgrade was
+loud only because it broke the build. A silent one would not have been.
+
 ---
 
 <a name="t24" id="t24"></a>
