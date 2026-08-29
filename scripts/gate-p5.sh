@@ -573,11 +573,29 @@ info "same mechanism gate-p3 uses for its OpenBLAS harness. The dev host's own r
 info "kept as well: it is arm64 and scalar-only, but the worker pool, the shared"
 info "packed-B panel and the sync.Pool are backend-independent Go, so having two"
 info "architectures' schedulers look at the same concurrency is worth the minute."
-# race_verdict LABEL RC LOG — "clean", "a data race" and "a test failure under
-# -race" are three states, and only the middle one is about concurrency. A gate
-# that calls the third one "the race detector reports a finding" sends whoever
-# reads it looking for a race that is not there; the detector prints WARNING: DATA
-# RACE when it finds one, so that is what gets looked for.
+# race_verdict LABEL RC LOG — "clean", "a data race", "the tree did not compile"
+# and "a test failure under -race" are four states, and only the second is about
+# concurrency. A gate that calls the last one "the race detector reports a
+# finding" sends whoever reads it looking for a race that is not there; the
+# detector prints WARNING: DATA RACE when it finds one, so that is what gets
+# looked for.
+#
+# THE COMPILE-FAIL ARM IS NEW (2026-08-28) and it is a relabel, not a new check.
+# This arm is built natively on each host from `git archive HEAD` — it has to be,
+# because -race needs cgo and remote_build_test is CGO_ENABLED=0 — so it is the
+# one place in the whole harness where the HOST's toolchain compiles keel. #69's
+# port made the tree require go1.27's archsimd names, and the fleet's
+# /usr/local/go is still go1.26.5, so from fed1e70 onward every host takes this
+# path. Without the arm it fell to the `else`, which says "a test failed under
+# instrumentation" — a sentence about a test that in fact never ran, about
+# instrumentation that was never applied. Same UNMEASURED verdict either way, so
+# nothing was ever going to be judged wrongly; what was wrong was the cause a
+# reader would carry away, and the reader is the next session (#70).
+#
+# `[build failed]` is go test's own marker, and `^go: -race requires cgo` is the
+# toolchain's refusal to build the arm at all. Deliberately NOT a bare `^go: ` —
+# that also matches `go: downloading`, which can appear in a log whose actual
+# failure is a test, and this arm must not capture the else-arm's cases.
 race_verdict() {
   local label="$1" rc="$2" log="$3"
   if [[ "$rc" -eq 0 ]]; then
@@ -585,6 +603,13 @@ race_verdict() {
   elif grep -q 'WARNING: DATA RACE' "$log"; then
     fail "$label the race detector reports a data race"
     sed -n '/WARNING: DATA RACE/,/^==================$/p' "$log" | sed 's/^/        /' | head -60
+  elif grep -qE '\[build failed\]|^go: -race requires cgo' "$log"; then
+    local also=""
+    if grep -q 'checkptr: converted pointer straddles multiple allocations' "$log"; then
+      also=" — and a checkptr fatal from a package that DID build, so this log has two independent causes and neither is a race (T17, #42)"
+    fi
+    unmeasured "$label the tree did not compile here, so nothing was instrumented and no test ran: unmeasured for a reason that is not about concurrency at all$also. This arm is built natively because -race needs cgo, so it is the one arm that wants a host-local toolchain, and it wants go1.27.x — the tree stopped building on go1.26 at fed1e70 (#70's open fleet row)"
+    grep -E '^#|\.go:[0-9]+:[0-9]+:|\[build failed\]|^go: ' "$log" | sed 's/^/        /' | head -12
   elif grep -q 'checkptr: converted pointer straddles multiple allocations' "$log"; then
     # A known upstream defect, and still a FAIL: naming a cause is not the same
     # as meeting the criterion. `-race` implies -d=checkptr, and archsimd's
@@ -598,13 +623,23 @@ race_verdict() {
     # That address was #22's edge campaign until 2026-08-15, and it was wrong:
     # #22 ranks edge-handling candidates and cannot clear a checkptr fatal in
     # archsimd's own helpers. The fix is upstream CL 761120 (30 //go:nocheckptr
-    # on simd's unsafe_helpers.go), which ships in go1.27. Both keel-side steps
-    # have landed as of 2026-08-28 — #70's floor and #69's port — so a reader
-    # who sees this message is no longer waiting on either. What is left is
-    # whether the annotation reaches THIS consumer: golang/go#42880, open, says
-    # -race does not obey go:nocheckptr. So predict this still fires under
-    # -race and not under -d=checkptr, and treat the split as the finding.
-    unmeasured "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42, upstream golang/go#80856, fixed by CL 761120 in go1.27 — #69 and #70 have both landed, so what remains is golang/go#42880: -race does not obey go:nocheckptr; the criterion is not amendable)"
+    # on simd's unsafe_helpers.go), which ships in go1.27. #69's port landed
+    # 2026-08-28 and the dev host is on go1.27.0, so a reader who sees this
+    # message is not waiting on the port. Two things still stand between it and
+    # a measurement, and they are different in kind:
+    #
+    #   - This arm cannot be cross-compiled at all. `go test -c -race` under
+    #     CGO_ENABLED=0 is refused by the toolchain itself ("-race requires
+    #     cgo", measured 2026-08-28), so remote.sh's whole premise — the fleet
+    #     needs nothing but sshd — does not extend here. It is the ONLY arm that
+    #     wants a host-local toolchain, and it wants go1.27.x because the tree
+    #     no longer compiles on 1.26. That is #70's remaining fleet row, open.
+    #   - Whether the annotation reaches THIS consumer even then:
+    #     golang/go#42880, open, says -race does not obey go:nocheckptr.
+    #
+    # So predict this still fires under -race and not under -d=checkptr, and
+    # treat the split as the finding.
+    unmeasured "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42, upstream golang/go#80856, fixed by CL 761120 in go1.27 — #69's port landed, but this arm needs a host-local go1.27 toolchain because -race cannot be cross-compiled, and then golang/go#42880 says -race ignores go:nocheckptr anyway; the criterion is not amendable)"
     sed -n '/checkptr: converted pointer straddles/,/^testing\.tRunner/p' "$log" | sed 's/^/        /' | head -20
   else
     unmeasured "$label the -race run failed without the detector reporting a race, so the criterion is unmeasured: a test that fails under instrumentation says nothing either way about whether keel has a race"

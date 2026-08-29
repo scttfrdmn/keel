@@ -9,6 +9,23 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **CI's runner may or may not have AVX-512, and it is drawn per run** (`.github/workflows/ci.yml`). Two runs of
+  one workflow forty minutes apart read back `avx512 avx2 scalar` (`33225065217`, red — T27) and `avx2 scalar`
+  (`33226797681`, green). The consequence outruns the erratum: **the green run never executed the path the red
+  run failed on**, so CI green is not evidence for the T27 fix — the fleet is — and a red AVX-512 finding here
+  can be converted to green by a retry landing on other silicon. The design is unchanged, because its
+  rejected-options paragraph already said "whatever hardware the runner lottery deals"; what was wrong was a flat
+  claim about the fleet sitting two paragraphs above an argument assuming the opposite. Three prose sites and the
+  Level-3 summary branch now key off the printed availability rows instead of asserting a cause.
+- **`gate-p5`'s race criterion called a compile failure "a test failure under instrumentation"**
+  (`scripts/gate-p5.sh`). The `-race` arm is built natively on each host — it must be, since `-race` needs cgo and
+  `remote_build_test` is `CGO_ENABLED=0` — so it is the one place the *host's* toolchain compiles keel. The port
+  made the tree need go1.27's archsimd names while the fleet's `/usr/local/go` is go1.26.5, so from `fed1e70` every
+  host takes this path, and it fell to the `else`: a sentence about a test that never ran and instrumentation never
+  applied. Now a fourth verdict state, `UNMEASURED` either way, so no judgment changes — the reader's causal story
+  does. Exercised on a real `go1.26.5` failure from `janus` plus three controls proving the new arm does not capture
+  the neighbouring cases; the marker is deliberately `[build failed]` and not `^go: `, since the real log carries two
+  `go: downloading` lines.
 - **`Sasum`'s AVX-512 tail returned `-0`, because the ternlog rewrite transposes `AndNot`'s operands**
   (`internal/vec/vec_avx512.go`, `internal/vec/vec_avx2.go`; docs/toolchain-notes T27). `ssa.rewriteTern`
   folds a tree of vector logical ops into one `VPTERNLOGD` and builds the imm8 in `computeTT`, whose

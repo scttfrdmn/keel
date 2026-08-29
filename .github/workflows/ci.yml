@@ -56,9 +56,9 @@ jobs:
       - run: make lint
   # What this job's green means, exactly (#88, ruled 2026-08-16): "the simd
   # toolchain compiles all paths, and correctness is verified on scalar,
-  # deterministically." It does NOT mean the AVX-512 kernels ran. GitHub's runners
-  # have no AVX-512, so vectorKernels() returns nil and the Level-3 microkernel
-  # dispatch falls back — #87's SIGILL was that gap biting.
+  # deterministically." It does NOT mean the AVX-512 kernels ran — see the second
+  # correction below for why that sentence survives while the reason under it did
+  # not. #87's SIGILL was the Level-3 fallback gap biting.
   #
   # CORRECTION, measured on this job's first run under the read-back (2026-08-16): the
   # earlier version of this comment said "the vector path is not exercised here at
@@ -67,6 +67,28 @@ jobs:
   # down from where anyone was looking. Precisely the claim the read-back was added to
   # settle, falsified on contact with the instrument, which is the argument for
   # printing it rather than reasoning about it.
+  #
+  # SECOND CORRECTION, measured 2026-08-29 UTC: "GitHub's runners have no AVX-512"
+  # is false, and it is false in the worst available way — not "they gained it",
+  # but *it is drawn per run*. Two runs of THIS workflow, forty minutes apart, same
+  # repo, same `runs-on: ubuntu-latest`:
+  #
+  #   33225065217  keel-l1-available: avx512 avx2 scalar   (red: T27 fired, #117)
+  #   33226797681  keel-l1-available: avx2 scalar          (green)
+  #
+  # Read those two lines together and the consequence is sharper than the erratum.
+  # The green run **did not execute the code path the red run failed on**, so CI
+  # green on the T27 fix is not evidence the fix works; the evidence is the fleet
+  # (2 AVX-512 microarchitectures x 4 dispatch pins). And a red run on this
+  # workflow can be an AVX-512 finding that the retry silently converts to green
+  # by landing on different silicon — which is the one failure mode that would
+  # make a reader distrust the instrument rather than the code.
+  #
+  # The design below is unaffected, and the rejected-options paragraph is why: it
+  # already said "whatever hardware the runner lottery deals". Determinism plus
+  # read-back is correct precisely because the hardware is a draw. What was wrong
+  # was a flat claim about the fleet sitting two paragraphs above an argument that
+  # assumed the opposite. The read-back is what caught it, again.
   #
   # Two options were rejected. Asserting "a vector backend registered" would fail
   # spuriously on whatever hardware the runner lottery deals. Merely documenting
@@ -142,8 +164,10 @@ jobs:
             echo "**Claimed:** the simd toolchain compiles every path, and correctness is verified"
             echo "on the scalar backend, deterministically (\`KEEL_FORCE=scalar\`, asserted below)."
             echo
-            echo "**Not claimed:** that any vector kernel executed. GitHub runners have no AVX-512;"
-            echo "vector-backend evidence comes from the three-host gate fleet, not from CI."
+            echo "**Not claimed:** that any vector kernel executed — nor that this runner could have run"
+            echo "one. Whether \`ubuntu-latest\` deals AVX-512 is drawn **per run**, measured both ways on"
+            echo "2026-08-29 within forty minutes, so read the availability rows below instead of assuming"
+            echo "either answer. Vector-backend evidence comes from the three-host gate fleet, not from CI."
             echo
             echo '| read-back | value |'
             echo '|---|---|'
@@ -176,10 +200,11 @@ jobs:
             echo "Level 1 \`${l1:-unreported}\`, Level 3 \`${kern:-unreported}\`."
             # Named per level, not as one "vector or not" bit, because the two levels
             # gate on different features and the first run of this leg already split
-            # them: GitHub's runners have AVX2 but not AVX-512, so Level 1 selected
-            # `avx2` while the Level-3 microkernels stayed scalar. "This runner
-            # exercised a vector path" would have been true and would have hidden
-            # which one, which is the imprecision #88 exists to remove.
+            # them: that runner had AVX2 and not AVX-512, so Level 1 selected `avx2`
+            # while the Level-3 microkernels stayed scalar. "This runner exercised a
+            # vector path" would have been true and would have hidden which one, which
+            # is the imprecision #88 exists to remove. (That runner. Not the fleet —
+            # AVX-512 is drawn per run; see the second correction above.)
             if [ "${l1:-}" != "scalar" ] && [ "${l1:-}" != "" ]; then
               echo "- Level 1 ran the **\`$l1\`** backend: real vector coverage, from"
               echo "  hardware CI happens to have. Opportunistic — still not a criterion."
@@ -187,11 +212,14 @@ jobs:
               echo "- Level 1 was scalar, duplicating the judged leg."
             fi
             case "${kern:-}" in
-              */scalar|"") echo "- Level 3 was the scalar microkernel: the AVX-512 kernels need a feature"
-                           echo "  this runner lacks, so **no vector kernel executed**. That evidence"
-                           echo "  comes from the three-host fleet." ;;
-              *)           echo "- Level 3 ran **\`$kern\`** — a vector microkernel executed in CI, which"
-                           echo "  has never been true before. Worth acting on, not just noting." ;;
+              */scalar|"") echo "- Level 3 was the scalar microkernel, so **no vector kernel executed**."
+                           echo "  Which of the two reasons applies is in the availability rows above and is"
+                           echo "  not asserted here: this runner may lack AVX-512 (drawn per run), or it may"
+                           echo "  have it while the shape registry declines to fingerprint its µarch (#25)."
+                           echo "  Either way the vector-kernel evidence comes from the three-host fleet." ;;
+              *)           echo "- Level 3 ran **\`$kern\`** — a vector microkernel executed in CI, on hardware"
+                           echo "  the lottery dealt. Worth acting on, not just noting: this leg judges"
+                           echo "  nothing, so a pass here is coverage nobody asked for and nobody counted." ;;
             esac
           } >> "$GITHUB_STEP_SUMMARY"
       # Gates are run locally by design (they need real hardware + perf
