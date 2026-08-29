@@ -50,6 +50,15 @@ While the major version is 0, minor versions may contain breaking changes.
   deleted rather than explained. Driven with a negative control: two hosts in one run still append to one file
   (2 rows), a second run writes its own (1 row, no cross-run archive leak), and the old unstamped name reproduces
   the defect at 2 rows in 1 file.
+- **The BASELINE summary line told the operator to land the witness rows, and following it manufactures the FAIL
+  it was written to prevent.** It names only `witness-candidates`, so a reader who lands those and stops has
+  produced exactly the *owing* state — a tracked witness for `(cpu_model, era)` with no baseline row — which
+  `gate-p5` renders as an unmet-registration FAIL. Landing both in the same commit is not the escape either: a
+  baseline candidate emitted from a single run says so in its own estimator column (`SINGLE DRAW … NOT landable
+  as-is (§5 rule 16)`), so a fleet with one archived run in an era can supply neither half. Caught by reading
+  `:1219` before landing `p5-clean-b5cef4f`'s five witness rows, which would have converted three green BASELINE
+  verdicts into reds and pinned column 6 to a gitignored path. The line now states the both-or-neither rule and
+  why one run cannot satisfy it; the rows are not landed.
 - **The same floor admitted a prerelease, which `#70` rules inadmissible.** `^go1\.` plus `split` on `.` gave
   `go1.27rc3` a minor of 27, and janus and antares carry exactly that version alongside their `/usr/local/go`, so
   the hole had a host to bite. Anchored to digits at both ends; 11 cases exercised against the shipped function,

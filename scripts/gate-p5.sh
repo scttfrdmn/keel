@@ -1395,6 +1395,10 @@ else
     # run cannot spend anything by itself, because the witness is landed by review. Stated
     # as the conditional it is, so a reader who lands nothing is not told the debt is closed.
     info "$SCALE_HOSTS_BASE of $NHOSTS host(s) rendered BASELINE this run in era $P5_ERA: green-compatible, and spent ONLY once the witness rows at $WITNESS_CANDIDATES are landed in $BASELINE_WITNESS by a reviewed commit. Until then the same absence re-renders BASELINE rather than becoming an unmet registration, and this line is the record of it (#6, #114)"
+    # The line above names only the witness, and followed literally it manufactures reds: a
+    # landed witness with no landed baseline IS the unmet-registration branch, and the baseline
+    # half cannot land off one run (§5 rule 16). Said out loud, 2026-08-29.
+    info "  landing is BOTH-OR-NEITHER: a witness row landed without its baseline row spends BASELINE and renders the unmet-registration FAIL instead. A single run cannot supply the baseline half (§5 rule 16, the emitted row says so in its own estimator column), so a fleet with one archived run in this era lands NEITHER and re-renders BASELINE next time"
   fi
   # Absence semantics decided once in `fleet_coverage`, not a third time here: the
   # divergent-copies defect at the verdict layer is what #90's sharing ruling was about, and
