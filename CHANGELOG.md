@@ -20,7 +20,11 @@ While the major version is 0, minor versions may contain breaking changes.
   was *linked rather than upgraded*, so the provisioner would have called a host ready for a harness it cannot
   build. Default now `go1.27.0` (stable, published for linux/amd64) and floor `27`. Verified in situ under
   `--check`, which now says `go on the ssh PATH is go1.26.5, and the harness needs go1.27.0 or newer` and predicts
-  gate-p3 will fail those hosts by name — the condition caught before a fleet run instead of during one.
+  gate-p3 will fail those hosts by name — the condition caught before a fleet run instead of during one. Then
+  discharged on the fleet (#70 authorized): `antares` and `janus` read back `go1.27.0` on a fresh connection rather
+  than off the install's own output, digest matched against `$KEEL_GO_SHA256` as an independent pin, `go1.27rc3`
+  removed rather than left beside, and `verify` natively built the very harness that had failed. `vesta` answered
+  neither name, so it is `unmeasured` — two read-backs of three, not three.
 - **The same floor admitted a prerelease, which `#70` rules inadmissible.** `^go1\.` plus `split` on `.` gave
   `go1.27rc3` a minor of 27, and janus and antares carry exactly that version alongside their `/usr/local/go`, so
   the hole had a host to bite. Anchored to digits at both ends; 11 cases exercised against the shipped function,

@@ -21,9 +21,15 @@ stating plainly:
   - There **is** a second toolchain, and gate-p5's `-race` arm requires it.
     `go test -c -race` under `CGO_ENABLED=0` is refused outright — `go: -race
     requires cgo` — so that one arm ships `git archive HEAD` and builds on the
-    host. `janus` and `antares` both carry `/usr/local/go` = `go1.26.5` with
-    `go1.27rc3` alongside; `vesta` did not answer ssh on 2026-08-28, so its state
-    is `unmeasured` rather than assumed to match.
+    host. `janus` and `antares` both carry `/usr/local/go` = `go1.27.0` as of
+    2026-08-28, installed under #70's ruling with `go1.27rc3` *removed* rather than
+    left beside it: an inadmissible toolchain on disk is a wrong-binary selection
+    waiting for a PATH ambiguity, and since T23's rename 1.26 cannot compile this
+    tree at all. `vesta` answered neither `vesta` nor `vesta.local`, so its state
+    is `unmeasured` rather than assumed to match — two read-backs of three.
+    `janus` additionally keeps `~/sdk/go1.25.0` and `~/sdk/go1.26.5`, reachable
+    only through their own `go1.X` shims and not from the harness's PATH:
+    recorded rather than removed, because the ruling named rc3.
   - The drift argument was backwards. The version the gate printed was the
     **host's** (`gate-p5.sh:639`), which is the compiler that produces *nothing*
     except that `-race` arm — so the one binary whose provenance mattered was the
