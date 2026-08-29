@@ -9,6 +9,18 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **`scripts/detach.sh` dropped the caller's environment, so a detached run could measure a different fleet than
+  the one it was told to** — and it did: `KEEL_REMOTE_HOSTS=antares scripts/detach.sh run … -- ./scripts/gate-p5.sh`
+  ran the gate against a stale `.keel-hosts` and produced a log of `UNMEASURED` against `keel-skx`, a host that no
+  longer resolves. That reads as a fleet outage and is a launcher defect. The mechanism makes it worse than a flat
+  drop: `tmux new-session` seeds a session from the **server's** environment, so an override arrives only when that
+  call is what starts the server, and `exit-empty off` pins the server for the machine's lifetime. Measured both
+  branches on 2026-08-28 — no server: `KEEL_REMOTE_HOSTS=[antares]`; server already up: `[unset]` — so the first
+  detached run of a host's life honours its overrides and every later one silently does not. The runner script now
+  carries an enumerated environment (`PATH`, `GOEXPERIMENT`, `GOMAXPROCS`, `KEEL_*`, `BENCH_*`), which makes
+  `build/<name>.cmd` readable as a statement of what was measured, and the launcher echoes the names it carried.
+  `PATH` is on the list because it picks the `go` that builds the arms; it matched the server's here only because
+  one profile started both. Proven on the branch that failed, with a server already up.
 - **`docs/hosts.md` said no toolchain is installed on the remote hosts, and that the gate version-checks the
   compiler whose output runs — both false, the second interestingly so.** There is a second toolchain and gate-p5's
   `-race` arm needs it (`go test -c -race` under `CGO_ENABLED=0` is refused outright), so `janus` and `antares` carry

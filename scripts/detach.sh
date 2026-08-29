@@ -76,6 +76,26 @@ cmd_run() {
   local log="$DIR/$name.log" status="$DIR/$name.status" runner="$DIR/$name.cmd"
   rm -f "$status"
 
+  # THE CALLER'S ENVIRONMENT IS CARRIED, and the runner file is the record of it.
+  # Measured both branches 2026-08-28: `tmux new-session` seeds a session from the
+  # SERVER's environment, so an override reaches the run only when this very call is
+  # what starts the server. With `exit-empty off` below pinning the server forever,
+  # that makes the first detached run of a machine's life carry its overrides and
+  # every later one drop them, silently. It cost a gate-p5 pre-flight:
+  # `KEEL_REMOTE_HOSTS=antares` vanished, the gate read a stale `.keel-hosts`, and it
+  # produced a log of UNMEASURED against an unreachable host — a fleet outage to read,
+  # a launcher defect in fact. The run was no longer the program that was launched,
+  # which is the one thing this script exists to guarantee.
+  #
+  # Enumerated rather than `export -p`, so `build/<name>.cmd` can be READ as a
+  # statement of what was measured. PATH is in the list because it decides which `go`
+  # builds the arms (remote.sh's builder_toolchain) and it matches the server's today
+  # only because one profile happened to start both.
+  local carried=() v
+  for v in PATH GOEXPERIMENT GOMAXPROCS $(compgen -v | grep -E '^(KEEL_|BENCH_)' || true); do
+    [[ -n "${!v+set}" ]] && carried+=("$v")
+  done
+
   # The command is written to a runner script rather than interpolated into
   # tmux's argument, which a shell on the far side would re-expand. Same
   # hazard, and the same fix, as remote_exec's printf %q (scripts/remote.sh).
@@ -92,6 +112,7 @@ cmd_run() {
   {
     echo '#!/usr/bin/env bash'
     printf 'cd %q || exit 3\n' "$ROOT"
+    for v in "${carried[@]}"; do printf 'export %s=%q\n' "$v" "${!v}"; done
     printf 'signalled=\n'
     # shellcheck disable=SC2016  # deliberately unexpanded: this is the runner's source
     printf 'signal() { [[ -n "$signalled" ]] && return 0; signalled=1; tmux wait-for -S %q 2>/dev/null || true; }\n' "$sess"
@@ -114,6 +135,9 @@ cmd_run() {
   tmux set-option -s exit-empty off 2>/dev/null || true
 
   printf 'detached: session=%s log=%s\n' "$sess" "$log"
+  # Names only, values in the runner file: the failure this replaces was silent, so a
+  # caller who names a fleet should see it echoed back.
+  printf 'carried:  %s\n' "${carried[*]}"
   printf 'status:   %s (absent until it finishes)\n' "$status"
 }
 
