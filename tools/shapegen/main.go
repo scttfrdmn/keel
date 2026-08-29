@@ -150,12 +150,30 @@ func parseShape(spec, form string) (Shape, error) {
 // repoRoot locates the module root, which every mode needs: candidates are
 // compiled from a directory under internal/vec and the shipped kernels are read
 // from the tree, so neither can be found relative to the caller's cwd.
+//
+// The marker is go.mod, not .git. This asked `git rev-parse --show-toplevel`
+// until 2026-08-28, which finds the *repository* root — a different thing that
+// merely coincides with the module root in a checkout, and is absent from a
+// `git archive` export. gate-p5's -race leg and gate-p3's OpenBLAS harness both
+// ship by that export (cgo forbids cross-building them), so the git form made
+// three tests here fail with `exit status 128` on every benchmark host and left
+// a named P5 criterion permanently UNMEASURED. Everything these tests read is in
+// the export; only the lookup wasn't.
 func repoRoot() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	dir, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("locating the repo root: %v", err)
+		return "", fmt.Errorf("reading the working directory: %v", err)
 	}
-	return strings.TrimSpace(string(out)), nil
+	for d := dir; ; {
+		if _, err := os.Stat(filepath.Join(d, "go.mod")); err == nil {
+			return d, nil
+		}
+		parent := filepath.Dir(d)
+		if parent == d {
+			return "", fmt.Errorf("no go.mod in %s or any parent", dir)
+		}
+		d = parent
+	}
 }
 
 // audit compiles one candidate and returns its steady-state loop report.

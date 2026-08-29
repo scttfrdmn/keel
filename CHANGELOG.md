@@ -25,6 +25,20 @@ While the major version is 0, minor versions may contain breaking changes.
   than off the install's own output, digest matched against `$KEEL_GO_SHA256` as an independent pin, `go1.27rc3`
   removed rather than left beside, and `verify` natively built the very harness that had failed. `vesta` answered
   neither name, so it is `unmeasured` — two read-backs of three, not three.
+- **A named P5 criterion could never render a verdict, and the condition was already in the tree as a footnote.**
+  With `go1.27.0` installed the `-race` leg finally *built*, and then failed three `tools/shapegen` tests
+  identically on both hosts: `locating the repo root: exit status 128`. `repoRoot()` shelled out to `git rev-parse
+  --show-toplevel`, and that leg ships the tree by `git archive HEAD`, which has no `.git`. The same failure was
+  measured the same day in CI's floor arm and recorded at `ci.yml:71` as "the transport, not the toolchain" —
+  true, and shelved there as an oddity awaiting anyone who reproduced the floor off an export. What that missed is
+  that a *second* arm ships by the same transport, so the cost was not an odd red but a criterion that could never
+  be measured on any benchmark host. `repoRoot` now walks up for `go.mod`, which its own comment always named:
+  `git rev-parse` returns the *repository* root, a different thing that coincides with the module root only in a
+  checkout. Everything these tests read is present in the export; only the lookup wasn't. Driven in all three
+  states before landing — reproduced in an extracted export (2 FAIL), all three pass there afterwards including
+  the audit test that writes under the export's own `internal/vec`, and the not-found branch driven from `/tmp`
+  (`shapegen: no go.mod in /tmp or any parent`, rc=2). Two failures there against three here is arm-dependent and
+  not a miscount: the floor arm sets no `GOEXPERIMENT`, so it does not build `audit_simd_test.go`.
 - **The same floor admitted a prerelease, which `#70` rules inadmissible.** `^go1\.` plus `split` on `.` gave
   `go1.27rc3` a minor of 27, and janus and antares carry exactly that version alongside their `/usr/local/go`, so
   the hole had a host to bite. Anchored to digits at both ends; 11 cases exercised against the shipped function,

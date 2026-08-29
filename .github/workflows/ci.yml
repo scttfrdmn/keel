@@ -69,10 +69,12 @@ jobs:
   #
   # One trap, hit while measuring: the first attempt shipped the tree with `git archive`
   # and `tools/shapegen`'s two fixed-point tests failed at `git rev-parse --show-toplevel`
-  # (exit 128), because a tarball has no `.git`. That is the transport, not the toolchain
-  # — re-run inside a real worktree it is rc=0. `actions/checkout` gives a worktree, so
-  # the arm is fine here, but anyone reproducing the floor off an export will see two
-  # unrelated reds.
+  # (exit 128), because a tarball has no `.git`. Two is THIS arm's count: GOEXPERIMENT is
+  # unset here, so audit_simd_test.go's third failure shows up only where it is set.
+  # Diagnosing it as "the transport, not the toolchain" and stopping there was the error —
+  # gate-p5's -race leg ships by the same `git archive`, where the same lookup left a named
+  # P5 criterion UNMEASURED on every benchmark host. Fixed 2026-08-28: repoRoot() walks up
+  # for go.mod, which an export has. The clause promising two reds off an export is VOID.
   floor:
     name: scalar path on the go.mod floor (1.26.x)
     runs-on: ubuntu-latest
