@@ -687,6 +687,15 @@ fi
 # duplication is deliberate rather than a slip: lint runs on every push, including on the
 # one machine here without AVX-512, and catches a broken reader before a $24/hr fleet
 # renders a bar from it; this copy is what makes the published log self-certifying.
+#
+# CORRECTED 2026-08-28. The sentence above was false when written and stayed false for a
+# week: `make lint` ran on no push. CI's stock job listed three of the target's four steps
+# by hand and never gained the fourth, so the only machine that ran baseline-test.sh was a
+# gate — which is to say, the fleet. f0e9e0b broke a reader's boundary control, nothing
+# caught it, and the bill was a $3.888/hr run that rendered no bar at all. The claim is now
+# true (`ci.yml` runs `make lint`), and it is worth naming what made it durable rather than
+# merely wrong: a comment asserting that another file does something, where nothing checks
+# that it does. Grep the mechanism before crediting it.
 if BTLOG="$(bash scripts/baseline-test.sh 2>&1)"; then
   pass "BASELINE-REGISTERED readers pass their controls ($(grep -c '^  ok ' <<<"$BTLOG") fixtures; 21 mutants driven 2026-08-21, all killed, and a 22nd found unkillable — an unnamed-era guard whose deletion changed nothing observable, so it was deleted rather than explained. §5 rule 12: the number is what it covers, and mutation is a session act with no standing harness)"
 else

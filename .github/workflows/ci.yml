@@ -16,28 +16,44 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
-        with: { go-version: '1.26.x' }
+        with: { go-version: '1.27.x' }
       # setup-go v6 set GOTOOLCHAIN=local (actions/setup-go#460), which is the one thing
       # in the Node-24 sweep that changes what a green MEANS: `go` can no longer quietly
       # download a newer toolchain to satisfy go.mod, it errors instead. That is the
       # behaviour this project wants — a silent toolchain substitution would make the Go
       # version a fact about the runner rather than about the pin — so it is printed and
-      # not assumed. go.mod says `go 1.26` and this job installs 1.26.x, so local suffices.
+      # not assumed. go.mod says `go 1.26`, this job installs a newer 1.27.x, and local
+      # still suffices: the directive is a floor, so nothing needs downloading.
+      #
+      # WHY 1.27.x AND NOT 1.26.x (2026-08-28, T23). This pin was `1.26.x` and is now the
+      # tree's *only* machine-checked statement of which archsimd API keel is written
+      # against. go.mod cannot carry it — archsimd ships with the toolchain, so it is not a
+      # module requirement — and the 1.26→1.27 rename is a swap with no spelling that
+      # satisfies both. The pin therefore stopped being a convenience the day the dev host
+      # moved: it is what fails a tree written against the wrong one. It failed fed1e70
+      # exactly that way, from the 1.26 side, which is this job earning its keep.
       - run: go version && go env GOTOOLCHAIN
       - run: go build ./...
-      - run: go vet ./...
       # `gofmt -l` exits 0 whether or not it lists anything, so it has to be made to
       # gate: an unformatted file sat at HEAD through green CI because nothing here
       # ran it at all. Printed as well as gated, so the failure names the file.
       - run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go test ./...
-      # #85: every DESIGN.md rule citation must resolve against DESIGN.md's actual
-      # structure. Self-test first — the lint reaches only its clean path on a
-      # healthy tree, so a green from the lint alone leaves seven branches untested.
-      # It needs a git checkout (it enumerates sites with `git ls-files`) but no
-      # toolchain, so it lives in the stock job where it cannot be skipped.
-      - run: bash scripts/citation-lint-test.sh
-      - run: bash scripts/citation-lint.sh
+      # `make lint` and NOT a copy of its contents (2026-08-28). This was three lines —
+      # `go vet`, then #85's citation lint and its self-test — while the Makefile's `lint`
+      # target had grown a fourth, `scripts/baseline-test.sh`. So the two lists silently
+      # diverged, and the cost was exact: gate-p5.sh's comment beside that very check
+      # claimed "lint runs on every push … and catches a broken reader before a $24/hr
+      # fleet renders a bar from it", which was false, because nothing here ran it. A
+      # BASELINE-REGISTERED reader broken by f0e9e0b therefore survived to a $3.888/hr
+      # fleet run. One definition of green, in the Makefile, is what the `docs` job
+      # already does and for this reason.
+      #
+      # It lives in the stock job because none of it needs GOEXPERIMENT, and the citation
+      # lint additionally needs the git checkout (it enumerates with `git ls-files`) but
+      # no toolchain. The self-tests inside the target run before the lints they cover,
+      # since a lint reaches only its clean path on a healthy tree.
+      - run: make lint
   # What this job's green means, exactly (#88, ruled 2026-08-16): "the simd
   # toolchain compiles all paths, and correctness is verified on scalar,
   # deterministically." It does NOT mean the AVX-512 kernels ran. GitHub's runners
@@ -68,10 +84,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
-        with: { go-version: '1.26.x' }
+        with: { go-version: '1.27.x' }
       # Printed here too, and for a sharper reason than in the stock job: this leg's
       # whole claim is "the simd toolchain compiles every path", and which toolchain
-      # that was is the subject of the sentence.
+      # that was is the subject of the sentence. Sharper again since T23's rename: on the
+      # wrong minor this leg does not fail a test, it fails to compile, and the version it
+      # prints is the difference between the two.
       - run: go version && go env GOTOOLCHAIN
       - run: go build ./...
       # THE JUDGED LEG. `set -o pipefail` is not decoration: without it the pipe

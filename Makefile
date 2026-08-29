@@ -4,8 +4,16 @@ GOEXP := GOEXPERIMENT=simd
 
 .PHONY: build stock test test-scalar bench gate-p0 gate-p1 gate-p2 gate-p3 gate-p4 gate-p5 lint docs docs-serve
 
+# `build` builds twice, and the second is the load-bearing one. The dev host is
+# darwin/arm64, where the build tags exclude gemm_amd64.go and both vector
+# backends, so a native build greens on a tree that compiles nowhere a benchmark
+# runs — which is how go1.27's archsimd rename (T23) reached a $3.888/hr fleet run
+# before it reached a compiler error. The cross-build is the cheapest instrument
+# that sees the amd64 vector path from here; it is a `build` and not a separate
+# target so it cannot be the step someone skips.
 build:
 	$(GOEXP) go build ./...
+	GOOS=linux GOARCH=amd64 $(GOEXP) go build ./...
 
 stock:
 	go build ./...

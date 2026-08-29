@@ -20,12 +20,12 @@ is a normal Go module that respects `GOMAXPROCS`.
 go get github.com/scttfrdmn/keel
 ```
 
-Go 1.26 or newer. The vector kernels additionally need a toolchain built with
-the SIMD experiment enabled, and amd64 hardware with AVX-512:
+Go 1.26 or newer. The vector kernels additionally need **Go 1.27 or newer**, a
+toolchain built with the SIMD experiment enabled, and amd64 hardware with AVX-512:
 
 ```
-GOEXPERIMENT=simd go build ./...   # vector kernels
-go build ./...                     # scalar path, any toolchain
+GOEXPERIMENT=simd go build ./...   # vector kernels, Go 1.27+
+go build ./...                     # scalar path, any Go 1.26+ toolchain
 ```
 
 Both modes compile the same source and produce the same answers. The vector

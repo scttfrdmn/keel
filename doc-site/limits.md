@@ -49,9 +49,9 @@
 
 | | requirement |
 | --- | --- |
-| Go | 1.26 or newer |
+| Go | 1.26 or newer for the scalar path; **1.27 or newer** for the vector path |
 | scalar path | any Go toolchain, any platform Go supports |
-| vector path, build | `GOEXPERIMENT=simd`, amd64 |
+| vector path, build | `GOEXPERIMENT=simd`, amd64, Go 1.27+ |
 | vector path, run | AVX-512 for Level 3; AVX2 or AVX-512 for Level 1 |
 
 The vector path depends on `simd`/`archsimd`, which are **experimental** and not
@@ -59,12 +59,17 @@ covered by Go's compatibility promise. They have already had breaking renames
 between releases, and a toolchain upgrade can therefore break the vector build
 without breaking anything else.
 
-!!! warning "As of 2026-08-16: the vector path does not build on Go 1.27"
+!!! warning "As of 2026-08-28: the vector path needs Go 1.27, and no longer builds on 1.26"
 
-    `archsimd` swapped its load and store names between 1.26 and 1.27, with two
-    of the old names surviving under new parameter types. The port is
-    [issue #69](https://github.com/scttfrdmn/keel/issues/69). Until it lands, use
-    Go 1.26.x for the vector path; the scalar path is unaffected on either.
+    `archsimd` swapped its load and store names between 1.26 and 1.27 — the slice
+    forms took over the bare names and the array forms gained an `Array` suffix —
+    and keel is now written against the 1.27 spelling
+    ([issue #69](https://github.com/scttfrdmn/keel/issues/69), landed). The swap
+    admits no source that satisfies both, so this is a floor and not a preference:
+    on 1.26, `GOEXPERIMENT=simd go build ./...` fails to compile. The scalar path is
+    unaffected and still builds on 1.26. This warning has now pointed *both*
+    directions in twelve days, which is the experimental-package risk itself rather
+    than a fact about either release.
 
 ## Maturity
 

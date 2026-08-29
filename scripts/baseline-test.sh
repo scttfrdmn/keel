@@ -32,6 +32,15 @@ ok()  { printf '  ok %s\n' "$1"; OK=$((OK + 1)); }
 no()  { printf '  NOT OK %s\n' "$1"; BAD=$((BAD + 1)); }
 is()  { if [[ "$2" == "$3" ]]; then ok "$1"; else no "$1 (got '$2', want '$3')"; fi; }
 
+# Snapshotted HERE, before the first fixture, for case 30: the property is that nothing
+# in this file touches the tracked artifacts, so the reference has to predate every case.
+# `cksum` over the bytes rather than the text: a whole-file comparison makes the failure
+# message a two-screen diff of the registry, and command substitution would strip the
+# trailing newlines a write could consist entirely of. Only compared against itself, on
+# one machine, in one run, so which CRC it is does not matter.
+REG_BEFORE="$(cksum <scripts/host-baselines.tsv)"
+WIT_BEFORE="$(cksum <scripts/judged-runs.tsv)"
+
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 CPU='Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz'
 ERA=pinned8
@@ -260,10 +269,18 @@ baseline_spent "$WCAND" "$CPU" "$ERA" && ok 'a proposed witness row reads back a
 #     itself, so this is the one property whose violation is not a wrong number but a
 #     wrong constitution. Both tracked artifacts, because the witness is now half of the
 #     decision and a gate that could write it could spend its own exemption.
-is 'the tracked registry has no data rows and was not written' \
-   "$(awk -F'\t' '!/^#/ && $1 != "cpu_model" && NF >= 8' scripts/host-baselines.tsv | wc -l | tr -d ' ')" '0'
-is 'the tracked witness index has no data rows and was not written' \
-   "$(awk -F'\t' '!/^#/ && $1 != "cpu_model" && NF >= 6' scripts/judged-runs.tsv | wc -l | tr -d ' ')" '0'
+#
+#     UNCHANGED, NOT EMPTY (repaired 2026-08-28). This case used to assert that both
+#     tracked files hold zero data rows, using emptiness as a proxy for not-written. The
+#     proxy held only while the registry was unpopulated. f0e9e0b landed three reviewed
+#     baseline rows and one witness row — the registration this whole class exists to
+#     serve — the control failed, and gate-p5 fail-closed on every bar, so the first
+#     BASELINE-REGISTERED verdicts were never computed. A legitimate registration read
+#     exactly like this script writing to the tree. The property was always *unchanged*,
+#     and only a before/after comparison can state it; the same shape, for the same
+#     reason, as exercise-baseline.sh's P4BEFORE.
+is 'the tracked registry was not written' "$(cksum <scripts/host-baselines.tsv)" "$REG_BEFORE"
+is 'the tracked witness index was not written' "$(cksum <scripts/judged-runs.tsv)" "$WIT_BEFORE"
 # 31. And the shipped ledger resolves, which is the one case above that is about THIS
 #     tree rather than a fixture: gate-p5 FAILs when it does not, so a malformed ledger
 #     should be caught by `make lint` on every push and not by a $24/hr fleet.

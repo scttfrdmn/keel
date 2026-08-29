@@ -3,7 +3,7 @@
 # keel
 
 A pure-Go float32 BLAS subset built on Go's experimental SIMD support
-(`GOEXPERIMENT=simd`, Go 1.26+). Kernels that inline, respect safepoints,
+(`GOEXPERIMENT=simd`, Go 1.27+; scalar path Go 1.26+). Kernels that inline, respect safepoints,
 and parallelize on the caller's `GOMAXPROCS` — no cgo, no background
 threads, deploys as a normal Go module.
 
@@ -100,8 +100,8 @@ hardware. Non-goals and rationale: `DESIGN.md` §1–2.
 
 ## Building
 ```
-GOEXPERIMENT=simd go build ./...   # fast paths (Go 1.26+)
-go build ./...                     # scalar-only, stock toolchain
+GOEXPERIMENT=simd go build ./...   # fast paths (Go 1.27+, see doc-site/troubleshooting.md)
+go build ./...                     # scalar-only, stock toolchain (Go 1.26+)
 make test                          # or: gate-p0 … gate-p5
 ```
 

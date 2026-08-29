@@ -19,9 +19,37 @@ While the major version is 0, minor versions may contain breaking changes.
   passing it on, so nothing outside `internal/vec` changed. **`gemm_amd64.go` is generated and `tools/shapegen`
   emits it**, which T23's file inventory missed — `internal/kern`'s fixed-point test caught the generator
   drifting from its output. Two 1.27 facts recorded and deliberately not acted on: `paFloat32x16` now carries
-  `//go:nocheckptr`, which *predicts* golang/go#80856's `-race` failure is gone but is undecided until an
-  AVX-512 host runs it; and `(Float32x16) Abs()` now exists, retiring the bitcast workaround at #54's
+  `//go:nocheckptr` (CL 761120, merged, which closed golang/go#78413 — the still-open golang/go#80856 is a
+  duplicate), and that settles `-d=checkptr` **only**, because golang/go#42880 records that `-race` does *not*
+  obey `go:nocheckptr` — so the `-race` half is now predicted still broken, and an AVX-512 host's `-race` run
+  stays the decisive branch; and `(Float32x16) Abs()` now exists, retiring the bitcast workaround at #54's
   convenience rather than during a freeze.
+- **The vector path's floor is now Go 1.27, and CI is where that is stated** (`.github/workflows/ci.yml`,
+  `Makefile`, `DESIGN.md` §4/P0 + §"standing orders" 1, `CLAUDE.md`, `README.md`, `doc.go`,
+  `doc-site/{index,limits,troubleshooting}.md`). Because the rename is a *swap*, no source satisfies both
+  toolchains: CI still pinned `1.26.x` and so failed the port with the same 51 errors mirrored. `go.mod` cannot
+  carry this requirement — `archsimd` ships with the toolchain and is not a module dependency — so CI's pin is
+  the tree's only machine-checked statement of which API keel is written against. The scalar path's floor stays
+  Go 1.26. Two user-facing docs said the *opposite* as of 2026-08-16 ("use Go 1.26.x for the vector path") and
+  are corrected, with the direction change called out, since it has now pointed both ways in twelve days.
+- **`make build` cross-builds `GOOS=linux GOARCH=amd64`** (`Makefile`, `CLAUDE.md`). The dev host is
+  darwin/arm64, where the build tags exclude `gemm_amd64.go` and both vector backends, so the session-start
+  smoke build greened on a tree that compiled nowhere a benchmark runs — which is how the `archsimd` rename
+  reached a \$3.888/hr fleet run before it reached a compiler error. Verified by reintroducing one 1.26 name:
+  native-only build passes, `make build` fails naming the line.
+- **`baseline-test.sh`'s boundary control asserts *unchanged* rather than *empty*** (`scripts/baseline-test.sh`).
+  It checked that the tracked registry and witness index hold zero data rows, using emptiness as a proxy for
+  "this script did not write them". `f0e9e0b`'s three reviewed baseline rows and one witness row — the
+  registration the whole BASELINE-REGISTERED class exists to serve — broke the proxy, gate-p5 fail-closed on
+  every bar, and the first registered-baseline verdicts were never computed. Now a `cksum` taken before the
+  first fixture and compared after. Both branches driven on purpose: a forged registry row and a
+  **single-newline** write to the witness index each turn the run red.
+- **CI runs `make lint`, not a hand-copied subset of it** (`.github/workflows/ci.yml`, `scripts/gate-p5.sh`).
+  The workflow listed three of the target's four steps and never gained the fourth, `baseline-test.sh`. So
+  gate-p5's comment beside that check — "lint runs on every push … and catches a broken reader before a
+  \$24/hr fleet renders a bar from it" — was false for the week it mattered, and the bill was the run above.
+  The comment is corrected in place rather than deleted, because what made it durable is worth naming: it
+  asserted a behaviour of *another file*, where nothing checked that the behaviour existed.
 
 ### Added
 - **Both of P5's scaling bars are TYPED, in one commit, from one run's rows: `CEIL_FRACTION = 44.2` and

@@ -6,9 +6,18 @@ testing philosophy (§5), risks and standing orders (§6). Read it fully
 before your first action in any session.
 
 ## Toolchain
-- Go 1.27rc (or newest 1.26.x) with `GOEXPERIMENT=simd`. Smoke-build before
-  anything else each session (`make build && make stock`).
-- The scalar path must always build on a stock toolchain (`make stock`).
+- Go 1.27 or newer with `GOEXPERIMENT=simd` (1.26.x no longer compiles
+  `internal/vec` — the names were swapped, T23). Smoke-build before anything
+  else each session (`make build && make stock`).
+- The scalar path must always build on a stock toolchain (`make stock`), whose
+  floor stays Go 1.26.
+- **`make build` cannot see an amd64-only break.** The dev host is darwin/arm64,
+  where the build tags exclude `gemm_amd64.go` and both vector backends outright,
+  so the session-start smoke build greened through a tree that compiled nowhere a
+  benchmark runs. This is not hypothetical: it is how go1.27's `archsimd` rename
+  reached a $3.888/hr fleet run before it reached a compiler error. `make build`
+  now cross-builds `GOOS=linux GOARCH=amd64` as its second line, so the smoke step
+  covers it — do not "simplify" that back to one build.
 
 ## Long runs: nothing may die, and no run is anyone's to babysit
 A gate or benchmark run must not be able to fail because of the lifetime of the

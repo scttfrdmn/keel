@@ -10,7 +10,7 @@ goroutine — it deploys as a normal Go module and respects GOMAXPROCS.
 
 # Two build modes
 
-	GOEXPERIMENT=simd go build ./...   # vector kernels on amd64, Go 1.26+
+	GOEXPERIMENT=simd go build ./...   # vector kernels on amd64, Go 1.27+
 	go build ./...                     # scalar path, any Go 1.26+ toolchain
 
 Both modes compile the same source and produce the same answers. The vector

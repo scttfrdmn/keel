@@ -2282,9 +2282,23 @@ count as against `rc3`, so the rename table and the 8-site array inventory are
 which this entry's file inventory missed: `gemm_amd64.go` is generated, and
 `internal/kern`'s fixed-point test is what caught the generator drifting from its
 output. Two further 1.27 API facts, both recorded and neither acted on: `paFloat32x16`
-now carries `//go:nocheckptr`, which predicts golang/go#80856's `-race` failure is
-gone (undecided — no AVX-512 host has run it); and `(Float32x16) Abs()` now exists,
-retiring this project's bitcast workaround at #54's convenience, not during a freeze.
+now carries `//go:nocheckptr`, from [CL 761120](https://go-review.googlesource.com/c/go/+/761120)
+(merged), which closed [golang/go#78413](https://github.com/golang/go/issues/78413) — the
+still-open [golang/go#80856](https://github.com/golang/go/issues/80856) is a duplicate of it. That
+settles the `-d=checkptr` half **only**: [golang/go#42880](https://github.com/golang/go/issues/42880),
+open, records that `-race` does *not* obey `go:nocheckptr`, so the `-race` half is now
+predicted **still broken** and an AVX-512 host's `-race` run stays the decisive branch. One
+annotation, two consumers, opposite answers. And `(Float32x16) Abs()` now exists, retiring
+this project's bitcast workaround at #54's convenience, not during a freeze.
+
+**And a second machine, found by CI.** Moving the dev host to 1.27 made the tree
+unbuildable on every machine still at 1.26 — CI included, which pins `1.26.x` and so
+failed `fed1e70` with the same 51 errors *mirrored*: `cannot use bp[0:16] (value of type
+[]float32) as *[16]float32 value in argument to archsimd.LoadFloat32x16`. The swap admits
+no spelling that satisfies both toolchains, and `go.mod` cannot express which one is
+required, because `archsimd` ships *with* the toolchain and is therefore not a module
+requirement. So the vector path's floor is now go1.27 and is stated only in prose and in
+CI's pin; the scalar path's floor stays go1.26.
 
 **The line that does not generalise.** The first paragraph says clobbering
 `/usr/local/go` "would silently re-point every host-invoked gate step and every
