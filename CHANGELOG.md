@@ -17,10 +17,11 @@ While the major version is 0, minor versions may contain breaking changes.
   this shape, and the dirty uppers are ZMM-wide. **`GOAMD64` does not move it** — v1
   through v4 diff clean, controlled by a sweep that does move the package listing at
   v3. No timing: the shape is unshipped and nothing was attributed, stated so in the
-  comment. Also localized `golang/go#80829` a layer up from the shorthand: the packed
-  `231` opcode exists (`aenum.go:1059`), the **SSA op table has only the `213` packed
-  forms**, and scalar `VFMADD231SD` ops with live rewrite rules are the in-tree
-  precedent for adding it.
+  comment. Correction to `bb3284e`'s message, which claimed keel's notes lacked the
+  precise form of `golang/go#80829`: **T12 recorded it on 2026-08-11**
+  (`toolchain-notes.md:852-859`, `spill-report.md:295`), naming the generator where my
+  re-read counted its output. Today's pass is corroboration under §5 rule 10, and adds
+  only that the gap is unchanged on go1.27.0.
 - **Replied to `golang/go#80828`** ([comment](https://github.com/golang/go/issues/80828#issuecomment-5471635162)),
   answering `cherrymui`'s 17-day-old question with a seven-row re-swept table, and
   disclosing that the issue **duplicates `golang/go#78753`** — closed 2026-05-26,

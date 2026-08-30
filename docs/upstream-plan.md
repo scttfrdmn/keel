@@ -230,27 +230,24 @@ already inside CL 1's headline number. Classification was done with a throwaway
 script; the predicates are stated above because the loops are 46 and 50 instructions
 and the check is meant to be redoable by eye.
 
-### Where the `231` gap is, and the in-tree precedent for closing it
+### The `231` gap was already localized; today only re-dated it
 
-Read out of go1.27.0's own source 2026-08-30, because "no `231` form" is shorthand
-that invites a reviewer to think the instruction is missing. It is not, and
-`golang/go#80829`'s own title says so — *"though the assembler encodes both."* The
-gap is one layer up:
+I set out on 2026-08-30 to sharpen `golang/go#80829` past the shorthand "no `231`
+form", and found the tree had done it on **2026-08-11**, in three places and better:
+T12's row, `docs/toolchain-notes.md:852-859` (*"`simdAMD64ops.go` defines
+`VFMADD213PS{128,256,512}` … and no 231-shaped op for any width … `AMD64Ops.go` does
+define scalar `VFMADD231SS` and `VFMADD231SD`, and `AMD64.rules` uses them for scalar
+`math.FMA` — so the 231 *shape* is already understood by the compiler, just not for
+vectors"*), and `docs/spill-report.md:295`. That record names the *generator*;
+mine counted its output, which is the weaker citation.
 
-- **The assembler has it.** `AVFMADD231PS` is an opcode (`cmd/internal/obj/x86/aenum.go:1059`)
-  with an optab entry (`avx_optabs.go:1845`).
-- **The SSA op table does not.** Across `ssa/_gen` and `ssa/opGen.go` the only packed
-  FMA ops are `VFMADD213PS` and `VFMADD213PD`, 60 occurrences each; **zero** packed
-  `231` or `132`. So no rewrite rule *can* select accumulate-in-place for
-  `archsimd`'s `MulAdd` — the missing thing is an op, and only then a rule.
-- **The precedent is in the same tree.** Scalar `VFMADD231SS`/`VFMADD231SD` ops exist
-  (`opGen.go:934`) and the compiler's own `a*b+c` lowering selects them
-  (`rewriteAMD64.go:8769`, `:8892`) at `GOAMD64=v3` and above — verified on a probe
-  where v1 emits `MULSD`/`ADDSD` and v3 emits `VFMADD231SD`. The packed sibling is
-  the same shape of change against a table that already models it scalar-side.
-
-This sharpens CL 1's description without adding a claim to it: the ask is a packed
-`231` op plus its rule, not an instruction.
+So this is **corroboration, not a second witness** (§5 rule 10), and the only thing
+today's read adds is a date: the prior record is go1.27.0's predecessor, and the gap
+is unchanged on go1.27.0 — `AVFMADD231PS` still an opcode with an optab entry, still
+no packed `231` SSA op. The shorthand that sent me looking is at
+`docs/toolchain-notes.md:42` and `:643`; the precise statement was two lines below the
+first one the whole time. The live table cell above, which is what feeds CL 1, now
+carries the precise form. Nothing here goes into the CL as new evidence.
 
 ### `golang/go#80835`: the third manifestation is reported, and `GOAMD64` does not move it
 
