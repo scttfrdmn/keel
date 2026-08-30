@@ -17,6 +17,17 @@ While the major version is 0, minor versions may contain breaking changes.
   Available only with the mechanism computed and positive-controlled, both
   readings disclosed, and the reading accepted by the authority.
 
+- `docs/neon-probe.md`: the arm64 lowering probe (#129), static only. Two of the
+  four amd64 misses are **absent** on arm64 — accumulate-in-place, because
+  `simdARM64.rules:242` rotates the accumulator into arg0 of a `resultInArg0` op,
+  and the 15-register limit, which is a property of amd64's `v` (VEX) mask while
+  AVX-512 ops use `w` and get 31. Broadcast is **present and worse**: identical
+  emulated Go source, but arm64 keeps a dead zero-init `VMOV` for 3 instructions
+  where amd64 needs 1. The wrapper anchor is **present, same cause, 4 bytes not 1**.
+  Also supplies the figure CL 1 needs in place of the refuted 110×: **12
+  register-to-register moves per 8 FMAs, 24.0% of `Kernel4x32`'s 50-instruction
+  loop**, agreeing with `spill-audit`'s own `12 reg copies`.
+
 - `docs/upstream-plan.md`, the root doc for the only workstream with an external
   clock: the CL ledger against verified upstream issue numbers, the shared per-CL
   evidence shape, the freeze budget, and the three figures that failed

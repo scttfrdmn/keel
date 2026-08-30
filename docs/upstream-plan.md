@@ -23,12 +23,14 @@ and the others do not.
 | [#126](https://github.com/scttfrdmn/keel/issues/126) | CL 2 — adopt CL 803220, SIMD ops in LICM | `golang/go#79984` | [#54](https://github.com/scttfrdmn/keel/issues/54) |
 | [#125](https://github.com/scttfrdmn/keel/issues/125) | **CL 3** — emulated broadcast + inlined-wrapper NOP anchor | `golang/go#80830` | [#17](https://github.com/scttfrdmn/keel/issues/17) |
 | [#128](https://github.com/scttfrdmn/keel/issues/128) | experience report on the graduation thread | `golang/go#73787` | the whole tree |
-| [#129](https://github.com/scttfrdmn/keel/issues/129) | NEON feasibility probe (no upstream artifact) | — | — |
-| [#130](https://github.com/scttfrdmn/keel/issues/130) | arm64 filing, **conditional on #129** | TBD or none | TBD |
+| [#129](https://github.com/scttfrdmn/keel/issues/129) | NEON feasibility probe — **done**, `docs/neon-probe.md` | — | — |
+| [#130](https://github.com/scttfrdmn/keel/issues/130) | arm64 filing — **subject now fixed**: dead zero-init in emulated broadcast | new | `docs/neon-probe.md` §2b |
 
-Order: **#129 first** (it needs nothing and nobody), Scott's half of #124 in
-parallel, then CL 1 within two to three weeks, then the rest as review allows.
-#130 may close as not-needed; that is a result, not a failure.
+Order: **#129 first** — done 2026-08-30. Scott's half of #124 in parallel, then
+CL 1 within two to three weeks, then the rest as review allows. #130 does not
+close as not-needed: the probe found one clean arm64-specific miss and its subject
+is settled, though it is the lowest-priority of the five since no keel gate is
+behind it and there is no arm64 backend yet to measure a delta on.
 
 ## The CL order is keyed to the subject, not to the number
 
@@ -55,9 +57,15 @@ three places that carried it rather than only in the two issues.
   lets it lead is not size but that its two halves are independent, so a freeze
   squeeze degrades it to a partial landing instead of nothing.
 - *"the 110× spill price is its evidence"* — the magnitude is **contradicted**, not
-  merely unlocated (see below). The subject linkage survives: the 6×32 tile spills
-  because only 15 of 32 vector registers are allocatable, which is #18, which is
-  CL 1's other half.
+  merely unlocated (see below). The subject linkage survives — the 6×32 tile does
+  spill, and #18 is CL 1's other half — but **#18's stated cause is now itself in
+  question.** `docs/neon-probe.md` §2d found that "only 15 of 32 allocatable" is a
+  property of amd64's `v` (VEX) register mask (`AMD64Ops.go:127`), while AVX-512
+  ops use `w` and get 31 (`:128`) — and `VFMADD213PS512`, which is what keel's
+  `Float32x16` kernels lower to, is a `w31` op. So the shipped kernels are not
+  subject to a 15-register cap, and why `Kernel6x32` spills with only ~20 values
+  live is unexplained. **Settle this before CL 1's description is written**; it is
+  an amd64 question the arm64 probe opened and deliberately left open.
 - *"highest keel payoff"* — **verified**, and this is what the order rests on.
   #104, the P2 STOP, states that 55% of measured peak is unreachable on Sapphire
   Rapids until `golang/go#80829` lands. No other CL here has a blocked phase gate
@@ -77,9 +85,19 @@ figure carried from a plan is a figure nobody checked:
   the report contains**. This is a stronger finding than the "searched for and not
   found" recorded on 2026-08-29, and it was reached by asking what the report
   measures instead of grepping for a string. **Cite 4.37× with its host and
-  denominator, or cite the structural figure instead:** 90 vector stack refs in
-  `Kernel6x32`'s steady-state loop against **0** in both shipped shapes
-  (`docs/spill-report.md:37-47`).
+  denominator, or cite a structural figure instead** — and note that the two
+  structural figures serve CL 1's two *different* halves:
+  - *accumulate-in-place* (the `VFMADD231PS` half): **12 register-to-register
+    moves per 8 FMAs, 24.0% of `Kernel4x32`'s 50-instruction loop, in a kernel
+    with zero spills** — four preserving broadcasts that `VFMADD213PS` clobbers,
+    eight rotating accumulators at the loop bottom. Two independent derivations:
+    `spill-audit` prints `12 reg copies`, and `docs/neon-probe.md` reaches 12 from
+    the listing. This is the sharpest figure available, because it is measured on
+    a **shipped** kernel and is about the miss itself rather than about a tile that
+    was never shipped.
+  - *register allocation* (the #18 half): 90 vector stack refs in `Kernel6x32`'s
+    steady-state loop against **0** in both shipped shapes
+    (`docs/spill-report.md:37-47`).
 - *"T17 nosplit −15.5%"* — **wrong sign, and the caveat was missing.** It is
   **+15.5%** static instructions in `internal/l1`, and it *was never paid*:
   `vec.LoadPart512` still calls `archsimd.LoadFloat32x16SlicePart` directly, so
@@ -141,11 +159,18 @@ right thing to start.
 - **No CL has been written, and no keel delta has been measured against a patched
   toolchain.** Every claim about what a fix would be worth to keel is an
   expectation, including #104's 55%.
-- **The arm64 half is entirely unmeasured.** #129 has not run, so nothing here
-  says whether arm64 shares any of these misses. The one statement made in the
-  other direction — that `FMLA` writes its own accumulator, so the
-  accumulate-in-place miss may have no arm64 counterpart — is an architectural
-  reading, not a measurement.
+- ~~**The arm64 half is entirely unmeasured.**~~ **VOID 2026-08-30** — #129 ran;
+  the result is `docs/neon-probe.md`. Its verdict: accumulate-in-place and the
+  15-register limit are **absent** on arm64, emulated broadcast is **present and
+  worse** (3 instructions against amd64's 1, from identical Go source), and the
+  wrapper anchor is **present with the same cause at 4 bytes instead of 1**. The
+  architectural reading recorded in this bullet — that `FMLA` writes its own
+  accumulator — reached the right conclusion by incomplete reasoning: the miss is
+  absent because `simdARM64.rules:242` rotates the accumulator into arg0, not
+  because the instruction set forces it. `VFMADD231PS` also writes its own
+  accumulator and amd64 still misses it, so architecture proposes and the lowering
+  rule decides. Still unmeasured on arm64: anything timed, and any tile but
+  `{MR:4, NR:16}`.
 - **The `110×` spill figure is now refuted, not merely unlocated** — updated
   2026-08-30. The 2026-08-29 version of this bullet said the figure "may exist
   somewhere this file did not look", which was the honest limit of a `grep`. The
