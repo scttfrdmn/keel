@@ -51,6 +51,22 @@ both kinds of contributor.
   full SHA, the delta's exact file list, and a runnable `git diff --stat` go in
   the release notes; any file that passes that test while failing a literal
   reading of the condition is named there rather than resolved silently.
+- **A markdown tag message needs `git tag -a --cleanup=verbatim -F`.** The default
+  cleanup strips every `#`-leading line as a comment, so `## Heading` lines vanish
+  from the tag object with no warning and nothing to diff against — repro in one
+  line, `printf '## H\nbody\n' | git stripspace --strip-comments`. v0.1.0's tag lost
+  all three of its section headings this way; the prose survived, including the seam
+  disclosure the tag exists to carry, and the intact copies are
+  `build/release-notes-vX.Y.Z.md` and the GitHub release body. Check it after
+  tagging: `git tag -l --format='%(contents)' vX.Y.Z` diffed against the notes file
+  should differ by exactly the signature block.
+- **The `github-pages` environment refuses a tag ref until told otherwise.**
+  Enabling Pages auto-creates that environment with `custom_branch_policies: true`
+  and one allowed ref, the branch `main` — which contradicts a deploy job gated on
+  `refs/tags/v*`, and the contradiction renders as a job that fails in ~2s with
+  **zero steps** and no log, not as an error message. v0.1.0 needed
+  `gh api --method POST repos/:owner/:repo/environments/github-pages/deployment-branch-policies
+  -f name='v*' -f type=tag` once, permanently.
 
 ## License
 Apache-2.0. New files carry the two-line header:

@@ -20,6 +20,16 @@ While the major version is 0, minor versions may contain breaking changes.
 ### Changed
 - CONTRIBUTING.md states the certificate-transfer condition next to the tag
   requirement, so the next release finds it where the release rules are.
+- CONTRIBUTING.md records the two mechanisms that bit while publishing v0.1.0,
+  both of which fail silently. `git tag -a -F` applies the default cleanup, which
+  strips every `#`-leading line as a comment, so all three `## ` section headings
+  vanished from the tag object with nothing to diff against — the prose survived,
+  including the seam disclosure, and the fix for next time is `--cleanup=verbatim`
+  plus a diff of `%(contents)` against the notes file. And enabling Pages
+  auto-creates a `github-pages` environment whose only allowed ref is the branch
+  `main`, which contradicts a deploy job gated on `refs/tags/v*`; the contradiction
+  renders as a job that fails in ~2s with **zero steps and no log**, so the tag
+  needed a `type=tag`, `name=v*` deployment-branch policy added once.
 
 ## [0.1.0] - 2026-08-29
 
