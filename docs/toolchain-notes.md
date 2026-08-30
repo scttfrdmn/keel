@@ -2713,3 +2713,74 @@ closed [#80140](https://github.com/golang/go/issues/80140) / [CL
 optimizations" is the nearest fixed neighbour. Filing, the refuted first story ("go1.27.0 swaps
 `VPANDND`'s operands") and two more retracted claims are on
 [#117](https://github.com/scttfrdmn/keel/issues/117).
+
+## T28 (#18) — go1.27.0 offers X16–X31 to the SIMD allocator, and `Kernel6x32`'s stack traffic halved
+
+**Observation.** T10/#18 recorded that `fpRegMaskAMD64` withholds X16–X31 from every SIMD
+value, so 15 of 32 vector registers are allocatable. On go1.27.0 `ssa/regalloc.go:785`
+unions **four** masks and `specialRegMaskAMD64 = 71776114766249984` supplies X16–X31 plus
+K1–K7, so **31 of 32 are allocatable** — only X15, the zero register, is in no mask.
+`Kernel6x32` uses 23 and its steady-state stack refs fell 90 → 44.
+
+Repro — independent register-only FMA chains, N a parameter, distinct starts so CSE
+cannot merge them:
+
+```sh
+mkdir -p build/n80828 && cd build/n80828
+gen() { n=$1; { echo 'package repro'; echo; echo 'import "simd/archsimd"'; echo;
+  echo '//go:noinline'; echo "func Chains$n(x []float32, k int) archsimd.Float32x16 {";
+  echo '	v := archsimd.LoadFloat32x16(x)';
+  i=0; while [ $i -lt $n ]; do echo "	a$i := archsimd.LoadFloat32x16(x[$((16*i)):])"; i=$((i+1)); done
+  echo '	for j := 0; j < k; j++ {';
+  i=0; while [ $i -lt $n ]; do echo "		a$i = v.MulAdd(v, a$i)"; i=$((i+1)); done
+  echo '	}'; echo '	s := a0';
+  i=1; while [ $i -lt $n ]; do echo "	s = s.Add(a$i)"; i=$((i+1)); done
+  echo '	return s'; echo '}'; } > chains$n.go; }
+gen 13; gen 14; cd ../..
+go run ./internal/spill/cmd/spill-audit -pkg ./build/n80828 -func Chains13
+go run ./internal/spill/cmd/spill-audit -pkg ./build/n80828 -func Chains14
+rm -rf build/n80828   # required: see below
+```
+
+**`rm -rf build/n80828` is not tidying.** `build/` is gitignored but `go build ./...`
+still walks it, and this package cannot compile natively on darwin/arm64 (`undefined:
+archsimd.Float32x16` — the build tags exclude `simd/archsimd`). Leaving it in place turns
+`make build` *and* `make stock` red on a clean tree, which is a false red of exactly the
+kind the session-start smoke build exists to rule out.
+
+```
+github.com/scttfrdmn/keel/build/n80828.Chains13: steady-state loop [744,995] 43 insns for 13 arith (3.31 per arith): 0 vector stack refs, 27 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+github.com/scttfrdmn/keel/build/n80828.Chains14: steady-state loop [830,1091] 45 insns for 14 arith (3.21 per arith): 2 vector stack refs, 26 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+```
+
+Highest vector register in the loop, scanned from `-gcflags=-S` over the byte range
+`spill-audit` reports, its instruction count the positive control:
+
+| N | 13 | 14 | 16 | 20 | 24 | 31 |
+|---|---|---|---|---|---|---|
+| highest | `Z14` | `Z16` | `Z18` | `Z23` | `Z29` | `Z31` |
+| distinct | 15 | 16 | 18 | 23 | 29 | 31 |
+| stack refs | 0 | 2 | 3 | 9 | — | — |
+
+The frontier is **still 13**, as #18 measured; only the magnitude and the ceiling moved.
+Identical under `GOAMD64` v1, v3 and v4, which refutes CL 767380's *"if using
+GOAMD64=v4 or higher"* framing.
+
+**What changed in the tree.** Nothing executable. Three sites carried #18's cause as
+settled and are corrected: `DESIGN.md` §4/P2, `Kernel6x32`'s doc comment in
+`internal/vec/gemm_amd64.go`, and `docs/spill-report.md`, which gains §11 with the
+decomposition of the 44 — 36 are broadcast-scalar round-trips through legacy-SSE `MOVUPS`
+in the inlined wrapper at `archsimd/other_gen_amd64.go:265`, and only 3 of the 12
+accumulators spill, so the residual is not register pressure.
+
+**Not established (§5 rule 12).** No go1.26.5 toolchain is installed on the dev host, so
+every 1.26.5 figure here is #18's quotation, not a re-run: this is measurement against
+quotation, not two measurements. The repro is not byte-identical to #18's either — its
+`LoadFloat32x16Slice` no longer exists (T23) — so the reg-copy column does not compare
+across the two readings. Nothing here is timed.
+
+**Upstream.** `golang/go#80828` is keel's own filing of this, open and `WaitingForInfo`
+since 2026-08-13. Why #18 was right when written, why the residual is
+`golang/go#80835`'s subject rather than a new filing,
+and the drafted reply are on [#18](https://github.com/scttfrdmn/keel/issues/18) and in
+`docs/upstream-plan.md`.

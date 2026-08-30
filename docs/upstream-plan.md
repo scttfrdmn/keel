@@ -25,9 +25,19 @@ and the others do not.
 | [#128](https://github.com/scttfrdmn/keel/issues/128) | experience report on the graduation thread | `golang/go#73787` | the whole tree |
 | [#129](https://github.com/scttfrdmn/keel/issues/129) | NEON feasibility probe — **done**, `docs/neon-probe.md` | — | — |
 | [#130](https://github.com/scttfrdmn/keel/issues/130) | arm64 filing — **subject now fixed**: dead zero-init in emulated broadcast | new | `docs/neon-probe.md` §2b |
+| — | **already filed, awaiting our reply** — X16–X31 withheld from the SIMD allocator | `golang/go#80828` | [#18](https://github.com/scttfrdmn/keel/issues/18), `docs/toolchain-notes.md` T28 |
+| — | **already filed by another reporter** — legacy-SSE `MOVUPS` in `archsimd`, AVX-SSE transition penalties | `golang/go#80835` | `docs/spill-report.md` §11.1 |
 
-Order: **#129 first** — done 2026-08-30. Scott's half of #124 in parallel, then
-CL 1 within two to three weeks, then the rest as review allows. #130 does not
+The last two rows are not CLs and have no keel issue: they are **debts on filings
+that already exist**, and both are ahead of every CL in urgency because they cost
+one comment each. `golang/go#80828` is keel's own, `WaitingForInfo` since
+2026-08-13 — `cherrymui`: *"Could you try Go 1.27RC3 or tip? I believe it should
+already work now."* T28 is the answer and it is **yes**; a reply drafted for Scott
+is the deliverable, since commenting upstream is an act beyond this repo.
+
+Order: **#129 first** — done 2026-08-30. Then the two outstanding replies. Scott's
+half of #124 in parallel, then CL 1 within two to three weeks, then the rest as
+review allows. #130 does not
 close as not-needed: the probe found one clean arm64-specific miss and its subject
 is settled, though it is the lowest-priority of the five since no keel gate is
 behind it and there is no arm64 backend yet to measure a delta on.
@@ -73,11 +83,31 @@ disqualifies it anyway, and it stands on the third.**
   Rapids until `golang/go#80829` lands. No other CL here has a blocked phase gate
   behind it.
 
-**#18's stated cause is in question, and CL 1's register-allocation half is
-excluded from the description until it is settled.** Not for the reason
-`docs/neon-probe.md` §2d first gave — that reasoning was the near-miss #18's own
-folklore note predicted, and the mask arithmetic settles nothing either way. The
-empirical finding on go1.27.0, from the shipped listing:
+**#18's stated cause is refuted on go1.27.0, and CL 1's register-allocation half
+is therefore dropped from the description rather than deferred.** T-78's read
+landed 2026-08-30; `docs/toolchain-notes.md` T28 and `docs/spill-report.md` §11
+carry it. Three findings, each with its own witness:
+
+1. **31 of 32 vector registers are allocatable.** `ssa/regalloc.go:785` unions
+   four masks and `specialRegMaskAMD64 = 71776114766249984` supplies X16–X31 plus
+   K1–K7; only X15, the zero register, is in no mask. Identical under `GOAMD64`
+   v1/v3/v4, which refutes CL 767380's *"v4 or higher"* framing.
+2. **The spill count halved: 90 → 44** vector stack refs, 5.62 → 4.56
+   instructions per arithmetic op.
+3. **The residual is not accumulator pressure.** 36 of the 44 are
+   broadcast-scalar round-trips through legacy-SSE `MOVUPS` in the inlined
+   wrapper at `archsimd/other_gen_amd64.go:265`; only 3 of the 12 accumulators
+   spill; and the allocator leaves X24–X31 idle while paying them. That shape is
+   already open upstream as `golang/go#80835` (AVX-SSE transition penalties, 65×
+   measured on Emerald Rapids), so it earns a `standing-task` keyed to that
+   issue, not a filing.
+
+**#18 was right when it was written** — its N=20 repro sat above the spill
+frontier and still named nothing above `Z14`. The toolchain moved under a true
+finding. It is *not* the reason `docs/neon-probe.md` §2d first gave, either: that
+reasoning was the near-miss #18's own folklore note predicted, and the mask
+arithmetic settles nothing on its own. The empirical finding on go1.27.0, from the
+shipped listing:
 
 | kernel | max vector register | above X14 |
 |---|---|---|
@@ -88,11 +118,13 @@ empirical finding on go1.27.0, from the shipped listing:
 `VFMADD213PS Z11, Z16, Z12` at `gemm_amd64.go:228` is an ordinary allocation, not
 spill scratch, and the two clean rows are the positive control that the probe
 discriminates. So `Kernel6x32` **holds 23 vector registers, needs about 15 values,
-and still carries 90 vector stack refs** — which is not register starvation and is
-a stranger question than the one #18 asked. #18's `Z0…Z14`-at-any-N sweep was
-measured 2026-08-18, before the go1.27 port: the toolchain moved under the finding.
-`build/ssa/Kernel6x32.html` adjudicates what is live at the spill points; no
-mechanism goes in writing ahead of that read.
+leaves X24–X31 untouched, and still carries 44 vector stack refs** — which is not
+register starvation and is a stranger question than the one #18 asked.
+
+**What CL 1 may say about registers: nothing.** The half that survives is
+accumulate-in-place, cited by the 12 moves. The 90-vs-0 stack-ref contrast is not
+merely uncited now, it is **stale**: 90 was a go1.26.5 reading and the shipped
+shapes' 0 is the only half of it still true.
 
 ## Three figures did not survive verification and are not in any CL description
 
@@ -100,12 +132,21 @@ Numbers reach a CL description only after being re-read from the tree, because a
 figure carried from a plan is a figure nobody checked:
 
 - *"the measured 110× µarch spill price"* — **located, real, and off-subject. The
-  2026-08-30 entry that called it contradicted is retracted in full.** Provenance:
-  #104's own table, `Kernel6x32` at **30.5%** of keel-zen4's peak against
-  **0.278%** of keel-spr's, so 30.5/0.278 = **109.7×** — the fifth pairing #18's
-  *"no log yields 110x under any pairing I can construct"* did not enumerate,
-  because it used raw rates and this one is normalized per host (53.6 × 2.05 =
-  109.9, the 2.05 being the SPR/Zen 4 peak ratio). The same quantity
+  2026-08-30 entry that called it contradicted is retracted in full.** Provenance,
+  **corrected 2026-08-30 after the first attempt cited the wrong run**: one sweep,
+  `build/gate-p2-f19a977.log`, prints `[keel-zen4] 6x32 35.79 = 30.5% of peak`
+  (line 78) and `[keel-spr] 6x32 0.6677`, `peak 240.2` (lines 88–89) = **0.278%**,
+  so 30.5/0.278 = **109.7×** — the fifth pairing #18's *"no log yields 110x under
+  any pairing I can construct"* did not enumerate, because it used raw rates and
+  this one is normalized per host. The cross-check 53.6 × 2.05 = 109.9 (raw-rate
+  ratio × the SPR/Zen 4 peak ratio) reads off the same two lines and is
+  algebraically the same quotient, so it is **one witness, not two** (§5 rule 10).
+  The originally published provenance — *"#104's own table"* — was wrong: #104 is
+  the `882e983` run at peak **228.9** with `6x32` **0.6526**, whose pairing is
+  **107.1×** and whose 0.285% is not 0.278%. Checking a correct figure against a
+  plausible neighbouring run nearly produced a second false retraction of it; the
+  same-log pairing is the stronger provenance the first attempt should have found.
+  The same quantity
   `docs/spill-report.md` measures reads **121.1× on Sapphire Rapids** in #18's
   six-host table, reproduced at 120.0× on a second guest size, 2.3% spread.
   **How the refutation went wrong:** it adjudicated a *µarch* claim against
@@ -124,11 +165,11 @@ figure carried from a plan is a figure nobody checked:
     the listing. This is the sharpest figure available, because it is measured on
     a **shipped** kernel and is about the miss itself rather than about a tile that
     was never shipped.
-  - *register allocation* (the #18 half): 90 vector stack refs in `Kernel6x32`'s
-    steady-state loop against **0** in both shipped shapes
-    (`docs/spill-report.md:37-47`). **This half is excluded from the description
-    until T-78's `ssa.html` read lands** — the count is solid, the *cause* is not,
-    and a CL cannot assert a mechanism its author has not seen.
+  - *register allocation* (the #18 half): **withdrawn 2026-08-30, not deferred.**
+    The figure was 90 vector stack refs in `Kernel6x32`'s steady-state loop
+    against 0 in both shipped shapes (`docs/spill-report.md:37-47`); on go1.27.0
+    it is 44, its stated cause is refuted, and 82% of what remains belongs to
+    `golang/go#80835`. A CL description may not carry it in any form.
 - *"T17 nosplit −15.5%"* — **wrong sign, and the caveat was missing.** It is
   **+15.5%** static instructions in `internal/l1`, and it *was never paid*:
   `vec.LoadPart512` still calls `archsimd.LoadFloat32x16SlicePart` directly, so

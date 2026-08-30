@@ -9,6 +9,17 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- `docs/toolchain-notes.md` T28 and `docs/spill-report.md` §11: **#18's cause is
+  refuted on go1.27.0.** 31 of 32 vector registers are allocatable, not 15
+  (`specialRegMaskAMD64` supplies X16–X31; only X15 is in no mask), identically
+  under `GOAMD64` v1/v3/v4. `Kernel6x32`'s steady-state stack refs fell 90 → 44 and
+  36 of the 44 are broadcast-scalar round-trips through legacy-SSE `MOVUPS`
+  (`golang/go#80835`), with only 3 of 12 accumulators spilling and X24–X31 idle. #18
+  was right when written — its N=20 repro was above the frontier and named nothing
+  above `Z14`; the toolchain moved under a true finding. Corrected at all three
+  sites that carried the old cause, and CL 1's register-allocation half is
+  **withdrawn from the description, not deferred**.
+
 - DESIGN.md §5 rule 22 and `docs/rulings.md` rule 22: a criterion is applied by
   the mechanism it names, not by the surface form of its wording. Ruled on the
   v0.1.0 release report — the tag-delta condition's canonical form is *nothing in
@@ -62,10 +73,14 @@ While the major version is 0, minor versions may contain breaking changes.
 
 - **Retracted the same day, by the condition attached to the ruling that accepted
   it: the `110×` spill price is real, is keel's own measurement, and is off-subject
-  for CL 1.** #104 measures `Kernel6x32` at 30.5% of keel-zen4's peak against 0.278%
-  of keel-spr's — 30.5/0.278 = **109.7×**, the percent-of-peak pairing #18's
-  four-pairing enumeration missed; the same quantity reads **121.1×** on Sapphire
-  Rapids in #18's six-host table. The refutation compared a *µarch* claim against
+  for CL 1.** One sweep — `build/gate-p2-f19a977.log:77-89` — prints `Kernel6x32` at
+  30.5% of keel-zen4's peak and 0.6677/240.2 = 0.278% of keel-spr's, so
+  30.5/0.278 = **109.7×**, the percent-of-peak pairing #18's four-pairing
+  enumeration missed; the same quantity reads **121.1×** on Sapphire Rapids in #18's
+  six-host table. The provenance first published for that pairing — *"#104's own
+  table"* — was **wrong and is corrected here**: #104 is a different run (peak 228.9,
+  `6x32` 0.6526) whose pairing is 107.1×, and checking the figure against it nearly
+  retracted a correct number. The refutation compared a *µarch* claim against
   `docs/spill-report.md`, whose hosts are janus, vesta and antares — no Sapphire
   Rapids — so "25× larger than anything in the report" was true of the report and
   false of the tree. It still may not enter a CL description: the compiler emits the

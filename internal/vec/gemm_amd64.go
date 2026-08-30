@@ -201,10 +201,14 @@ func Kernel4x32(kc int, a, b, c []float32, ldc int) {
 // deliberately left out of kern.Kernels() so that nothing ships it and the
 // gate's zero-spill criterion stays binding on the kernels that do.
 //
-// It exists to make the T10 constraint a measured number: the audit says the
-// steady-state body is 270 instructions with 90 vector stack references for 48
-// FMAs, and what that costs in GFLOP/s is the thing a go/no-go decision needs.
-// KERNEL.md carries the comparison against the two shapes that fit.
+// It exists to make the T10 constraint a measured number, and the number moved
+// when the toolchain did. On go1.26.5 the audit said 270 instructions with 90
+// vector stack references for 48 FMAs; on go1.27.0, re-measured 2026-08-30, it
+// says 219 for 44. The residual is not accumulator pressure — 36 of the 44 are
+// broadcast-scalar round-trips through legacy-SSE MOVUPS inside the inlined
+// archsimd wrapper, only 3 of the 12 accumulators spill, and the allocator
+// leaves X24-X31 unused while doing it. docs/spill-report.md carries the
+// decomposition; KERNEL.md the comparison against the two shapes that fit.
 //
 // Requires len(a) >= kc*6, len(b) >= kc*32, ldc >= 32, and len(c) >= 5*ldc+32.
 func Kernel6x32(kc int, a, b, c []float32, ldc int) {

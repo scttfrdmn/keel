@@ -652,3 +652,88 @@ per-invocation cost the blocked nest amortises over many calls; it is falsified 
 sweep's rate is flat in the number of `kc=128` passes per timed iteration, since a fixed
 prologue must dilute with more passes. Both numbers are below both floors, so no verdict
 turns on it either way.
+
+## 11. Re-measured on go1.27.0 (2026-08-30): the count halved and the cause was wrong
+
+§1's transcript is a 2026-08-11 quotation from a go1.26.5 gate and stays as written. The
+port to go1.27.0 (T-64) moved the toolchain under it, so `spill-audit` was re-run on the
+same kernel at the same tile:
+
+```
+Kernel6x32: steady-state loop [152,1457] 219 insns for 48 arith (4.56 per arith):
+  44 vector stack refs, 45 reg copies, 24 broadcasts, 8 anchor nops,
+  0 calls, 0 bounds-check exits, 0 other mem refs
+```
+
+Against go1.26.5's `270 insns … 90 vector stack refs, 50 reg copies, 5.62 per arith`:
+**90 → 44**, and instructions per arithmetic op fell 19%. The steady-state loop is pcs
+00026–00268, back edge `00268 JGT 26`, source lines 224–285 — *not* the loop at pcs
+270–349, which is the k-remainder (`CMPQ CX, $6`) and was misread as the steady state
+once during this analysis.
+
+### 11.1 Only 3 of 12 accumulators spill; 36 of the 44 refs are broadcast round-trips
+
+The 44 decompose, from the `-gcflags=-S` listing:
+
+| what | refs | where |
+|---|---|---|
+| `MOVUPS X2 → autotmp_NNN(SP)` | 18 | one per `BroadcastFloat32x16(ap[N])` in the source |
+| `MOVUPS autotmp_NNN(SP) → X#` | 18 | inside the inlined wrapper, `archsimd/other_gen_amd64.go:265` |
+| Z-width accumulator stores | 3 | `c5h`, `c5l`, `c4h` |
+| Z-width loads + 1 wrapper store | 5 | — |
+
+So **82% of the traffic is 36 broadcast-scalar round-trips through the stack**, at
+X-width, in a wrapper the compiler inlined; and **only 3 of the 12 accumulators spill at
+all**. This is a different defect from the one §1 and DESIGN.md §4/P2 recorded.
+
+### 11.2 The 15-register claim is refuted, at the compiler source and in the emitted code
+
+#18 Property 1 says `fpRegMaskAMD64` offers only X0–X14, so X16–X31 can never be
+allocated. **That was correct on go1.26.5** — its N=20 repro sat well above the spill
+frontier and still named no register above `Z14`, which is discriminating evidence. The
+toolchain moved under a true finding; nothing here says #18 misread its own listing.
+On go1.27.0 `ssa/regalloc.go:785` unions **four** masks, and
+`specialRegMaskAMD64 = 71776114766249984` supplies X16–X31 plus K1–K7. Decoding
+`opGen.go`: `fpRegMaskAMD64 == simdRegMaskAMD64 == 2147418112` = X0–X14, and the union
+makes **31 of 32 vector registers allocatable** — only X15, the amd64 zero register, is
+in no mask.
+
+Two independent witnesses, not one restated twice: the mask decode above, and the shipped
+listing, which actually allocates above the claimed ceiling.
+
+| kernel | vector registers used | distinct |
+|---|---|---|
+| `Kernel2x32` | 0–14 | 15 |
+| `Kernel4x32` | 0–14 | 15 |
+| `Kernel6x32` | 0–14 **and 16–23** | **23** |
+
+`VFMADD213PS Z11, Z16, Z12` at `gemm_amd64.go:228` is an ordinary allocation. The two
+clean rows are the positive control that the probe discriminates at all. `Kernel6x32`
+therefore holds 23 registers, needs about 15 values, **leaves X24–X31 untouched**, and
+still pays 44 stack refs — which is not register starvation.
+
+### 11.3 The residual's candidate mechanism is already open upstream
+
+`golang/go#80835` (open, 6 comments) reports legacy-SSE — non-VEX `MOVUPS` — encodings
+in `archsimd` functions causing AVX-SSE transition penalties, measured at **65×** on
+Emerald Rapids. keel's 36 round-trips per iteration are exactly that encoding, which makes
+it a candidate for §10's SPR asymmetry. It is a **candidate only**: janus (Skylake-X) pays
+1.9× on the same code, which a transition-penalty story has to explain and does not yet.
+No new upstream filing is warranted; the deliverable is a `standing-task` keyed to that
+issue.
+
+### 11.4 The reg-copy term is a different, still-live miss
+
+45 reg copies for 48 arith is ~1 per FMA, and the ported `golang/go#80828` repro holds ~2 per FMA at
+N=13. That is `golang/go#80829`'s accumulate-in-place miss (`213`-only FMA forms), which
+is CL 1's subject and is untouched by any of the above.
+
+### 11.5 What this section does not establish (§5 rule 12)
+
+- **No timing.** Every figure here is static instruction counting on a cross-built
+  `GOOS=linux GOARCH=amd64` object. No host ran this code; the GFLOP/s columns elsewhere
+  in this report are all go1.26.5-era.
+- **The 8 Z-width refs are unexplained.** 3 accumulators spill and 9 do not, and nothing
+  here says why those three.
+- **`golang/go#80835` is unmeasured on keel.** Attributing any part of the SPR reading to
+  AVX-SSE transitions requires a counter-based measurement nobody has taken.
