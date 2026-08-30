@@ -18,7 +18,17 @@ While the major version is 0, minor versions may contain breaking changes.
   was right when written — its N=20 repro was above the frontier and named nothing
   above `Z14`; the toolchain moved under a true finding. Corrected at all three
   sites that carried the old cause, and CL 1's register-allocation half is
-  **withdrawn from the description, not deferred**.
+  **withdrawn from the description, not deferred**. Opened
+  [#144](https://github.com/scttfrdmn/keel/issues/144) as the `standing-task` keyed
+  to `golang/go#80835` for the 36 round-trips.
+
+- **`3a7ad60`'s commit message carries a false correction; this supersedes it.** It
+  says the 109.7× pairing's provenance *"was wrong … not from #104"*. It was right:
+  the table is in a #104 **comment**, and the check that declared it fabricated read
+  `gh issue view --json body`, which omits comments. `docs/upstream-plan.md`'s
+  discipline list now says a citation check reads `body,comments`. The
+  `build/gate-p2-f19a977.log` citation added alongside it is sound and is kept as
+  the primary source.
 
 - DESIGN.md §5 rule 22 and `docs/rulings.md` rule 22: a criterion is applied by
   the mechanism it names, not by the surface form of its wording. Ruled on the
@@ -73,14 +83,11 @@ While the major version is 0, minor versions may contain breaking changes.
 
 - **Retracted the same day, by the condition attached to the ruling that accepted
   it: the `110×` spill price is real, is keel's own measurement, and is off-subject
-  for CL 1.** One sweep — `build/gate-p2-f19a977.log:77-89` — prints `Kernel6x32` at
-  30.5% of keel-zen4's peak and 0.6677/240.2 = 0.278% of keel-spr's, so
-  30.5/0.278 = **109.7×**, the percent-of-peak pairing #18's four-pairing
-  enumeration missed; the same quantity reads **121.1×** on Sapphire Rapids in #18's
-  six-host table. The provenance first published for that pairing — *"#104's own
-  table"* — was **wrong and is corrected here**: #104 is a different run (peak 228.9,
-  `6x32` 0.6526) whose pairing is 107.1×, and checking the figure against it nearly
-  retracted a correct number. The refutation compared a *µarch* claim against
+  for CL 1.** #104 measures `Kernel6x32` at 30.5% of keel-zen4's peak against 0.278%
+  of keel-spr's — 30.5/0.278 = **109.7×**, the percent-of-peak pairing #18's
+  four-pairing enumeration missed; the same quantity reads **121.1×** on Sapphire
+  Rapids in #18's six-host table. Primary source for both terms, added 2026-08-30:
+  `build/gate-p2-f19a977.log:77-89`, one sweep. The refutation compared a *µarch* claim against
   `docs/spill-report.md`, whose hosts are janus, vesta and antares — no Sapphire
   Rapids — so "25× larger than anything in the report" was true of the report and
   false of the tree. It still may not enter a CL description: the compiler emits the

@@ -26,7 +26,7 @@ and the others do not.
 | [#129](https://github.com/scttfrdmn/keel/issues/129) | NEON feasibility probe — **done**, `docs/neon-probe.md` | — | — |
 | [#130](https://github.com/scttfrdmn/keel/issues/130) | arm64 filing — **subject now fixed**: dead zero-init in emulated broadcast | new | `docs/neon-probe.md` §2b |
 | — | **already filed, awaiting our reply** — X16–X31 withheld from the SIMD allocator | `golang/go#80828` | [#18](https://github.com/scttfrdmn/keel/issues/18), `docs/toolchain-notes.md` T28 |
-| — | **already filed by another reporter** — legacy-SSE `MOVUPS` in `archsimd`, AVX-SSE transition penalties | `golang/go#80835` | `docs/spill-report.md` §11.1 |
+| [#144](https://github.com/scttfrdmn/keel/issues/144) | **already filed by another reporter** — legacy-SSE `MOVUPS` in `archsimd`, AVX-SSE transition penalties | `golang/go#80835` | `docs/spill-report.md` §11.1 |
 
 The last two rows are not CLs and have no keel issue: they are **debts on filings
 that already exist**, and both are ahead of every CL in urgency because they cost
@@ -132,21 +132,16 @@ Numbers reach a CL description only after being re-read from the tree, because a
 figure carried from a plan is a figure nobody checked:
 
 - *"the measured 110× µarch spill price"* — **located, real, and off-subject. The
-  2026-08-30 entry that called it contradicted is retracted in full.** Provenance,
-  **corrected 2026-08-30 after the first attempt cited the wrong run**: one sweep,
-  `build/gate-p2-f19a977.log`, prints `[keel-zen4] 6x32 35.79 = 30.5% of peak`
-  (line 78) and `[keel-spr] 6x32 0.6677`, `peak 240.2` (lines 88–89) = **0.278%**,
-  so 30.5/0.278 = **109.7×** — the fifth pairing #18's *"no log yields 110x under
-  any pairing I can construct"* did not enumerate, because it used raw rates and
-  this one is normalized per host. The cross-check 53.6 × 2.05 = 109.9 (raw-rate
-  ratio × the SPR/Zen 4 peak ratio) reads off the same two lines and is
-  algebraically the same quotient, so it is **one witness, not two** (§5 rule 10).
-  The originally published provenance — *"#104's own table"* — was wrong: #104 is
-  the `882e983` run at peak **228.9** with `6x32` **0.6526**, whose pairing is
-  **107.1×** and whose 0.285% is not 0.278%. Checking a correct figure against a
-  plausible neighbouring run nearly produced a second false retraction of it; the
-  same-log pairing is the stronger provenance the first attempt should have found.
-  The same quantity
+  2026-08-30 entry that called it contradicted is retracted in full.** Provenance:
+  #104's own table, `Kernel6x32` at **30.5%** of keel-zen4's peak against
+  **0.278%** of keel-spr's, so 30.5/0.278 = **109.7×** — the fifth pairing #18's
+  *"no log yields 110x under any pairing I can construct"* did not enumerate,
+  because it used raw rates and this one is normalized per host (53.6 × 2.05 =
+  109.9, the 2.05 being the SPR/Zen 4 peak ratio, also #104's). Primary source for
+  every term, traced 2026-08-30: **one sweep**, `build/gate-p2-f19a977.log` —
+  `[keel-zen4] 6x32 35.79 = 30.5% of peak` (line 78), `[keel-spr] 6x32 0.6677` and
+  `peak 240.2` (lines 88–89). The two derivations are algebraically the same
+  quotient, so they are **one witness, not two** (§5 rule 10). The same quantity
   `docs/spill-report.md` measures reads **121.1× on Sapphire Rapids** in #18's
   six-host table, reproduced at 120.0× on a second guest size, 2.3% spread.
   **How the refutation went wrong:** it adjudicated a *µarch* claim against
@@ -195,7 +190,13 @@ figure carried from a plan is a figure nobody checked:
 1. **Search the tracker first, always** — including before asking a question, not
    only before filing. It has already paid once.
 2. **Read the thread, not the title.** An upstream title is a symptom report; the
-   comments and any linked CL may have moved the cause.
+   comments and any linked CL may have moved the cause. **This binds citation
+   checks too, and `gh issue view --json body` does not satisfy it.** On
+   2026-08-30 the 109.7× provenance above was checked that way, the table was not
+   in the body, and the citation was declared fabricated and "corrected" in two
+   files and a commit message (`3a7ad60`) — while the table sat in a #104
+   *comment*, exactly as originally written. A citation check reads `--json
+   body,comments`, or it is testing a different artifact than the one cited.
 3. **A duplicate carrying a wrong causal story is worse than no filing.** When the
    bug is already open, the deliverable is a `standing-task` issue keyed to it and
    its CL — not a second report.
