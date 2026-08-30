@@ -22,6 +22,17 @@ While the major version is 0, minor versions may contain breaking changes.
   must hold at every level or name one; and **`VFMADD213PS` is emitted at `GOAMD64=v1`**,
   an independent derivation — different instrument from the `spill-audit` sweep — of the
   mechanism behind `golang/go#80835`'s reported invariance, and of that mechanism only.
+- **CL 1 exists as a failing test, committed and unmailed.** Branch `keel-cl1-fma`,
+  `03b7769900`, `Change-Id: Ifb1d4f47…`, subject marked `[WIP, unmailed]`: two cases in
+  `test/codegen/simd.go`, one per half of `golang/go#80829`, failing at all four `GOAMD64`
+  levels. **Mailing is not authorized and has not happened.** Two corrections came out of
+  writing it. `#124`'s codereview box **was first ticked on the hook file's existence** —
+  the cold path; the warm path is a commit, and it aborted with `exec: git-codereview: not
+  found` because `GOPATH/bin` is off `PATH`. Now proven the other way, by a commit that
+  produced a Change-Id. And the mechanism: **`213` puts a *multiplicand* in the
+  destination**, not the addend as my first draft of the test comment said, so the copy
+  appears only where that multiplicand stays live — at the first FMA of the case and not
+  the second, which makes "one copy per FMA" the wrong rate to quote.
 - **`docs/toolchain-notes.md` T29: `go doc` builds the package for the host arch**, so
   `go doc simd/archsimd Float32x16.MulAdd` on darwin/arm64 answers *"symbol Float32x16 is
   not a type"* for a correct, shipping name — the instrument the prime directive mandates,

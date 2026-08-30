@@ -301,10 +301,50 @@ change how CL 1's case must be written:
   hand-rolled `spill-audit` sweep — §5 rule 10 corroboration, and *only* of the
   mechanism: it says nothing about the spill idiom, which a three-argument leaf has none
   of.
+- **`$(go env GOPATH)/bin` must be on `PATH` or every commit in the clone fails.**
+  `git codereview hooks` writes a `pre-commit` that `exec`s `git-codereview`, and the
+  binary lives in `GOPATH/bin`, which is not on this host's `PATH` — so `git commit`
+  aborts with `exec: git-codereview: not found`. **This box was first ticked on the
+  hook file's existence, which is the cold path; the warm path is a commit, and it
+  failed.** Now proven the other way: a real commit on branch `keel-cl1-fma` produced
+  `Change-Id: Ifb1d4f47…`, so the hook chain works end to end. Note `GOPATH` here
+  contains a space (`/Volumes/External HD/go`), so the export needs quoting.
 - **asmcheck failure output carries encoding bytes** (`62 f2 75 48 a8 c2 c3`, EVEX)
   where `-gcflags=-S` carries none. Recorded because this session had to strike
   fabricated encodings from an upstream draft for exactly that lack; the bytes have a
   source, and it is this harness.
+
+## CL 1 exists as a failing test, committed and unmailed
+
+Branch `keel-cl1-fma` in the clone, commit `03b7769900`,
+`Change-Id: Ifb1d4f4766f4ac43e018ecea75ed6a3dc91cd979`, marked `[WIP, unmailed]` in its own
+subject. Two cases appended to `test/codegen/simd.go`, one per half of `golang/go#80829`,
+both failing at all four `GOAMD64` levels — three assertions × four levels, every failure
+`opcode not found`. **Mailing is not authorized and has not happened.** The fix amends this
+commit; Gerrit is one commit per CL.
+
+The accumulate case's current output, which is the CL description's evidence:
+
+```
+VMOVDQU64	(AX), Z1
+VMOVDQU64	64(AX), Z0
+VMOVDQU64	Z0, Z2		<-- the copy
+VFMADD213PS	Z1, Z0, Z2
+VFMADD213PS	Z2, Z0, Z0
+```
+
+**The mechanism, stated correctly.** `213` computes `dst = src2*dst + src3`, so the
+destination holds a **multiplicand** — not the addend, which is how my first draft of the
+test comment had it. The copy therefore appears exactly where that multiplicand is still
+live afterwards: at the first FMA and not the second, which the listing above shows and
+which is why "one copy per FMA" is the wrong rate to quote. `231` computes
+`dst = src2*src3 + dst`, reading both multiplicands, which is what an accumulation wants.
+This refines rather than contradicts the existing framing that an accumulator cannot be
+written in place.
+
+`BroadcastFloat32x16` is documented **"Emulated, CPU Feature: AVX512F"**, so the `.BCST`
+half touches `golang/go#80830` (CL 3). If 80830 moves first the second case must be
+re-read, and its comment says so.
 
 ## Three figures did not survive verification and are not in any CL description
 
