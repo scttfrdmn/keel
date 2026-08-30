@@ -7,9 +7,13 @@ A pure-Go float32 BLAS subset built on Go's experimental SIMD support
 and parallelize on the caller's `GOMAXPROCS` — no cgo, no background
 threads, deploys as a normal Go module.
 
-**Status: pre-release.** Levels 1–3 are implemented and gated; P0–P4 are
-green and P5 (parallelism, dispatch, polish) is in progress with its gate
-written and red. Watch the [milestones](../../milestones) for progress.
+**Status: v0.1.0.** Levels 1–3 are implemented and gated, and all six phase
+gates P0–P5 are green — certified by a `gate-p5` run on a three-host AWS fleet,
+with the certified rev and the seam between it and the tag named in the
+[release notes](../../releases/tag/v0.1.0). Major is still 0, so a minor bump may
+break the API. What keel does not do — and which parts of that are scheduled,
+open or parked — is stated once, in
+[Capabilities & limits](https://scttfrdmn.github.io/keel/limits/).
 
 ## Measured rates
 
@@ -96,7 +100,10 @@ Level 1 (`Sdot Saxpy Sscal Snrm2 Sasum Isamax`), Level 2 (`Sgemv Sger`),
 Level 3 (`Sgemm` plus derived `Ssyrk Ssymm Strsm`). Row-major, float32,
 amd64 fast paths (AVX-512/AVX2) with a scalar fallback that builds on a
 stock toolchain. Target: ≥70% of single-threaded OpenBLAS SGEMM on AVX-512
-hardware. Non-goals and rationale: `DESIGN.md` §1–2.
+hardware. What is out of scope, split into commitments, scheduled work, one open
+question and parked ideas:
+[Capabilities & limits](https://scttfrdmn.github.io/keel/limits/) — the canonical
+statement. `DESIGN.md` §1–2 carries the design rationale behind it.
 
 ## Building
 ```

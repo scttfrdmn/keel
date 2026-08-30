@@ -23,6 +23,25 @@ both kinds of contributor.
 - **Commits.** Small, single-purpose, present tense. Gate-closing commits
   use `PN: <summary> [gate green]`.
 
+## Workstreams and labels
+- **Milestones are phases through v0.1.0 and workstreams after it.** P0–P5 were
+  build phases; `upstream-go1.28`, `v0.1.1-hygiene`, `v0.2.0-arm64` and
+  `v0.3.0-f64` are workstreams, and an issue belongs to the one whose *release*
+  needs it, not the one whose subject matter it shares.
+- **`workstream/*` labels cut across milestones** (`arm64`, `f64`, `hygiene`); the
+  pre-existing `upstream` label already means "candidate golang/go issue" and is
+  used instead of a `workstream/upstream`.
+- **`science` means unscheduled on purpose, and carries no milestone.** Open
+  questions and performance leads that block no release live there rather than in
+  a backlog milestone, because a backlog milestone reads like a plan.
+- **`external-clock` marks work whose pace someone else sets** — an upstream review
+  queue, a toolchain release. **`needs-scott`** marks work that cannot be finished
+  from this repo's keyboard: anything outward-facing, and anything requiring an
+  identity or an account.
+- **Upstream work has a root document**, `docs/upstream-plan.md`: the CL ledger,
+  the shared per-CL evidence shape, and the figures that failed verification and
+  must not be cited. Read it before touching anything labelled `upstream`.
+
 ## Code rules
 - All `simd`/`archsimd` imports live in `internal/vec` only.
 - Every vector op has a scalar twin and a differential test before it merges.

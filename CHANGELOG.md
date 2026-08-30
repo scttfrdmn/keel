@@ -17,7 +17,37 @@ While the major version is 0, minor versions may contain breaking changes.
   Available only with the mechanism computed and positive-controlled, both
   readings disclosed, and the reading accepted by the authority.
 
+- `docs/upstream-plan.md`, the root doc for the only workstream with an external
+  clock: the CL ledger against verified upstream issue numbers, the shared per-CL
+  evidence shape, the freeze budget, and the three figures that failed
+  verification and may not be cited. Two of those were wrong in the plan it
+  descends from — `T17` is **+15.5%** static instructions and not −15.5%, and it
+  was never paid; the nest-on-SKX gap is **+33.4%** nest improvement and not
+  "18.4-pt" — and the "110× spill price" could not be located at all. Also
+  records that the plan's "CL 1: `golang/go#80830` embedded-broadcast lowering"
+  was mis-keyed: embedded broadcast is `golang/go#80829`, the third CL.
+- CONTRIBUTING.md documents the post-v0.1.0 label and milestone taxonomy:
+  milestones are workstreams now rather than phases, `workstream/*` cuts across
+  them, `science` means unscheduled and carries no milestone deliberately, and
+  `external-clock`/`needs-scott` mark the two kinds of work this repo's keyboard
+  cannot finish alone.
+
 ### Changed
+- **`doc-site/limits.md` splits "what keel does not do" into four claims that were
+  previously one list**: commitments that will not change (row-major only, no
+  `Isamax` vector kernel, subset-not-whole-BLAS, panics not error returns),
+  roadmapped work with issue numbers (NEON, the AVX2 microkernel, f16/bf16 pending
+  an upstream element type), one open question (float64 — where the blocker is the
+  oracle, not the kernels), and parked ideas (complex, packed/banded, int8/VNNI,
+  auto-tuning). A flat list made a schedule read as a promise and a commitment read
+  as an oversight; the page is now the single canonical statement, and README's
+  Scope section links to it instead of restating the split.
+- **Three stale status claims corrected on public pages.** README, the doc-site
+  landing page and `limits.md`'s Maturity section all still said there was no
+  tagged release and that P5 was in progress with its gate red. v0.1.0 is tagged
+  and gate-p5 is green at `72 PASS / 0 FAIL`; all three now say so, name the
+  certificate, and name the two known shortfalls (#104, #111) rather than omitting
+  them.
 - CONTRIBUTING.md states the certificate-transfer condition next to the tag
   requirement, so the next release finds it where the release rules are.
 - CONTRIBUTING.md records the two mechanisms that bit while publishing v0.1.0,

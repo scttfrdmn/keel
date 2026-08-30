@@ -14,22 +14,15 @@
 - **Pure Go**: no cgo, no assembly, no code generation, no `init` that spawns
   anything, no goroutine that outlives a call.
 
-## What keel does not do
+## What keel will not do
 
-- **No float64.** Not planned. Use [Gonum](https://www.gonum.org/) — it is
-  mature, and float64 was never this project's gap to fill.
-- **No complex types.** Neither `complex64` nor `complex128`; no `C`- or
-  `Z`-prefixed routines.
+These are commitments, not gaps. Each one follows from what keel is for, and a
+version that reversed it would be a different library.
+
 - **No column-major option.** There is no `order` argument. Transpose flags cover
   the cases that matter; a genuinely column-major matrix has to be transposed by
-  the caller.
-- **No packed, banded or triangular-packed storage.** Every matrix is a dense
-  rectangle plus a leading dimension.
-- **No ARM64 vector path.** NEON and SVE are a real intention rather than a
-  promise, and they are not written. On arm64 keel builds and runs the scalar
-  path.
-- **No AVX2 microkernel.** Level 1 has an AVX2 backend; Level 3 does not, so a
-  machine with AVX2 but no AVX-512 gets a vector Level 1 and a scalar Level 3.
+  the caller. keel is not a translation of reference BLAS, so there is no order
+  argument to get wrong.
 - **No `Isamax` vector kernel.** Reference BLAS defines it by a sequential
   comparison chain, which gives NaN a specific behaviour — a NaN in the first
   position wins, a NaN anywhere else is skipped — that a lane-parallel maximum
@@ -38,12 +31,64 @@
   with no arithmetic in it.
 - **Not the whole of BLAS.** Level 2 is `Sgemv` and `Sger`; there is no `Strmv`,
   `Ssymv`, `Ssyr` or `Ssyr2`. Level 3 is `Sgemm` and three routines derived from
-  it; there is no `Strmm` or `Ssyr2k`.
+  it; there is no `Strmm` or `Ssyr2k`. "Subset" is in the first sentence of the
+  design document, and `Sgemm` is where the effort concentrates on purpose.
 - **No error returns.** Invalid arguments panic. There is nothing to check a
-  status code against.
+  status code against, because in Go there is no XERBLA to consult afterwards and
+  a silently-returning no-op looks like success.
+
+## What keel does not do yet — or may never do
+
+Split from the list above because the two are different claims, and reading a
+schedule as a promise or a commitment as an oversight both mislead. Nothing here
+is a delivery date: the roadmapped items have owners and issue numbers, which is
+all that distinguishes them from the parked ones.
+
+**Roadmapped — scheduled, not written.**
+
+- **No ARM64 vector path.** On arm64 keel builds and runs the scalar path. NEON
+  is scheduled for [v0.2.0-arm64](https://github.com/scttfrdmn/keel/milestone/10),
+  in the order: a lowering-feasibility probe
+  ([#129](https://github.com/scttfrdmn/keel/issues/129)), then the ISA-agnostic
+  seam ([#135](https://github.com/scttfrdmn/keel/issues/135)), then the kernel
+  family ([#136](https://github.com/scttfrdmn/keel/issues/136)) — whose `MR`×`NR`
+  shape has to be re-derived rather than rescaled, since a 128-bit vector holds
+  four float32 and not sixteen. SVE is not scheduled.
+- **No AVX2 microkernel.** Level 1 has an AVX2 backend; Level 3 does not, so a
+  machine with AVX2 but no AVX-512 gets a vector Level 1 and a scalar Level 3.
+  Tracked as [#40](https://github.com/scttfrdmn/keel/issues/40).
+- **No float16 or bfloat16.** Blocked on the toolchain rather than on keel: no
+  such element type exists in the `simd` packages. If one appears, the shape that
+  would be worth building is a *storage* variant — load reduced-precision, widen,
+  accumulate in float32, narrow on store — which is why it is cheaper than
+  float64 and does not need a new oracle. Conditional, no schedule:
+  [#139](https://github.com/scttfrdmn/keel/issues/139).
+
+**Open question — not a plan either way.**
+
+- **No float64.** Use [Gonum](https://www.gonum.org/): it is mature, and float64
+  was never this project's gap to fill. Whether that stays permanent is
+  explicitly open ([#103](https://github.com/scttfrdmn/keel/issues/103)), and the
+  finding recorded there is that the cost is mispriced by everyone who guesses at
+  it. The blocker is not the kernels — the float64 simd surface is already
+  symmetric with the float32 one — it is the **oracle**: keel's whole correctness
+  argument is testing float32 against a wider type, and a float64 reference for a
+  float64 routine is the same precision as the thing under test, so it validates
+  nothing about accumulation order.
+
+**Parked — no owner, no schedule, and may never happen.**
+
+- **No complex types.** Neither `complex64` nor `complex128`; no `C`- or
+  `Z`-prefixed routines.
+- **No packed, banded or triangular-packed storage.** Every matrix is a dense
+  rectangle plus a leading dimension.
+- **No int8 / VNNI path.** The AVX-512 VNNI int8 dot product exists on some of
+  keel's own development hardware and is unused. Quantized inference is a
+  different library's problem.
 - **No auto-tuning.** Blocking parameters are fixed; the microkernel *shape* is
   chosen per host from a feature-bundle classification, not by measuring at
-  startup.
+  startup. Parked rather than committed: a measured selection is defensible, it
+  is just not what ships.
 
 ## Requirements
 
@@ -73,9 +118,20 @@ without breaking anything else.
 
 ## Maturity
 
-There is no tagged release. As of 2026-08-16, phases P0–P4 of the build plan are
-green and P5 (parallelism, dispatch, polish) is in progress, so the API can still
-change and the module has no compatibility guarantee yet.
+**v0.1.0, tagged 2026-08-29.** All six phase gates P0–P5 are green — the release
+is certified by a `gate-p5` run on a three-host AWS fleet at `72 PASS / 0 FAIL /
+0 UNMEASURED`, with the certified rev, its log, and the two-commit seam between
+that rev and the tag all named in the
+[release notes](https://github.com/scttfrdmn/keel/releases/tag/v0.1.0).
+
+Major is still 0, so a minor bump may break the API and the module carries no
+compatibility guarantee yet. Two shortfalls are known and open rather than
+hidden: Sapphire Rapids reads 34.2% of measured peak with 55% unreachable until
+an upstream lowering lands
+([#104](https://github.com/scttfrdmn/keel/issues/104)), and Granite Rapids falls
+short of the `gate-p3` OpenBLAS criterion
+([#111](https://github.com/scttfrdmn/keel/issues/111)) — both machines are
+therefore characterization hosts, not certified ones.
 
 What *is* settled is the testing floor every routine already meets: a float64
 oracle per routine, differential agreement across backends on identical inputs,

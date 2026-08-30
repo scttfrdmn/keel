@@ -8,11 +8,13 @@ Level 3, with AVX-512 kernels written in Go against the experimental
 toolchain. No cgo, no assembly, no code generation, no background goroutines: it
 is a normal Go module that respects `GOMAXPROCS`.
 
-!!! warning "Status as of 2026-08-16: pre-release"
+!!! note "Status: v0.1.0, tagged 2026-08-29"
 
-    Levels 1–3 are implemented and gated. Phases P0–P4 are green; P5
-    (parallelism, dispatch, polish) is in progress. There is no tagged release
-    yet, so the API may still change.
+    Levels 1–3 are implemented and gated, and all six phase gates P0–P5 are
+    green. Major is still 0, so a minor bump may break the API and the module
+    carries no compatibility guarantee yet. See
+    [Capabilities & limits](limits.md) for the certificate, the two known
+    shortfalls, and what is scheduled versus parked.
 
 ## Install
 
