@@ -156,7 +156,7 @@ take a look!"* on 2026-08-13. The question that had to be settled first: is
 |---|---|---|---|
 | `golang/go#80830` | `BroadcastFloat32x16` is **emulated**, so there is a wrapper to inline at all | intrinsic coverage | why the round-trip exists — **CL 3** |
 | `golang/go#80835` | the `MOVUPS` chosen is **legacy-SSE**, not VEX | ssa→prog encoding | the AVX-SSE **price**, not the traffic |
-| `golang/go#80829` | no `231` FMA form, and no `.BCST` memory-operand folding | lowering rules | 45 reg copies; and `.BCST` would delete the materialization outright — **CL 1** |
+| `golang/go#80829` | no packed `231` FMA **op**, and no `.BCST` memory-operand folding — the assembler encodes both | SSA op table, then lowering rules | 45 reg copies; and `.BCST` would delete the materialization outright — **CL 1** |
 
 So the premise the re-keying order rested on — *"CL 1's surviving half is the
 broadcast lowering"* — does not hold, and correcting it is what settles the
@@ -229,6 +229,53 @@ one-for-one figure: the 12 counts 8 rotation copies itself, so the unmeasured st
 already inside CL 1's headline number. Classification was done with a throwaway
 script; the predicates are stated above because the loops are 46 and 50 instructions
 and the check is meant to be redoable by eye.
+
+### Where the `231` gap is, and the in-tree precedent for closing it
+
+Read out of go1.27.0's own source 2026-08-30, because "no `231` form" is shorthand
+that invites a reviewer to think the instruction is missing. It is not, and
+`golang/go#80829`'s own title says so — *"though the assembler encodes both."* The
+gap is one layer up:
+
+- **The assembler has it.** `AVFMADD231PS` is an opcode (`cmd/internal/obj/x86/aenum.go:1059`)
+  with an optab entry (`avx_optabs.go:1845`).
+- **The SSA op table does not.** Across `ssa/_gen` and `ssa/opGen.go` the only packed
+  FMA ops are `VFMADD213PS` and `VFMADD213PD`, 60 occurrences each; **zero** packed
+  `231` or `132`. So no rewrite rule *can* select accumulate-in-place for
+  `archsimd`'s `MulAdd` — the missing thing is an op, and only then a rule.
+- **The precedent is in the same tree.** Scalar `VFMADD231SS`/`VFMADD231SD` ops exist
+  (`opGen.go:934`) and the compiler's own `a*b+c` lowering selects them
+  (`rewriteAMD64.go:8769`, `:8892`) at `GOAMD64=v3` and above — verified on a probe
+  where v1 emits `MULSD`/`ADDSD` and v3 emits `VFMADD231SD`. The packed sibling is
+  the same shape of change against a table that already models it scalar-side.
+
+This sharpens CL 1's description without adding a claim to it: the ask is a packed
+`231` op plus its rule, not an instruction.
+
+### `golang/go#80835`: the third manifestation is reported, and `GOAMD64` does not move it
+
+Sent 2026-08-30 under authorization
+([comment](https://github.com/golang/go/issues/80835#issuecomment-5471826854)), framed
+as a third manifestation with no priority claim and keel's fleet offered as the
+assignee's verification set. Two things were measured for it that the plan did not
+have:
+
+- **`Kernel6x32`'s loop is identical instruction for instruction at `GOAMD64` v1, v2,
+  v3 and v4** — four 219-line bodies that diff clean against each other, 36 legacy
+  `MOVUPS` and 44 stack refs at every level. This bears on the *proposed* fix of
+  selecting VEX when AVX is known available: at v3 and v4 the compiler already may,
+  and does not. **Control, because an ignored variable and an invariant one read
+  alike:** the same sweep moves the whole package's listing at v3 (7643 → 7625 lines),
+  and the scalar probe above moves with it. This is a **different** invariance from
+  T28's, which was measured on the Chains register-allocation sweep; that one does not
+  transfer to the encoding question and was not cited for it.
+- **The round-trip is the compiler's 128-bit spill idiom, not the wrapper.** All 18
+  stores leave `X2` at 18 distinct call-site lines and all 18 reloads are attributed to
+  `archsimd/other_gen_amd64.go:265`; the shipped `Kernel4x32` inlines that same wrapper
+  at that same position with **zero** stack refs and **zero** legacy encodings.
+- **What the comment says it does not have:** any timing. `Kernel6x32` is not shipped
+  and no counter-based attribution was run, so unlike the issue's own two
+  manifestations keel's is an instruction-count observation, stated as one.
 
 ## Three figures did not survive verification and are not in any CL description
 

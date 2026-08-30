@@ -9,6 +9,18 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Reported keel's round-trip on `golang/go#80835`** ([comment](https://github.com/golang/go/issues/80835#issuecomment-5471826854))
+  as a third manifestation of the reporter's issue, no priority claimed: the
+  compiler's 128-bit spill idiom is legacy-SSE encoded *inside* an all-EVEX loop —
+  **36 of `Kernel6x32`'s 44 vector stack refs**, 18 round-trips per iteration, among
+  48 ZMM `VFMADD213PS`. So a boundary `VZEROUPPER` or `ClearAVXUpperBits` cannot reach
+  this shape, and the dirty uppers are ZMM-wide. **`GOAMD64` does not move it** — v1
+  through v4 diff clean, controlled by a sweep that does move the package listing at
+  v3. No timing: the shape is unshipped and nothing was attributed, stated so in the
+  comment. Also localized `golang/go#80829` a layer up from the shorthand: the packed
+  `231` opcode exists (`aenum.go:1059`), the **SSA op table has only the `213` packed
+  forms**, and scalar `VFMADD231SD` ops with live rewrite rules are the in-tree
+  precedent for adding it.
 - **Replied to `golang/go#80828`** ([comment](https://github.com/golang/go/issues/80828#issuecomment-5471635162)),
   answering `cherrymui`'s 17-day-old question with a seven-row re-swept table, and
   disclosing that the issue **duplicates `golang/go#78753`** — closed 2026-05-26,
