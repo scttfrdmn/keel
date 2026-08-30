@@ -33,6 +33,23 @@ While the major version is 0, minor versions may contain breaking changes.
   cannot finish alone.
 
 ### Changed
+- **`docs/upstream-plan.md`: the CL order is keyed to the subject, and the `110×`
+  spill price is now refuted rather than unlocated** (ruled 2026-08-30). The plan
+  landed one day earlier carrying a transposition — embedded-broadcast lowering was
+  to lead, and that content is `golang/go#80829`, not the `golang/go#80830` the
+  ordering named. `golang/go#80829` is now CL 1 and `golang/go#80830` CL 3; each
+  issue kept its own subject, evidence and verified upstream number, because
+  swapping the *references* onto unchanged bodies would have re-created the mis-key
+  in a better-hidden form. Two of the ordering's three premises did not survive
+  verification and are recorded beside it: `golang/go#80829` is the **largest** of
+  the three CLs, not the smallest, and what lets it lead is that its two halves are
+  independently mailable; the premise that does verify is the payoff, via #104's
+  P2 STOP. And the `110×` figure, recorded on 2026-08-29 as merely unlocatable, is
+  **contradicted by the report that was supposed to contain it**: asking what
+  `docs/spill-report.md` *measures* rather than grepping for the string gives the
+  spilling 6×32 tile against the best shipped shape at **2.54× / 3.17× / 4.37×** on
+  janus, vesta and antares, so 110× is 25× larger than anything in the report. A
+  search reports absence; the instrument reports disagreement.
 - **`doc-site/limits.md` splits "what keel does not do" into four claims that were
   previously one list**: commitments that will not change (row-major only, no
   `Isamax` vector kernel, subset-not-whole-BLAS, panics not error returns),
