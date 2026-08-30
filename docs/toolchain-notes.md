@@ -2816,3 +2816,36 @@ reaches those registers is not the one #18 read, and keel has not identified it.
 was right when written, and why the residual is `golang/go#80835`'s subject rather than a
 new filing, are on [#18](https://github.com/scttfrdmn/keel/issues/18) and in
 `docs/upstream-plan.md`.
+
+## T29 (#124) — `go doc` builds the package for the *host* arch, so an amd64-only simd type reads as a nonexistent one
+
+`go doc simd/archsimd Float32x16.MulAdd` on the darwin/arm64 dev host answers **"symbol
+Float32x16 is not a type in package archsimd"**. The name is correct and shipping; the
+arm64 build of the package simply has only the 128-bit types, and `go doc` reports the
+absence in the vocabulary of a wrong name. This is the instrument CLAUDE.md's prime
+directive mandates *against* writing simd from memory, denying a name that memory had
+right.
+
+```
+$ cd $(go env GOROOT)/src && GOEXPERIMENT=simd go doc simd/archsimd Float32x16.MulAdd
+doc: symbol Float32x16 is not a type in package archsimd installed in "simd/archsimd"
+
+$ GOEXPERIMENT=simd GOARCH=amd64 GOOS=linux go doc simd/archsimd Float32x16.MulAdd
+package archsimd // import "simd/archsimd"
+
+func (x Float32x16) MulAdd(y Float32x16, z Float32x16) Float32x16
+    MulAdd performs a fused (x * y) + z.
+
+    Asm: VFMADD213PS, CPU Feature: AVX512
+
+$ GOEXPERIMENT=simd go doc simd/archsimd | grep -c Float32x16              # host = arm64
+0
+$ GOEXPERIMENT=simd GOARCH=amd64 GOOS=linux go doc simd/archsimd | grep -c Float32x16
+5
+```
+
+**What changed in the tree.** Nothing executable. `docs/upstream-plan.md` discipline item
+7 now requires `GOARCH=amd64` on every `go doc` query for an amd64 type, and states why a
+bare query's answer is not evidence about the name. The doc output also settles that
+`MulAdd` is `VFMADD213PS` by design, which is the `231` gap of `golang/go#80829` stated in
+upstream's own reference.

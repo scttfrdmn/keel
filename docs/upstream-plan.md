@@ -18,7 +18,7 @@ and the others do not.
 
 | # | what | upstream | keel evidence |
 |---|---|---|---|
-| [#124](https://github.com/scttfrdmn/keel/issues/124) | prerequisites: CLA, Gerrit, Go from source | — | — |
+| [#124](https://github.com/scttfrdmn/keel/issues/124) | prerequisites: CLA, Gerrit, Go from source — **discharged** | — | — |
 | [#127](https://github.com/scttfrdmn/keel/issues/127) | **CL 1** — MulAdd accumulate-in-place + `.BCST` folding | `golang/go#80829` | [#20](https://github.com/scttfrdmn/keel/issues/20), [#18](https://github.com/scttfrdmn/keel/issues/18), [#104](https://github.com/scttfrdmn/keel/issues/104) |
 | [#126](https://github.com/scttfrdmn/keel/issues/126) | CL 2 — adopt CL 803220, SIMD ops in LICM | `golang/go#79984` | [#54](https://github.com/scttfrdmn/keel/issues/54) |
 | [#125](https://github.com/scttfrdmn/keel/issues/125) | **CL 3** — emulated broadcast + inlined-wrapper NOP anchor | `golang/go#80830` | [#17](https://github.com/scttfrdmn/keel/issues/17) |
@@ -274,6 +274,38 @@ have:
   and no counter-based attribution was run, so unlike the issue's own two
   manifestations keel's is an instruction-count observation, stated as one.
 
+## #124's environment half is discharged, and the harness has a green-on-nothing mode
+
+Built from source at `603439a1c6` (`go1.28-devel_603439a1c6 ... X:simd`), `git codereview
+hooks` installed, and the compiler recorded off the artifact rather than off the shell
+(#58). A throwaway `test/codegen` case in CL 1's exact shape — `//go:build
+goexperiment.simd && amd64`, `archsimd.Float32x16.MulAdd` — was run, driven to fail on
+purpose, and deleted; the clone is clean. Four facts came out of it, and two of them
+change how CL 1's case must be written:
+
+- **Without `-all_codegen` the case is SKIPped and the run says `ok`, exit 0.** Measured
+  with a *false* assertion, which is the only version of this control that decides
+  anything: `--- SKIP` under an overall `PASS`, and non-verbose output is one `ok` line.
+  `defaultAllCodeGen()` is `strings.HasPrefix(testenv.Builder(), "gotip-linux-amd64")`
+  (`testdir_test.go:54`), so on this darwin/arm64 host every amd64 assertion is inert by
+  default. **A CL 1 verification run that omits the flag proves nothing and looks
+  identical to success.**
+- **A bare `amd64:` assertion is checked at all four `GOAMD64` levels, separately.** The
+  false control failed four times, once each for `linux/amd64/v1` … `/v4`
+  (`archVariants`, `testdir_test.go:1538`); `amd64/v1:` scopes to one. So CL 1's
+  `VFMADD231PS` assertion must hold at every level or say which level it means.
+- **`VFMADD213PS` is emitted at `GOAMD64=v1`** — an AVX512 instruction at the baseline
+  level, proven by a scoped `amd64/v1:` assertion passing. This is an independent
+  derivation of the mechanism behind the invariance reported on `golang/go#80835`
+  (archsimd lowering does not consult `GOAMD64`), from a different instrument than the
+  hand-rolled `spill-audit` sweep — §5 rule 10 corroboration, and *only* of the
+  mechanism: it says nothing about the spill idiom, which a three-argument leaf has none
+  of.
+- **asmcheck failure output carries encoding bytes** (`62 f2 75 48 a8 c2 c3`, EVEX)
+  where `-gcflags=-S` carries none. Recorded because this session had to strike
+  fabricated encodings from an upstream draft for exactly that lack; the bytes have a
+  source, and it is this harness.
+
 ## Three figures did not survive verification and are not in any CL description
 
 Numbers reach a CL description only after being re-read from the tree, because a
@@ -375,9 +407,13 @@ figure carried from a plan is a figure nobody checked:
 7. **Never write against this API from memory.** `go doc simd/archsimd`, `go doc
    simd`, and the sources under `$(go env GOROOT)/src/simd/` first; identifiers
    recalled from training are presumptively wrong, and this API has had breaking
-   renames between releases.
-8. **Nothing mails without #124.** The CLA is Scott's; the build, the hooks and
-   the toolchain read-back are not.
+   renames between releases. **Pass `GOARCH=amd64`**: `go doc` builds the package for
+   the *host*, so on this darwin/arm64 dev host `go doc simd/archsimd Float32x16` answers
+   *"symbol Float32x16 is not a type"* — the arm64 build has only the 128-bit types. That
+   is the mandated instrument reporting a wrong-arch query in the subject's voice, and
+   the correct name reads as a hallucination.
+8. **Nothing mails without #124** — now discharged both halves: the CLA on Scott's
+   direct confirmation, the build, the hooks and the artifact read-back measured above.
 
 ## Where this leads
 

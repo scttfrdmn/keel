@@ -9,6 +9,25 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`#124`'s environment half is discharged, and the `test/codegen` harness has a
+  green-on-nothing mode.** Go built from source at `603439a1c6`, `git codereview hooks`
+  installed, compiler read off the artifact. A throwaway case in CL 1's exact shape
+  (`goexperiment.simd && amd64`, `Float32x16.MulAdd`) was run, driven to fail on purpose,
+  and deleted. **Without `-all_codegen` a *false* assertion yields `--- SKIP` under an
+  overall `PASS` and one `ok` line, exit 0** — `defaultAllCodeGen()` keys on a
+  `gotip-linux-amd64` builder prefix, so every amd64 assertion is inert on this
+  darwin/arm64 host and a CL verification run that omits the flag is indistinguishable
+  from success. Two more: a bare `amd64:` assertion is checked at **all four `GOAMD64`
+  levels separately** (the control failed four times, v1–v4), so CL 1's `VFMADD231PS`
+  must hold at every level or name one; and **`VFMADD213PS` is emitted at `GOAMD64=v1`**,
+  an independent derivation — different instrument from the `spill-audit` sweep — of the
+  mechanism behind `golang/go#80835`'s reported invariance, and of that mechanism only.
+- **`docs/toolchain-notes.md` T29: `go doc` builds the package for the host arch**, so
+  `go doc simd/archsimd Float32x16.MulAdd` on darwin/arm64 answers *"symbol Float32x16 is
+  not a type"* for a correct, shipping name — the instrument the prime directive mandates,
+  denying what memory had right. Discipline item 7 now requires `GOARCH=amd64`. The
+  doc line also states `MulAdd`'s form as `VFMADD213PS` in upstream's own reference,
+  which is `golang/go#80829`'s gap.
 - **Reported keel's round-trip on `golang/go#80835`** ([comment](https://github.com/golang/go/issues/80835#issuecomment-5471826854))
   as a third manifestation of the reporter's issue, no priority claimed: the
   compiler's 128-bit spill idiom is legacy-SSE encoded *inside* an all-EVEX loop —
