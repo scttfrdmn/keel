@@ -40,3 +40,4 @@ docs/spill-report.md	§5.2	1	docs/spill-report.md's own §5.2 — self-reference
 docs/spill-report.md	§5.3	1	docs/spill-report.md's own §5.3 — self-reference
 CHANGELOG.md	§10.2	1	docs/spill-report.md §10.2 — the shipped shapes' binding terms, not DESIGN.md
 docs/spill-report.md	§10.2	1	docs/spill-report.md's own §10.2 — self-reference
+docs/upstream-plan.md	§11.1	1	docs/spill-report.md §11.1 — the 44 refs decomposed, not DESIGN.md
