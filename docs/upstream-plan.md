@@ -25,15 +25,22 @@ and the others do not.
 | [#128](https://github.com/scttfrdmn/keel/issues/128) | experience report on the graduation thread | `golang/go#73787` | the whole tree |
 | [#129](https://github.com/scttfrdmn/keel/issues/129) | NEON feasibility probe — **done**, `docs/neon-probe.md` | — | — |
 | [#130](https://github.com/scttfrdmn/keel/issues/130) | arm64 filing — **subject now fixed**: dead zero-init in emulated broadcast | new | `docs/neon-probe.md` §2b |
-| — | **already filed, awaiting our reply** — X16–X31 withheld from the SIMD allocator | `golang/go#80828` | [#18](https://github.com/scttfrdmn/keel/issues/18), `docs/toolchain-notes.md` T28 |
+| — | **answered 2026-08-30, duplicate of `golang/go#78753`** — X16–X31 withheld from the SIMD allocator; fixed by CL 768262 | `golang/go#80828` | [#18](https://github.com/scttfrdmn/keel/issues/18), `docs/toolchain-notes.md` T28 |
 | [#144](https://github.com/scttfrdmn/keel/issues/144) | **already filed by another reporter** — legacy-SSE `MOVUPS` in `archsimd`, AVX-SSE transition penalties | `golang/go#80835` | `docs/spill-report.md` §11.1 |
 
 The last two rows are not CLs and have no keel issue: they are **debts on filings
-that already exist**, and both are ahead of every CL in urgency because they cost
-one comment each. `golang/go#80828` is keel's own, `WaitingForInfo` since
+that already exist**, and both were ahead of every CL in urgency because they cost
+one comment each. `golang/go#80828` is keel's own and was `WaitingForInfo` since
 2026-08-13 — `cherrymui`: *"Could you try Go 1.27RC3 or tip? I believe it should
-already work now."* T28 is the answer and it is **yes**; a reply drafted for Scott
-is the deliverable, since commenting upstream is an act beyond this repo.
+already work now."* T28 is the answer, it is **yes**, and the reply was **sent
+2026-08-30** under Scott's authorization with the standing rule that every number
+in an upstream comment passes the same verification a CL description does. That
+rule earned its keep immediately: verification killed two of the drafted reply's
+claims before it was sent — the CL 767380 refutation (abandoned CL) and a
+*"9 refs against 25, roughly 3×"* comparison whose `25` had no provenance in the
+tree or in the issue, whose own table says **44** at N=20. What went instead is a
+seven-row sweep with two controls, and the correction that `golang/go#80828` duplicates
+`golang/go#78753`, closed before keel filed.
 
 Order: **#129 first** — done 2026-08-30. Then the two outstanding replies. Scott's
 half of #124 in parallel, then CL 1 within two to three weeks, then the rest as
@@ -91,9 +98,17 @@ carry it. Three findings, each with its own witness:
 1. **31 of 32 vector registers are allocatable.** `ssa/regalloc.go:785` unions
    four masks and `specialRegMaskAMD64 = 71776114766249984` supplies X16–X31 plus
    K1–K7; only X15, the zero register, is in no mask. Identical under `GOAMD64`
-   v1/v3/v4, which refutes CL 767380's *"v4 or higher"* framing.
+   v1/v3/v4 — which **confirms the CL that landed rather than refuting anything.**
+   CL 767380, whose title gates on *"v4 or higher"*, was **abandoned 2026-04-17**;
+   the merged fix is CL 768262, unconditional, on `dev.simd` 2026-04-23 against
+   `golang/go#78753`. A 2026-08-30 claim in T28 and in this file that the
+   invariance *refutes* that framing is **retracted**: the framing binds nothing,
+   and gabyhelp's "Related Code Changes" line names a CL without its status, which
+   is where the mistake came from — read the thread, not the title, applied to a CL.
 2. **The spill count halved: 90 → 44** vector stack refs, 5.62 → 4.56
-   instructions per arithmetic op.
+   instructions per arithmetic op — but see the re-keying section below: on the
+   isolated repro that reduction is **almost entirely a conversion into register
+   copies**, not a saving.
 3. **The residual is not accumulator pressure.** 36 of the 44 are
    broadcast-scalar round-trips through legacy-SSE `MOVUPS` in the inlined
    wrapper at `archsimd/other_gen_amd64.go:265`; only 3 of the 12 accumulators
@@ -125,6 +140,50 @@ register starvation and is a stranger question than the one #18 asked.
 accumulate-in-place, cited by the 12 moves. The 90-vs-0 stack-ref contrast is not
 merely uncited now, it is **stale**: 90 was a go1.26.5 reading and the shipped
 shapes' 0 is the only half of it still true.
+
+## CL 1 re-keyed against `golang/go#80835`: adjacent, and it does not move
+
+**Ruled 2026-08-30, before a line of CL 1's codegen test was written.** T-78 put 36
+of `Kernel6x32`'s 44 stack references on legacy-SSE `MOVUPS` in the inlined
+broadcast wrapper, which is `golang/go#80835`'s subject, already open, by another
+reporter (`achille-roussel`) and **assigned to `JunyangShao`**, who wrote *"I will
+take a look!"* on 2026-08-13. The question that had to be settled first: is
+`golang/go#80835` the same defect as CL 1's target, a superset, or adjacent?
+
+**Adjacent.** One symptom, three separable causes, and no fix subsumes another:
+
+| upstream | what it is | where it is | keel's term |
+|---|---|---|---|
+| `golang/go#80830` | `BroadcastFloat32x16` is **emulated**, so there is a wrapper to inline at all | intrinsic coverage | why the round-trip exists — **CL 3** |
+| `golang/go#80835` | the `MOVUPS` chosen is **legacy-SSE**, not VEX | ssa→prog encoding | the AVX-SSE **price**, not the traffic |
+| `golang/go#80829` | no `231` FMA form, and no `.BCST` memory-operand folding | lowering rules | 45 reg copies; and `.BCST` would delete the materialization outright — **CL 1** |
+
+So the premise the re-keying order rested on — *"CL 1's surviving half is the
+broadcast lowering"* — does not hold, and correcting it is what settles the
+question. CL 1's surviving half is **accumulate-in-place** (`231`), which touches
+none of the 44 stack refs; and the `.BCST` half, which does touch them, would
+remove the materialization at the source where `golang/go#80835` would only make its
+encoding VEX. `golang/go#80835`'s two documented manifestations are a shift count and
+stack zeroing; keel's broadcast-scalar round-trip is a **third**, on a real GEMM
+kernel, and that is new information the issue lacks.
+
+**CL 1 therefore stays keyed to `golang/go#80829` and does not attach to
+`golang/go#80835`.** Attaching would race an assigned maintainer on a defect CL 1 does not
+fix, which is the failure the order was written to prevent — the same reflex that
+made `#144` a `standing-task` rather than a filing, applied one level up. keel's
+contribution to `golang/go#80835` is the 36/44 decomposition as `#144`'s single comment,
+not a CL.
+
+**And CL 1 gains its best evidence yet, which is not a µarch figure.** The
+go1.27.0 register fix bought almost nothing on FMA chains because **every spill it
+avoided came back as a register-to-register copy** — exactly one for one at N=14
+(−12 refs, +12 copies, **0 net instructions**) and N=15 (−16, +16, **0**), one
+instruction at N=16, and 11 of 79 at N=20 (T28's table, two controls on it). The
+cause is precisely `golang/go#80829`: with `213`-only forms, `a = v.MulAdd(v, a)` cannot
+land in `a`, so at 15 registers the pressure surfaced as spills and at 31 it
+surfaces as copies. That is a **compiler-only** datum, measured, about the miss
+itself — it says the register fix is close to neutral for this shape until CL 1
+lands, and unlike the 109.7× it points at the mechanism it names.
 
 ## Three figures did not survive verification and are not in any CL description
 
@@ -159,7 +218,11 @@ figure carried from a plan is a figure nobody checked:
     `spill-audit` prints `12 reg copies`, and `docs/neon-probe.md` reaches 12 from
     the listing. This is the sharpest figure available, because it is measured on
     a **shipped** kernel and is about the miss itself rather than about a tile that
-    was never shipped.
+    was never shipped. **A second figure is admitted 2026-08-30**, about
+    consequence rather than count: on the `golang/go#80828` chain repro the
+    go1.27.0 register fix converted spills into register copies **one for one**,
+    for **zero** net instructions at N=14 and N=15. Compiler-only, measured, with
+    two controls on the table it comes from — it says what this miss costs.
   - *register allocation* (the #18 half): **withdrawn 2026-08-30, not deferred.**
     The figure was 90 vector stack refs in `Kernel6x32`'s steady-state loop
     against 0 in both shipped shapes (`docs/spill-report.md:37-47`); on go1.27.0
@@ -197,6 +260,13 @@ figure carried from a plan is a figure nobody checked:
    files and a commit message (`3a7ad60`) — while the table sat in a #104
    *comment*, exactly as originally written. A citation check reads `--json
    body,comments`, or it is testing a different artifact than the one cited.
+   **It binds CLs the same way, and a CL's title without its status is a title**:
+   the 2026-08-30 claim that keel's `GOAMD64` invariance refuted CL 767380's *"v4
+   or higher"* framing was read off gabyhelp's "Related Code Changes" line, which
+   prints subjects and no statuses. CL 767380 was **abandoned** four months
+   earlier and the merged fix is unconditional, so the refutation had no subject.
+   One `curl` against Gerrit's `/changes/<n>/detail` would have said so, and now
+   does before any CL is cited.
 3. **A duplicate carrying a wrong causal story is worse than no filing.** When the
    bug is already open, the deliverable is a `standing-task` issue keyed to it and
    its CL — not a second report.

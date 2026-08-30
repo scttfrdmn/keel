@@ -1122,3 +1122,49 @@ The closure is over **statically named** script invocations, and three things bo
    The next release recomputes it rather than citing this number, because the closure is a
    property of the scripts at that revision. Not filed: the method above is the deliverable, and a
    fix smaller than its issue gets fixed rather than filed.
+
+## Rule 23 — an absence claim states the scope its instrument actually searched
+
+*Ruled 2026-08-30, on the second self-caught instance in two days. Scott: "an instrument scoped to
+less than the claim, reporting in the subject's voice". The law he drew from it: that scope must
+cover the claim's scope, or the finding is `unmeasured` rather than absent.*
+
+### The two instances, which are one shape
+
+| # | claim made | instrument | its actual scope | why it read as a finding |
+|---|---|---|---|---|
+| 1 | the 110× spill price is "25× larger than anything the report contains" | `docs/spill-report.md` | janus, vesta, antares — **no Sapphire Rapids** | true of the report, false of the tree; the adjective *µarch* named the scope and the comparand held it fixed |
+| 2 | "neither `30.5%` nor `0.278%` appears in #104" | `gh issue view 104 --json body` | the opening post only | true of the body, false of the issue; the table was in a **comment**, worded exactly as cited |
+
+The second was the more expensive: it "corrected" a **correct** citation in `CHANGELOG.md`,
+`docs/upstream-plan.md` and a pushed commit message (`3a7ad60`), reverted at `110c4ec`. Both came
+from a tool rather than a guess, which is precisely what lent them authority.
+
+### Why the class survives being written down
+
+**The wrong reading is always nearly right.** #104 does contain a second SPR peak (228.9) and rate
+(0.6526), yielding 107.1× — near enough to 110× that the false correction looked arithmetically
+motivated rather than unsearched. A near-miss on a plausible neighbour is the tell, and it is the
+reason a scope error presents as a numerical one.
+
+### What binds now
+
+1. **Name the extent before concluding a string is absent.** For a GitHub citation, `--json
+   body,comments`. For a file, the whole file rather than the section under discussion. For a
+   fleet claim, the host set.
+2. **Prefer the three-state resolution.** Real, and *off-subject*, is a verdict. Reaching for
+   refuted-or-confirmed on a two-state axis is what converted a scope error into a numerical one
+   both times.
+3. **This is not rule 11.** Rule 11 says the instrument adjudicates; rule 23 says **which**
+   instrument may. Neither may be cited for the other's job — the same separation 11 and 12
+   already carry.
+
+### Coverage, and what stays unseen (§5 rule 12)
+
+**No mechanical check enforces this and none is proposed.** The failure is a mismatch between a
+claim's scope and a query's scope, both of which are prose at the moment they are written; a linter
+would have to read the claim. What the tree gets instead is the discipline list in
+`docs/upstream-plan.md` §"The discipline every item inherits", item 2, which now names the
+`--json body,comments` form for the one instrument that produced instance 2. The other scopes —
+host sets, file extents — are unguarded, and both instances were caught by re-derivation rather
+than by any check, which is the only mechanism this rule can honestly claim.

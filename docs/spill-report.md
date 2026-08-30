@@ -728,6 +728,15 @@ issue.
 N=13. That is `golang/go#80829`'s accumulate-in-place miss (`213`-only FMA forms), which
 is CL 1's subject and is untouched by any of the above.
 
+**It is also what ate the register fix.** Re-swept 2026-08-30 across N (T28's table): the
+stack references go1.27.0 removed came back as register copies **one for one** — at N=14,
+−12 refs and +12 copies for **zero** net instructions; at N=15, −16 and +16, again zero; 1
+instruction at N=16; 11 of 79 at N=20. Two controls: N=13 reproduces all three of
+`golang/go#80828`'s own go1.26.5 columns exactly, and every row on both toolchains closes
+as `insns = N + refs + copies + 3`. So for FMA-chain code the 15→31 register change is
+close to neutral until `golang/go#80829` lands, and the pressure it relieved was never
+about register *count* — it was about a lowering that cannot write its own accumulator.
+
 ### 11.5 What this section does not establish (§5 rule 12)
 
 - **No timing.** Every figure here is static instruction counting on a cross-built

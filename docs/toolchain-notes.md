@@ -15,6 +15,19 @@ asks for a repro before a workaround and sets no length, so this narrows nothing
 it requires. Existing entries are left as written: they are dated records, and
 rewriting them would cost real reasoning to buy back lines already spent.
 
+**Every entry here is dated by its toolchain, and that is a law about claims and not
+a filing convention** (added 2026-08-30, ruling on T28). *The toolchain moved under a
+true finding.* T10/#18 measured that 15 of 32 vector registers were allocatable and
+was right; go1.27.0 made it false with nobody touching keel, and three sites in the
+tree had meanwhile promoted it from a dated reading to a settled cause. So a codegen
+claim carries the toolchain it was measured on **inside** the claim, a superseded
+entry is marked at its head rather than rewritten — the observation stood, the era
+ended — and the era-boundary law applies to compiler findings exactly as it applies
+to a measured rate: what dates a rate is the fleet and the denominator, what dates a
+lowering is `go version`. The corollary is a re-measurement obligation: a toolchain
+bump re-opens every entry it could touch, and citing one across a bump without
+re-running it is citing a quotation as a measurement.
+
 | Date | Toolchain | Observation | Repro | Upstream issue |
 |---|---|---|---|---|
 | 2026-08-10 | go1.26.5 | `simd/archsimd` is amd64-only; no vector type exists on other GOARCHes | [T1](#t1) | none — documented upstream |
@@ -26,7 +39,7 @@ rewriting them would cost real reasoning to buy back lines already spent.
 | 2026-08-10 | go1.26.5 | `GOAMD64` level does not gate archsimd intrinsics; a v1 binary runs AVX-512 | [T7](#t7) | none — load-bearing for keel |
 | 2026-08-10 | go1.26.5 | CSE merges identical FMA accumulator chains; two more ways a peak kernel lies | [T8](#t8) | none — not a defect |
 | 2026-08-11 | go1.26.5 | Every inlined non-intrinsic call costs a 1-byte NOP in the loop body | [T9](#t9) | filed: [golang/go#80830](https://github.com/golang/go/issues/80830) (#17) |
-| 2026-08-11 | go1.26.5 | Only 15 of 32 vector registers are allocatable; no `231` FMA form exists | [T10](#t10) | filed: [golang/go#80828](https://github.com/golang/go/issues/80828), [#80829](https://github.com/golang/go/issues/80829) (#18) |
+| 2026-08-11 | go1.26.5 | Only 15 of 32 vector registers are allocatable; no `231` FMA form exists | [T10](#t10) | filed: [golang/go#80828](https://github.com/golang/go/issues/80828), [golang/go#80829](https://github.com/golang/go/issues/80829) (#18) |
 | 2026-08-11 | go1.26.5 | `GOSSAFUNC` is not in the build cache key: on a cache hit it writes no `ssa.html` but still prints `dumped SSA … to ./ssa.html` | [T11](#t11) | candidate |
 | 2026-08-11 | go1.26.5 | The assembler encodes `vfmadd231ps mem{1to16}` and the intrinsic layer cannot reach it: no 231 SSA op, the load-merge rule folds memory into the addend, and nothing emits `.BCST` | [T12](#t12) | filed: [golang/go#80829](https://github.com/golang/go/issues/80829) (#20) |
 | 2026-08-11 | go1.26.5 | `import "C"` in a `_test.go` file is rejected outright — a benchmark cannot call C directly, so a reference harness needs a package file | [T13](#t13) | none — long-standing, not simd |
@@ -2753,18 +2766,30 @@ github.com/scttfrdmn/keel/build/n80828.Chains13: steady-state loop [744,995] 43 
 github.com/scttfrdmn/keel/build/n80828.Chains14: steady-state loop [830,1091] 45 insns for 14 arith (3.21 per arith): 2 vector stack refs, 26 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
 ```
 
-Highest vector register in the loop, scanned from `-gcflags=-S` over the byte range
-`spill-audit` reports, its instruction count the positive control:
+Swept 2026-08-30, `spill-audit` for the counts and `-gcflags=-S` for the highest `Z`
+named in the function; the go1.26.5 columns are `golang/go#80828`'s own table, quoted, since no
+1.26.5 toolchain is installed:
 
-| N | 13 | 14 | 16 | 20 | 24 | 31 |
-|---|---|---|---|---|---|---|
-| highest | `Z14` | `Z16` | `Z18` | `Z23` | `Z29` | `Z31` |
-| distinct | 15 | 16 | 18 | 23 | 29 | 31 |
-| stack refs | 0 | 2 | 3 | 9 | — | — |
+| N | insns 1.26.5→1.27.0 | stack refs | reg copies | highest Z |
+|---|---|---|---|---|
+| 13 | 43 → 43 | 0 → 0 | 27 → 27 | `Z14` |
+| 14 | 45 → 45 | 14 → **2** | 14 → **26** | `Z16` |
+| 15 | 51 → 51 | 19 → **3** | 14 → **30** | `Z17` |
+| 16 | 55 → 54 | 24 → **3** | 12 → **32** | `Z18` |
+| 20 | 79 → 68 | 44 → **9** | 12 → **36** | `Z23` |
+| 24 | — → 82 | — → 15 | — → 40 | `Z29` |
+| 31 | — → 107 | — → 43 | — → 30 | `Z31` |
 
-The frontier is **still 13**, as #18 measured; only the magnitude and the ceiling moved.
-Identical under `GOAMD64` v1, v3 and v4, which refutes CL 767380's *"if using
-GOAMD64=v4 or higher"* framing.
+The frontier is **still 13**, as #18 measured, and **the spills came back as
+register-to-register copies almost one for one** — exactly so at N=14 (−12 refs, +12
+copies, net zero instructions) and N=15 (−16, +16, zero), 1 instruction at N=16, 11 of
+79 at N=20. Two controls: N=13 reproduces all three go1.26.5 columns exactly, and every
+row on both toolchains closes as `insns = N + refs + copies + 3`. Identical under
+`GOAMD64` v1, v3 and v4 — **CL 767380, whose title gates on v4, was abandoned
+2026-04-17; the fix that landed is CL 768262, unconditional, merged to `dev.simd`
+2026-04-23 against `golang/go#78753`.** So the invariance confirms the merged CL rather
+than refuting live framing, and `golang/go#80828` is a duplicate of `golang/go#78753`, which was
+already closed when keel filed it.
 
 **What changed in the tree.** Nothing executable. Three sites carried #18's cause as
 settled and are corrected: `DESIGN.md` §4/P2, `Kernel6x32`'s doc comment in
@@ -2776,11 +2801,14 @@ accumulators spill, so the residual is not register pressure.
 **Not established (§5 rule 12).** No go1.26.5 toolchain is installed on the dev host, so
 every 1.26.5 figure here is #18's quotation, not a re-run: this is measurement against
 quotation, not two measurements. The repro is not byte-identical to #18's either — its
-`LoadFloat32x16Slice` no longer exists (T23) — so the reg-copy column does not compare
-across the two readings. Nothing here is timed.
+`LoadFloat32x16Slice` no longer exists (T23) — so what licenses the comparison is the
+N=13 row and the closing identity, not the repro's provenance. Nothing here is timed.
 
-**Upstream.** `golang/go#80828` is keel's own filing of this, open and `WaitingForInfo`
-since 2026-08-13. Why #18 was right when written, why the residual is
-`golang/go#80835`'s subject rather than a new filing,
-and the drafted reply are on [#18](https://github.com/scttfrdmn/keel/issues/18) and in
+**Upstream.** Answered on `golang/go#80828` 2026-08-30 with the table above, the
+duplicate disclosure, and one open question: `simdRegMaskAMD64` is **still** `2147418112`
+(X0–X14) and `compatRegs` intersects with it for SIMD values wider than 8 bytes, yet the
+listing allocates `Z16`–`Z23` including plain copies and one reload — so the path that
+reaches those registers is not the one #18 read, and keel has not identified it. Why #18
+was right when written, and why the residual is `golang/go#80835`'s subject rather than a
+new filing, are on [#18](https://github.com/scttfrdmn/keel/issues/18) and in
 `docs/upstream-plan.md`.

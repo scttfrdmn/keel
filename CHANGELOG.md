@@ -9,6 +9,40 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Replied to `golang/go#80828`** ([comment](https://github.com/golang/go/issues/80828#issuecomment-5471635162)),
+  answering `cherrymui`'s 17-day-old question with a seven-row re-swept table, and
+  disclosing that the issue **duplicates `golang/go#78753`** — closed 2026-05-26,
+  fixed by CL 768262, unconditional. The headline is not the register count:
+  **every spill go1.27.0 removed came back as a register-to-register copy, one for
+  one** — zero net instructions at N=14 and N=15, 1 at N=16, 11 of 79 at N=20 —
+  because `213`-only FMA forms (`golang/go#80829`) mean an accumulator cannot be
+  written in place. Controls: N=13 reproduces all three of the issue's own go1.26.5
+  columns, and every row on both toolchains closes as `insns = N + refs + copies + 3`.
+  Left open upstream: `simdRegMaskAMD64` is still X0–X14 and `compatRegs` intersects
+  with it, yet `Z16`–`Z23` are allocated, so the path that reaches them is unidentified.
+
+- DESIGN.md §5 rule 23 and `docs/rulings.md` rule 23: **an absence claim states the
+  scope its instrument actually searched**, and that scope must cover the claim's
+  scope or the finding is `unmeasured` rather than absent. Ruled on the second
+  instance in two days — a host set without Sapphire Rapids adjudicating a µarch
+  claim, then `--json body` adjudicating a citation whose table was in a comment.
+  Signature: the instrument reports in the subject's voice. Distinct from rule 11,
+  which says the instrument adjudicates; 23 says which instrument may.
+
+- `docs/toolchain-notes.md` header: **every entry is dated by its toolchain**, as a
+  law about claims. *The toolchain moved under a true finding* — #18 was right and
+  go1.27.0 falsified it with nobody touching keel — so a codegen claim carries its
+  `go version` inside the claim, a superseded entry is marked at its head rather
+  than rewritten, and a toolchain bump re-opens every entry it could touch.
+
+- `docs/upstream-plan.md`: **CL 1 adjudicated against `golang/go#80835` and does not
+  re-key** — adjacent, not the same defect nor a superset. One symptom, three
+  separable causes: `golang/go#80830` (emulated broadcast, why the wrapper exists), `golang/go#80835`
+  (legacy-SSE encoding, the price), `golang/go#80829` (`231` and `.BCST`, CL 1). `golang/go#80835` is
+  assigned to `JunyangShao`, so keel's contribution there is `#144`'s one comment —
+  the round-trip is a **third** manifestation alongside the shift count and stack
+  zeroing — not a CL racing an assigned maintainer.
+
 - `docs/toolchain-notes.md` T28 and `docs/spill-report.md` §11: **#18's cause is
   refuted on go1.27.0.** 31 of 32 vector registers are allocatable, not 15
   (`specialRegMaskAMD64` supplies X16–X31; only X15 is in no mask), identically
@@ -68,6 +102,22 @@ While the major version is 0, minor versions may contain breaking changes.
   cannot finish alone.
 
 ### Changed
+- **Retracted: the `GOAMD64` v1/v3/v4 invariance does not refute CL 767380's *"v4 or
+  higher"* framing.** That CL was **abandoned 2026-04-17**; the merged fix is CL
+  768262, unconditional. The invariance therefore *confirms* what landed. The claim
+  came from gabyhelp's "Related Code Changes" line, which prints CL subjects without
+  statuses — read the thread, not the title, applied to a CL. Corrected in T28 and
+  `docs/upstream-plan.md`, whose discipline item 2 now requires a Gerrit status check
+  before any CL is cited. The drafted reply's *"9 refs against 25, roughly 3×"* was
+  dropped in the same verification: `25` has no provenance, and the issue's own table
+  says **44** at N=20.
+
+- `docs/toolchain-notes.md` T28: the go1.26.5-vs-go1.27.0 comparison is licensed by
+  the N=13 control and the closing identity rather than left disclaimed. The earlier
+  note that *"the reg-copy column does not compare"* is superseded — it does, and the
+  comparison is the finding. N=15's highest register is `Z17`, measured; the sweep
+  gained the `insns` and `reg copies` columns and N=15/24/31 stack refs.
+
 - **`docs/upstream-plan.md`: the CL order is keyed to the subject** (ruled
   2026-08-30). The plan
   landed one day earlier carrying a transposition — embedded-broadcast lowering was
@@ -1330,13 +1380,13 @@ Removed/Fixed set, and that is what this is.
 - **Three field notes are filed upstream against `golang/go`**, each with a
   self-contained repro built from scratch for the filing and re-verified against the
   go1.26.5 GOROOT, and each carrying janus's roofline table as its impact statement:
-  [#80828](https://github.com/golang/go/issues/80828) (512-bit values allocated from
+  [golang/go#80828](https://github.com/golang/go/issues/80828) (512-bit values allocated from
   15 of 32 zmm registers — a fresh sweep puts the zero-spill frontier at 13
   independent accumulators and shows no register above Z14 is ever named),
-  [#80829](https://github.com/golang/go/issues/80829) (no 231-shaped vector FMA, the
+  [golang/go#80829](https://github.com/golang/go/issues/80829) (no 231-shaped vector FMA, the
   load-merge rule folds the addend, nothing emits `.BCST` — with the byte-identical
   `go tool asm` / `llvm-mc` encodings and a 9-instructions-for-2-FMAs GEMM row),
-  [#80830](https://github.com/golang/go/issues/80830) (`BroadcastFloat32x16` is
+  [golang/go#80830](https://github.com/golang/go/issues/80830) (`BroadcastFloat32x16` is
   emulated as `SetElem`+`Broadcast1To16`; a one-line wrapper costs one anchor NOP per
   call site — 7 insns/0 NOPs direct against 11/4 wrapped, for identical arithmetic).
   Recorded in `docs/toolchain-notes.md` beside T9, T10 and T12 and in
@@ -2640,7 +2690,7 @@ Removed/Fixed set, and that is what this is.
   Recorded in the report; the rebuild's in-tree/out-of-tree question is Scott's.
 - **`docs/spill-report.md` is reopened (part 10): P2 and P3 are both red on the first evidentiary host**, a full-size
   `c7i.48xlarge` — 34.2% of measured peak and a 51.0% mission ratio. 55% needs ≤ 4.09 insns/FMA against the shipped
-  6.25, and golang/go#80829 plus #80830 together reach only 50.0%. The report's part 9 stands for the retired fleet.
+  6.25, and golang/go#80829 plus golang/go#80830 together reach only 50.0%. The report's part 9 stands for the retired fleet.
 - **gate-p3's mission ratio is now decided by the admission machinery, not merely taken on an admitted host**
   (#104/#30): `admission_readback` and `adm_judgeable` in `remote.sh` gate both of criterion 6's verdict paths,
   gate-p2's inline copy calls them, and a not-admitted host has its own tally so the aggregate stops calling it a
