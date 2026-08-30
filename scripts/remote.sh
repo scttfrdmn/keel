@@ -501,12 +501,12 @@ remote_build_test() {
 
 # builder_toolchain BIN — record which Go compiled BIN, read off BIN (issue #58).
 #
-# Not `go version`, which reports the driver in THIS shell: a different fact, and
-# GOTOOLCHAIN can make them differ. `go version <file>` reports the compiler and the
-# GOEXPERIMENT out of the artifact the fleet executes -- `go1.27.0-X:simd` -- which is
-# the one the numbers came from. It is absent from every archive name (rev and run
-# stamp only), and the dev host cross-compiles everything the fleet runs, so this is
-# the whole provenance of the compiler for the whole campaign.
+# Not `go version`, which reports THIS shell's driver -- a different fact, and GOTOOLCHAIN
+# can make them differ. `go version <file>` reports the compiler and GOEXPERIMENT out of
+# the artifact the fleet executes -- `go1.27.0-X:simd` -- absent from every archive name,
+# and the dev host cross-compiles all the fleet runs, so this is the compiler's whole
+# provenance. `$2` alone broke on the from-source toolchains #124 enables: a devel stamp
+# is `go1.28-devel_<sha> <date> X:simd`, so field 2 dropped the experiment -- take `X:` too.
 #
 # On change, not per call: ten builds a gate would print ten identical lines, and a
 # value that moves MID-RUN is the finding this exists to catch. Deliberately NOT set
@@ -517,7 +517,7 @@ remote_build_test() {
 KEEL_BUILDER_GO=""
 builder_toolchain() {
   local v
-  v="$(go version "$1" 2>/dev/null | awk '{print $2}')"
+  v="$(go version "$1" 2>/dev/null | awk '{x=""; for(i=3;i<=NF;i++) if ($i ~ /^X:/) x=" "$i; print $2 x}')"
   [[ -n "$v" && "$v" != "$KEEL_BUILDER_GO" ]] || return 0
   info "builder toolchain ${KEEL_BUILDER_GO:+CHANGED mid-run from $KEEL_BUILDER_GO to }$v, read off $(basename "$1") and not off this shell's go"
   KEEL_BUILDER_GO="$v"

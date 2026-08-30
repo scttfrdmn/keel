@@ -127,6 +127,18 @@ While the major version is 0, minor versions may contain breaking changes.
   cannot finish alone.
 
 ### Changed
+- **`builder_toolchain` dropped the GOEXPERIMENT from a from-source toolchain** — its
+  `awk '{print $2}'` reads field 2, which is the whole stamp for a release
+  (`go1.27.0-X:simd`) but only the version for a devel build (`go1.28-devel_<sha>
+  <date> X:simd`), where `X:` is the last field. So `#58`'s own instrument, the one
+  that exists so a gate log cannot carry two compilers without saying so, would have
+  recorded a compiler without saying which experiment — on the first verification run
+  against a patched compiler, which is exactly what `#124` enables. Found by *running*
+  it against both toolchains rather than reading it: released stamp unchanged
+  byte-for-byte, repeat call silent (on-change only), and the `CHANGED mid-run` branch
+  driven on purpose, naming both compilers with the experiment now kept. Net +0 lines
+  in `scripts/`.
+
 - **Retracted: the `GOAMD64` v1/v3/v4 invariance does not refute CL 767380's *"v4 or
   higher"* framing.** That CL was **abandoned 2026-04-17**; the merged fix is CL
   768262, unconditional. The invariance therefore *confirms* what landed. The claim
