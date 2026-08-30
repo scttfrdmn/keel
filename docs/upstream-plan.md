@@ -185,6 +185,51 @@ surfaces as copies. That is a **compiler-only** datum, measured, about the miss
 itself — it says the register fix is close to neutral for this shape until CL 1
 lands, and unlike the 109.7× it points at the mechanism it names.
 
+### The population check the one-for-one figure was admitted on
+
+**Ruled 2026-08-30 as the condition on admitting it: *the copies it counts must be
+the copies CL 1's lowering removes*** — a true, controlled, well-stated fact off the
+CL's subject being the failure mode this week was spent curing. Checked before the
+figure went into the description, and **it passes**: the repro's copies and
+`Kernel4x32`'s cited 12 are one population in the same two subcategories.
+
+Every copy in each `spill-audit -v` loop body was classified by two predicates —
+**rescue**, a pre-FMA copy where a `VFMADD213PS` within the next two instructions
+overwrites the register the copy read or wrote (so the copy exists only because that
+FMA's destination is not its addend); and **rotation**, a post-FMA copy whose source
+holds a value this iteration produced, restoring the loop-header register assignment:
+
+| loop | FMAs writing their own addend | copies | rescue | rotation | unattributed |
+|---|---|---|---|---|---|
+| `Kernel4x32` — shipped, CL 1's cited 12 | **0 of 8** | 12 | 4 | 8 | **0** |
+| `Chains13` — repro, the N=13 control | **0 of 13** | 27 | 13 | 14 | **0** |
+| `Chains14` — repro, the one-for-one row | **0 of 14** | 26 | 12 | 14 | **0** |
+| `Kernel6x32` — never shipped, cited nowhere | **0 of 48** | 45 | 24 | 6 | **15** |
+
+The 4/8 split on `Kernel4x32` is the figure's own description — *four preserving
+broadcasts that `VFMADD213PS` clobbers, eight rotating accumulators at the loop
+bottom* — now reached mechanically rather than by reading, which makes it a second
+derivation and not a second witness (§5 rule 10). **`0 of N` in every row is the
+machine-checkable form of `golang/go#80829`**: across 83 FMAs in four loops, not one
+writes its own addend.
+
+**`Kernel6x32`'s 15 is the positive control**, and it is why the other three zeros
+mean something: shown a loop whose copies are a *different* population the classifier
+declines to attribute them, and the 15 it flags are the `X`-register scalar moves of
+the broadcast round-trip — `golang/go#80835`'s subject, in the kernel CL 1 does not
+cite. An instrument that attributed everything would have proved nothing.
+
+**The one step that is structural rather than measured, and it binds both figures
+equally.** That `231` removes these copies follows from the operand form — both
+sources read-only, so no rescue; destination tied to the addend, so the loop-carried
+accumulator never changes register, so no rotation — but **no toolchain emits `231`
+here yet, so nothing about the post-fix code is measured.** This is stated in the CL
+description rather than implied, and it is not a reason to prefer the 12 over the
+one-for-one figure: the 12 counts 8 rotation copies itself, so the unmeasured step is
+already inside CL 1's headline number. Classification was done with a throwaway
+script; the predicates are stated above because the loops are 46 and 50 instructions
+and the check is meant to be redoable by eye.
+
 ## Three figures did not survive verification and are not in any CL description
 
 Numbers reach a CL description only after being re-read from the tree, because a
@@ -223,6 +268,11 @@ figure carried from a plan is a figure nobody checked:
     go1.27.0 register fix converted spills into register copies **one for one**,
     for **zero** net instructions at N=14 and N=15. Compiler-only, measured, with
     two controls on the table it comes from — it says what this miss costs.
+    **Admitted on the population check above**, not on the controls alone: both
+    figures count rescue and rotation copies in the same two subcategories, so the
+    second is not a second subject. The `0 of N` column is the same statement as the
+    12 — one instruction form that cannot write its addend — which is why the two
+    figures belong in one description.
   - *register allocation* (the #18 half): **withdrawn 2026-08-30, not deferred.**
     The figure was 90 vector stack refs in `Kernel6x32`'s steady-state loop
     against 0 in both shipped shapes (`docs/spill-report.md:37-47`); on go1.27.0

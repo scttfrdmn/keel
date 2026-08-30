@@ -2784,7 +2784,11 @@ The frontier is **still 13**, as #18 measured, and **the spills came back as
 register-to-register copies almost one for one** — exactly so at N=14 (−12 refs, +12
 copies, net zero instructions) and N=15 (−16, +16, zero), 1 instruction at N=16, 11 of
 79 at N=20. Two controls: N=13 reproduces all three go1.26.5 columns exactly, and every
-row on both toolchains closes as `insns = N + refs + copies + 3`. Identical under
+row on both toolchains closes as `insns = N + refs + copies + 3`. Every copy in the
+N=13 and N=14 loops is a rescue or a rotation forced by `VFMADD213PS`, none is a
+broadcast, and no FMA in either loop writes its own addend — the classification, and
+`Kernel6x32`'s 15 unattributed copies as its positive control, are in
+`docs/upstream-plan.md`. Identical under
 `GOAMD64` v1, v3 and v4 — **CL 767380, whose title gates on v4, was abandoned
 2026-04-17; the fix that landed is CL 768262, unconditional, merged to `dev.simd`
 2026-04-23 against `golang/go#78753`.** So the invariance confirms the merged CL rather

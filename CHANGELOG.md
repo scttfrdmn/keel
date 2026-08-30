@@ -21,6 +21,18 @@ While the major version is 0, minor versions may contain breaking changes.
   Left open upstream: `simdRegMaskAMD64` is still X0–X14 and `compatRegs` intersects
   with it, yet `Z16`–`Z23` are allocated, so the path that reaches them is unidentified.
 
+- **The population check CL 1's one-for-one figure was admitted on** — every copy in
+  four steady-state loops classified as *rescue* (a `VFMADD213PS` overwrites the
+  register a pre-FMA copy touched) or *rotation* (a post-FMA copy restoring the
+  loop-header assignment). `Kernel4x32` 12 = 4 + 8, which is CL 1's cited figure
+  reached mechanically; `Chains13` 27 = 13 + 14; `Chains14` 26 = 12 + 14; **0
+  unattributed in all three**, and **0 of 83 FMAs across the four loops writes its own
+  addend**. `Kernel6x32` is the positive control at **15 unattributed** — the `X`
+  scalar moves of the broadcast round-trip, `golang/go#80835`'s subject, in the kernel
+  CL 1 does not cite. Disclosed with it: that `231` removes these copies follows from
+  the operand form and is **not measured**, since no toolchain emits it here yet — a
+  caveat that binds the cited 12 equally, 8 of which are rotation copies.
+
 - DESIGN.md §5 rule 23 and `docs/rulings.md` rule 23: **an absence claim states the
   scope its instrument actually searched**, and that scope must cover the claim's
   scope or the finding is `unmeasured` rather than absent. Ruled on the second
