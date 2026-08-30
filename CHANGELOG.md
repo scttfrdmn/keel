@@ -34,7 +34,9 @@ While the major version is 0, minor versions may contain breaking changes.
   verification and may not be cited. Two of those were wrong in the plan it
   descends from — `T17` is **+15.5%** static instructions and not −15.5%, and it
   was never paid; the nest-on-SKX gap is **+33.4%** nest improvement and not
-  "18.4-pt". The third, the "110× spill price", was recorded here as unlocated and
+  "18.4-pt" — re-derived 2026-08-30, the decomposition's product is 43.34% and the
+  bar 57.8, so even the points form reads 14.46 pt and `18.4` has no provenance
+  anywhere in the tree. The third, the "110× spill price", was recorded here as unlocated and
   is now located — see the retraction below. Also
   records that the plan's "CL 1: `golang/go#80830` embedded-broadcast lowering"
   was mis-keyed: embedded broadcast is `golang/go#80829`, the third CL.

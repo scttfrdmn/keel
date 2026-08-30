@@ -134,12 +134,20 @@ figure carried from a plan is a figure nobody checked:
   `vec.LoadPart512` still calls `archsimd.LoadFloat32x16SlicePart` directly, so
   the figure is a measured **quotation** for a change that became obsolete before
   it was written (`docs/toolchain-notes.md:1409-1417`). It may be cited only with
-  that clause attached.
-- *"nest-on-SKX 18.4-pt gap"* — **does not reproduce.** The tree's figure is
-  **+33.4%**, the improvement the nest term needs, from the decomposition
+  that clause attached. Re-read 2026-08-30: the note still says exactly this, and
+  `vec.LoadPart512` still calls `archsimd.LoadFloat32x16SlicePart` — so the
+  quotation is still unpaid, not merely recorded as having been.
+- *"nest-on-SKX 18.4-pt gap"* — **does not reproduce, in either form.** The tree's
+  figure is **+33.4%**, the improvement the nest term needs, from the decomposition
   `share = 0.4633 × 0.5822 × 1.6067` in `CHANGELOG.md`'s 2026-08-21 entry citing
-  `build/onethread-decomp-3fceaa9.log`. A share gap in points and a required
-  improvement percentage are different quantities.
+  `build/onethread-decomp-3fceaa9.log`. Re-derived 2026-08-30: the product is
+  **43.34%**, matching that entry's stated share, and the middle term must reach
+  0.7765 — **+33.4%** — to put the share on `CEIL_FRACTION`'s typed 57.8. So the
+  *points* gap is **14.46 pt**, and `18.4` has no provenance anywhere in the tree
+  under either reading (grepped tracked files and `build/`; the pattern's live
+  matches are unrelated GFLOP/s figures). A share gap in points and a required
+  improvement percentage are different quantities, and this charter figure is
+  neither.
 
 ## The discipline every item inherits
 
