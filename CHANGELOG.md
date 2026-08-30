@@ -17,16 +17,16 @@ While the major version is 0, minor versions may contain breaking changes.
   Available only with the mechanism computed and positive-controlled, both
   readings disclosed, and the reading accepted by the authority.
 
-- `docs/neon-probe.md`: the arm64 lowering probe (#129), static only. Two of the
-  four amd64 misses are **absent** on arm64 — accumulate-in-place, because
-  `simdARM64.rules:242` rotates the accumulator into arg0 of a `resultInArg0` op,
-  and the 15-register limit, which is a property of amd64's `v` (VEX) mask while
-  AVX-512 ops use `w` and get 31. Broadcast is **present and worse**: identical
-  emulated Go source, but arm64 keeps a dead zero-init `VMOV` for 3 instructions
-  where amd64 needs 1. The wrapper anchor is **present, same cause, 4 bytes not 1**.
-  Also supplies the figure CL 1 needs in place of the refuted 110×: **12
-  register-to-register moves per 8 FMAs, 24.0% of `Kernel4x32`'s 50-instruction
-  loop**, agreeing with `spill-audit`'s own `12 reg copies`.
+- `docs/neon-probe.md`: the arm64 lowering probe (#129), static only.
+  Accumulate-in-place is **absent** on arm64, because `simdARM64.rules:242` rotates
+  the accumulator into arg0 of a `resultInArg0` op — a lowering-rule fact, not an
+  architectural one, since `VFMADD231PS` also writes its own accumulator and amd64
+  still misses it. Broadcast is **present and worse**: identical emulated Go source,
+  but arm64 keeps a dead zero-init `VMOV` for 3 instructions where amd64 needs 1.
+  The wrapper anchor is **present, same cause, 4 bytes not 1**. Supplies the figure
+  CL 1 needs: **12 register-to-register moves per 8 FMAs, 24.0% of `Kernel4x32`'s
+  50-instruction loop**, agreeing with `spill-audit`'s own `12 reg copies`. The
+  register-limit finding this entry first carried is retracted below.
 
 - `docs/upstream-plan.md`, the root doc for the only workstream with an external
   clock: the CL ledger against verified upstream issue numbers, the shared per-CL
@@ -34,7 +34,8 @@ While the major version is 0, minor versions may contain breaking changes.
   verification and may not be cited. Two of those were wrong in the plan it
   descends from — `T17` is **+15.5%** static instructions and not −15.5%, and it
   was never paid; the nest-on-SKX gap is **+33.4%** nest improvement and not
-  "18.4-pt" — and the "110× spill price" could not be located at all. Also
+  "18.4-pt". The third, the "110× spill price", was recorded here as unlocated and
+  is now located — see the retraction below. Also
   records that the plan's "CL 1: `golang/go#80830` embedded-broadcast lowering"
   was mis-keyed: embedded broadcast is `golang/go#80829`, the third CL.
 - CONTRIBUTING.md documents the post-v0.1.0 label and milestone taxonomy:
@@ -44,8 +45,8 @@ While the major version is 0, minor versions may contain breaking changes.
   cannot finish alone.
 
 ### Changed
-- **`docs/upstream-plan.md`: the CL order is keyed to the subject, and the `110×`
-  spill price is now refuted rather than unlocated** (ruled 2026-08-30). The plan
+- **`docs/upstream-plan.md`: the CL order is keyed to the subject** (ruled
+  2026-08-30). The plan
   landed one day earlier carrying a transposition — embedded-broadcast lowering was
   to lead, and that content is `golang/go#80829`, not the `golang/go#80830` the
   ordering named. `golang/go#80829` is now CL 1 and `golang/go#80830` CL 3; each
@@ -55,12 +56,25 @@ While the major version is 0, minor versions may contain breaking changes.
   verification and are recorded beside it: `golang/go#80829` is the **largest** of
   the three CLs, not the smallest, and what lets it lead is that its two halves are
   independently mailable; the premise that does verify is the payoff, via #104's
-  P2 STOP. And the `110×` figure, recorded on 2026-08-29 as merely unlocatable, is
-  **contradicted by the report that was supposed to contain it**: asking what
-  `docs/spill-report.md` *measures* rather than grepping for the string gives the
-  spilling 6×32 tile against the best shipped shape at **2.54× / 3.17× / 4.37×** on
-  janus, vesta and antares, so 110× is 25× larger than anything in the report. A
-  search reports absence; the instrument reports disagreement.
+  P2 STOP.
+
+- **Retracted the same day, by the condition attached to the ruling that accepted
+  it: the `110×` spill price is real, is keel's own measurement, and is off-subject
+  for CL 1.** #104 measures `Kernel6x32` at 30.5% of keel-zen4's peak against 0.278%
+  of keel-spr's — 30.5/0.278 = **109.7×**, the percent-of-peak pairing #18's
+  four-pairing enumeration missed; the same quantity reads **121.1×** on Sapphire
+  Rapids in #18's six-host table. The refutation compared a *µarch* claim against
+  `docs/spill-report.md`, whose hosts are janus, vesta and antares — no Sapphire
+  Rapids — so "25× larger than anything in the report" was true of the report and
+  false of the tree. It still may not enter a CL description: the compiler emits the
+  same spilled code on every host, so only the silicon's price differs, which is a
+  well-formed claim pointing at the wrong mechanism. **Also retracted:** the probe's
+  reading that AVX-512's `w`/`w31` masks exempt keel's kernels from the 15-register
+  limit. On go1.27.0 `Kernel6x32` allocates `Z16`–`Z23` — 23 vector registers for a
+  tile needing ~15 values — and still carries 90 vector stack refs, with
+  `Kernel2x32` and `Kernel4x32` at max `Z14` as the positive control. #18's cause is
+  open, the reg-alloc half stays out of CL 1's description, and `ssa.html`
+  adjudicates.
 - **`doc-site/limits.md` splits "what keel does not do" into four claims that were
   previously one list**: commitments that will not change (row-major only, no
   `Isamax` vector kernel, subset-not-whole-BLAS, panics not error returns),

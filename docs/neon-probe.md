@@ -154,17 +154,35 @@ carried by real instructions instead. Counting call sites would overstate it.
 ### 2d. Register allocation — **ABSENT on arm64**
 
 keel [#18](https://github.com/scttfrdmn/keel/issues/18) (T10) is "only 15 of 32
-vector registers allocatable". The amd64 mechanism is narrower than that phrasing
-(`AMD64Ops.go:126-128`):
+vector registers allocatable". **#18's causal story does need a re-read on the
+amd64 side — but not for the reason first published here, and that reason is
+retracted.**
 
-    v = buildReg("X0 ... X14")                     // 15 registers
-    w = buildReg("X0 ... X14 X16 ... X31")         // 31 registers
+The retracted argument was that "15 of 32" is a property of amd64's `v` (VEX) mask
+while AVX-512 ops use `w` and get 31, so `VFMADD213PS512` escapes the cap. #18's
+own filing note anticipated exactly this and called it a near-miss "worth recording
+before it becomes folklore" — and it was right to. The mask arithmetic settles
+nothing in either direction: on go1.27.0
+`fpRegMaskAMD64 == simdRegMaskAMD64 == {v1: 2147418112}`, which is bits 16–30, and
+`registersAMD64` puts `X0` at index 16 and `X16`–`X31` at 32–47 — so by the masks
+alone nothing above `X14` is allocatable, yet the listing disagrees.
 
-"15 of 32" is a property of the **`v` (VEX) ops**. AVX-512 ops use `w` and get
-31, and `VFMADD213PS512` is a `w31` op — so keel's shipped `Float32x16` kernels
-are **not** subject to the 15-register limit. **#18's causal story needs a
-re-read on the amd64 side**; recorded here, not acted on, because this probe's
-scope is arm64.
+What the shipped object code says, which is the instrument that counts:
+
+| kernel | max vector register | above `X14` |
+|---|---|---|
+| `Kernel2x32` | 14 | — |
+| `Kernel4x32` | 14 | — |
+| `Kernel6x32` | **23** | `Z16`–`Z23` |
+
+`VFMADD213PS Z11, Z16, Z12` (`gemm_amd64.go:228`) is an ordinary allocation, not
+spill scratch; the two 14s are the positive control that the sweep discriminates.
+So `Kernel6x32` **holds 23 vector registers for a tile needing about 15 values and
+still carries 90 vector stack refs** — not register starvation, and a stranger
+question than #18 asked. #18's `Z0…Z14`-at-any-N sweep dates to 2026-08-18, before
+keel's go1.27 port: the toolchain moved under the finding. `ssa.html` adjudicates
+what is live at the spill points, and no mechanism is proposed here ahead of that
+read. Recorded, not resolved — this probe's scope is arm64.
 
 arm64 has no such split. `ARM64Ops.go:145` puts all 32 in one set
 (`fp = buildReg("F0 ... F31")`) and the simd ops take `fp11/fp21/fp31`
@@ -215,10 +233,13 @@ amd64**, from entirely different misses.
 
 ## A replacement figure for CL 1, measured on the shipped kernel
 
-`docs/upstream-plan.md` records that CL 1's "110× spill price" is refuted — the
-spill report measures that quantity at 2.54×–4.37×. This probe supplies a figure
-that is *directly* about the miss `golang/go#80829` names, from keel's own
-shipped `Kernel4x32`, and it has two independent derivations: the gate's
+CL 1's "110× spill price" is real (109.7× in #104, 121.1× on SPR in #18) and is
+**off-subject**: the compiler emits the same spilled code on every host in that
+table, so what varies by two orders of magnitude is the silicon's price, not a
+compiler miss. A same-day claim in this section that the figure was *refuted* is
+retracted — `docs/upstream-plan.md` carries the arithmetic and the error. What CL 1
+needs instead is a figure *directly* about the miss `golang/go#80829` names, from
+keel's own shipped `Kernel4x32`, and it has two independent derivations: the gate's
 `spill-audit` prints `12 reg copies`, and the classifier here reaches 12 from the
 listing separately.
 
@@ -231,8 +252,8 @@ listing separately.
 
 **12 register-to-register moves per 8 FMAs — 24.0% of a 50-instruction loop — in
 a kernel with zero spills.** Four preserve broadcasts that `VFMADD213PS`
-clobbers; eight rotate accumulators at the loop bottom. Unlike the 110×, this is
-re-derivable by anyone: `GOOS=linux GOARCH=amd64 GOEXPERIMENT=simd go build
+clobbers; eight rotate accumulators at the loop bottom. It is re-derivable by
+anyone: `GOOS=linux GOARCH=amd64 GOEXPERIMENT=simd go build
 -gcflags=-S ./internal/vec/`, then read `Kernel4x32` between offsets 101 and 341.
 It is a static instruction count, not a timing claim, and must be cited as such.
 
@@ -311,8 +332,20 @@ backward branch that is not the function-level stack check.
 
 ## Corrections this probe made to itself
 
-Three of its own intermediate results were wrong and were caught before
-publication. Recorded because each was wrong in a way that read as a finding:
+Three intermediate results were wrong and caught before publication; a fourth and
+fifth were wrong and caught **after**, on the same day, and are the more instructive
+pair. Recorded because every one of them was wrong in a way that read as a finding:
+
+0. **Two published claims, retracted 2026-08-30 by the ruling that accepted them.**
+   (a) That CL 1's 110× was *refuted* — it is keel's own measurement (#104, #18) and
+   the refutation adjudicated a µarch claim against a three-host lab report with no
+   Sapphire Rapids in it. (b) That §2d's `v`-vs-`w31` mask reading showed the shipped
+   kernels escape the 15-register cap — the masks say nothing above `X14` is
+   allocatable *and* `Kernel6x32` allocates `Z16`–`Z23` anyway, so the argument was
+   the folklore #18's filing note warned about. Both were caught by a provenance
+   grep attached as a *condition on the ruling*, which is the apparatus working at
+   the only level that matters: pointed at the authority's citation and mine
+   together.
 
 1. **A register-pressure "knee" at 16 accumulators.** Read as an arm64 echo of
    amd64's "15 of 32". It was LICM hoisting loop-invariant B loads, so the probe
