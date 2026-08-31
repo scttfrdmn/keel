@@ -342,7 +342,7 @@ bench_expect() {
 # AND THE LAST ROUNDING GOES THE SAME WAY (#143). `printf "%.3f"` rounds to NEAREST,
 # so it could return a value ABOVE the bound it computed — half a quantum, 0.05
 # points of share — and #116's own standard says a bound must bound something
-# measured. Every bar here is on the 3-decimal lattice (0.55, 0.90, 6.067, 44.2%),
+# measured. Every bar here is on the 3-decimal lattice (0.55, 0.90, 6.066, 44.2%),
 # so rounding DOWN makes `lo >= bar` decide what the unrounded bound decides, both
 # ways: nothing in band passes, nothing above the bar is refused. Direction (§5 rule
 # 15): pass -> fail only, so it was checked against the archive and not asserted —

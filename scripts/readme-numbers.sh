@@ -53,15 +53,15 @@ CAP_END='<!-- keel-caption: end -->'
 # SUSPENDED the same day when the spread amendment changed the instrument its denominator was
 # measured with. STRSM_FLOOR was suspended beside it, made era-scoped by the same ruling.
 # BOTH ARE TYPED AGAIN 2026-08-22 from the founding campaign's take four, recomputed under
-# #116: 44.2 from six admissible rows and 6.067x from three judged hosts. gate-p5.sh carries
+# #116: 44.2 from six admissible rows and 6.066x from three judged hosts. gate-p5.sh carries
 # both derivations and is the authority; restated here in the same commit because the check
 # below reads those lines back verbatim, so this is a second edit and not a second decision.
-# 6.067x is not SCALE_FLOOR_RETIRED coming back — it lands within 1.1% of it by coincidence,
+# 6.066x is not SCALE_FLOOR_RETIRED coming back — it lands within 1.1% of it by coincidence,
 # and the caption below names the retired one AS retired, which is why the check reads all
 # three. The published shares this caption governs are regenerated separately, as medians
 # over this era's archives (#6): a bar and the rows it judges are not one act.
 CEIL_FRACTION=44.2
-STRSM_FLOOR=6.067
+STRSM_FLOOR=6.066
 SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'
 
@@ -119,7 +119,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
   # row, and the prefix is the one that lies. Take four (rev 6ba6566) prints
   #   PASS [keel-zen5] Sgemm reaches 48.0% ... -- measured and REPORTED, NO FRACTION IN FORCE (#6)
   # where PASS means only that nothing failed, and nothing failed because no bar existed:
-  # 44.2% and 6.067x were derived FROM that run. So the prose outranks the prefix. Reading
+  # 44.2% and 6.066x were derived FROM that run. So the prose outranks the prefix. Reading
   # the prefix alone republished those 9 rows as clearing bars that postdate them -- the
   # mirror of the case guarded below, which is bars empty here and shortfalls in the log.
   # One function for BOTH verdict shapes, because a fix to one of two classifiers is a fix

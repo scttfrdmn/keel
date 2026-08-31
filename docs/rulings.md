@@ -549,7 +549,8 @@ as derivation. It is the arm64 prerequisite, because every `c7g`/`c8g` host is b
 outside every current bar's derivation set.
 
 **The two derivation sets differ, and that is the finding, not an implementation detail.**
-`STRSM_FLOOR = 6.067x` was derived from **three** take-four rows — `keel-zen5` 6.4699x,
+`STRSM_FLOOR` (6.067x as ruled here, 6.066x since the re-typing below) was derived from **three**
+take-four rows — `keel-zen5` 6.4699x,
 `keel-zen4` 6.6357x, `keel-skx` 6.8311x — while `CEIL_FRACTION = 44.2%` was derived from
 **two** Zen models with `keel-skx` at `DERIV=0`. So the ratio criterion needs `SCALE_DERIVED_FROM`
 of its own; reusing `CEIL_DERIVED_FROM` would have handed `keel-skx` a `BASELINE` for a bar it
@@ -586,6 +587,67 @@ is the safe direction, and re-typing a bar downward after the fact is loosening 
 the constant stands and the delta is disclosed here (§5 rule 15). It also positive-controls #143:
 the two 0.001 discrepancies are exactly the ones that fix predicts, at the two rows whose bounds
 were not already on the lattice.
+
+> **VOID as to its conclusion, 2026-08-31.** *"the constant stands"* is overruled; the
+> observation and the #143 positive control above stand unchanged. Ruling below.
+
+### `STRSM_FLOOR` is re-typed to 6.066 (#119, ruled by Scott 2026-08-31)
+
+**The constant becomes the formula's output at full precision: `6.066`.** Scott's grounds:
+*"the bar's authority is its derivation, and 6.067 is what the derivation printed through the
+display-rounding path the fix just cured. Keeping the old constant 'because it's published'
+would preserve the disease's output after curing its mechanism — a criterion constant that
+disagrees with its own formula on its own inputs is a fossil the constitution has a name for."*
+So the paragraph above got the *facts* right and the *disposition* wrong: it treated the bar as
+a published number to be defended and the formula as a description of it, where the formula is
+the authority and the number is its output.
+
+**Direction, stated and not left to be discovered: 0.001x MORE LENIENT.** This is the whole
+reason the ruling carries conditions. `6.469 - 0.403 = 6.066` exactly on the 3-decimal lattice
+`bench_ratio_lo` returns; the shipped 6.067 is `6.4699 - 0.403 = 6.0669` rounded to *nearest*.
+**Nothing was re-measured** — no sample, no host, no sweep moved. One quantum of instrument
+precision did, and §5 rule 15 is answered by disclosing the direction plus the check below,
+rather than by refusing the correction.
+
+**Re-derived under the current instrument, not accepted on the ruling's word.** The three
+take-four rows (`archive/pinned8/`, rev `6ba6566` `20260823T004407Z`, one raw log per host) put
+through `tools/benchci` and `bench_ratio_lo`: `lo` = 6.831136 / 6.635663 / 6.469880 for
+`keel-skx` / `keel-zen4` / `keel-zen5`, reproducing the four-decimal figures the derivation
+publishes (6.8311 / 6.6357 / 6.4699). Argmin `keel-zen5`, bound 6.469 as the instrument renders
+it, and the gate's own subtraction (`printf "%.3f", b-m`) types **6.066**.
+
+**Three witnesses that it flips nothing, which is what makes "flips nothing" a finding rather
+than a hope** (Scott's second condition). A verdict can move only for a bound in the half-open
+band `[6.066, 6.067)` — FAIL under the old constant, PASS under the new — and:
+
+1. **33 rows recomputed** from every raw log in `archive/pinned8/` and `archive/free-placement/`
+   carrying both `Strsm` arms, under the current instrument: **0 in band**. 47 archived logs
+   have no bounded `Strsm` ratio and are counted as skipped rather than as clean.
+2. **184 rendered bounds** over the 62 logs in the tree that print one, extracted from every
+   `Nx net of CI` rendering on a line naming `Strsm`: **0 in band**, nearest neighbours **6.017**
+   below and **6.094** above, so the band is bracketed on *both* sides and not merely from above.
+3. **The published pass count, regenerated.** `readme-numbers.sh` re-run over the same two
+   archives with the new constant still prints *"9 of the 12 routine-host pairs … clear the
+   bars"*, its only diff being the constant it quotes. The figure a reader would cite is
+   byte-identical.
+
+Witnesses 1 and 2 were **positive-controlled** — the predicate and the extractor were each run
+against a planted in-band 6.066 and both fired — because a zero from an instrument never shown
+to be able to return nonzero is unreadable. Witness 2's first form keyed on the comma rendering
+alone and found 149 bounds; broadened to every rendering of `$lo` in the ratio criterion
+(`:1085`'s parenthesised form, `:1072`'s `at 8 threads,` form, `:1150`'s `>= bar` form) it finds
+184. The 149 was a no-finding from an under-inclusive pattern, and it is recorded here because
+it agreed with the right answer for the wrong reason.
+
+**One figure corrected in passing, same cause.** `gate-p5.sh`'s derivation line and DESIGN.md
+§4 both published the three rule-19 interval widths as **0.229/0.220/0.040x**. Recomputed, the
+full-precision widths are 0.229233 / 0.220796 / 0.039598 and the widths *the gate's own rule-19
+sentence renders* (from the rounded `pt` and `lo` it also prints) are **0.230 / 0.221 / 0.040**.
+So `0.220` matched no path at all — neither rounding nor the instrument — and `0.229` was the
+full-precision quantity where the gate prints the lattice one. Both sites now carry the widths
+the instrument renders, which is also what this document already carried at rule 19. All three
+rows remain admissible against the 0.403x cap by a wide margin, and the two corrections move in
+the *stricter* direction (a wider disclosed interval).
 
 **One latent defect fixed in passing.** The share criterion tested `-z "$CEIL_FRACTION"` after
 resolving a per-host bar into `$BBAR`, so a suspended *fleet* bar excused a host whose own

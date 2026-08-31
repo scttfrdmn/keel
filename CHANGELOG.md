@@ -8,6 +8,37 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **`STRSM_FLOOR` is re-typed `6.067x` → `6.066x`, which is 0.001x MORE LENIENT** (`#119`,
+  ruled by Scott 2026-08-31; `scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, and the caption
+  `readme-numbers.sh` generates into `README.md`). **This is an instrument-precision
+  re-derivation and not a re-measurement**: no sample, host or sweep moved. `bench_ratio_lo`
+  has rounded *down* since `#143`, so the argmin's bound is `6.469` and the formula's output on
+  its own inputs is `6.469 - 0.403 = 6.066` exactly, where the shipped `6.067` was
+  `6.4699 - 0.403 = 6.0669` rounded to *nearest* — `#143`'s cured display path fossilised in a
+  constant. `#119` found the delta, disclosed it, and let the constant stand as the safe
+  direction; that disposition is **VOID as to its conclusion**, the grounds being that a
+  criterion constant which disagrees with its own formula on its own inputs is a fossil, and a
+  bar's authority is its derivation rather than its publication history.
+  **Re-derived, not accepted on the ruling's word**: the three take-four rows through
+  `tools/benchci` + `bench_ratio_lo` give `lo` = 6.831136 / 6.635663 / 6.469880 for
+  keel-skx / keel-zen4 / keel-zen5, reproducing the four-decimal figures the gate publishes.
+  **Three witnesses that it flips no verdict** — a verdict can move only for a bound in
+  `[6.066, 6.067)` — 33 rows recomputed from both eras' raw archives (0 in band, 47 logs with
+  no bounded ratio counted as skipped rather than as clean); 184 rendered bounds over the 62
+  logs that print one (0 in band, nearest 6.017 below and 6.094 above, so the band is bracketed
+  on both sides); and `readme-numbers.sh` re-run under the new constant still printing
+  *"9 of the 12 routine-host pairs … clear the bars"*, byte-identical but for the constant it
+  quotes. Witnesses 1 and 2 were positive-controlled against a planted in-band 6.066.
+  **One figure corrected in passing, same cause**: the three rule-19 interval widths published
+  as `0.229/0.220/0.040x` are `0.230/0.221/0.040x` as the gate's own rule-19 sentence renders
+  them (full precision 0.229233/0.220796/0.039598), so `0.220` matched no path at all — the
+  corrections move in the stricter direction and all three rows stay admissible against the
+  0.403x cap. `docs/rulings.md` carries the ruling, the derivation, all three witnesses and
+  their controls; `DESIGN.md` §4's pre-registered sensitivities are re-derived to **>6.24%**
+  and **>6.66%** by the arithmetic that reproduces the 6.23/6.64 pair it published against
+  6.067.
+
 ### Fixed
 - **The live BASELINE-REGISTERED exercise refused a gate that was behaving correctly, and its
   own derivation-set guard was checking one of the two sets it printed `ok` for (`#119`).**

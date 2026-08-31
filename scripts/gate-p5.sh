@@ -192,7 +192,15 @@ read -ra P5_ROWS <<<"$P5_JUDGED $P5_MEASURED"
 # deliberately -- 6.1x invents strictness no row earned, and 6.0x would be typographically
 # indistinguishable from the value readme-numbers.sh publishes AS retired, which is the "wrong
 # one of two 6.0s" its own check exists to prevent.
-STRSM_FLOOR=6.067
+#
+# RE-TYPED 6.067 -> 6.066 on 2026-08-31, LOOSER by 0.001x -- stated, not left to be found
+# (ruled on #119). No sample moved: bench_ratio_lo rounds DOWN since #143, so the argmin's
+# bound is 6.469 and the formula's own output is 6.469 - 0.403 = 6.066 exactly, where 6.067
+# was 6.0669 rounded to NEAREST -- #143's cured display path, fossilised in a constant.
+# #119 let it stand as the safe direction; superseded, a bar's authority being its derivation.
+# Flips nothing, checked: no archived bound lies in [6.066, 6.067). docs/rulings.md carries the
+# argument, the two witnesses and their positive controls.
+STRSM_FLOOR=6.066
 # This class's DECLARED SLACK in the units it is measured in, and the width cap rule 19 uses
 # for it: 7.403x (janus, the lowest of the nine) less the ratified 7.0x. Not a new constant and
 # not a post-hoc one — it is BASELINE_MARGIN's construction, bar = reference - slack, in x
@@ -203,7 +211,7 @@ STRSM_MARGIN=0.403
 # The CPU models whose judged rows DERIVED STRSM_FLOOR, and the reason this class needs a
 # list OF ITS OWN rather than borrowing CEIL_DERIVED_FROM (#119, §5 rule 17 extended to the
 # ratio criteria). THE TWO SETS DIFFER BY ONE MODEL, and in the direction that matters:
-# 6.067x was derived from THREE take-four rows including keel-skx's 6.8311x, while 44.2%
+# 6.066x was derived from THREE take-four rows including keel-skx's 6.8311x, while 44.2%
 # was derived from two Zen models with skx at DERIV=0. Reusing the share bar's list would
 # hand skx a BASELINE for a bar it helped set — an exemption granted by chronology it does
 # not have, which is rule 17 run backwards. Verified by recomputing all three rows from
@@ -724,7 +732,7 @@ fi
 if [[ -n "$STRSM_FLOOR" ]]; then
   info "judged at >= ${STRSM_FLOOR}x: $P5_MEASURED — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)"
   info "  and judged PER HOST since 2026-08-30 (#119, §5 rule 17 extended to the ratio criteria): ${STRSM_FLOOR}x binds only the models that derived it (SCALE_DERIVED_FROM, three of them — one MORE than the share bar's two, keel-skx having derived this bar and not that one), and a host outside that set renders BASELINE and registers from its own rows rather than being convicted for a chronology. Its bar is then its own baseline less the same ${STRSM_MARGIN}x — never BASELINE_MARGIN's ${BASELINE_MARGIN}, which is points of share and would set a bar looser than the retired ${SCALE_FLOOR_RETIRED}x floor if carried across units. docs/rulings.md rule 17 carries both derivation sets and the era-archive check on the slack"
-  info "  DERIVATION of ${STRSM_FLOOR}x: the lowest of THREE judged rows in the founding campaign's take four (keel-zen5 6.4699x net of CI, recomputed under #116; keel-zen4 6.6357x, keel-skx 6.8311x) less ${STRSM_MARGIN}x, this class's declared slack in its own units — 7.403x, the lowest of the nine readings that ratified 7.0x, less that 7.0x, so it predates these rows by six days and answers the units question the suspension left open. All three rows were admissible under rule 19: intervals 0.229/0.220/0.040x wide against the ${STRSM_MARGIN}x cap, and the slack is 1.8x the argmin's own interval"
+  info "  DERIVATION of ${STRSM_FLOOR}x: the lowest of THREE judged rows in the founding campaign's take four (keel-zen5 6.469x net of CI — 6.469880 unrounded, recomputed under #116; keel-zen4 6.635x, keel-skx 6.831x) less ${STRSM_MARGIN}x, this class's declared slack in its own units — 7.403x, the lowest of the nine readings that ratified 7.0x, less that 7.0x, so it predates these rows by six days and answers the units question the suspension left open. The bound is quoted as bench_ratio_lo RETURNS it, three decimals rounded down (#143), because that is what the subtraction above is performed on: 6.469 - ${STRSM_MARGIN} = ${STRSM_FLOOR} exactly, no rounding of the difference. All three rows were admissible under rule 19: intervals 0.230/0.221/0.040x wide against the ${STRSM_MARGIN}x cap, and the slack is 1.8x the argmin's own interval"
   info "  ${STRSM_FLOOR}x IS NOT THE RETIRED ${SCALE_FLOOR_RETIRED}x RETURNING, and it lands within 1.1% of it by coincidence: that constant was a CROSS-HOST quality bar on the whole judged class and was retired for a RANK INVERSION -- it refused Zen 4 at 65.9% of 8x its own core peak and passed Granite Rapids at 34.3%, measuring the wrong quantity by construction. This is a per-routine regression bar on $P5_MEASURED alone, derived on different silicon under a different placement, and none of the grounds for that retirement is disturbed by the arithmetic landing nearby (#37, #6)"
 else
   info "measured and reported, floor deferred to this measurement plus a stated model: $P5_MEASURED (#37). This is a SUSPENSION and not an absence: 7.0x WAS ratified 2026-08-16 and is retired here, made era-scoped by the 2026-08-22 ruling on #6 because its denominator is the 1-thread arm this fleet has measured bimodal and placement-sensitive, and rule 5's own controls are silent on that arm"
