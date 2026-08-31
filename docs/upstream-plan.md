@@ -296,6 +296,33 @@ chain's last FMA. Measured across three kernels of unroll 1, 4 and 4, that narro
 left exactly one FMA per accumulator behind — 0, 4 and 12 of 8, 16 and 48 — and cost
 21 of the 26 copies the rewrite removes from `Kernel6x32`.
 
+The phi clause is permissive in a way a reviewer will ask about, and the answer is
+measured rather than argued (`build/phi-arm2.log`, three probe loops audited under both
+arms with `internal/spill` — the instrument that produced the table above, not a fresh
+counter). A multi-use phi whose extra reader is *inside* the loop and wants the pre-FMA
+accumulator has to be rescued under 231, and when the multiplicands are freshly loaded
+— dead at the FMA — 213 needs no rescue at all: **1 copy under 213 against 2 under
+231**. So "231 is never worse for a phi" is false, and CL 1 now says so rather than
+asserting the reverse. The control identifies the cause: the same loop with
+*loop-invariant* multiplicands is level, 2 against 2, because then 213 must rescue a
+multiplicand too — what decides it is multiplicand liveness, not the phi's use count.
+Tightening the clause to exclude that shape would mean locating the phi's other
+readers, and `ssa.Value` carries `Uses int32` with no use list, so that is a function
+scan rather than a field test. `rewrite.go:857` supplies the standard instead: a
+load-clobber detector consulting `Loopnest`, whose comment says outright that such a
+detector "does not need to be perfect" because regalloc issues the reg-reg move when it
+is wrong — which is exactly the one copy measured here.
+
+Both defects that delayed this measurement were in the instrument, not the subject, and
+both were the same failure: a quantity that could not move. The first probe redirected
+its `-gcflags=-S` listing into the package directory, where Go reads a `.s` as assembly
+source for the package; that build had already enumerated its inputs so it succeeded,
+and every build after it failed in *both* arms, whereupon a check reading "stock arm
+emits no 231" passed on an empty file. The replacement's copies counter then excluded
+any line containing `(` to skip memory operands — which is every line, since each
+carries a source position — and it reported 0 copies for all six cells while printing
+`VMOVDQU64 Z0, Z4` two paragraphs below in its own log.
+
 **No part of this is the scalar path's precedent.** `AMD64Ops.go:834-835` defines
 `VFMADD231SS` and `VFMADD231SD` and *no* scalar 213 op at all, so
 `(FMA x y z) => (VFMADD231SD z x y)` is not a rule choosing between two forms — it is

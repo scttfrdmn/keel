@@ -22,6 +22,21 @@ While the major version is 0, minor versions may contain breaking changes.
   Two claims withdrawn: the scalar rule is **not** precedent for an unconditional rewrite
   (there is no scalar 213 op, so it selects nothing), and a narrower phi test fires only
   at unroll 1. **Not mailed; the description awaits Scott's read (ruling 1).**
+- **CL 1's description takes three ruled edits, and the third had to be measured because
+  the justification offered for it is false** (`7e50c40693`, amended from `f70aa0a5b4`,
+  tree byte-identical, `Change-Id` preserved). The census `231=132 / 213=29` with the 29
+  split 22 peak declines + 7 folded-addend load forms, and the copy rate qualified as *per
+  FMA whose multiplicand is still live afterwards*, needed no new measurement. The phi
+  clause did: a multi-use phi whose extra reader is inside the loop and wants the pre-FMA
+  accumulator costs **1 copy under 213 against 2 under 231**, so "231 is never worse for a
+  phi" does not hold, while the same loop with loop-invariant multiplicands is level at 2
+  against 2 — the discriminator is multiplicand liveness, not the use count. The clause
+  stands on `rewrite.go:857`'s standard, a load-clobber detector documented as not needing
+  to be perfect because regalloc inserts the move. Two instrument defects found first, both
+  quantities pinned so they could not move: a `-gcflags=-S` listing written into the
+  package directory (Go reads a `.s` there as assembly source) failed every later build in
+  **both** arms while a check greened on the empty file, and a copies counter excluding any
+  line with `(` excluded all of them. Still unmailed.
 - **CL 1's 231 operand order now has an amd64 *execution* witness, and producing it found
   a scope defect in its own first attempt** (`build/fma-witness4.log`). asmcheck greps
   opcodes, not operand order, and the dev host cannot run amd64, so nothing else in the
