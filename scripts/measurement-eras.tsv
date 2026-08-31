@@ -50,9 +50,13 @@
 # REGISTRATIONS (§5 rule 17's one-BASELINE-per-host-per-era bound), and the artifact
 # fields scope CONFIGURATIONS (§7 rule 7's placement-and-version disclosure). What
 # makes the re-foundings free of the loophole the guard below exists for is countable
-# rather than argued: scripts/judged-runs.tsv has NO data rows and
-# scripts/host-baselines.tsv is header-only, so no host has ever spent a BASELINE in
-# this era and re-opening it returns nobody's exemption.
+# rather than argued: AS OF 2026-08-22, when the last of them landed, judged-runs.tsv
+# had no data rows and host-baselines.tsv was header-only, so no host had spent a
+# BASELINE in this era and re-opening it returned nobody's exemption. That count has
+# since moved and the sentence is dated for it: keel-skx registered share/Sgemm,
+# share/Ssyrk and share/Ssymm here on 2026-08-28. So the emptiness argument is spent —
+# a FURTHER re-founding of pinned8 would return a live exemption and has to earn the
+# two conditions above on their own merits.
 #
 # The CURRENT era is the last data row. A row whose `amendment` is empty or `—` is
 # not an era: era resolution fails closed, and a criterion with no era resolves to

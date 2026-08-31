@@ -115,6 +115,15 @@ While the major version is 0, minor versions may contain breaking changes.
   6.067.
 
 ### Fixed
+- **The era guard's loophole argument was resting on a count that had gone false**
+  (`scripts/measurement-eras.tsv`, feeding `#118`). Its paragraph justified `pinned8`'s two
+  re-foundings as costless because `judged-runs.tsv` had no data rows and `host-baselines.tsv` was
+  header-only, so no host had an exemption to return. True on 2026-08-22 when the last re-founding
+  landed; false since 2026-08-28, when keel-skx registered `share/Sgemm`, `share/Ssyrk` and
+  `share/Ssymm` in that era. The sentence is now dated as-of, with the change and its consequence
+  stated: a *further* re-founding of `pinned8` would return a live exemption and has to earn the
+  guard's two conditions on their own merits rather than on emptiness. Which is exactly what
+  `#118` is asking for, so the argument had to be repaired before the ruling could be priced.
 - **The live BASELINE-REGISTERED exercise refused a gate that was behaving correctly, and its
   own derivation-set guard was checking one of the two sets it printed `ok` for (`#119`).**
   First firing on antares.local found both. (1) The share criterion had no rule-19 escape
