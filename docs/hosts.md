@@ -39,9 +39,17 @@ stating plainly:
     `detach.sh` gives the run a tmux pane, so `confirm()`'s `/dev/tty` open
     *succeeds* and its `read` then hits EOF, which is the one branch whose
     message names a terminal rather than the absence of one.
-    `janus` additionally keeps `~/sdk/go1.25.0` and `~/sdk/go1.26.5`, reachable
-    only through their own `go1.X` shims and not from the harness's PATH:
-    recorded rather than removed, because the ruling named rc3.
+    `janus` additionally keeps `~/sdk/go1.25.0` and `~/sdk/go1.26.5`, recorded
+    rather than removed because the ruling named rc3. *This said they were
+    "reachable only through their own `go1.X` shims"; re-probed 2026-08-31 (#134),
+    there are no shims* — `~/go/bin/go1.*` is empty on all three hosts, and no
+    dotfile, crontab or user unit names `sdk/go1`, so nothing but an absolute path
+    reaches them. **The auto-selectable toolchains are somewhere else entirely.**
+    `GOTOOLCHAIN` is `auto` on all three, which selects out of
+    `$GOMODCACHE/golang.org/toolchain@*`, and `janus` holds five there — go1.24.0,
+    go1.25.0, go1.25.11, go1.25.12, go1.27.0, four of them below the go1.27 floor.
+    Inert for keel, whose `go.mod` asks for `go 1.26` against an installed 1.27.0,
+    so `auto` has nothing to switch to; the policy question is #121's.
   - The drift argument was backwards. The version the gate printed was the
     **host's** (`gate-p5.sh:639`), which is the compiler that produces *nothing*
     except that `-race` arm — so the one binary whose provenance mattered was the

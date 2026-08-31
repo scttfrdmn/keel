@@ -9,6 +9,17 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The stray-toolchain exposure is in the module cache, not `~/sdk`** (`#134` inventory, feeding
+  `#121`; `docs/hosts.md`). Probed read-only on all three lab hosts 2026-08-31: `go` resolves to
+  `/usr/local/go/bin/go` at go1.27.0 on every one, so `#134`'s provenance criterion discharges
+  negative. `janus`'s `~/sdk` toolchains have **no `go1.X` shims** — the doc said they did — so only
+  an absolute path reaches them; meanwhile `GOTOOLCHAIN=auto` everywhere selects out of
+  `$GOMODCACHE/golang.org/toolchain@*`, where `janus` holds five, four below the go1.27 floor. Inert
+  for keel (`go.mod` asks `go 1.26`, installed is 1.27.0) and inert for the fleet either way, since
+  `remote.sh:498` cross-compiles every artifact on the dev host. The `~/sdk` purge is unrun: the
+  recursive remote delete was refused by the sandbox and needs Scott. Also: the probe's first
+  liveness check matched its own command line and reported all three hosts busy — a self-matching
+  `pgrep`, re-run with the pattern built at runtime under an `sshd` positive control.
 - **`RANK-WINDOW-BLIND` is deleted; every reading now prints its disparity `D` instead** (`#132`,
   ruled by Scott 2026-08-31; `scripts/bench.sh`). `bench_describe` closes each reading that
   carries a range with `D=<v> (span <s>% / interval <i>%)` where `D = (max−min)/(hi−lo)` — how
