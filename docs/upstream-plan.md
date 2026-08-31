@@ -454,6 +454,30 @@ figure carried from a plan is a figure nobody checked:
    the correct name reads as a hallucination.
 8. **Nothing mails without #124** — now discharged both halves: the CLA on Scott's
    direct confirmation, the build, the hooks and the artifact read-back measured above.
+9. **A prerequisite is proven by its failure mode, not by its presence.** Both of
+   #124's boxes had a mode that greens on nothing, and both were first ticked on the
+   cold path. `git codereview hooks` writes a `pre-commit` file whose *existence*
+   attests that the installer ran, a different proposition from committing working —
+   every real commit aborted with `exec: git-codereview: not found`. And
+   `defaultAllCodeGen()` keys on a `gotip-linux-amd64` builder prefix, so on this
+   darwin/arm64 dev host **every `amd64:` assertion is inert by default**: a false
+   assertion yields `--- SKIP` beneath an overall `PASS`, one `ok` line unverbose,
+   **exit 0**. *A true assertion passing would have satisfied both boxes while proving
+   neither.* This is §5 rule 7 arriving at this workstream — a check that could not
+   have come out otherwise is not evidence, so for every confirmation name the result
+   that would have falsified it. A hook file existing, a test file compiling, a `PASS`
+   line printing: all cold-path facts, each satisfiable while the mechanism it stands
+   for is inert. Item 7 above is the same law about an instrument's *scope* rather
+   than its failure mode (§5 rule 23), and the two are checked separately.
+
+   **Therefore every CL's verification run from here carries `-all_codegen` and is
+   preceded by a deliberately false assertion shown to fail.** The negative control is
+   not a nicety, it is the only witness that the assertion was ever evaluated: a
+   verification run that omits the flag is indistinguishable at the exit code from a
+   real one, and the test/codegen case is the dangerous one precisely because its
+   failure mode is silent. A checker has three outcomes — pass, fail, and *did not
+   run* — and the third renders as the first, so the false assertion's failure text is
+   recorded beside the passing run or the passing run has not said which it saw.
 
 ## Where this leads
 

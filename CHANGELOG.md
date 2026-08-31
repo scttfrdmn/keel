@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Every upstream CL's verification run now carries `-all_codegen` preceded by a
+  deliberately false assertion shown to fail** (`docs/upstream-plan.md` discipline item
+  9, Scott's ruling): *a prerequisite is proven by its failure mode, not by its
+  presence.* Both of `#124`'s boxes had a mode that greens on nothing and both were
+  first ticked on the cold path — a true assertion passing would have satisfied both
+  while proving neither. §5 rule 7 at the upstream workstream; item 7's `GOARCH=amd64`
+  clause is the scope half (§5 rule 23) and is checked separately.
 - **`#124`'s environment half is discharged, and the `test/codegen` harness has a
   green-on-nothing mode.** Go built from source at `603439a1c6`, `git codereview hooks`
   installed, compiler read off the artifact. A throwaway case in CL 1's exact shape
