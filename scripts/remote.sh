@@ -42,6 +42,35 @@ remote_hosts() {
   sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$f"
 }
 
+# remote_require_hosts — sets HOSTS, or diagnoses an empty fleet and exits 2.
+#
+# Lifted from three byte-identical copies (#131). It sets a variable instead of printing
+# one because `H="$(remote_require_hosts)"` would run the exit in a command substitution:
+# that aborts only under the caller's `set -e`, and a guard whose teeth depend on a shell
+# option the next caller may not set fails open.
+remote_require_hosts() {
+  HOSTS="$(remote_hosts)"
+  [[ -n "$HOSTS" ]] && return 0
+  echo "no execution hosts configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)." >&2
+  echo "simd/archsimd is amd64-only (T1), so there is nothing to measure here." >&2
+  exit 2
+}
+
+# remote_host_header HOST — the per-host banner, or return 1 for a host that is silent,
+# so a driver's loop reads `remote_host_header "$host" || continue`. Three copies (#131),
+# and the skip WORDING is the part worth lifting: three chances for one copy to stop
+# saying that an absent row is absent rather than estimated.
+remote_host_header() {
+  local prov
+  prov="$(remote_probe "$1" || true)"
+  if [[ -z "$prov" ]]; then
+    warn "[$1] unreachable, or /proc/cpuinfo unreadable — skipped, and its row is missing rather than estimated"
+    return 1
+  fi
+  echo "-- $1 --"
+  info "$prov"
+}
+
 # unmeasured MESSAGE — the gate is not green, and the log says why it is not a
 # miss. Sets FAIL exactly as each gate's own `fail` does, so a criterion that
 # reports this blocks the gate identically; what differs is what the red asserts
@@ -186,6 +215,11 @@ pass()       { printf '  \033[32mPASS\033[0m  %s%s\n'        "$VERDICT_STAMP" "$
 fail()       { printf '  \033[31mFAIL\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; FAIL=1; N_FAIL=$((N_FAIL + 1)); }
 unmeasured() { printf '  \033[33mUNMEASURED\033[0m  %s%s\n'  "$VERDICT_STAMP" "$1"; FAIL=1; N_UNMEASURED=$((N_UNMEASURED + 1)); }
 info()       { printf '        %s%s\n'                       "$VERDICT_STAMP" "$1"; }
+# warn() — untallied on purpose: only the four "not a gate" drivers call it, and a
+# tallied class no gate emits is indistinguishable from one nobody remembered. Its
+# absence here is what minted four copies of it beside four copies of info() that this
+# file's info() already overrode at every call site (#131). Now stamped; they weren't.
+warn()       { printf '  \033[33mWARN\033[0m  %s%s\n'        "$VERDICT_STAMP" "$1"; }
 # baseline() — a criterion declining to judge a host its reference artifact predates,
 # and recording the reference this run would propose instead (#6, ruled 2026-08-21).
 # It is the one verdict helper that does NOT raise FAIL, and that is the whole of its

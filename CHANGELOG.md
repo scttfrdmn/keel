@@ -9,6 +9,25 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **`scripts/ab.sh` — one A/B harness, lifted out of `l1-bench.sh` and `edge-bench.sh`** (`#131`
+  paydown). The two drivers were identical for the entire skeleton — worktree, trap,
+  cross-compile, methodology preamble, host loop, comparison — and differed in four strings, so
+  each is a parameter (`AB_TITLE`, `AB_FILTER`, `AB_TAG`, plus optional `AB_NOTES` and
+  `AB_BASE_HINT`) and none is a mode flag: nothing in `ab.sh` asks which caller it is serving,
+  which is `#131`'s criterion 6. Its own file rather than more of `remote.sh`, because every gate
+  sources `remote.sh` and an A/B driver's machinery has no business inside the closure a release
+  certificate transfers across. `remote.sh` also gained `warn`, `remote_require_hosts` and
+  `remote_host_header`, ending four dead copies of `info`/`warn` (each already overridden by
+  `remote.sh`'s at every call site) and three copies each of the empty-fleet guard and the
+  per-host banner. **`l1-bench.sh` now archives its logs under `build/l1-<host>-<sha>.log`**,
+  which it never did — the lift gave both callers `edge-bench.sh`'s §5.8 behaviour. Neither
+  driver had a test, so the lift is verified by a 39-assertion exercise that executes both real
+  files end to end with the transport stubbed, driving every failure arm: a failed build arm with
+  and without the fixture hint, a failed run arm, an uncompared host, a silent host beside a live
+  one, an empty fleet, and a caller that sets neither optional variable. `shellcheck -x -S style`
+  over `scripts/` falls 113 → 107 findings, itemised: −4 `SC2329` (the dead `info` definitions it
+  had been reporting all along, unread because nothing runs it) and −4/+2 `SC2064` (the
+  deliberate trap expansion, now once instead of twice).
 - **The stray-toolchain exposure is in the module cache, not `~/sdk`** (`#134` inventory, feeding
   `#121`; `docs/hosts.md`). Probed read-only on all three lab hosts 2026-08-31: `go` resolves to
   `/usr/local/go/bin/go` at go1.27.0 on every one, so `#134`'s provenance criterion discharges

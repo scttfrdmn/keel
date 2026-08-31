@@ -90,9 +90,6 @@
 
 set -euo pipefail
 
-info() { printf '        %s\n' "$1"; }
-warn() { printf '  \033[33mWARN\033[0m  %s\n' "$1"; }
-
 # The kernel whose code the change under test touches, and a control whose code
 # it must leave byte-identical. Both are read back per build.
 CHANGED_FN='l1\.avx512Asum$'

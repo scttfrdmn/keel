@@ -68,9 +68,6 @@ set -euo pipefail
 # first host is touched, which makes the instrument immune instead of leaving
 # "never edit a running instrument" as a rule someone has to remember.
 
-info() { printf '        %s\n' "$1"; }
-warn() { printf '  \033[33mWARN\033[0m  %s\n' "$1"; }
-
 # pct FRACTION — a fraction as a percentage, or a dash when it was not measured.
 pct() { [[ -n "$1" ]] && awk -v r="$1" 'BEGIN{printf "%.1f%%", r*100}' || printf -- '-'; }
 
@@ -592,13 +589,7 @@ main() {
   echo "== retention ($MODE) — issue #26. Not a gate: this certifies nothing. =="
   echo
 
-  local HOSTS
-  HOSTS="$(remote_hosts)"
-  if [[ -z "$HOSTS" ]]; then
-    echo "no execution hosts configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)." >&2
-    echo "simd/archsimd is amd64-only (T1), so there is nothing to measure here." >&2
-    exit 2
-  fi
+  remote_require_hosts
 
   if ! remote_build_test ./internal/block/ "$BIN" >"$LOG" 2>&1; then
     echo "cross-compile of the internal/block test binary failed:" >&2
@@ -646,16 +637,10 @@ main() {
   fi
   echo
 
-  local host prov
+  local host
   while read -r host; do
     [[ -n "$host" ]] || continue
-    prov="$(remote_probe "$host" || true)"
-    if [[ -z "$prov" ]]; then
-      warn "[$host] unreachable, or /proc/cpuinfo unreadable — skipped, and its row is missing rather than estimated"
-      continue
-    fi
-    echo "-- $host --"
-    info "$prov"
+    remote_host_header "$host" || continue
     if ! KEEL_REMOTE_ENV="$RENV" remote_exec "$host" "$BIN" "${BFLAGS[@]}" \
          -test.bench="$FILTER" >"$LOG" 2>&1; then
       warn "[$host] the benchmark run failed; nothing is reported for it"
