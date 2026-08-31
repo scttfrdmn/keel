@@ -419,6 +419,11 @@ change how CL 1's case must be written:
 
 ## CL 1 exists as a failing test, committed and unmailed
 
+**This heading is superseded and kept for the record: "committed and unmailed" was true of
+`03b7769900` and of every rev through `7e50c40693`, and stopped being true on 2026-08-30
+when CL 1 mailed as `golang/go` CL 824624. See "CL 1 is mailed" below.** Nothing else in
+this section is retracted; it describes the state it describes.
+
 Branch `keel-cl1-fma` in the clone, commit `03b7769900`,
 `Change-Id: Ifb1d4f4766f4ac43e018ecea75ed6a3dc91cd979`, marked `[WIP, unmailed]` in its own
 subject. Two cases appended to `test/codegen/simd.go`, one per half of `golang/go#80829`,
@@ -485,6 +490,41 @@ Confirmed incidentally, by the census rather than by argument: `avx2Axpy`/`avx51
 emit **both** forms, and 4 of the 29 residual 213s are theirs, because Axpy's addend is a
 freshly loaded `y` that the load form folds — the deliberate non-match the rule comment
 describes, turning up on its own in a function nobody wrote the rule for.
+
+## CL 1 is mailed: `golang/go` CL 824624
+
+https://go-review.googlesource.com/c/go/+/824624, mailed 2026-08-30, status `NEW`, branch
+`master`, +343/−0, `Change-Id: Ifb1d4f4766f4ac43e018ecea75ed6a3dc91cd979`. Confirmed from
+Gerrit's own `/detail` rather than from the push output: the change number, the preserved
+`Change-Id`, the owner, and the insertion count all read back as expected. No reviewer is
+assigned yet.
+
+The mailed rev is `fcc582225c`, not the `7e50c40693` that was read and approved. The only
+difference is the author and committer email: `~/.gitconfig` carries the GitHub noreply
+address, Gerrit rejected the first push with *"email address … is not registered in your
+account, and you lack 'forge author' permission"*, and the fix was a repo-local
+`user.email` in the clone plus an `--amend --author`. **The tree is byte-identical to the
+witnessed `f70aa0a5b4` (0 diff lines) and the message is byte-identical to the reviewed
+`7e50c40693` (0 diff lines)**, so every certificate earned by those revs transfers across a
+disclosed delta that touches neither the code nor the description. The global config was
+left alone; the override is confined to the Go clone.
+
+Two process notes for the next CL. First, that rejection is a *pre*-mail gate nothing in
+the verification apparatus covered — the CL was witnessed for correctness on three hosts
+and verified line by line, and it still bounced on an identity field, because every check
+we built asks about the content and none asked whether Gerrit would accept the author. It
+costs one command to ask beforehand: the author email must appear in the mailing account's
+registered addresses. Second, the first `mail` invocation was piped to `tail`, so the
+`$?` printed beside it was `tail`'s status and read `0` on a push that had been **rejected**
+— the rejection was legible only in the text. `&&`, never a pipe, when the exit status is
+the thing being reported.
+
+Post-mail discipline now in force: reviewer comments get same-session treatment, since
+review turnaround is the freeze budget; a reviewer request produces a patchset on this CL,
+never a scope expansion, and nothing in keel rides along with a review response; and if a
+reviewer asks for the memory-operand forms, the answer is the "Not included" paragraph
+already in the description, with the follow-up CL keyed to `golang/go#80830` when its turn
+comes.
 
 ## Three figures did not survive verification and are not in any CL description
 

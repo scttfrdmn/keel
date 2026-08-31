@@ -9,6 +9,17 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **CL 1 is mailed: `golang/go` CL 824624**, https://go-review.googlesource.com/c/go/+/824624,
+  status `NEW`, branch `master`, +343/−0, `Change-Id: Ifb1d4f47…` — keel's first change on the
+  Go tree. Confirmed from Gerrit's `/detail`, not from the push output. The mailed rev is
+  `fcc582225c` rather than the reviewed `7e50c40693`: Gerrit rejected the first push because
+  `~/.gitconfig` supplies a GitHub noreply author address that is not registered on the
+  account, fixed with a clone-local `user.email` and `--amend --author`. Tree byte-identical
+  to the witnessed `f70aa0a5b4` and message byte-identical to the reviewed `7e50c40693`, both
+  0 diff lines, so the delta touches neither code nor description. **Two apparatus gaps it
+  exposed:** no check anywhere asked whether Gerrit would accept the author — every one asked
+  about content — and the first `mail` was piped to `tail`, so the `$?` printed beside it was
+  `tail`'s and read `0` on a **rejected** push. Supersedes the "still unmailed" entries below.
 - **CL 1 is written and verified, one commit, still unmailed.** Branch `keel-cl1-fma`
   at `01f89f15da` (`03b7769900` and `7021eebc03` squashed in, `Change-Id: Ifb1d4f47…`):
   six packed `VFMADD231P{S,D}` ops and a late-lower rule conditional on
@@ -36,7 +47,7 @@ While the major version is 0, minor versions may contain breaking changes.
   quantities pinned so they could not move: a `-gcflags=-S` listing written into the
   package directory (Go reads a `.s` there as assembly source) failed every later build in
   **both** arms while a check greened on the empty file, and a copies counter excluding any
-  line with `(` excluded all of them. Still unmailed.
+  line with `(` excluded all of them. Mailed as CL 824624; see the entry above.
 - **CL 1's 231 operand order now has an amd64 *execution* witness, and producing it found
   a scope defect in its own first attempt** (`build/fma-witness4.log`). asmcheck greps
   opcodes, not operand order, and the dev host cannot run amd64, so nothing else in the
