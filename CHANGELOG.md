@@ -69,7 +69,15 @@ While the major version is 0, minor versions may contain breaking changes.
   re-typed, since re-typing downward is loosening. Those same two 0.001 gaps positive-control
   `#143`. Derivation and both lists in `docs/rulings.md` rule 17; nine fixtures in
   `scripts/baseline-test.sh` (66 ok), one of them asserting the two *shipped* lists really do
-  differ, negative-controlled against a copy with them unified.
+  differ, negative-controlled against a copy with them unified. **No certificate-fleet verdict
+  moves**, resolved against the real tracked registry rather than argued: all three fleet models
+  render `fleet` on `scale/Strsm`, so the comparison is bar-for-bar what it was, keel-skx stays
+  `registered` on its three `share/*` rows, and an `ARM Neoverse-V2` renders `new` on both
+  criteria — which is the unblocking `#137` needs. That check also exposed a gap in
+  `host-baselines.tsv`'s own header, now fixed: it excluded rows for "the models that derived
+  `CEIL_FRACTION`" when the exclusion is per criterion, so the 8124M is legitimately
+  registry-governed on `share/*` and fleet-governed on `scale/Strsm`, and adding the missing row
+  *for consistency* would convict it of a conflict on a bar it helped derive.
 - **`exercise-baseline.sh` drives both criteria of the class, and its own documented host was
   the wrong one (`#119`).** Every read-back is now keyed twice — `reaches`/points/2.6/`(#6)`
   for the share criterion, `scales`/x/0.403/`(#119)` for the ratio one — because the phrase

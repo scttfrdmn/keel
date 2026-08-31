@@ -46,11 +46,18 @@
 # change. Either way the row's estimator, source and grounds move with the value;
 # provenance is the row, not a footnote.
 #
-# NOT IN HERE, on purpose: the three CPU models that DERIVED CEIL_FRACTION
-# (gate-p5.sh's CEIL_DERIVED_FROM). Their reference artifact does not predate their
-# admission — they are the artifact — so they stay on the fleet bar. Per-host
-# convergence for them is a post-tag option, not something smuggled in with this
-# mechanism.
+# NOT IN HERE, on purpose: the CPU models that DERIVED THE BAR A ROW WOULD BE FOR. Their
+# reference artifact does not predate their admission — they are the artifact — so they stay
+# on the fleet bar, and gate-p5 FAILS a host claimed by both a derivation list and this
+# registry rather than picking a winner. Per-host convergence for them is a post-tag option,
+# not something smuggled in with this mechanism.
+#
+# AND THE TWO LISTS ARE NOT THE SAME LIST (#119, 2026-08-30). `share/*` rows are excluded for
+# CEIL_DERIVED_FROM's two AMD models; `scale/Strsm` rows are excluded for SCALE_DERIVED_FROM's
+# THREE, which includes the Intel 8124M — the model that has three `share/*` rows below. So the
+# same host is legitimately registry-governed on one criterion and fleet-governed on the other,
+# and adding a `scale/Strsm` row for it "for consistency" would convict it of a conflict on a
+# bar it helped derive. Consistency between the two criteria is the error here, not the goal.
 #
 # THE FIRST ROWS LANDED 2026-08-28, and what unblocked them is worth recording, because
 # both of the reasons this file was empty had to be discharged and only one of them was
