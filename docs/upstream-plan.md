@@ -241,10 +241,17 @@ quantity in each column:
 | FMA forms | 48× 213 | 12× 213, 36× 231 | **48× 231** | 48× 231 |
 | vector stack refs | 44 | 44 | **44** | 44 |
 
-The last two columns are not merely equal per row: **the two rules emit the same 674
-instructions for this function, address-stripped diff clean**, which is why the
-shipped column can carry a copy decomposition measured on the unconditional arm
-without being reclassified. Package-wide the condition changes exactly 22 FMAs —
+The last two columns are not merely equal per row: **the two rules emit identical code
+for this function — an address-stripped diff of the two listings is empty over all 619
+instructions** (651 listing lines, counting the FUNCDATA/PCDATA pseudo-ops) — which is
+why the shipped column can carry a copy decomposition measured on the unconditional arm
+without being reclassified. The empty diff is not a vacuous pass: the same comparison
+against the stock arm differs in 826 lines. An earlier version of this paragraph and of
+CL 1's description said "the same 674 instructions", which is not reproducible under any
+counting rule the listing admits — 674 is neither the all-lines count (651), the count
+less pseudo-ops (619), nor the count of lines carrying a source position (506). The
+identity was real and the figure beside it was not, which is the failure mode of
+quoting a count taken at a different scope than the claim it is attached to. Package-wide the condition changes exactly 22 FMAs —
 `internal/vec` goes 3× 213 / 112× 231 unconditional to 25× 213 / 90× 231 shipped, and
 the 22 are the 12 in `avx512Peak` and the 10 in `avx2Peak`. Nothing else in the
 package sees the condition at all.
@@ -271,7 +278,11 @@ is what the surrounding chain continues in. `avx512Peak` is the mirror image —
 `a_i = FMA512(a_i, y, x)`, where the loop-carried value is a *multiplicand* and the
 addend `x` is loop-invariant — and converting it forced a copy of `x` for each of 12
 chains: **27 instructions and 0 copies became 53 and 26**, 2.25 → 4.42 per FMA.
-`avx2Peak` regressed the same way. These two kernels are keel's percent-of-peak
+`avx2Peak` regressed the same way and now with a number rather than the word: **23 and 0
+became 44 and 21**, 2.30 → 4.40 per FMA, measured off the archived unconditional listing
+with the same instrument. It was asserted as "likewise" for one draft on the strength of
+the FMA count alone, which establishes that the rule fired there and says nothing about
+what it cost. These two kernels are keel's percent-of-peak
 *denominator*, so that regression would not have surfaced as a failure; it would have
 lowered measured peak GFLOP/s and silently *raised* every published percentage.
 

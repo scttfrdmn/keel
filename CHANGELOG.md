@@ -22,6 +22,18 @@ While the major version is 0, minor versions may contain breaking changes.
   Two claims withdrawn: the scalar rule is **not** precedent for an unconditional rewrite
   (there is no scalar 213 op, so it selects nothing), and a narrower phi test fires only
   at unroll 1. **Not mailed; the description awaits Scott's read (ruling 1).**
+- **Three numbers in CL 1's description were corrected before it was ever shown, by
+  re-measuring the quantities each one named** (now `f70aa0a5b4`). "The same 674
+  instructions" was unreproducible under every counting rule the listing admits — 651
+  all-lines, 619 less pseudo-ops, 506 positioned — while the identity it decorated was
+  real; the empty diff now ships with its rule named and a negative control (826 lines
+  against the stock arm). "A 10-chain AVX2 loop regresses likewise" was inferred from an
+  FMA count, which shows the rule fired and not what it cost; measured, `avx2Peak` goes
+  23/0 → **44/21**, 2.30 → 4.40 per FMA. And the 19 residual copies are **18** X-register
+  broadcast moves plus **1** Z rotation, not 19 X moves — `upstream-plan.md`'s own table
+  had this right, so the prose was the defect. The stock column is now one arm of one
+  toolchain (`FMAPrefers231` forced false) rather than three archives of differing scope,
+  which is what made the 674 misattribution possible.
 - **Every upstream CL's verification run now carries `-all_codegen` preceded by a
   deliberately false assertion shown to fail** (`docs/upstream-plan.md` discipline item
   9, Scott's ruling): *a prerequisite is proven by its failure mode, not by its
