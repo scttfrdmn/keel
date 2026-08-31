@@ -1,0 +1,74 @@
+# Copyright 2026 Scott Friedman
+# SPDX-License-Identifier: Apache-2.0
+#
+# Verbatim output of /tmp/fma-remeasure.sh, 2026-08-31, re-measuring both falsifiers in
+# golang/go CL 824624 before either could be quoted in a review reply (the watch protocol's
+# rule 5). This comment block is the ONLY addition; everything below it is the run's own
+# stdout as written to the gitignored build/fma-remeasure-fcc5822.log. docs/upstream-plan.md
+# reads the table off it.
+host Darwin 25.6.0 arm64  keel 497bb2f  go-tree fcc582225c
+started 2026-08-31T20:44:51Z
+
+############ predictions, stated before any arm runs
+  A (as mailed)      avx512Peak  27 insns  0 copies | avx2Peak 23/0
+                     Kernel4x32  38/0   Kernel2x32  66/0   Kernel6x32 193/19
+  B (unconditional)  avx512Peak  53 insns 26 copies  <- falsifier 1, the number a reply cites
+                     accumulation kernels unchanged from A (they already all convert)
+                     avx2Peak: worse than 23/0, no figure predicted -- none was ever published
+  C (no rewrite)     Kernel6x32  19+26 = 45 copies   <- "the 26 copies the rewrite removes"
+                     avx512Peak  27/0 (the Horner shape's natural form is 213)
+  D (narrow)         Kernel4x32  converts fully, 38/0, loop 0x213
+                     Kernel2x32  exactly one 213 per accumulator left  ->  4x213
+                     Kernel6x32  exactly one 213 per accumulator left  -> 12x213
+                     Kernel6x32  19+21 = 40 copies   <- falsifier 2, 21 of C's 26
+
+############ arm A: the rule as mailed, against the binary already built
+go version go1.28-devel_f70aa0a5b4 Sun Aug 30 18:42:10 2026 -0700 darwin/arm64
+  A1      avx512Peak  213=12  231=0   | [264,355] 27 insns for 12 arith (2.25 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 12 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  A1      avx2Peak    213=10  231=0   | [220,291] 23 insns for 10 arith (2.30 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 10 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  A1      Kernel4x32  213=0   231=8   | [101,269] 38 insns for 8 arith (4.75 per arith): 0 vector stack refs, 0 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  A1      Kernel2x32  213=0   231=16  | [70,377] 66 insns for 16 arith (4.12 per arith): 0 vector stack refs, 0 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  A1      Kernel6x32  213=0   231=48  | [152,1296] 193 insns for 48 arith (4.02 per arith): 44 vector stack refs, 19 reg copies, 24 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+
+############ UNION must be byte-identical to the mailed body, or A2 is not arm A
+  ok    this script's UNION is the predicate fcc582225c mails
+
+############ arm B: return true (unconditional)
+  predicate: return true
+  rebuilt: go version go1.28-devel_fcc582225c Sun Aug 30 20:10:50 2026 -0700 darwin/arm64
+  B       avx512Peak  213=0   231=12  | [267,515] 53 insns for 12 arith (4.42 per arith): 0 vector stack refs, 26 reg copies, 0 broadcasts, 12 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  B       avx2Peak    213=0   231=10  | [223,387] 44 insns for 10 arith (4.40 per arith): 0 vector stack refs, 21 reg copies, 0 broadcasts, 10 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  B       Kernel4x32  213=0   231=8   | [101,269] 38 insns for 8 arith (4.75 per arith): 0 vector stack refs, 0 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  B       Kernel2x32  213=0   231=16  | [70,377] 66 insns for 16 arith (4.12 per arith): 0 vector stack refs, 0 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  B       Kernel6x32  213=0   231=48  | [152,1296] 193 insns for 48 arith (4.02 per arith): 44 vector stack refs, 19 reg copies, 24 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+
+############ arm C: return false (no rewrite; the 213 baseline)
+  predicate: return false
+  rebuilt: go version go1.28-devel_fcc582225c Sun Aug 30 20:10:50 2026 -0700 darwin/arm64
+  C       avx512Peak  213=12  231=0   | [264,355] 27 insns for 12 arith (2.25 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 12 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  C       avx2Peak    213=10  231=0   | [220,291] 23 insns for 10 arith (2.30 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 10 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  C       Kernel4x32  213=8   231=0   | [101,341] 50 insns for 8 arith (6.25 per arith): 0 vector stack refs, 12 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  C       Kernel2x32  213=16  231=0   | [70,430] 74 insns for 16 arith (4.62 per arith): 0 vector stack refs, 8 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  C       Kernel6x32  213=48  231=0   | [152,1457] 219 insns for 48 arith (4.56 per arith): 44 vector stack refs, 45 reg copies, 24 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+
+############ arm D: narrow -- z.Uses==1, or v closes a two-arg phi
+  predicate: z := v.Args[2]
+  predicate: return z.Uses == 1 || (z.Op == ssaop.OpPhi && len(z.Args) == 2 && (z.Args[0] == v || z.Args[1] == v))
+  rebuilt: go version go1.28-devel_fcc582225c Sun Aug 30 20:10:50 2026 -0700 darwin/arm64
+  D       avx512Peak  213=12  231=0   | [264,355] 27 insns for 12 arith (2.25 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 12 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  D       avx2Peak    213=10  231=0   | [220,291] 23 insns for 10 arith (2.30 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 10 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  D       Kernel4x32  213=0   231=8   | [101,269] 38 insns for 8 arith (4.75 per arith): 0 vector stack refs, 0 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  D       Kernel2x32  213=4   231=12  | [70,420] 72 insns for 16 arith (4.50 per arith): 0 vector stack refs, 6 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  D       Kernel6x32  213=12  231=36  | [152,1422] 214 insns for 48 arith (4.46 per arith): 44 vector stack refs, 40 reg copies, 24 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+
+############ restore the mailed rule from the backup, rebuild, re-measure arm A
+  ok    rewrite.go is back to fcc582225c's
+  rebuilt: go version go1.28-devel_fcc582225c Sun Aug 30 20:10:50 2026 -0700 darwin/arm64
+  A2      avx512Peak  213=12  231=0   | [264,355] 27 insns for 12 arith (2.25 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 12 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  A2      avx2Peak    213=10  231=0   | [220,291] 23 insns for 10 arith (2.30 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 10 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  A2      Kernel4x32  213=0   231=8   | [101,269] 38 insns for 8 arith (4.75 per arith): 0 vector stack refs, 0 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  A2      Kernel2x32  213=0   231=16  | [70,377] 66 insns for 16 arith (4.12 per arith): 0 vector stack refs, 0 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  A2      Kernel6x32  213=0   231=48  | [152,1296] 193 insns for 48 arith (4.02 per arith): 44 vector stack refs, 19 reg copies, 24 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+
+############ A1 vs A2 must agree line for line, or every reading above is void
+finished 2026-08-31T20:47:39Z

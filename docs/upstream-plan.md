@@ -605,19 +605,63 @@ subject hides.
 
 **"Guessing" is answerable, and the answer is already in the CL.** The condition was not
 picked; each of its two clauses has a measured falsifier, both already in `FMAPrefers231`'s
-doc comment: rewriting unconditionally turned a 12-chain Horner-shape loop from 27
-instructions and 0 copies into **53 and 26**, and the tempting narrower test — "this FMA
-supplies the phi's backedge argument" — cost **21 of the 26** copies the rewrite removes from
-the widest of three kernels at unroll 1, 4 and 4. Those are the CL's numbers, measured when
-it was written and not re-measured today; a reply may quote them as such and must not present
-them as fresh.
+doc comment. Those were measured when the CL was written, so under the watch protocol's rule
+5 — *any* number in a reply passes the same verification a CL description does — they could
+not be quoted in a reply as they stood. They are now re-measured; see below.
 
-**Nothing is mailed, amended or replied to on this.** The reply is drafted for Scott's read
-on #127, per the standing gate, and the decision it needs is which of three: defend the rule
-as a pre-regalloc approximation and offer to delete it when the series lands; split CL 1 down
-to the six packed ops alone (honest caveat — ops no rule emits are unreachable, so this may
-not be landable as-is); or rebase onto the three-CL stack and extend `778820` first, which
-makes a keel CL wait on an unvoted 3900-line dependency.
+**The mechanism finding has a second, independent derivation, and it is the stronger one.**
+The argument above reads `778820`'s field comment and observes that "the first two arguments"
+is not a three-cycle. That is an argument from wording. The structural form does not depend on
+the comment at all: `VFMADD213PS512` is declared `resultInArg0` with `argLength: 3`
+(`ssa/_gen/simdAMD64ops.go:183`), so it computes `arg0 = arg1*arg0 + arg2`, whose value
+`arg0*arg1 + arg2` is **symmetric in the two arguments the field swaps**. Swapping them is
+therefore a no-op on this op, no chain of such swaps can move `arg2`, and the destination is
+the only thing that distinguishes the forms. `cmd/internal/obj/x86` assembles all three —
+`VFMADD132/213/231`, for both PS and PD (`aenum.go`) — while `ssa` models 213 alone today and
+231 with this CL; 132 is modeled nowhere. So the family is a three-element orbit and a
+pairwise field is exactly its degenerate case. Two derivations that share no premise, which is
+what §5 rule 10 asks for before either is called confirmed.
+
+**Both falsifiers re-measured 2026-08-31 at patch set 1**, `spill-audit` on the same
+`internal/vec` the P2 gate audits — the repo's instrument, not a regex over `-gcflags=-S`.
+Four arms, one `FMAPrefers231` body each. The run wrote `build/fma-remeasure-fcc5822.log`,
+which is gitignored, so it is **tracked** as `docs/cl1-falsifiers-fcc5822.log`: these figures
+are bound for a public reply, and evidence for a published claim living on one machine is the
+`#114` defect this same session found one layer up in the v0.1.0 certificate.
+
+| arm | predicate | avx512Peak | avx2Peak | K4x32 | K2x32 | K6x32 |
+|---|---|---|---|---|---|---|
+| **A** as mailed | `z.Uses == 1 \|\| z.Op == OpPhi` | 27 / 0 | 23 / 0 | 38 / 0 | 66 / 0 | 193 / 19 |
+| **B** unconditional | `true` | **53 / 26** | **44 / 21** | 38 / 0 | 66 / 0 | 193 / 19 |
+| **C** no rewrite | `false` | 27 / 0 | 23 / 0 | 50 / 12 | 74 / 8 | 219 / **45** |
+| **D** narrow | `Uses==1 \|\| v` closes a 2-arg phi | 27 / 0 | 23 / 0 | 38 / 0 | 72 / 6 | 214 / **40** |
+
+*insns / register copies in the steady-state loop.* Falsifier 1 is B against A: the Horner
+shape regresses 27→53 insns and 0→26 copies, and its AVX2 twin 23→44 and 0→21 — a figure
+never published before, because only the direction was predicted for it. Falsifier 2 is D
+against C and A: on `Kernel6x32` the copies run 45 → 40 → 19, so the narrow test recovers 5
+of the 26 the rule removes and leaves **21**, exactly the doc comment's claim, by leaving one
+213 per accumulator (12 of 48 FMAs; 4 of 16 in `Kernel2x32`). C also re-derives `T-85`'s
+`InsnsPerFMA` before-figures, 50/8 and 74/16.
+
+Arm D's predicate is a **reconstruction** — the original no longer exists in the tree — so its
+four pre-stated predictions were a fidelity test of the reconstruction as much as of the
+claim, and all four landed. Across the whole run, 14 predictions were stated before any arm
+ran — 13 exact figures and one directional, `avx2Peak` under B, for which no figure had ever
+been published — and all 14 were confirmed, none missed. The run's own control: arm A measured first and last, `diff`-identical across all five
+functions, which is what rules out a reading taken against a stale or half-built compiler. It
+earned its keep — A1 ran against a binary stamped `f70aa0a5b4`, a *prior amend of this same
+CL*, and the two commits' trees are byte-identical (`git diff --stat` empty), so the reading
+was sound for a reason no mtime could have shown.
+
+**Nothing is mailed, amended or replied to on this.** Patch set 1 needs no correction: its two
+numbers survived re-measurement. The reply is drafted for Scott's read on #127, per the
+standing gate, and the decision it needs is which of three: defend the rule as a pre-regalloc
+approximation and offer to delete it when the series lands; split CL 1 down to the six packed
+ops alone (honest caveat — ops no rule emits are unreachable, so this may not be landable
+as-is); or rebase onto the three-CL stack and extend `778820` first, which makes a keel CL
+wait on an unvoted 3900-line dependency. The protocol forbids the third on its own terms —
+"never a scope expansion" — so the live choice is the first two.
 
 ## Three figures did not survive verification and are not in any CL description
 

@@ -23,6 +23,21 @@ While the major version is 0, minor versions may contain breaking changes.
   in `scripts/measurement-eras.tsv` is still `#118`'s ruling to make.
 
 ### Changed
+- **Both of CL 824624's falsifiers re-measured, and the mechanism finding given a second
+  derivation** (`#127`). The watch protocol's rule 5 makes every number in a review reply pass
+  what a CL description passes, so the two figures in `FMAPrefers231`'s doc comment could not be
+  quoted as they stood — they were measured when the CL was written. Four `FMAPrefers231` bodies,
+  `spill-audit` on `internal/vec`, the log tracked as `docs/cl1-falsifiers-fcc5822.log` because
+  `build/` is gitignored and these figures are bound for a public reply: unconditional rewriting
+  takes the Horner shape 27→**53** insns and 0→**26** copies, its AVX2 twin 23→44 and 0→21; the
+  narrow "closes the phi" test leaves **21 of 26** copies on `Kernel6x32`, whose copies run
+  45 → 40 → 19 across no-rewrite, narrow and as-mailed. 14 predictions stated before the run, 14
+  confirmed. Arm A was measured first *and* last and came back `diff`-identical, which is what
+  caught that the pre-built compiler was stamped at a prior amend of the same CL — with a
+  byte-identical tree, so the reading held for a reason no mtime shows. The `commuted Op`
+  objection now also has a wording-free form: 213 computes `arg0*arg1 + arg2`, symmetric in the
+  two arguments that field swaps, so no chain of them moves `arg2`. Patch set 1 needs no
+  correction; nothing amended, replied to or mailed.
 - **`docs/upstream-plan.md` records CL 824624's first review** (`#127`). The trybots passed
   (`LUCI-TryBot-Result+1` on revision `fcc582225c`); Jorropo left one unresolved comment saying
   operand-form selection is regalloc's job and pointing at his commuted-regalloc series. The
