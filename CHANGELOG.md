@@ -23,6 +23,15 @@ While the major version is 0, minor versions may contain breaking changes.
   in `scripts/measurement-eras.tsv` is still `#118`'s ruling to make.
 
 ### Changed
+- **`docs/upstream-plan.md` records CL 824624's first review** (`#127`). The trybots passed
+  (`LUCI-TryBot-Result+1` on revision `fcc582225c`); Jorropo left one unresolved comment saying
+  operand-form selection is regalloc's job and pointing at his commuted-regalloc series. The
+  architectural point is conceded in the record; the specific mechanism is not available for this
+  instruction, and the reason is the field's own comment — `778820`'s `commuted Op` commutes "the
+  first two arguments", where `(VFMADD213PS x y z) => (VFMADD231PS z x y)` is a three-cycle,
+  because the forms differ in which of three operands is the destination. Nothing amended, replied
+  to or mailed: the reply is drafted for Scott's read, and the decision among defend / split /
+  rebase-on-an-unvoted-stack is his.
 - **`scripts/ab.sh` — one A/B harness, lifted out of `l1-bench.sh` and `edge-bench.sh`** (`#131`
   paydown). The two drivers were identical for the entire skeleton — worktree, trap,
   cross-compile, methodology preamble, host loop, comparison — and differed in four strings, so

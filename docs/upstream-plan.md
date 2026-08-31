@@ -552,6 +552,73 @@ reviewer asks for the memory-operand forms, the answer is the "Not included" par
 already in the description, with the follow-up CL keyed to `golang/go#80830` when its turn
 comes.
 
+## CL 1's first review: the TryBots passed, and the mechanism the objection points at cannot express the change
+
+Read off Gerrit 2026-08-31, one `/detail` and one `/comments` query, no polling. CL 824624
+is at patchset 1, status `NEW`, 8 messages, 1 inline comment.
+
+**Two events, opposite signs.** Junyang Shao ran the trybots (`Commit-Queue+1`, 18:16) and
+they **passed** — `LUCI-TryBot-Result+1` at 18:38, on revision `fcc582225c`. So the
+mechanical half of review is clear. Then Jorropo, 19:03, one **unresolved** patchset-level
+comment:
+
+> This doesn't make sense, it is regalloc's job to do register allocation not rewrite.
+>
+> You're having to do a bad job at guessing which of the two FMA is better. What you should
+> do instead is let regalloc pick, you could this trivially using my commuted regalloc CL
+> series: CL 778460
+
+**The first sentence is right and is conceded.** `FMAPrefers231` exists *because* late lower
+runs before regalloc: its own doc comment says "liveness is not available here — late lower
+runs before regalloc — so this asks a structural question instead". A predicate that
+approximates liveness is doing with a proxy what regalloc does with the fact. If the
+information were available at the right phase, the rule should not exist.
+
+**The second sentence names a mechanism that, on its own documented terms, cannot express
+this change.** The series is a three-CL stack — `778820` (`add the concept of commuted forms
+to ssa/_gen`) → `778460` (`teach regalloc how to commute amd64 CMOV`) → `810740` (`teach CSE
+and rewrite to canonicalize commuted instructions`). Its representation is one field, added
+in `778820` to `opInfo` in `ssa/op.go`, and the field's own comment is the answer:
+
+```go
+// if not [OpInvalid], this operation can be commuted by swapping the
+// first two arguments and changing to the commuted op (e.g. CMOVQCS ↔ CMOVQCC or ADD ↔ ADD).
+commuted Op
+```
+
+Swapping the **first two** arguments. CL 1's rewrite is
+`(VFMADD213PS x y z) => (VFMADD231PS z x y)` — a three-cycle over three arguments, because
+the two forms differ in *which of three operands is the destination*: 213's destination holds
+a multiplicand, 231's holds the addend. `x↔y` is the trivially-commutative part that
+multiplication already gives for free; the part that matters is `arg0 ↔ arg2`, and a single
+pairwise `commuted Op` has no way to say it. Extending the field to a three-argument
+permutation is a change **to** `778820`, not a use **of** it, so "trivially" does not hold
+for this instruction.
+
+Series state, as facts rather than as an argument: all three are `NEW`; `778820` is
++3948/−3933 at patchset 10, last updated 2026-08-05, TryBot+1, **no `Code-Review` vote of
+any sign**; and its own description says commuted instructions "are completely useless for
+now" and that both consumers "currently keep the previous behavior and only optimize on
+trivially commutative ops." Read via Gerrit `/detail`, not off a subject line — a title
+carries no status, and this series' `ex-wait-release` hashtag is exactly the kind of state a
+subject hides.
+
+**"Guessing" is answerable, and the answer is already in the CL.** The condition was not
+picked; each of its two clauses has a measured falsifier, both already in `FMAPrefers231`'s
+doc comment: rewriting unconditionally turned a 12-chain Horner-shape loop from 27
+instructions and 0 copies into **53 and 26**, and the tempting narrower test — "this FMA
+supplies the phi's backedge argument" — cost **21 of the 26** copies the rewrite removes from
+the widest of three kernels at unroll 1, 4 and 4. Those are the CL's numbers, measured when
+it was written and not re-measured today; a reply may quote them as such and must not present
+them as fresh.
+
+**Nothing is mailed, amended or replied to on this.** The reply is drafted for Scott's read
+on #127, per the standing gate, and the decision it needs is which of three: defend the rule
+as a pre-regalloc approximation and offer to delete it when the series lands; split CL 1 down
+to the six packed ops alone (honest caveat — ops no rule emits are unreachable, so this may
+not be landable as-is); or rebase onto the three-CL stack and extend `778820` first, which
+makes a keel CL wait on an unvoted 3900-line dependency.
+
 ## Three figures did not survive verification and are not in any CL description
 
 Numbers reach a CL description only after being re-read from the tree, because a
