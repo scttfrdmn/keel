@@ -441,6 +441,32 @@ require_disk() {
   return 0
 }
 
+# resolve_fleet — the fleet, plus the two preconditions every remote-measuring gate states
+# about it: the tier-C ledger of what the gate trusts rather than checks (#73, ruled
+# 2026-08-15) and the free-space read (#84). Sets HOSTS.
+#
+# Lifted from all six gates (#131), which carried these six lines byte-identically — one md5
+# across p0..p5, so no argument distinguishes the callers and there is nothing here for a mode
+# flag to be. The old comment's "declared here, where the fleet is named" named six places.
+resolve_fleet() {
+  HOSTS="$(remote_hosts)"
+  assume_fleet "$HOSTS"
+  require_disk
+}
+
+# probe_or_unmeasured HOST — the host's provenance line, or the refusal that a host which did
+# not answer produced no reading rather than a failure (DESIGN.md §5.6). Returns nonzero so the
+# caller's loop reads `|| continue`.
+#
+# Lifted from gate-p1..p4 (#131), which carried these six lines verbatim. The probe's value
+# never outlived them in any of the four, so nothing is exported and there is no out-parameter
+# to keep in step — unlike assert_governor's lift, which does export.
+probe_or_unmeasured() {
+  local prov; prov="$(remote_probe "$1" || true)"
+  [[ -n "$prov" ]] || { unmeasured "[$1] unreachable, so this target produced no reading"; return 1; }
+  info "[$1] $prov"
+}
+
 # assumed_ledger — print the ledger, once, beside the verdict. Prints even when
 # empty: "this gate declared no unverifiable assumption" is a statement a reader
 # should be able to see the gate make, and its absence is indistinguishable from

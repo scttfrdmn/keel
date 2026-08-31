@@ -23,6 +23,44 @@ While the major version is 0, minor versions may contain breaking changes.
   in `scripts/measurement-eras.tsv` is still `#118`'s ruling to make.
 
 ### Changed
+- **The ceiling every judged share divides by is a published, re-measured row** (`#113`).
+  `CEIL_FRACTION` judges each host's routines against that host's own measured 8-thread ceiling,
+  and those rates lived in README's *caption* — outside the region `gate-p5` criterion 9
+  re-measures, the exact defect `0bbf964` was reverted for. The blocker was criterion 9's row
+  checker hardwiring `scale_name`, so `Ceiling/compute` resolved to
+  `Scale/Ceiling/compute/n=4096/threads=8`, matched nothing, and was reported as "this gate
+  measured no such row" — a true refusal about the wrong thing. A `row_name` resolver keyed on the
+  published benchmark column fixes it, and yields EMPTY for a path-like name no family addresses,
+  because unaddressable and unmeasured are different facts about a published row. README grew
+  three rows (24 → 27, one per host: 1444, 2292 and 933.8 GFLOP/s) and the caption's
+  "deliberately not republished here" sentence is now the opposite claim. Verified before landing
+  by resolving each published row through criterion 9's own `bench_gflops` against that host's
+  archived bench log — 27/27 matched inside `README_TOL`, all three ceiling rows included — with
+  a drifted row and an unaddressable row each shown to be refused, so the green distinguishes
+  checked from skipped. `#113`'s own premise that "the twelve archived logs carry no
+  measured-ceiling row at all" measures **false**: 2709 `Ceiling/compute` lines are in the
+  archive and every archived revision's gate already computed `CEIL8` from a measured ceiling,
+  not a proxy — which is why this needed no fleet run to publish, and which reopens whether that
+  issue's permanent-limitation clause holds for the reason it states.
+- **Six gates stopped carrying the fleet preamble, four stopped carrying the probe block, and
+  two stopped carrying P2's compile-time audit** (`#131`). `resolve_fleet` (`remote.sh`) replaces
+  six byte-identical copies — one md5 across `gate-p0`..`gate-p5`; `probe_or_unmeasured` replaces
+  four verbatim copies in which the probe's value never outlived the block, so nothing is
+  exported; `carry_p2_properties` (`gate-lib.sh`) replaces `gate-p3`'s and `gate-p4`'s copies of
+  the spill/call/BCE audit, which differed only in the phase name and the loop's description —
+  two arguments, not a mode flag. Each lift was proven byte-equivalent to the code it replaced
+  before landing: 8 scenarios for `carry_p2_properties` (both callers × each failure branch, with
+  `go` stubbed to echo the argv so a changed command line shows as a diff), plus both branches of
+  the probe inside a real loop to prove `|| continue` still skips the body. Every comparison
+  carries a control that must fail. `gate-p2`'s ancestral copy of the audit is deliberately not
+  folded in: its wording and ordering differ, and a divergent copy is a finding to settle rather
+  than a caller to convert. **Refused one lift and recording it**: the four gates' governor
+  preamble loops differ in body — `gate-p2`/`gate-p3` call `admission_readback`, `gate-p1`/`p4`
+  do not, and `gate-p4` benchmarks too — so the distinction is arbitrary and sharing it would
+  need a flag telling the function which caller it is. Ledger, `gate-docs.sh`'s own expressions:
+  `shell 15854 / library 8964 / 1.77x` at the start of the session, `shell 15842 / ... / 1.77x`
+  at the end, both 2026-08-31. Net `scripts/` **−12**, which discharges the `+11` shelf; the
+  ratio does not move at two decimals on 12 lines, so the counts are the reading, not the ratio.
 - **Both of CL 824624's falsifiers re-measured, and the mechanism finding given a second
   derivation** (`#127`). The watch protocol's rule 5 makes every number in a review reply pass
   what a CL description passes, so the two figures in `FMAPrefers231`'s doc comment could not be

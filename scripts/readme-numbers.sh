@@ -367,6 +367,13 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
           }
         }
       }
+      # THE DENOMINATOR EVERY BAR DIVIDES BY IS NOW A ROW (#113). Caption-only until now, and the
+      # caption is outside the region criterion 9 re-measures -- the defect 0bbf964 was reverted
+      # for. Emitted after this host'"'"'s routines, so "that same peak" has a referent above it.
+      hce = med(ceil8, h); cn = MEDN
+      if (hce == "") { printf "readme-numbers: [%s] has no measured 8-thread ceiling in these logs, so the denominator its shares divide by cannot be published as a re-measured row (#113)\n", h > "/dev/stderr"; exit 3 }
+      printf "| %s | Ceiling/compute | 8 | %.4g | %.1f%% of %.1f GFLOP/s, that same peak x 8 cores; %s |\n", \
+        model[h], hce, (hce + 0) / p8 * 100, p8, est(cn)
     }
     # The caption, derived from the same parse that produced the rows above it.
     printf "\n%s\n", "CAPTION:" > "/dev/stderr"
@@ -383,6 +390,9 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # older than this script -- the issue-6 comment says "5 of 12 published README rows"
     # about the same 12 ratios -- so naming both denominators is the fix, not renaming one.
     nr = nh * n; nrow = nr * 2
+    # A THIRD COUNT (#113): a ceiling row is not a routine row, so what a reader counts and what
+    # forms pairs diverged. Reusing nrow would have published "All 24 rows" above 27 of them.
+    nrowall = nrow + nh
     g = ""; for (k in gov) g = (g == "" ? k : "mixed")
     # "rev `<sha>`", not "commit `<sha>`": docs-gen.sh:92 parses this exact sentence for
     # /rev `[0-9a-f]{7,40}`/ to date doc-site/numbers.md, and dies with "the page has no
@@ -410,11 +420,11 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # while the rates come from all of them.
     if (nf == 1) {
       printf "All %d rows come from one run — `scripts/gate-p5.sh` at rev `%s`, log in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. The 1-thread and 8-thread rows for a routine are the two arms of that run'"'"'s scaling ratio, so they are directly comparable to each other; rows from different CPUs are not, because the peaks differ.\n\n", \
-        nrow, (jrev == "" ? "unrecorded" : jrev), src, (nsz == "" ? "4096" : nsz), \
+        nrowall, (jrev == "" ? "unrecorded" : jrev), src, (nsz == "" ? "4096" : nsz), \
         (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host") > "/dev/stderr"
     } else {
       printf "All %d rows are per-row medians over the %d archived runs of one era — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N. The 1-thread and 8-thread rows for a routine pool the same archives, so their ratio is a ratio of like estimators; rows from different CPUs are not comparable, because the peaks differ. The verdicts below are the judged run'"'"'s alone — a verdict belongs to the gate that rendered it and two cannot be averaged.\n\n", \
-        nrow, nf, (jrev == "" ? "unrecorded" : jrev), others, src, (nsz == "" ? "4096" : nsz), \
+        nrowall, nf, (jrev == "" ? "unrecorded" : jrev), others, src, (nsz == "" ? "4096" : nsz), \
         (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host") > "/dev/stderr"
     }
     # THE COLUMN DENOMINATOR IS NOT THE CRITERION DENOMINATOR, and after #6 that has
@@ -450,14 +460,16 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
         }
         if (lo == "") continue
         cl = cl (cl == "" ? "" : "; ") sprintf("%s %.1f-%.1f%%", model[h], lo, hi)
-        gp = gp (gp == "" ? "" : ", ") sprintf("%.0f%%", 100 * hc / (8 * hp))
+        # %.1f since #113 put this quantity in the table too: at %.0f the caption said "100%"
+        # three lines under a row saying 99.8% -- caption-vs-table drift, by rounding.
+        gp = gp (gp == "" ? "" : ", ") sprintf("%.1f%%", 100 * hc / (8 * hp))
       }
       sub(/, ([^,]*)$/, " and&", gp); sub(/ and, /, " and ", gp)
       if (cl != "")
         # "In the judged run", not "this run": these shares are the readings the bar compared
         # against, so they come from one archive while the table above pools every archive.
         # Under pooling "this run" has no referent, and the shares would read as medians.
-        printf "Measured in the judged run, as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings'"'"' own rates are deliberately not republished here: nothing in the table above re-measures them, and a rate no instrument re-checks is a claim rather than a measurement (§7 rule 7, and criterion 9 is what noticed). They are in the gate %s this caption names, and publishing them here means first making them re-measured rows.\n\n", (nt == "" ? "8" : nt), cl, gp, retired, (nf == 1 ? "log" : "logs") > "/dev/stderr"
+        printf "Measured in the judged run, as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings'"'"' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).\n\n", (nt == "" ? "8" : nt), cl, gp, retired > "/dev/stderr"
     }
     # The bars in words, not as a ">= %s" with a hole in it. Either may be deferred to
     # its own measurement and both have been, at different times and for the same
@@ -503,7 +515,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # a BASELINE verdict line can be parsed: those lines carry no scaling clause, so this
       # program refuses the whole log, which is the blocker on regenerating the README as
       # medians over this era (#6). Found 2026-08-22 by driving this branch, not by reading it.
-      printf "NONE of the %d routine-host pairs those %d rows form was judged: both bars scripts/gate-p5.sh would enforce are suspended for re-derivation from this era (%s; %s), so every number above is REPORTED and the absence of a shortfall below is not a pass. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
+      printf "NONE of the %d routine-host pairs those %d routine rows form was judged: both bars scripts/gate-p5.sh would enforce are suspended for re-derivation from this era (%s; %s), so every number above is REPORTED and the absence of a shortfall below is not a pass. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
     } else if (nl + nn + ns == 0 && nr - nb - nu == 0) {
       # NOTHING WAS JUDGED, yet bars are in force in this tree -- so the branch above cannot
       # fire and the "N of M clear" branches would headline "0 of the 12 pairs clear the bars",
@@ -511,9 +523,9 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # an untested population is not a result, and printing it as one is the same false
       # attribution this commit removes, one branch over. Reachable with the founding run as
       # sole input, which is exactly how it was found.
-      printf "NONE of the %d routine-host pairs those %d rows form was judged against the bars scripts/gate-p5.sh now enforces (%s; %s), so no number above is a pass and the absence of a shortfall is not one either.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, bc, retired > "/dev/stderr"
+      printf "NONE of the %d routine-host pairs those %d routine rows form was judged against the bars scripts/gate-p5.sh now enforces (%s; %s), so no number above is a pass and the absence of a shortfall is not one either.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, bc, retired > "/dev/stderr"
     } else if (nl + nn + ns == 0 && nb == 0 && nu == 0) {
-      printf "Every one of the %d routine-host pairs those %d rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
+      printf "Every one of the %d routine-host pairs those %d routine rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
     } else if (nl + nn + ns == 0) {
       # EVERY JUDGED PAIR CLEARED, and some pairs were not judged at all. "Every one of the
       # N pairs clears the bars" over a population containing BASELINE rows is the vacuous
@@ -521,13 +533,13 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # So the judged count is the subject and the recorded count is named beside it, in
       # the SAME words the shortfall branch below uses, because two spellings of one
       # disclosure is the drift this whole script exists to end.
-      printf "%d of the %d routine-host pairs those %d rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr - nb - nu, nr, nrow, jb, tb, bc, retired > "/dev/stderr"
+      printf "%d of the %d routine-host pairs those %d routine rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr - nb - nu, nr, nrow, jb, tb, bc, retired > "/dev/stderr"
     } else {
-      # nr, not nr - nb: "the N pairs those M rows form" is a structural claim about the
-      # table -- 24 rows form 12 pairs however many of them anything judged -- so subtracting
+      # nr, not nr - nb: "the N pairs those M routine rows form" is a structural claim about the
+      # table -- 24 routine rows form 12 pairs however many of them anything judged -- so subtracting
       # the baselines here would make the phrase false while the branch above kept it true,
       # which is one caption reading two denominators out of the same six words.
-      printf "%d of the %d routine-host pairs those %d rows form %s not clear the bars scripts/gate-p5.sh enforces (%s; %s; both judged net of confidence intervals).%s ", nl + nn + ns, nr, nrow, (nl + nn + ns == 1 ? "does" : "do"), jb, tb, bc > "/dev/stderr"
+      printf "%d of the %d routine-host pairs those %d routine rows form %s not clear the bars scripts/gate-p5.sh enforces (%s; %s; both judged net of confidence intervals).%s ", nl + nn + ns, nr, nrow, (nl + nn + ns == 1 ? "does" : "do"), jb, tb, bc > "/dev/stderr"
       if (ns > 0) {
         s = ""; for (k = 1; k <= ns; k++) s = s (k > 1 ? "; " : "") short[k]
         printf "%d of the judged routines %s short of %s own host'"'"'s ceiling: %s. ", ns, (ns == 1 ? "falls" : "fall"), (ns == 1 ? "its" : "their"), s > "/dev/stderr"

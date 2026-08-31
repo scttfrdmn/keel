@@ -233,6 +233,18 @@ GATE_PEAK="Peak/avx512"
 # read-only and read-modify-write halves of the bandwidth bracket.
 compute_name() { printf 'Ceiling/compute/%s/threads=%d' "${GATE_PEAK#Peak/}" "$1"; }
 stream_name()  { printf 'Ceiling/stream/%s/threads=%d' "$1" "$2"; }
+# A PUBLISHED ROW NAMES ITS OWN BENCHMARK, and criterion 9 resolves that name here (#113).
+# It called scale_name directly, so a ceiling row resolved to `Scale/Ceiling/compute/n=...`,
+# matched nothing, and was reported as "this gate measured no such row" — a true refusal about
+# the wrong thing. A path-like name no family resolves yields EMPTY instead of a Scale guess:
+# unaddressable and unmeasured need different sentences, and the second blames the run.
+row_name() {
+  case "$1" in
+    Ceiling/compute) compute_name "$2" ;;
+    */*)             ;;
+    *)               scale_name "$1" "$2" ;;
+  esac
+}
 # Two top-level alternatives, each with fewer elements than the names it selects,
 # so each is depth-unconstrained and runs everything beneath it. That is the one
 # reading of `go test -bench`'s two-level split which means what it looks like
@@ -364,12 +376,7 @@ LOCAL_OK=0
 GOEXPERIMENT=simd go test -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
 test_verdict "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK" "every test passes"
 
-HOSTS="$(remote_hosts)"
-# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
-# 2026-08-15). Declared here, where the fleet is named; printed beside the
-# verdict by assumed_ledger below.
-assume_fleet "$HOSTS"
-require_disk
+resolve_fleet
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 
 # The measurement precondition, asserted rather than assumed (§5 rule 5), and the
@@ -1386,7 +1393,12 @@ else
             RBADN="$RBADN ${rben}/threads=${rthr}(no denominator column: never a number without one, §7 rule 7)"
             continue
           fi
-          mgf="$(bench_gflops "$(scale_name "$rben" "$rthr")" "$BENCHCSV")"
+          rname="$(row_name "$rben" "$rthr")"
+          if [[ -z "$rname" ]]; then
+            RBADN="$RBADN ${rben}/threads=${rthr}(no benchmark family here addresses this published name, so criterion 9 cannot re-measure it — #113)"
+            continue
+          fi
+          mgf="$(bench_gflops "$rname" "$BENCHCSV")"
           if [[ -z "$mgf" ]]; then
             RBADN="$RBADN ${rben}/threads=${rthr}(published, but this gate measured no such row)"
           elif ! awk -v a="$rgf" -v b="$mgf" -v t="$README_TOL" 'BEGIN{d=(a-b)/b; if (d<0) d=-d; exit !(d <= t)}'; then

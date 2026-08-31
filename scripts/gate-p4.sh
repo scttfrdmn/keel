@@ -218,12 +218,7 @@ STOCK_OK=0
 go test -count=1 ./... >"$LOG" 2>&1 || STOCK_OK=$?
 test_verdict "local, stock toolchain" "$LOG" "$STOCK_OK" "all tests pass without GOEXPERIMENT=simd"
 
-HOSTS="$(remote_hosts)"
-# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
-# 2026-08-15). Declared here, where the fleet is named; printed beside the
-# verdict by assumed_ledger below.
-assume_fleet "$HOSTS"
-require_disk
+resolve_fleet
 
 # ---- the measurement precondition, asserted rather than assumed
 #
@@ -258,12 +253,7 @@ else
     "cross-compile of linux/amd64 test binary"
   while read -r host; do
     [[ -n "$host" ]] || continue
-    prov="$(remote_probe "$host" || true)"
-    if [[ -z "$prov" ]]; then
-      unmeasured "[$host] unreachable, so this target produced no reading"
-      continue
-    fi
-    info "[$host] $prov"
+    probe_or_unmeasured "$host" || continue
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
     if [[ "$OK" -eq 0 ]]; then
@@ -466,41 +456,7 @@ else
   done
 fi
 
-# ------------------------------ P2's compile-time properties, carried forward
-echo
-echo "-- carried from P2 (criterion 4): the K-loop after triangular masking --"
-info "compile-time property, audited against the linux/amd64 object code the hosts run"
-if GOEXPERIMENT=simd go run ./internal/spill/cmd/spill-audit \
-     -pkg "$KERN_PKG" -func "$KERN_FUNCS" -mode spill -ssa "$SSADIR" >"$AUDITKERN" 2>&1; then
-  sed 's/^/        /' "$AUDITKERN"
-  pass "0 accumulator spills in the steady-state K-loop (P2 property held)"
-  pass "0 calls in the steady-state K-loop (P2 property held)"
-  pass "0 surviving bounds checks in the steady-state K-loop (P2 property held)"
-else
-  sed 's/^/        /' "$AUDITKERN"
-  fail "P4 broke a P2 kernel property; the audit above says which"
-fi
-if go run ./internal/spill/cmd/spill-audit \
-     -pkg ./internal/vec -func "$PEAK_FUNCS" -mode nomemory >"$AUDITPEAK" 2>&1; then
-  pass "every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)"
-else
-  sed 's/^/        /' "$AUDITPEAK"
-  fail "a peak kernel's loop touches memory; the percent-of-peak denominator is not a ceiling"
-fi
-# Every package the derived routines can live in, so a bounds check introduced by a
-# triangular index expression is visible as provenance even where it is outside the
-# K-loop the criterion covers.
-BCE_PKGS="$KERN_PKG ./internal/kern ./internal/pack ./internal/block"
-# shellcheck disable=SC2086 # BCE_PKGS is a deliberate list of package patterns
-if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 \
-     go build -gcflags='-d=ssa/check_bce' $BCE_PKGS 2>"$LOG"; then
-  BCE_N="$(grep -c 'Found Is\(Slice\)\?InBounds' "$LOG" || true)"
-  info "check_bce: ${BCE_N:-0} bounds check(s) across vec+kern+pack+block, all outside the K-loop (provenance; the criterion is the loop-body audit above)"
-  pass "check_bce output recorded as provenance"
-else
-  sed 's/^/        /' "$LOG" | tail -20
-  fail "build with -d=ssa/check_bce failed"
-fi
+carry_p2_properties P4 "triangular masking"
 
 # ------------------------------------- Ssyrk >= 85% of Sgemm at the same size
 echo

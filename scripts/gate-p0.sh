@@ -186,12 +186,7 @@ GOEXPERIMENT=simd go test -v -count=1 ./internal/vec/... >"$TESTLOG" 2>&1 || LOC
 record_target "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$TESTLOG" "$LOCAL_OK"
 
 # Remote targets: ship a cross-compiled static test binary and run it there.
-HOSTS="$(remote_hosts)"
-# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
-# 2026-08-15). Declared here, where the fleet is named; printed beside the
-# verdict by assumed_ledger below.
-assume_fleet "$HOSTS"
-require_disk
+resolve_fleet
 if [[ -z "$HOSTS" ]]; then
   info "no remote targets configured (.keel-hosts or \$KEEL_REMOTE_HOSTS)"
 else

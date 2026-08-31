@@ -404,3 +404,49 @@ reconcile_sweep_best_ipf() {
     pass "SWEEP_BEST_IPF=$stated reconciles against shapegen -frontier: $got from $shape, best of $n emittable zero-spill shapes"
   fi
 }
+
+# carry_p2_properties PHASE LOOP-DESC — P2's three compile-time properties, re-audited against
+# the object code a later phase's kernels actually compile to: no accumulator spill, no call and
+# no surviving bounds check in the steady-state K-loop, plus the register-only peak mix that
+# makes the percent-of-peak denominator a ceiling.
+#
+# Lifted from gate-p3 and gate-p4 (#131), which carried it verbatim apart from the phase name
+# and the loop's description — two arguments, not a mode flag, so this never asks which caller
+# it is. gate-p2's ancestor copy is deliberately NOT folded in: its wording and its ordering
+# both differ, and a divergent copy is a finding to settle on its own rather than a caller to
+# convert (uniformity is not correctness — the divergent one can be the right one).
+carry_p2_properties() {
+  echo
+  echo "-- carried from P2 (criterion 4): the K-loop after $2 --"
+  info "compile-time property, audited against the linux/amd64 object code the hosts run"
+  if GOEXPERIMENT=simd go run ./internal/spill/cmd/spill-audit \
+       -pkg "$KERN_PKG" -func "$KERN_FUNCS" -mode spill -ssa "$SSADIR" >"$AUDITKERN" 2>&1; then
+    sed 's/^/        /' "$AUDITKERN"
+    pass "0 accumulator spills in the steady-state K-loop (P2 property held)"
+    pass "0 calls in the steady-state K-loop (P2 property held)"
+    pass "0 surviving bounds checks in the steady-state K-loop (P2 property held)"
+  else
+    sed 's/^/        /' "$AUDITKERN"
+    fail "$1 broke a P2 kernel property; the audit above says which"
+  fi
+  if go run ./internal/spill/cmd/spill-audit \
+       -pkg ./internal/vec -func "$PEAK_FUNCS" -mode nomemory >"$AUDITPEAK" 2>&1; then
+    pass "every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)"
+  else
+    sed 's/^/        /' "$AUDITPEAK"
+    fail "a peak kernel's loop touches memory; the percent-of-peak denominator is not a ceiling"
+  fi
+  # Every package a derived routine can live in, so a bounds check introduced by an index
+  # expression shows up as provenance even where it is outside the K-loop the criterion covers.
+  BCE_PKGS="$KERN_PKG ./internal/kern ./internal/pack ./internal/block"
+  # shellcheck disable=SC2086 # BCE_PKGS is a deliberate list of package patterns, not one word
+  if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 \
+       go build -gcflags='-d=ssa/check_bce' $BCE_PKGS 2>"$LOG"; then
+    BCE_N="$(grep -c 'Found Is\(Slice\)\?InBounds' "$LOG" || true)"
+    info "check_bce: ${BCE_N:-0} bounds check(s) across vec+kern+pack+block, all outside the K-loop (provenance; the criterion is the loop-body audit above)"
+    pass "check_bce output recorded as provenance"
+  else
+    sed 's/^/        /' "$LOG" | tail -20
+    fail "build with -d=ssa/check_bce failed"
+  fi
+}

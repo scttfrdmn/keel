@@ -129,12 +129,7 @@ LOCAL_OK=0
 GOEXPERIMENT=simd go test -v -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
 score_run "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK"
 
-HOSTS="$(remote_hosts)"
-# The ledger of what this gate trusts rather than checks (#73 tier C, ruled
-# 2026-08-15). Declared here, where the fleet is named; printed beside the
-# verdict by assumed_ledger below.
-assume_fleet "$HOSTS"
-require_disk
+resolve_fleet
 
 # ---- the measurement precondition, asserted rather than assumed (#77)
 #
@@ -172,12 +167,7 @@ else
   while read -r host; do
     [[ -n "$host" ]] || continue
     N_CONF=$((N_CONF + 1))
-    prov="$(remote_probe "$host" || true)"
-    if [[ -z "$prov" ]]; then
-      unmeasured "[$host] unreachable, so this target produced no reading"
-      continue
-    fi
-    info "[$host] $prov"
+    probe_or_unmeasured "$host" || continue
 
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
