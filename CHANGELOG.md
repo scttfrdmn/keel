@@ -9,6 +9,28 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **The live BASELINE-REGISTERED exercise refused a gate that was behaving correctly, and its
+  own derivation-set guard was checking one of the two sets it printed `ok` for (`#119`).**
+  First firing on antares.local found both. (1) The share criterion had no rule-19 escape
+  hatch: the driver expected `$NJ` BASELINE lines, "one per judged routine", where two of three
+  share readings had rendered `NOISE-LIMITED, NOT JUDGED` — Ssyrk's 8-thread interval is
+  `±33.6%`, costing that share 14.70 points against a 2.6-point margin. The ratio criterion has
+  had that hatch since 2026-08-22; the share one was a hardcoded count, and it would have
+  failed all three passes. `swant` is replaced by `preempted CRIT N` and `want_n KIND N`,
+  per routine and per pass for both criteria, keyed to each criterion's own refusal sentence
+  (the shared prefix matches both, measured 1/1/2 against the gate's bytes; disjoint
+  `P5_JUDGED`/`P5_MEASURED` is what makes the short key harmless *today*). Pass 3's skip arm is
+  lifted out of the ratio branch and now keys to pass 1's candidates file rather than a latch.
+  A computed expectation can reach zero, so a `wantc == 0` refusal is added: zero-equals-zero
+  is a green over nothing measured. (2) `${!l}` on `CEIL_DERIVED_FROM` — a name never assigned,
+  the value being in `DERIVED_FROM` — dies inside a process substitution whose status nothing
+  checks, so `set -u` skipped the CEIL arm and the `ok` line asserting the host was outside
+  **both** sets printed anyway. The arm's loss cost nothing, and by containment rather than
+  design: `CEIL_DERIVED_FROM` is a subset of `SCALE_DERIVED_FROM` today. Direct `NAME=VALUE`
+  expansion in the `for` list now aborts the driver instead. Verified against the failing run's
+  own archived artifacts: `want_n share 1` returns 1 where the hardcoded expectation was 3, and
+  2 == the 2 candidate rows that landed. All three new arms driven red and back; 66 fixtures
+  green; `+43` net lines to `scripts/`, disclosed, joining `#131`.
 - **A suspended fleet bar could excuse a host that had a registered bar of its own (`#119`).**
   The share criterion's last guard read `[[ -z "$CEIL_FRACTION" ]]`, testing the *fleet
   constant* after `$BBAR` had already been resolved to this host's own baseline less the
