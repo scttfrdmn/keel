@@ -11,6 +11,20 @@ import "testing"
 //
 // The third property (no memory operand in the steady-state loop) is checked by
 // disassembly in scripts/gate-p2.sh, because no amount of arithmetic can see it.
+//
+// A fourth property is checked NOWHERE, and it is not hypothetical. Nothing pins the
+// instruction count of these loop bodies, so a toolchain change that inflates them
+// lowers the measured ceiling and therefore silently *raises* every percent-of-peak
+// figure computed against it — the failure mode T8 caused in the other direction, with
+// no test to object. Measured while developing the upstream 231-operand rewrite: an
+// unconditional form of that rule took avx512Peak's loop from 27 instructions and 0
+// copies to 53 and 26, because these kernels carry the accumulator as a *multiplicand*
+// and so want 213, the opposite of what a GEMM tile wants. Both tests below stayed
+// green, correctly — the arithmetic and the chain count were untouched.
+//
+// The action that would close it is an insns/FMA criterion for the peak kernels in
+// gate-p2.sh, the shape gate-p3.sh already applies to the shipped tiles through
+// InsnsPerFMA; it is deferred, not undoable (GitHub #145).
 
 // TestPeakChainsAreIndependent is the CSE guard.
 //

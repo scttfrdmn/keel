@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **CL 1 is written and verified, one commit, still unmailed.** Branch `keel-cl1-fma`
+  at `01f89f15da` (`03b7769900` and `7021eebc03` squashed in, `Change-Id: Ifb1d4f47…`):
+  six packed `VFMADD231P{S,D}` ops and a late-lower rule conditional on
+  `z.Uses == 1 || z.Op == ssaop.OpPhi`. **The unconditional form it started as is
+  wrong** — it took `avx512Peak`'s loop from 27 instructions and 0 copies to 53 and 26,
+  because the peak kernels carry the accumulator as a *multiplicand* and want 213. Five
+  loops measured against predictions stated before the run, all five exact: `Kernel4x32`
+  50/12 → **38/0**, `Kernel2x32` 74/8 → **66/0**, `Kernel6x32` 219/45 → **193/19**, both
+  peak kernels unchanged. Both codegen assertions were driven to failure, and a rebuild
+  without the `OpPhi` clause proved it load-bearing (`Kernel4x32` then converts nothing).
+  Two claims withdrawn: the scalar rule is **not** precedent for an unconditional rewrite
+  (there is no scalar 213 op, so it selects nothing), and a narrower phi test fires only
+  at unroll 1. **Not mailed; the description awaits Scott's read (ruling 1).**
 - **Every upstream CL's verification run now carries `-all_codegen` preceded by a
   deliberately false assertion shown to fail** (`docs/upstream-plan.md` discipline item
   9, Scott's ruling): *a prerequisite is proven by its failure mode, not by its

@@ -267,6 +267,16 @@ func TestDiffBinary(t *testing.T) {
 // TestDiffMulAdd holds every backend's fused multiply-add equal to the spec.
 // Separate from the binary ops because it is the op the whole project rests
 // on, and because it needs three operands.
+//
+// It reaches one of the two FMA encodings, and the one the kernels do not use.
+// b.MulAdd is Block-level, so AVX512MulAdd's load512 operands fold straight into
+// the instruction and this executes VFMADD213PS512load; the kernels call FMA512 on
+// values already in registers, which is the register form a compiler operand-form
+// change (golang/go#80829) actually moves. Measured, not assumed: perturbing the
+// register form to a wrong operand permutation left this package PASS and was caught
+// by internal/kern and internal/block, whose differential tests drive the kernels.
+// So the register form is covered — one directory over, not here — and a
+// package-local reading of this test would overstate what it defends.
 func TestDiffMulAdd(t *testing.T) {
 	pool := blockPool()
 	forEachVectorBackend(t, func(t *testing.T, b backend) {

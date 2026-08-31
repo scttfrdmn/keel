@@ -257,9 +257,11 @@ func TestTrsmSolveReplay(t *testing.T) {
 						for i := range want {
 							if want[i] != got[i] {
 								t.Fatalf("element %d (row %d, col %d): the replay gives %v, Trsm at a "+
-									"block-diagonal A gives %v — trsmSolvesOnly no longer walks the "+
-									"partition tri.go walks, so solve-only ÷ full is not the diagonal "+
-									"solves' share of anything",
+									"block-diagonal A gives %v — so solve-only ÷ full is not the "+
+									"diagonal solves' share of anything. The likely cause is that "+
+									"trsmSolvesOnly no longer walks the partition tri.go walks, but "+
+									"any defect that changes an element arrives here, a miscompiled "+
+									"FMA included; confirm the partition before assuming it",
 									i, i/s.n, i%s.n, got[i], want[i])
 							}
 						}

@@ -215,20 +215,85 @@ writes its own addend.
 
 **`Kernel6x32`'s 15 is the positive control**, and it is why the other three zeros
 mean something: shown a loop whose copies are a *different* population the classifier
-declines to attribute them, and the 15 it flags are the `X`-register scalar moves of
-the broadcast round-trip — `golang/go#80835`'s subject, in the kernel CL 1 does not
-cite. An instrument that attributed everything would have proved nothing.
+declines to attribute them. An instrument that attributed everything would have proved
+nothing. **12 of those 15 are the `X`-register scalar moves of the broadcast
+round-trip** — `golang/go#80835`'s subject, in the kernel CL 1 does not cite — and the
+remaining 3 are `Z` copies whose FMA is further than the predicate's two-instruction
+window, not a third population; a coarser `Z`-vs-`X` cut over the same 45 puts them
+with rescue (27/6/12). Both cuts sum to 45 and the 45 stands; only the sentence that
+called all 15 `X` moves was wrong.
 
-**The one step that is structural rather than measured, and it binds both figures
-equally.** That `231` removes these copies follows from the operand form — both
-sources read-only, so no rescue; destination tied to the addend, so the loop-carried
-accumulator never changes register, so no rotation — but **no toolchain emits `231`
-here yet, so nothing about the post-fix code is measured.** This is stated in the CL
-description rather than implied, and it is not a reason to prefer the 12 over the
-one-for-one figure: the 12 counts 8 rotation copies itself, so the unmeasured step is
-already inside CL 1's headline number. Classification was done with a throwaway
-script; the predicates are stated above because the loops are 46 and 50 instructions
-and the check is meant to be redoable by eye.
+**No longer unmeasured: a patched toolchain now emits `231` here.** The step this
+section used to flag as structural — that `231` removes these copies, because both
+sources are read-only so nothing needs rescuing, and the destination is tied to the
+addend so the loop-carried accumulator keeps its register — was reasoning, and the
+instrument has now been run against it (§5 rule 11). `spill-audit`'s own library over
+four listings of `Kernel6x32`'s steady-state loop, one per candidate rule, same
+quantity in each column:
+
+| `Kernel6x32` loop body | before | `z.Uses == 1` | **shipped** | unconditional |
+|---|---|---|---|---|
+| `Z` rescue | 27 | 9 | **0** | 0 |
+| `Z` rotation | 6 | 13 | **1** | 1 |
+| `X` broadcast rescue (`golang/go#80835`) | 12 | 18 | **18** | 18 |
+| register copies | 45 | 40 | **19** | 19 |
+| instructions ÷ arith | 219/48 = 4.56 | 214/48 = 4.46 | 193/48 = **4.02** | 193/48 = 4.02 |
+| FMA forms | 48× 213 | 12× 213, 36× 231 | **48× 231** | 48× 231 |
+| vector stack refs | 44 | 44 | **44** | 44 |
+
+The last two columns are not merely equal per row: **the two rules emit the same 674
+instructions for this function, address-stripped diff clean**, which is why the
+shipped column can carry a copy decomposition measured on the unconditional arm
+without being reclassified. Package-wide the condition changes exactly 22 FMAs —
+`internal/vec` goes 3× 213 / 112× 231 unconditional to 25× 213 / 90× 231 shipped, and
+the 22 are the 12 in `avx512Peak` and the 10 in `avx2Peak`. Nothing else in the
+package sees the condition at all.
+
+`Kernel4x32`, the loop CL 1 cites, goes 50 instructions and 12 copies to **38 and 0**
+— both populations the 4/8 split named, gone, 6.25 → 4.75 instructions per FMA.
+`Kernel2x32` goes 74/8 to 66/0. Under the shipped rule `avx512Peak` and `avx2Peak`
+stay at 27/0 and 23/0, unchanged from stock, which is the null the measurement needs;
+under the unconditional rule they do **not** — that is the next paragraph. Spills sit
+at 44 in every column, so nothing here bought copies with memory traffic.
+
+**The two middle columns are the finding, and they cost two rewrites of the rule.**
+
+A `z.Uses == 1` guard looks prudent and is the one thing that breaks the rewrite: a
+loop-carried accumulator's addend is the loop `Phi`, read by both the FMA and whatever
+consumes the value after the loop, so the guard declines on exactly the shape it was
+written for — and the rotation copies it left behind *grew*, 6 → 13. On `Kernel4x32`,
+the loop CL 1 actually cites, that guard converts **nothing**: 50 instructions and 12
+copies, indistinguishable from stock.
+
+So the rule went unconditional, and **the unconditional form is wrong in the other
+direction.** 231 ties the destination to the addend, which only helps when the addend
+is what the surrounding chain continues in. `avx512Peak` is the mirror image —
+`a_i = FMA512(a_i, y, x)`, where the loop-carried value is a *multiplicand* and the
+addend `x` is loop-invariant — and converting it forced a copy of `x` for each of 12
+chains: **27 instructions and 0 copies became 53 and 26**, 2.25 → 4.42 per FMA.
+`avx2Peak` regressed the same way. These two kernels are keel's percent-of-peak
+*denominator*, so that regression would not have surfaced as a failure; it would have
+lowered measured peak GFLOP/s and silently *raised* every published percentage.
+
+The shipped rule is therefore conditional on a helper, `z.Uses == 1 || z.Op == OpPhi`
+— the addend either dies here or arrives as the phi that a loop-carried accumulator
+looks like on the way in. Both clauses are load-bearing and a third, narrower reading
+of the second was measured and discarded: testing whether *this* FMA supplies the
+phi's own backedge argument fires only at unroll 1, because an unrolled body updates
+each accumulator several times per iteration and the value closing the phi is the
+chain's last FMA. Measured across three kernels of unroll 1, 4 and 4, that narrow form
+left exactly one FMA per accumulator behind — 0, 4 and 12 of 8, 16 and 48 — and cost
+21 of the 26 copies the rewrite removes from `Kernel6x32`.
+
+**No part of this is the scalar path's precedent.** `AMD64Ops.go:834-835` defines
+`VFMADD231SS` and `VFMADD231SD` and *no* scalar 213 op at all, so
+`(FMA x y z) => (VFMADD231SD z x y)` is not a rule choosing between two forms — it is
+the only form there is. An earlier draft of this section cited it as authority for
+rewriting unconditionally; it never was, and that citation is withdrawn.
+
+The `18` in the last two columns is the honest cost term and it is not CL 1's: those
+are `golang/go#80835`'s `X` moves, up from 12 because the freed registers pushed more
+broadcast sources into the high half.
 
 ### The `231` gap was already localized; today only re-dated it
 
