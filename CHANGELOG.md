@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The keel rev CL 2 is verified against is pinned at `ac0f6508e2a4ba6bcbf123e6f397c38f92650574`**,
+  cited by SHA in CL 2's description footnote, because keel's `internal/spill` audit is CL 2's
+  instrument while hygiene work edits `scripts/` underneath it. The pin certifies stability and
+  not birth-correctness (`#143` is open at that rev); admissible only because `#143` is a
+  `gate-p5.sh` share defect and CL 2 reads instruction counts, and the pin advances if any CL 2
+  number turns out to come from a share. Reviewers were assigned 2026-08-31 (Keith Randall,
+  Martin Möhrmann, Jorropo) with no votes or comments — assignment is not a response.
 - **CL 1 is mailed: `golang/go` CL 824624**, https://go-review.googlesource.com/c/go/+/824624,
   status `NEW`, branch `master`, +343/−0, `Change-Id: Ifb1d4f47…` — keel's first change on the
   Go tree. Confirmed from Gerrit's `/detail`, not from the push output. The mailed rev is

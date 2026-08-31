@@ -496,8 +496,34 @@ describes, turning up on its own in a function nobody wrote the rule for.
 https://go-review.googlesource.com/c/go/+/824624, mailed 2026-08-30, status `NEW`, branch
 `master`, +343/−0, `Change-Id: Ifb1d4f4766f4ac43e018ecea75ed6a3dc91cd979`. Confirmed from
 Gerrit's own `/detail` rather than from the push output: the change number, the preserved
-`Change-Id`, the owner, and the insertion count all read back as expected. No reviewer is
-assigned yet.
+`Change-Id`, the owner, and the insertion count all read back as expected.
+
+**Reviewers assigned 2026-08-31:** Keith Randall, Martin Möhrmann, Jorropo, with Gopher
+Robot CC'd. No votes, no inline comments, and the only message is Gopher Robot's
+first-change boilerplate — assignment is not a response, so no patchset is owed. That
+boilerplate does name the freeze windows, which the plan had been treating as a budget
+without stating: **May–July and Nov–Jan**. At the mailing date we are inside an open
+development cycle, so the runway is real rather than nominal.
+
+### The keel rev CL 2 is verified against is pinned at `ac0f650`
+
+CL 2's instrument is keel's `internal/spill` audit and bench harness, and keel's own
+hygiene work is editing `scripts/` underneath it. So every CL 2 verification run is made
+against keel `ac0f6508e2a4ba6bcbf123e6f397c38f92650574`, and the CL 2 description's
+footnote cites that rev rather than "keel at time of writing". Archived logs are never
+rewritten, so a pinned rev plus its archived logs stay mutually consistent no matter what
+lands on `main` afterwards. The commit recording this pin necessarily comes *after*
+`ac0f650`, and changes only this file — so the instrument is identical at both, and the pin
+names the earlier rev deliberately rather than chasing its own SHA.
+
+What the pin does *not* certify: it freezes whatever state `ac0f650` is in, correct or not
+(a pin certifies stability, not birth-correctness — `#143`'s rendered-share comparison is
+open at this rev). That is admissible because `#143` is a defect in `gate-p5.sh`'s share
+criterion, which is not CL 2's instrument; CL 2 measures instruction counts and codegen
+through `internal/spill`, which the fix does not touch. **The condition on that reasoning:
+if any CL 2 number turns out to come from a `gate-p5.sh` share, the pin advances past
+`#143`'s fix and the description cites the newer rev.** Advancing the pin is a decision to
+be recorded here, not a silent bump.
 
 The mailed rev is `fcc582225c`, not the `7e50c40693` that was read and approved. The only
 difference is the author and committer email: `~/.gitconfig` carries the GitHub noreply
