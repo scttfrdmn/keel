@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **A suspended fleet bar could excuse a host that had a registered bar of its own (`#119`).**
+  The share criterion's last guard read `[[ -z "$CEIL_FRACTION" ]]`, testing the *fleet
+  constant* after `$BBAR` had already been resolved to this host's own baseline less the
+  margin — so had the fleet fraction ever been suspended again, a registered host would have
+  been passed as "no fraction in force" against a bar sitting two lines above. Both criteria now
+  test the **resolved** bar. Unreachable today (44.2 is typed) and strictly stricter when
+  reached, so it is checked in a fixture rather than asserted.
 - **The rounding band `#143` is about is real, one-sided and permissive — and it is not at
   the site the issue names.** `$ratio` already arrives from `bench_ratio_lo` at `%.3f`, so
   gate-p5's `frac="$(printf %.1f, 100*$ratio)"` is *lossless* and the prescribed fix moves no
@@ -35,6 +42,53 @@ While the major version is 0, minor versions may contain breaking changes.
   quantum, so it is restated as history rather than left standing.
 
 ### Added
+- **§5 rule 17 now binds the ratio criterion too (`#119`).** gate-p5's `Strsm` scaling bar was
+  one fleet constant judging every host that reported, including hosts outside its derivation
+  set by chronology rather than by any property of their code — the exact asymmetry rule 17
+  settled for the share criterion on 2026-08-21. The classifier is **lifted, not copied**:
+  `baseline_state` in `gate-lib.sh` answers in one word (`nokey`/`conflict`/`fleet`/`registered`/
+  `owing`/`new`) and both criteria call it **with no mode flag** — the derivation list is an
+  *argument*, because the two criteria genuinely have different lists, and that is data rather
+  than a mode. **The two lists differ by one model, and that is the finding:** `STRSM_FLOOR`'s
+  6.067x was derived from three rows (keel-zen5/zen4/skx) where `CEIL_FRACTION`'s 44.2% was
+  derived from two, so reusing the share criterion's list would have handed keel-skx a
+  `BASELINE` for a bar it helped set — rule 17 run backwards. The margin is settled **by rule
+  and then measured**: rule 17(c) requires the fleet bar's own constant, `STRSM_MARGIN=0.403`
+  is already in ratio units and predates the era's rows by six days, and its adequacy was
+  checked by recomputing all three archived take-four rows under the current instrument
+  (`lo` = 6.831/6.635/6.469x, intervals 0.040/0.221/0.230x wide — the margin is **1.75× the
+  widest**). `BASELINE_MARGIN`'s 2.6 is *points of share*: carried across units it would set a
+  registered host's bar looser than the **retired** 6.0x floor. Stated inside the number (§5
+  rule 12): 9 of this era's 15 archived `Strsm` rows are wider than 0.403x, so rule 19
+  out-resolves them before bar selection and the class will register from a minority of its own
+  rows; and the widest width *printed in a gate log* for this era, 0.929x, is a pre-`#116`
+  rendering, so the census that produced it pooled across an instrument change — which is why
+  the check was redone from the archives instead of from the logs. Byproduct: re-running
+  `STRSM_FLOOR`'s formula under the post-`#143` instrument now types **6.066**, so the shipped
+  6.067 is 0.001x *stricter* than its own formula yields — disclosed and deliberately not
+  re-typed, since re-typing downward is loosening. Those same two 0.001 gaps positive-control
+  `#143`. Derivation and both lists in `docs/rulings.md` rule 17; nine fixtures in
+  `scripts/baseline-test.sh` (66 ok), one of them asserting the two *shipped* lists really do
+  differ, negative-controlled against a copy with them unified.
+- **`exercise-baseline.sh` drives both criteria of the class, and its own documented host was
+  the wrong one (`#119`).** Every read-back is now keyed twice — `reaches`/points/2.6/`(#6)`
+  for the share criterion, `scales`/x/0.403/`(#119)` for the ratio one — because the phrase
+  `RECORDED as its candidate baseline rather than judged` had become common to both and would
+  have counted one criterion's line against the other's expectation. Three consequences: the
+  target host must sit outside **both** derivation sets, which retires this file's own two-week-
+  old usage example (`keel-skx` derived `STRSM_FLOOR`, so it would have exercised the share arm
+  and silently rendered `fleet` on the ratio arm); the wrong-era decoy is landed under every
+  criterion key, since a decoy only under `share/` leaves the ratio lookup with nothing above
+  its real row while the log still reads *era scoping held*; and rule 19 can out-resolve the
+  ratio row before it reaches the class at all, which is disclosed per pass and again in the
+  closing summary rather than counted as a clean arm. Verified without host time: eight arms
+  against synthesized pass logs — all-good, rule-19-in-pass-1, registered-then-noisy,
+  **ratio margin in share units**, **share margin in ratio units**, decoy-consulted, and a
+  missing line with no rule-19 excuse — each read the intended verdict, the four false ones
+  as NO. Two reporting defects that surfaced only from those controls are fixed: the NO
+  paragraph told the era story alone where there are now two causes, and the skip line offered
+  two causes joined by *or* when the driver knows which. Still unrun on a host; the live
+  three-pass exercise is the arm64 prerequisite it always was.
 - **The keel rev CL 2 is verified against is pinned at `ac0f6508e2a4ba6bcbf123e6f397c38f92650574`**,
   cited by SHA in CL 2's description footnote, because keel's `internal/spill` audit is CL 2's
   instrument while hygiene work edits `scripts/` underneath it. The pin certifies stability and

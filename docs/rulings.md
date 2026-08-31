@@ -537,6 +537,62 @@ than the truth for any host whose registered baseline sits above the fleet's. A 
 cannot answer a probe also produced no benchmark rows, so the branch is fail-closed and
 unexercised, and that is stated rather than implied.
 
+### The extension to the ratio criteria (#119, ruled 2026-08-29, landed 2026-08-30)
+
+The class was built for the *absolute* criteria and the ratio criteria never got it: a scaling
+bar applied to every host that reported, so a host outside the bar's derivation set was judged
+against an artifact that predates its admission — rule 17's entire subject, unenforced one
+criterion over. Ruled to be legislated **from principle**, with the lab `Strsm` table as
+*exhibit A* rather than as the derivation set: a rule fitted to the rows that motivated it has
+no independent content, which is the objection §5 rule 10 raises about counting corroboration
+as derivation. It is the arm64 prerequisite, because every `c7g`/`c8g` host is by construction
+outside every current bar's derivation set.
+
+**The two derivation sets differ, and that is the finding, not an implementation detail.**
+`STRSM_FLOOR = 6.067x` was derived from **three** take-four rows — `keel-zen5` 6.4699x,
+`keel-zen4` 6.6357x, `keel-skx` 6.8311x — while `CEIL_FRACTION = 44.2%` was derived from
+**two** Zen models with `keel-skx` at `DERIV=0`. So the ratio criterion needs `SCALE_DERIVED_FROM`
+of its own; reusing `CEIL_DERIVED_FROM` would have handed `keel-skx` a `BASELINE` for a bar it
+helped set, which is rule 17 run *backwards* — an exemption granted by a chronology the host
+does not have. Read off the artifact rather than off the constant: recomputing all three rows
+from `archive/pinned8/` take four under the current instrument gives `lo` = 6.831 / 6.635 /
+6.469x, reproducing the derivation the gate prints.
+
+**The margin is `STRSM_MARGIN`, and refusing to convert 2.6 is the design point.** Clause (c)
+requires *"the same margin constant subtracted from a different baseline, never a second
+threshold with a second justification"*, so the per-host ratio bar is `baseline − 0.403x`.
+`BASELINE_MARGIN`'s 2.6 is **points of share** and this bar is in **x**: carried across, a
+registered host's bar would sit 2.6x under its own baseline — looser than the *retired* 6.0x
+general floor, i.e. the surface-form error in numerical clothing. `0.403x` is already in the
+right units, already derived from readings (7.403x, the lowest of the nine that ratified 7.0x,
+less that 7.0x), and predates this era's rows by six days.
+
+That reuse is **checked against the era's archives, not assumed**. Recomputed under the current
+instrument, take four's three ratio intervals are **0.040 / 0.221 / 0.230x** wide, so the margin
+is **1.75×** the widest — the same shape the gate already prints for the share bar. What the
+check cannot see is stated inside it (§5 rule 12): **9 of the era's 15 archived `Strsm` rows are
+wider than 0.403x**, and rule 19 refuses those above bar selection, so this class will register
+baselines from a *minority* of its own rows. The 15 are also not one instrument — every printed
+width in `build/` except `969c360`'s predates #116's CI repair, and the widest of them, 0.929x,
+is a pre-repair rendering rather than an in-era measurement. Pooling it with the recomputed
+three would be the cross-instrument error the era column exists to prevent, arriving through a
+census.
+
+**A byproduct worth recording rather than acting on.** The same recomputation puts `keel-zen5`'s
+`lo` at 6.469x where the published derivation says 6.4699x, because #143 moved `bench_ratio_lo`'s
+final rounding from nearest to down. Re-running the formula today would therefore type **6.066**,
+not 6.067 — so the shipped bar is 0.001x *stricter* than its own formula now yields. Strictness
+is the safe direction, and re-typing a bar downward after the fact is loosening a threshold, so
+the constant stands and the delta is disclosed here (§5 rule 15). It also positive-controls #143:
+the two 0.001 discrepancies are exactly the ones that fix predicts, at the two rows whose bounds
+were not already on the lattice.
+
+**One latent defect fixed in passing.** The share criterion tested `-z "$CEIL_FRACTION"` after
+resolving a per-host bar into `$BBAR`, so a suspended *fleet* bar excused a host whose own
+registered bar was sitting one branch up — a per-host bar overridden by the absence of a bar
+that does not govern it. It now tests the resolved bar. Unreachable while 44.2 is typed, and
+stricter when reached, so it is driven by a fixture rather than asserted.
+
 ## Rule 18 — an instrument measures a noun
 
 *Ruled 2026-08-22. Issue #115, Scott's ruling on the hoist, opening "Yes, the shipped arm

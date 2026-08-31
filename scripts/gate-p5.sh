@@ -200,6 +200,16 @@ STRSM_FLOOR=6.067
 # the derivation and both caveats. It answers the units half of the open question above and NOT
 # the other half: what the typing commit subtracts to set the bar is still that commit's to argue.
 STRSM_MARGIN=0.403
+# The CPU models whose judged rows DERIVED STRSM_FLOOR, and the reason this class needs a
+# list OF ITS OWN rather than borrowing CEIL_DERIVED_FROM (#119, §5 rule 17 extended to the
+# ratio criteria). THE TWO SETS DIFFER BY ONE MODEL, and in the direction that matters:
+# 6.067x was derived from THREE take-four rows including keel-skx's 6.8311x, while 44.2%
+# was derived from two Zen models with skx at DERIV=0. Reusing the share bar's list would
+# hand skx a BASELINE for a bar it helped set — an exemption granted by chronology it does
+# not have, which is rule 17 run backwards. Verified by recomputing all three rows from
+# archive/pinned8/ take four under the current instrument: lo = 6.831 / 6.635 / 6.469x,
+# reproducing the derivation this gate prints, so the set is read off the artifact.
+SCALE_DERIVED_FROM="AMD EPYC 9R14|AMD EPYC 9R45|Intel(R) Xeon(R) Platinum 8124M"
 # The falsified ceiling, recomputed from each run's own declared work split rather
 # than carried as a constant, and reported beside the reading that clears it. Judged
 # by nothing: a future reading landing BELOW it would refute nothing (the nine
@@ -713,6 +723,7 @@ else
 fi
 if [[ -n "$STRSM_FLOOR" ]]; then
   info "judged at >= ${STRSM_FLOOR}x: $P5_MEASURED — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)"
+  info "  and judged PER HOST since 2026-08-30 (#119, §5 rule 17 extended to the ratio criteria): ${STRSM_FLOOR}x binds only the models that derived it (SCALE_DERIVED_FROM, three of them — one MORE than the share bar's two, keel-skx having derived this bar and not that one), and a host outside that set renders BASELINE and registers from its own rows rather than being convicted for a chronology. Its bar is then its own baseline less the same ${STRSM_MARGIN}x — never BASELINE_MARGIN's ${BASELINE_MARGIN}, which is points of share and would set a bar looser than the retired ${SCALE_FLOOR_RETIRED}x floor if carried across units. docs/rulings.md rule 17 carries both derivation sets and the era-archive check on the slack"
   info "  DERIVATION of ${STRSM_FLOOR}x: the lowest of THREE judged rows in the founding campaign's take four (keel-zen5 6.4699x net of CI, recomputed under #116; keel-zen4 6.6357x, keel-skx 6.8311x) less ${STRSM_MARGIN}x, this class's declared slack in its own units — 7.403x, the lowest of the nine readings that ratified 7.0x, less that 7.0x, so it predates these rows by six days and answers the units question the suspension left open. All three rows were admissible under rule 19: intervals 0.229/0.220/0.040x wide against the ${STRSM_MARGIN}x cap, and the slack is 1.8x the argmin's own interval"
   info "  ${STRSM_FLOOR}x IS NOT THE RETIRED ${SCALE_FLOOR_RETIRED}x RETURNING, and it lands within 1.1% of it by coincidence: that constant was a CROSS-HOST quality bar on the whole judged class and was retired for a RANK INVERSION -- it refused Zen 4 at 65.9% of 8x its own core peak and passed Granite Rapids at 34.3%, measuring the wrong quantity by construction. This is a per-routine regression bar on $P5_MEASURED alone, derived on different silicon under a different placement, and none of the grounds for that retirement is disturbed by the arithmetic landing nearby (#37, #6)"
 else
@@ -946,13 +957,9 @@ else
     # the host-level half of it, since the registry is keyed on host × criterion and
     # the criterion half belongs inside the row loop.
     hcpu="$(remote_probe "$host" | cut -d'|' -f1 | sed 's/ *$//' || true)"
-    # Substring, in the same direction and for the same reason as the README criterion's
-    # row match: a probe string that gains a suffix must not silently move a host out of
-    # the derivation set and into registry governance, which would change its bar.
-    DERIV=0
-    while IFS= read -r d; do
-      [[ -n "$d" && "$hcpu" == *"$d"* ]] && DERIV=1
-    done < <(printf '%s\n' "${CEIL_DERIVED_FROM//|/$'\n'}")
+    # Which bar governs is now decided per criterion by baseline_state (#119), because the
+    # two criteria of this class have different derivation sets; the host-level half that
+    # remains is the witness, read once below and consumed by the README criterion too.
     # The witness that separates newness from an unmet obligation: has this SILICON been
     # judged in THIS ERA before. Read once per host because it is a fact about the tracked
     # index, not about a routine. Keyed on the CPU model rather than the hostname, matching
@@ -1090,14 +1097,63 @@ else
         elif awk -v p="$pt" -v l="$lo" -v c="$STRSM_MARGIN" 'BEGIN{exit !(p-l > c)}'; then
           reported "[$host] $r scales ${pt}x, ${lo}x net of CI; model at this shape: rank_update=$ru diag_solve=$ds — NOISE-LIMITED, NOT JUDGED and NOT ELIGIBLE TO TYPE A FLOOR: the interval on this ratio is $(awk -v p="$pt" -v l="$lo" 'BEGIN{printf "%.3f", p-l}')x wide, which exceeds the ${STRSM_MARGIN}x this class's bar was deliberately set under its own reference, so no floor placed with that slack could be adjudicated by this reading. The reading stands and is archived; what is refused is its vote (#6, ruled 2026-08-22)"
           HOST_NOISY_ROWS=$((HOST_NOISY_ROWS + 1))
-        elif [[ -z "$STRSM_FLOOR" ]]; then
-          pass "[$host] $r scales ${pt}x, ${lo}x net of CI; model at this shape: rank_update=$ru diag_solve=$ds — measured and reported, NO FLOOR IN FORCE (#37): 7.0x was ratified 2026-08-16 and is suspended at the 2026-08-22 spread amendment, not never set, and this reading is the input to re-deriving it"
-        elif awk -v v="$lo" -v f="$STRSM_FLOOR" 'BEGIN{exit !(v >= f)}'; then
-          pass "[$host] $r scales ${pt}x, ${lo}x net of CI (>= ${STRSM_FLOOR}x, the regression bar ratified for this class 2026-08-16 under the B-packing-residue model)"
         else
-          fail "[$host] $r scales ${pt}x, ${lo}x net of CI (< ${STRSM_FLOOR}x, the regression bar ratified for this class)"
-          HOST_CLEARED=0
-          HOST_MISSED=1
+          # ---- which bar is in force for this host x this ratio (#119, §5 rule 17 extended)
+          #
+          # THE SAME CLASS THE SHARE CRITERION BELOW HAS HAD SINCE 2026-08-21, and this
+          # criterion had none of it: one scaling bar judged every host that reported,
+          # including hosts absent from its derivation set by chronology rather than by any
+          # property of their code. docs/rulings.md rule 17 carries the extension, both
+          # derivation sets, and the two things checked rather than assumed — why the margin
+          # is STRSM_MARGIN and not BASELINE_MARGIN's 2.6 points (different units, and rule
+          # 17(c) requires the fleet bar's own constant), and what the era's archives say
+          # about whether 0.403x is enough slack for it.
+          SCRIT="scale/$r"; SBAR="$STRSM_FLOOR"
+          SWHY="the fleet bar ratified for this class 2026-08-16 under the B-packing-residue model"
+          SSTATE="$(baseline_state "$BASELINE_REGISTRY" "$BASELINE_WITNESS" "$hcpu" "$SCRIT" "$P5_ERA" "$SCALE_DERIVED_FROM")"
+          if [[ "$SSTATE" == nokey ]]; then
+            unmeasured "[$host] $r scales ${pt}x, ${lo}x net of CI, but the CPU model is unreadable so no bar can be keyed to this host: the reading is unjudged rather than cleared (#119). Fail-closed rather than falling back to the fleet bar, which would be looser than the truth for any host whose registered baseline sits above it"
+            HOST_CLEARED=0; HOST_MEASURED=0
+          elif [[ "$SSTATE" == conflict ]]; then
+            fail "[$host] $SCRIT is claimed by both SCALE_DERIVED_FROM and $BASELINE_REGISTRY, so two artifacts disagree about which bar governs this host and neither may be applied (#119)"
+            HOST_CLEARED=0; HOST_MEASURED=0
+          elif [[ "$SSTATE" == new || "$SSTATE" == owing ]]; then
+            # The candidate carries $lo, the bound the bar is compared against, and not $pt:
+            # a reference minted from a point estimate would set a bar its own interval could
+            # not adjudicate, which is rule 19's subject one line up.
+            baseline_candidate "$BASELINE_CANDIDATES" "$hcpu" "$SCRIT" "$P5_ERA" "$lo" \
+              "SINGLE DRAW from gate-p5 at $P5_REV -- NOT landable as-is (§5 rule 16): re-reduce as a median over N archived runs before committing" \
+              "$BENCH_ARCHIVE" "$(date -u +%Y-%m-%d)" \
+              "admitted after STRSM_FLOOR's derivation set, so the fleet bar's reference artifact predates this host"
+            if [[ "$SSTATE" == new ]]; then
+              [[ "$HOST_BASE" -eq 0 ]] && baseline_candidate "$WITNESS_CANDIDATES" \
+                "$hcpu" "$P5_ERA" "$P5_REV" "$(date -u +%Y-%m-%d)" "$host" "$BENCH_ARCHIVE"
+              baseline "[$host] $r scales ${pt}x, ${lo}x net of CI, and this silicon has no registered baseline and no witness row in era $P5_ERA: the ${STRSM_FLOOR}x bar was derived on three other models, so its reference artifact predates this host's admission and the reading is RECORDED as its candidate baseline rather than judged (#119). Candidate rows: $BASELINE_CANDIDATES and $WITNESS_CANDIDATES"
+              HOST_BASE=1
+            else
+              BASELINE_OWING="$BASELINE_OWING $host/$SCRIT"
+              fail "[$host] $r has no registered baseline in $BASELINE_REGISTRY for era $P5_ERA, and $BASELINE_WITNESS says this silicon was already judged in that era — so the absence is an unmet registration rather than newness, and BASELINE is spent (#119). Land the candidate row emitted at $BASELINE_CANDIDATES"
+            fi
+            HOST_CLEARED=0; HOST_MEASURED=0
+          else
+            if [[ "$SSTATE" == registered ]]; then
+              SROW="$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$SCRIT" "$P5_ERA")"
+              sbval="$(awk -F'\t' '{print $4}' <<<"$SROW")"
+              SBAR="$(awk -v b="$sbval" -v m="$STRSM_MARGIN" 'BEGIN{printf "%.3f", b-m}')"
+              SWHY="this host's registered baseline ${sbval}x (era $(awk -F'\t' '{print $3}' <<<"$SROW")) less the same ${STRSM_MARGIN}x of margin the fleet bar uses (estimator: $(awk -F'\t' '{print $5}' <<<"$SROW"); recomputable from $(awk -F'\t' '{print $6}' <<<"$SROW"); registered $(awk -F'\t' '{print $7}' <<<"$SROW"))"
+            fi
+            # The RESOLVED bar decides, so a suspended fleet bar cannot excuse a registered
+            # host — the same correction made at the share criterion below (#119).
+            if [[ -z "$SBAR" ]]; then
+              pass "[$host] $r scales ${pt}x, ${lo}x net of CI; model at this shape: rank_update=$ru diag_solve=$ds — measured and reported, NO FLOOR IN FORCE (#37): 7.0x was ratified 2026-08-16 and is suspended at the 2026-08-22 spread amendment, not never set, and this reading is the input to re-deriving it"
+            elif awk -v v="$lo" -v f="$SBAR" 'BEGIN{exit !(v >= f)}'; then
+              pass "[$host] $r scales ${pt}x, ${lo}x net of CI (>= ${SBAR}x, $SWHY)"
+            else
+              fail "[$host] $r scales ${pt}x, ${lo}x net of CI (< ${SBAR}x, $SWHY)"
+              HOST_CLEARED=0
+              HOST_MISSED=1
+            fi
+          fi
         fi
 
         # What the printed split is, and — the part a reader cannot reconstruct — what
@@ -1170,18 +1226,19 @@ else
 
       # ---- which bar is in force for this host x this criterion (#6, ruled 2026-08-21)
       #
-      # Three states, decided from two tracked artifacts rather than from a flag, and every
+      # The states are decided from two tracked artifacts rather than from a flag, and every
       # one of them printed with its derivation. The fleet bar is the default only for the
       # hosts that derived it; for everyone else absence of a row is either newness or an
       # obligation, and which one it is is not this criterion's opinion. Both artifacts are
       # read at (cpu_model, era): a baseline governs only readings from the instrument that
       # produced it, so an era boundary renders BASELINE fleet-wide once instead of
-      # convicting every host of a methodology change.
+      # convicting every host of a methodology change. The classification itself is
+      # baseline_state, shared with the ratio criterion above (#119) — the two differ in
+      # their derivation sets, their units and their margin, and in nothing else.
       BCRIT="share/$r"; BBAR="$CEIL_FRACTION"
       BWHY="the fleet bar, whose derivation is printed in this criterion's preamble"
-      BROW=""
-      [[ "$DERIV" -eq 0 && -n "$hcpu" ]] && BROW="$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT" "$P5_ERA")"
-      if [[ -z "$hcpu" ]]; then
+      BSTATE="$(baseline_state "$BASELINE_REGISTRY" "$BASELINE_WITNESS" "$hcpu" "$BCRIT" "$P5_ERA" "$CEIL_DERIVED_FROM")"
+      if [[ "$BSTATE" == nokey ]]; then
         # FAIL-CLOSED, and not a fallback to the fleet bar: the host's identity is the key
         # to its bar, so without it there is no bar in force, and a reading judged against
         # a bar that may not be this host's is not a verdict. Falling back would be looser
@@ -1192,14 +1249,14 @@ else
         unmeasured "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), but the CPU model is unreadable so no bar can be keyed to this host: the reading is unjudged rather than cleared (#6)"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
-      elif [[ "$DERIV" -eq 1 && -n "$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT" "$P5_ERA")" ]]; then
+      elif [[ "$BSTATE" == conflict ]]; then
         # Two independent statements of who governs a host, disagreeing. Reported rather
         # than resolved by precedence: a silent winner here would judge a host against a
         # bar neither the registry nor CEIL_DERIVED_FROM meant it to have.
         fail "[$host] $BCRIT is claimed by both CEIL_DERIVED_FROM and $BASELINE_REGISTRY, so two artifacts disagree about which bar governs this host and neither may be applied (#6)"
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
-      elif [[ "$DERIV" -eq 0 && -z "$BROW" ]]; then
+      elif [[ "$BSTATE" == new || "$BSTATE" == owing ]]; then
         # The class itself. The candidate row is fully formed so that landing it is a
         # review and not a re-derivation — but its estimator column says what one run can
         # support, which is a draw and not a reference (§5 rule 16). The gate proposes;
@@ -1212,7 +1269,7 @@ else
           "SINGLE DRAW from gate-p5 at $P5_REV -- NOT landable as-is (§5 rule 16): re-reduce as a median over N archived runs before committing" \
           "$BENCH_ARCHIVE" "$(date -u +%Y-%m-%d)" \
           "admitted after CEIL_FRACTION's derivation set, so the fleet bar's reference artifact predates this host"
-        if [[ "$HOST_SPENT" -eq 0 ]]; then
+        if [[ "$BSTATE" == new ]]; then
           # The witness that spends this era's one BASELINE is proposed HERE, beside the
           # baseline it spends, and once per host rather than once per routine. Both rows
           # land in one reviewed commit or neither does; landing neither leaves the host
@@ -1228,16 +1285,24 @@ else
         fi
         HOST_CLEARED=0; HOST_MEASURED=0
         continue
-      elif [[ -n "$BROW" ]]; then
+      elif [[ "$BSTATE" == registered ]]; then
         # Field 3 is the era, matched by baseline_lookup, so value/estimator/source/as_of are
         # 4..7. Named here because these ordinals moved when the era column landed and an
         # off-by-one would print a bar made out of a date.
+        BROW="$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$BCRIT" "$P5_ERA")"
         bval="$(awk -F'\t' '{print $4}' <<<"$BROW")"
         BBAR="$(awk -v b="$bval" -v m="$BASELINE_MARGIN" 'BEGIN{printf "%.1f", b-m}')"
         BWHY="this host's registered baseline ${bval}% (era $(awk -F'\t' '{print $3}' <<<"$BROW")) less the same ${BASELINE_MARGIN} points of margin the fleet bar uses (estimator: $(awk -F'\t' '{print $5}' <<<"$BROW"); recomputable from $(awk -F'\t' '{print $6}' <<<"$BROW"); registered $(awk -F'\t' '{print $7}' <<<"$BROW"))"
       fi
 
-      if [[ -z "$CEIL_FRACTION" ]]; then
+      # THE RESOLVED BAR DECIDES, NOT THE FLEET CONSTANT (#119). This read `-z $CEIL_FRACTION`,
+      # which let a suspended fleet bar excuse a host whose own registered bar was sitting in
+      # $BBAR two lines up — a per-host bar overridden by the absence of a bar that does not
+      # govern it. Unreachable today (44.2 is typed) and stricter when reached, so it is
+      # checked in a fixture rather than asserted: baseline-test.sh drives registered-with-an-
+      # empty-fleet-bar and requires a verdict rather than a pass. $BBAR is empty only when a
+      # fleet-governed host meets an empty constant, which is what the message below says.
+      if [[ -z "$BBAR" ]]; then
         # The STRSM_FLOOR precedent (#37): measured, reported, and the input to setting
         # the bar rather than a bar itself. Named as unjudged so no reader can mistake a
         # silent pass for cleared coverage — this class HAS no floor in force right now.
@@ -1373,7 +1438,7 @@ else
     BARS_J="$P5_JUDGED reported against each host's own ceiling with no fraction in force (#6)"
   fi
   if [[ -n "$STRSM_FLOOR" ]]; then
-    BARS_M="${STRSM_FLOOR}x of its own single-thread rate for $P5_MEASURED"
+    BARS_M="${STRSM_FLOOR}x of its own single-thread rate for $P5_MEASURED on the hosts that derived that floor, and a registered baseline less ${STRSM_MARGIN}x elsewhere (#119)"
   else
     BARS_M="$P5_MEASURED is reported unjudged (#37)"
   fi

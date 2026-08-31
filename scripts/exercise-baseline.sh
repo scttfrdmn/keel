@@ -14,6 +14,18 @@
 # project's history found a real defect on first firing (Scott's ruling of 2026-08-21,
 # which ordered this file before that campaign).
 #
+# THE CLASS NOW HAS TWO CRITERIA AND THEY DO NOT SHARE A DERIVATION SET (#119,
+# 2026-08-30). Every read-back below is keyed twice: once to the share criterion (`reaches`,
+# points, BASELINE_MARGIN, `(#6)`) and once to the ratio criterion (`scales`, x,
+# STRSM_MARGIN, `(#119)`). Two consequences a reader of an older version of this file would
+# get wrong. First, the host must sit outside BOTH derivation sets or one criterion renders
+# `fleet` while the other renders the state being exercised -- which retires this file's own
+# usage example: keel-skx derived STRSM_FLOOR and did not derive CEIL_FRACTION, so the host
+# named here for two weeks would now exercise the share arm and skip the ratio arm entirely.
+# Second, the ratio criterion's row can be out-resolved by rule 19 before it reaches the
+# class at all, and that is disclosed per pass rather than absorbed: an unexercised arm is
+# stated inside the result (§5 rule 12), never counted as a clean one.
+#
 # THREE PASSES, ONE HOST, and the third pass carries the era test inside it:
 #
 #   pass 1  registry empty, witness empty
@@ -25,16 +37,16 @@
 #              the branch that makes single-shot mean anything, and #114's fix moved
 #              its witness from a build/ glob to a tracked file: unexercised, a repo
 #              with one landed row and no registry row would have renewed BASELINE.
-#   pass 3  registry landed from pass 1's fracs, PLUS a decoy row in the WRONG ERA
-#           -> judged at (that routine's own baseline - 2.6), with the verdict line
+#   pass 3  registry landed from pass 1's own values, PLUS a decoy row in the WRONG ERA
+#           -> judged at (that criterion's own baseline - its own margin), with the line
 #              naming era `pinned8`. The decoy is a `free-placement` row at 99.0 for
 #              the same CPU and criterion, written ABOVE the real rows because
 #              baseline_lookup returns the first match: below them it would prove
 #              nothing, since the correct row would win either way. So one pass drives
 #              the registered state and both arms of era scoping, and the discriminator
-#              is textual and declared here in advance -- a bar of `frac-2.6` at era
-#              `pinned8` confirms scoping; a bar of 96.4 at era `free-placement`
-#              refutes it and is a finding that outranks the rest of this run.
+#              is textual and declared here in advance -- a bar of `value - margin` at
+#              era `pinned8` confirms scoping; a bar of `99.0 - margin` at era
+#              `free-placement` refutes it and is a finding that outranks this run.
 #
 # WHY A SEAM AND NOT A SHIM. gate-p5.sh:75 carries the argument in full: every route to
 # varying tracked content from outside is closed by other checks this gate enforces
@@ -60,7 +72,7 @@
 # stamped-line audit by one.
 #
 # Usage, detached like any long run (CLAUDE.md):
-#   scripts/detach.sh run baseline-exercise-<rev> -- ./scripts/exercise-baseline.sh keel-skx
+#   scripts/detach.sh run baseline-exercise-<rev> -- ./scripts/exercise-baseline.sh antares.local
 set -euo pipefail
 
 # say LINE... -- one place that writes to both the terminal and the combined log, so a
@@ -135,6 +147,15 @@ main() {
   say ""
   say "instrument exercise: COMPLETE, verdict withheld (each pass exited 2, which is the"
   say "expected synthetic exit and a fact about this driver, not about P5)."
+  # The coverage claim states what it could not see, at the end and not only three screens up
+  # (§5 rule 12): a reader who takes the summary line is the reader this disclosure is for.
+  if [[ "${SCALE_EXERCISED:-1}" -eq 0 ]]; then
+    say "COVERAGE, stated here because the summary is what gets read: the RATIO criterion's"
+    say "three states are UNEXERCISED in this run -- rule 19 out-resolved its row in pass 1, so"
+    say "no candidate baseline was proposed for it and no bar of its could be registered. What"
+    say "this run exercised is the share and README criteria. Re-run on a quieter host to reach"
+    say "the arm #119 added; nothing about this driver needs changing to do it."
+  fi
   say "log: $LOG   passes: $DIR/pass{1,2,3}.log   substituted rows: $DIR/*.tsv"
   exit 2
 }
@@ -262,13 +283,18 @@ preflight() {
   say "   ok    era resolves: $ERA ($PROV) -- every row this exercise writes is keyed to it"
 
   # 6. The host must be governed by the REGISTRY and not by the fleet bar, or the class
-  # never fires. CEIL_DERIVED_FROM is read out of gate-p5.sh's bytes rather than restated
-  # here, so a host added to the derivation set later cannot be exercised as if it were
-  # still outside it. This is the one preflight step that contacts the host.
+  # never fires. Both lists are read out of gate-p5.sh's bytes rather than restated here,
+  # so a host added to either derivation set later cannot be exercised as if it were still
+  # outside it -- and BOTH are required, because the two criteria's sets differ by one model
+  # (#119): a host inside only one of them exercises one criterion and silently renders
+  # `fleet` on the other, which reads in the log exactly like a clean single-criterion pass.
+  # This is the one preflight step that contacts the host.
   DERIVED_FROM="$(sed -n 's/^CEIL_DERIVED_FROM="\(.*\)"$/\1/p' scripts/gate-p5.sh | head -1)"
-  if [[ -z "$DERIVED_FROM" ]]; then
-    refuse "exercise-baseline: cannot read CEIL_DERIVED_FROM out of scripts/gate-p5.sh, so" \
-           "  which bar governs $HOST is unknown to this driver."
+  SCALE_DERIVED_FROM="$(sed -n 's/^SCALE_DERIVED_FROM="\(.*\)"$/\1/p' scripts/gate-p5.sh | head -1)"
+  if [[ -z "$DERIVED_FROM" || -z "$SCALE_DERIVED_FROM" ]]; then
+    refuse "exercise-baseline: cannot read CEIL_DERIVED_FROM ('$DERIVED_FROM') or" \
+           "  SCALE_DERIVED_FROM ('$SCALE_DERIVED_FROM') out of scripts/gate-p5.sh, so which" \
+           "  bar governs $HOST is unknown to this driver for at least one criterion."
   fi
   # shellcheck source=scripts/remote.sh
   source scripts/remote.sh
@@ -278,19 +304,22 @@ preflight() {
            "  every row this exercise writes -- is unreadable. A host that cannot answer a" \
            "  probe cannot produce the sweep the class reads."
   fi
-  while IFS= read -r d; do
-    # `if`, not `test && refuse`: an AND-list whose test is false returns 1 at statement
-    # position, and under `set -e` that exits the driver -- on the FIRST entry the host does
-    # not match, which is every entry in the passing case. The guard would have aborted the
-    # exercise precisely when it had nothing to complain about.
-    if [[ -n "$d" && "$HCPU" == *"$d"* ]]; then
-      refuse "exercise-baseline: $HOST reports '$HCPU', which matches CEIL_DERIVED_FROM entry" \
-        "  '$d'. That host is governed by the fleet bar, so the BASELINE-REGISTERED class" \
-        "  never fires on it and pass 3 would hit the both-artifacts-claim-it FAIL instead." \
-        "  Point this exercise at a host outside the derivation set."
-    fi
-  done < <(printf '%s\n' "${DERIVED_FROM//|/$'\n'}")
-  say "   ok    $HOST is '$HCPU', outside CEIL_DERIVED_FROM, so the registry governs it"
+  for l in CEIL_DERIVED_FROM SCALE_DERIVED_FROM; do
+    while IFS= read -r d; do
+      # `if`, not `test && refuse`: an AND-list whose test is false returns 1 at statement
+      # position, and under `set -e` that exits the driver -- on the FIRST entry the host does
+      # not match, which is every entry in the passing case. The guard would have aborted the
+      # exercise precisely when it had nothing to complain about.
+      if [[ -n "$d" && "$HCPU" == *"$d"* ]]; then
+        refuse "exercise-baseline: $HOST reports '$HCPU', which matches $l entry '$d'. That" \
+          "  host is governed by that criterion's fleet bar, so the BASELINE-REGISTERED class" \
+          "  never fires on it and pass 3 would hit the both-artifacts-claim-it FAIL instead." \
+          "  Point this exercise at a host outside BOTH derivation sets (#119): they differ by" \
+          "  one model, so 'outside the other one' is not the same question."
+      fi
+    done < <(printf '%s\n' "${!l//|/$'\n'}")
+  done
+  say "   ok    $HOST is '$HCPU', outside CEIL_DERIVED_FROM and SCALE_DERIVED_FROM, so the registry governs both criteria"
 
   # 7. What the shipped registry already says about this host, disclosed rather than
   # assumed away: the substitution is built from headers alone, so if scripts/ already
@@ -306,12 +335,23 @@ preflight() {
   # first time a routine joins the class.
   JUDGED="$(sed -n 's/^P5_JUDGED="\(.*\)"$/\1/p' scripts/gate-p5.sh | head -1)"
   MARGIN="$(sed -n 's/^BASELINE_MARGIN=\([0-9.]*\)$/\1/p' scripts/gate-p5.sh | head -1)"
-  if [[ -z "$JUDGED" || -z "$MARGIN" ]]; then
-    refuse "exercise-baseline: cannot read P5_JUDGED ('$JUDGED') or BASELINE_MARGIN ('$MARGIN')" \
-           "  out of scripts/gate-p5.sh, so the counts and bars below have nothing to check."
+  MEASURED="$(sed -n 's/^P5_MEASURED="\(.*\)"$/\1/p' scripts/gate-p5.sh | head -1)"
+  SMARGIN="$(sed -n 's/^STRSM_MARGIN=\([0-9.]*\)$/\1/p' scripts/gate-p5.sh | head -1)"
+  if [[ -z "$JUDGED" || -z "$MARGIN" || -z "$MEASURED" || -z "$SMARGIN" ]]; then
+    refuse "exercise-baseline: cannot read P5_JUDGED ('$JUDGED'), BASELINE_MARGIN ('$MARGIN')," \
+           "  P5_MEASURED ('$MEASURED') or STRSM_MARGIN ('$SMARGIN') out of scripts/gate-p5.sh," \
+           "  so the counts and bars below have nothing to check for at least one criterion."
   fi
   NJ="$(printf '%s\n' $JUDGED | grep -c . || true)"
-  say "   ok    judged routines: $JUDGED ($NJ), margin $MARGIN points -- both read from the gate, not restated"
+  NM="$(printf '%s\n' $MEASURED | grep -c . || true)"
+  # The criterion KEYS, built once here in the gate's own two spellings: every row this
+  # driver lands or looks up is keyed by one of these, and two spellings typed at four sites
+  # is how the decoy ends up under a key no criterion reads.
+  CRITS=""
+  for r in $JUDGED; do CRITS="$CRITS share/$r"; done
+  for r in $MEASURED; do CRITS="$CRITS scale/$r"; done
+  say "   ok    share criterion: $JUDGED ($NJ) at margin $MARGIN points; ratio criterion: $MEASURED ($NM) at margin ${SMARGIN}x"
+  say "         -- all four read from the gate, and the margins are DIFFERENT UNITS, which is why neither is reused for the other (#119)"
   say ""
 }
 
@@ -392,6 +432,21 @@ run_pass() {
 # count PATTERN N -- occurrences of a verdict phrase in pass N's stripped log.
 count() { grep -cF "$1" "$DIR/pass$2.txt" || true; }
 
+# swant N -- how many ratio-criterion verdict lines pass N could possibly have rendered: $NM
+# if its row reached the bar block, 0 if rule 19 out-resolved the row first. Rule 19 sits
+# AHEAD of bar selection there, and 9 of this era's 15 archived Strsm rows are wider than
+# STRSM_MARGIN, so an arm lost to noise is the likely case rather than the exotic one.
+#
+# PER PASS AND NOT LATCHED, which is the direction that can be wrong in only one way: each
+# pass is its own measurement, so an arm too noisy to judge on one sweep can be quiet enough
+# on the next, and an expectation carried forward would read a working arm as a broken one.
+# Rule 19's refusal is the ONLY excuse admitted -- any other reason the line is missing leaves
+# the expectation at $NM and reads as a NO, which is where an unmeasured arm belongs.
+swant() {
+  if [[ "$(count 'NOT ELIGIBLE TO TYPE A FLOOR' "$1")" -eq 0 ]]; then printf '%s\n' "$NM"
+  else printf '0\n'; fi
+}
+
 # dlogs LOG -- the delegated log path LOG names, if any. Keyed to the phrase the gates
 # print and tolerant of ANY prefix: instrument_exercise stamps info lines too, so
 # `[synthetic] ` sits between the indent and the phrase, and an anchored `^ *full output:`
@@ -410,20 +465,38 @@ dlogs() {
 # fail-closed direction: a gate whose wording changes without this driver being updated
 # must say the branch did not fire, never mistake a neighbouring branch for the target.
 readback_new() {
-  local nb nr tally cand wit
-  nb="$(count 'RECORDED as its candidate baseline rather than judged' 1)"
+  local nb ns nr tally cand wit wantc
+  nb="$(count 'RECORDED as its candidate baseline rather than judged (#6)' 1)"
+  ns="$(count 'RECORDED as its candidate baseline rather than judged (#119)' 1)"
   nr="$(count "its absence here is this host's admission date" 1)"
   tally="$(grep -F 'rendered BASELINE this run in era' "$DIR/pass1.txt" | tail -1 || true)"
   cand="$(awk -F'\t' '!/^#/ && NF >= 8' "$DIR/pass1-baseline-candidates-$REV.tsv" 2>/dev/null | grep -c . || true)"
   wit="$(awk -F'\t' '!/^#/ && NF >= 6' "$DIR/pass1-witness-candidates-$REV.tsv" 2>/dev/null | grep -c . || true)"
+  # SCALE_EXERCISED is pass 1's answer specifically, and it is the one place a latch is right:
+  # pass 3 judges against a row this pass proposes, so a ratio row that never got proposed
+  # here cannot be registered there however quiet pass 3 turns out to be.
+  SWANT="$(swant 1)"
+  SCALE_EXERCISED=1
+  [[ "$SWANT" -gt 0 ]] || SCALE_EXERCISED=0
+  wantc=$((NJ + SWANT))
   say "   share criterion, BASELINE lines:  $nb (expected $NJ, one per judged routine)"
+  say "   ratio criterion, BASELINE lines:  $ns (expected $SWANT)"
   say "   README criterion, BASELINE lines: $nr (expected 1)"
-  say "   candidate rows: $cand baseline, $wit witness"
+  say "   candidate rows: $cand baseline (expected $wantc), $wit witness"
   say "   fleet tally:    ${tally:-none printed}"
-  if [[ "$nb" -eq "$NJ" && "$nr" -eq 1 && "$cand" -eq "$NJ" && "$wit" -eq 1 ]]; then
-    say "   YES for the 'new' state: both criteria of the class rendered BASELINE on a host"
-    say "   with no registry row and no witness row, and the gate proposed exactly the rows"
-    say "   a reviewed commit would land -- $NJ baselines and one witness, once per host."
+  if [[ "$SCALE_EXERCISED" -eq 0 ]]; then
+    say "   DISCLOSED, and it is a limit on this whole run rather than on this pass: rule 19"
+    say "   out-resolved the ratio criterion's row before it reached the class, so no candidate"
+    say "   baseline exists for it and pass 3 cannot register it whatever pass 3 measures."
+    say "   This host's Strsm interval is wider than ${SMARGIN}x; a quieter host or more samples"
+    say "   is what would exercise that arm -- not a change to this driver."
+  fi
+  if [[ "$nb" -eq "$NJ" && "$ns" -eq "$SWANT" && "$nr" -eq 1 &&
+        "$cand" -eq "$wantc" && "$wit" -eq 1 ]]; then
+    say "   YES for the 'new' state: every criterion of the class that could be reached"
+    say "   rendered BASELINE on a host with no registry row and no witness row, and the gate"
+    say "   proposed exactly the rows a reviewed commit would land -- $wantc baselines across"
+    say "   both criteria and one witness, once per host and not once per routine."
   else
     say "   NO for the 'new' state: the counts above are not the class's empty-registry"
     say "   rendering, so passes 2 and 3 rest on nothing. Read $DIR/pass1.log."
@@ -433,19 +506,26 @@ readback_new() {
 }
 
 readback_owing() {
-  local ns nr debt renewed
+  local ns nx nr debt renewed w2
   ns="$(count 'BASELINE is spent (#6). Land the candidate row' 2)"
+  nx="$(count 'BASELINE is spent (#119). Land the candidate row' 2)"
   nr="$(count 'so its numbers are unpublished rather than unborn' 2)"
   debt="$(grep -F 'hosts owing registration:' "$DIR/pass2.txt" | tail -1 || true)"
-  renewed="$(count 'RECORDED as its candidate baseline rather than judged' 2)"
+  # BOTH criteria's phrases, because a renewal on either is #114's defect and the substring
+  # they used to share would have counted one criterion's renewal against the other's silence.
+  renewed="$(count 'RECORDED as its candidate baseline rather than judged (#6)' 2)"
+  renewed=$((renewed + $(count 'RECORDED as its candidate baseline rather than judged (#119)' 2) ))
+  w2="$(swant 2)"
   say "   share criterion, spent FAILs:  $ns (expected $NJ)"
+  say "   ratio criterion, spent FAILs:  $nx (expected $w2)"
   say "   README criterion, spent FAILs: $nr (expected 1)"
   say "   BASELINE renewals:             $renewed (expected 0 -- a renewal here is #114's defect)"
   say "   debt line:                     ${debt:-none printed}"
-  if [[ "$ns" -eq "$NJ" && "$nr" -eq 1 && "$renewed" -eq 0 && -n "$debt" ]]; then
+  if [[ "$ns" -eq "$NJ" && "$nx" -eq "$w2" && "$nr" -eq 1 &&
+        "$renewed" -eq 0 && -n "$debt" ]]; then
     say "   YES for the 'owing' state: one landed witness row and no registry row converts"
-    say "   the same absence pass 1 read as newness into an unmet obligation, on both"
-    say "   criteria, and the debt is printed rather than absorbed."
+    say "   the same absence pass 1 read as newness into an unmet obligation, on every"
+    say "   criterion that reached the class, and the debt is printed rather than absorbed."
   else
     say "   NO for the 'owing' state. A nonzero renewal count is the specific failure #114"
     say "   named: a witness the gate cannot see means BASELINE never spends."
@@ -454,44 +534,79 @@ readback_owing() {
 }
 
 readback_registered() {
-  local line bar bval bera bad=0 seen=0 r want
+  local line bar bval bera bad=0 seen=0 c r want u m fmt verb w3 wseen
+  w3="$(swant 3)"
+  [[ "$SCALE_EXERCISED" -eq 1 ]] || w3=0
+  wseen=$((NJ + w3))
   say "   the decoy: a free-placement row at 99.0 sits ABOVE the real rows, so a bar of"
-  say "   96.4 or an era of free-placement in any line below refutes era scoping."
-  for r in $JUDGED; do
-    want="$(awk -F'\t' -v k="share/$r" '!/^#/ && $2 == k {print $4; exit}' "$DIR/pass1-baseline-candidates-$REV.tsv")"
-    line="$(grep -F "] $r reaches" "$DIR/pass3.txt" | grep -F 'registered baseline' | tail -1 || true)"
+  say "   99.0 less that criterion's own margin, or an era of free-placement in any line"
+  say "   below, refutes era scoping."
+  for c in $CRITS; do
+    r="${c#*/}"
+    # Each criterion is read in ITS OWN units, margin, verb and precision, all four taken from
+    # the gate: `%`/2.6/`reaches`/%.1f for the share criterion, `x`/0.403/`scales`/%.3f for the
+    # ratio one (#119). A single set carried across both is #110's units error, and here it
+    # would not even find a line to be wrong about.
+    case "$c" in
+      share/*) u='%'; m="$MARGIN"; verb='reaches'; fmt='%.1f' ;;
+      *)       u='x'; m="$SMARGIN"; verb='scales';  fmt='%.3f'
+               if [[ "$w3" -eq 0 ]]; then
+                 # WHICH of the two, not either: the driver knows, and "or" in a skip line is
+                 # a reader's dead end. They are different facts about the fleet -- one says
+                 # the reference was never proposed, the other says this sweep was too noisy.
+                 if [[ "$SCALE_EXERCISED" -eq 0 ]]; then
+                   say "   $c: SKIPPED and unexercised -- pass 1 proposed no candidate baseline for"
+                   say "     it, so there is nothing registered to judge against here."
+                 else
+                   say "   $c: SKIPPED and unexercised -- a row WAS registered from pass 1, and rule"
+                   say "     19 out-resolved THIS pass's reading before it reached the bar."
+                 fi
+                 say "     Stated, not counted as clean."
+                 continue
+               fi ;;
+    esac
+    want="$(awk -F'\t' -v k="$c" '!/^#/ && $2 == k {print $4; exit}' "$DIR/pass1-baseline-candidates-$REV.tsv")"
+    line="$(grep -F "] $r $verb" "$DIR/pass3.txt" | grep -F 'registered baseline' | tail -1 || true)"
     if [[ -z "$line" ]]; then
-      say "   $r: NO line naming a registered baseline at all"
+      say "   $c: NO line naming a registered baseline at all"
       bad=1; continue
     fi
     seen=$((seen + 1))
-    bar="$(sed -n 's/.*(>= \([0-9.]*\)%, this host.s registered baseline.*/\1/p;s/.*(< \([0-9.]*\)%, this host.s registered baseline.*/\1/p' <<<"$line" | head -1)"
-    bval="$(sed -n "s/.*registered baseline \([0-9.]*\)% (era \([^)]*\)).*/\1/p" <<<"$line" | head -1)"
-    bera="$(sed -n "s/.*registered baseline \([0-9.]*\)% (era \([^)]*\)).*/\2/p" <<<"$line" | head -1)"
+    bar="$(sed -n "s/.*(>= \([0-9.]*\)$u, this host.s registered baseline.*/\1/p;s/.*(< \([0-9.]*\)$u, this host.s registered baseline.*/\1/p" <<<"$line" | head -1)"
+    bval="$(sed -n "s/.*registered baseline \([0-9.]*\)$u (era \([^)]*\)).*/\1/p" <<<"$line" | head -1)"
+    bera="$(sed -n "s/.*registered baseline \([0-9.]*\)$u (era \([^)]*\)).*/\2/p" <<<"$line" | head -1)"
     local expect
-    expect="$(awk -v b="$want" -v m="$MARGIN" 'BEGIN{printf "%.1f", b-m}')"
+    expect="$(awk -v b="$want" -v m="$m" -v f="$fmt" 'BEGIN{printf f, b-m}')"
     if [[ "$bera" != "$ERA" ]]; then
-      say "   $r: era scoping REFUTED -- the bar came from era '$bera', not '$ERA'"
+      say "   $c: era scoping REFUTED -- the bar came from era '$bera', not '$ERA'"
       bad=1
     elif [[ "$bval" != "$want" ]]; then
-      say "   $r: the bar rests on baseline $bval% where the landed row says $want%"
+      say "   $c: the bar rests on baseline $bval$u where the landed row says $want$u"
       bad=1
     elif [[ "$bar" != "$expect" ]]; then
-      say "   $r: bar $bar% where $want - $MARGIN = $expect%"
+      say "   $c: bar $bar$u where $want - $m = $expect$u"
       bad=1
     else
-      say "   $r: judged at $bar% = $want% - $MARGIN, era $bera (the decoy's 99.0 was not consulted)"
+      say "   $c: judged at $bar$u = $want$u - $m, era $bera (the decoy's 99.0 was not consulted)"
     fi
   done
-  if [[ "$bad" -eq 0 && "$seen" -eq "$NJ" ]]; then
+  if [[ "$bad" -eq 0 && "$seen" -eq "$wseen" ]]; then
     say "   YES for the 'registered' state, and era scoping holds in both directions: the"
-    say "   in-era row governed every judged routine and the wrong-era row above it was"
-    say "   not read, on the same pass and from the same lookup."
+    say "   in-era row governed every criterion that reached the class ($seen of $((NJ + NM)))"
+    say "   and the wrong-era row above it was not read, on the same pass and one lookup."
   else
-    say "   NO for the 'registered' state. If the era named above is free-placement this is"
-    say "   the finding that outranks the rest of this run: a baseline from the retired"
-    say "   instrument would judge pinned readings, which is the misattribution the era"
-    say "   boundary exists to prevent."
+    # TWO CAUSES, NAMED SEPARATELY. This paragraph used to tell the era story alone, which was
+    # the only way to fail it while one criterion had one margin. A wrong margin -- 2.6
+    # subtracted from a ratio, the units error #119 refused by rule -- now fails it too, and
+    # the per-criterion lines above say which happened. One verdict standing for two causes is
+    # what DESIGN.md §5.6 forbids, and a report of it is no exception.
+    say "   NO for the 'registered' state, and the lines above say which of two things went"
+    say "   wrong. An era of free-placement is the finding that outranks the rest of this run:"
+    say "   a baseline from the retired instrument judging pinned readings is the exact"
+    say "   misattribution the era boundary exists to prevent. A bar that is neither the"
+    say "   landed value nor that value less THAT criterion's own margin is the other: the"
+    say "   share criterion is in points and the ratio criterion is in x, and a margin carried"
+    say "   between them is #110's units error arriving one criterion over (#119)."
   fi
 }
 
@@ -513,13 +628,16 @@ land_registry() {
   # first matching row and stops, so a wrong-era row below the right one would be
   # skipped whether or not the era column is honoured. Above it, only era matching keeps
   # it out.
-  local r
-  for r in $JUDGED; do
-    printf '%s\tshare/%s\tfree-placement\t99.0\tSYNTHETIC DECOY -- a wrong-era row this run must not consult\t—\t%s\tsynthetic: era-scoping negative control (scripts/exercise-baseline.sh)\n' \
-      "$HCPU" "$r" "$(date -u +%Y-%m-%d)" >>"$DIR/host-baselines.tsv"
+  local c
+  # One decoy per criterion KEY, from $CRITS: a decoy written only under `share/` would leave
+  # the ratio criterion's lookup with nothing above its real row, so the era test would not
+  # cover the criterion #119 just added -- and the log would still say era scoping held.
+  for c in $CRITS; do
+    printf '%s\t%s\tfree-placement\t99.0\tSYNTHETIC DECOY -- a wrong-era row this run must not consult\t—\t%s\tsynthetic: era-scoping negative control (scripts/exercise-baseline.sh)\n' \
+      "$HCPU" "$c" "$(date -u +%Y-%m-%d)" >>"$DIR/host-baselines.tsv"
   done
   awk -F'\t' '!/^#/ && NF >= 8' "$DIR/pass1-baseline-candidates-$REV.tsv" >>"$DIR/host-baselines.tsv"
-  say "   landed into $DIR/host-baselines.tsv: $NJ decoy row(s) at era free-placement, then"
+  say "   landed into $DIR/host-baselines.tsv: $((NJ + NM)) decoy row(s) at era free-placement, then"
   say "   $(awk -F'\t' -v e="$ERA" '!/^#/ && $3 == e' "$DIR/host-baselines.tsv" | grep -c . || true) real row(s) at era $ERA, in that order"
 }
 

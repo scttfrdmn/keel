@@ -287,5 +287,74 @@ is 'the tracked witness index was not written' "$(cksum <scripts/judged-runs.tsv
 is 'the shipped era ledger resolves an era' \
    "$([[ -n "$(era_current scripts/measurement-eras.tsv)" ]] && echo yes)" 'yes'
 
+echo "-- baseline_state: the classifier both criteria of the class now share (#119) --"
+# The six states in one place, because #119 gave the RATIO criteria the per-host admission
+# only the share criterion had, and the way two criteria stay one class is one classifier.
+# ARM is the `new` fixture on purpose: arm64 is what #119 blocks, and every c7g is outside
+# every current bar's derivation set by construction.
+CEILD='AMD EPYC 9R14|AMD EPYC 9R45'
+SCALED='AMD EPYC 9R14|AMD EPYC 9R45|Intel(R) Xeon(R) Platinum 8124M'
+ARM='ARM Neoverse-V2'
+# 32. Fail-closed first: no key, no bar. Argued at the call site as unreachable (a host
+#     that cannot answer a probe produced no rows), so it is driven here instead.
+is 'an unreadable CPU model resolves to nokey' \
+   "$(baseline_state "$REG" "$WIT" '' share/Sgemm "$ERA" "$CEILD")" 'nokey'
+# 33. In the derivation list: the artifact does not predate this host, so the fleet bar
+#     stands. Substring, and the suffix case is the one that must not flip governance.
+is 'a model in the derivation set is fleet-governed' \
+   "$(baseline_state "$REG" "$WIT" 'AMD EPYC 9R45' share/Ssyrk "$ERA" "$CEILD")" 'fleet'
+is 'a probe string with a suffix stays in the derivation set' \
+   "$(baseline_state "$REG" "$WIT" 'AMD EPYC 9R45 96-Core Processor' share/Ssyrk "$ERA" "$CEILD")" 'fleet'
+# 34. Both artifacts claiming one host is reported, never resolved by precedence. The
+#     registry fixture carries a 9R14 row for exactly this.
+is 'a host claimed by both the derivation set and the registry is a conflict' \
+   "$(baseline_state "$REG" "$WIT" 'AMD EPYC 9R14' share/Sgemm "$ERA" "$CEILD")" 'conflict'
+# 35. THE #119 FINDING, as a fixture rather than a claim: one host, one criterion key, two
+#     derivation lists, two different governing states. skx derived STRSM_FLOOR and did not
+#     derive CEIL_FRACTION, so a shared list would have handed it a BASELINE for a bar it
+#     helped set — rule 17 run backwards. Driven on BOTH criterion keys because the two
+#     lists diverge in two different ways and only one of them is the exemption hazard: on a
+#     key it has a row for, the wrong list turns a registration into a governance conflict;
+#     on a key it does not, the wrong list turns an obligation into a fleet bar. These are
+#     the cases that fail if the two lists are ever "unified".
+is 'skx is registry-governed under the share bar derivation set' \
+   "$(baseline_state "$REG" "$WIT" "$CPU" share/Sgemm "$ERA" "$CEILD")" 'registered'
+is 'and the ratio set claims the same registered row, which is a conflict and not a bar' \
+   "$(baseline_state "$REG" "$WIT" "$CPU" share/Sgemm "$ERA" "$SCALED")" 'conflict'
+is 'skx is fleet-governed for the ratio bar it helped derive' \
+   "$(baseline_state "$REG" "$WIT" "$CPU" scale/Strsm "$ERA" "$SCALED")" 'fleet'
+# 36. And the shipped constants really are the two different lists this turns on — a check
+#     about THIS tree, like case 31, because the fixture above proves the classifier and
+#     says nothing about what gate-p5 hands it.
+is 'the shipped ratio derivation set includes the Intel model' \
+   "$(/usr/bin/grep -c '^SCALE_DERIVED_FROM=.*Intel' scripts/gate-p5.sh)" '1'
+is 'the shipped share derivation set does not' \
+   "$(/usr/bin/grep -c '^CEIL_DERIVED_FROM=.*Intel' scripts/gate-p5.sh)" '0'
+# 37. Newness against an unmet obligation, the distinction the witness exists for, driven
+#     on a host outside every derivation set — which every arm64 host will be.
+is 'a model with no row and no witness is new' \
+   "$(baseline_state "$REG" "$WIT" "$ARM" scale/Strsm "$ERA" "$SCALED")" 'new'
+is 'a witnessed model with no row for this criterion is owing' \
+   "$(baseline_state "$REG" "$WIT" "$CPU" scale/Strsm "$ERA" "$CEILD")" 'owing'
+# 38. Era scoping survives the lift. The registry holds a share/Strsm row for this CPU in
+#     the PREVIOUS era; asking in this era must not find it, or an instrument change would
+#     be booked as host drift through the classifier instead of through the registry.
+is "a row from another era does not register (it resolves to that era's absence)" \
+   "$(baseline_state "$REG" "$WIT" "$CPU" share/Strsm "$ERA" "$CEILD")" 'owing'
+is 'and the same row IS found when asked for in its own era' \
+   "$(baseline_state "$REG" "$WIT" "$CPU" share/Strsm "$OLD" "$CEILD")" 'registered'
+# 39. An empty derivation list makes every host registry-governed rather than every host
+#     fleet-governed. Fail-closed direction: a criterion that has not named its derivation
+#     set must not silently apply its bar to silicon that did not set it. 9R45 has no row and
+#     no witness in this era, so `new` IS the registry route — and it is asserted as the
+#     value the fixtures make true rather than the one the sentence suggests: reading `owing`
+#     off the prose here is what the first pass of this case did, and it failed.
+is 'an empty derivation set leaves a host to the registry rather than to the fleet bar' \
+   "$(baseline_state "$REG" "$WIT" 'AMD EPYC 9R45' share/Ssyrk "$ERA" '')" 'new'
+# 40. Case 30's property, re-asserted after the group above, because a boundary check that
+#     runs in the middle of a file only covers the half above it.
+is 'the tracked registry was still not written' "$(cksum <scripts/host-baselines.tsv)" "$REG_BEFORE"
+is 'the tracked witness index was still not written' "$(cksum <scripts/judged-runs.tsv)" "$WIT_BEFORE"
+
 printf '\n%d ok, %d not ok\n' "$OK" "$BAD"
 [[ "$BAD" -eq 0 ]]

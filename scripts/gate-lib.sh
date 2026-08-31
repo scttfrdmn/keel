@@ -316,6 +316,46 @@ baseline_spent() {
     END { exit !found }' "$tsv"
 }
 
+# baseline_state REGISTRY WITNESS CPU CRIT ERA DERIVED_FROM — which bar governs one host x
+# one criterion, as ONE WORD (#119, extending §5 rule 17 to the ratio criteria).
+#
+# TWO CRITERIA CONSUME THIS, and that is why it is a function rather than a second copy.
+# Until #119 only the share-of-ceiling criterion had per-host admission; the scaling-ratio
+# bar judged every host that reported, including hosts absent from its derivation set by
+# chronology rather than by any property of their code — which is rule 17's entire subject,
+# unenforced one criterion over.
+#
+# NO CALLER FLAG, deliberately. The derivation list is an ARGUMENT because the two criteria
+# genuinely have different ones — the share bar was derived on two CPU models and the ratio
+# bar on three, skx being in the second and not the first — and a differing list is data, not
+# a mode. What a state MEANS stays at the call site: the units, the margin, the wording and
+# which counters drop are per criterion, and a classifier told which criterion it serves
+# would be two functions wearing one name.
+#
+# States, fail-closed one first:
+#   nokey       no CPU model, so no bar can be keyed to this host and none may be applied
+#   conflict    the derivation list AND the registry both claim it: two artifacts disagree
+#   fleet       in the derivation list, so the bar's artifact does not predate this admission
+#   registered  a row for this era governs; the caller re-reads it with baseline_lookup
+#   owing       no row, but the witness says this silicon was judged in this era already
+#   new         no row and no witness: genuine newness, BASELINE's only legitimate state
+baseline_state() {
+  local reg="$1" wit="$2" cpu="$3" crit="$4" era="$5" derived="$6" d dv=0 row
+  [[ -n "$cpu" ]] || { printf 'nokey\n'; return 0; }
+  # Substring, and in this direction: a probe string that gains a suffix must not silently
+  # move a host out of the derivation set and into registry governance, changing its bar.
+  while IFS= read -r d; do
+    [[ -n "$d" && "$cpu" == *"$d"* ]] && dv=1
+  done < <(printf '%s\n' "${derived//|/$'\n'}")
+  row="$(baseline_lookup "$reg" "$cpu" "$crit" "$era")"
+  if [[ "$dv" -eq 1 ]]; then
+    if [[ -n "$row" ]]; then printf 'conflict\n'; else printf 'fleet\n'; fi
+  elif [[ -n "$row" ]]; then printf 'registered\n'
+  elif baseline_spent "$wit" "$cpu" "$era"; then printf 'owing\n'
+  else printf 'new\n'
+  fi
+}
+
 # baseline_candidate FILE FIELDS... — append one fully formed candidate row, tab-joined.
 # The gate calls this and nothing else: it never opens the registry or the witness index
 # for writing, because an instrument that mints the reference it will judge against has
