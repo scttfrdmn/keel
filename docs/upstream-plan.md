@@ -422,6 +422,43 @@ written in place.
 half touches `golang/go#80830` (CL 3). If 80830 moves first the second case must be
 re-read, and its comment says so.
 
+### The amd64 execution witness, and the scope defect in its own first attempt
+
+asmcheck greps opcodes, not operand order, and the dev host is darwin/arm64, so nothing
+in the CL's own verification ever *runs* the emitted amd64. `build/fma-witness4.log` does.
+Phase A perturbs the operand order only — `=> (VFMADD231PS(128|256|512) x y z)`, the
+condition held constant, so the destination is a multiplicand again and the instruction
+computes `x = y*z + x` — and must fail on a host; Phase B is the witness proper. Clean: 0
+gated failures, every prediction stated before the run and exact, whole-module census
+exactly **213=29 / 231=132** with no `PD` forms and per-function tallies matching, and
+**15 of 15** package-host runs passing on `AMD Ryzen 9 7950X3D`, `Intel i9-9960X` and
+`AMD Ryzen AI MAX+ 395`. An earlier run does not substitute for it: that one restored an
+*unconditional* rule, so its Phase B witnessed code that no longer ships.
+
+Two coverage facts belong inside that number (§5 rule 12), and the second is a defect of
+mine, not of the fix:
+
+- **Phase A caught 3 of 5 packages.** `vec` and `pack` **passed** a knowingly-wrong
+  permutation, because `internal/vec`'s own tests never call `FMA512`/`FMA256` in register
+  form — its differential suite cannot see a wrong FMA operand order at all. The witness
+  rests on the root package's tests and on `kern`/`block`, never on `vec`'s.
+- **The first attempt executed and counted only `vec`/`kern`/`block`/`pack`, omitting 42
+  of the 132 emitted 231s** — 32%, all of them in `internal/l1`, which has no test files
+  of its own and is reached only through the root package. Same failure as the "674
+  instructions" figure this CL already corrected: a count taken at one scope attached to a
+  claim made at
+  another. What made it look deliberate was a comment justifying the scope whose second
+  clause did not follow from its first — *every FMA intrinsic lives in `internal/vec`,
+  **which is why** a census of it covers all four binaries*. Rescoping the census to
+  `./...` and adding the root package turned the omission into evidence: under Phase A the
+  root package **FAILs**, so the third of the subject that went unexecuted is the third
+  carrying the strongest witness in it.
+
+Confirmed incidentally, by the census rather than by argument: `avx2Axpy`/`avx512Axpy`
+emit **both** forms, and 4 of the 29 residual 213s are theirs, because Axpy's addend is a
+freshly loaded `y` that the load form folds — the deliberate non-match the rule comment
+describes, turning up on its own in a function nobody wrote the rule for.
+
 ## Three figures did not survive verification and are not in any CL description
 
 Numbers reach a CL description only after being re-read from the tree, because a

@@ -22,6 +22,23 @@ While the major version is 0, minor versions may contain breaking changes.
   Two claims withdrawn: the scalar rule is **not** precedent for an unconditional rewrite
   (there is no scalar 213 op, so it selects nothing), and a narrower phi test fires only
   at unroll 1. **Not mailed; the description awaits Scott's read (ruling 1).**
+- **CL 1's 231 operand order now has an amd64 *execution* witness, and producing it found
+  a scope defect in its own first attempt** (`build/fma-witness4.log`). asmcheck greps
+  opcodes, not operand order, and the dev host cannot run amd64, so nothing else in the
+  verification executes the emitted code. Phase A perturbs the operand order alone —
+  condition held constant, so the destination is a multiplicand again — and must fail on a
+  host; Phase B is the witness. Clean, every prediction stated first and exact: census
+  **213=29 / 231=132** whole-module, no `PD` forms, **15 of 15** package-host runs across
+  three x86 parts. Two facts inside the number: Phase A caught **3 of 5** packages, and
+  `vec` and `pack` *passed* a knowingly-wrong permutation because `internal/vec`'s own
+  tests never call `FMA512`/`FMA256` in register form; and the first attempt **omitted 42
+  of the 132 emitted 231s** — 32%, all in `internal/l1`, which has no tests of its own and
+  runs only under the root package. That is the "674 instructions" failure again, a count
+  at one scope attached to a claim at another, and what made it look deliberate was a
+  scope-justifying comment whose second clause did not follow from its first. Rescoping to
+  `./...` made the omission evidence: under Phase A the root package **FAILs**. No
+  published number moves; `avx2Axpy` turns out to emit both forms, its addend being a
+  freshly loaded `y` the load form folds.
 - **Three numbers in CL 1's description were corrected before it was ever shown, by
   re-measuring the quantities each one named** (now `f70aa0a5b4`). "The same 674
   instructions" was unreproducible under every counting rule the listing admits — 651
