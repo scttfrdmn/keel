@@ -30,7 +30,18 @@ While the major version is 0, minor versions may contain breaking changes.
   expansion in the `for` list now aborts the driver instead. Verified against the failing run's
   own archived artifacts: `want_n share 1` returns 1 where the hardcoded expectation was 3, and
   2 == the 2 candidate rows that landed. All three new arms driven red and back; 66 fixtures
-  green; `+43` net lines to `scripts/`, disclosed, joining `#131`.
+  green; `+43` net lines to `scripts/`, disclosed, joining `#131`. **The three-pass exercise
+  then completed for the first time** — 'new', 'owing' and 'registered' all YES, 417 verdict
+  lines across 9 logs all `[synthetic]` and none signed — and it needed the fix at pass 3, not
+  at pass 1: `share/Ssyrk` was quiet enough to be judged on pass 1 and noise-limited on pass 3,
+  where the lifted skip arm reported it `SKIPPED and unexercised` where the old code had only
+  "NO line naming a registered baseline at all". Ssyrk was noise-limited on the previous run's
+  sweep, quiet on this one's pass 1, noisy again on pass 3 — three sweeps of one host, so
+  noise-limiting is a property of the sweep and per-pass-unlatched is observed rather than
+  argued. Era scoping holds in both directions on the same lookup (`39.3% = 41.9 - 2.6`,
+  `37.3% = 39.9 - 2.6`, `5.379x = 5.782x - 0.403`, all era `pinned8`, the wrong-era decoy at
+  99.0 never consulted), and the registered arm is exercised on 3 of 4 criteria with the fourth
+  named.
 - **A suspended fleet bar could excuse a host that had a registered bar of its own (`#119`).**
   The share criterion's last guard read `[[ -z "$CEIL_FRACTION" ]]`, testing the *fleet
   constant* after `$BBAR` had already been resolved to this host's own baseline less the
