@@ -37,16 +37,29 @@ While the major version is 0, minor versions may contain breaking changes.
   byte-identical tree, so the reading held for a reason no mtime shows. The `commuted Op`
   objection now also has a wording-free form: 213 computes `arg0*arg1 + arg2`, symmetric in the
   two arguments that field swaps, so no chain of them moves `arg2`. Patch set 1 needs no
-  correction; nothing amended, replied to or mailed.
+  correction and was not amended; the reply built on these figures went out the same day, below.
 - **`docs/upstream-plan.md` records CL 824624's first review** (`#127`). The trybots passed
   (`LUCI-TryBot-Result+1` on revision `fcc582225c`); Jorropo left one unresolved comment saying
   operand-form selection is regalloc's job and pointing at his commuted-regalloc series. The
   architectural point is conceded in the record; the specific mechanism is not available for this
   instruction, and the reason is the field's own comment — `778820`'s `commuted Op` commutes "the
   first two arguments", where `(VFMADD213PS x y z) => (VFMADD231PS z x y)` is a three-cycle,
-  because the forms differ in which of three operands is the destination. Nothing amended, replied
-  to or mailed: the reply is drafted for Scott's read, and the decision among defend / split /
-  rebase-on-an-unvoted-stack is his.
+  because the forms differ in which of three operands is the destination. The decision among
+  defend / split / rebase-on-an-unvoted-stack was Scott's; he ruled *defend*, and the reply is now
+  sent — see below. Patch set 1 was never amended.
+- **CL 824624's review reply is sent, and the CL-number bridge was its send gate** (`#127`).
+  Threaded under Jorropo's objection at 21:46:11Z, left **unresolved** because the architectural
+  point is not settled and is the objector's to resolve; confirmed from Gerrit's `/detail` and
+  `/comments` rather than the POST body — messages 8→9, comments 1→2. The split was rejected on
+  the draft's own caveat, that a half defining six ops no rule emits is unreachable code. The gate
+  caught a real miscue: Jorropo named "CL 778460" and the draft cited `778820` twice. Verified via
+  `/detail` on both plus `/revisions/current/related` — `778820` is the parent `778460` sits on
+  and the only member touching `ssa/op.go` — so both sites now name his number first and the
+  member second. Calibration measured, not assumed: `golang/build`'s owners table lists Jorropo a
+  **secondary owner of `cmd/compile/internal/ssa`**, 164 commits in `src/cmd/compile`, which is
+  what makes deference-on-architecture-firmness-on-mechanism the right posture rather than a
+  guess. One sentence was killed before sending — an unprompted offer to hold CL 1 behind his
+  series, a schedule concession no one requested.
 - **`scripts/ab.sh` — one A/B harness, lifted out of `l1-bench.sh` and `edge-bench.sh`** (`#131`
   paydown). The two drivers were identical for the entire skeleton — worktree, trap,
   cross-compile, methodology preamble, host loop, comparison — and differed in four strings, so

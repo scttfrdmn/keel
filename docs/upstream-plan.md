@@ -654,14 +654,51 @@ earned its keep — A1 ran against a binary stamped `f70aa0a5b4`, a *prior amend
 CL*, and the two commits' trees are byte-identical (`git diff --stat` empty), so the reading
 was sound for a reason no mtime could have shown.
 
-**Nothing is mailed, amended or replied to on this.** Patch set 1 needs no correction: its two
-numbers survived re-measurement. The reply is drafted for Scott's read on #127, per the
-standing gate, and the decision it needs is which of three: defend the rule as a pre-regalloc
-approximation and offer to delete it when the series lands; split CL 1 down to the six packed
-ops alone (honest caveat — ops no rule emits are unreachable, so this may not be landable
-as-is); or rebase onto the three-CL stack and extend `778820` first, which makes a keel CL
-wait on an unvoted 3900-line dependency. The protocol forbids the third on its own terms —
-"never a scope expansion" — so the live choice is the first two.
+**The reply is sent; patch set 1 was not amended.** Its two numbers survived re-measurement, so
+there was nothing to correct. Of the three courses the draft laid out — defend the rule as a
+pre-regalloc approximation and offer to delete it when the series lands; split CL 1 down to the
+six packed ops alone; or rebase onto the stack and extend `778820` first — the protocol forbade
+the third on its own terms ("never a scope expansion"), and Scott ruled the first on 2026-08-31,
+rejecting the split on the draft's own caveat: a half that defines six ops no rule emits is
+unreachable code wearing a CL's clothes, nobody asked for it, and offering it against a
+*mechanism* objection reads as motion rather than an answer. Posted 21:46:11Z as a threaded
+patchset-level reply under Jorropo's comment (`in_reply_to 41a77fbb_d00fa00a`, own id
+`7eea0614_d296a1eb`), left **unresolved** deliberately — the architectural objection is not
+settled and it is the objector's to resolve. Confirmed from Gerrit's own `/detail` and
+`/comments`, not from the POST's response body: messages 8→9, comments 1→2, unresolved still 1.
+
+Its shape, in order: concede the principle; contest the mechanism with the structural
+derivation; supply the two re-measured falsifiers against the "guessing" half; close by offering
+to delete the predicate if the information belongs in regalloc. One sentence was written and
+then killed before sending — an offer to hold CL 1 behind the series. Unprompted, that hands a
+code owner a schedule concession he never asked for and converts a technical exchange into a
+negotiation. It is one line to add back if it is ever wanted, which is the right shape for it.
+
+**The send was gated on reconciling two CL numbers, and the gate caught a real miscue.** Jorropo
+wrote "my commuted regalloc CL series: CL 778460"; the draft cited `778820` twice, including in
+its load-bearing sentence. Both numbers were verified by `/detail`, the stack order by
+`/changes/778460/revisions/current/related`, and the per-CL file lists by their diffs: `778820`
+is the parent `778460` sits on, and it is the only member of the three that touches `ssa/op.go`
+where the field is defined. So it was the bridge case rather than an error, and both sites now
+give his number first and the member second — "your series at CL 778460 — specifically the
+commuted-`Op` mechanism in the CL 778820 it sits on". Citing a number other than the one an
+author gave for *his own series*, to that author, is this project's transcription-error class
+aimed at the one reader guaranteed to notice.
+
+**Reviewer calibration, measured rather than assumed.** `golang/build`'s owners table
+(`devapp/owners/table.go:170`) lists Jorropo as a **secondary owner of
+`cmd/compile/internal/ssa`** — the package this rule lives in — with 164 commits in
+`src/cmd/compile` and backports to `release-branch.go1.27`. He is not on `internal/amd64`'s
+list. So this is not a drive-by, and the posture the reply takes — deference on architecture,
+firmness on mechanism, measurements on the merits — was chosen after that measurement, not
+before it. Weight of an objection is a fact about the tracker, not an impression from its tone.
+
+**Now pending on the owner, and the watch is re-baselined so my own message cannot wake it**:
+9 messages, 2 comments, 1 unresolved, only nonzero label `LUCI-TryBot-Result+1`, **no
+`Code-Review` vote of any sign ever cast**. One measured delta left unexplained: Martin Möhrmann
+was a REVIEWER in the morning's baseline and is absent from the evening's. The day-six re-arm
+now finds the watch by its prompt rather than by an id, because the id changes on every
+re-baseline and a hard-coded one reports a healthy watch as lapsed.
 
 ## Three figures did not survive verification and are not in any CL description
 
