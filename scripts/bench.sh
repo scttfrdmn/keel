@@ -338,6 +338,16 @@ bench_expect() {
 # achieved rate on top and reads a fraction of peak. Both want the same
 # conservative treatment — numerator at its low bound, denominator at its high
 # one — so both get it from one function.
+#
+# AND THE LAST ROUNDING GOES THE SAME WAY (#143). `printf "%.3f"` rounds to NEAREST,
+# so it could return a value ABOVE the bound it computed — half a quantum, 0.05
+# points of share — and #116's own standard says a bound must bound something
+# measured. Every bar here is on the 3-decimal lattice (0.55, 0.90, 6.067, 44.2%),
+# so rounding DOWN makes `lo >= bar` decide what the unrounded bound decides, both
+# ways: nothing in band passes, nothing above the bar is refused. Direction (§5 rule
+# 15): pass -> fail only, so it was checked against the archive and not asserted —
+# 539 comparable verdict lines over 272 logs, none in band, which is visible exactly
+# when a rendered margin is 0.
 bench_ratio_lo() {
   local n d
   n="$(bench_stat "$1" "$3" "${4:-sec/op}")"
@@ -347,7 +357,8 @@ bench_ratio_lo() {
     BEGIN {
       split(n, a, " "); split(d, b, " ")
       if (a[3] == "inf" || b[4] == "inf") exit
-      printf "%.3f", a[3] / b[4]
+      v = a[3] / b[4]; r = sprintf("%.3f", v) + 0
+      printf "%.3f", (r > v) ? r - 0.001 : r    # ROUNDS DOWN, never up: see #143
     }'
 }
 
@@ -377,7 +388,8 @@ bench_ratio_hi() {
       split(n, a, " "); split(d, b, " ")
       if (a[4] == "inf" || b[3] == "inf") exit
       if (b[3] <= 0) exit   # the low bound of the denominator reaches zero: unbounded above
-      printf "%.3f", a[4] / b[3]
+      v = a[4] / b[3]; r = sprintf("%.3f", v) + 0
+      printf "%.3f", (r < v) ? r + 0.001 : r    # ROUNDS UP, the mirror: see #143
     }'
 }
 
@@ -392,19 +404,18 @@ bench_ratio_hi() {
 # and prints nothing if either benchmark is missing, so empty stays "not
 # measured" as everywhere else in this file.
 #
-# THE PASS CONDITION IS UNCHANGED, BIT FOR BIT. `pass` is `bench_ratio_lo >= BAR`,
-# which is the same comparison every gate here has made since issue #14. Nothing
-# that passed before passes differently now, and nothing that was below the bar
-# gets in: the third state is carved out of the old FAIL, never out of the old
-# PASS. Replayed against the six archived criterion-7 readings at 746cc98 and
+# `pass` is `bench_ratio_lo >= BAR`, the comparison every gate here has made since
+# issue #14; the third state is carved out of the old FAIL, never out of the old
+# PASS. It was replayed against the six archived criterion-7 readings at 746cc98 and
 # 2eda333 before it landed: five stayed PASS and the one noisy janus reading
 # (interval [81.6%, 93.9%] about a raw 87.5%, bar 85%) moved FAIL ->
 # indeterminate, which is the reading that started #67. The replay drives these
 # functions from the medians as the logs *printed* them, which bench_describe
 # renders to 4 significant figures, so a replayed raw ratio can sit 0.1 point off
-# the gate's own — antares replays 88.3% where its log says 88.2%. Verdicts are
-# unaffected (every margin here is more than a point), but the numbers are a
-# reproduction to display precision, not to the gate's.
+# the gate's own — antares replays 88.3% where its log says 88.2%. Every margin
+# there is more than a point, so the reproduction is to display precision and no
+# verdict turns on the gap. (#143 later moved `bench_ratio_lo`'s final rounding
+# from nearest to down, so `pass` is half a quantum stricter than at that replay.)
 #
 # The remedy for indeterminate is precision, never a wider judgment: one archived
 # re-run under DESIGN.md §4's allowance, and if a host is *chronically*

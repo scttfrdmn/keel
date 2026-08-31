@@ -1204,6 +1204,10 @@ else
         # review and not a re-derivation — but its estimator column says what one run can
         # support, which is a draw and not a reference (§5 rule 16). The gate proposes;
         # it never writes the registry.
+        # It records $frac, which is NOT a rounding (#143): $ratio carries 3 decimals of a
+        # fraction, so 100*$ratio has one and $frac reproduces it exactly. If
+        # bench_ratio_lo gains resolution this line must too; the comparison below already
+        # did, which is why it reads $ratio.
         baseline_candidate "$BASELINE_CANDIDATES" "$hcpu" "$BCRIT" "$P5_ERA" "$frac" \
           "SINGLE DRAW from gate-p5 at $P5_REV -- NOT landable as-is (§5 rule 16): re-reduce as a median over N archived runs before committing" \
           "$BENCH_ARCHIVE" "$(date -u +%Y-%m-%d)" \
@@ -1238,7 +1242,9 @@ else
         # the bar rather than a bar itself. Named as unjudged so no reader can mistake a
         # silent pass for cleared coverage — this class HAS no floor in force right now.
         pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, NO FRACTION IN FORCE (#6): 51.0 was typed 2026-08-22 from confined-mask rows and is suspended at the spread amendment the same day, so this reading is an input to re-deriving it, and neither that bar nor the retired ${SCALE_FLOOR_RETIRED}x floor is applied"
-      elif awk -v v="$frac" -v f="$BBAR" 'BEGIN{exit !(v >= f)}'; then
+      # $ratio, not the rendered $frac (#143), and 100* because $ratio is a fraction
+      # and every bar here is in points — a substitution without it fails everything.
+      elif awk -v v="$ratio" -v f="$BBAR" 'BEGIN{exit !(100*v >= f)}'; then
         pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s) (>= ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"
       else
         fail "[$host] $r reaches only ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s) (< ${BBAR}%, $BWHY), scaling ${pt}x / ${lo}x net of CI"

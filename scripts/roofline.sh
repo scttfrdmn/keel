@@ -429,7 +429,11 @@ p3_ratio_lo() {
     if (src != "roofline") { if (rlo != "") printf "%.6f\n", rlo; exit }
     if (pklo == "" || roof + 0 <= 0) exit
     v = pklo / roof
-    printf "%.6f\n", (v > rlo + 0) ? v : rlo + 0
+    v = (v > rlo + 0) ? v : rlo + 0
+    # Rounds DOWN, same reason and same shape as bench_ratio_lo (#143): this is a
+    # lower bound, and %.6f rounds to nearest, which can return a value above it.
+    r = sprintf("%.6f", v) + 0
+    printf "%.6f\n", (r > v) ? r - 0.000001 : r
   }'
 }
 

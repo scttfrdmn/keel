@@ -8,6 +8,32 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **The rounding band `#143` is about is real, one-sided and permissive — and it is not at
+  the site the issue names.** `$ratio` already arrives from `bench_ratio_lo` at `%.3f`, so
+  gate-p5's `frac="$(printf %.1f, 100*$ratio)"` is *lossless* and the prescribed fix moves no
+  verdict; driven, a true share of `44.150060%` still cleared the `44.2` bar. The band lives
+  in `bench.sh`'s `printf "%.3f"`, which rounds to **nearest** and so can return a value
+  above the bound it computed. `bench_ratio_lo` and `p3_ratio_lo` now round **down** and
+  `bench_ratio_hi` **up**, which is `#116`'s own standard (a bound must bound something
+  measured) and makes `lo >= bar` decide exactly what the unrounded bound decides, since
+  every bar here is on the 3-decimal lattice. `bench_ratio` is unchanged: a point estimate
+  has no direction to be conservative in. **The archive is clear** — 539 comparable verdict
+  lines over 272 archived logs, none inside the band, and the census is exact rather than
+  approximate because a verdict is in band exactly when its rendered margin is 0. Tightest
+  archived margins: **0.400 points** and **0.004 in ratio units**, both 8× the band (`#143`'s
+  46× is the *certificate's* tightest margin, 2.3 points; over the whole archive it is 0.4).
+  Seven-arm before/after control: the three in-band arms flip PASS→FAIL and the four that
+  must not move stay PASS. **The arm `#143`'s own acceptance criterion could not supply:**
+  its prescription — "compare the raw `$ratio`" — is a units error, since `$ratio` is a
+  fraction and every bar is in points, and taken verbatim it FAILs *everything*. The
+  specified control would have read that as success, because it too expects FAIL. The gate
+  now compares `100*$ratio`. Two further findings recorded rather than fixed here:
+  `roofline-test.sh`'s `checkr` tolerance is `0.0005`, exactly this band, so the existing
+  fixture harness for the lower-bound function is structurally blind to the class; and
+  `bench_ratio_grade`'s "pass condition unchanged, bit for bit" claim is now false by half a
+  quantum, so it is restated as history rather than left standing.
+
 ### Added
 - **The keel rev CL 2 is verified against is pinned at `ac0f6508e2a4ba6bcbf123e6f397c38f92650574`**,
   cited by SHA in CL 2's description footnote, because keel's `internal/spill` audit is CL 2's
