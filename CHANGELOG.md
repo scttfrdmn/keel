@@ -9,6 +9,37 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **`RANK-WINDOW-BLIND` is deleted; every reading now prints its disparity `D` instead** (`#132`,
+  ruled by Scott 2026-08-31; `scripts/bench.sh`). `bench_describe` closes each reading that
+  carries a range with `D=<v> (span <s>% / interval <i>%)` where `D = (max−min)/(hi−lo)` — how
+  many interval widths of sample disagreement the reading holds — and the marker, `QUANTUM` and
+  the conjunction between them are gone. **The history is the argument**: every thresholded form
+  of this detector had a false-negative band (exact-zero missed 12 readings, printed-zero missed
+  the row that was the denominator of nine verdict lines), and the trigger's verdict was not even
+  monotone in the blindness it claimed to detect — in one archive file, one host, one sweep, all
+  in `sec/op`, it named `D=142.6` and stayed silent on `D=180`. `D` reads off the **real
+  asymmetric** bounds, never the printed `± W%`, which is the mirrored symmetric half-width and a
+  different quantity; both operands therefore print beside it. Output-only (§5 rule 15): no
+  criterion reads `D`, so no verdict can move. The four documented instances are worked through
+  as reading examples in `docs/rulings.md` rule 20, three of them pinned in
+  `tools/benchci/archive_test.go`, and §9g's keel-skx fixtures were rewritten to their
+  **re-derived** readings because an operand may not be invented. Coverage limit stated rather
+  than papered over: on a **rate** unit `D` is quantised by the samples themselves — Go renders a
+  `ReportMetric` rate at 4 significant figures — so the `sec/op` reading of an arm is the one to
+  trust when the two disagree.
+- **The apparatus ledger's own ratio was flattering itself; `tools/*_test.go` is folded in**
+  (`#131`, ruled by Scott 2026-08-31; `scripts/gate-docs.sh`). The reporter excluded
+  `tools/*_test.go` from the `tools/` term while including `bench/`'s tests in `bench/`, so 769
+  lines were counted in **neither** term — a disclosure metric flattering by omission, in the one
+  artifact whose entire value is that it doesn't. `tools/` now moves whole, as `bench/` has since
+  2026-08-20, and the reported apparatus ratio restates **2.70x → 2.80x** on one tree (2.69x →
+  2.79x when the hole was found on 2026-08-30; both ends have moved with the tree since, which is
+  why the line now *computes* the pre-fold ratio rather than quoting it). This is a definition
+  correction, not a regression, and the definition sentence prints beside the number: apparatus =
+  shell + `tools/` + `bench/` **including their tests**, library = `*.go` net of its tests. The
+  asymmetry is deliberate — the ratio measures maintenance burden against shipped substance, and
+  a test of an instrument is burden — and it is only defensible stated. `internal/spill`'s audit
+  instrument stays on the library side, still disclosed and still not moved.
 - **`STRSM_FLOOR` is re-typed `6.067x` → `6.066x`, which is 0.001x MORE LENIENT** (`#119`,
   ruled by Scott 2026-08-31; `scripts/gate-p5.sh`, `scripts/readme-numbers.sh`, and the caption
   `readme-numbers.sh` generates into `README.md`). **This is an instrument-precision

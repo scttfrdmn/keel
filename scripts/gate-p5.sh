@@ -933,9 +933,9 @@ else
     # Published because a summary that drops its CI makes its own correction unsizable (#6).
     # ONE RENDERER FOR THE DENOMINATOR (ruled 2026-08-28, #6). This line hand-built its own
     # `+/- %.2f%%` and never called bench_describe, so the ceiling — the denominator of every
-    # share below — was the one reading in the log carrying no range and no RANK-WINDOW-BLIND
-    # marker: rule 20's concealment class, uncovered on the number where it matters most,
-    # having printed +/- 0.00% on keel-skx's confirmation run. CEIL8P is that same phrase's
+    # share below — was the one reading in the log carrying no range and no disparity: rule
+    # 20's concealment class, uncovered on the number where it matters most, having printed
+    # +/- 0.00% over a 1.04% span on keel-skx's confirmation run. CEIL8P is that same phrase's
     # value token, so the nine verdict lines below cite the denominator in the rendering the
     # disclosure printed instead of a second one — benchstat's CSV field carries 5 significant
     # figures on some rates, so `%.4g` and the raw field are not identical by luck. Reached

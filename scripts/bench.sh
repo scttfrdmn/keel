@@ -486,34 +486,28 @@ bench_describe() {
       split(s, a, " ")
       label = (unit == "sec/op") ? "s" : unit
       if (a[2] == "inf") { printf "%.4g %s (no CI: too few or too noisy samples)", a[1], label; exit }
-      # THE PRINTED WIDTH IS THE ASSERTION, so the marker below keys on it and not on the
-      # stored value (ruled 2026-08-28, #6). A width of 0.003% renders "0.0%" and makes the
-      # identical claim to a reader as an exact zero, so it earns identical scrutiny: the
-      # exact zeros are not a privileged class. QUANTUM is the resolution of the display
-      # ITSELF -- what "0.0%" can support -- so it is neither tuned nor an accident of the
-      # format string, it is what that format string already asserts. Same move as the
-      # band-top in #110, where the resolution of the display defined what a rounded value
-      # could support.
-      QUANTUM = 0.1
-      width = sprintf("%.1f", a[2] * 100)
-      printf "%.4g %s +/- %s%%", a[1], label, width
+      printf "%.4g %s +/- %.1f%%", a[1], label, a[2] * 100
       # THE RANGE PRINTS BESIDE THE INTERVAL (DESIGN.md §5 rule 20). Guarded on
       # non-empty because a pre-#116 archived CSV has three columns, and "%.4g" of
       # an empty field would render a confident "[0, 0]" over a range nobody
       # measured — the exact class of fabrication this disclosure exists to expose.
       if (a[5] == "" || a[6] == "") exit
       printf " [%.4g, %.4g]", a[5], a[6]
-      # A zero-width interval over samples that disagree is the rank window having
-      # stopped looking, never a quiet host: benchstat bounds the median with order
-      # statistics [x_(r), x_(n+1-r)], and as n grows r moves inward FAST (n=10 ->
-      # [2,9], n=30 -> [10,21]), so a contaminant that cost three verdicts at n=10
-      # sat inside a +/-0.0% reading at n=30 while still in the sample. What names the
-      # anomaly is THE RANGE REFUTING THE PRINTED CLAIM -- a span the interval could not
-      # have hidden if it meant what it displays -- so both halves are read off the printed
-      # line: the width as printed, and a span that clears one quantum of that same display.
-      span = 100 * (a[6] - a[5]) / a[1]
-      if (width + 0 == 0 && span > QUANTUM)
-        printf " RANK-WINDOW-BLIND(span %.2f%% under a %s%% interval)", span, width
+      # AND THE DISPARITY PRINTS ON EVERY ROW, DECIDING NOTHING (#132, ruled 2026-08-31).
+      # D = (max-min)/(hi-lo) -- how many interval widths of disagreement the samples hold.
+      # benchstat bounds the median by order statistics [x_(r), x_(n+1-r)], so D >= 1 always
+      # (1420/1420 archived, tools/benchci/archive_test.go) and D = inf at a window that
+      # stopped looking: a blindness scale with no free parameter. UNTHRESHOLDED because every
+      # thresholded form of this had a blind band, one of them over the denominator of nine
+      # verdict lines; the four instances are worked through in docs/rulings.md, rule 20. An
+      # instrument reports its quantity, §5 rule 19 renders the verdicts. BOTH OPERANDS PRINT
+      # because neither is on this line: "+/- W%" is the MIRRORED symmetric half-width
+      # max(hi-c, c-lo)/c, so D is not recomputable from W. lo/hi cannot read "inf" -- benchci
+      # unbounds ci/lo/hi together and a[2] exited above.
+      span = a[6] - a[5]; iw = a[4] - a[3]
+      printf " D=%s (span %.2f%% / interval %.4f%%)",
+        (iw > 0) ? sprintf("%.4g", span / iw) : ((span > 0) ? "inf" : "1"),
+        100 * span / a[1], 100 * iw / a[1]
     }'
 }
 

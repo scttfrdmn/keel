@@ -876,13 +876,11 @@ ci_case "an absent rate does not read as under the ceiling" \
 # predicate must not claim a second cause (§5 rule 6).
 ci_case "a zero ceiling is not this branch's finding" "ok|" 0 "Sgemm=612.9"
 
-# The renderer this exercises had NO test before now, which is why the display-zero band
-# went unseen: rule 20's marker was driven by hand once and nothing re-drove it, and no
-# persisted CSV in the tree has the seven columns it needs (every one predates #116), so
-# the archive cannot witness it either. Rows 1, 2 and 4 are real readings -- zen5's
-# founding ceiling sample, and the 0.00%/0.07% pair keel-skx printed across the era's two
-# archives, which is the discriminating pair the ruling turns on.
-head_ "9f. rule 20: the marker keys on the width as PRINTED (ruled 2026-08-28)"
+# Every row here has lo == hi, so these six pin the rendering's SHAPE and its two degenerate
+# ends and no D below is a division. That is the coverage split, not an oversight (§5 rule 12):
+# the arithmetic is driven on measured intervals by §9g (D=17) and by
+# tools/benchci/archive_test.go (D=459.3 / 180 / 142.6). Argument: docs/rulings.md, rule 20.
+head_ "9f. rule 20: every reading prints its disparity D, thresholded nowhere (#132)"
 bd_case() {     # note, expected, csv-body
   local note="$1" want="$2" body="$3" got f
   f="$(mktemp)" || return
@@ -891,23 +889,24 @@ bd_case() {     # note, expected, csv-body
   rm -f "$f"
   [[ "$got" == "$want" ]] && pass_ "$note" || fail_ "$note -> [$got], expected [$want]"
 }
-bd_case "an exact zero under a 13.40% span is still named" \
-  "2291 GFLOP/s +/- 0.0% [1989, 2296] RANK-WINDOW-BLIND(span 13.40% under a 0.0% interval)" \
+bd_case "a window that stopped looking reports D=inf rather than a clean reading" \
+  "2291 GFLOP/s +/- 0.0% [1989, 2296] D=inf (span 13.40% / interval 0.0000%)" \
   "Judged,2291,0.00%,2291,2291,1989,2296"
-# THE ARM THE RULING ADDS. 0.03% makes the identical claim to a reader as an exact zero,
-# so it earns identical scrutiny; before the ruling this row printed clean.
-bd_case "a width of 0.03% prints 0.0% and is named on the same terms" \
-  "2291 GFLOP/s +/- 0.0% [1989, 2296] RANK-WINDOW-BLIND(span 13.40% under a 0.0% interval)" \
+# The width rendering is the half #132 does NOT touch: 0.03% still prints 0.0%.
+bd_case "0.03% still prints 0.0% and D reads the same on both" \
+  "2291 GFLOP/s +/- 0.0% [1989, 2296] D=inf (span 13.40% / interval 0.0000%)" \
   "Judged,2291,0.03%,2291,2291,1989,2296"
-# The other half of the conjunction: a span the display's own resolution can support is
-# not a refutation of anything, so it is not an anomaly.
-bd_case "a span inside one display quantum is not an anomaly" \
-  "2291 GFLOP/s +/- 0.0% [2291, 2292]" \
-  "Judged,2291,0.00%,2291,2291,2291,2292"
-bd_case "a width one quantum above zero is outside the trigger (#132's miss class)" \
-  "2291 GFLOP/s +/- 0.1% [1989, 2296]" \
+# D's FLOOR: an interval that spans its samples exactly hides nothing, and `1` says so.
+bd_case "an interval that spans its samples exactly reads D=1" \
+  "2291 GFLOP/s +/- 0.0% [2291, 2291] D=1 (span 0.00% / interval 0.0000%)" \
+  "Judged,2291,0.00%,2291,2291,2291,2291"
+# THE MISS CLASS, NOW AN EQUALITY. Same samples and window as the row above, one display
+# quantum more printed width: the old trigger named that one and skipped this one while D
+# reads inf on both. That is the whole ruling.
+bd_case "one quantum of printed width no longer changes what is reported (#132)" \
+  "2291 GFLOP/s +/- 0.1% [1989, 2296] D=inf (span 13.40% / interval 0.0000%)" \
   "Judged,2291,0.07%,2291,2291,1989,2296"
-# A pre-#116 CSV has three columns: no range, hence no marker, and above all no
+# A pre-#116 CSV has three columns: no range, hence no D, and above all no
 # fabricated "[0, 0]" over a range nobody measured.
 bd_case "a three-column archive prints no range and invents none" \
   "2291 GFLOP/s +/- 0.0%" "Judged,2291,0.00%"
@@ -942,16 +941,20 @@ else
     rm -f "$f"
     [[ "$out" == *"$want"* ]] && pass_ "$note" || fail_ "$note -> [$out], wanted [$want]"
   }
-  # The reading that motivated the fix: keel-skx's confirmation ceiling printed `+/- 0.00%` on
-  # the denominator of all three of its shares. Under the routed line it is NAMED.
-  ceil_case "the skx confirmation ceiling now carries its range and the marker" \
-    "compute 1444 GFLOP/s +/- 0.0% [1398, 1451] RANK-WINDOW-BLIND(span 3.67% under a 0.0% interval) measured at 8 threads" \
-    "Ceiling/compute/avx512/threads=8,1444,0.00%,1444,1444,1398,1451"
-  # Take four's 0.07% prints 0.1%, so the trigger's equality at zero excludes it -- though its
-  # 3.67% span refutes 0.1% as squarely as 0.0%. Negative control, and #132's whole miss class.
-  ceil_case "the take-four ceiling prints 0.1% and is not named (#132)" \
-    "compute 1444 GFLOP/s +/- 0.1% [1398, 1451] measured at 8 threads" \
-    "Ceiling/compute/avx512/threads=8,1444,0.07%,1444,1444,1398,1451"
+  # The reading that motivated the fix: keel-skx's confirmation ceiling was the denominator of
+  # all three of its shares and printed `+/- 0.00%`. BOTH ROWS ARE NOW THE REAL READINGS, from
+  # archive/pinned8/bench-gate-p5-{969c360,6ba6566}-keel-skx-*-1.txt. They were hand-built as
+  # [1398, 1451] when only the printed width was under test; #132 makes the interval an
+  # operand, so a fixture may no longer invent one (§5, a readable constant certifies nothing).
+  ceil_case "the skx confirmation ceiling carries its range and D=inf" \
+    "compute 1444 GFLOP/s +/- 0.0% [1430, 1445] D=inf (span 1.04% / interval 0.0000%) measured at 8 threads" \
+    "Ceiling/compute/avx512/threads=8,1444,0%,1444,1444,1430,1445"
+  # Take four printed 0.1% and the old trigger's equality at zero excluded it. This is the row
+  # #132 was filed over, and it is also §9f's missing arithmetic: a real 1-GFLOP/s-wide interval
+  # under a 17-GFLOP/s span divides to D=17, so the division is driven on a measured row.
+  ceil_case "the take-four ceiling is reported on the same terms, D=17 (#132)" \
+    "compute 1444 GFLOP/s +/- 0.1% [1429, 1446] D=17 (span 1.18% / interval 0.0693%) measured at 8 threads" \
+    "Ceiling/compute/avx512/threads=8,1444,0.06925207756232687%,1444,1445,1429,1446"
   # MAKE THE QUANTITY MOVE. Both renderings read 1444 above, so agreement there certifies
   # nothing; benchstat emits 5 significant figures on some rates, and on one of those the
   # display token and the raw arithmetic field DIFFER. That difference is the whole reason

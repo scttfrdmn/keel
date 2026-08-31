@@ -931,6 +931,11 @@ which is what makes the range disclosure load-bearing rather than decorative.
 
     2291 GFLOP/s +/- 0.0% [1989, 2296] RANK-WINDOW-BLIND(span 13.40% under a 0.0% interval)
 
+**As of 2026-08-31 the same reading renders without a verdict** (#132, ruled below); the marker is
+gone and the quantity it was deciding about is printed instead, on every row:
+
+    2291 GFLOP/s +/- 0.0% [1989, 2296] D=inf (span 13.40% / interval 0.0000%)
+
 Three properties are deliberate. It is **unthresholded** — a printed-width zero under a span
 exceeding one quantum of that same display fires it (see the amendment below; as adopted it was
 narrower, keying on an *exact* zero) — because a triviality cutoff would be the
@@ -1002,7 +1007,8 @@ between them **is** the defect; `sampleRange`; the seven-column CSV with ci/lo/h
 **together** on one flag). `-verify` agrees with pinned benchstat on all 42 cells, so the display
 column is provably untouched. The awk consumers were run end-to-end on the real archived CSV
 (share 0.483, matching the 48.25% predicted pre-run). `RANK-WINDOW-BLIND` was driven **on purpose**
-against the recurrence sample rather than inferred from a healthy run. `clock_series` was exercised
+against the recurrence sample rather than inferred from a healthy run (and since #132 deleted it,
+what those arms drive is `D` on three measured intervals, with its absence asserted by name). `clock_series` was exercised
 across five shapes — six-field flat, legacy two-field flat, genuine decline, missing, unbounded —
 after an audit found its `n != 6` guard would have silently reported "unbounded" on every host on
 every run the moment `bench_stat` grew fields; that hazard was found by enumerating the 29 call
@@ -1101,6 +1107,23 @@ bottom**, including on the `Scale` rows that feed the ratio criterion:
 | 6.51% | 0.0% | **YES** | `Scale/Ssymm/n=4096/threads=8` |
 | 6.24% | 0.1% | no | `Scale/Ssymm/n=4096/threads=8` (`969c360`) |
 
+**Corrected 2026-08-31, re-deriving every row for the ruling below.** Two labels above are wrong,
+and neither changes the finding — the interleaving is real — but a table whose rows cannot be
+found is not a record. Row 1 is **keel-zen4**, not zen5: the pair is *one arm on two hosts of one
+sweep*, which is also how the prose below and `DESIGN.md` §5 rule 20 described it, and both said
+"adjacent arms of one file". And the table sorted on span across **units**, which it does not say:
+rows 1, 2, 5 and 6 are `sec/op` while rows 3 and 4 are `sec/op` and `GFLOP/s` respectively, so
+rows 3–4 differ in unit as well as arm. Full provenance, as rendered by the shipped renderer:
+
+| row | file | unit | reading |
+|---|---|---|---|
+| 1 | `6ba6566` keel-**zen4** `-3` | sec/op | `8.984e-05 s +/- 0.0% [8.977e-05, 0.0001041] D=204.5` |
+| 2 | `6ba6566` keel-zen5 `-2` | sec/op | `7.32e-05 s +/- 0.1% [7.306e-05, 8.458e-05] D=180` |
+| 3 | `6ba6566` keel-zen4 `-3` | sec/op | `0.0002157 s +/- 0.0% [0.0002154, 0.0002472] D=161` |
+| 4 | `6ba6566` keel-zen4 `-3` | GFLOP/s | `933.7 GFLOP/s +/- 0.1% [806, 934.5] D=160.6` |
+| 5 | `6ba6566` keel-zen5 `-2` | sec/op | `0.1281 s +/- 0.0% [0.1279, 0.1362] D=94.19` |
+| 6 | `969c360` keel-zen4 `-3` | sec/op | `0.208 s +/- 0.1% [0.2075, 0.2205] D=54.81` |
+
 The exhibit is one file's adjacent arms —
 `archive/pinned8/bench-gate-p5-6ba6566-keel-zen5-20260823T004407Z-2.txt`, `scalar/threads=8` span
 **27.99%** named at `0.0%`, `avx2/threads=8` span **15.74%** silent at `0.1%` — and the silent row's
@@ -1120,6 +1143,139 @@ measured rates and stays open for Scott. One thing the corpus settles for free: 
 three-column `go tool benchstat -format=csv` of the same archive, that avx2 row prints `0.0%`
 because benchstat rounds to `%.0f%%` — so the seven-column writer is what made the printed width
 discriminating at all, and the historical logs were blind in both directions at once.
+
+### Amendment, 2026-08-31: delete the decision, print the quantity (#132, ruled by Scott)
+
+*The four options above were carried to Scott. He took none of them.*
+
+> Print the disparity on every line, threshold nothing. The history is the argument: every
+> thresholded form of this detector has had a blind band — exact-zero missed twelve, display-zero
+> missed the 0.1% row that decided a verdict, and 6.3% would spend its life waiting for instance
+> five to arrive at 6.2%. A detector that renders a verdict inherits a false-negative band from
+> wherever its threshold sits; an instrument that reports the quantity has no band to be blind in.
+> And the verdict was never load-bearing — width-admissibility judges the interval; the marker
+> serves human readers, and readers are better served by the number than by an opinion about the
+> number. "An instrument measures a noun" — the noun here is the disparity, and the decision was
+> decoration. The four known instances get re-rendered in the docs as worked examples of reading
+> D, so the judgment the threshold used to make badly is taught instead of automated.
+
+`bench_describe` now closes every reading that carries a range with
+
+    D=<value> (span <s>% / interval <i>%)
+
+and `RANK-WINDOW-BLIND`, `QUANTUM` and the conjunction between them are gone. Three details are
+not free choices. **`D` is computed from the real asymmetric bounds `hi − lo`, never from the
+printed `± W%`**, which is the *mirrored symmetric* half-width `max(hi−c, c−Lo)/c` (#116,
+`tools/benchci/main.go`) — a different quantity, so `D` is not recoverable from `W` by a reader or
+by a later sweep, which is why **both operands print** beside it. `D = inf` at a zero-width window
+and `D = 1` when a zero-width window sits over identical samples: `1` is the floor of the scale,
+verified on 1420 of 1420 archived readings, because both bounds are order statistics and cannot
+escape their own samples. And nothing else moved — no criterion reads `D`, so per rule 15 this is
+output-only in the strict sense: it cannot turn a green red or a red green, and rule 19's
+width-admissibility remains the only thing that judges an interval.
+
+#### Reading D: the four instances, re-rendered
+
+Every line below is printed by the shipped `bench_describe` over `tools/benchci`'s re-derivation of
+the named archive file, and the "old verdict" column is what the deleted trigger did.
+
+**1. The one that decided nine verdict lines.** keel-skx's 8-thread ceiling, the denominator of all
+three of its share criteria, in `GFLOP/s`:
+
+| run | reading | old verdict |
+|---|---|---|
+| confirmation `969c360` | `1444 GFLOP/s +/- 0.0% [1430, 1445] D=inf (span 1.04% / interval 0.0000%)` | **named** |
+| take four `6ba6566` | `1444 GFLOP/s +/- 0.1% [1429, 1446] D=17 (span 1.18% / interval 0.0693%)` | silent |
+
+*How to read it:* `D=inf` says the window collapsed to a point and 1.04% of sample disagreement is
+outside it — the median is exact and the reading is not. `D=17` says the interval is real but 17×
+too narrow to contain what was observed; the silent row was blinder in **span** (1.18% > 1.04%) and
+said nothing at all. Neither reading is refused by anything; both are denominators you would want
+to re-run before publishing a share off them, and the difference between `inf` and `17` is what
+tells you the first is a degenerate window and the second merely an optimistic one.
+
+**2. One arm, two hosts, one sweep.** `Ceiling/compute/avx2/threads=8` in `sec/op` at `6ba6566`:
+
+| host | reading | old verdict |
+|---|---|---|
+| keel-zen4 `-3` | `8.984e-05 s +/- 0.0% [8.977e-05, 0.0001041] D=204.5 (span 15.93% / interval 0.0779%)` | **named** |
+| keel-zen5 `-2` | `7.32e-05 s +/- 0.1% [7.306e-05, 8.458e-05] D=180 (span 15.74% / interval 0.0874%)` | silent |
+
+*How to read it:* 204.5 against 180 is a 14% difference in blindness, and the verdicts differ
+because one printed width rounded to `0.0%` and the other to `0.1%`. Read as `D`, these are the
+same finding on two hosts — which is what a reader needs, because a contaminant on two hosts of one
+sweep is a sweep-level problem and a contaminant on one is a host-level one.
+
+**3. Two rows of one file.** keel-zen4 `-3` at `6ba6566`, and the pair the prose above called
+adjacent arms:
+
+| row | reading | old verdict |
+|---|---|---|
+| `avx512/threads=8`, sec/op | `0.0002157 s +/- 0.0% [0.0002154, 0.0002472] D=161 (span 14.78% / interval 0.0918%)` | **named** |
+| `avx2/threads=8`, GFLOP/s | `933.7 GFLOP/s +/- 0.1% [806, 934.5] D=160.6 (span 13.76% / interval 0.0857%)` | silent |
+
+*How to read it:* `D` = 160.995 and 160.625 unrounded. **This is the instance that convicts any
+future bar on `D` as well**, and it is why Scott's "threshold nothing" is not merely a preference
+for numbers: a cutoff placed anywhere between these two would be separating readings that differ by
+0.2% in the quantity it claims to measure. There is no value of the constant that makes this pair
+behave, which is the definition of a parameter chosen by looking at the data.
+
+**4. The pair that reaches a ratio criterion.** `Scale/Ssymm/n=4096/threads=8` in `sec/op`, the arm
+that feeds the scaling ratio:
+
+| run | reading | old verdict |
+|---|---|---|
+| `6ba6566` keel-zen5 `-2` | `0.1281 s +/- 0.0% [0.1279, 0.1362] D=94.19 (span 6.51% / interval 0.0691%)` | **named** |
+| `969c360` keel-zen4 `-3` | `0.208 s +/- 0.1% [0.2075, 0.2205] D=54.81 (span 6.24% / interval 0.1139%)` | silent |
+
+*How to read it:* this is the pair Scott's "instance five to arrive at 6.2%" names — a span cutoff
+at 6.3% separates them, and the fifth instance would land just under it. Here the named row *is*
+the blinder one (94.19 > 54.81), so the trigger was right by accident; `D` says so without needing
+to have been right, and 54.81 is still an interval 55× too narrow for its samples on a row a
+criterion divides.
+
+#### The one that convicts the trigger outright
+
+Instances 2–4 show the trigger disagreeing with the severity. One archive file shows it
+**inverting** it — `archive/pinned8/bench-gate-p5-6ba6566-keel-zen5-20260823T004407Z-2.txt`, one
+host, one sweep, all three arms in `sec/op`:
+
+    scalar/threads=8   9.025e-05 s +/- 0.0% [9.017e-05, 0.0001154] D=459.3 (span 27.99% / interval 0.0609%)   named
+    avx2/threads=8     7.32e-05 s  +/- 0.1% [7.306e-05, 8.458e-05] D=180   (span 15.74% / interval 0.0874%)   SILENT
+    avx512/threads=8   8.787e-05 s +/- 0.0% [8.77e-05, 9.483e-05]  D=142.6 (span 8.11% / interval 0.0569%)    named
+
+It named 142.6 and skipped 180. Sorted by the thing it claimed to detect, its verdict is not
+monotone — so this was never a *sensitivity* to be tuned; it was a discontinuity, and the deletion
+is the only fix that does not leave a band. These three rows are pinned in
+`tools/benchci/archive_test.go` for exactly that reason: the argument for the ruling is a
+regression test, not a paragraph.
+
+#### Coverage, and what it cannot see (rule 12)
+
+Driven, all fail-driven before commit: the three arms above over a re-derived archived CSV, which
+is the **only** place `D`'s division runs on measured intervals — every fixture in
+`scripts/remote-exec-test.sh` §9f has `lo == hi` and therefore reaches only `inf` and the floor `1`
+— plus §9g's take-four ceiling at `D=17`, whose fixture was **rewritten to the real reading**
+because it had been hand-built as `[1398, 1451]` when only the printed width was under test, and a
+fixture may not invent an operand. The retired marker's absence is asserted **by name** rather than
+left to four exact-match strings, and `D`'s presence is asserted against the range's presence, so a
+renderer that dropped `D` fails on one arm instead of on all of them; both new assertions were
+positive-controlled by suppressing `D` and by re-emitting the marker, and each failed as written.
+Unexercised: `D` on a row whose interval is unbounded, which is unreachable — `tools/benchci`
+unbounds `ci`/`lo`/`hi` together on one flag (pinned by
+`TestWriteCSVColumnsAndUnboundedTogether`) and the `ci == inf` branch returns before `D`. A real limit rather than a dead
+branch, and its mechanism is not where I first put it: on a **rate** unit `D` is quantised by the
+*samples*, not by any formatting in this tree. Go renders a `ReportMetric` rate at 4 significant
+figures, so keel-skx's ceiling samples are literally the integers `1444 1445 1446` in the raw log,
+every order statistic over them is an integer, and `D=17` above is `17/1` on a window whose true
+width is somewhere in `(0, 2)`. `tools/benchci` is not the cause — it writes `lo`/`hi` with
+`fmt.Sprint`, full precision — so a finer rate `D` would need the *benchmark* to report more digits.
+`sec/op` has no such coarseness (the same arm's samples are 6-digit nanosecond integers), which is
+why the `sec/op` reading of an arm is the one to trust when the two disagree. Instances 1 and 3
+above quote `GFLOP/s` anyway, and on purpose: instance 1 **is** the gate's ceiling denominator,
+which `bench_gflops` reads in `GFLOP/s` and in no other unit, and instance 3's second row is the
+`GFLOP/s` row the sorted table selected. Both are quoted in the unit whose blindness actually
+mattered, with the coarseness disclosed here rather than swapped away.
 
 ## Rule 21 — a record of deltas cannot see an injection, so what decides a measurement is stated totally
 

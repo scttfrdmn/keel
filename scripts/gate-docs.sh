@@ -321,22 +321,25 @@ stage_citations() {
 # shell term is not also a redefinition that lets untracked Go pay down the ratio.
 stage_ratio() {
   head_ "apparatus ratio (reported, never a verdict)"
-  local sh lib tool bench benchlib ratio aratio app libnet
+  local sh lib tool toollib bench benchlib ratio aratio oratio app libnet toolt
   sh="$(git ls-files -co --exclude-standard '*.sh' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   lib="$(git ls-files -co --exclude-standard '*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
-  tool="$(git ls-files -co --exclude-standard 'tools/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
-  # bench/ counts EVERY tracked *.go, tests included -- that is the whole point of the
-  # 2026-08-20 correction above -- while benchlib is only the part the library term
-  # already held, so subtracting it moves bench/ across without double-counting.
+  # tools/ AND bench/ each count EVERY *.go, tests included: the 2026-08-20 correction for
+  # bench/ and its 2026-08-31 completion for tools/ (#131). The *lib variables are only the
+  # part the library term already held, so subtracting them moves each across whole, once.
+  tool="$(git ls-files -co --exclude-standard 'tools/*.go' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  toollib="$(git ls-files -co --exclude-standard 'tools/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   bench="$(git ls-files -co --exclude-standard 'bench/*.go' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   benchlib="$(git ls-files -co --exclude-standard 'bench/*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   app=$((sh + tool + bench))
-  libnet=$((lib - tool - benchlib))
+  toolt=$((tool - toollib))
+  libnet=$((lib - toollib - benchlib))
   ratio="$(awk -v a="$sh" -v b="$lib" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
   aratio="$(awk -v a="$app" -v b="$libnet" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
+  oratio="$(awk -v a="$((app - tool + toollib))" -v b="$libnet" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
   info "shell ${sh} / library ${lib} / ratio ${ratio}x"
-  info "apparatus ${app} (shell ${sh} + tools/ ${tool} + bench/ ${bench}, of which ${benchlib} was already counted as library) / library ${libnet} / ratio ${aratio}x"
-  info "shell = *.sh; library = *.go less *_test.go; both count tracked AND untracked-not-ignored, since a counter that polices new shell must see it before it is committed; tools/ and bench/ are apparatus (bench/ whole, tests included); internal/spill's audit instrument stays on the library side, disclosed"
+  info "apparatus ${app} (shell ${sh} + tools/ ${tool} + bench/ ${bench}, of which ${toollib} + ${benchlib} were already counted as library) / library ${libnet} / ratio ${aratio}x"
+  info "apparatus = shell + tools/ + bench/ INCLUDING their tests; library = *.go net of its tests. The asymmetry is deliberate and only defensible stated: the ratio measures maintenance burden against shipped substance, and a test of an instrument is burden. Both terms count tracked AND untracked-not-ignored, since a counter that polices new shell must see it before it is committed. internal/spill's audit instrument stays on the library side, disclosed. RESTATED 2026-08-31 (#131): tools/*_test.go was in NEITHER term, ${toolt} lines of it here; folding it in reads ${oratio}x under the pre-fold definition against ${aratio}x under this one, which is a DEFINITION correction of one tree and not a regression. The same fold measured 2.69x -> 2.79x on 2026-08-30 when the hole was found; both ends have moved with the tree since, which is why this line computes them instead of quoting them"
 }
 
 main() {
