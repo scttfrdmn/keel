@@ -55,6 +55,16 @@ func provenance() {
 		fmt.Println("keel-bench-governor:", governor())
 		fmt.Println("keel-bench-clock-mhz:", clockMHz())
 		fmt.Println("keel-bench-platform:", runtime.GOOS+"/"+runtime.GOARCH)
+		// The compiler is part of the instrument and no bench artifact recorded it:
+		// of the 45 under archive/pinned8/ not one names a toolchain, so "1.26.x or
+		// 1.27.0?" — #118's whole question — was unanswerable from the rows. This
+		// records provenance and settles no era. runtime.Version() carries the
+		// GOEXPERIMENT too: go1.27.0-X:simd with it, go1.27.0 without, measured both
+		// ways here, where keel-bench-backend says scalar either way and so cannot
+		// witness the experiment. NOT in KEEL_BENCH_IGNORE, so a cross-toolchain A/B
+		// fails closed with bench_compare naming the key that forked the table (#50,
+		// T20); no arm-building path in the tree varies it, so nothing is lost.
+		fmt.Println("keel-bench-toolchain:", runtime.Version())
 		fmt.Println("keel-bench-backend:", keel.ActiveL1Backend(),
 			"(available: "+strings.Join(keel.AvailableL1Backends(), " ")+")")
 		fmt.Println("keel-bench-peak-method: measured on this host by " +

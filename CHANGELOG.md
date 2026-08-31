@@ -8,6 +8,20 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **`keel-bench-toolchain` in the provenance preamble** (`bench/bench_test.go`, feeding `#118`).
+  The compiler is part of the instrument and no bench artifact recorded it: of the 45 bench
+  artifacts under `archive/pinned8/` not one names a toolchain, so "was this row taken under
+  go1.26.x or go1.27.0" — the question `#118` exists to rule on — was not answerable from the rows
+  themselves. `runtime.Version()` also carries the GOEXPERIMENT, verified by making the value move
+  rather than by reading it once: `go1.27.0-X:simd` under `GOEXPERIMENT=simd` and `go1.27.0`
+  without, on a host where `keel-bench-backend` says `scalar` either way and so could not have
+  distinguished them. Deliberately **not** added to `KEEL_BENCH_IGNORE`, so a cross-toolchain A/B
+  now fails closed through `bench_compare` naming the key that forked benchstat's table (`#50`,
+  T20); nothing in the tree compares across toolchains today, since every arm-building path sets
+  `GOEXPERIMENT=simd`. This records provenance and settles nothing — whether go1.27.0 opens an era
+  in `scripts/measurement-eras.tsv` is still `#118`'s ruling to make.
+
 ### Changed
 - **`scripts/ab.sh` — one A/B harness, lifted out of `l1-bench.sh` and `edge-bench.sh`** (`#131`
   paydown). The two drivers were identical for the entire skeleton — worktree, trap,
