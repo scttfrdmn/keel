@@ -904,7 +904,7 @@ bd_case "a width of 0.03% prints 0.0% and is named on the same terms" \
 bd_case "a span inside one display quantum is not an anomaly" \
   "2291 GFLOP/s +/- 0.0% [2291, 2292]" \
   "Judged,2291,0.00%,2291,2291,2291,2292"
-bd_case "a width that prints 0.1% asserts nothing the range refutes" \
+bd_case "a width one quantum above zero is outside the trigger (#132's miss class)" \
   "2291 GFLOP/s +/- 0.1% [1989, 2296]" \
   "Judged,2291,0.07%,2291,2291,1989,2296"
 # A pre-#116 CSV has three columns: no range, hence no marker, and above all no
@@ -947,9 +947,9 @@ else
   ceil_case "the skx confirmation ceiling now carries its range and the marker" \
     "compute 1444 GFLOP/s +/- 0.0% [1398, 1451] RANK-WINDOW-BLIND(span 3.67% under a 0.0% interval) measured at 8 threads" \
     "Ceiling/compute/avx512/threads=8,1444,0.00%,1444,1444,1398,1451"
-  # Take four's 0.07%: prints 0.1%, asserts nothing the range refutes, so no marker. The
-  # negative control -- without it the section passes on a predicate that names everything.
-  ceil_case "the take-four ceiling prints 0.1% and is not named" \
+  # Take four's 0.07% prints 0.1%, so the trigger's equality at zero excludes it -- though its
+  # 3.67% span refutes 0.1% as squarely as 0.0%. Negative control, and #132's whole miss class.
+  ceil_case "the take-four ceiling prints 0.1% and is not named (#132)" \
     "compute 1444 GFLOP/s +/- 0.1% [1398, 1451] measured at 8 threads" \
     "Ceiling/compute/avx512/threads=8,1444,0.07%,1444,1444,1398,1451"
   # MAKE THE QUANTITY MOVE. Both renderings read 1444 above, so agreement there certifies

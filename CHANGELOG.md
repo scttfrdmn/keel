@@ -42,6 +42,23 @@ While the major version is 0, minor versions may contain breaking changes.
   quantum, so it is restated as history rather than left standing.
 
 ### Added
+- **Rule 20's archived path is exercised by CI, and it says the marker's selectivity is an
+  accident of the display quantum (`#133`, reporting to `#132`).** The stated coverage limit —
+  "no persisted CSV carries the seven columns" — was about persisted *CSVs*; every
+  `archive/*/*.txt` holds the raw samples, so `tools/benchci` re-derives them and
+  `tools/benchci/archive_test.go` re-drives the sweep under `go test ./...` (which CI runs and
+  `remote-exec-test.sh` is not): **80 files, 1420 readings, 0 unbounded**, no interval bound
+  escaping its own samples on any of them, the rank pairs pinned through
+  `benchmath.AssumeNothing` itself, and the shipped `bench_describe` driven over a re-derived
+  archived CSV with `RANK-WINDOW-BLIND` firing on purpose. **No trigger changed.** The corpus
+  answers `#132` in the negative — the disparity ratio's achievable set is `[1, ∞]` at every
+  bounded n, so no finite cutoff follows from the geometry (`D ≥ 1` on 1420 of 1420) — and
+  finds the real seam instead: of 296 near-zero readings in the 18 per-host `pinned8` archives,
+  78 are named and 218 silent, **interleaving** down the span ordering (15.93% named at `0.0%`
+  against 15.74% silent at `0.1%`, adjacent arms of one file, the silent one carrying two
+  recurring 15.5%-slow draws at ranks 29–30 of 30). Two `remote-exec-test.sh` fixture notes
+  claimed a width printing `0.1%` "asserts nothing the range refutes"; correct as pins,
+  false as statements, renamed to name the miss class.
 - **§5 rule 17 now binds the ratio criterion too (`#119`).** gate-p5's `Strsm` scaling bar was
   one fleet constant judging every host that reported, including hosts outside its derivation
   set by chronology rather than by any property of their code — the exact asymmetry rule 17

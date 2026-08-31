@@ -917,7 +917,8 @@ re-drove it. `scripts/remote-exec-test.sh` §9f now fixtures six cases, three of
 the discriminating pair being the `0.00%`/`0.07%` keel-skx printed across this era's two archives.
 Unexercised: the archived path, because **no persisted CSV anywhere in the tree carries the seven
 columns the range needs** — every one predates #116 — so the archive cannot witness this renderer
-and the fixture is the whole of its coverage.
+and the fixture is the whole of its coverage. **Lifted 2026-08-30; see "The archived path, and what
+the corpus said about the trigger" below.**
 
 ### The tally printer (same ruling)
 
@@ -984,6 +985,79 @@ needs a constant chosen by looking at these widths — which is Scott's call und
 amend-only-with-a-predating-standard rule and is not taken here. The conservative one ships, its
 sensitivity stated in this table rather than in a claim, and the span prints on **every** row so
 that the two rows the trigger misses are still legible to anyone who reads the reading.
+
+### The archived path, and what the corpus said about the trigger
+
+*Measured 2026-08-30, closing #133 and reporting to #132. No trigger changed.*
+
+**The stated coverage limit was wrong about its own subject, and the correction is a large corpus
+rather than a caveat.** The limit read "no persisted CSV carries the seven columns" — true, and
+about persisted *CSVs*. Every `archive/*/*.txt` is a raw benchmark log, so the samples the seven
+columns are computed from have been in the tree all along: `tools/benchci` re-derives them. The
+one documented command is `for f in archive/*/*.txt; do go run ./tools/benchci "$f"; done`, and
+`tools/benchci/archive_test.go` is that sweep as a **Go test**, so CI re-drives it — `go test ./...`
+runs in CI and `remote-exec-test.sh` does not, which is the whole reason the fixtures alone were
+memory-driven. (That placement costs the `scripts/` ledger nothing, and it costs `gate-docs.sh`'s apparatus
+ledger nothing either — which is a hole in the reporter and not a property of the code. Line 327
+excludes `*_test.go` from the `tools/` term while line 331 includes it for `bench/`, so **749 test
+lines under `tools/` are counted in neither term**, 253 of them added here: honest apparatus 20044
+and 2.79x against the reported 19295 and 2.69x. Same shape as the `bench/` hole that file corrected
+on 2026-08-20, and left unfixed here on that entry's own instruction that a definition change be
+argued rather than bundled into other work. Disclosed here and recorded on the paydown issue,
+`#131`, which is where the ledger is being worked.)
+
+What it asserts, all of it fail-driven before commit: the corpus re-derives to **80 files / 1420
+readings / 0 unbounded** (as of 2026-08-30; floors, so a lost archive reds and a new era does not);
+**no interval bound escapes its own samples** on any of the 1420, with a negative control feeding
+the same predicate #116's own fabricated bound; the rank pairs `[2,9] / [6,15] / [10,21] / [18,32] /
+[36,55]` pinned through `benchmath.AssumeNothing` itself over samples `1..n`, where each bound
+comes back **equal to its own rank** — the cleanest available proof that both bounds are order
+statistics; and the shipped `bench_describe` driven over a re-derived archived CSV, with the marker
+**firing on purpose** there.
+
+That last assertion is also #132's answer, and it is a *no*. The disparity ratio
+`D = (max−min)/(hi−lo)` has achievable set `[1, ∞]` at every bounded n — `D ≥ 1` because both
+bounds are order statistics, and `sup D = ∞` at a degenerate window — so **no finite cutoff follows
+from the rank geometry**; only the two endpoints do, and both are already known (`D ≥ 1` is the
+3/3-false-positive widening refuted above; `D = ∞` read at display resolution is what ships).
+`D ≥ 1` held on 1420 of 1420, which is the positive control for the claim in the instrument that
+motivated it (§5 rule 11).
+
+The corpus did find a defect, and it is not the missing middle. The shipped trigger fires on **90 of
+1420** readings (6.3%); the classes re-measure at **133 display-zero / 25 exact / 108 middle**, the
+same 1:4 shape as the 16/4/12 above. But among the 18 per-host `pinned8` archives, of the **296**
+readings whose printed width is within one quantum of zero under a span exceeding that quantum,
+**78 are named and 218 are silent** — and sorted by span the two verdicts **interleave to the
+bottom**, including on the `Scale` rows that feed the ratio criterion:
+
+| span | printed width | named? | row |
+|---|---|---|---|
+| 15.93% | 0.0% | **YES** | `Ceiling/compute/avx2/threads=8` (zen5, `6ba6566`) |
+| 15.74% | 0.1% | no | `Ceiling/compute/avx2/threads=8` (zen5, `6ba6566`) |
+| 14.78% | 0.0% | **YES** | `Ceiling/compute/avx512/threads=8` |
+| 13.76% | 0.1% | no | `Ceiling/compute/avx2/threads=8` |
+| 6.51% | 0.0% | **YES** | `Scale/Ssymm/n=4096/threads=8` |
+| 6.24% | 0.1% | no | `Scale/Ssymm/n=4096/threads=8` (`969c360`) |
+
+The exhibit is one file's adjacent arms —
+`archive/pinned8/bench-gate-p5-6ba6566-keel-zen5-20260823T004407Z-2.txt`, `scalar/threads=8` span
+**27.99%** named at `0.0%`, `avx2/threads=8` span **15.74%** silent at `0.1%` — and the silent row's
+n=30 sample is 28 draws inside 0.3% plus **two recurring** draws 15.5% slow at ranks 29 and 30,
+which is precisely the recurrence mechanism this rule was written for. So what separates the two
+rows is which side of the display quantum the *surviving* window's spread happened to land on, and
+nothing whatever about the contamination: **the marker's sensitivity is an accident of how quiet the
+clean mass was.** The trigger's equality at zero is the seam.
+
+Not fixed here, deliberately. Widening it is a criterion amendment; it needs a standard that
+predates the result, and the only predating standard available — the display quantum generalized to
+`span > printed_width + quantum`, no new constant — measures **90.4%** firing on this corpus, which
+is the 3/3 refutation above at 1420× the scale. A cutoff on `D` fires 9.1% at `D > 10` and 5.8% at
+`D > 20`, but its Jaccard agreement with the shipped marker never exceeds **0.35** at any cutoff, so
+it is a *different* set and not a refinement of this one. #132 carries the four options with their
+measured rates and stays open for Scott. One thing the corpus settles for free: over a **genuine**
+three-column `go tool benchstat -format=csv` of the same archive, that avx2 row prints `0.0%`
+because benchstat rounds to `%.0f%%` — so the seven-column writer is what made the printed width
+discriminating at all, and the historical logs were blind in both directions at once.
 
 ## Rule 21 — a record of deltas cannot see an injection, so what decides a measurement is stated totally
 
