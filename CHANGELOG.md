@@ -9,6 +9,39 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **All three `janus` null-A/B draws preserved with their per-sample arm logs** — nine files in
+  `archive/pinned8/` with sha256 in its README (`#141`, `#147`). The driver transcripts were never
+  the point: the finding is in the 690 per-sample rows each arm log holds, and a benchstat table
+  cannot show it. **18 of 138 (row, arm) cells are bimodal *within* a single `-count=30` window** —
+  classified as a largest-adjacent-gap above 1.5% of the median with both clusters holding ≥3
+  samples, the second condition load-bearing because without it 20 single wild samples read as
+  modes. It tracks the backend, not `kc`: scalar 12 bimodal + 16 outlier of 48 cells, avx512 6 + 4
+  of 72, `Peak/*` **0 of 18** — and a prediction that it would concentrate at small `kc` is refuted
+  (6/3/4/5 across `kc=8/32/128/512`). Two signatures separate on which rate sized `b.N`, against a
+  harness elapsed target **measured at 1.2043 s** over 240 unimodal samples rather than recalled:
+  `6x32/avx512/kc=8` fits the *other* mode's rate to **0.14%/0.23%** and alternates `HLHL…` 15|15
+  with the slow mode on even `k` in two independent runs, so the mode flips between the ramp and
+  the timed run; `2x32/scalar/kc=8` fits its *own* rate to **0.24–0.73%** with a 15.52% gap in
+  contiguous blocks. No mechanism is attributed — `Peak` being clean cannot separate "allocates
+  nothing" from "touches no memory", both being true of it alone. The consequence for anything that
+  reads benchstat: `W1/base 6x32/avx512/kc=8` prints `± 2%` and **that 2% is the mode gap, not an
+  uncertainty**, with `p=0.000` describing a deterministic pattern.
+- **W1's two arm binaries are byte-identical, so `-trimpath`'s effect is recorded as a fact and not
+  as an inference** — `sha256=34a87563622bb6c3… bytes=5066630 flags=[-buildmode=exe -compiler=gc
+  -trimpath=true]` on both arms of a run whose base arm builds in a worktree at a different path
+  (`#141`). The pre-registration in `065608d`'s message named that exact digest before the run
+  existed. What it does **not** establish is that this quieted anything: the deltas it compares are
+  draws from the modal distribution above, so W0-versus-W1 is n=1 against n=1 and the
+  layout attribution is `UNMEASURED` — a defect in the witness's design, found by the witness.
+- **A ±0.04pp ambiguity band on every threshold read off a benchmark table** (`#147`). Per sample
+  `GFLOP/s` is exactly `flops/call ÷ ns/op`, verified to the printed digit, but `testing` prints each
+  metric to 4 significant figures **independently**, so each column carries its own quantization. The
+  `|sec/op|` vs `|GFLOP/s|` discrepancy across #141's 12 predicate rows is **0.003–0.041 percentage
+  points**, flat rather than concentrated on the bimodal row — which refutes the even-`n`-median
+  explanation reached for first. Two of those twelve rows changed disposition between the two halves
+  of one table: `−1.9954%`/`+2.0049%` against a 2% threshold, and `−0.2945%`/`+0.3109%` against a
+  0.30% one. Under `GFLOP/s` a different branch would have fired; what resolved it legitimately is
+  that the pre-registration named `sec/op` in advance.
 - **The planted-delta control, beside the A/B harness and run before any host is touched** —
   `ab_control` in `scripts/ab.sh` (`#141`, authorized 2026-09-01: *"an A/B that can't see a planted
   delta hasn't measured a real one"*). #141's own checklist asked for this **before** the instrument

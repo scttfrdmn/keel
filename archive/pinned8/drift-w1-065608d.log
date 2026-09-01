@@ -1,0 +1,119 @@
+== drift — issue #141. One revision, two windows. Not a gate. ==
+
+base: 065608d (HEAD)
+new:  065608d (working tree)
+        planted-delta control: +10.00% recovered from a pair named the way this run names
+        its arms (base-065608d.txt vs new-065608d.txt) — the comparison is live.
+Preparing worktree (detached HEAD 065608d)
+built two linux/amd64 bench binaries (static)
+        base binary: sha256=34a87563622bb6c3… bytes=5066630 flags=[-buildmode=exe -compiler=gc -trimpath=true]
+        new binary: sha256=34a87563622bb6c3… bytes=5066630 flags=[-buildmode=exe -compiler=gc -trimpath=true]
+methodology: -count=30 -benchtime=1s, GOMAXPROCS=1, filter=BenchmarkKernel|BenchmarkPeak
+        benchstat compares the two logs, ignoring keel-bench-clock-mhz,keel-bench-flops — configuration
+        keys that describe the run rather than the build, and which forked the table
+        into two delta-free halves when they were not ignored (#50, T20).
+        both arms are the same source, so any delta below is the host between two
+        windows, not the code: a null A/B whose expected reading is a wash.
+        read the absolute sec/op and GFLOP/s columns, not only the delta -- the ratio
+        the gate publishes divides two terms a host effect moves together.
+
+-- janus.local --
+        Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | instance=none | virt=metal | 32 cpus | 16 cores | smt=2 | 1 sockets | governor=performance | tmux=yes | Linux 5.14.0-611.34.1.el9_7.x86_64 | L2=1024K L1d=32K L3=22528K | spawn=none
+        keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+        keel-bench-cpu: Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz
+        keel-bench-cores: 8 logical
+        keel-bench-governor: performance
+        keel-bench-platform: linux/amd64
+        keel-bench-toolchain: go1.27.0-X:simd
+        keel-bench-backend: avx512 (available: avx512 avx2 scalar)
+        keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+        keel-bench-peak-formula: scalar: 8.8 GFLOP/s (4.40 GHz cpuinfo_max_freq x 2 FP ports, unfused: 1 flop/op x 1 lanes)
+        keel-bench-gomaxprocs: 1
+        keel-bench-kern: 2x32/avx512 (available: 4x32/avx512 2x32/avx512 4x32/scalar 2x32/scalar)
+        keel-bench-kern-class: issue insns-per-fma=4.625 (avx512 without vbmi2+vpopcntdq (Skylake-X / Cascade Lake / Cooper Lake generation))
+        keel-bench-kern-audit: 4x32/avx512=6.250 2x32/avx512=4.625
+        keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+        goos: linux
+        goarch: amd64
+        pkg: github.com/scttfrdmn/keel/bench
+        cpu: Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz
+                                  │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.AHjzohUWIn/base-065608d.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.AHjzohUWIn/new-065608d.txt │
+                                  │                                      sec/op                                      │                         sec/op                           vs base                │
+        Kernel/4x32/avx512/kc=8                                                                         33.29n ±  0%                                               33.31n ± 0%        ~ (p=0.935 n=30)
+        Kernel/4x32/avx512/kc=32                                                                        111.8n ±  0%                                               111.8n ± 0%        ~ (p=0.798 n=30)
+        Kernel/4x32/avx512/kc=128                                                                       430.7n ±  0%                                               430.0n ± 0%   -0.16% (p=0.005 n=30)
+        Kernel/4x32/avx512/kc=512                                                                       1.698µ ±  0%                                               1.693µ ± 0%   -0.29% (p=0.000 n=30)
+        Kernel/2x32/avx512/kc=8                                                                         14.83n ±  0%                                               14.83n ± 0%        ~ (p=0.501 n=30)
+        Kernel/2x32/avx512/kc=32                                                                        44.73n ±  0%                                               44.72n ± 0%        ~ (p=0.830 n=30)
+        Kernel/2x32/avx512/kc=128                                                                       164.4n ±  0%                                               164.1n ± 0%   -0.18% (p=0.027 n=30)
+        Kernel/2x32/avx512/kc=512                                                                       704.4n ±  0%                                               696.2n ± 0%   -1.17% (p=0.000 n=30)
+        Kernel/4x32/scalar/kc=8                                                                         645.1n ±  0%                                               645.2n ± 0%        ~ (p=0.848 n=30)
+        Kernel/4x32/scalar/kc=32                                                                        2.311µ ±  0%                                               2.326µ ± 0%   +0.67% (p=0.000 n=30)
+        Kernel/4x32/scalar/kc=128                                                                       37.27µ ±  3%                                               37.58µ ± 2%        ~ (p=0.219 n=30)
+        Kernel/4x32/scalar/kc=512                                                                       151.0µ ±  0%                                               151.1µ ± 0%        ~ (p=0.971 n=30)
+        Kernel/2x32/scalar/kc=8                                                                         321.2n ± 15%                                               369.9n ± 0%  +15.16% (p=0.001 n=30)
+        Kernel/2x32/scalar/kc=32                                                                        1.119µ ±  0%                                               1.290µ ± 0%  +15.24% (p=0.000 n=30)
+        Kernel/2x32/scalar/kc=128                                                                       17.22µ ±  9%                                               18.04µ ± 8%        ~ (p=0.081 n=30)
+        Kernel/2x32/scalar/kc=512                                                                       73.54µ ±  3%                                               73.58µ ± 1%        ~ (p=0.367 n=30)
+        Kernel/6x32/avx512/kc=8                                                                         43.85n ±  2%                                               42.97n ± 0%   -2.00% (p=0.000 n=30)
+        Kernel/6x32/avx512/kc=32                                                                        147.1n ±  1%                                               146.3n ± 0%   -0.58% (p=0.004 n=30)
+        Kernel/6x32/avx512/kc=128                                                                       557.1n ±  0%                                               555.8n ± 0%   -0.24% (p=0.000 n=30)
+        Kernel/6x32/avx512/kc=512                                                                       2.246µ ±  0%                                               2.250µ ± 0%   +0.16% (p=0.032 n=30)
+        Peak/avx512                                                                                     120.8µ ±  0%                                               120.9µ ± 0%        ~ (p=0.104 n=30)
+        Peak/avx2                                                                                       102.7µ ±  0%                                               102.8µ ± 0%        ~ (p=0.959 n=30)
+        Peak/scalar                                                                                     354.9µ ±  0%                                               355.0µ ± 0%        ~ (p=0.511 n=30)
+        geomean                                                                                         1.562µ                                                     1.582µ        +1.33%
+        
+                                  │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.AHjzohUWIn/base-065608d.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.AHjzohUWIn/new-065608d.txt │
+                                  │                                     GFLOP/s                                      │                         GFLOP/s                          vs base                │
+        Kernel/4x32/avx512/kc=8                                                                          61.52 ±  0%                                                61.48 ± 0%        ~ (p=0.982 n=30)
+        Kernel/4x32/avx512/kc=32                                                                         73.25 ±  0%                                                73.28 ± 0%        ~ (p=0.750 n=30)
+        Kernel/4x32/avx512/kc=128                                                                        76.09 ±  0%                                                76.20 ± 0%   +0.14% (p=0.006 n=30)
+        Kernel/4x32/avx512/kc=512                                                                        77.19 ±  0%                                                77.43 ± 0%   +0.31% (p=0.000 n=30)
+        Kernel/2x32/avx512/kc=8                                                                          69.03 ±  0%                                                69.03 ± 0%        ~ (p=0.662 n=30)
+        Kernel/2x32/avx512/kc=32                                                                         91.56 ±  0%                                                91.59 ± 0%        ~ (p=0.865 n=30)
+        Kernel/2x32/avx512/kc=128                                                                        99.66 ±  0%                                                99.82 ± 0%   +0.16% (p=0.030 n=30)
+        Kernel/2x32/avx512/kc=512                                                                        93.03 ±  0%                                                94.14 ± 0%   +1.19% (p=0.000 n=30)
+        Kernel/4x32/scalar/kc=8                                                                          3.175 ±  0%                                                3.175 ± 0%        ~ (p=0.830 n=30)
+        Kernel/4x32/scalar/kc=32                                                                         3.545 ±  0%                                                3.522 ± 0%   -0.65% (p=0.000 n=30)
+        Kernel/4x32/scalar/kc=128                                                                       879.3m ±  3%                                               872.0m ± 2%        ~ (p=0.217 n=30)
+        Kernel/4x32/scalar/kc=512                                                                       868.2m ±  0%                                               867.3m ± 0%        ~ (p=0.971 n=30)
+        Kernel/2x32/scalar/kc=8                                                                          3.188 ± 13%                                                2.768 ± 0%  -13.18% (p=0.001 n=30)
+        Kernel/2x32/scalar/kc=32                                                                         3.662 ±  0%                                                3.176 ± 0%  -13.25% (p=0.000 n=30)
+        Kernel/2x32/scalar/kc=128                                                                       951.7m ± 10%                                               908.4m ± 9%        ~ (p=0.082 n=30)
+        Kernel/2x32/scalar/kc=512                                                                       891.2m ±  3%                                               890.6m ± 1%        ~ (p=0.359 n=30)
+        Kernel/6x32/avx512/kc=8                                                                          70.08 ±  2%                                                71.48 ± 0%   +2.00% (p=0.000 n=30)
+        Kernel/6x32/avx512/kc=32                                                                         83.51 ±  1%                                                84.00 ± 0%   +0.59% (p=0.003 n=30)
+        Kernel/6x32/avx512/kc=128                                                                        88.23 ±  0%                                                88.44 ± 0%   +0.23% (p=0.000 n=30)
+        Kernel/6x32/avx512/kc=512                                                                        87.53 ±  0%                                                87.41 ± 0%   -0.14% (p=0.036 n=30)
+        Peak/avx512                                                                                      208.4 ±  0%                                                208.1 ± 0%        ~ (p=0.111 n=30)
+        Peak/avx2                                                                                        102.1 ±  0%                                                102.0 ± 0%        ~ (p=0.822 n=30)
+        Peak/scalar                                                                                      3.693 ±  0%                                                3.692 ± 0%        ~ (p=0.515 n=30)
+        geomean                                                                                          19.50                                                      19.24        -1.31%
+        
+                                  │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.AHjzohUWIn/base-065608d.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.AHjzohUWIn/new-065608d.txt │
+                                  │                                    flops/call                                    │                       flops/call                        vs base                 │
+        Kernel/4x32/avx512/kc=8                                                                          2.048k ± 0%                                              2.048k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/4x32/avx512/kc=32                                                                         8.192k ± 0%                                              8.192k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/4x32/avx512/kc=128                                                                        32.77k ± 0%                                              32.77k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/4x32/avx512/kc=512                                                                        131.1k ± 0%                                              131.1k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/2x32/avx512/kc=8                                                                          1.024k ± 0%                                              1.024k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/2x32/avx512/kc=32                                                                         4.096k ± 0%                                              4.096k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/2x32/avx512/kc=128                                                                        16.38k ± 0%                                              16.38k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/2x32/avx512/kc=512                                                                        65.54k ± 0%                                              65.54k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/4x32/scalar/kc=8                                                                          2.048k ± 0%                                              2.048k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/4x32/scalar/kc=32                                                                         8.192k ± 0%                                              8.192k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/4x32/scalar/kc=128                                                                        32.77k ± 0%                                              32.77k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/4x32/scalar/kc=512                                                                        131.1k ± 0%                                              131.1k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/2x32/scalar/kc=8                                                                          1.024k ± 0%                                              1.024k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/2x32/scalar/kc=32                                                                         4.096k ± 0%                                              4.096k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/2x32/scalar/kc=128                                                                        16.38k ± 0%                                              16.38k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/2x32/scalar/kc=512                                                                        65.54k ± 0%                                              65.54k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/6x32/avx512/kc=8                                                                          3.072k ± 0%                                              3.072k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/6x32/avx512/kc=32                                                                         12.29k ± 0%                                              12.29k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/6x32/avx512/kc=128                                                                        49.15k ± 0%                                              49.15k ± 0%       ~ (p=1.000 n=30) ¹
+        Kernel/6x32/avx512/kc=512                                                                        196.6k ± 0%                                              196.6k ± 0%       ~ (p=1.000 n=30) ¹
+        geomean                                                                                          13.47k                                                   13.47k       +0.00%
+        ¹ all samples are equal
+
+done. A wash makes #141's widening a transient excursion; a repeat of it makes it a host property.

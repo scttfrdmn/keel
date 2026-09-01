@@ -39,21 +39,50 @@ applied to *it*, and `keel-pin:` is the only witness of that. Applying the predi
 also returned exactly **35 unpinned** archives whose names are identical to the 35 already in
 `archive/free-placement/`, which is an independent check that the free arm was preserved whole.
 
-**The predicate over-collects, and the three `drift-janus-df999da*.log` files are why this says so
-(2026-09-01, #141).** They are a null A/B on `janus.local` — a lab host, neither fleet nor judged —
-and the two arm files carry `keel-pin: mask=0,1,2,3,4,5,6,7 width=8` and `doms=`, which is *both*
-stated predicates, so a re-derivation by predicate alone would file them in the spread arm. They
-are **excluded by name**, which is in doctrine rather than around it: `INDEX.tsv` and
+**The predicate over-collects, and the nine `drift-*` files are why this says so (2026-09-01,
+#141).** They are three null A/B runs on `janus.local` — a lab host, neither fleet nor judged — and
+each run's two arm files carry `keel-pin: mask=0,1,2,3,4,5,6,7 width=8` and `doms=`, which is *both*
+stated predicates, so a re-derivation by predicate alone would file all six arm files in the spread
+arm. They are **excluded by name**, which is in doctrine rather than around it: `INDEX.tsv` and
 `INDEX-spread.tsv` are the membership, and the predicate is the check on them. Neither index cites
-these three and no verdict rests on them.
+any of the nine and no verdict rests on them.
 
 Extension does not separate them and I am not going to pretend it does. Measured before adding
 them: all 8 `.log` files here carried **zero** `keel-pin:` lines, so `.log` meant driver transcript
-and `.txt` meant sample archive, exactly. `drift-janus-df999da-{base,new}.log` are the first `.log`
-files here that are sample archives — 1 `keel-pin:` line and 690 `Benchmark` rows each — so the
-convention now has two exceptions and a named exclusion list is what carries the fact instead.
-They are tracked at all for #114's reason only: a published attribution whose evidence is a
-`build/` path is evidence on one laptop.
+and `.txt` meant sample archive, exactly. The six arm files are `.log` files that are sample
+archives — 1 `keel-pin:` line and 690 `Benchmark` rows each, against 0 and 0 for the three driver
+transcripts — so the convention now has six exceptions and a named exclusion list is what carries
+the fact instead. They are tracked at all for #114's reason only: a published attribution whose
+evidence is a `build/` path is evidence on one laptop.
+
+**Two naming forms, and the reason is worth more than the tidiness would have been.** The three
+`df999da` files were *renamed* when archived (`drift-janus-df999da-base.log` here against
+`drift-janus.local-base-df999da.log` under `build/` — contents byte-identical, verified). The six
+added for W0/W1 keep **the names the driver wrote**. Normalizing them would have been one `mv`, and
+it is refused for this directory's own stated reason: a citation should resolve to what the
+instrument produced, and a renamed file is a small edit to the record of a run. So the mixed
+convention is deliberate and is the tell for exactly one fact — which files were touched on the way
+in. Read the host, revision and arm out of each file's header, not out of its name.
+
+| file | sha256 | role |
+|---|---|---|
+| `drift-janus-df999da.log` | `5889db9df6fc1fa6…` | driver, draw 1 |
+| `drift-janus-df999da-base.log` | `b9d9f5e6000f41b8…` | arm |
+| `drift-janus-df999da-new.log` | `4a250b06686edaf1…` | arm |
+| `drift-w0-9862637.log` | `526fb48e447f637d…` | driver, draw 2 (#141's W0) |
+| `drift-janus.local-base-9862637.log` | `1de1e449346851fd…` | arm |
+| `drift-janus.local-new-9862637.log` | `34496914ad8bb167…` | arm |
+| `drift-w1-065608d.log` | `9ed6c9d34db99591…` | driver, draw 3 (#141's W1, `-trimpath`) |
+| `drift-janus.local-base-065608d.log` | `f0ed1a1ccb2fc6b0…` | arm |
+| `drift-janus.local-new-065608d.log` | `934e7bc12f8d695c…` | arm |
+
+W1's two arm files are the evidence for a claim no earlier archive here could make: **both arms of
+that run are the same binary**, `sha256=34a87563622bb6c3… bytes=5066630 flags=[-buildmode=exe
+-compiler=gc -trimpath=true]`, so the deltas between them are the host between two windows with
+build layout excluded by construction. All six arm files together are the input to #147 — 18 of 138
+(row, arm) cells bimodal *within* a single `-count=30` window — which is why the arm files and not
+only the driver transcripts had to be preserved: the finding is in the per-sample rows, and a
+benchstat table cannot show it.
 
 The three revisions present are `e64b34e` (9), `be5bb91` (8) and `d2fe477` (7). All 24 carry the
 same mask, `mask=0,1,2,3,4,5,6,7 width=8`, and all 24 report `gomaxprocs=8` — uniform, as rule 5's
