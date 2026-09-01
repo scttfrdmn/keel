@@ -22,7 +22,7 @@ While the major version is 0, minor versions may contain breaking changes.
   and `+137` lines each printed as one hundredth (1.77x → 1.78x → 1.79x) with the library term
   measured constant at 8964 across all five revisions — two printed decimals cannot separate two
   spends differing by 59 lines, and a flat ratio is not a flat ledger.
-- **`scripts/detach-test.sh` — `detach.sh`'s incident log, made executable** (137 lines, wired
+- **`scripts/detach-test.sh` — `detach.sh`'s incident log, made executable** (161 lines, wired
   into `make lint`). The harness that launches every long run had produced three behavioural
   incidents in a week and had no test at all; one of them idled a three-host fleet for eight
   hours, so its failures are denominated in dollars rather than lines. Each case runs **twice**:
@@ -45,6 +45,16 @@ While the major version is 0, minor versions may contain breaking changes.
   Without tmux the file prints `SKIP` and exits **0**, naming that none of the arms ran — a
   tmux-less machine should not fail `make lint`, and a skip that reads like a pass is the thing
   this file exists against. Both branches driven on purpose.
+  **Every arm runs on a private tmux server** (`TMUX_TMPDIR` under the test's own temp dir, which
+  moves the socket for this shell *and* for the `detach.sh` children it spawns), per #122's
+  instruction that the operator's server be neither read nor perturbed. This was not cosmetic: the
+  first version set a global variable on the shared server, and setting one there while a gate run
+  is live reaches every session that server starts afterwards. Asserted rather than assumed, and
+  driven red on purpose — and the assertion's own first reading was a false leak, because macOS
+  `mktemp -d` yields `/var/folders/…` while tmux reports the resolved `/private/var/folders/…`.
+  **Not covered, from #122's own list rather than from the incident log:** that the stated
+  exceptions `PATH`/`GOEXPERIMENT`/`GOMAXPROCS` survive the namespace clear. It has never failed,
+  the only-what-happened scope excludes it, and a regression there breaks every run loudly.
 - **gate-p5 criterion 9 now checks the README's denominator column, not just that it is
   non-empty** (#100, arm B). Each host publishes 9 rows whose 9 denominator sentences reduce to
   **one** measured quantity — the 1-thread avx512 peak, or that peak times the thread count — so

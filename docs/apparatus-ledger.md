@@ -58,10 +58,12 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-08-31 | `5f345ee` | +53 | 355 | #100 arm B: the README denominator column is checked, not just non-empty. |
 | 2026-08-31 | `2b09f6d` | +18 | 373 | #122: two words for two facts in `detach.sh stat`. |
 | 2026-08-31 | `48f9ed9` | +137 | 510 | `detach-test.sh`. Authorised at ~90 by ruling; 137 disclosed, 23 of them the header stating the scope. |
-| 2026-08-31 | `66706c2` | +1 | **511** | This file, plus the reading rule printed beside the ratio in `gate-docs.sh`. The ledger costs the ledger one line. |
+| 2026-08-31 | `66706c2` | +1 | 511 | This file, plus the reading rule printed beside the ratio in `gate-docs.sh`. The ledger costs the ledger one line. |
+| 2026-08-31 | `PENDING` | +24 | **535** | `detach-test.sh` moves onto a private tmux server, with the isolation asserted and driven red. Perturbing the shared server is how the incident it tests was born. |
 
-**Current debt: +511 net shell lines** unpaid by a routine, a kernel or a library fix.
-Shell term 16058, library term 8964, historical ratio 1.79x.
+**Current debt: +535 net shell lines** unpaid by a routine, a kernel or a library fix.
+Shell term 16082, library term 8964, historical ratio 1.79x — the third session in a row where
+the ratio's two printed decimals cannot see the spend.
 
 ## What is owed against it, and what is not
 

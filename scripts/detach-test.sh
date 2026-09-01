@@ -21,6 +21,11 @@
 # bench.sh, exercise-baseline.sh and gate-p5.sh, so the zero here is a reading). There is no
 # behaviour in this file to drive, so it gets no arm. Giving `stat` a self-describing age of
 # its own would remove the class, and that is a change to propose, not to smuggle in here.
+#
+# ALSO NOT COVERED, and this one is #122's own list rather than the incident log: item 3, that the
+# stated exceptions PATH/GOEXPERIMENT/GOMAXPROCS survive the namespace clear. It has never failed,
+# and the only-what-happened scope excludes it; a regression there breaks every run loudly rather
+# than quietly, which is why it is the cheapest of the four to leave out. Named, not implied.
 
 # shellcheck disable=SC2015  # `cond && ok || bad` is if-then-else HERE: ok and bad both end in
 # printf, which cannot fail, so the C arm never runs on a true A. Keeps each arm to one line.
@@ -38,15 +43,24 @@ command -v tmux >/dev/null || { printf 'SKIP  tmux absent, so NONE of the arms b
 # build/ artifact in the temp tree: this test cannot litter the repo it is testing. One parent
 # temp dir, because mkroot is called inside `$(...)` and an array appended there is appended in
 # a subshell and lost -- which would leak a root per arm.
-BASE="$(mktemp -d)"
+# -P because on macOS mktemp yields /var/folders/... while tmux reports the resolved
+# /private/var/folders/..., so the isolation arm below compared two spellings of one path and
+# read as a leak. Found by that arm going red on a correctly isolated run.
+BASE="$(cd "$(mktemp -d)" && pwd -P)" || exit 1
+# A PRIVATE tmux server, per #122: "the defect *was* the server, so a fake server is a fake
+# test" -- and equally, the operator's real server must be neither read nor perturbed, because
+# case 2 below is BORN of a global variable set on a shared server. Setting one on the server
+# that is hosting a live gate run would reach every session it starts afterwards. TMUX_TMPDIR
+# moves the socket for this shell AND for the detach.sh children it spawns, which is what makes
+# one variable enough; kill-server then takes the whole thing with it.
+export TMUX_TMPDIR="$BASE/tmux"; mkdir -p "$TMUX_TMPDIR"
 mkroot() { # mkroot [SED-EXPR] -> path to a root whose detach.sh is optionally mutated
   local t; t="$(mktemp -d "$BASE/rXXXXXX")"; mkdir -p "$t/scripts"
   if [[ $# -gt 0 ]]; then sed -E "$1" "$ROOT/scripts/detach.sh" >"$t/scripts/detach.sh"
   else cp "$ROOT/scripts/detach.sh" "$t/scripts/detach.sh"; fi
   chmod +x "$t/scripts/detach.sh"; printf '%s\n' "$t"
 }
-cleanup() { tmux kill-session -t "=keel-keel-t5-$$" 2>/dev/null
-            tmux set-environment -gu KEEL_TEST_FLEET 2>/dev/null; rm -rf "$BASE"; }
+cleanup() { tmux kill-server 2>/dev/null; rm -rf "$BASE"; }
 trap cleanup EXIT
 
 # Every assertion below matches a CAPTURED string, never a pipeline's exit status. `stat`
@@ -126,6 +140,16 @@ r="$(mkroot)"
 "$r/scripts/detach.sh" wait "t6-$$" >/dev/null 2>&1
 [[ "$("$r/scripts/detach.sh" stat "t6-$$")" == exited*status=7* ]] \
   && ok "control: a finished run still reports exited status=7" || bad "control: stat is broken for finished runs"
+
+# ---- isolation, asserted rather than assumed: every session above lived on the private server,
+# so nothing here could reach a live detached run. Checked AFTER the arms, when a leak would exist.
+[[ "$(tmux display-message -p '#{socket_path}' 2>/dev/null)" == "$BASE"/* ]] \
+  && ok "isolation: the arms above ran on this test's own tmux server, not the operator's" || bad "isolation: TMUX_TMPDIR did not move the socket; the arms above touched a shared server"
+# The second arm is VACUOUS when no default server is running, and it is not made non-vacuous by
+# starting one -- that is the perturbation it is checking for. The socket-path arm above is the
+# load-bearing one; this is the direct observation, kept for the case where a server does exist.
+env -u TMUX_TMPDIR tmux list-sessions -F '#{session_name}' 2>/dev/null | /usr/bin/grep -qE "t[0-9]b?-$$|keel-t5-$$" \
+  && bad "isolation: a test session leaked onto the default server" || ok "isolation: the operator's default server carries none of this test's sessions"
 
 # ---- scope guard: remote.sh's REMOTE_STATE=vanished is a DIFFERENT mechanism with its own
 # consumers and its own tests. #122 was not about it, and a future pass at "consistent
