@@ -69,10 +69,11 @@ While the major version is 0, minor versions may contain breaking changes.
   the project, deliberately taken on a **non-certificate** run so that a certificate is not a
   rendering's debut (`archive/pinned8/p2onfleet-afb108e.log`, `gate-p3: GREEN`, 52 PASS / 0 FAIL / 0
   UNMEASURED, `KEEL_BENCH_COUNT=30`, `go1.27.0`, on-demand `c5n.18xlarge`/`c7a.48xlarge`/`c8a.48xlarge`,
-  63 min, ≤$25.37 at a measured $24.09/hr). Each figure divides by the measured 1-thread peak of the
-  host it names and by nothing else: `keel-zen5` 65.1% of 288.2 GFLOP/s and `keel-zen4` 96.8% of
-  117.0 GFLOP/s, both fma-bound against the flat 55% floor; `keel-skx` 47.8% of 186.3 GFLOP/s, which
-  is 96.9% of that shape's 49.3% issue roofline against the 90% bar. The two fma-bound percentages are
+  63 min, ≤$25.37 at a measured $24.09/hr). Each figure divides by that host's own `BenchmarkPeak`
+  register-only ceiling **measured in the same invocation as the kernel**, and by nothing else:
+  `keel-zen5` 187.3 / 287.7 GFLOP/s = 65.1% and `keel-zen4` 113.3 / 117.0 = 96.8%, both fma-bound
+  against the flat 55% floor; `keel-skx` 88.79 / 185.6 = 47.8%, which is 96.9% of that shape's 49.3%
+  issue roofline against the 90% bar. The two fma-bound percentages are
   not comparable to each other — 96.8% of 117.0 is the smaller rate. This criterion has no OpenBLAS
   term at all. The gate's separate mission criterion does, it passed on all three in the same log, and
   its denominator is **not** the same quantity on each. `keel-zen5`: 64.6% of plain 1-thread OpenBLAS
@@ -84,6 +85,17 @@ While the major version is 0, minor versions may contain breaking changes.
   denominator, and 39.1% of plain OpenBLAS — the amended denominator doing exactly the work it was
   ruled for. The declaration row rendered as designed: *every fleet host and nothing else*, with the
   machine-local `.keel-sentinel` reported by name and mtime as **not read**.
+- **The sentinel criterion's percent-of-peak is published as a ratio only: neither its numerator nor
+  its denominator appears anywhere in the gate log.** Found while writing the entry above — the
+  first draft attributed the *Sgemm* section's peaks (288.2 / 117.0 / 186.3 GFLOP/s) to the sentinel,
+  and two of the three are the wrong number for it, because that section is a separate invocation. The
+  real terms live only in the run's `bench-*.txt` sample files, which are written under gitignored
+  `build/`, so a published percent-of-peak was recoverable on one laptop and nowhere else — the exact
+  thing `archive/pinned8/README.md` says the archive exists to prevent. All 13 sample files from this
+  run are now tracked beside its log; each names its own host, `gomaxprocs` and toolchain in its
+  header, so the mapping is a property of the files rather than of their names. What is **not** fixed:
+  the gate still prints only the ratio, and printing the two terms is a one-line `info` in
+  `gate-p3.sh` deferred to a session that can pay for shell under the apparatus cap.
 - **The apparatus ratio counts shell by content, not by file extension** (`gate-docs.sh`'s new
   `shell_files`: the `'*.sh'` glob unioned with a shebang sweep of every tracked-or-untracked
   file). Ruled 2026-08-31: a ledger that *"counts a 189-line test while its 97-line subject is

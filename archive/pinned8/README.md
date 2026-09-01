@@ -123,7 +123,14 @@ baseline is the `owing` state, which gate-p5 renders **FAIL**.
 `free-placement/` has no generator because no thirty-sixth member can ever exist — the mask
 refuses with status 121 rather than running free. **This directory can still grow, and what it
 grows with is spread-form archives**: every future `gate-p5` run adds to it while rule 5 stands,
-and every one of those carries `doms=`/`nodedoms=`. What is closed is the **confined subset**, at
+and every one of those carries `doms=`/`nodedoms=`. **Amended 2026-09-01: not only `gate-p5`.**
+The 13 `bench-gate-p3-afb108e-*` files are the first `gate-p3` samples preserved here, and they
+are here because that gate publishes a percent-of-peak whose numerator and denominator appear in
+**no** log — only the ratio does — so without them the first on-fleet P2 judgment would have been
+a number citable on one laptop, which is the failure this whole directory exists to prevent. They
+are spread-form and say so, they are not in `INDEX.tsv` (frozen at the 24, by its own header), and
+which host each one ran on is read from its `keel-bench-cpu:`/`keel-pin:` header rather than from
+its name, exactly as the membership predicate above prefers. What is closed is the **confined subset**, at
 24 as of 2026-08-22: the selector now spreads or refuses, so no twenty-fifth pre-amendment reading
 can ever be taken. Every count and table above is a statement about those 24 and does not move.
 

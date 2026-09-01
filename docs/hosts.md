@@ -603,12 +603,16 @@ janus's standing as *the* host where instruction count binds is unaffected as a
 statement about the silicon — the table below still reports it — but it is no longer a
 statement about who judges. **P2's floor was judged on the fleet for the first time on
 2026-09-01** (`archive/pinned8/p2onfleet-afb108e.log`, `gate-p3: GREEN`, 52 PASS / 0
-FAIL), and it holds on all three: `keel-zen5` 65.1% of its own 288.2 GFLOP/s measured
-peak and `keel-zen4` 96.8% of its own 117.0 GFLOP/s, both fma-bound against the flat 55%
-floor; `keel-skx` 47.8% of its own 186.3 GFLOP/s, which is 96.9% of that shape's 49.3%
-issue roofline against the 90% bar. Every percentage there divides by the measured peak
-of the host it names and by nothing else — the two fma-bound readings are not comparable
-as percentages, because 96.8% of 117.0 is a smaller rate than 65.1% of 288.2. That run
+FAIL), and it holds on all three: `keel-zen5` 187.3 / 287.7 GFLOP/s = 65.1% and
+`keel-zen4` 113.3 / 117.0 = 96.8%, both fma-bound against the flat 55% floor; `keel-skx`
+88.79 / 185.6 = 47.8%, which is 96.9% of that shape's 49.3% issue roofline against the
+90% bar. Both terms of each ratio are that host's own, from the *same* invocation —
+`BenchmarkKernel` on the dispatched shape over `BenchmarkPeak/avx512`, medians of 30,
+recomputed here from the run's tracked sample files rather than quoted, because the gate
+log publishes the ratio and neither term. The peaks in the Sgemm section of the same log
+(288.2 / 117.0 / 186.3) are a *different* invocation and are not these denominators. The
+two fma-bound readings are also not comparable to each other as percentages: 96.8% of
+117.0 is a smaller rate than 65.1% of 287.7. That run
 was deliberately **not** a certificate: per DESIGN.md §5's *"its first firing should not
 double as its first test"*, the declaration row and these three judgments had to be
 rendered by some real gate before a **certificate** run rendered them.
