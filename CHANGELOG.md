@@ -9,6 +9,29 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`scripts/detach-test.sh` — `detach.sh`'s incident log, made executable** (137 lines, wired
+  into `make lint`). The harness that launches every long run had produced three behavioural
+  incidents in a week and had no test at all; one of them idled a three-host fleet for eight
+  hours, so its failures are denominated in dollars rather than lines. Each case runs **twice**:
+  against a mutant copy with the fixing line reverted, where the arm must **reproduce the
+  incident**, and against the shipped script, where it must not. A harness test that has never
+  failed proves only that the harness cannot be tested — and this one earned its form, because
+  both fail-first arms caught a real defect before the file certified anything (a sed mutation
+  that silently matched nothing, and `set -o pipefail` turning `stat`'s by-design exit 1 into a
+  false NOMATCH from a `grep -q` that had in fact matched; every assertion now matches a captured
+  string, never a pipeline's status).
+  Covered, all three from the log: the **dropped override** (`:117`), the **injected override**
+  (`:116`, the eight-hour fleet), and **one word for two facts** (#122, asserted as
+  distinguishability plus the prefix hint). Plus a positive control that `stat` still reports a
+  finished run's exit code, and a scope guard that `remote.sh`'s separate `REMOTE_STATE=vanished`
+  was not renamed along the way.
+  **Not covered, stated rather than implied:** the fourth incident of that week — a 45-second-old
+  log read as a seven-hour stall — was a defect in an ad-hoc *probe* of a detached run, not in
+  this script, which has no mtime, age or timezone logic at all (the same grep finds such logic
+  in three sibling scripts, so the zero is a reading). Nothing in `detach.sh` to drive, so no arm.
+  Without tmux the file prints `SKIP` and exits **0**, naming that none of the arms ran — a
+  tmux-less machine should not fail `make lint`, and a skip that reads like a pass is the thing
+  this file exists against. Both branches driven on purpose.
 - **gate-p5 criterion 9 now checks the README's denominator column, not just that it is
   non-empty** (#100, arm B). Each host publishes 9 rows whose 9 denominator sentences reduce to
   **one** measured quantity — the 1-thread avx512 peak, or that peak times the thread count — so

@@ -36,6 +36,7 @@ lint:
 	bash scripts/citation-lint-test.sh
 	bash scripts/citation-lint.sh
 	bash scripts/baseline-test.sh
+	bash scripts/detach-test.sh
 
 gate-p%:
 	scripts/gate-p$*.sh
