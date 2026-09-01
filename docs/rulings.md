@@ -1516,3 +1516,103 @@ would have to read the claim. What the tree gets instead is the discipline list 
 `--json body,comments` form for the one instrument that produced instance 2. The other scopes —
 host sets, file extents — are unguarded, and both instances were caught by re-derivation rather
 than by any check, which is the only mechanism this rule can honestly claim.
+
+## Rule 24 — a pre-registered prediction is stated in the instrument's own output space
+
+**Adopted 2026-08-31**, ruling on the #113 certificate comparison. Scott's ruling on Scott's own
+prediction: *"the prediction failure is mine to own, and it earns a law: a pre-registered
+prediction must be stated in the instrument's own output space. I supplied two prose deltas that
+were digit-only, to be checked by a normalization that erases digits — so the table predicted
+precisely what the instrument cannot render and nothing it can."*
+
+### The instrument, and what it can render
+
+The comparison that validates a re-measured certificate against its pinned one reduces both logs to
+a set of normalized verdict keys:
+
+    LC_ALL=C sed -E 's/\x1b\[[0-9;]*m//g' "$1" \
+    | /usr/bin/grep -E '^  (PASS|FAIL|UNMEASURED|BASELINE|REPORTED) ' \
+    | LC_ALL=C sed -E 's/zen4/zenFOUR/g; s/zen5/zenFIVE/g' \
+    | LC_ALL=C sed -E 's/[0-9]+\.[0-9]+/#/g; s/[0-9]+/#/g' \
+    | LC_ALL=C sed -E 's/zenFOUR/zen4/g; s/zenFIVE/zen5/g'
+
+ANSI stripped because the logs carry `^[[32mPASS^[[0m`; the two-space anchor because `gate-p5`'s own
+verdicts sit at exactly that indent while delegated ones are deeper; the letter mask because the
+digit pass would otherwise collapse `keel-zen4` and `keel-zen5` into one host — which it did on the
+first attempt, reading 58 and 57 distinct keys instead of 72, and would have published a wrong
+member count. **The output space is wording.** Every numeral in it is `#`.
+
+Both pre-registered deltas were numerals: `8 row(s)` → `9 row(s)` and `6.067x` → `6.066x`. Both were
+confirmed against the raw logs, and **each accounts for 0 of the 7 changed members**, because in this
+instrument both readings are `# row(s)` and `#x`.
+
+### The reading that let it pass: injectivity is not identity
+
+Both logs yield **72 verdict lines and 72 distinct keys**. That is an *injectivity* property — no two
+verdicts of one run normalize together, which is what makes the key usable as an identity at all —
+and it says nothing whatever about whether the two *sets* coincide. Read as agreement, it is
+compatible with all 72 members differing. The set question needs a set operation, and it was run
+only after the report had already been published:
+
+    comm -3 <(norm pinned | sort) <(norm remeasured | sort)   # 7 lines each side
+
+### The seven, classified individually — because "7 differ" is a count and the finding is which
+
+Scott: *"Classify the seven individually in the record… because '7 differ' is a count, and the
+finding is which."* `68a9bec` is the pinned release-a2 certificate (72 PASS / 0 FAIL, GREEN);
+`ba6f286` is the #113 re-measurement (71 PASS / 1 FAIL, RED). Every attribution below is measured —
+the wording changes by `git log -S … -- scripts/gate-p5.sh`, the numbers by re-reading both logs.
+
+| # | Members | Class | Cause | Attributed to |
+|---:|---:|---|---|---|
+| 1 | **1** | **the run's actual FAIL** | `PASS  gate-p# is green on this commit (#a#bec), so every rate this gate divided by is still a measured one` became `FAIL  gate-p# is RED on this commit (exit #), so nothing above that divides by a measured rate means what it says` | `ba6f286`'s delegated `gate-p4`, itself RED on `gate-p3`'s `janus.local` sentinel |
+| 2 | **3** | wording, per host | the Strsm class line's `>= #x, the regression bar ratified for this class` became `>= #x, the fleet bar ratified for this class`, once each on `keel-skx`, `keel-zen4`, `keel-zen5` | `75aae82` (#119) — **reported** in the first write-up |
+| 3 | **1** | wording, aggregate | the single line summing the class bars: `…#x of its own single-thread rate for Strsm) (#/#)` became `…#x of its own single-thread rate for Strsm on the hosts that derived that floor, and a registered baseline less #x elsewhere (##)) (#/#)` | `75aae82` (#119) — **the second surface, NOT reported**, and why *"that is the entire diff"* was false |
+| 4 | **2** | decoration | the peak-series window line, on `keel-skx` and `keel-zen4` only: `head->middle -#% … middle->tail +#%` became `head->middle +#% … middle->tail -#%` | measurement noise; **no verdict moved** — both runs render `so the windows are ties and a tie is not an order` |
+
+That is 1 + 3 + 1 + 2 = 7, and the four classes are four different kinds of thing: one is the
+result, four are one commit's wording (three of which were reported and one of which was not), and
+two are decoration.
+
+**Members 4 are worth their own paragraph, because they are the instrument's mirror image.** The
+window steps are all an order of magnitude below their own floors in both runs, so both runs render
+the identical tie verdict; only the *sign* of an immaterial step changed:
+
+                 68a9bec  h->m       m->t          ba6f286  h->m       m->t
+    keel-zen5             +0.1082%   -0.2246%               +0.2542%   -0.0900%   <- signs agree
+    keel-zen4             -0.0186%   +0.0167%               +0.0112%   -0.0147%   <- flipped
+    keel-skx              -0.0313%   +0.0052%               +0.0527%   -0.0472%   <- flipped
+
+The normalization **erases the magnitude and keeps the sign**, so a step of 0.0112% and a step of
+0.0186% are the same key while their signs are not — and `keel-zen5` differs only by having drawn
+the same signs twice. So the same instrument that suppressed both predictions promoted two
+non-events to full members, and 2 of 7 are noise wearing a member's clothes. That asymmetry is a
+finding about the comparison, not about the run, and it is the third of #113's open questions.
+
+### What binds now
+
+1. **Push each predicted delta through the comparison before registering it.** If the normalization
+   erases it, predict it against an instrument that can see it — `9 row(s)` is checkable by the
+   criterion that prints it — or register it explicitly as invisible here. A prediction the
+   instrument cannot render is not a weak constraint; it is none, wearing rigour.
+2. **Predict a count in the instrument's own terms, and settle it with a set operation** in both
+   directions. `comm -3`, not an eyeballed diff, and never over abridged output.
+3. **A confirmed prediction is evidence about what it named.** It is not agreement about the
+   artifact. `72/72` is injectivity; `|symmetric difference| = 0` is identity; only the second
+   licenses *"that is the entire diff."*
+4. **This is not rule 12.** Rule 12 says a coverage number states what it cannot see — a number
+   that exists, with a stated hole. This says a prediction stated in units the instrument does not
+   render sees *nothing*, so there is no number to qualify. Neither may be cited for the other.
+
+### Coverage, and what stays unseen (§5 rule 12)
+
+**No check enforces this, and the honest reason is that the comparison is not a script in this
+tree** — it was assembled at the terminal for #113 and lives here as the block above, so there is no
+place to add an assertion that a registered prediction survives normalization. Two specific holes,
+stated rather than left implicit. (a) The classification above is only as complete as the
+`^  (PASS|FAIL|…) ` anchor: both logs also carry deeper-indented delegated verdicts and prose lines
+that no member could ever come from, and a change confined to those is invisible to this rule's
+whole apparatus. (b) The sign-versus-magnitude asymmetry is **named here and unfixed** — narrowing
+the normalization to erase signs too would suppress a real sign change on a step that mattered, and
+that trade has not been measured, so it stays an open question on #113 rather than a silent choice
+made in a `sed` expression.

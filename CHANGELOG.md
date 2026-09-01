@@ -8,6 +8,21 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **§5 rule 24 — a pre-registered prediction is stated in the instrument's own output space, or it
+  constrains nothing** (`DESIGN.md`, `docs/rulings.md`). Scott's ruling on his own prediction for
+  the #113 certificate comparison: both registered deltas were digit-only (`8 row(s)` → `9 row(s)`,
+  `6.067x` → `6.066x`), the comparison normalizes every numeral to `#`, so each accounts for **0 of
+  the 7 changed members** — a prediction the instrument cannot render is not a weak constraint but
+  none, wearing rigour. Recorded with it: `72` verdict lines and `72` distinct keys is an
+  **injectivity** property, not a set identity, and reading it as agreement is what let *"that is
+  the entire diff"* be published over an abridged rendering. The seven members are now classified
+  individually rather than counted — 1 the run's actual FAIL, 4 one commit's wording across two
+  surfaces (3 reported at the time, 1 not), and **2 decoration**: window-step sign flips on
+  `keel-skx` and `keel-zen4` whose magnitudes are an order of magnitude under their own floors, so
+  both runs render the same tie verdict. The normalization erases the magnitude and keeps the sign,
+  which is the mirror image of the same defect and stays open on #113.
+
 ### Changed
 - **The apparatus ratio counts shell by content, not by file extension** (`gate-docs.sh`'s new
   `shell_files`: the `'*.sh'` glob unioned with a shebang sweep of every tracked-or-untracked

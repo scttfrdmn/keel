@@ -48,7 +48,9 @@ sign of a session, the numerator is the one that cannot be flattered.
 
 Every delta below is **measured from the commit**, not quoted from a comment —
 `git show --numstat --format= <rev> -- '*.sh'`, added minus removed. Re-derivable at any time,
-which is the property a thread does not have. Measured 2026-08-31 at `48f9ed9`.
+which is the property a thread does not have. Rows through `5e4557e` were measured 2026-08-31 at
+`48f9ed9`; from `3087301` the pathspec gains every file `shell_files` finds by shebang, which today
+is `scripts/fakessh` — so a future edit to it is a row like any other.
 
 A commit that changes the shell term cannot name its own hash, so **its row is filled in by the
 next commit that touches this file** — which is why the last row may briefly read `PENDING`. That
@@ -72,8 +74,8 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-08-31 | `48f9ed9` | +137 | 510 | `detach-test.sh`. Authorised at ~90 by ruling; 137 disclosed, 23 of them the header stating the scope. |
 | 2026-08-31 | `66706c2` | +1 | 511 | This file, plus the reading rule printed beside the ratio in `gate-docs.sh`. The ledger costs the ledger one line. |
 | 2026-08-31 | `5e4557e` | +24 | 535 | `detach-test.sh` moves onto a private tmux server, with the isolation asserted and driven red. Perturbing the shared server is how the incident it tests was born. |
-| 2026-08-31 | `PENDING` | **+97** | **632** | **Definition correction, not a spend.** Shell counted by content: `scripts/fakessh`, 97 lines of bash the `'*.sh'` glob never saw. The lines are as old as the file; only the counter changed. Its own `+16` of new shell in `gate-docs.sh` is the next row. |
-| 2026-08-31 | `PENDING` | +16 | **648** | `shell_files` and the comment recording why the glob was wrong. Same commit as the row above, listed separately because one is a re-reading of lines that already existed and the other is lines that did not. |
+| 2026-08-31 | `3087301` | **+97** | **632** | **Definition correction, not a spend.** Shell counted by content: `scripts/fakessh`, 97 lines of bash the `'*.sh'` glob never saw. The lines are as old as the file; only the counter changed. Its own `+16` of new shell in `gate-docs.sh` is the next row. |
+| 2026-08-31 | `3087301` | +16 | **648** | `shell_files` and the comment recording why the glob was wrong. Same commit as the row above, listed separately because one is a re-reading of lines that already existed and the other is lines that did not. |
 
 **Current debt: +648 net shell lines** unpaid by a routine, a kernel or a library fix, of which
 **+97 is a re-reading rather than a spend** — the tree did not grow, the counter stopped measuring
