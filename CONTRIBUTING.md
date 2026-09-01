@@ -70,6 +70,16 @@ both kinds of contributor.
   full SHA, the delta's exact file list, and a runnable `git diff --stat` go in
   the release notes; any file that passes that test while failing a literal
   reading of the condition is named there rather than resolved silently.
+- **The certificate log is *tracked* and its sha256 is *published in the release
+  notes*, both at tag time.** Present and verifiable are different properties and a
+  certificate needs both. v0.1.0 shipped with neither: the notes cited
+  `build/release-a2-68a9bec.log` by path, `build/` is gitignored, and no repository
+  under any revision held a green `gate-p5` — so the tag's own certificate resolved
+  only on the laptop that produced it, and there was no digest to check a recovered
+  copy against. Home is `archive/pinned8/` beside the era's other logs. Publishing
+  the digest is what makes the next recovery *provable* rather than merely
+  corroborated; tracking alone freezes bytes from that moment on, which is not the
+  same as showing they are the bytes that were cited.
 - **A markdown tag message needs `git tag -a --cleanup=verbatim -F`.** The default
   cleanup strips every `#`-leading line as a comment, so `## Heading` lines vanish
   from the tag object with no warning and nothing to diff against — repro in one

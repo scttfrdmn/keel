@@ -8,6 +8,25 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **v0.1.0's certificate log is now tracked, and no repository revision had ever held a green
+  `gate-p5`** (`archive/pinned8/release-a2-68a9bec.log`, sha256
+  `e8c5889a081d2e08dbe5f43f4605e2693ce650b75fd465015959f38ed7baaa1e`, 947,745 bytes). The
+  release notes cite the certificate as `build/release-a2-68a9bec.log`; `build/` is gitignored,
+  and the three logs in `archive/pinned8/` are all RED — so the tag's own certificate resolved
+  on one laptop and nowhere else. #114's law at the top of the stack. **Identity is
+  corroborated, not proven, and the notes published no digest to check against**: the witnesses
+  are the log's own rev stamp `68a9bec`, its tally matching the notes verbatim, and an mtime
+  (`2026-08-29T21:49:57Z`) that predates the tag by 70 minutes. Tracking freezes the bytes from
+  now on; it cannot show they are the bytes that were cited, which is why CONTRIBUTING's tag
+  checklist now requires the digest *in the notes* and not only a tracked file. #113's
+  validating run archives beside it (`validate113-ba6f286.log`, sha256
+  `24a4ae860eb0c5b9ae97bc2134cc5ee67b4ca18c35c78316d73b9f5a81587f23`). Found while building a
+  verdict-set diff and discovering the comparison basis was not in the repository. **Same class,
+  not fixed here because its home needs a ruling:** CONTRIBUTING names
+  `build/release-notes-vX.Y.Z.md` as an intact copy of the tag message and that file is
+  gitignored too.
+
 ### Added
 - **`keel-bench-toolchain` in the provenance preamble** (`bench/bench_test.go`, feeding `#118`).
   The compiler is part of the instrument and no bench artifact recorded it: of the 45 bench
