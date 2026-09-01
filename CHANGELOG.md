@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`docs/apparatus-ledger.md` — one running total for the apparatus debt, itemized per commit**,
+  and `gate-docs.sh` now prints how to read its own ratio. Ruled 2026-08-31: *"'booked separately'
+  would create a second ledger, and two ledgers is how a number gets to be true in each and wrong
+  in sum."* Until now the total lived only in #131's comment thread, which has no single current
+  value — only a series of claims about one. Every delta in the table is **measured from the
+  commit** (`git show --numstat --format= <rev> -- '*.sh'`) rather than quoted, which is the
+  property a thread does not have; that already corrected one line, `891db4d`, which the
+  reconstruction had folded into `75aae82`'s +292 and which measures **+0**. Current debt **+511**.
+  The standing reading rule beside the figure: **the absolute shell term is the session-delta
+  reading, the ratio is the headline disclosure only.** Both terms are five digits, so `+78` lines
+  and `+137` lines each printed as one hundredth (1.77x → 1.78x → 1.79x) with the library term
+  measured constant at 8964 across all five revisions — two printed decimals cannot separate two
+  spends differing by 59 lines, and a flat ratio is not a flat ledger.
 - **`scripts/detach-test.sh` — `detach.sh`'s incident log, made executable** (137 lines, wired
   into `make lint`). The harness that launches every long run had produced three behavioural
   incidents in a week and had no test at all; one of them idled a three-host fleet for eight
