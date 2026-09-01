@@ -107,7 +107,9 @@ cmd_run() {
   #   - it does NOT write the status file when it dies by signal. A killed run
   #     has no exit code to report, and manufacturing one is the single failure
   #     mode this script exists to prevent (DESIGN.md §5.6). `wait` therefore
-  #     hands the verdict to `stat`, which says `vanished`.
+  #     hands the verdict to `stat`, which says `died` (it ran and was killed) or
+  #     `never-started` (nothing under this NAME ever ran) -- two words, because
+  #     one word for both left the reader unable to tell which (#122).
   {
     echo '#!/usr/bin/env bash'
     printf 'cd %q || exit 3\n' "$ROOT"
@@ -145,7 +147,7 @@ cmd_wait() {
   local name="$1" sess; sess="$(sess_of "$1")"
   # Both fast paths matter. If it already finished, waiting would block on a
   # channel whose signal may have been consumed by an earlier `wait`; if it
-  # already vanished, there is nothing left to signal at all.
+  # already died, there is nothing left to signal at all.
   if [[ -r "$DIR/$name.status" ]] || ! tmux has-session -t "=$sess" 2>/dev/null; then
     cmd_stat "$name"
     return
@@ -158,17 +160,33 @@ cmd_stat() {
   local name="$1" sess; sess="$(sess_of "$1")"
   local log="$DIR/$name.log" status="$DIR/$name.status"
   if tmux has-session -t "=$sess" 2>/dev/null; then
-    printf 'running  %s  (%s lines so far)\n' "$sess" "$(wc -l <"$log" 2>/dev/null || echo 0)"
+    printf 'running  %s  (%s lines so far)\n' "$sess" "$(wc -l <"$log" 2>/dev/null | tr -d ' ' || echo 0)"
     return 0
   fi
   if [[ -r "$status" ]]; then
     printf 'exited   %s  status=%s  log=%s\n' "$sess" "$(cat "$status")" "$log"
     return 0
   fi
-  # No session and no status file: the runner never wrote one, so the work was
-  # killed, or never started. Either way there is no verdict, and reporting one
-  # as an exit code would be a lie.
-  printf 'vanished %s  no status file: killed or never started  log=%s\n' "$sess" "$log"
+  # ONE WORD FOR TWO FACTS (#122). "no session and no status file" had two causes and
+  # `vanished ... killed or never started` named both at once, so the reader could not tell
+  # which had happened -- and they call for opposite next actions. Work that started and was
+  # killed has a log to read and host-minutes already spent; work that never started has
+  # nothing, and the usual cause is a NAME that does not match what was launched. That is not
+  # hypothetical: querying `validate113-ba6f286` as `keel-validate113-ba6f286` reported this
+  # line for a run that was healthy and 25 minutes in. Both still return 1 -- a run without a
+  # status file is unmeasured either way, and an exit code is what neither of them has.
+  local runner="$DIR/$name.cmd" hint=""
+  if [[ -e "$log" ]]; then
+    printf 'died     %s  no status file after %s log line(s): it started and was killed, so it has no exit code and inventing one is the failure mode this script exists to prevent  log=%s\n' \
+      "$sess" "$(wc -l <"$log" 2>/dev/null | tr -d ' ' || echo 0)" "$log"
+    return 1
+  fi
+  [[ -e "$runner" ]] && hint=" ($runner does exist, so a launch under this exact name was attempted and tmux never started it)"
+  # The prefix is HINTED AT, never stripped. `keel-foo` is a legal NAME, so a stat that
+  # rewrote or rejected one would break a run that is merely named that way -- which is why
+  # the fix for the false alarm above is a sentence and not a transformation.
+  printf 'never-started %s  no session, no status file, no log%s. NAME is always looked up as keel-<NAME>, so a NAME that already begins with keel- is queried as %s -- if that is what happened, drop the prefix\n' \
+    "$sess" "$hint" "$sess"
   return 1
 }
 

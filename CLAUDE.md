@@ -40,10 +40,14 @@ reason your shell should ever die."
   alive. tmux is present on the dev host and all three benchmark hosts.
 - **Never `sleep` to wait.** Background the wait or read the log file; interim
   progress is free.
-- **A killed run is `unmeasured`, never an exit code.** `detach.sh stat` reports
-  `vanished` when there is no status file, because inventing a verdict for work
-  that did not finish is the one failure mode this whole apparatus exists to
-  prevent (DESIGN.md §5.6).
+- **A killed run is `unmeasured`, never an exit code.** With no status file
+  `detach.sh stat` reports `died` (a log exists, so it ran and was killed) or
+  `never-started` (no log at all, most often a NAME that does not match what was
+  launched), because inventing a verdict for work that did not finish is the one
+  failure mode this whole apparatus exists to prevent (DESIGN.md §5.6). Those
+  were one word, `vanished`, until #122: it named both causes in one breath, and
+  a healthy 25-minute run read as a dead one. `remote.sh`'s `REMOTE_STATE=vanished`
+  is a *different* mechanism with five gate consumers and keeps its own word.
 - **The tree stays frozen for a run's whole life**, detached or not — including
   across a chain of per-host invocations, each of which rebuilds its own arms.
   This covers the *running script itself*, and that is a second hazard, not the

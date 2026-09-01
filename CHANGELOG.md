@@ -31,6 +31,22 @@ While the major version is 0, minor versions may contain breaking changes.
   `N=2 archives` count, a claim about the archive set rather than about this run.
 
 ### Fixed
+- **`detach.sh stat` said `vanished ... killed or never started`, naming both causes at once**
+  (#122). They call for opposite next actions — a run that started and was killed has a log to
+  read and host-minutes already spent; a run that never started has nothing, and the usual cause
+  is a NAME that does not match what was launched. Now two words: **`died`** (a log exists) and
+  **`never-started`** (no log at all), both still exiting 1, because a run without a status file
+  is unmeasured either way and an exit code is exactly what neither has. `never-started` names
+  the doubled-prefix cause outright, since `sess_of` prefixes `keel-` unconditionally and
+  querying `validate113-ba6f286` as `keel-validate113-ba6f286` reported the old line for a run
+  that was healthy and 25 minutes in. **The prefix is hinted at, never stripped**: `keel-foo` is
+  a legal NAME and a `stat` that rewrote or rejected one would break a run merely named that way,
+  so the fix for the false alarm is a sentence and not a transformation — a case the fixture
+  pins by running a legitimately `keel-`-prefixed job end to end. `remote.sh`'s
+  `REMOTE_STATE=vanished` is a **different mechanism** with five gate consumers and its own test
+  suite, and keeps its word untouched. Also fixed in passing: `wc -l` renders with leading
+  padding on macOS, so both this line and the pre-existing `running` line printed
+  `(       1 lines so far)`.
 - **gate-p5's 1-thread avx512 peak was per-host state living in the per-routine loop, past both
   of that loop's `continue`s** (`scripts/gate-p5.sh`). A host whose every routine bailed carried
   the *previous* host's peak. **Latent on the judged fleet** — the only reader sat in the
