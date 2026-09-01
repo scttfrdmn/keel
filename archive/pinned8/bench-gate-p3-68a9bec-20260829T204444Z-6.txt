@@ -1,0 +1,52 @@
+keel-pin: mask=0,8,16,24,32,40,48,56 width=8 doms=0,8,16,24,32,40,48,56 nodedoms=12
+keel-bench-cpu: AMD EPYC 9R45
+keel-bench-cores: 8 logical
+keel-bench-governor: unknown (no cpufreq)
+keel-bench-clock-mhz: 2355-4507 (snapshot, not sustained)
+keel-bench-platform: linux/amd64
+keel-bench-backend: avx512 (available: avx512 avx2 scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: avx512: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: avx2: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: scalar: unavailable (no cpuinfo_max_freq)
+keel-bench-gomaxprocs: 1
+keel-bench-kern: 2x32/avx512 (available: 4x32/avx512 2x32/avx512 4x32/scalar 2x32/scalar)
+keel-bench-kern-class: issue insns-per-fma=4.625 (KEEL_KERN_CLASS=issue (override; fingerprint says fma))
+keel-bench-kern-audit: 4x32/avx512=6.250 2x32/avx512=4.625
+keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+keel-bench-flops: name=Sgemm/n=2048 flops=17179869184 formula=2*m*n*k m=2048 n=2048 k=2048
+goos: linux
+goarch: amd64
+pkg: github.com/scttfrdmn/keel/bench
+cpu: AMD EPYC 9R45
+BenchmarkSgemm/n=2048         	       8	 128695144 ns/op	       133.5 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127478396 ns/op	       134.8 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 128521488 ns/op	       133.7 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127350871 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 128347094 ns/op	       133.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127337832 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127301885 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127265226 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127373242 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127813235 ns/op	       134.4 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127444139 ns/op	       134.8 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127260031 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127300018 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127275061 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127308821 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127352650 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127387164 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127359768 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127221479 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127238127 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127255095 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127297291 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127261522 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127385607 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127282758 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127276465 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127270352 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127280391 ns/op	       135.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127315986 ns/op	       134.9 GFLOP/s
+BenchmarkSgemm/n=2048         	       8	 127318845 ns/op	       134.9 GFLOP/s
+PASS

@@ -1,0 +1,113 @@
+keel-bench-cpu: AMD EPYC 9R14
+keel-bench-cores: 192 logical
+keel-bench-governor: unknown (no cpufreq)
+keel-bench-clock-mhz: 2600-3701 (snapshot, not sustained)
+keel-bench-platform: linux/amd64
+keel-bench-toolchain: go1.27.0-X:simd
+keel-bench-backend: avx512 (available: avx512 avx2 scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: avx512: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: avx2: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: scalar: unavailable (no cpuinfo_max_freq)
+keel-bench-gomaxprocs: 1
+keel-bench-kern: 4x32/avx512 (available: 4x32/avx512 2x32/avx512 4x32/scalar 2x32/scalar)
+keel-bench-kern-class: fma insns-per-fma=6.250 (avx512 with vbmi2+vpopcntdq (Ice Lake / Zen 4 or later))
+keel-bench-kern-audit: 4x32/avx512=6.250 2x32/avx512=4.625
+keel-bench-openblas: OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64 corename=Haswell threads=1 procs=192
+keel-bench-flops: name=Sgemm/n=2048 flops=17179869184 formula=2*m*n*k m=2048 n=2048 k=2048
+goos: linux
+goarch: amd64
+pkg: github.com/scttfrdmn/keel/bench
+cpu: AMD EPYC 9R14
+BenchmarkSgemm/n=2048         	       6	 170418498 ns/op	       100.8 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 173152204 ns/op	        99.22 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 170060166 ns/op	       101.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       6	 170426630 ns/op	       100.8 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 172278903 ns/op	        99.72 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169955234 ns/op	       101.1 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169219082 ns/op	       101.5 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169024287 ns/op	       101.6 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 172668624 ns/op	        99.50 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169741702 ns/op	       101.2 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169258552 ns/op	       101.5 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169022406 ns/op	       101.6 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169591226 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169594220 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169935205 ns/op	       101.1 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 168961703 ns/op	       101.7 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169383481 ns/op	       101.4 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169538540 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169657956 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169546085 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169552782 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169597586 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169537396 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169567220 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169576665 ns/op	       101.3 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 170131372 ns/op	       101.0 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169121665 ns/op	       101.6 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169473819 ns/op	       101.4 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169344636 ns/op	       101.4 GFLOP/s
+BenchmarkSgemm/n=2048         	       7	 169142592 ns/op	       101.6 GFLOP/s
+keel-bench-flops: name=OpenBLAS/n=2048 flops=17179869184 formula=2*m*n*k m=2048 n=2048 k=2048
+BenchmarkOpenBLAS/n=2048      	       7	 153861204 ns/op	       111.7 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 153883070 ns/op	       111.6 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154068170 ns/op	       111.5 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 153814047 ns/op	       111.7 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 153957053 ns/op	       111.6 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154082165 ns/op	       111.5 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 153864087 ns/op	       111.7 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 153847573 ns/op	       111.7 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154338757 ns/op	       111.3 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 153844367 ns/op	       111.7 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 153878687 ns/op	       111.6 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154169158 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154201561 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154181101 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154175259 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154160158 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154154165 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154136477 ns/op	       111.5 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154186401 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154147772 ns/op	       111.5 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154151224 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154160264 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154161264 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154186441 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154156258 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154203478 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154184371 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154121083 ns/op	       111.5 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154168374 ns/op	       111.4 GFLOP/s
+BenchmarkOpenBLAS/n=2048      	       7	 154138448 ns/op	       111.5 GFLOP/s
+BenchmarkPeak/avx512          	    5324	    214958 ns/op	       117.1 GFLOP/s
+BenchmarkPeak/avx512          	    5587	    214798 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5584	    214801 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5584	    214773 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5584	    214845 ns/op	       117.1 GFLOP/s
+BenchmarkPeak/avx512          	    5576	    214778 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5575	    214791 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5568	    214770 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5584	    214832 ns/op	       117.1 GFLOP/s
+BenchmarkPeak/avx512          	    5587	    214796 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5581	    214771 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5586	    214789 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5588	    214766 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5584	    214830 ns/op	       117.1 GFLOP/s
+BenchmarkPeak/avx512          	    5587	    214783 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5583	    214764 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5586	    214812 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5587	    214781 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5566	    214759 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5588	    214805 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5578	    214789 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5586	    214826 ns/op	       117.1 GFLOP/s
+BenchmarkPeak/avx512          	    5584	    214817 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5587	    214778 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5588	    214804 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5584	    214793 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5589	    214759 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5529	    214796 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5588	    214764 ns/op	       117.2 GFLOP/s
+BenchmarkPeak/avx512          	    5582	    214778 ns/op	       117.2 GFLOP/s
+PASS

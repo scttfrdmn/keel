@@ -1,0 +1,83 @@
+keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+keel-bench-cpu: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz
+keel-bench-cores: 8 logical
+keel-bench-governor: unknown (no cpufreq)
+keel-bench-clock-mhz: 1192-3409 (snapshot, not sustained)
+keel-bench-platform: linux/amd64
+keel-bench-toolchain: go1.27.0-X:simd
+keel-bench-backend: avx512 (available: avx512 avx2 scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: avx512: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: avx2: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: scalar: unavailable (no cpuinfo_max_freq)
+keel-bench-gomaxprocs: 1
+keel-bench-kern: 2x32/avx512 (available: 4x32/avx512 2x32/avx512 4x32/scalar 2x32/scalar)
+keel-bench-kern-class: issue insns-per-fma=4.625 (avx512 without vbmi2+vpopcntdq (Skylake-X / Cascade Lake / Cooper Lake generation))
+keel-bench-kern-audit: 4x32/avx512=6.250 2x32/avx512=4.625
+keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+keel-bench-flops: name=Sgemm/n=2048 flops=17179869184 formula=2*m*n*k m=2048 n=2048 k=2048
+goos: linux
+goarch: amd64
+pkg: github.com/scttfrdmn/keel/bench
+cpu: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz
+BenchmarkSgemm/n=2048         	       5	 253078288 ns/op	        67.88 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 253884129 ns/op	        67.67 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249618295 ns/op	        68.82 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 252939523 ns/op	        67.92 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249276991 ns/op	        68.92 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248845942 ns/op	        69.04 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248828332 ns/op	        69.04 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248835522 ns/op	        69.04 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249403231 ns/op	        68.88 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249350707 ns/op	        68.90 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249822285 ns/op	        68.77 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248500476 ns/op	        69.13 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249193882 ns/op	        68.94 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248800887 ns/op	        69.05 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 254664602 ns/op	        67.46 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249627448 ns/op	        68.82 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249861384 ns/op	        68.76 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249035082 ns/op	        68.99 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 253575047 ns/op	        67.75 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248949025 ns/op	        69.01 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249314201 ns/op	        68.91 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249109342 ns/op	        68.97 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249633151 ns/op	        68.82 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248832563 ns/op	        69.04 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248781049 ns/op	        69.06 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 250401550 ns/op	        68.61 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249368354 ns/op	        68.89 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248880098 ns/op	        69.03 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 249644503 ns/op	        68.82 GFLOP/s
+BenchmarkSgemm/n=2048         	       5	 248790255 ns/op	        69.05 GFLOP/s
+BenchmarkPeak/avx512          	    8880	    135672 ns/op	       185.5 GFLOP/s
+BenchmarkPeak/avx512          	    8940	    135788 ns/op	       185.3 GFLOP/s
+BenchmarkPeak/avx512          	    8926	    135333 ns/op	       186.0 GFLOP/s
+BenchmarkPeak/avx512          	    8829	    135135 ns/op	       186.2 GFLOP/s
+BenchmarkPeak/avx512          	    8784	    135115 ns/op	       186.3 GFLOP/s
+BenchmarkPeak/avx512          	    8866	    135371 ns/op	       185.9 GFLOP/s
+BenchmarkPeak/avx512          	    8852	    135231 ns/op	       186.1 GFLOP/s
+BenchmarkPeak/avx512          	    8770	    135398 ns/op	       185.9 GFLOP/s
+BenchmarkPeak/avx512          	    8797	    135145 ns/op	       186.2 GFLOP/s
+BenchmarkPeak/avx512          	    8868	    135085 ns/op	       186.3 GFLOP/s
+BenchmarkPeak/avx512          	    8866	    135395 ns/op	       185.9 GFLOP/s
+BenchmarkPeak/avx512          	    8941	    135136 ns/op	       186.2 GFLOP/s
+BenchmarkPeak/avx512          	    8827	    135327 ns/op	       186.0 GFLOP/s
+BenchmarkPeak/avx512          	    8924	    135234 ns/op	       186.1 GFLOP/s
+BenchmarkPeak/avx512          	    8947	    135295 ns/op	       186.0 GFLOP/s
+BenchmarkPeak/avx512          	    8937	    135422 ns/op	       185.8 GFLOP/s
+BenchmarkPeak/avx512          	    8712	    135065 ns/op	       186.3 GFLOP/s
+BenchmarkPeak/avx512          	    8934	    135426 ns/op	       185.8 GFLOP/s
+BenchmarkPeak/avx512          	    8942	    135051 ns/op	       186.3 GFLOP/s
+BenchmarkPeak/avx512          	    8844	    135116 ns/op	       186.3 GFLOP/s
+BenchmarkPeak/avx512          	    8852	    135438 ns/op	       185.8 GFLOP/s
+BenchmarkPeak/avx512          	    8950	    135085 ns/op	       186.3 GFLOP/s
+BenchmarkPeak/avx512          	    8852	    135244 ns/op	       186.1 GFLOP/s
+BenchmarkPeak/avx512          	    8829	    135178 ns/op	       186.2 GFLOP/s
+BenchmarkPeak/avx512          	    8800	    135239 ns/op	       186.1 GFLOP/s
+BenchmarkPeak/avx512          	    8512	    135071 ns/op	       186.3 GFLOP/s
+BenchmarkPeak/avx512          	    8875	    135129 ns/op	       186.2 GFLOP/s
+BenchmarkPeak/avx512          	    8941	    135364 ns/op	       185.9 GFLOP/s
+BenchmarkPeak/avx512          	    8938	    135037 ns/op	       186.4 GFLOP/s
+BenchmarkPeak/avx512          	    8841	    135333 ns/op	       186.0 GFLOP/s
+PASS

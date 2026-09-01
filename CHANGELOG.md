@@ -96,6 +96,23 @@ While the major version is 0, minor versions may contain breaking changes.
   header, so the mapping is a property of the files rather than of their names. What is **not** fixed:
   the gate still prints only the ratio, and printing the two terms is a one-line `info` in
   `gate-p3.sh` deferred to a session that can pay for shell under the apparatus cap.
+- **The same defect at a worse site: `janus` was the sole judged sentinel of both the `v0.1.0-a2`
+  certificate and #113's RED, and it is named nowhere in either run's tracked log.** Zero mentions
+  of `janus` in `release-a2-68a9bec.log` or `validate113-ba6f286.log`; the sentinel verdicts, the
+  ceiling-spread intervals and every term behind them were under gitignored `build/` only. The 2
+  `gate-p3-under-p4` logs and their 28 samples are now tracked in `archive/pinned8/`. Re-derived
+  from them, both published shares reproduce exactly — 99.52/207.75 = 47.9% at `68a9bec`,
+  89.81/207.95 = 43.2% at `ba6f286` — and the artifacts then say something no percentage in either
+  log could: **all three `BenchmarkPeak` medians agree to within 0.16% while four of five
+  `BenchmarkKernel` medians move 5-12%**, the largest on a *scalar* shape that shares no code with
+  the vector path. The instrument was constant across the pair and is now shown to be: identical
+  `keel-pin:` mask (`nodedoms=1`, so rule 5's spread amendment is a no-op on that host), identical
+  governor, `gomaxprocs` and dispatched shape, and the same `go1.27.0-X:simd` builder in both gate
+  logs — `remote.sh` cross-compiles `keel.test` locally and `scp`s a static binary, so a host's own
+  toolchain cannot enter a measurement at all. The one field that moved is the `clock-mhz` *snapshot*
+  max, 3799 → 3701. Reported on #141, where it sharpens the attribution rather than settling it.
+  Corrected in the same commit: `archive/pinned8/README.md` claimed the 13 `afb108e` samples "are
+  spread-form and say so" — 9 are, and the other 4 say the opposite by carrying no `keel-pin:` line.
 - **The apparatus ratio counts shell by content, not by file extension** (`gate-docs.sh`'s new
   `shell_files`: the `'*.sh'` glob unioned with a shebang sweep of every tracked-or-untracked
   file). Ruled 2026-08-31: a ledger that *"counts a 189-line test while its 97-line subject is

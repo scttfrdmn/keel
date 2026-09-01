@@ -1,0 +1,262 @@
+keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+keel-bench-cpu: Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz
+keel-bench-cores: 8 logical
+keel-bench-governor: performance
+keel-bench-clock-mhz: 1200-3701 (snapshot, not sustained)
+keel-bench-platform: linux/amd64
+keel-bench-toolchain: go1.27.0-X:simd
+keel-bench-backend: avx512 (available: avx512 avx2 scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: avx512: 281.6 GFLOP/s (4.40 GHz cpuinfo_max_freq x 2 FMA ports x 16 lanes)
+keel-bench-peak-formula: avx2: 140.8 GFLOP/s (4.40 GHz cpuinfo_max_freq x 2 FMA ports x 8 lanes)
+keel-bench-peak-formula: scalar: 8.8 GFLOP/s (4.40 GHz cpuinfo_max_freq x 2 FP ports, unfused: 1 flop/op x 1 lanes)
+keel-bench-gomaxprocs: 8
+keel-bench-kern: 2x32/avx512 (available: 4x32/avx512 2x32/avx512 4x32/scalar 2x32/scalar)
+keel-bench-kern-class: issue insns-per-fma=4.625 (avx512 without vbmi2+vpopcntdq (Skylake-X / Cascade Lake / Cooper Lake generation))
+keel-bench-kern-audit: 4x32/avx512=6.250 2x32/avx512=4.625
+keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+goos: linux
+goarch: amd64
+pkg: github.com/scttfrdmn/keel/bench
+cpu: Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2768426	       431.7 ns/op	        75.91 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2781768	       432.7 ns/op	        75.73 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2789940	       436.0 ns/op	        75.15 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2774880	       433.3 ns/op	        75.63 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2775256	       432.7 ns/op	        75.72 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2773782	       432.1 ns/op	        75.83 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2782585	       431.1 ns/op	        76.01 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2763351	       431.2 ns/op	        75.99 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2762343	       431.0 ns/op	        76.03 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2769139	       431.4 ns/op	        75.96 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2775438	       431.7 ns/op	        75.90 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2780613	       431.1 ns/op	        76.00 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2784510	       432.1 ns/op	        75.84 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2779221	       431.8 ns/op	        75.88 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2788795	       453.1 ns/op	        72.33 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2550189	       469.9 ns/op	        69.73 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2247538	       489.5 ns/op	        66.94 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2607458	       457.7 ns/op	        71.59 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2283204	       533.0 ns/op	        61.48 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2319598	       572.4 ns/op	        57.24 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2406201	       460.4 ns/op	        71.18 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2518717	       466.1 ns/op	        70.30 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2775546	       470.1 ns/op	        69.70 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2755516	       472.2 ns/op	        69.40 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2447373	       583.5 ns/op	        56.16 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2486790	       472.1 ns/op	        69.40 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2534956	       472.9 ns/op	        69.29 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2520992	       473.6 ns/op	        69.19 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2542544	       472.1 ns/op	        69.41 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/avx512/kc=128-8         	 2479056	       476.5 ns/op	        68.76 GFLOP/s	     32768 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6323658	       188.2 ns/op	        87.04 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6270991	       185.9 ns/op	        88.15 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6322326	       181.9 ns/op	        90.07 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6342691	       181.2 ns/op	        90.44 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6532574	       182.8 ns/op	        89.64 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6338400	       190.0 ns/op	        86.23 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6381652	       188.6 ns/op	        86.86 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6429980	       190.6 ns/op	        85.97 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6619982	       181.4 ns/op	        90.33 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6675158	       180.1 ns/op	        90.95 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6638176	       181.0 ns/op	        90.54 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6682252	       180.3 ns/op	        90.88 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6649009	       184.8 ns/op	        88.64 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6581968	       179.5 ns/op	        91.25 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6629157	       182.2 ns/op	        89.90 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6611304	       182.3 ns/op	        89.86 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6557289	       181.4 ns/op	        90.33 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6510963	       182.4 ns/op	        89.84 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6567896	       181.6 ns/op	        90.20 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6559330	       181.8 ns/op	        90.13 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6504414	       185.5 ns/op	        88.30 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6519793	       180.8 ns/op	        90.62 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6638444	       182.4 ns/op	        89.81 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6246301	       186.6 ns/op	        87.79 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6269352	       186.4 ns/op	        87.89 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6247214	       188.9 ns/op	        86.74 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6489390	       184.4 ns/op	        88.85 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6283353	       187.4 ns/op	        87.42 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6047269	       184.2 ns/op	        88.95 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/avx512/kc=128-8         	 6285655	       182.4 ns/op	        89.81 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   39134	     37590 ns/op	         0.8717 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   31122	     40199 ns/op	         0.8151 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   32350	     36131 ns/op	         0.9069 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   39645	     35693 ns/op	         0.9181 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   38923	     37481 ns/op	         0.8743 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   33292	     35025 ns/op	         0.9356 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   38616	     39474 ns/op	         0.8301 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   36976	     40974 ns/op	         0.7997 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   35845	     38923 ns/op	         0.8419 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   31692	     38816 ns/op	         0.8442 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   46179	     39622 ns/op	         0.8270 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   33302	     37636 ns/op	         0.8707 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   39991	     35560 ns/op	         0.9215 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   31167	     40169 ns/op	         0.8158 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   32934	     40504 ns/op	         0.8090 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   37335	     39488 ns/op	         0.8298 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   61314	     40994 ns/op	         0.7993 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   32604	     41076 ns/op	         0.7977 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   32082	     40817 ns/op	         0.8028 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   32109	     40674 ns/op	         0.8056 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   46078	     41099 ns/op	         0.7973 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   49494	     40747 ns/op	         0.8042 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   43838	     41046 ns/op	         0.7983 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   32469	     40835 ns/op	         0.8025 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   32523	     37587 ns/op	         0.8718 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   40516	     36592 ns/op	         0.8955 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   40566	     35890 ns/op	         0.9130 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   31164	     40011 ns/op	         0.8190 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   31868	     40836 ns/op	         0.8024 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/scalar/kc=128-8         	   33348	     39263 ns/op	         0.8346 GFLOP/s	     32768 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  219088	     19907 ns/op	         0.8230 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  245509	     19351 ns/op	         0.8467 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  247302	     19743 ns/op	         0.8299 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  247761	     19479 ns/op	         0.8411 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  247878	     18639 ns/op	         0.8790 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  222733	     19975 ns/op	         0.8202 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	   73238	     20214 ns/op	         0.8105 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  244321	     17027 ns/op	         0.9622 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  214159	     19334 ns/op	         0.8474 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  243237	     17037 ns/op	         0.9617 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  245648	     20392 ns/op	         0.8035 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  271546	     13186 ns/op	         1.243 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  185646	     10548 ns/op	         1.553 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  237720	     17268 ns/op	         0.9488 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	   85226	     15379 ns/op	         1.065 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  147888	     17403 ns/op	         0.9414 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	   79287	     13012 ns/op	         1.259 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  270346	     10788 ns/op	         1.519 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  274305	     16750 ns/op	         0.9781 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  268177	     18954 ns/op	         0.8644 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  267528	     17980 ns/op	         0.9113 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  113208	     17317 ns/op	         0.9461 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  265532	     16503 ns/op	         0.9928 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  268843	     18526 ns/op	         0.8844 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  269754	     16291 ns/op	         1.006 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  268177	     17310 ns/op	         0.9465 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  263922	     17753 ns/op	         0.9229 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  273764	     16322 ns/op	         1.004 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	  119311	     18355 ns/op	         0.8926 GFLOP/s	     16384 flops/call
+BenchmarkKernel/2x32/scalar/kc=128-8         	   87087	     15526 ns/op	         1.055 GFLOP/s	     16384 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2143070	       557.0 ns/op	        88.24 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2168996	       555.6 ns/op	        88.47 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2171935	       554.1 ns/op	        88.71 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2182122	       546.5 ns/op	        89.94 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2185028	       552.8 ns/op	        88.91 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2207391	       544.0 ns/op	        90.36 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2186338	       548.3 ns/op	        89.64 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2229967	       536.7 ns/op	        91.59 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2221610	       539.0 ns/op	        91.19 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2233753	       537.1 ns/op	        91.52 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2224785	       537.3 ns/op	        91.47 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2234702	       537.3 ns/op	        91.48 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2224418	       537.4 ns/op	        91.47 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2167677	       554.5 ns/op	        88.64 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2213347	       555.0 ns/op	        88.56 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2224820	       557.3 ns/op	        88.20 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2234373	       551.3 ns/op	        89.16 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2207469	       550.9 ns/op	        89.22 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2228294	       542.0 ns/op	        90.68 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2223442	       540.0 ns/op	        91.02 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2149018	       559.5 ns/op	        87.85 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2185027	       541.3 ns/op	        90.81 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2216248	       557.7 ns/op	        88.13 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2165928	       562.0 ns/op	        87.47 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2225929	       538.5 ns/op	        91.27 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2234510	       541.1 ns/op	        90.83 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2232618	       536.1 ns/op	        91.68 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2211386	       538.6 ns/op	        91.25 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2226456	       536.8 ns/op	        91.57 GFLOP/s	     49152 flops/call
+BenchmarkKernel/6x32/avx512/kc=128-8         	 2213967	       541.3 ns/op	        90.80 GFLOP/s	     49152 flops/call
+BenchmarkPeak/avx512-8                       	    9571	    120894 ns/op	       208.2 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9630	    120978 ns/op	       208.0 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9634	    121000 ns/op	       208.0 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9576	    120921 ns/op	       208.1 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9613	    120988 ns/op	       208.0 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9668	    121025 ns/op	       207.9 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9748	    121053 ns/op	       207.9 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9520	    120981 ns/op	       208.0 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9678	    121327 ns/op	       207.4 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9294	    121061 ns/op	       207.9 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9760	    120838 ns/op	       208.3 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9645	    121188 ns/op	       207.7 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9764	    121351 ns/op	       207.4 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9638	    121170 ns/op	       207.7 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9604	    121020 ns/op	       207.9 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9595	    120820 ns/op	       208.3 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9741	    121216 ns/op	       207.6 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9678	    120959 ns/op	       208.1 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9608	    120941 ns/op	       208.1 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9697	    121324 ns/op	       207.4 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9570	    120865 ns/op	       208.2 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9684	    121236 ns/op	       207.6 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9562	    121023 ns/op	       207.9 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9588	    120995 ns/op	       208.0 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9618	    121166 ns/op	       207.7 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9588	    121007 ns/op	       208.0 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9583	    121573 ns/op	       207.0 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9776	    121000 ns/op	       208.0 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9654	    120860 ns/op	       208.2 GFLOP/s
+BenchmarkPeak/avx512-8                       	    9631	    121229 ns/op	       207.6 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    102924 ns/op	       101.9 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103137 ns/op	       101.7 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    102972 ns/op	       101.8 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103879 ns/op	       100.9 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    106027 ns/op	        98.90 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    102986 ns/op	       101.8 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103070 ns/op	       101.7 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103191 ns/op	       101.6 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103119 ns/op	       101.7 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103570 ns/op	       101.2 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103327 ns/op	       101.5 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103303 ns/op	       101.5 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103033 ns/op	       101.8 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103115 ns/op	       101.7 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103083 ns/op	       101.7 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103389 ns/op	       101.4 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103156 ns/op	       101.6 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    102886 ns/op	       101.9 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103038 ns/op	       101.8 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103172 ns/op	       101.6 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    102900 ns/op	       101.9 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    102991 ns/op	       101.8 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103448 ns/op	       101.4 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103041 ns/op	       101.8 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103470 ns/op	       101.3 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103093 ns/op	       101.7 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103000 ns/op	       101.8 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103215 ns/op	       101.6 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103149 ns/op	       101.7 GFLOP/s
+BenchmarkPeak/avx2-8                         	   10000	    103652 ns/op	       101.2 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7833	    355661 ns/op	         3.685 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7597	    355310 ns/op	         3.689 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7020	    355592 ns/op	         3.686 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7953	    356522 ns/op	         3.676 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7944	    356221 ns/op	         3.680 GFLOP/s
+BenchmarkPeak/scalar-8                       	    8050	    356640 ns/op	         3.675 GFLOP/s
+BenchmarkPeak/scalar-8                       	    5942	    356314 ns/op	         3.679 GFLOP/s
+BenchmarkPeak/scalar-8                       	    8052	    356314 ns/op	         3.679 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7682	    355964 ns/op	         3.682 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7653	    355205 ns/op	         3.690 GFLOP/s
+BenchmarkPeak/scalar-8                       	    5534	    354230 ns/op	         3.700 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7970	    355807 ns/op	         3.684 GFLOP/s
+BenchmarkPeak/scalar-8                       	    5442	    354054 ns/op	         3.702 GFLOP/s
+BenchmarkPeak/scalar-8                       	    6349	    351103 ns/op	         3.733 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7791	    357278 ns/op	         3.669 GFLOP/s
+BenchmarkPeak/scalar-8                       	    5589	    353880 ns/op	         3.704 GFLOP/s
+BenchmarkPeak/scalar-8                       	    6706	    355412 ns/op	         3.688 GFLOP/s
+BenchmarkPeak/scalar-8                       	    8052	    356398 ns/op	         3.678 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7675	    355350 ns/op	         3.689 GFLOP/s
+BenchmarkPeak/scalar-8                       	    6067	    355381 ns/op	         3.688 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7957	    356254 ns/op	         3.679 GFLOP/s
+BenchmarkPeak/scalar-8                       	    5961	    356008 ns/op	         3.682 GFLOP/s
+BenchmarkPeak/scalar-8                       	    6475	    355541 ns/op	         3.687 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7837	    356649 ns/op	         3.675 GFLOP/s
+BenchmarkPeak/scalar-8                       	    8090	    357659 ns/op	         3.665 GFLOP/s
+BenchmarkPeak/scalar-8                       	    5667	    353800 ns/op	         3.705 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7892	    356870 ns/op	         3.673 GFLOP/s
+BenchmarkPeak/scalar-8                       	    8080	    356857 ns/op	         3.673 GFLOP/s
+BenchmarkPeak/scalar-8                       	    7836	    356555 ns/op	         3.676 GFLOP/s
+BenchmarkPeak/scalar-8                       	    5394	    354345 ns/op	         3.699 GFLOP/s
+PASS

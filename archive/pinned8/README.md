@@ -127,10 +127,25 @@ and every one of those carries `doms=`/`nodedoms=`. **Amended 2026-09-01: not on
 The 13 `bench-gate-p3-afb108e-*` files are the first `gate-p3` samples preserved here, and they
 are here because that gate publishes a percent-of-peak whose numerator and denominator appear in
 **no** log — only the ratio does — so without them the first on-fleet P2 judgment would have been
-a number citable on one laptop, which is the failure this whole directory exists to prevent. They
-are spread-form and say so, they are not in `INDEX.tsv` (frozen at the 24, by its own header), and
-which host each one ran on is read from its `keel-bench-cpu:`/`keel-pin:` header rather than from
-its name, exactly as the membership predicate above prefers. What is closed is the **confined subset**, at
+a number citable on one laptop, which is the failure this whole directory exists to prevent. Nine
+of the 13 are spread-form and say so; the other four say the opposite by carrying **no**
+`keel-pin:` line at all — the three OpenBLAS-tagged single-thread runs and the 72-thread peak run
+ran unpinned, and each of those three holds `BenchmarkSgemm` and `BenchmarkOpenBLAS` in one file,
+so the mission criterion's two arms share a placement even where that placement is free. None of
+the 13 are in `INDEX.tsv` (frozen at the 24, by its own header), and which host each one ran on is
+read from its `keel-bench-cpu:`/`keel-pin:` header rather than from its name, exactly as the
+membership predicate above prefers.
+
+**Extended the same day to the two `janus` runs, for a sharper version of the same reason.** The 2
+`gate-p3-under-p4-{68a9bec,ba6f286}` logs and their 28 samples are here because `janus.local` was
+the sole judged sentinel on both — that is #146's defect — and `janus` appears **nowhere** in
+either run's tracked driver log (`release-a2-68a9bec.log`, `validate113-ba6f286.log`: zero
+mentions). So v0.1.0-a2's certificate carried a P2-floor judgment, and #113's `gate-p5: RED`
+carried the FAIL that contradicted it, with the entire witness for both sitting under a gitignored
+`build/`. Preserving them also fixes a second thing the ratios could not show: the two runs'
+`BenchmarkPeak` medians agree to within 0.16% on all three backends while four of five
+`BenchmarkKernel` medians move by 5-12%, which is a statement about that host that no percentage
+in either log could have made. What is closed is the **confined subset**, at
 24 as of 2026-08-22: the selector now spreads or refuses, so no twenty-fifth pre-amendment reading
 can ever be taken. Every count and table above is a statement about those 24 and does not move.
 
