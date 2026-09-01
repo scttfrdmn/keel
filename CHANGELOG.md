@@ -197,18 +197,51 @@ While the major version is 0, minor versions may contain breaking changes.
   the **medians** and overstates what the intervals support. Recomputed with both runs' own
   confidence intervals: `2x32/avx512` −9.76% is disjoint by 9.2 GFLOP/s and `6x32/avx512` +2.59% by
   0.49, both comfortable; `4x32/avx512` −5.19% is disjoint by **0.01** and `2x32/scalar` −12.25% by
-  **0.0014** on a value near 1, i.e. touching; and **`4x32/scalar` −5.87% overlaps and is not
+  **0.0014** on a value near 1, i.e. touching; and **`4x32/scalar` −5.86% overlaps and is not
   resolved at all**. So the two solidly resolved movers are both AVX-512 kernels, and the inference
   *"whatever moved is not in `internal/vec`, established without reference to the source diff"* no
   longer has the scalar evidence it rested on. **What replaces it is stronger and needs no cross-run
   median comparison:** between the two runs the *within-run* interval on every memory-touching kernel
   widened — `4x32/avx512` ×51 (0.105% → 5.378%), `2x32/avx512` ×8.8, `6x32/avx512` ×8.0,
-  `4x32/scalar` ×1.9 — while the three register-only `BenchmarkPeak` arms held at ×1.0, ×2.0 and ×1.7
-  and stayed under 0.14% in absolute terms. The excursion is an **imprecision** in memory-touching
+  `4x32/scalar` ×1.95 — while the three register-only `BenchmarkPeak` arms held at ×1.00, ×2.00 and
+  ×1.66 and stayed under 0.136% in absolute terms. The excursion is an **imprecision** in memory-touching
   measurement, not a shift, and that is mechanically the ceiling-spread width going 0.003 → 0.099,
-  since the spread is computed from those intervals. `2x32/scalar` is uninformative in either
+  since the spread is computed from those intervals. **The memory/register split is a correlation and
+  not an attribution, by #141's own checklist**: *"a timing arm cannot distinguish these"* — a claim
+  that the memory system is the mechanism needs #53's L1d-miss counts, and every arm here is a timing
+  arm. What is established is which rows widened, grouped by a property they happen to share.
+  `2x32/scalar` is uninformative in either
   direction: it printed ±21.9% and ±6.9% in the two runs, with a 4.3× min-to-max range inside one of
   them.
+- **#141 answered on the host that raised it: the widening was a transient excursion, and the
+  certificate's sentinel reading is the reproducible one** (`#141`, `archive/pinned8/drift-janus-df999da*.log`,
+  `scripts/ab-bench.sh drift` on `janus.local` at `df999da`, `n=30` per arm, `-benchtime=1s`,
+  `GOMAXPROCS=1`, `keel-pin width=8`, `governor=performance`, `go1.27.0-X:simd`; **no OpenBLAS
+  reference on this host**, so every figure is percent-of-measured-peak or a within-host delta).
+  The three calibrated `kc=128` AVX-512 bands read **0.066/0.085/0.091%** and **0.145/0.095/0.147%**
+  in the two arms, against `ba6f286`'s 5.378/1.681/1.779% — the widest here is 11.4× narrower than the
+  narrowest there, and narrower than the pre-excursion run on two of three rows. Nothing landed in the
+  0.30–1.00% band that was **declared ambiguous before the run**. The medians agree independently:
+  +0.36/+0.39/+0.09% against the pre-excursion run where the excursion was −5.19/−9.76/+2.59%. So the
+  sentinel share — the ratio whose two terms this session put in the gate log — reads **47.94%** and
+  **47.83%** here against **47.90%** in the certificate, and the `43.2%` that failed P2's floor was
+  the outlier.
+  **Three things the run found that the fork did not ask for.** (1) *The arms are not one binary.*
+  `remote_build_test` passes no `-trimpath` and the base arm builds inside a worktree at a different
+  path, so the two binaries differ (5,089,864 vs 5,089,752 bytes, different sha256) — and this repo's
+  own between-binary layout floor is 1.71/0.99/1.32%, the same order as the deltas. Settled by symbol
+  address rather than assumed: all 8 `internal/vec` text symbols sit at byte-identical addresses in
+  both arms, and of 3635 text symbols the 196 that moved are **all** `go.shape` generic instantiations
+  in `internal/sync`, `slices`, `sync` and `runtime` — no keel symbol among them, no symbol in one
+  binary only. (2) *The host is not quiet between windows even so.* Two arms of one build, kernels at
+  identical addresses, minutes apart: `2x32/avx512/kc=32` −3.08%, `2x32/avx512/kc=512` −2.30%,
+  `6x32/avx512/kc=8` −2.04%, all `p=0.000`, and `2x32/scalar/kc=32` **+15.60%** at `p=0.000` with
+  ±0.158% and ±0.109% bands. Opposite signs at `p=0.000` is a **direction split**, which is precisely
+  the case criterion 5b's new coverage line says a roofline cannot absorb. (3) *The pre-registration
+  was too coarse and the defect is ours:* the predicate was written over `Kernel/*/avx512` while its
+  thresholds were calibrated at `kc=128` alone, and the driver's filter expands that to four `kc`
+  values per shape — so the fork read literally returns the other branch on rows no threshold ever
+  covered. Rule 24 one level down: the output *space* was right, the row *granularity* was not.
 
 ### Added
 - **`docs/apparatus-ledger.md` — one running total for the apparatus debt, itemized per commit**,

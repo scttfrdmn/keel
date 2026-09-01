@@ -39,6 +39,22 @@ applied to *it*, and `keel-pin:` is the only witness of that. Applying the predi
 also returned exactly **35 unpinned** archives whose names are identical to the 35 already in
 `archive/free-placement/`, which is an independent check that the free arm was preserved whole.
 
+**The predicate over-collects, and the three `drift-janus-df999da*.log` files are why this says so
+(2026-09-01, #141).** They are a null A/B on `janus.local` — a lab host, neither fleet nor judged —
+and the two arm files carry `keel-pin: mask=0,1,2,3,4,5,6,7 width=8` and `doms=`, which is *both*
+stated predicates, so a re-derivation by predicate alone would file them in the spread arm. They
+are **excluded by name**, which is in doctrine rather than around it: `INDEX.tsv` and
+`INDEX-spread.tsv` are the membership, and the predicate is the check on them. Neither index cites
+these three and no verdict rests on them.
+
+Extension does not separate them and I am not going to pretend it does. Measured before adding
+them: all 8 `.log` files here carried **zero** `keel-pin:` lines, so `.log` meant driver transcript
+and `.txt` meant sample archive, exactly. `drift-janus-df999da-{base,new}.log` are the first `.log`
+files here that are sample archives — 1 `keel-pin:` line and 690 `Benchmark` rows each — so the
+convention now has two exceptions and a named exclusion list is what carries the fact instead.
+They are tracked at all for #114's reason only: a published attribution whose evidence is a
+`build/` path is evidence on one laptop.
+
 The three revisions present are `e64b34e` (9), `be5bb91` (8) and `d2fe477` (7). All 24 carry the
 same mask, `mask=0,1,2,3,4,5,6,7 width=8`, and all 24 report `gomaxprocs=8` — uniform, as rule 5's
 "fleet-wide and never selectively" requires. Rows carry `-8` where the free arm's carried `-192`
