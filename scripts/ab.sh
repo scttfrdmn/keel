@@ -55,6 +55,93 @@ source scripts/remote.sh
 # shellcheck source=scripts/bench.sh
 source scripts/bench.sh
 
+# ab_arm_file DIR ARM SHA — the sample file benchstat is handed for one arm, and the
+# ONE place that name is formed. Two callers: ab_host, which writes the measured arms,
+# and ab_control, which writes the planted pair. That sharing is the point — drop the
+# arm from the name and the control's own two writes collide too, so the control fails
+# instead of the run silently comparing a file to itself.
+ab_arm_file() { printf '%s/%s-%s.txt\n' "$1" "$2" "$3"; }
+
+# ab_control — the planted-delta control, run before any host is touched.
+#
+# #141's checklist asked for this BEFORE this instrument was written, and it was skipped:
+# ab_host named both arm files by SHA alone, a null A/B (BASE_REF=HEAD) resolves both
+# SHAs to one string, the second `cp` overwrote the first, and benchstat compared a file
+# to itself and printed `~ (p=1.000)` — the exact token bench_compare reads as "no drift".
+# That harness would have reported a wash on any host, on any day, forever. Scott's rule,
+# 2026-09-01: an A/B that cannot see a planted delta has not measured a real one.
+#
+# Two synthetic sample sets differing by an exact ×1.1 on every sample, written through
+# ab_arm_file with THIS run's own two SHAs, compared by the same bench_compare the run
+# will use. The recovered delta must read +10.00%.
+#
+# The plant is exact by construction — every sample scaled by exactly 1.1, so the median
+# ratio is 1.1 at any n and any rank pair — which is what makes comparing the rendered
+# token sound here rather than a band hiding inside a comparison: the failure guarded
+# against is a comparison that is DEAD (`~`, +0.00%, or no row at all), which is ten
+# percentage points away from the plant, not a rounding of it.
+#
+# bench_compare's own exit status is subsumed, not discarded: its NOT COMPARED path
+# prints no delta row at all, so `got` is empty and the check below fails on it.
+#
+# What it cannot see (§5 rule 12): it drives one synthetic row through benchstat and the
+# arm naming, so it does not prove that the HOST's rows survive the pipeline, that either
+# arm ran, or that the two binaries differ as intended — the arm provenance lines below
+# are what answer that last one. It runs on every A/B invocation, so it cannot rot
+# silently: if it breaks, every A/B in the tree stops before touching a host.
+ab_control() {
+  local d base new out got
+  d="$BINDIR/control"
+  mkdir -p "$d"
+  base="$(ab_arm_file "$d" base "$BASE_SHA")"
+  new="$(ab_arm_file "$d" new "$NEW_SHA")"
+  ab_control_samples 100 >"$base"
+  ab_control_samples 110 >"$new"
+  out="$(bench_compare "$base" "$new" || true)"
+  got="$(sed -n 's|^Control/plant-1 .*[[:space:]]\([+-][0-9.]*\)% (p=.*|\1|p' <<<"$out")"
+  if [[ "$got" != "+10.00" ]]; then
+    echo "ab-bench: THE PLANTED-DELTA CONTROL FAILED. A +10.00% plant read as" >&2
+    echo "'${got:-no delta at all}', so this harness cannot be shown to see a delta and" >&2
+    echo "nothing is measured. The comparison it produced:" >&2
+    sed 's/^/  /' >&2 <<<"$out"
+    exit 2
+  fi
+  info "planted-delta control: +10.00% recovered from a pair named the way this run names"
+  info "its arms ($(basename "$base") vs $(basename "$new")) — the comparison is live."
+}
+
+# ab_control_samples SCALE — ten deterministic sec/op samples at SCALE/100 of 1000-1009 ns.
+ab_control_samples() {
+  local i
+  printf 'goos: linux\ngoarch: amd64\npkg: keel/bench\n'
+  for i in 0 1 2 3 4 5 6 7 8 9; do
+    printf 'BenchmarkControl/plant-1\t1\t%s ns/op\n' "$(((1000 + i) * $1))"
+  done
+}
+
+# ab_arm_provenance ARM BIN — what the far side will actually execute, read off the
+# binary: its digest, its size, and the build flags the toolchain stamped inside it.
+#
+# A NULL A/B IS NOT AUTOMATICALLY ONE BINARY, which is why this line exists (2026-09-01,
+# #141). ab_run builds the base arm in a worktree at a different path, so without
+# `-trimpath` the two arms differ in the path strings the linker embeds. Measured at
+# ed17c57: four builds of ./bench from four paths gave four distinct digests, and the
+# size is not even monotone in path length — a 9-character path produced a LARGER binary
+# than the 25-character repo path, and paths of length 9 and 44 produced identical sizes
+# with different digests, so comparing sizes could have missed it outright. keel's own
+# between-binary layout floor is 1.71/0.99/1.32% (#54/#61), the same order as the deltas
+# #141 was reading. So two equal digests are a null A/B and two different ones are two
+# builds carrying a live layout confound, and which of those a log recorded is a fact
+# about the measurement rather than a detail of the driver.
+ab_arm_provenance() {
+  local sha
+  sha="$({ shasum -a 256 "$2" 2>/dev/null || sha256sum "$2"; } | cut -c1-16)"
+  # ${sha} braced: bash reads the bytes of a following multibyte character as part of a
+  # bare $name, so `$sha…` expanded as the unset variable `sha<0xe2>` and, under `set -u`,
+  # killed the driver at the line that was meant to describe it.
+  info "$1 binary: sha256=${sha}… bytes=$(wc -c <"$2" | tr -d ' ') flags=[$(build_settings "$2")]"
+}
+
 # ab_host HOST — both arms on one host, then the comparison.
 #
 # Both arms run back to back on the same machine before anything is compared, so
@@ -62,7 +149,7 @@ source scripts/bench.sh
 # can arrange. A host whose first arm fails reports nothing at all rather than
 # half a table.
 ab_host() {
-  local host="$1" arm bin
+  local host="$1" arm bin basetxt newtxt
   for arm in base new; do
     bin="$BASE_BIN"
     [[ "$arm" == new ]] && bin="$NEW_BIN"
@@ -78,17 +165,21 @@ ab_host() {
   # the name because the SHAs are not always distinct: a null A/B (BASE_REF=HEAD,
   # the drift preset) resolves both to one short SHA, and naming by SHA alone made
   # the second `cp` overwrite the first, so benchstat was handed one file twice and
-  # printed a wash by construction. The build/ copies are the durable ones: a
+  # printed a wash by construction. The name is formed by ab_arm_file, which ab_control
+  # drives with this run's own two SHAs, so the collapse is now caught by a control
+  # instead of by whoever notices. The build/ copies are the durable ones: a
   # ranking is recomputed from the logs rather than from a script's stdout
   # (DESIGN.md §5.8).
-  cp "$BINDIR/base.log" "$BINDIR/base-$BASE_SHA.txt"
-  cp "$BINDIR/new.log" "$BINDIR/new-$NEW_SHA.txt"
+  basetxt="$(ab_arm_file "$BINDIR" base "$BASE_SHA")"
+  newtxt="$(ab_arm_file "$BINDIR" new "$NEW_SHA")"
+  cp "$BINDIR/base.log" "$basetxt"
+  cp "$BINDIR/new.log" "$newtxt"
   cp "$BINDIR/base.log" "build/$AB_TAG-$host-base-$BASE_SHA.log"
   cp "$BINDIR/new.log" "build/$AB_TAG-$host-new-$NEW_SHA.log"
   # The caller's `set -o pipefail` is what makes this test bench_compare's verdict
   # rather than sed's: without it the indent pipe would swallow the one status that
   # says whether a comparison happened.
-  if ! bench_compare "$BINDIR/base-$BASE_SHA.txt" "$BINDIR/new-$NEW_SHA.txt" | sed 's/^/        /'; then
+  if ! bench_compare "$basetxt" "$newtxt" | sed 's/^/        /'; then
     warn "[$host] the two arms were not compared, so this host contributes no delta"
   fi
 }
@@ -121,6 +212,10 @@ ab_run() {
   echo "base: $BASE_SHA ($BASE_REF)"
   echo "new:  $NEW_SHA (working tree$DIRTY)"
 
+  # Before any host is touched, and before the fleet is even resolved: a harness that
+  # cannot see a planted delta has nothing to say about a measured one.
+  ab_control
+
   remote_require_hosts
 
   git worktree add --detach "$WORKTREE" "$BASE_REF" >/dev/null
@@ -136,6 +231,8 @@ ab_run() {
     exit 2
   fi
   echo "built two linux/amd64 bench binaries (static)"
+  ab_arm_provenance base "$BASE_BIN"
+  ab_arm_provenance new "$NEW_BIN"
 
   mapfile -t BFLAGS < <(bench_flags)
   echo "methodology: -count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME, GOMAXPROCS=1, filter=$AB_FILTER"

@@ -9,6 +9,37 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The planted-delta control, beside the A/B harness and run before any host is touched** —
+  `ab_control` in `scripts/ab.sh` (`#141`, authorized 2026-09-01: *"an A/B that can't see a planted
+  delta hasn't measured a real one"*). #141's own checklist asked for this **before** the instrument
+  was written and it was skipped, which is how a harness that could not fail got built: `ab_host`
+  named both arm files by SHA alone, a null A/B resolves both SHAs to one string, the second `cp`
+  overwrote the first, and benchstat compared a file to itself and printed `~ (p=1.000)` — the exact
+  token `bench_compare` reads as no drift. The control writes two synthetic sample sets differing by
+  an exact `×1.1`, **through the same `ab_arm_file` that names the measured arms and with this run's
+  own two SHAs**, and requires the recovered delta to read `+10.00%`; anything else exits 2 before a
+  host is contacted. Driven both ways rather than asserted: with `ab_arm_file` reverted to the
+  pre-fix naming the control prints `a +10.00% plant read as 'no delta at all'` and benchstat's own
+  `abc1234.txt#0` / `abc1234.txt#1` self-comparison beneath it. It cannot see whether the host's rows survive
+  the pipeline, nor whether either arm ran; what it establishes is that the comparison is alive.
+  Authorized at *"~30 lines"* and **+71 measured**, with the flags line a further **+58**; both are
+  booked as authorized debt in `docs/apparatus-ledger.md`, unpaid, and the estimate-to-actual gap is
+  stated there rather than argued down. The apparatus ratio moved 1.82x → 1.84x on a *smaller*
+  unrounded increment than the +137 that printed as one hundredth a session earlier (0.01439 against
+  0.01528, library term constant at 8964) — which is the reading rule earning itself again, not
+  retiring: the +129 came from the diff.
+- **Every A/B log now states what the far side will execute** — `ab_arm_provenance` prints each arm's
+  sha256, size and the build flags read out of the binary with `go version -m` (`build_settings` in
+  `scripts/remote.sh`), and `builder_toolchain`'s existing line carries the flags too, so a mid-run
+  **flag** change is now as visible as a mid-run compiler change (`#58`, `#141`). Read off the
+  artifact, never off the shell that meant to pass them. Measured at `ed17c57`: four builds of
+  `./bench` from four paths gave **four distinct digests**, and the size is not monotone in path
+  length — a 9-character path produced a *larger* binary than the 25-character repo path, and paths
+  of length 9 and 44 produced identical sizes with different digests, so a size comparison alone
+  could have missed the difference outright. This adds a word to an `info` line, so it moves no
+  verdict and no normalized certificate key (rule 24's comparison anchors on `^  (PASS|FAIL|…) `);
+  a raw-text diff against the pinned `v0.1.0` certificate will show it, and
+  `docs/certificates/v0.1.0.md` says so.
 - **`scripts/ab-bench.sh {l1|edge|drift} [BASE_REF]` — one parametrized caller in place of
   `l1-bench.sh` and `edge-bench.sh`, and it carries #141's decisive instrument** (`#141`, `#131`,
   ruled: *"two callers keyed to two benchmark sets plus a third for this one is the wrong shape"*).
@@ -38,8 +69,26 @@ While the major version is 0, minor versions may contain breaking changes.
   sha256, and points at the tracked file; corrections accumulate there from now on, where they are
   diffable, reviewable and inside `citation-lint.sh`'s enumeration — verified, not assumed: the new
   file contributes one citation site and it resolves.
-- **§5 rule 24 — a pre-registered prediction is stated in the instrument's own output space, or it
-  constrains nothing** (`DESIGN.md`, `docs/rulings.md`). Scott's ruling on his own prediction for
+- **§5 rule 24 — a pre-registered prediction is stated in the instrument's own output space AND at
+  that instrument's own row granularity, or it constrains nothing** (`DESIGN.md`, `docs/rulings.md`).
+  The **second clause arrived 2026-09-01, one day after the first**, ruling on #141's fork (*"a
+  pre-registered predicate governs exactly the rows it registered thresholds for — supplying
+  thresholds after seeing the kc≠128 deltas would be fresh judgment wearing pre-registration's
+  clothes"*). The fork was registered over `Kernel/*/avx512` with thresholds derived at `kc=128`, the
+  only depth `gate-p5` measures, while the drift driver renders four `kc` values per shape:
+  re-derived mechanically from the tracked `archive/pinned8/drift-janus-df999da-{base,new}.log`, whose
+  two arms render an identical row set, the 23 rendered rows partition as **3 adjudicated + 9 reached
+  without a threshold + 11 out of domain** (8 `Kernel` scalar — `6x32` has no scalar arm — and 3
+  `Peak`). Restricted to its calibrated three the fork returned one branch decisively; read literally
+  it returned the other. **One table, one predicate, both branches** — so the free parameter had moved
+  from the threshold to the row set, and the verdict for a reached-but-unthresholded row is now
+  `UNMEASURED`, never a branch. Also corrected here: the first write-up said the predicate covers
+  *"12 AVX-512 rows for which no threshold was ever derived"* and the ruling quoted the figure —
+  twelve is the **scope**, nine were unthresholded, and a sentence that used one number for two
+  quantities is rule 24's own subject one level up. #141 itself closes on **transient** for the
+  certificate's 47.90% reading, on the adjudicable evidence only (bands 11.4× narrower than the
+  excursion's, medians agreeing to +0.4%, sentinel share 47.94/47.83); the kc≠128 direction-split
+  files as a new finding rather than as a branch verdict. Scott's ruling on his own prediction for
   the #113 certificate comparison: both registered deltas were digit-only (`8 row(s)` → `9 row(s)`,
   `6.067x` → `6.066x`), the comparison normalizes every numeral to `#`, so each accounts for **0 of
   the 7 changed members** — a prediction the instrument cannot render is not a weak constraint but

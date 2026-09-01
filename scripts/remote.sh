@@ -613,6 +613,22 @@ remote_build_test() {
     go test -c -o "$out" "$pkg"
 }
 
+# build_settings BIN — the build FLAGS the toolchain stamped inside BIN, one line.
+#
+# Read off the artifact for exactly builder_toolchain's reason (#58): a flag this shell
+# can echo certifies what the shell meant to pass, and the fleet executes what the
+# linker wrote. `go version -m` prints the recorded `build` settings; the `-`-prefixed
+# ones are the flags, and the rest (GOARCH, GOEXPERIMENT, CGO_ENABLED, DefaultGODEBUG)
+# are environment the target already names.
+#
+# Flags are provenance, which is why this exists at all (2026-09-01, #141): the same
+# source built with and without `-trimpath` is two different binaries, and a log that
+# does not say which one it measured cannot answer whether an A/B's arms were one build.
+build_settings() {
+  go version -m "$1" 2>/dev/null |
+    awk '$1=="build" && $2 ~ /^-/ {printf "%s%s", sep, $2; sep=" "} END{print ""}'
+}
+
 # builder_toolchain BIN — record which Go compiled BIN, read off BIN (issue #58).
 #
 # Not `go version`, which reports THIS shell's driver -- a different fact, and GOTOOLCHAIN
@@ -628,13 +644,29 @@ remote_build_test() {
 # redirects that function's stdout to a build log, so an info() there would land
 # outside the gate log; and two callers invoke it in a subshell, where an assignment
 # dies with the subshell exactly as the tally constraint above describes.
-KEEL_BUILDER_GO=""
+#
+# SINCE 2026-09-01 THE RECORD INCLUDES THE BUILD FLAGS, and the mid-run detector gains
+# them for free: a run whose flags change between two builds is the same class of finding
+# as one whose compiler changes, and it was previously invisible. The variable is named
+# for what it now holds. This adds a word to an `info` line, so it moves no verdict and
+# no normalized certificate key — rule 24's comparison anchors on `^  (PASS|FAIL|…) `,
+# and `info` prints at eight spaces — but a re-measurement diffed against the pinned
+# v0.1.0 certificate as raw text will show this line, which docs/certificates/v0.1.0.md
+# now says out loud.
+KEEL_BUILDER_BUILD=""
 builder_toolchain() {
   local v
   v="$(go version "$1" 2>/dev/null | awk '{x=""; for(i=3;i<=NF;i++) if ($i ~ /^X:/) x=" "$i; print $2 x}')"
-  [[ -n "$v" && "$v" != "$KEEL_BUILDER_GO" ]] || return 0
-  info "builder toolchain ${KEEL_BUILDER_GO:+CHANGED mid-run from $KEEL_BUILDER_GO to }$v, read off $(basename "$1") and not off this shell's go"
-  KEEL_BUILDER_GO="$v"
+  # Two guards rather than `[[ -n "$v" ]] && v=…`, and the reason was measured rather
+  # than assumed: a false `&&` list is exempt from `set -e` where it stands mid-function
+  # (rc=0) and NOT where it stands last, since there it becomes the function's own status
+  # and aborts the caller (rc=1). builder_toolchain is called in exactly that position by
+  # remote_build_test_or_fail below, so the form that cannot depend on where it sits wins.
+  [[ -n "$v" ]] || return 0
+  v="$v flags=[$(build_settings "$1")]"
+  [[ "$v" != "$KEEL_BUILDER_BUILD" ]] || return 0
+  info "builder toolchain ${KEEL_BUILDER_BUILD:+CHANGED mid-run from $KEEL_BUILDER_BUILD to }$v, read off $(basename "$1") and not off this shell's go"
+  KEEL_BUILDER_BUILD="$v"
 }
 
 # remote_build_test_or_fail PKG OUT LOG PASS_MSG FAIL_MSG — the guarded form of the call

@@ -1581,7 +1581,7 @@ would have to read the claim. What the tree gets instead is the discipline list 
 host sets, file extents — are unguarded, and both instances were caught by re-derivation rather
 than by any check, which is the only mechanism this rule can honestly claim.
 
-## Rule 24 — a pre-registered prediction is stated in the instrument's own output space
+## Rule 24 — a pre-registered prediction is stated in the instrument's own output space, and at its row granularity
 
 **Adopted 2026-08-31**, ruling on the #113 certificate comparison. Scott's ruling on Scott's own
 prediction: *"the prediction failure is mine to own, and it earns a law: a pre-registered
@@ -1680,3 +1680,95 @@ whole apparatus. (b) The sign-versus-magnitude asymmetry is **named here and unf
 the normalization to erase signs too would suppress a real sign change on a step that mattered, and
 that trade has not been measured, so it stays an open question on #113 rather than a silent choice
 made in a `sed` expression.
+
+### The second clause — row granularity, added 2026-09-01, one day after the first
+
+**Adopted 2026-09-01**, ruling on #141's fork. Scott: *"a pre-registered predicate governs exactly
+the rows it registered thresholds for — supplying thresholds after seeing the kc≠128 deltas would be
+fresh judgment wearing pre-registration's clothes, which is the flattery-asymmetry's oldest trick in
+either direction."* The headline gains its second half: right output space, **and** the instrument's
+own row granularity — thresholds for every row the driver renders, or those rows are declared out of
+domain in advance.
+
+The first clause is about *units*: a prediction the normalization erases sees nothing. This one is
+about *extent*: a prediction that names a family sees rows nobody characterised, and inherits a
+verdict for each of them. They are the same failure — a predicate whose reach exceeds its
+calibration — arriving from two directions, and neither is a special case of the other.
+
+#### The predicate, and the rows it actually reached
+
+The fork was registered over `Kernel/*/avx512`, and its thresholds came from `kc=128` — the only
+panel depth `gate-p5` measures, so the only one with prior data. The drift driver's filter is
+`BenchmarkKernel|BenchmarkPeak`, which on janus renders **four `kc` values per shape**. Re-derived
+mechanically rather than recalled, from the tracked arm logs
+`archive/pinned8/drift-janus-df999da-{base,new}.log` — both arms render the identical 23-row set, so
+the partition is a property of the filter and the host and not of one arm:
+
+| | rows | state |
+|---|---:|---|
+| predicate scope, thresholded (`2x32`, `4x32`, `6x32` at `kc=128`) | **3** | adjudicated |
+| predicate scope, no threshold ever derived (`kc` = 8, 32, 512 × three shapes) | **9** | **`UNMEASURED`** |
+| outside the predicate, declared out of domain in advance (8 `scalar` — `6x32` has no scalar arm — and 3 `Peak`) | **11** | out of domain |
+| total rendered | **23** | |
+
+**A count of my own, corrected in place rather than left standing.** The first write-up of this said
+the predicate "covers 12 AVX-512 rows for which no threshold was ever derived", and the ruling
+repeated the figure as *"the twelve unthresholded rows"*. Twelve is the predicate's whole **scope**;
+**nine** were unthresholded. The shortfall and the reach are two quantities and the sentence used one
+number for both — which is the same shape as rule 24's own subject, a claim stated at the wrong
+granularity, so it is corrected here and inside DESIGN.md's rule text rather than being allowed to
+stand because a ruling had already quoted it.
+
+#### Why this is a defect and not a close call: one table returned both branches
+
+Restricted to the three rows it had calibrated, the fork returned **transient** decisively. Read
+literally over all twelve, it returned the other branch, on the nine rows nobody had characterised.
+Both readings were true of one table, computed from one set of samples, by one predicate. **A fork
+that can return either branch is not a pre-registration**, whatever its timestamp; the free
+parameter simply moved from the threshold to the row set.
+
+The verdict for a reached-but-unthresholded row is therefore **`UNMEASURED`** — the vocabulary rule 6
+already provides, and the same third state rule 19 gives a row too wide to adjudicate. Not a pass,
+not a fail, and not a quiet exclusion: the row prints, its delta is archived, and what is refused is
+only the comparison against a bar that does not exist.
+
+#### What the ruling settled on the merits, separately
+
+#141's own question was answered on the evidence that *was* adjudicable, and Scott stated it as such:
+*"Transient. The certificate's reading holds, now with two independent reproductions."* The grounds
+were three, none of them the unthresholded rows: bands **11.4× narrower** than the excursion's,
+medians agreeing to **+0.4%**, and a sentinel share of **47.94 / 47.83** against the certificate's
+**47.90**. The kc≠128 direction-split does not vanish by being declared `UNMEASURED` — it **files as
+a new finding**, and the trimpath witness is what will attribute it.
+
+#### What binds now, beyond the first clause's three
+
+(d) **Enumerate the exact rows the driver will print, before registering anything.** Run the filter,
+or read an archived log produced by the same filter. The 23 rows above cost one `grep | sort -u` over
+a log that already existed.
+
+(e) **A row with no prior data is declared out of domain in the pre-registration itself**, in the same
+sentence and with the same standing as an ambiguous band. That declaration is cheap before the fact
+and unavailable after it.
+
+(f) **When the two readings disagree, publish both, name the defect as the predicate's, and do not
+retro-scope.** Supplying the missing thresholds afterwards is the amend-only-with-a-predating-standard
+rule violated against one's own prediction, and rule 16's asymmetry says why it is not self-correcting:
+a draw that flatters gets a threshold and a draw that indicts gets reopened, so the direction of the
+repair is decided by the result it is repairing. Posting both readings without picking was ruled
+correct; the pick belongs to the authority.
+
+#### Coverage, and what stays unseen (§5 rule 12)
+
+**No check enforces this either, and the shape of the hole is different from the first clause's.** The
+row set is a *runtime* property of the driver: `AB_FILTER` is a regex, the shapes come from the
+benchmark's own table, and which arms exist depends on the host's CPU features — janus renders no
+`6x32/scalar` at all, and a host without AVX-512 would render none of the predicate's twelve. So an
+enumeration is per host and per revision, and there is nothing to assert against at registration time
+except a log from the same filter. Two specific limits. (a) The partition above is exact for
+`df999da` on `janus.local` and is **not** portable: the same predicate on a different host has a
+different scope, a different thresholded subset, and therefore a different `UNMEASURED` count. (b)
+The enumeration is only as right as the pattern that runs it, and it has the same failure mode as its
+subject: a bare `avx512` over the row list returns **13**, not 12, because `BenchmarkPeak/avx512`
+matches a predicate written for `Kernel/*/avx512`. One row of scope error, in the check built to
+catch scope errors, and it is caught here only because the four counts were made to sum to 23.
