@@ -1384,7 +1384,7 @@ else
         # a claim about the README earned by a host that stopped answering (#76).
         unmeasured "[$host] the CPU model is unreadable, so this host's README rows cannot be located: an empty model matches no row, and that is not the README publishing none"
       else
-        RMATCH=0; RBADN=""
+        RMATCH=0; RBADN=""; RDEN1=""; RDENT=""; RDENSKIP=0
         while IFS= read -r row; do
           [[ -n "$row" ]] || continue
           rcpu="$(awk -F'|' '{gsub(/^ +| +$/, "", $2); print $2}' <<<"$row")"
@@ -1400,6 +1400,24 @@ else
             RBADN="$RBADN ${rben}/threads=${rthr}(no denominator column: never a number without one, §7 rule 7)"
             continue
           fi
+          # ARM B (#100): the denominator column's VALUE, where this criterion tested only that
+          # the column was non-empty. Every share a host publishes divides by one quantity —
+          # the 1-thread avx512 peak, or that peak times the thread count — so 9 sentences
+          # reduce to 1 number, and it is one this gate already measures. Arm A (P == 100·R/D)
+          # is refused, not deferred: its band is derived from how many digits each figure was
+          # printed to and ranges 0.05→0.868 points across the block, so on its widest row it
+          # cannot see a share mistyped by half a point. That is #110's class.
+          rd="$(sed -nE 's|^[^%]*% of ([0-9]+(\.[0-9]+)?) GFLOP/s.*|\1|p' <<<"$rden")"
+          if [[ -z "$rd" ]]; then
+            RBADN="$RBADN ${rben}/threads=${rthr}(denominator column names no '<N> GFLOP/s' quantity, so what its share divided by is unstated)"
+            continue
+          fi
+          # Judged at the two thread counts an identity exists for; anything else is COUNTED and
+          # named in the verdict rather than refused, since a future row at another width would
+          # be correct and this arm simply has no identity to check it by (§5 rule 12).
+          if [[ "$rthr" == 1 ]]; then RDEN1="$RDEN1 $rd"
+          elif [[ "$rthr" == "$P5_THREADS" ]]; then RDENT="$RDENT $rd"
+          else RDENSKIP=$((RDENSKIP + 1)); fi
           rname="$(row_name "$rben" "$rthr")"
           if [[ -z "$rname" ]]; then
             RBADN="$RBADN ${rben}/threads=${rthr}(no benchmark family here addresses this published name, so criterion 9 cannot re-measure it — #113)"
@@ -1412,6 +1430,41 @@ else
             RBADN="$RBADN ${rben}/threads=${rthr}(README says $rgf, this run measured $mgf)"
           fi
         done <<<"$RROWS"
+        # Arm B decides once per host, because the property is a property of the column. `<=`,
+        # not `<`: readme-numbers.sh prints p1 ROUNDED and computes p8 from the UNROUNDED value,
+        # so Intel's 192.6 / 1541.2 pair sits exactly ON the 8·hw(p1) endpoint — written `<`
+        # this arm would refuse a correct row in the first data it ever saw. PEAK1 is the
+        # measured tie and require_bench guarantees it resolves; the tolerance against it is
+        # README_TOL because that comparison is a published median against one run's reading,
+        # which is the same kind of comparison the rate arm already makes at 5%.
+        RDV=""
+        [[ "$RMATCH" -gt 0 ]] && RDV="$(awk -v o="$RDEN1" -v m="$RDENT" -v t="$P5_THREADS" \
+          -v p="$PEAK1" -v tol="$README_TOL" -v pk="$GATE_PEAK" 'BEGIN{
+          n=split(o,A," "); k=split(m,B," ")
+          for(i=1;i<=n;i++) if(A[i]!=A[1]){printf "its 1-thread rows divide by %s and also by %s, so this host publishes more than one peak", A[1], A[i]; exit}
+          for(i=1;i<=k;i++) if(B[i]!=B[1]){printf "its %d-thread rows divide by %s and also by %s, so this host publishes more than one peak", t, B[1], B[i]; exit}
+          if(n==0||k==0){printf "%d row(s) at 1 thread and %d at %d, so there is no pair to check the peak-times-cores identity on", n, k, t; exit}
+          a=A[1]; b=B[1]
+          # In INTEGERS, and that is not fastidiousness. `e <= t*hw` in doubles refused the correct
+          # Intel pair 192.6 / 1541.2: 8*192.6 lands at 1540.79999999999995, so the delta reads
+          # 0.40000000000009 against a band of 0.40000000000000 — the row that motivated `<=`
+          # failing under `<=`. Both figures are decimals the README printed, so scaling each to
+          # units-in-its-last-place settles it exactly instead of picking an epsilon. Products
+          # stay under 1e8 here, nowhere near 2^53.
+          da=index(a,"."); da=(da==0)?0:length(a)-da
+          db=index(b,"."); db=(db==0)?0:length(b)-db
+          D=(da>db)?da:db
+          e=2*(int(b*10^D+0.5)-t*int(a*10^D+0.5)); if(e<0)e=-e
+          if(!(e<=t*10^(D-da))){printf "%s at 1 thread and %s at %d differ from that peak times %d by %.4g, past the %.4g its own printed resolution allows", a, b, t, t, e/(2*10^D), t/(2*10^da); exit}
+          f=(a-p)/p; if(f<0)f=-f
+          if(!(f<=tol)){printf "published peak %s is %.2f%% from the %s this run measured (%s)", a, 100*f, pk, p; exit}
+          printf "ok %s / %s", a, b }')"
+        # Fail CLOSED on an absent verdict: RMATCH>0 means the awk above ran, so an empty RDV is a
+        # broken arm, and reading empty as "nothing to report" would pass the column silently.
+        [[ "$RMATCH" -eq 0 || "$RDV" == ok\ * ]] \
+          || RBADN="$RBADN denominator-column(${RDV:-arm B reached its input and produced no verdict at all})"
+        RDSKIPMSG=""
+        [[ "$RDENSKIP" -gt 0 ]] && RDSKIPMSG=", with $RDENSKIP row(s) at neither 1 nor $P5_THREADS threads, for which this arm has no identity to check"
         if [[ "$RMATCH" -eq 0 && "$HOST_SPENT" -eq 0 ]]; then
           # THE SAME CLASS, ONE CRITERION OVER (#6). A README row is born from a judged
           # run, so a host whose first judged run is this one cannot have had a row to
@@ -1426,7 +1479,7 @@ else
           BASELINE_OWING="$BASELINE_OWING $host/README"
           fail "[$host] README.md publishes no row for '$hcpu', and $BASELINE_WITNESS records a judged run for this silicon in era $P5_ERA — so its numbers are unpublished rather than unborn, and BASELINE is spent (#6)"
         elif [[ -z "$RBADN" ]]; then
-          pass "[$host] every README row for this CPU re-measures within 5% ($RMATCH row(s))"
+          pass "[$host] every README row for this CPU re-measures within 5% ($RMATCH row(s)), and their denominators reduce to the one peak this run measured — ${RDV#ok } GFLOP/s${RDSKIPMSG}"
         else
           fail "[$host] README rows disagree with this run:$RBADN"
         fi

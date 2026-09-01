@@ -8,6 +8,28 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **gate-p5 criterion 9 now checks the README's denominator column, not just that it is
+  non-empty** (#100, arm B). Each host publishes 9 rows whose 9 denominator sentences reduce to
+  **one** measured quantity — the 1-thread avx512 peak, or that peak times the thread count — so
+  the arm requires all 1-thread rows to name one value, all 8-thread rows to name one value,
+  those two to satisfy the peak-times-cores identity within the printed figures' own resolution,
+  and the published peak to sit within `README_TOL` of the `Peak/avx512` this run measured.
+  Rows at any other thread count are **counted and named in the verdict** rather than refused:
+  a future row at another width would be correct and this arm has no identity for it (§5 rule
+  12). An unparseable denominator cell is a refusal, never a fall-through.
+  **The identity is computed in integers, and the instrument is why.** #100 predicted that `≤`
+  on floats would suffice for the boundary pair; the fixture refuted that prediction *before it
+  shipped*. `8 × 192.6` is `1540.79999999999995` in doubles, so Intel's correct `192.6 / 1541.2`
+  pair reads a delta of `0.40000000000009095` against a band of `0.40000000000000002` — **the
+  row that motivated `≤` fails under `≤`**. Both figures are decimals the README printed, so
+  scaling each to units-in-its-last-place decides it exactly instead of picking an epsilon.
+  **Arm A (`P == 100·R/D`) is refused, not deferred**, and recorded as considered: its band is
+  derived from how many digits each figure happens to be printed to and ranges 0.05→0.868 points
+  across the block, so on its widest row it cannot see a share mistyped by half a point — #110's
+  class. Arm C (the tail template) is unlanded and unclaimed. The residual after B is the
+  `N=2 archives` count, a claim about the archive set rather than about this run.
+
 ### Fixed
 - **gate-p5's 1-thread avx512 peak was per-host state living in the per-routine loop, past both
   of that loop's `continue`s** (`scripts/gate-p5.sh`). A host whose every routine bailed carried
