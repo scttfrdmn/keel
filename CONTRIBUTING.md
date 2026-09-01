@@ -80,6 +80,15 @@ both kinds of contributor.
   the digest is what makes the next recovery *provable* rather than merely
   corroborated; tracking alone freezes bytes from that moment on, which is not the
   same as showing they are the bytes that were cited.
+- **Every judged witness is a fleet host, and the declaration row says so.** Added
+  to this checklist 2026-08-31 (ruled, `#146`) because v0.1.0-a2 failed it silently:
+  P2's throughput floor was judged on one lab box named by a gitignored,
+  machine-local file, while all three fleet hosts printed *"not a sentinel, so P2's
+  floor is not judged here"* — the migration ruling (judged measurement on AWS; the
+  lab is the dev tier) violated through a channel nobody enumerated. Read the
+  certificate's sentinel declaration row before tagging: it names the judged set and
+  whether `$KEEL_SENTINEL_OUT_OF_FLEET` widened it, so a certificate rendered with a
+  lab sentinel says so on its face rather than in a file that is not in the repo.
 - **A markdown tag message needs `git tag -a --cleanup=verbatim -F`.** The default
   cleanup strips every `#`-leading line as a comment, so `## Heading` lines vanish
   from the tag object with no warning and nothing to diff against — repro in one

@@ -547,7 +547,8 @@ no number from this machine is reportable.
 
 **The throughput sentinel** is the one role P3 assigns to a single host, named in
 `.keel-sentinel` or `$KEEL_SENTINEL_HOST` — same format as `.keel-hosts`, and
-gitignored for the same reason. The ruling
+gitignored for the same reason. *(Both channels retired 2026-08-31; see the
+correction below.)* The ruling
 on issue #19 left P2's floor with a class-dependent denominator, and on an
 issue-bound host that floor *rises* as the kernel's instruction count falls. The
 same arithmetic makes such a host the one that notices a K-loop getting fatter,
@@ -572,6 +573,38 @@ Gate P3 classifies *every* host with that same measurement even when only one is
 judged by it, because the amended denominator above applies only where the
 classifier says issue-bound. A host whose classification could not be measured is
 treated as FMA-bound and faces the unmodified bar, which is the strict direction.
+
+**CORRECTION, 2026-08-31 (#146, ruled): the two sentences above naming how a sentinel
+is selected are retired, and the "janus keeps that role through P5" clause is VOID for
+any judged run.** The selection channels described above — `$KEEL_SENTINEL_HOST`, then
+`.keel-sentinel` — outranked the configured fleet, so a gitignored, machine-local,
+three-week-old file naming `janus.local` decided which host held a *judged* role. It
+did so in the #113 re-measurement **and in the run that signed `v0.1.0-a2`**, where
+`keel-skx`, `keel-zen4` and `keel-zen5` each printed *"not a sentinel, so P2's floor is
+not judged here"*. That is the migration ruling (judged measurement on AWS; the lab is
+the dev tier) violated through a channel nobody enumerated, and rule 21's total
+restatement could not see it because a namespace clear reaches variables, not files.
+
+What holds now: the sentinel set is **every fleet host**, derived from the same
+`.keel-hosts`/`$KEEL_REMOTE_HOSTS` the rest of the gate reads. `.keel-sentinel` is not
+a selection input at all, and if it exists the gate names it, with its mtime, as *not
+read*. `$KEEL_SENTINEL_HOST` **fails** the gate rather than being silently ignored,
+because a no-op override reads exactly like an honoured one. An out-of-fleet sentinel
+is still available for deliberate characterization work, but only through
+`$KEEL_SENTINEL_OUT_OF_FLEET`, which is a *union* with the fleet — no flag can subtract
+a fleet witness — and which prints into the run's `.cmd` and into the log's declaration
+row, so a certificate rendered with a lab sentinel says so on its face.
+
+The widening from "a fleet host" to "every fleet host" is mine and is disclosed on
+#146: any proper subset needs a tie-break among equals, which is the arbitrariness being
+removed rather than a fix for it, and judging more hosts can only turn a green red.
+
+janus's standing as *the* host where instruction count binds is unaffected as a
+statement about the silicon — the table below still reports it — but it is no longer a
+statement about who judges. P2's floor has never been judged on `keel-skx`,
+`keel-zen4` or `keel-zen5`; the first fleet pass to do so is the one that follows this
+correction — and per DESIGN.md §5's *"its first firing should not double as its first
+test"*, the next **certificate** run may not be that debut.
 
 **The uniqueness clause above went false without an edit, which is why it now carries
 its date.** Six hosts have been classified since, four of them Intel, and one of the

@@ -76,11 +76,13 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-08-31 | `5e4557e` | +24 | 535 | `detach-test.sh` moves onto a private tmux server, with the isolation asserted and driven red. Perturbing the shared server is how the incident it tests was born. |
 | 2026-08-31 | `3087301` | **+97** | **632** | **Definition correction, not a spend.** Shell counted by content: `scripts/fakessh`, 97 lines of bash the `'*.sh'` glob never saw. The lines are as old as the file; only the counter changed. Its own `+16` of new shell in `gate-docs.sh` is the next row. |
 | 2026-08-31 | `3087301` | +16 | **648** | `shell_files` and the comment recording why the glob was wrong. Same commit as the row above, listed separately because one is a re-reading of lines that already existed and the other is lines that did not. |
+| 2026-08-31 | *(next commit)* | +102 | **750** | **#146, ruled**: the sentinel rule (`.keel-sentinel` retired as a selection input, `sentinel_hosts`/`sentinel_declaration` lifted into `remote.sh` and a second copy in `exercise-dead-host.sh` deleted) plus the `.cmd` input-closure enumeration and its fail-first arm. Authorised debt: *"Land the sentinel rule and the closure enumeration."* Of the +102, measured per file: `remote.sh` +54 (the resolver, the declaration printer and the ruling recorded at the site), `detach.sh` +27, `detach-test.sh` +26 (the fail-first arm), `gate-p3.sh` **−9** and `exercise-dead-host.sh` +4 — the lift removed 29 lines and cost 13 back. |
 
-**Current debt: +648 net shell lines** unpaid by a routine, a kernel or a library fix, of which
+**Current debt: +750 net shell lines** unpaid by a routine, a kernel or a library fix, of which
 **+97 is a re-reading rather than a spend** — the tree did not grow, the counter stopped measuring
-by file extension. Shell term 16195 (16082 under the old definition + 97 + 16), library term 8964,
-historical ratio 1.81x.
+by file extension. Shell term 16297, library term 8964, historical ratio 1.82x. The ratio moved one
+hundredth on a 102-line spend, which is the reading rule above earning itself again: read the
+absolute term.
 
 The two rows are separate on purpose. Reported as one `+113` the entry would assert that a session
 wrote 113 lines of apparatus, which is false by 97; folded into the definition note and left out of
@@ -95,11 +97,11 @@ series measured under two definitions is not a series.
 
 ## What is owed against it, and what is not
 
-Two entries above are authorised debt rather than overage: `48f9ed9` was ruled *"spend the ~90
+Three entries above are authorised debt rather than overage: `48f9ed9` was ruled *"spend the ~90
 lines… booked as debt"* on the grounds that the budget rule *"was never meant to starve the one
 piece of apparatus whose failures are denominated in dollars rather than lines,"* and the
 opening +11 predates the cap's current definition. Authorised is still owed; a ruling changes
-who agreed to the debt, not whether it exists.
+who agreed to the debt, not whether it exists. The +102 for #146 is the third: Scott ruled option (b) with the file channel retired *"plus (c) which is owed regardless"*, and a fix that removes a gitignored file's power to select a judged host is apparatus by every definition here — it ships no routine and no kernel. It is booked at its measured size, including the 26 lines of test that make the enumeration fail first.
 
 Two things are **not** paydown, stated so they cannot be attempted:
 

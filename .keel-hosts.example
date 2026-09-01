@@ -16,13 +16,12 @@
 # Or set KEEL_REMOTE_HOSTS="host-a host-b", which takes precedence.
 # See docs/hosts.md.
 #
-# One more machine-local list, same format, read by scripts/gate-p3.sh:
-#
-#   .keel-sentinel  ($KEEL_SENTINEL_HOST) — the host P2's throughput floor is
-#     re-checked on, to notice a K-loop that P3 made fatter. Should be the host
-#     that classifies issue-bound, since that is where instruction count binds.
-#     Empty means every host is a sentinel: missing configuration costs time,
-#     never coverage.
+# There is no second host list. P2's throughput floor is re-checked in gate-p3 on
+# EVERY host named here — .keel-sentinel and $KEEL_SENTINEL_HOST were retired
+# 2026-08-31 (#146) because a gitignored file outranking this one decided a judged
+# role on a release certificate run. To judge a host that is NOT in the fleet, for
+# deliberate characterization work, set $KEEL_SENTINEL_OUT_OF_FLEET; it unions with
+# this list and says so in the log's declaration row.
 
 # zen4.example.internal
 # skylake-x.example.internal

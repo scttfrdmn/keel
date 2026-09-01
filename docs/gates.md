@@ -249,12 +249,22 @@ How those are mechanized, and every judgement call involved:
     the same unit-tested pure function (scripts/roofline.sh) driven by the same
     fixtures, which run before any benchmarking.
 
-    The sentinel is named by $KEEL_SENTINEL_HOST or .keel-sentinel (machine-local
-    and gitignored, like .keel-hosts: real hostnames are infrastructure, not
-    source — docs/hosts.md). If neither names one, the check runs on EVERY host.
-    Missing configuration must cost time, not coverage; a gate that skipped its
-    regression check because a file was absent would be a gate that got weaker
-    when someone cloned the repo.
+    The sentinel set is EVERY host in the fleet — the same .keel-hosts (or
+    $KEEL_REMOTE_HOSTS) the rest of the gate reads, so there is no second host list
+    to go stale. Missing configuration must cost time, not coverage; a gate that
+    skipped its regression check because a file was absent would be a gate that got
+    weaker when someone cloned the repo.
+
+    RESTATED 2026-08-31 (#146, ruled). This read "the sentinel is named by
+    $KEEL_SENTINEL_HOST or .keel-sentinel", and that precedence put a gitignored,
+    machine-local file ABOVE the fleet: P2's floor was judged on one lab host in the
+    #113 re-measurement and in the run that signed v0.1.0-a2, with all three fleet
+    hosts printing "not a sentinel". .keel-sentinel is no longer read (its presence
+    is reported, with its mtime, as not read); $KEEL_SENTINEL_HOST FAILS rather than
+    being silently ignored; an out-of-fleet sentinel is declared with
+    $KEEL_SENTINEL_OUT_OF_FLEET, which unions with the fleet and prints into the
+    run's .cmd and into the log's declaration row. docs/hosts.md carries the
+    correction in full.
 
     IF THIS CRITERION READS RED, THE POLICY IS IN DESIGN.md §4 AND IT IS ONE
     RE-RUN. The issue-bound roofline check is the tightest margin in this gate --

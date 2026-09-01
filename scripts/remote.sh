@@ -56,6 +56,60 @@ remote_require_hosts() {
   exit 2
 }
 
+# sentinel_hosts prints the hosts P2's throughput floor is JUDGED on (gate-p3's
+# criterion 5), one per line: the fleet, plus whatever $KEEL_SENTINEL_OUT_OF_FLEET
+# deliberately adds to it.
+#
+# RULED 2026-08-31 (#146, option b, `.keel-sentinel` retired as a selection input).
+# The old precedence was $KEEL_SENTINEL_HOST > .keel-sentinel > the fleet, so a
+# gitignored, machine-local, three-week-old file naming one lab box decided a JUDGED
+# role — including on the run that signed v0.1.0-a2, where all three fleet hosts
+# printed "not a sentinel, so P2's floor is not judged here". Rule 21's env clear
+# cannot reach a file, so the .cmd was silent too.
+#
+# The declared deterministic rule is EVERY fleet host, not one of them. Scott's
+# ruling says "a fleet host"; this is the widening, disclosed here, in the commit and
+# on #146, so it can be narrowed by decision. Grounds: any proper subset needs a
+# tie-break among equals, which is the arbitrariness being removed rather than a fix
+# for it; this function's own documented fallback was already "else every host"; P2's
+# floor is a per-host property, so a fleet of three holds three of them; and judging
+# more hosts can only turn a green red, never the reverse.
+#
+# The out-of-fleet set is a UNION, never a replacement — no flag can subtract a fleet
+# witness, so #146 cannot recur through this channel. To judge a lab host ALONE, make
+# it the fleet ($KEEL_REMOTE_HOSTS), which says so where every gate already looks.
+sentinel_hosts() {
+  if [[ -n "${KEEL_SENTINEL_OUT_OF_FLEET:-}" ]]; then
+    # shellcheck disable=SC2086  # splitting is the point, as remote_hosts above
+    printf '%s\n' $KEEL_SENTINEL_OUT_OF_FLEET
+  fi
+  remote_hosts
+}
+
+# sentinel_declaration prints the declaration row #146 requires: which hosts hold the
+# judged role, and whether any of them is out of fleet, so a certificate rendered with
+# a lab sentinel says so on its face. It also refuses the retired channels OUT LOUD —
+# a stale $KEEL_SENTINEL_HOST fails, a present .keel-sentinel is named with its mtime —
+# because a silently unhonoured override reads exactly like an honoured one, which is
+# the defect being replaced rather than a cosmetic detail of it.
+sentinel_declaration() {
+  local extra f
+  # shellcheck disable=SC2086  # splitting is the point
+  extra="$(printf '%s\n' ${KEEL_SENTINEL_OUT_OF_FLEET:-} | sed '/^$/d' | tr '\n' ' ' | sed 's/ *$//')"
+  if [[ -n "$extra" ]]; then
+    info "sentinel declaration: every fleet host, PLUS OUT-OF-FLEET $extra (declared via \$KEEL_SENTINEL_OUT_OF_FLEET) — P2's floor on this run is not a fleet-only witness"
+  else
+    info "sentinel declaration: every fleet host and nothing else (\$KEEL_SENTINEL_OUT_OF_FLEET unset)"
+  fi
+  if [[ -n "${KEEL_SENTINEL_HOST:-}" ]]; then
+    fail "\$KEEL_SENTINEL_HOST=$KEEL_SENTINEL_HOST is retired (#146) and was NOT honoured — an out-of-fleet sentinel is declared with \$KEEL_SENTINEL_OUT_OF_FLEET"
+  fi
+  f="$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.keel-sentinel"
+  if [[ -e "$f" ]]; then
+    info "note: .keel-sentinel exists (mtime $(date -u -r "$f" +%Y-%m-%dT%H:%M:%SZ)) and is NOT read — retired as a selection input (#146)"
+  fi
+}
+
 # remote_host_header HOST — the per-host banner, or return 1 for a host that is silent,
 # so a driver's loop reads `remote_host_header "$host" || continue`. Three copies (#131),
 # and the skip WORDING is the part worth lifting: three chances for one copy to stop

@@ -133,6 +133,32 @@ o="$("$r/scripts/detach.sh" stat "keel-t5-$$")"
 [[ "$o" == running*keel-keel-t5-$$* ]] && ok "3b a legitimately keel-prefixed NAME still runs, and the doubled session name is visible" \
                                        || bad "3b prefixed NAME broke or hid its session: $o"
 
+# ---- incident 4: THE CHANNEL THE CLEAR CANNOT REACH (#146, found 2026-08-31; it had already
+# signed v0.1.0-a2). Incident 2's fix makes the .cmd a complete statement of the ENVIRONMENT, and
+# `.keel-sentinel` — gitignored, machine-local, three weeks old — then outranked the configured
+# fleet for a JUDGED criterion while the .cmd said nothing about it. An `unset` loop cannot reach
+# a file, so the runner copies every `.keel-*` in verbatim. This arm plants one in the temp root
+# and reads the .cmd back: the assertion is that the file's CONTENT is there, not that a header is.
+closure() { # closure ROOT [NAME-SUFFIX] -> how many times the planted host name reached the .cmd
+  local r="$1" n="t7$2-$$"
+  printf '# machine-local\njanus.local\n' >"$r/.keel-sentinel"
+  "$r/scripts/detach.sh" run "$n" -- true >/dev/null 2>&1
+  "$r/scripts/detach.sh" wait "$n" >/dev/null 2>&1
+  /usr/bin/grep -c '^#     | janus.local$' "$r/build/$n.cmd" 2>/dev/null || true
+}
+m="$(mkroot '/print "#     \| "/d')"
+[[ "$(closure "$m" m)" == 0 ]] && ok "4 fails first: with the file-channel copy reverted, a .keel-sentinel that decides a judged host leaves no trace in the .cmd" \
+                               || bad "4 mutant did not reproduce the incident, so the arm below proves nothing"
+[[ "$(closure "$(mkroot)" r)" == 1 ]] && ok "4 fixed: the runner records .keel-sentinel's contents, so the run's file channel is on the record too" \
+                                      || bad "4 the .cmd is still silent about the files that decide the run"
+# An empty closure must be STATED, not silent: on a root with no .keel-* at all the header is the
+# only thing that distinguishes "enumerated, nothing there" from "never enumerated" — which is the
+# same distinction as died/never-started above, applied to a channel instead of a run.
+r="$(mkroot)"; "$r/scripts/detach.sh" run "t8-$$" -- true >/dev/null 2>&1; "$r/scripts/detach.sh" wait "t8-$$" >/dev/null 2>&1
+o="$(cat "$r/build/t8-$$.cmd")"
+[[ "$o" == *"input closure, FILE channel"* && "$o" == *"revision: "* ]] \
+  && ok "4 an empty file channel is stated, and the defaults channel names its tree" || bad "4 a root with no .keel-* produces a .cmd that cannot be told from an unenumerated one"
+
 # ---- control, not an incident: a run that finishes must still report its exit code. Without
 # it every arm above could be green because `stat` is broken for everything.
 r="$(mkroot)"

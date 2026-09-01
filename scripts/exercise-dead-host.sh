@@ -58,6 +58,8 @@ set -euo pipefail
 
 main() {
   cd "$(dirname "$0")/.."
+  # shellcheck source=scripts/remote.sh
+  source scripts/remote.sh   # for sentinel_hosts (#146); assignments only at source time
 
   # The host list is machine-local and gitignored; read it, do not hardcode it. The
   # third entry by default because that is the ruling's wording, and because the third
@@ -131,16 +133,18 @@ main() {
   fi
 
   # The collateral scope, computed rather than assumed. P2 re-checks its throughput
-  # floor on the sentinel host (.keel-sentinel), so if the dead host were the sentinel
-  # this exercise would knock out a second criterion and the log should say so instead
-  # of leaving a reader to infer which UNMEASURED lines belong to the induction.
-  SENTINEL="$(grep -v '^[[:space:]]*#' .keel-sentinel 2>/dev/null | grep . | head -1 || true)"
-  if [[ -z "$SENTINEL" ]]; then
-    SCOPE="the sentinel is unset, so every host is a sentinel and the dead one's absence reaches that criterion too"
-  elif [[ "$SENTINEL" == "$DEAD" ]]; then
-    SCOPE="the dead host IS the sentinel, so the sentinel criterion goes unmeasured as well -- collateral, expected, and not the branch under test"
+  # floor on the sentinel hosts, so if the dead host is one, this exercise knocks out a
+  # second criterion and the log should say so instead of leaving a reader to infer
+  # which UNMEASURED lines belong to the induction.
+  #
+  # Asks the resolver instead of re-parsing a file (#146). This copy read
+  # `.keel-sentinel` directly, so when that file stopped being a selection input it
+  # would have kept computing a scope from it and printed a confident, wrong sentence
+  # -- a second implementation of one question, which is the divergence #131 is about.
+  if [[ $'\n'"$(sentinel_hosts)"$'\n' == *$'\n'"$DEAD"$'\n'* ]]; then
+    SCOPE="the dead host IS a sentinel (every fleet host is, since #146), so the sentinel criterion goes unmeasured as well -- collateral, expected, and not the branch under test"
   else
-    SCOPE="the sentinel is a different, live host, so the induction is isolated to the fleet aggregate"
+    SCOPE="the dead host is not a sentinel, so the induction is isolated to the fleet aggregate"
   fi
 
   REV="$(git rev-parse --short HEAD)"

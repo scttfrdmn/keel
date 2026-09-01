@@ -24,6 +24,45 @@ While the major version is 0, minor versions may contain breaking changes.
   which is the mirror image of the same defect and stays open on #113.
 
 ### Changed
+- **P2's throughput floor is judged on every fleet host; `.keel-sentinel` is no longer a selection
+  input** (`remote.sh`'s new `sentinel_hosts`/`sentinel_declaration`, `gate-p3.sh`, `#146`, ruled).
+  The retired precedence — `$KEEL_SENTINEL_HOST` > `.keel-sentinel` > the fleet — let a gitignored,
+  machine-local file with a three-week-old mtime decide which host held a **judged** role, so P2's
+  floor was judged on one lab box (`janus.local`) in the #113 re-measurement *and in the run that
+  signed `v0.1.0-a2`*, with `keel-skx`, `keel-zen4` and `keel-zen5` each printing *"not a sentinel,
+  so P2's floor is not judged here"*. Now: the set is derived from `.keel-hosts`/`$KEEL_REMOTE_HOSTS`
+  and nothing else; a present `.keel-sentinel` is reported **with its mtime** as not read; a stale
+  `$KEEL_SENTINEL_HOST` **fails** the gate rather than being silently ignored, because a no-op
+  override reads exactly like an honoured one; and an out-of-fleet sentinel for deliberate
+  characterization work is declared with `$KEEL_SENTINEL_OUT_OF_FLEET`, which **unions** with the
+  fleet — no flag can subtract a fleet witness — and prints into both the run's `.cmd` and the log's
+  declaration row. Scott's ruling says *"a fleet host chosen by a declared deterministic rule"*; the
+  rule implemented is **every** fleet host, disclosed at the site and on #146, because any proper
+  subset needs a tie-break among equals and judging more hosts can only turn a green red. The
+  resolver was lifted rather than copied: `exercise-dead-host.sh` was re-parsing the same file to
+  compute its own scope sentence and would have kept printing a confident, wrong one.
+- **A run's `.cmd` states its whole input closure — environment *and* files *and* defaults**
+  (`detach.sh`, `#146(c)`, ruled). §5 rule 21's namespace clear made the record complete over one
+  channel; an `unset` loop cannot reach a file, so the record of the run that signed `v0.1.0-a2` was
+  clean for the second time by a second mechanism. Every `.keel-*` file is now copied in verbatim
+  with its mtime, **by glob and not by list** (a hardcoded list is how the next decision file goes
+  unenumerated) and **unfiltered** (the obvious filter, skip tracked-and-clean, would have excused
+  `.keel-hosts` — the file at the centre of the original incident); the defaults channel is stated by
+  naming the revision, which is also the first time the `.cmd` recorded which tree it launched. An
+  empty closure prints its header with no members, so *enumerated, nothing there* is distinguishable
+  from *never enumerated*. `detach-test.sh` gains the arm, shown to fail first: with the copy
+  reverted, a planted `.keel-sentinel` that decides a judged host leaves no trace. 16 arms, GREEN.
+- **§5 rule 21 amended, and rule 22 cross-referenced: a total restatement is only as total as the
+  set of channels it enumerates** (`DESIGN.md`, `docs/rulings.md`). Scott's ruling: *"rule 21 and
+  rule 22 discovering they're the same rule from opposite ends: the certificate's input closure is
+  what the declaration must state, not merely what the clear must reset."* The amendment also
+  retires rule 21's own coverage item 2 — *"`scripts/detach.sh` has no automated test at all"* — and
+  states what stays unexercised: no arm drives a **gate** through the new resolver on real hosts, so
+  the first on-fleet P2 judgment is a witness not yet taken.
+- **`docs/hosts.md` and `docs/gates.md`**: the sentinel-selection prose is corrected in place with
+  its date, and the *"janus keeps that role through P5"* clause of 2026-08-12 is marked **VOID for
+  any judged run** — janus's standing as the host where instruction count binds is a statement about
+  silicon, not about who judges.
 - **The apparatus ratio counts shell by content, not by file extension** (`gate-docs.sh`'s new
   `shell_files`: the `'*.sh'` glob unioned with a shebang sweep of every tracked-or-untracked
   file). Ruled 2026-08-31: a ledger that *"counts a 189-line test while its 97-line subject is

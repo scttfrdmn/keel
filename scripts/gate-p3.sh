@@ -191,19 +191,9 @@ OPENBLAS_OK_CORES="haswell skylakex cooperlake sapphirerapids zen"
 # table: one that cannot execute here is recorded as unavailable, not assumed absent.
 OPENBLAS_CORETYPES="default Zen Haswell SkylakeX Cooperlake SapphireRapids"
 
-# sentinel_hosts prints the hosts the P2 throughput regression re-runs on:
-# whatever is configured, else every host (criterion 5).
-sentinel_hosts() {
-  if [[ -n "${KEEL_SENTINEL_HOST:-}" ]]; then
-    tr ' ' '\n' <<<"$KEEL_SENTINEL_HOST" | sed '/^$/d'
-    return
-  fi
-  if [[ -r .keel-sentinel ]]; then
-    sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' .keel-sentinel
-    return
-  fi
-  remote_hosts
-}
+# sentinel_hosts / sentinel_declaration moved to scripts/remote.sh (#146): the set is
+# now derived FROM the fleet, so it belongs beside remote_hosts, and a second consumer
+# (exercise-dead-host.sh) was re-parsing the retired file to compute its own answer.
 
 # other_class CLASS — the class criterion 5b pins KEEL_KERN_CLASS to: the one
 # dispatch did not choose on this host, so the cross-check measures the shape that
@@ -657,6 +647,7 @@ BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 
 SENTINELS="$(sentinel_hosts)"
+sentinel_declaration
 # Criterion 5 judges the sentinel hosts. Criterion 6b needs something else from the
 # same measurement: a *classification* for every host whose Sgemm will be divided by
 # an OpenBLAS number, because the amended denominator applies only where the host is
@@ -674,19 +665,19 @@ DRIFT_CHECKED=""
 if [[ -z "$SENTINELS" ]]; then
   unmeasured "no sentinel host and no hosts at all, so P2's floor is unmeasured on this run rather than missed"
 else
-  if [[ -z "${KEEL_SENTINEL_HOST:-}" && ! -r .keel-sentinel ]]; then
-    info "no sentinel configured, so every host is one: $(tr '\n' ' ' <<<"$SENTINELS")"
-  fi
-  if [[ "$(tr '\n' ' ' <<<"$CLASSIFY")" != "$(tr '\n' ' ' <<<"$SENTINELS")" ]]; then
-    info "classifying every host for criterion 6b (judged as sentinels: $(tr '\n' ' ' <<<"$SENTINELS"))"
-  fi
+  info "judged as sentinels: $(tr '\n' ' ' <<<"$SENTINELS")"
   if ! remote_build_test ./bench "$KERNBIN" >"$LOG" 2>&1; then
     fail "cross-compile of the linux/amd64 bench binary (kernel benchmarks)"
     sed 's/^/        /' "$LOG" | tail -20
   fi
   while read -r host; do
     [[ -n "$host" ]] || continue
-    # Judged only if configured as a sentinel; classified either way.
+    # Judged only if the host is a sentinel; classified either way. Since #146 the
+    # sentinel set contains the whole fleet, so every host here is judged and the
+    # "not a sentinel" renderings below are unreachable by construction — kept, not
+    # deleted, because they are the only thing that would print if a narrowing
+    # decision ever reintroduced a subset, and their last two firings are the two
+    # runs #146 is about.
     JUDGED=0
     [[ $'\n'"$SENTINELS"$'\n' == *$'\n'"$host"$'\n'* ]] && JUDGED=1
     if ! remote_exec "$host" "$KERNBIN" "${BFLAGS[@]}" -test.bench="$KERN_BENCH_FILTER" >"$BENCHLOG" 2>&1; then

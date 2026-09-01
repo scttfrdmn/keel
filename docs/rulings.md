@@ -1393,6 +1393,62 @@ Three things this does not cover, stated rather than implied.
      that RED-with-zero-FAILs means look for a missing measurement. What is in the tree is the
      vocabulary that makes the inference possible; the inference itself lives here.
 
+### Amendment, 2026-08-31 (`#146`) — a total restatement is only as total as the set of channels it enumerates
+
+*Scott's words, ruling on `#146`: "rule 21's `.cmd` must enumerate the gate's full input closure,
+env **and** files **and** defaults. That's rule 21 and rule 22 discovering they're the same rule
+from opposite ends: the certificate's input closure is what the declaration must state, not merely
+what the clear must reset."*
+
+The fix above — clear the whole `KEEL_`/`BENCH_` namespace, re-export the carried set — was correct,
+was tested, and held. Two days later the same shape arrived through a channel an `unset` loop cannot
+reach. `gate-p3.sh`'s `sentinel_hosts()` ranked `.keel-sentinel` — untracked, gitignored,
+machine-local, mtime three weeks old — **above** the configured fleet, so P2's throughput floor was
+judged on one lab host (`janus.local`) in the `#113` re-measurement *and in the run that signed
+`v0.1.0-a2`*, while `keel-skx`, `keel-zen4` and `keel-zen5` each printed *"not a sentinel, so P2's
+floor is not judged here"*. `build/validate113-ba6f286.cmd` was **clean** — for the second time, by
+a second mechanism, and for a reason that is structural rather than an oversight: the record was
+complete over the channel it enumerated and silent over the one it did not.
+
+So the requirement is not *clear the environment*. It is **enumerate the channels**, and a run's
+record now states three:
+
+| channel | how it is stated | why that form |
+|---|---|---|
+| environment | cleared wholesale, then re-exported (the original fix) | a delta cannot see an injection |
+| files | every `.keel-*` copied in **verbatim**, with its mtime | a clear cannot reach a file, and a summary of a file is a delta again |
+| defaults | by naming the **revision** the tree is at, plus clean/dirty | what a gate decides when nothing is set is a property of the tree, and a launcher has no business knowing any gate's defaults |
+
+Three properties of the file half are load-bearing:
+
+1. **By glob, never by list.** A hardcoded enumeration is exactly how the *next* decision file goes
+   unrecorded, which is this rule's own failure mode applied to its own fix.
+2. **Unfiltered, including files git could recover.** The obvious filter — skip tracked, clean files
+   — would have excused `.keel-hosts`, the file at the centre of the original incident. A filter is
+   where the silence comes back.
+3. **An empty closure is stated.** A tree with no `.keel-*` prints the header and no members, so
+   *enumerated, nothing there* is distinguishable from *never enumerated* — the same distinction as
+   `died` versus `never-started`, applied to a channel instead of a run.
+
+**The retirement of the channel is a different ruling and is not this rule's business.**
+`.keel-sentinel` stopped being a selection input at all, `$KEEL_SENTINEL_HOST` now **fails** the
+gate rather than being silently ignored, and an out-of-fleet sentinel is declared with
+`$KEEL_SENTINEL_OUT_OF_FLEET` — a union with the fleet, printed into both the `.cmd` and the log's
+declaration row. That is the migration ruling being enforced (judged measurement on AWS; the lab is
+the dev tier). What *this* rule owns is only that the record's silence was structural.
+
+**Coverage of the amendment, per §5 rule 12.** Item 2 of the coverage list above — *"`scripts/detach.sh`
+has no automated test at all"* — is no longer true, and the debt it named (`#122`) was paid before
+this amendment landed: `scripts/detach-test.sh` drives 16 arms, each shown to fail first against a
+mutant with the fixing line reverted. This amendment has one of them (a planted `.keel-sentinel`
+must reach the `.cmd`; with the copy reverted it does not). What remains unexercised: no arm drives
+a **gate** through the new sentinel resolver on real hosts — `sentinel_hosts` and
+`sentinel_declaration` were driven through all four states (fleet-only, declared out-of-fleet, the
+retired variable's refusal, and an empty fleet) by a probe outside the tree, and the first on-fleet
+gate run is the witness that has not been taken yet. The defaults channel is stated **by reference**,
+so a reader still has to check out the revision to see a default; that is a deliberate indirection,
+not a gap, but it is one an amendment cannot close by asserting.
+
 ## Rule 22 — a criterion is applied by the mechanism it names, not by the surface form of its wording
 
 *Ruled 2026-08-29, on questions 2 and 3 of the v0.1.0 release report (`#95`). Two criteria, one

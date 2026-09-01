@@ -115,6 +115,33 @@ cmd_run() {
     printf 'cd %q || exit 3\n' "$ROOT"
     echo 'for v in $(compgen -v | grep -E "^(KEEL_|BENCH_)" || true); do unset "$v"; done'
     for v in "${carried[@]}"; do printf 'export %s=%q\n' "$v" "${!v}"; done
+    # THE FILE CHANNEL, ENUMERATED (2026-08-31, #146(c), ruled). The clear above makes
+    # this file a complete statement of one channel, and a total restatement is only as
+    # total as the set of channels it enumerates: `.keel-sentinel` — gitignored,
+    # machine-local, three weeks old — outranked the fleet for a JUDGED criterion on the
+    # run that signed v0.1.0-a2, and an `unset` loop cannot reach a file. So every
+    # `.keel-*` decision file is copied in verbatim, with its mtime, as comments the
+    # runner never reads. By GLOB and not by list, because a hardcoded list is how the
+    # next decision file goes unenumerated; this is rule 21 and rule 22 meeting from
+    # opposite ends — the certificate's input closure is what the declaration must
+    # STATE, not merely what the clear must reset.
+    # Verbatim and UNFILTERED, including files git could recover on its own: a filter is
+    # where the silence comes back, and the one it would have excused here is `.keel-hosts`.
+    printf '# -- input closure, FILE channel: %s/.keel-* verbatim (comments only) --\n' "$ROOT"
+    local cf
+    for cf in "$ROOT"/.keel-*; do
+      [[ -f "$cf" ]] || continue
+      printf '#   %s  (mtime %s)\n' "${cf##*/}" "$(date -u -r "$cf" +%Y-%m-%dT%H:%M:%SZ)"
+      awk '{print "#     | " $0}' "$cf"
+    done
+    # The DEFAULTS channel, which is the third one and cannot be enumerated here: what a gate
+    # decides when neither an env var nor a file says otherwise is a property of the TREE, and
+    # this script has no business knowing any gate's defaults. Naming the revision states that
+    # channel completely and by reference — and it is also the only place the .cmd said which
+    # tree it launched, which the frozen-tree rule makes the identity of the run.
+    printf '# -- input closure, DEFAULTS channel: this tree, by reference --\n#   revision: %s %s\n' \
+      "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo not-a-git-tree)" \
+      "$(git -C "$ROOT" diff --quiet HEAD 2>/dev/null && echo '(clean)' || echo '(DIRTY: the defaults in effect are not any committed revision)')"
     printf 'signalled=\n'
     # shellcheck disable=SC2016  # deliberately unexpanded: this is the runner's source
     printf 'signal() { [[ -n "$signalled" ]] && return 0; signalled=1; tmux wait-for -S %q 2>/dev/null || true; }\n' "$sess"
