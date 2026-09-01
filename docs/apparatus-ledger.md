@@ -77,12 +77,13 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-08-31 | `3087301` | **+97** | **632** | **Definition correction, not a spend.** Shell counted by content: `scripts/fakessh`, 97 lines of bash the `'*.sh'` glob never saw. The lines are as old as the file; only the counter changed. Its own `+16` of new shell in `gate-docs.sh` is the next row. |
 | 2026-08-31 | `3087301` | +16 | **648** | `shell_files` and the comment recording why the glob was wrong. Same commit as the row above, listed separately because one is a re-reading of lines that already existed and the other is lines that did not. |
 | 2026-08-31 | `a65d39e` | +102 | **750** | **#146, ruled**: the sentinel rule (`.keel-sentinel` retired as a selection input, `sentinel_hosts`/`sentinel_declaration` lifted into `remote.sh` and a second copy in `exercise-dead-host.sh` deleted) plus the `.cmd` input-closure enumeration and its fail-first arm. Authorised debt: *"Land the sentinel rule and the closure enumeration."* Of the +102, measured per file: `remote.sh` +54 (the resolver, the declaration printer and the ruling recorded at the site), `detach.sh` +27, `detach-test.sh` +26 (the fail-first arm), `gate-p3.sh` **−9** and `exercise-dead-host.sh` +4 — the lift removed 29 lines and cost 13 back. |
+| 2026-08-31 | `afb108e` | +4 | **754** | `detach.sh`: the file-channel copy is labelled AS OF LAUNCH, because a driver can rewrite a decision file inside the run it launched (`aws-fleet.sh up` writes `.keel-hosts`). Four lines of comment, caught before the fleet pass read the record and booked in the same session that spent them — the row exists because the +102 above was measured at `a65d39e` and the ratio reading taken there could not see a commit that came after it. |
 
-**Current debt: +750 net shell lines** unpaid by a routine, a kernel or a library fix, of which
+**Current debt: +754 net shell lines** unpaid by a routine, a kernel or a library fix, of which
 **+97 is a re-reading rather than a spend** — the tree did not grow, the counter stopped measuring
-by file extension. Shell term 16297, library term 8964, historical ratio 1.82x. The ratio moved one
-hundredth on a 102-line spend, which is the reading rule above earning itself again: read the
-absolute term.
+by file extension. Shell term 16301, library term 8964, historical ratio 1.82x (measured 2026-09-01,
+at `afb108e` plus this session's doc-only changes). The ratio moved one hundredth over a 106-line
+spend, which is the reading rule above earning itself again: read the absolute term.
 
 The two rows are separate on purpose. Reported as one `+113` the entry would assert that a session
 wrote 113 lines of apparatus, which is false by 97; folded into the definition note and left out of
@@ -101,7 +102,7 @@ Three entries above are authorised debt rather than overage: `48f9ed9` was ruled
 lines… booked as debt"* on the grounds that the budget rule *"was never meant to starve the one
 piece of apparatus whose failures are denominated in dollars rather than lines,"* and the
 opening +11 predates the cap's current definition. Authorised is still owed; a ruling changes
-who agreed to the debt, not whether it exists. The +102 for #146 is the third: Scott ruled option (b) with the file channel retired *"plus (c) which is owed regardless"*, and a fix that removes a gitignored file's power to select a judged host is apparatus by every definition here — it ships no routine and no kernel. It is booked at its measured size, including the 26 lines of test that make the enumeration fail first.
+who agreed to the debt, not whether it exists. The +102 for #146 is the third: Scott ruled option (b) with the file channel retired *"plus (c) which is owed regardless"*, and a fix that removes a gitignored file's power to select a judged host is apparatus by every definition here — it ships no routine and no kernel. It is booked at its measured size, including the 26 lines of test that make the enumeration fail first. The `afb108e` row after it is the same authorisation reaching four more lines of comment, so the authorised total for #146 is **+106**, not +102 — which is the whole reason that row exists rather than being folded backwards into a figure already published.
 
 Two things are **not** paydown, stated so they cannot be attempted:
 

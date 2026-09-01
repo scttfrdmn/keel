@@ -269,7 +269,12 @@ How those are mechanized, and every judgement call involved:
     IF THIS CRITERION READS RED, THE POLICY IS IN DESIGN.md §4 AND IT IS ONE
     RE-RUN. The issue-bound roofline check is the tightest margin in this gate --
     two independent runs on janus read 95.0% and 93.7% against a 90% floor -- so a
-    single dip is within the variance the bar was set above. Exactly one immediate
+    single dip is within the variance the bar was set above. THE SAMPLE HAS GROWN
+    SINCE, in both directions, and it is stated here as of 2026-09-01: a third janus
+    reading fell BELOW the floor at 87.2%..89.2% (#113/#141, on generated code that
+    did not change), and the first on-fleet reading, keel-skx, came in at
+    96.9%..97.1%. Four readings, one of them a fail, is still the sample this policy
+    was priced for; what the low one changed is the priority of #141, not the bar. Exactly one immediate
     re-run; the criterion fails only if both runs fail; both outputs go into the
     umbrella issue verbatim either way, so a pass on the second reading says so in
     the record. Not a loop, and not available to any correctness criterion above:

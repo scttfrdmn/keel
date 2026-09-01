@@ -601,10 +601,17 @@ removed rather than a fix for it, and judging more hosts can only turn a green r
 
 janus's standing as *the* host where instruction count binds is unaffected as a
 statement about the silicon — the table below still reports it — but it is no longer a
-statement about who judges. P2's floor has never been judged on `keel-skx`,
-`keel-zen4` or `keel-zen5`; the first fleet pass to do so is the one that follows this
-correction — and per DESIGN.md §5's *"its first firing should not double as its first
-test"*, the next **certificate** run may not be that debut.
+statement about who judges. **P2's floor was judged on the fleet for the first time on
+2026-09-01** (`archive/pinned8/p2onfleet-afb108e.log`, `gate-p3: GREEN`, 52 PASS / 0
+FAIL), and it holds on all three: `keel-zen5` 65.1% of its own 288.2 GFLOP/s measured
+peak and `keel-zen4` 96.8% of its own 117.0 GFLOP/s, both fma-bound against the flat 55%
+floor; `keel-skx` 47.8% of its own 186.3 GFLOP/s, which is 96.9% of that shape's 49.3%
+issue roofline against the 90% bar. Every percentage there divides by the measured peak
+of the host it names and by nothing else — the two fma-bound readings are not comparable
+as percentages, because 96.8% of 117.0 is a smaller rate than 65.1% of 288.2. That run
+was deliberately **not** a certificate: per DESIGN.md §5's *"its first firing should not
+double as its first test"*, the declaration row and these three judgments had to be
+rendered by some real gate before a **certificate** run rendered them.
 
 **The uniqueness clause above went false without an edit, which is why it now carries
 its date.** Six hosts have been classified since, four of them Intel, and one of the
@@ -635,10 +642,15 @@ premise that SKX *and* ICX are issue-bound silicon — the instrument was run ag
 reasoning that motivated launching it and refuted half of it (§5 rule 11). Nothing
 downstream moved: icx is correctness-class and judged nothing.
 
-**Open, and not settled here:** the sentinel rationale above rests on janus being the
-lone issue-bound host, and it no longer is. The second one, keel-skx, sits in the
-*judged* fleet rather than beside it. Whether the sentinel role moves, splits or stays
-is a ruling, not a measurement, and nothing in this file assumes an answer.
+**Settled 2026-08-31, by ruling on #146 — this paragraph asked for a ruling and got
+one.** It read *"the sentinel rationale above rests on janus being the lone issue-bound
+host, and it no longer is … whether the sentinel role moves, splits or stays is a ruling,
+not a measurement."* The answer is that the role does not sit on any one host: the
+sentinel set is every fleet host, so `keel-skx`'s issue-boundedness is now judged where
+it lives rather than making janus's role awkward. The lone-host premise is retired along
+with the selection channels that rested on it, and the first fleet pass to render that
+(2026-09-01, above) judged both classes at once — two fma-bound hosts against the flat
+55% floor and one issue-bound host against its roofline.
 
 ## Placement methodology: pinned since 2026-08-21
 

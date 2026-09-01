@@ -1441,13 +1441,21 @@ the dev tier). What *this* rule owns is only that the record's silence was struc
 has no automated test at all"* — is no longer true, and the debt it named (`#122`) was paid before
 this amendment landed: `scripts/detach-test.sh` drives 16 arms, each shown to fail first against a
 mutant with the fixing line reverted. This amendment has one of them (a planted `.keel-sentinel`
-must reach the `.cmd`; with the copy reverted it does not). What remains unexercised: no arm drives
-a **gate** through the new sentinel resolver on real hosts — `sentinel_hosts` and
-`sentinel_declaration` were driven through all four states (fleet-only, declared out-of-fleet, the
-retired variable's refusal, and an empty fleet) by a probe outside the tree, and the first on-fleet
-gate run is the witness that has not been taken yet. The defaults channel is stated **by reference**,
-so a reader still has to check out the revision to see a default; that is a deliberate indirection,
-not a gap, but it is one an amendment cannot close by asserting.
+must reach the `.cmd`; with the copy reverted it does not). `sentinel_hosts` and
+`sentinel_declaration` were additionally driven through all four states (fleet-only, declared
+out-of-fleet, the retired variable's refusal, and an empty fleet) by a probe outside the tree.
+
+**The on-fleet witness was taken 2026-09-01, and it narrows this list rather than clearing it**
+(`archive/pinned8/p2onfleet-afb108e.log`, `gate-p3: GREEN`). Three of the resolver's renderings are
+now witnessed by a real gate on real hosts: the fleet-only declaration row, the *"`.keel-sentinel`
+exists … and is NOT read"* note with its mtime, and `judged as sentinels: keel-zen5 keel-zen4
+keel-skx` followed by three P2-floor verdicts. What stays unexercised **by a gate**, and is
+therefore still probe-only: the out-of-fleet branch of the declaration row
+(`$KEEL_SENTINEL_OUT_OF_FLEET`), and the retired variable's refusal — which would enter a gate as a
+`FAIL` in its tally, a path no gate run has ever executed. Those two are named here rather than
+counted as covered because the probe is not the instrument the gate is. The defaults channel is
+stated **by reference**, so a reader still has to check out the revision to see a default; that is a
+deliberate indirection, not a gap, but it is one an amendment cannot close by asserting.
 
 ## Rule 22 — a criterion is applied by the mechanism it names, not by the surface form of its wording
 

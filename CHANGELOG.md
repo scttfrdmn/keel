@@ -57,12 +57,33 @@ While the major version is 0, minor versions may contain breaking changes.
   rule 22 discovering they're the same rule from opposite ends: the certificate's input closure is
   what the declaration must state, not merely what the clear must reset."* The amendment also
   retires rule 21's own coverage item 2 — *"`scripts/detach.sh` has no automated test at all"* — and
-  states what stays unexercised: no arm drives a **gate** through the new resolver on real hosts, so
-  the first on-fleet P2 judgment is a witness not yet taken.
+  states what stays unexercised. That list named the first on-fleet P2 judgment as a witness not yet
+  taken; it was taken on 2026-09-01 (next entry), which narrows the list to the out-of-fleet branch
+  and the refusal path rather than clearing it.
 - **`docs/hosts.md` and `docs/gates.md`**: the sentinel-selection prose is corrected in place with
   its date, and the *"janus keeps that role through P5"* clause of 2026-08-12 is marked **VOID for
   any judged run** — janus's standing as the host where instruction count binds is a statement about
-  silicon, not about who judges.
+  silicon, not about who judges. Both files now carry the on-fleet result in place of the
+  *"never been judged"* clause, which is exactly the kind of sentence that goes false without an edit.
+- **P2's floor is judged on the fleet, and it holds on all three hosts** — the first such reading in
+  the project, deliberately taken on a **non-certificate** run so that a certificate is not a
+  rendering's debut (`archive/pinned8/p2onfleet-afb108e.log`, `gate-p3: GREEN`, 52 PASS / 0 FAIL / 0
+  UNMEASURED, `KEEL_BENCH_COUNT=30`, `go1.27.0`, on-demand `c5n.18xlarge`/`c7a.48xlarge`/`c8a.48xlarge`,
+  63 min, ≤$25.37 at a measured $24.09/hr). Each figure divides by the measured 1-thread peak of the
+  host it names and by nothing else: `keel-zen5` 65.1% of 288.2 GFLOP/s and `keel-zen4` 96.8% of
+  117.0 GFLOP/s, both fma-bound against the flat 55% floor; `keel-skx` 47.8% of 186.3 GFLOP/s, which
+  is 96.9% of that shape's 49.3% issue roofline against the 90% bar. The two fma-bound percentages are
+  not comparable to each other — 96.8% of 117.0 is the smaller rate. This criterion has no OpenBLAS
+  term at all. The gate's separate mission criterion does, it passed on all three in the same log, and
+  its denominator is **not** the same quantity on each. `keel-zen5`: 64.6% of plain 1-thread OpenBLAS
+  0.3.26, unpinned at `corename=Cooperlake`, its coretype sweep having found no cross-family winner
+  beyond drift. `keel-zen4`: 90.4% of plain OpenBLAS **pinned to `Haswell`**, which its own sweep
+  measured 5.5% above DYNAMIC_ARCH's `Cooperlake` choice (a 5.90 GFLOP/s cross-family win against a
+  0.20 GFLOP/s same-family drift) — on Genoa the AVX2 reference kernel beats the AVX-512 one, the same
+  direction as that host's 117.0 GFLOP/s peak. `keel-skx`: 75.9% of its issue-capped **roofline**
+  denominator, and 39.1% of plain OpenBLAS — the amended denominator doing exactly the work it was
+  ruled for. The declaration row rendered as designed: *every fleet host and nothing else*, with the
+  machine-local `.keel-sentinel` reported by name and mtime as **not read**.
 - **The apparatus ratio counts shell by content, not by file extension** (`gate-docs.sh`'s new
   `shell_files`: the `'*.sh'` glob unioned with a shebang sweep of every tracked-or-untracked
   file). Ruled 2026-08-31: a ledger that *"counts a 189-line test while its 97-line subject is
