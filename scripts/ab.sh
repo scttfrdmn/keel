@@ -2,7 +2,7 @@
 # Copyright 2026 Scott Friedman
 # SPDX-License-Identifier: Apache-2.0
 #
-# ab.sh — the two-build A/B harness behind l1-bench.sh and edge-bench.sh.
+# ab.sh — the two-build A/B harness behind scripts/ab-bench.sh.
 #
 # Sourced, never executed, from a main() that has already cd'd to the repository
 # root; it sources remote.sh and bench.sh itself. Its callers are NOT gates: they
@@ -13,11 +13,11 @@
 # sources: an A/B driver's machinery has no business inside the closure a release
 # certificate has to transfer across.
 #
-# Lifted from ~160 lines the two drivers held in common (#131). They were
-# identical for the entire skeleton — worktree, trap, cross-compile, methodology
-# preamble, host loop, comparison — and differed in four strings, so each of those
-# is a parameter and none of them is a mode flag: nothing below asks which caller
-# it is serving. A caller sets these, then calls `ab_run BASE_REF`:
+# Lifted from ~160 lines the two drivers of the day held in common (#131). They
+# were identical for the entire skeleton — worktree, trap, cross-compile,
+# methodology preamble, host loop, comparison — and differed in four strings, so
+# each of those is a parameter and none of them is a mode flag: nothing below asks
+# which caller it is serving. A caller sets these, then calls `ab_run BASE_REF`:
 #
 #   AB_TITLE      the banner line
 #   AB_FILTER     the -test.bench pattern
@@ -41,7 +41,7 @@
 # is committed — which also means BASE_REF must already contain the fixture.
 #
 # The comparison goes through bench_compare rather than calling benchstat
-# directly. l1-bench.sh's first run is why that function exists: benchstat groups
+# directly. The l1 measurement's first run is why that function exists: benchstat groups
 # by configuration, keel's provenance preamble is in that namespace, and one
 # volatile key in it (keel-bench-clock-mhz, a live snapshot) silently turned every
 # A/B into two independent one-column tables with no delta in them — #50,
@@ -73,19 +73,22 @@ ab_host() {
       return 0
     fi
   done
-  # benchstat labels the columns from the file names, so the temp files are named
-  # for the two commits rather than passed as base.txt/new.txt. The build/ copies
-  # are the durable ones: a ranking is recomputed from the logs rather than from a
-  # script's stdout (DESIGN.md §5.8), and l1-bench.sh was discarding its own until
-  # this lift gave both callers edge-bench.sh's behaviour.
-  cp "$BINDIR/base.log" "$BINDIR/$BASE_SHA.txt"
-  cp "$BINDIR/new.log" "$BINDIR/$NEW_SHA.txt"
-  cp "$BINDIR/base.log" "build/$AB_TAG-$host-$BASE_SHA.log"
-  cp "$BINDIR/new.log" "build/$AB_TAG-$host-$NEW_SHA.log"
+  # benchstat labels the columns from the file names, so the temp files carry the
+  # arm AND its commit rather than being passed as base.txt/new.txt. The arm is in
+  # the name because the SHAs are not always distinct: a null A/B (BASE_REF=HEAD,
+  # the drift preset) resolves both to one short SHA, and naming by SHA alone made
+  # the second `cp` overwrite the first, so benchstat was handed one file twice and
+  # printed a wash by construction. The build/ copies are the durable ones: a
+  # ranking is recomputed from the logs rather than from a script's stdout
+  # (DESIGN.md §5.8).
+  cp "$BINDIR/base.log" "$BINDIR/base-$BASE_SHA.txt"
+  cp "$BINDIR/new.log" "$BINDIR/new-$NEW_SHA.txt"
+  cp "$BINDIR/base.log" "build/$AB_TAG-$host-base-$BASE_SHA.log"
+  cp "$BINDIR/new.log" "build/$AB_TAG-$host-new-$NEW_SHA.log"
   # The caller's `set -o pipefail` is what makes this test bench_compare's verdict
   # rather than sed's: without it the indent pipe would swallow the one status that
   # says whether a comparison happened.
-  if ! bench_compare "$BINDIR/$BASE_SHA.txt" "$BINDIR/$NEW_SHA.txt" | sed 's/^/        /'; then
+  if ! bench_compare "$BINDIR/base-$BASE_SHA.txt" "$BINDIR/new-$NEW_SHA.txt" | sed 's/^/        /'; then
     warn "[$host] the two arms were not compared, so this host contributes no delta"
   fi
 }

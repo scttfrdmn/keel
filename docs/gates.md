@@ -148,6 +148,24 @@ How those are mechanized, and every judgement call involved:
     A merely-slow kernel produces divergent rates, classifies FMA-bound, and
     faces the full 55%.
 
+    WHAT THIS BRANCH CANNOT SEE (DESIGN.md §5 rule 12; added 2026-09-01 on #141).
+    Excluding the shape under test buys independence from that shape, not from the
+    host. Every ceiling mix is measured on the same machine in the same
+    invocation, so under a host-level effect the numerator and the denominator move
+    together: a shape-UNIFORM excursion scales both of attain's terms by nearly the
+    same factor and is ABSORBED — the criterion renders a clean verdict over it and
+    reports nothing. Only a DIRECTION-SPLIT excursion reaches a verdict, and #141's
+    third instance reached one by the accident of its shape. On janus between two
+    gate runs the ceiling set stayed nearly still (6x32 +2.59% against 2x32
+    -9.76%), so the roofline moved -1.4% (49.3% -> 48.6%) while the share moved
+    -9.8% (47.9% -> 43.2%) and the excursion was reported. Had the same magnitude
+    arrived uniformly across the shapes, this branch would have PASSed over it.
+    So a green 5b is not a bound on host stability, and it cannot become one from
+    the inside: an uncorrelated denominator would have to come from a different
+    run, which is a different instrument. The one that measures it is a repeat on
+    the suspect host recording ABSOLUTE rates -- scripts/ab-bench.sh drift -- since
+    a ratio of two co-moving terms self-cancels the effect in question.
+
     WHAT THE AMENDMENT COSTS, AS A NUMBER. The peak kernel is always in the
     ceiling set with f = 1, so max_i p_i >= I_peak, and the shape guard caps the
     denominator at SWEEP_BEST_IPF * ROOF_SHAPE_SLACK. The effective floor for an

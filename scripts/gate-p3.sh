@@ -776,6 +776,11 @@ else
         "$ISSUE_MIX_SPREAD_MIN" "$SWEEP_BEST_IPF" "$ROOF_SHAPE_SLACK" $CEIL)"
     frac="$(awk -v r="$ACT_LO" 'BEGIN{printf "%.1f", r * 100}')"
     fracpt="$(awk -v r="$ACT_PT" 'BEGIN{printf "%.1f", r * 100}')"
+    # Both terms of the percentage below, on the line above the verdict that uses it.
+    # Printing the ratio alone made #141 reconstruct the numerator and denominator
+    # from tracked samples after the fact, and reconstruction is what happens when
+    # disclosure fails: neither term appeared in any log this gate wrote (e5aa85c).
+    info "[$host] the ratio's two terms, same invocation: $ACT_ID $(bench_stat "Kernel/$ACT_ID" "$BENCHCSV" GFLOP/s | cut -d' ' -f1) GFLOP/s over $GATE_PEAK $(bench_stat "$GATE_PEAK" "$BENCHCSV" GFLOP/s | cut -d' ' -f1) GFLOP/s"
     # The spread and its interval are PRINTED here, not just consumed. This gate
     # used to discard both (`_CSPREAD _MSPREAD`), and on 2026-08-15 that cost a
     # day: janus reclassified fma-bound with why=diverge, four verdicts moved, and

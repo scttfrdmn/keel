@@ -9,6 +9,35 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`scripts/ab-bench.sh {l1|edge|drift} [BASE_REF]` — one parametrized caller in place of
+  `l1-bench.sh` and `edge-bench.sh`, and it carries #141's decisive instrument** (`#141`, `#131`,
+  ruled: *"two callers keyed to two benchmark sets plus a third for this one is the wrong shape"*).
+  The three presets differ only in the strings `ab.sh` already took as parameters, so the preset
+  table is the entire difference and nothing else asks which one it serves — #131's own rule, applied
+  to the callers. `drift` is a **null A/B**: `BASE_REF` defaults to `HEAD`, both arms are one source,
+  and the only difference between them is elapsed time on the machine, which is the quantity
+  `-count` cannot reach (every sample of one benchmark sits in one contiguous window). It refuses a
+  dirty tree, because a null A/B with uncommitted work in it is an unlabelled comparison of two
+  builds; its filter and count are the gate's, for comparability with the archived `janus` runs.
+  **Measured, not estimated: `+41` net shell, of which the refactor is `+36`.** Against the tree
+  that is debt and it is booked as such in `docs/apparatus-ledger.md`; against the counterfactual a
+  third thin caller would have cost `~163` total against this file's `151`. Every measured fact in
+  the two deleted headers survives — the four cache-resident sizes, T19's instruction counts, #22's
+  A/B/C framing, why `BenchmarkSgemm` is excluded, the void-on-control rule and the three
+  between-binary layout floors (1.71/0.99/1.32%). One claim did **not** survive because it had gone
+  false: `edge-bench.sh`'s closing note said its numbers came from *"the hosts' own go1.26.5"*, and
+  `remote.sh` cross-compiles locally and ships a static binary, so no host's toolchain has ever
+  entered one of these runs.
+- **`docs/certificates/v0.1.0.md` — the canonical evolving provenance record for the tag**, with the
+  release body reduced to a pointer at it (`#146`, ruled). Three appended addenda is an addendum
+  ladder: a document whose corrections are ordered by when they were written rather than by what they
+  correct. The tag object, its commit and the body's existing text are untouched — a dated record
+  does not go false, it goes stale — but a reader consults the body **today**, and the second
+  addendum's present-tense *"has therefore **never been judged** on `skx`, `zen4` or `zen5`"* went
+  false at `7daf0f2`. The third addendum states that in one sentence with the log linked and its
+  sha256, and points at the tracked file; corrections accumulate there from now on, where they are
+  diffable, reviewable and inside `citation-lint.sh`'s enumeration — verified, not assumed: the new
+  file contributes one citation site and it resolves.
 - **§5 rule 24 — a pre-registered prediction is stated in the instrument's own output space, or it
   constrains nothing** (`DESIGN.md`, `docs/rulings.md`). Scott's ruling on his own prediction for
   the #113 certificate comparison: both registered deltas were digit-only (`8 row(s)` → `9 row(s)`,
@@ -24,6 +53,26 @@ While the major version is 0, minor versions may contain breaking changes.
   which is the mirror image of the same defect and stays open on #113.
 
 ### Changed
+- **`gate-p3` prints both terms of the sentinel's percent-of-peak, on the line above the verdict
+  that divides them** (`gate-p3.sh`, `#141`, ruled — the disclosure exemption: *"criterion-honesty
+  lines on the signing path don't wait for the ledger"*). The criterion published a ratio and neither
+  term appeared in any log it wrote, which is how #141's numerator and denominator had to be
+  **reconstructed** from archived samples after the fact — and reconstruction is what happens when
+  disclosure fails. Rendered from the tracked `68a9bec` samples before landing: *"the ratio's two
+  terms, same invocation: 2x32/avx512/kc=128 99.52 GFLOP/s over Peak/avx512 207.75 GFLOP/s"*, whose
+  quotient reproduces the gate's published 47.9% exactly; an absent benchmark name renders empty
+  rather than a spurious number, checked as the negative control. **`+5` shell, ledger-stated exempt.**
+- **Criterion 5b's roofline branch gains its §5 rule 12 coverage line** (`docs/gates.md`, `#141`,
+  ruled). Excluding the shape under test from the ceiling set buys independence from that *shape*,
+  not from the *host*: every ceiling mix is measured on the same machine in the same invocation, so a
+  shape-uniform host effect scales numerator and denominator together and is **absorbed** — the
+  criterion renders a clean verdict over it and reports nothing. Only a **direction-split** excursion
+  reaches a verdict, and #141's third instance reached one by the accident of its shape: on `janus`
+  the ceiling set stayed nearly still (`6x32` +2.59% against `2x32` −9.76%), so the roofline moved
+  −1.4% (49.3% → 48.6%) while the share moved −9.8% (47.9% → 43.2%). A green 5b is therefore not a
+  bound on host stability and cannot become one from the inside — an uncorrelated denominator would
+  have to come from a different run, which is a different instrument, and that instrument is now
+  `scripts/ab-bench.sh drift`.
 - **P2's throughput floor is judged on every fleet host; `.keel-sentinel` is no longer a selection
   input** (`remote.sh`'s new `sentinel_hosts`/`sentinel_declaration`, `gate-p3.sh`, `#146`, ruled).
   The retired precedence — `$KEEL_SENTINEL_HOST` > `.keel-sentinel` > the fleet — let a gitignored,
@@ -127,6 +176,39 @@ While the major version is 0, minor versions may contain breaking changes.
   control's first reading was a **false miss** — `shell_files | grep -q` returns 141, because
   `grep -q` exits on its first match and `pipefail` reports the producer's SIGPIPE, so the arm
   asserted against a captured listing instead.
+
+### Fixed
+- **`ab.sh` named both arms' comparison files by commit SHA alone, so a null A/B compared one file
+  with itself and printed a wash by construction** (`ab.sh`, found while building `drift`). With
+  `BASE_REF` resolving to `HEAD` both arms produce the same short SHA, the second `cp` overwrote the
+  first, and `benchstat` was handed one path twice. **Measured, on synthetic logs with a planted
+  +10% delta:** the colliding names print `1.099µ ± 0%` against `1.099µ ± 0%`, `~ (p=1.000 n=10)` —
+  and it prints a `vs base` column, which is the token `bench_compare` checks for, so the harness
+  would have *reported success* and the run would have answered "no drift" whatever the host did. The
+  arm is now in the file name (`base-<sha>` / `new-<sha>`), which makes the degenerate case work by
+  construction rather than by a special case and labels benchstat's columns by arm in every run; the
+  same pair then renders `998.8n` against `1099.2n`, `+10.06% (p=0.000 n=10)`. This is the defect
+  class the whole `drift` preset exists to rule on, sitting inside the instrument that was to rule on
+  it — a false PASS available only to the one measurement that had never been taken.
+- **Two of #141's five kernel "movers" are not resolved, and the structural claim resting on the
+  scalar arm is withdrawn** (`#141`, corrected against the samples tracked at `f84a9ac`). The
+  published decomposition — *"four of five `BenchmarkKernel` medians moving 5–12% in both
+  directions, the largest mover a scalar shape sharing no code with the vector path"* — is true of
+  the **medians** and overstates what the intervals support. Recomputed with both runs' own
+  confidence intervals: `2x32/avx512` −9.76% is disjoint by 9.2 GFLOP/s and `6x32/avx512` +2.59% by
+  0.49, both comfortable; `4x32/avx512` −5.19% is disjoint by **0.01** and `2x32/scalar` −12.25% by
+  **0.0014** on a value near 1, i.e. touching; and **`4x32/scalar` −5.87% overlaps and is not
+  resolved at all**. So the two solidly resolved movers are both AVX-512 kernels, and the inference
+  *"whatever moved is not in `internal/vec`, established without reference to the source diff"* no
+  longer has the scalar evidence it rested on. **What replaces it is stronger and needs no cross-run
+  median comparison:** between the two runs the *within-run* interval on every memory-touching kernel
+  widened — `4x32/avx512` ×51 (0.105% → 5.378%), `2x32/avx512` ×8.8, `6x32/avx512` ×8.0,
+  `4x32/scalar` ×1.9 — while the three register-only `BenchmarkPeak` arms held at ×1.0, ×2.0 and ×1.7
+  and stayed under 0.14% in absolute terms. The excursion is an **imprecision** in memory-touching
+  measurement, not a shift, and that is mechanically the ceiling-spread width going 0.003 → 0.099,
+  since the spread is computed from those intervals. `2x32/scalar` is uninformative in either
+  direction: it printed ±21.9% and ±6.9% in the two runs, with a 4.3× min-to-max range inside one of
+  them.
 
 ### Added
 - **`docs/apparatus-ledger.md` — one running total for the apparatus debt, itemized per commit**,
