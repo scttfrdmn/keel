@@ -80,16 +80,19 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-08-31 | `afb108e` | +4 | **754** | `detach.sh`: the file-channel copy is labelled AS OF LAUNCH, because a driver can rewrite a decision file inside the run it launched (`aws-fleet.sh up` writes `.keel-hosts`). Four lines of comment, caught before the fleet pass read the record and booked in the same session that spent them — the row exists because the +102 above was measured at `a65d39e` and the ratio reading taken there could not see a commit that came after it. |
 | 2026-09-01 | `774c02a` | +36 | **790** | **The three-caller merge, and it did not come out neutral.** `ab-bench.sh` +151 against `l1-bench.sh` −43 and `edge-bench.sh` −75 is +33, plus +3 in `ab.sh` for the collision fix's comment. Ruled in advance: *"one parametrized caller replacing both is net-zero-or-better… if the parametrization turns out not to be net-neutral, run it anyway with the debt stated."* Stated. A counterfactual reading exists — a third thin caller would have cost ~163 against this file's 151 — and it is **not** booked, because the ledger measures the tree and the tree moved +36. What was refused as paydown: thinning the two deleted headers, which carry T19's instruction counts, the four cache-resident sizes and the three between-binary layout floors. |
 | 2026-09-01 | `774c02a` | +5 | **795** | **EXEMPT, not owed** — see the section below. `gate-p3.sh` prints both terms of the sentinel's percent-of-peak on the line above the verdict that divides them. Same commit as the row above, listed separately because one is owed and one is not. |
-| 2026-09-01 | `PENDING` | +71 | **866** | **The planted-delta control, authorised as debt and over its estimate.** Scott: *"authorised as debt, and it was never optional… ~30 lines, its own ledger row, landed with the control shown to catch the plant."* Authorised at ~30; **+71 disclosed**, measured per hunk: `ab_control` and its doc block +47, `ab_control_samples` +8, `ab_arm_file` +6, the call site in `ab_run` +4, and +9/−5 converting `ab_host` to the shared namer. Half of it is the doc block, and it is what makes the row honest rather than shorter: the control exists because #141's checklist asked for it *before* the harness was written and it was skipped, and the block names that, the exact-×1.1 construction, and what the control cannot see (§5 rule 12). The `ab_arm_file` lift is the load-bearing part — the control drives the run's own two SHAs through the same namer `ab_host` uses, so the collision it was written for is covered by construction rather than by a second assertion. |
-| 2026-09-01 | `PENDING` | +58 | **924** | **The build-flags line, ruled as an instrument change.** Scott: *"the declaration row grows a **build-flags line** (the deeper fix: flags are part of the binary's provenance and belong in every log's self-description)."* `remote.sh` +32 (`build_settings`, plus `builder_toolchain` restated to carry the flags and the measured `set -e` fact behind its two-guard form) and `ab.sh` +26 (`ab_arm_provenance` and its two call sites). **Not exempt**, and the exemption was checked rather than assumed: it covers a criterion's own terms *on the signing path*, and `ab.sh`'s own header says its callers certify nothing. Booked in full. |
+| 2026-09-01 | `9862637` | +71 | **866** | **The planted-delta control, authorised as debt and over its estimate.** Scott: *"authorised as debt, and it was never optional… ~30 lines, its own ledger row, landed with the control shown to catch the plant."* Authorised at ~30; **+71 disclosed**, measured per hunk: `ab_control` and its doc block +47, `ab_control_samples` +8, `ab_arm_file` +6, the call site in `ab_run` +4, and +9/−5 converting `ab_host` to the shared namer. Half of it is the doc block, and it is what makes the row honest rather than shorter: the control exists because #141's checklist asked for it *before* the harness was written and it was skipped, and the block names that, the exact-×1.1 construction, and what the control cannot see (§5 rule 12). The `ab_arm_file` lift is the load-bearing part — the control drives the run's own two SHAs through the same namer `ab_host` uses, so the collision it was written for is covered by construction rather than by a second assertion. |
+| 2026-09-01 | `9862637` | +58 | **924** | **The build-flags line, ruled as an instrument change.** Scott: *"the declaration row grows a **build-flags line** (the deeper fix: flags are part of the binary's provenance and belong in every log's self-description)."* `remote.sh` +32 (`build_settings`, plus `builder_toolchain` restated to carry the flags and the measured `set -e` fact behind its two-guard form) and `ab.sh` +26 (`ab_arm_provenance` and its two call sites). **Not exempt**, and the exemption was checked rather than assumed: it covers a criterion's own terms *on the signing path*, and `ab.sh`'s own header says its callers certify nothing. Booked in full. |
+| 2026-09-01 | `PENDING` | +9 | **933** | **`-trimpath` in `remote_build_test`, ruled as an instrument change.** Scott: *"`-trimpath`: yes, now… the null-A/B-builds-two-binaries class dies at the root or it recurs forever."* `remote.sh` +10/−1, of which **one line is the flag** and nine are the comment that says why a build flag is a measurement decision — the measured 4-digests-from-4-paths fact, the `1.71/0.99/1.32%` layout floor it sits beside, and that the flag is readable back out of the artifact. Deliberately not shortened: this is the rule's own example of a fix whose honest form is a comment, and the cap permits that at the cost of budget rather than by exemption. Booked in full; **not** exempt, on the same reading as the row above. |
 
-**Current debt: +924 net shell lines** unpaid by a routine, a kernel or a library fix, of which
+**Current debt: +933 net shell lines** unpaid by a routine, a kernel or a library fix, of which
 **+97 is a re-reading rather than a spend** — the tree did not grow, the counter stopped measuring
-by file extension — and **+5 is exempt**, so **+822 is owed** once both are set aside. Shell term
-16471, library term 8964, historical ratio 1.84x (measured 2026-09-01 with the two `PENDING` rows
-above staged). Both readings of this session's `+129` agree — `git diff --numstat -- '*.sh'` gives
-102 + 36 added against 5 + 4 removed, and `gate-docs.sh`'s own counter moved 16342 → 16471 — which
-is the cross-check that makes the figure a measurement rather than a subtraction.
+by file extension — and **+5 is exempt**, so **+831 is owed** once both are set aside. Shell term
+16480, library term 8964, historical ratio 1.84x (measured 2026-09-01 with the `-trimpath` row above
+staged). Both readings of `9862637`'s `+129` agree — `git show --numstat --format= 9862637 -- '*.sh'`
+gives 102 + 36 added against 5 + 4 removed, and `gate-docs.sh`'s own counter moved 16342 → 16471 —
+which is the cross-check that makes the figure a measurement rather than a subtraction. The
+`-trimpath` commit adds `+9` on the same two readings (`10 − 1` in `remote.sh`; the counter 16471 →
+16480), for a **session total of +138** across two commits.
 
 **And the ratio moved this time, 1.82x → 1.84x, which does not retire the reading rule above; it
 illustrates the second half of it, and the arithmetic is the opposite of what the printed jump
@@ -120,13 +123,17 @@ piece of apparatus whose failures are denominated in dollars rather than lines,"
 opening +11 predates the cap's current definition. Authorised is still owed; a ruling changes
 who agreed to the debt, not whether it exists. The +102 for #146 is the third: Scott ruled option (b) with the file channel retired *"plus (c) which is owed regardless"*, and a fix that removes a gitignored file's power to select a judged host is apparatus by every definition here — it ships no routine and no kernel. It is booked at its measured size, including the 26 lines of test that make the enumeration fail first. The `afb108e` row after it is the same authorisation reaching four more lines of comment, so the authorised total for #146 is **+106**, not +102 — which is the whole reason that row exists rather than being folded backwards into a figure already published.
 
-The fourth and fifth are this session's, both authorised in the #141 ruling of 2026-09-01 and both
-booked over their estimates. The control was authorised at *"~30 lines"* and cost **+71**; the
-build-flags line was authorised without a figure and cost **+58**. Neither is exempt and neither is
-paid for: this session shipped no routine, no kernel and no library fix, so **+129 of the total above
-is authorised overage on the cap's own terms** and is stated that way rather than argued down. The
-estimate is not the authorisation's operative part — *"it was never optional"* is — but the gap
-between 30 and 71 belongs in the record, because the next estimate is calibrated from this one.
+The fourth, fifth and sixth are this session's, all three authorised in the #141 ruling of
+2026-09-01. The control was authorised at *"~30 lines"* and cost **+71**; the build-flags line was
+authorised without a figure and cost **+58**; `-trimpath` was authorised without a figure
+(*"yes, now"*) and cost **+9**. None is exempt and none is paid for: this session shipped no routine,
+no kernel and no library fix, so **+138 of the total above is authorised overage on the cap's own
+terms** and is stated that way rather than argued down. The estimate is not the authorisation's
+operative part — *"it was never optional"* is — but the gap between 30 and 71 belongs in the record,
+because the next estimate is calibrated from this one. The `-trimpath` row is the counter-example
+worth keeping beside it: one line of flag, nine of comment, and the ruling's *"prefer deleting a line
+to explaining one"* loses here to the cap's own carve-out that a fix whose honest form is a comment is
+still allowed and simply spends budget.
 
 **The disclosure exemption** (standing since CEIL8CI, invoked 2026-09-01 for the `+5` above). A line
 whose job is to print the terms a criterion on the signing path divides does not wait for a session

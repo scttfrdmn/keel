@@ -607,10 +607,19 @@ assert_no_strays() {
 # intrinsics identically at every GOAMD64 level, and keel dispatches on
 # runtime feature detection, so the binary under test is built exactly the way
 # a released keel binary would be. See docs/toolchain-notes T7.
+#
+# -trimpath SINCE 2026-09-01, and it is an instrument change, not a build tweak
+# (ruled on #141). Without it the build path enters the binary, so ab.sh's base
+# arm -- which builds in a worktree at a different path -- produced a DIFFERENT
+# binary from the new arm at one revision: measured, 4 distinct digests from 4
+# paths, versus 1 byte-identical binary with the flag. keel's between-binary
+# layout floor is 1.71/0.99/1.32%, the same order as the deltas an A/B studies,
+# so a project whose experiments are A/Bs cannot have path-dependent builds.
+# The flag lands INSIDE the artifact, where build_settings reads it back.
 remote_build_test() {
   local pkg="$1" out="$2"
   GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-    go test -c -o "$out" "$pkg"
+    go test -c -trimpath -o "$out" "$pkg"
 }
 
 # build_settings BIN — the build FLAGS the toolchain stamped inside BIN, one line.

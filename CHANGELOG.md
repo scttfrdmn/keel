@@ -102,6 +102,25 @@ While the major version is 0, minor versions may contain breaking changes.
   which is the mirror image of the same defect and stays open on #113.
 
 ### Changed
+- **Every fleet binary is built with `-trimpath`, so a build path can no longer reach a
+  measurement** (`remote_build_test` in `scripts/remote.sh`, `#141`, ruled 2026-09-01: *"the
+  null-A/B-builds-two-binaries class dies at the root or it recurs forever; a project whose
+  experiments are A/Bs cannot have path-dependent builds"*). `ab.sh` builds its base arm in a
+  worktree at a different path, so a **null** A/B — one revision, both arms — was compiling two
+  different binaries: measured at `ed17c57`, four build paths gave four distinct digests, and with
+  the flag they collapse to one byte-identical binary. keel's own between-binary layout floor is
+  `1.71 / 0.99 / 1.32%`, the same order as the `2–4%` deltas #141 was studying, so the confound was
+  never separable by staring at the table. Verified through the function rather than from the
+  documentation: `build_settings` reads
+  `flags=[-buildmode=exe -compiler=gc -trimpath=true]` back out of the binary it produced, and the
+  binary shrank `5,089,752 → 5,066,630` bytes. Landed as an **instrument change**, dated and
+  disclosed — `docs/certificates/v0.1.0.md` gains *Instrument changes* entry 2, kept separate from
+  entry 1 because entry 1 changes what a log **says** while this changes what it **measured on**, and
+  absolute timings in the pinned certificate may therefore move by up to the layout floor with
+  nothing having regressed. It does **not** claim to make timings stable, only path-independent;
+  whether it removes #141's widened bands is the open pre-registered measurement there, whose
+  no-`-trimpath` arm has already reproduced the effect (two `Kernel/*/avx512` rows at `+4.45%` and
+  `-3.80%`, both `p=0.000`, `n=30`, `janus.local`).
 - **`gate-p3` prints both terms of the sentinel's percent-of-peak, on the line above the verdict
   that divides them** (`gate-p3.sh`, `#141`, ruled — the disclosure exemption: *"criterion-honesty
   lines on the signing path don't wait for the ledger"*). The criterion published a ratio and neither
