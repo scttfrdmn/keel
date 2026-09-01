@@ -922,6 +922,14 @@ else
     # witnesses (§5 rule 10).
     CEIL8="$(bench_gflops "$(compute_name "$P5_THREADS")" "$BENCHCSV")"
     CEIL1="$(bench_gflops "$(compute_name 1)" "$BENCHCSV")"
+    # The 1-thread avx512 peak belongs here by that same argument, and was not here: it was
+    # re-read once per routine INSIDE the loop below, past both of that loop's `continue`s, so
+    # a host whose every routine bailed carried the PREVIOUS host's peak. Latent while its only
+    # reader sat in the iteration that assigned it — a false-PASS mechanism the moment anything
+    # after the loop reads it, which #100's Arm B is. Non-empty by construction: require_bench
+    # above demands "$GATE_PEAK" under GFLOP/s, which is the same bench_stat call bench_gflops
+    # makes, so it is not re-tested below (the idiom CEIL8P's note states).
+    PEAK1="$(bench_gflops "$GATE_PEAK" "$BENCHCSV")"
     if [[ -z "$CEIL8" || -z "$CEIL1" ]]; then
       unmeasured "[$host] no measured ${P5_THREADS}-thread compute ceiling, so nothing here may be divided by one"
       continue
@@ -1068,10 +1076,9 @@ else
       # count is the only ceiling available here, and it assumes a clock that does
       # not drop with core count — which is exactly what it does on these parts. So
       # it over-estimates the ceiling, and says so.
-      p1="$(bench_gflops "$GATE_PEAK" "$BENCHCSV")"
       m8="$(bench_gflops "$many" "$BENCHCSV")"
-      if [[ -n "$p1" && -n "$m8" ]]; then
-        info "[$host] $r: $(awk -v a="$m8" -v b="$p1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread avx512 peak ($p1 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count"
+      if [[ -n "$m8" ]]; then
+        info "[$host] $r: $(awk -v a="$m8" -v b="$PEAK1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread avx512 peak ($PEAK1 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count"
       fi
 
       # Admission after the reading and before either bar (#104), the order p2 and p3 use:

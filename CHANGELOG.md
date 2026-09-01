@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **gate-p5's 1-thread avx512 peak was per-host state living in the per-routine loop, past both
+  of that loop's `continue`s** (`scripts/gate-p5.sh`). A host whose every routine bailed carried
+  the *previous* host's peak. **Latent on the judged fleet** — the only reader sat in the
+  iteration that assigned it, so no rendered verdict or log line changes — but it is a
+  false-PASS mechanism the moment anything after the loop reads it, and #100's Arm B is exactly
+  that reader. Hoisted to host scope beside `CEIL8`/`CEIL1`, whose own comment already made the
+  argument the peak had escaped: it is a property of the machine. Non-empty by construction —
+  `require_bench` demands the row under GFLOP/s via the same `bench_stat` call, and renders
+  `unmeasured` naming the cause when it is absent. The `-n` test went with it, so an empty peak
+  would now render `awk: division by zero` instead of skipping a line silently; **deliberately
+  not replaced by a `-z` guard**, because the only degenerate shape `bench_stat` can produce
+  past `require_bench` is a field shift printing the CI where the median belongs, which is
+  non-empty and wrong — a guard for the impossible case that misses the possible one.
 - **v0.1.0's certificate log is now tracked, and no repository revision had ever held a green
   `gate-p5`** (`archive/pinned8/release-a2-68a9bec.log`, sha256
   `e8c5889a081d2e08dbe5f43f4605e2693ce650b75fd465015959f38ed7baaa1e`, 947,745 bytes). The
