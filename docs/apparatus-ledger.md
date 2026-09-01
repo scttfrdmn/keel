@@ -21,9 +21,10 @@ apparatus ratio. The cap it discharges is CLAUDE.md's: *a session may not add ne
 only.** Ratified 2026-08-31 as a standing rule, and it exists because both terms are five
 digits: `+78` lines across three commits moved the historical ratio 1.77x → 1.78x, and the
 next `+137` moved it 1.78x → 1.79x. **Both spends read as the same 0.01**, though one is 1.76×
-the other — with the library term measured constant at 8964 across all five revisions, so
-nothing in the denominator is doing that. Two printed decimals cannot separate two spends that
-differ by 59 lines. A number that advances by one hundredth per session cannot resolve a
+the other — and the `+25` after them read as **0.00**, leaving 1.79x untouched. The library term
+is measured constant at 8964 across every one of those revisions, so nothing in the denominator is
+doing this. Two printed decimals cannot separate two spends that differ by 59 lines, and cannot see
+a third at all. A number that advances by one hundredth per session cannot resolve a
 session, and reading a *flat* ratio as a flat ledger is the specific error the rule forbids. Ask the shell term what a session cost. Ask the ratio only whether the project is
 still growing apparatus faster than substance.
 
@@ -62,8 +63,10 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-08-31 | `5e4557e` | +24 | **535** | `detach-test.sh` moves onto a private tmux server, with the isolation asserted and driven red. Perturbing the shared server is how the incident it tests was born. |
 
 **Current debt: +535 net shell lines** unpaid by a routine, a kernel or a library fix.
-Shell term 16082, library term 8964, historical ratio 1.79x — the third session in a row where
-the ratio's two printed decimals cannot see the spend.
+Shell term 16082, library term 8964, historical ratio 1.79x — which is exactly where it stood 25
+lines ago, at `48f9ed9`. Three spends in one session, +78, +137 and +25: the first two each moved
+the printed ratio by the same 0.01 despite differing by 59 lines, and the third did not move it at
+all. Measured, not asserted: 15842 → 1.7673, 15920 → 1.7760, 16057 → 1.7913, 16082 → 1.7940.
 
 ## What is owed against it, and what is not
 
