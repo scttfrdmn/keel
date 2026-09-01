@@ -127,7 +127,11 @@ cmd_run() {
     # STATE, not merely what the clear must reset.
     # Verbatim and UNFILTERED, including files git could recover on its own: a filter is
     # where the silence comes back, and the one it would have excused here is `.keel-hosts`.
-    printf '# -- input closure, FILE channel: %s/.keel-* verbatim (comments only) --\n' "$ROOT"
+    # "AS OF LAUNCH" is load-bearing: a driver may itself rewrite a decision file — the judged
+    # campaigns run `aws-fleet.sh up`, which writes `.keel-hosts` — so this copy is the state the
+    # launcher was handed, not necessarily the state the gate measured. That is the right thing for
+    # a provenance record to hold, and the gate prints its own host list in its own log.
+    printf '# -- input closure, FILE channel AS OF LAUNCH: %s/.keel-* verbatim (comments only) --\n' "$ROOT"
     local cf
     for cf in "$ROOT"/.keel-*; do
       [[ -f "$cf" ]] || continue
