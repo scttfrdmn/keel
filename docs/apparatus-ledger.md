@@ -38,6 +38,12 @@ Every delta below is **measured from the commit**, not quoted from a comment —
 `git show --numstat --format= <rev> -- '*.sh'`, added minus removed. Re-derivable at any time,
 which is the property a thread does not have. Measured 2026-08-31 at `48f9ed9`.
 
+A commit that changes the shell term cannot name its own hash, so **its row is filled in by the
+next commit that touches this file** — which is why the last row may briefly read `PENDING`. That
+follow-up costs no shell lines, so it needs no row of its own; if it ever does, the two are one
+entry. Amending the hash in would be the alternative and it is not one: the amend changes the
+hash, so the row would be wrong again and wrong in a way that reads as right.
+
 | Date | Commit | Δ shell | Total | What it was |
 |---|---|---:|---:|---|
 | 2026-08-30 | *(opening balance)* | +11 | 11 | The stated overage #131 was opened to discharge. Not a commit delta; the balance carried in. |
@@ -52,7 +58,7 @@ which is the property a thread does not have. Measured 2026-08-31 at `48f9ed9`.
 | 2026-08-31 | `5f345ee` | +53 | 355 | #100 arm B: the README denominator column is checked, not just non-empty. |
 | 2026-08-31 | `2b09f6d` | +18 | 373 | #122: two words for two facts in `detach.sh stat`. |
 | 2026-08-31 | `48f9ed9` | +137 | 510 | `detach-test.sh`. Authorised at ~90 by ruling; 137 disclosed, 23 of them the header stating the scope. |
-| 2026-08-31 | `PENDING` | +1 | **511** | This file, plus the reading rule printed beside the ratio in `gate-docs.sh`. The ledger costs the ledger one line. |
+| 2026-08-31 | `66706c2` | +1 | **511** | This file, plus the reading rule printed beside the ratio in `gate-docs.sh`. The ledger costs the ledger one line. |
 
 **Current debt: +511 net shell lines** unpaid by a routine, a kernel or a library fix.
 Shell term 16058, library term 8964, historical ratio 1.79x.
