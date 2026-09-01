@@ -8,6 +8,22 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **The apparatus ratio counts shell by content, not by file extension** (`gate-docs.sh`'s new
+  `shell_files`: the `'*.sh'` glob unioned with a shebang sweep of every tracked-or-untracked
+  file). Ruled 2026-08-31: a ledger that *"counts a 189-line test while its 97-line subject is
+  invisible"* is *"rule 22's surface-form error turned on the ledger's own definition."* The
+  subject is `scripts/fakessh`, 97 lines of bash with no extension, and the whole tree was swept
+  in the same pass so the restatement happens once — it is the only such file; the other three
+  non-`.sh` files under `scripts/` are TSV data. Shell term 16082 → **16195**, ratio 1.79x →
+  1.81x, of which **+97 is a definition correction and +16 a spend**, booked as two rows in
+  `docs/apparatus-ledger.md` because one number asserting a 113-line session would be false by 97.
+  Controlled rather than assumed: a planted `#!/bin/bash -eu` is counted, `#!/usr/bin/env python3`
+  is not, a file with no shebang is not, and no member the glob held was lost. The positive
+  control's first reading was a **false miss** — `shell_files | grep -q` returns 141, because
+  `grep -q` exits on its first match and `pipefail` reports the producer's SIGPIPE, so the arm
+  asserted against a captured listing instead.
+
 ### Added
 - **`docs/apparatus-ledger.md` — one running total for the apparatus debt, itemized per commit**,
   and `gate-docs.sh` now prints how to read its own ratio. Ruled 2026-08-31: *"'booked separately'

@@ -10,10 +10,21 @@ lived only in [#131](https://github.com/scttfrdmn/keel/issues/131)'s comment thr
 itself the mechanism by which a second one could arise — a thread has no single current value,
 only a series of claims about one.
 
-The debt is measured in **net lines under the shell term** — `git ls-files -co
---exclude-standard '*.sh'` — which `gate-docs.sh` prints on every push as the numerator of the
-apparatus ratio. The cap it discharges is CLAUDE.md's: *a session may not add net lines to
-`scripts/` unless it also lands a routine, a kernel, or a library fix.*
+The debt is measured in **net lines under the shell term**, which `gate-docs.sh` prints on every
+push as the numerator of the apparatus ratio. The cap it discharges is CLAUDE.md's: *a session may
+not add net lines to `scripts/` unless it also lands a routine, a kernel, or a library fix.*
+
+**Shell is shell by content, not by name** — ruled 2026-08-31, and the term is now
+`gate-docs.sh`'s `shell_files`: the `'*.sh'` glob unioned with every tracked-or-untracked file
+whose shebang names a shell. It was the glob alone until then, which *"counts a 189-line test
+while its 97-line subject is invisible… measuring by file extension, which is rule 22's
+surface-form error turned on the ledger's own definition."* The whole tree was swept in the same
+pass so the restatement happens once: `scripts/fakessh` is the only extensionless shell file in
+it, and the other three non-`.sh` files under `scripts/` are TSV data. The correction is booked
+as its own row below, at **+97**, and it is a definition correction rather than a spend — no line
+was written for it. Controls, because an enumeration that finds one thing must be shown capable of
+finding a second: a planted `#!/bin/bash -eu` is counted, a `#!/usr/bin/env python3` is not, a
+file with no shebang is not, and the new list loses no member the glob held.
 
 ## How to read the ratio, and how not to
 
@@ -60,13 +71,25 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-08-31 | `2b09f6d` | +18 | 373 | #122: two words for two facts in `detach.sh stat`. |
 | 2026-08-31 | `48f9ed9` | +137 | 510 | `detach-test.sh`. Authorised at ~90 by ruling; 137 disclosed, 23 of them the header stating the scope. |
 | 2026-08-31 | `66706c2` | +1 | 511 | This file, plus the reading rule printed beside the ratio in `gate-docs.sh`. The ledger costs the ledger one line. |
-| 2026-08-31 | `5e4557e` | +24 | **535** | `detach-test.sh` moves onto a private tmux server, with the isolation asserted and driven red. Perturbing the shared server is how the incident it tests was born. |
+| 2026-08-31 | `5e4557e` | +24 | 535 | `detach-test.sh` moves onto a private tmux server, with the isolation asserted and driven red. Perturbing the shared server is how the incident it tests was born. |
+| 2026-08-31 | `PENDING` | **+97** | **632** | **Definition correction, not a spend.** Shell counted by content: `scripts/fakessh`, 97 lines of bash the `'*.sh'` glob never saw. The lines are as old as the file; only the counter changed. Its own `+16` of new shell in `gate-docs.sh` is the next row. |
+| 2026-08-31 | `PENDING` | +16 | **648** | `shell_files` and the comment recording why the glob was wrong. Same commit as the row above, listed separately because one is a re-reading of lines that already existed and the other is lines that did not. |
 
-**Current debt: +535 net shell lines** unpaid by a routine, a kernel or a library fix.
-Shell term 16082, library term 8964, historical ratio 1.79x — which is exactly where it stood 25
-lines ago, at `48f9ed9`. Three spends in one session, +78, +137 and +25: the first two each moved
-the printed ratio by the same 0.01 despite differing by 59 lines, and the third did not move it at
-all. Measured, not asserted: 15842 → 1.7673, 15920 → 1.7760, 16057 → 1.7913, 16082 → 1.7940.
+**Current debt: +648 net shell lines** unpaid by a routine, a kernel or a library fix, of which
+**+97 is a re-reading rather than a spend** — the tree did not grow, the counter stopped measuring
+by file extension. Shell term 16195 (16082 under the old definition + 97 + 16), library term 8964,
+historical ratio 1.81x.
+
+The two rows are separate on purpose. Reported as one `+113` the entry would assert that a session
+wrote 113 lines of apparatus, which is false by 97; folded into the definition note and left out of
+the total it would be the second ledger the ruling above forbids. What a reader needs is the total
+the cap is measured against **and** which part of it any session could have avoided writing.
+
+Before this correction the historical series read: 15842 → 1.7673, 15920 → 1.7760, 16057 → 1.7913,
+16082 → 1.7940 — three spends in one session of +78, +137 and +25, the first two printing as the
+same 0.01 despite differing by 59 lines and the third printing as nothing at all. That is the
+evidence for the reading rule above, and it is preserved here at the old definition because a
+series measured under two definitions is not a series.
 
 ## What is owed against it, and what is not
 

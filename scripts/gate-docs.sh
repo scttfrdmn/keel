@@ -319,10 +319,26 @@ stage_citations() {
 # flatters the commit being prepared. 820eac0 read 1.47x while its own 131-line fixture
 # file was untracked; the honest figure was 1.49x. Both sides gained -co so correcting the
 # shell term is not also a redefinition that lets untracked Go pay down the ratio.
+#
+# SHELL IS SHELL BY CONTENT, NOT BY NAME (2026-08-31, ruled). The `'*.sh'` glob could not see
+# `scripts/fakessh` -- 97 lines of bash, the subject of `fakessh-test.sh` -- while counting that
+# 189-line test in full, so the counter was measuring by file extension: rule 22's surface-form
+# error turned on the ledger's own definition. `shell_files` is now the union of the glob and a
+# shebang sweep of every tracked-or-untracked file, so a name is sufficient but never necessary.
+# The sweep found exactly one such file tree-wide at this rev; the +97 is booked in
+# docs/apparatus-ledger.md as a definition correction, not a spend.
+shell_files() {
+  git ls-files -co --exclude-standard | while read -r f; do
+    [ -f "$f" ] || continue
+    case "$f" in *.sh) printf '%s\n' "$f"; continue ;; esac
+    read -r l < "$f" 2>/dev/null || continue
+    case "$l" in '#!'*sh | '#!'*sh\ *) printf '%s\n' "$f" ;; esac   # ...sh, or ...sh with args
+  done
+}
 stage_ratio() {
   head_ "apparatus ratio (reported, never a verdict)"
   local sh lib tool toollib bench benchlib ratio aratio oratio app libnet toolt
-  sh="$(git ls-files -co --exclude-standard '*.sh' | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
+  sh="$(shell_files | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   lib="$(git ls-files -co --exclude-standard '*.go' | { grep -v '_test\.go$' || true; } | while read -r f; do wc -l < "$f"; done | awk '{n+=$1} END{print n+0}')"
   # tools/ AND bench/ each count EVERY *.go, tests included: the 2026-08-20 correction for
   # bench/ and its 2026-08-31 completion for tools/ (#131). The *lib variables are only the
@@ -339,7 +355,7 @@ stage_ratio() {
   oratio="$(awk -v a="$((app - tool + toollib))" -v b="$libnet" 'BEGIN { if (b) printf "%.2f", a / b; else printf "n/a" }')"
   info "shell ${sh} / library ${lib} / ratio ${ratio}x"
   info "apparatus ${app} (shell ${sh} + tools/ ${tool} + bench/ ${bench}, of which ${toollib} + ${benchlib} were already counted as library) / library ${libnet} / ratio ${aratio}x"
-  info "apparatus = shell + tools/ + bench/ INCLUDING their tests; library = *.go net of its tests. The asymmetry is deliberate and only defensible stated: the ratio measures maintenance burden against shipped substance, and a test of an instrument is burden. Both terms count tracked AND untracked-not-ignored, since a counter that polices new shell must see it before it is committed. internal/spill's audit instrument stays on the library side, disclosed. RESTATED 2026-08-31 (#131): tools/*_test.go was in NEITHER term, ${toolt} lines of it here; folding it in reads ${oratio}x under the pre-fold definition against ${aratio}x under this one, which is a DEFINITION correction of one tree and not a regression. The same fold measured 2.69x -> 2.79x on 2026-08-30 when the hole was found; both ends have moved with the tree since, which is why this line computes them instead of quoting them"
+  info "apparatus = shell + tools/ + bench/ INCLUDING their tests; library = *.go net of its tests. The asymmetry is deliberate and only defensible stated: the ratio measures maintenance burden against shipped substance, and a test of an instrument is burden. Both terms count tracked AND untracked-not-ignored, since a counter that polices new shell must see it before it is committed. internal/spill's audit instrument stays on the library side, disclosed. RESTATED 2026-08-31 (#131): tools/*_test.go was in NEITHER term, ${toolt} lines of it here; folding it in reads ${oratio}x under the pre-fold definition against ${aratio}x under this one, which is a DEFINITION correction of one tree and not a regression. The same fold measured 2.69x -> 2.79x on 2026-08-30 when the hole was found; both ends have moved with the tree since, which is why this line computes them instead of quoting them. RESTATED AGAIN 2026-08-31 (#131, ruled): the shell term counts shell BY CONTENT, the '*.sh' glob unioned with every tracked-or-untracked file whose shebang names a shell, because scripts/fakessh's 97 lines of bash were invisible to the glob while its own 189-line test was counted in full -- a ledger measuring by file extension. +97 at this rev, booked in docs/apparatus-ledger.md as a definition correction and not a spend"
   info "HOW TO READ THIS: the absolute shell term (${sh}) is the session-delta reading; the ratio is the headline disclosure only. Standing rule, 2026-08-31. Both terms are five digits, so +78 lines and +137 lines both printed as one hundredth (1.77x -> 1.78x -> 1.79x) and the +25 after them printed as nothing at all, with the library term measured constant at 8964 throughout -- two printed decimals cannot separate two spends differing by 59 lines and cannot see a third, so a FLAT RATIO IS NOT A FLAT LEDGER. The running total, itemized per commit and measured not quoted, is docs/apparatus-ledger.md"
 }
 
