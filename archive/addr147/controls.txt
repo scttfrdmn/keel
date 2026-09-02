@@ -1,0 +1,107 @@
+== ctl-constant ==  rows=1  trace rows=1
+ctl/constant               join=30/30 sig4=30/30 med=    101.5 gap=  2.86% BIMODAL  distinct timed a/b/c=1/1/1 all-exec=1/1/1 alias4k ab=[0] ac=[0] bc=[0]
+
+-- R1:1 of 1 rows analyzable; 0 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 1 of 1 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 1 bimodal cells of 1 analyzable rows --
+
+ctl/constant  gap=2.86%  H=15 L=15  period2=False
+  seq  LLLLLLLLLLLLLLLHHHHHHHHHHHHHHH
+  address tuples: 1 distinct over 30 timed samples; each mode-pure: False
+  -> HYPOTHESIS 1 REFUTED on this cell: one address tuple for all samples
+------------------------------------------------------------------------
+== ctl-partition-equal ==  rows=1  trace rows=1
+ctl/equal                  join=30/30 sig4=30/30 med=    101.5 gap=  2.86% BIMODAL  distinct timed a/b/c=1/1/2 all-exec=1/1/2 alias4k ab=[0] ac=[0] bc=[0]
+
+-- R1:1 of 1 rows analyzable; 0 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 0 of 1 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 1 bimodal cells of 1 analyzable rows --
+
+ctl/equal  gap=2.86%  H=15 L=15  period2=False
+  seq  LLLLLLLLLLLLLLLHHHHHHHHHHHHHHH
+  address tuples: 2 distinct over 30 timed samples; each mode-pure: True
+  -> HYPOTHESIS 1 SUPPORTED on this cell: 2 tuples, partition equals the modes
+------------------------------------------------------------------------
+== ctl-partition-differs ==  rows=1  trace rows=1
+ctl/differs                join=30/30 sig4=30/30 med=    101.5 gap=  2.86% BIMODAL  distinct timed a/b/c=1/1/2 all-exec=1/1/2 alias4k ab=[0] ac=[0] bc=[0]
+
+-- R1:1 of 1 rows analyzable; 0 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 0 of 1 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 1 bimodal cells of 1 analyzable rows --
+
+ctl/differs  gap=2.86%  H=15 L=15  period2=False
+  seq  LLLLLLLLLLLLLLLHHHHHHHHHHHHHHH
+  address tuples: 2 distinct over 30 timed samples; each mode-pure: False
+  -> HYPOTHESIS 1 REFUTED on this cell: a tuple appears in both modes
+------------------------------------------------------------------------
+== ctl-finer ==  rows=1  trace rows=1
+ctl/finer                  join=30/30 sig4=30/30 med=    101.5 gap=  2.86% BIMODAL  distinct timed a/b/c=1/1/6 all-exec=1/1/6 alias4k ab=[0] ac=[0] bc=[0]
+
+-- R1:1 of 1 rows analyzable; 0 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 0 of 1 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 1 bimodal cells of 1 analyzable rows --
+
+ctl/finer  gap=2.86%  H=15 L=15  period2=False
+  seq  LLLLLLLLLLLLLLLHHHHHHHHHHHHHHH
+  address tuples: 6 distinct over 30 timed samples; each mode-pure: True
+  -> INCONCLUSIVE: 6 tuple classes, each pure in mode (strictly finer than the modes)
+------------------------------------------------------------------------
+== ctl-period2 ==  rows=1  trace rows=1
+ctl/period2                join=30/30 sig4=30/30 med=    101.5 gap=  2.86% BIMODAL  distinct timed a/b/c=1/1/2 all-exec=1/1/2 alias4k ab=[0] ac=[0] bc=[0]
+
+-- R1:1 of 1 rows analyzable; 0 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 0 of 1 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 1 bimodal cells of 1 analyzable rows --
+
+ctl/period2  gap=2.86%  H=15 L=15  period2=True
+  seq  LHLHLHLHLHLHLHLHLHLHLHLHLHLHLH
+  address tuples: 2 distinct over 30 timed samples; each mode-pure: True
+  -> HYPOTHESIS 1 SUPPORTED on this cell: 2 tuples, partition equals the modes
+  ramp-vs-timed: 0/30 timed runs differ in address from the execution immediately before them
+------------------------------------------------------------------------
+== ctl-unimodal ==  rows=1  trace rows=1
+ctl/unimodal               join=30/30 sig4=30/30 med=    100.1 gap=  0.10% .        distinct timed a/b/c=1/1/1 all-exec=1/1/1 alias4k ab=[0] ac=[0] bc=[0]
+
+-- R1:1 of 1 rows analyzable; 0 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 1 of 1 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 0 bimodal cells of 1 analyzable rows --
+------------------------------------------------------------------------
+== ctl-unmeasured ==  rows=1  trace rows=1
+ctl/unmeasured             UNMEASURED (R5): render join 29/30 of 59 execs; 1 with no candidate, 0 ambiguous | sig4 join 29/30
+
+-- R1:0 of 1 rows analyzable; 1 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 0 of 0 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 0 bimodal cells of 0 analyzable rows --
+------------------------------------------------------------------------
+== ctl-ramp-differs ==  rows=1  trace rows=1
+ctl/rampdiff               join=30/30 sig4=30/30 med=    101.5 gap=  2.86% BIMODAL  distinct timed a/b/c=1/1/2 all-exec=1/1/4 alias4k ab=[0] ac=[0] bc=[0]
+
+-- R1:1 of 1 rows analyzable; 0 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 0 of 1 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 1 bimodal cells of 1 analyzable rows --
+
+ctl/rampdiff  gap=2.86%  H=15 L=15  period2=True
+  seq  LHLHLHLHLHLHLHLHLHLHLHLHLHLHLH
+  address tuples: 2 distinct over 30 timed samples; each mode-pure: True
+  -> HYPOTHESIS 1 SUPPORTED on this cell: 2 tuples, partition equals the modes
+  ramp-vs-timed: 30/30 timed runs differ in address from the execution immediately before them
+------------------------------------------------------------------------
+== ctl-ambiguous ==  rows=1  trace rows=1
+ctl/ambig                  UNMEASURED (R5): render join 0/30 of 60 execs; 0 with no candidate, 30 ambiguous | sig4 join 0/30
+    sample 0 n=1000 printed=100.0: 2 candidates, 1 distinct address tuple(s)
+    sample 1 n=1001 printed=100.0: 2 candidates, 1 distinct address tuple(s)
+    sample 2 n=1002 printed=100.0: 2 candidates, 1 distinct address tuple(s)
+
+-- R1:0 of 1 rows analyzable; 1 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 0 of 0 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 0 bimodal cells of 0 analyzable rows --
+------------------------------------------------------------------------

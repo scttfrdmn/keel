@@ -1,0 +1,42 @@
+== w8 ==  rows=20  trace rows=20
+2x32/avx512/kc=128         join=30/30 sig4=30/30 med=    164.3 gap=  2.01% .        distinct timed a/b/c=1/13/15 all-exec=1/40/41 alias4k ab=[1024] ac=[1024] bc=[0]
+2x32/avx512/kc=32          join=30/30 sig4=30/30 med=    45.16 gap=  5.87% BIMODAL  distinct timed a/b/c=9/9/9 all-exec=17/18/18 alias4k ab=[0] ac=[0] bc=[0]
+2x32/avx512/kc=512         join=30/30 sig4=30/30 med=    668.5 gap=  1.41% .        distinct timed a/b/c=1/1/1 all-exec=6/4/4 alias4k ab=[0] ac=[0] bc=[0]
+2x32/avx512/kc=8           join=30/30 sig4=30/30 med=    16.73 gap=  8.37% .        distinct timed a/b/c=1/1/10 all-exec=1/1/19 alias4k ab=[3328] ac=[256] bc=[1024]
+2x32/scalar/kc=128         join=30/30 sig4=28/30 med=1.884e+04 gap=  5.91% BIMODAL  distinct timed a/b/c=1/12/11 all-exec=1/34/33 alias4k ab=[1024] ac=[1024] bc=[0]
+2x32/scalar/kc=32          join=30/30 sig4=30/30 med=     1376 gap=217.22% .        distinct timed a/b/c=10/10/10 all-exec=18/19/19 alias4k ab=[0] ac=[0] bc=[0]
+2x32/scalar/kc=512         join=30/30 sig4=30/30 med=7.807e+04 gap=  9.27% .        distinct timed a/b/c=5/4/4 all-exec=7/5/6 alias4k ab=[0] ac=[0] bc=[0]
+2x32/scalar/kc=8           join=30/30 sig4=30/30 med=      350 gap= 12.31% .        distinct timed a/b/c=1/1/12 all-exec=1/1/25 alias4k ab=[3328] ac=[256] bc=[1024]
+4x32/avx512/kc=128         join=30/30 sig4=30/30 med=    474.8 gap=  0.17% .        distinct timed a/b/c=8/7/7 all-exec=15/14/13 alias4k ab=[0] ac=[0] bc=[0]
+4x32/avx512/kc=32          join=30/30 sig4=30/30 med=    123.2 gap=  0.32% .        distinct timed a/b/c=1/6/6 all-exec=1/17/16 alias4k ab=[1024] ac=[1024] bc=[0]
+4x32/avx512/kc=512         join=30/30 sig4=30/30 med=     1866 gap=  0.48% .        distinct timed a/b/c=5/4/5 all-exec=10/7/10 alias4k ab=[0] ac=[0] bc=[0]
+4x32/avx512/kc=8           join=30/30 sig4=30/30 med=    36.87 gap=  3.58% .        distinct timed a/b/c=1/1/15 all-exec=1/1/27 alias4k ab=[3200] ac=[128] bc=[1024]
+4x32/scalar/kc=128         join=30/30 sig4=29/30 med= 3.88e+04 gap=  8.11% .        distinct timed a/b/c=3/3/3 all-exec=9/8/8 alias4k ab=[0] ac=[0] bc=[0]
+4x32/scalar/kc=32          join=30/30 sig4=30/30 med=     2556 gap=227.90% .        distinct timed a/b/c=1/10/10 all-exec=1/16/15 alias4k ab=[1024] ac=[1024] bc=[0]
+4x32/scalar/kc=512         UNMEASURED (R5): render join 28/30 of 90 execs; 0 with no candidate, 2 ambiguous | sig4 join 14/30
+    sample 25 n=10000 printed=162216: 2 candidates, 2 distinct address tuple(s)
+    sample 26 n=10000 printed=162216: 2 candidates, 2 distinct address tuple(s)
+4x32/scalar/kc=8           join=30/30 sig4=30/30 med=    643.1 gap=  0.84% .        distinct timed a/b/c=1/1/13 all-exec=1/1/25 alias4k ab=[3200] ac=[128] bc=[1024]
+6x32/avx512/kc=128         join=30/30 sig4=30/30 med=    599.5 gap=  0.25% .        distinct timed a/b/c=1/1/2 all-exec=5/5/2 alias4k ab=[0] ac=[0, 2944] bc=[0, 2944]
+6x32/avx512/kc=32          join=30/30 sig4=30/30 med=    158.5 gap=  0.69% .        distinct timed a/b/c=12/12/2 all-exec=21/20/2 alias4k ab=[0] ac=[0, 2944] bc=[0, 2944]
+6x32/avx512/kc=512         join=30/30 sig4=30/30 med=     2407 gap=  3.41% .        distinct timed a/b/c=1/1/1 all-exec=1/2/2 alias4k ab=[0] ac=[0] bc=[0]
+6x32/avx512/kc=8           join=30/30 sig4=30/30 med=     45.2 gap=  1.95% .        distinct timed a/b/c=7/1/2 all-exec=30/1/2 alias4k ab=[3072] ac=[0, 2944] bc=[1024, 3968]
+
+-- R1:19 of 20 rows analyzable; 1 unmeasured --
+R1: rows with all three addresses constant across the 30 timed samples: 2 of 19 analyzable (registered prediction: >= 8 of 20)
+
+-- R3: 2 bimodal cells of 19 analyzable rows --
+
+2x32/avx512/kc=32  gap=5.87%  H=13 L=17  period2=False
+  seq  HHHHHHHHHHHHHLLLLLLLLLLLLLLLLL
+  address tuples: 9 distinct over 30 timed samples; each mode-pure: False
+  -> HYPOTHESIS 1 REFUTED on this cell: a tuple appears in both modes
+
+2x32/scalar/kc=128  gap=5.91%  H=24 L=6  period2=False
+  seq  HHHHHHHHHHHHHLLHHLHLHLLHHHHHHH
+  address tuples: 12 distinct over 30 timed samples; each mode-pure: False
+  -> HYPOTHESIS 1 REFUTED on this cell: a tuple appears in both modes
+
+-- rows where the two R5 implementations disagree on measurability --
+   2x32/scalar/kc=128: render 30/30, sig4 28/30
+   4x32/scalar/kc=128: render 30/30, sig4 29/30

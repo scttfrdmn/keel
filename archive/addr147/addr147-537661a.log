@@ -1,0 +1,35 @@
+
+=== provenance and the frozen-tree guard ===
+2026-09-02T04:45:21Z
+settings: HOST=janus.local FILTER=BenchmarkKernel COUNT=30 BTIME=1s TAG=<none>
+driver host: terror
+rev: 537661ad737ad7f5b59e57f5fe4a54bcdd846e32
+tree clean: yes
+sourced scripts/remote.sh; KEEL_REMOTE_DIR=/tmp/keel-remote; default KEEL_PIN_WIDTH=8
+go: go version go1.27.0 darwin/arm64
+
+=== build: one binary, used by BOTH arms ===
+remote_build_test rc=0
+traced binary: sha256=d0d46d26c15cc8b2 bytes=5066553 flags=[-buildmode=exe -compiler=gc -trimpath=true]
+toolchain read off the artifact:         builder toolchain go1.27.0-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off bench.test and not off this shell's go
+
+=== arm w8: KEEL_PIN_WIDTH=8, trace -> /tmp/keel-remote/addrtrace-w8.txt ===
+ls: cannot access '/tmp/keel-remote/addrtrace-w8.txt': No such file or directory
+pre-arm trace file removed (the line above should say No such file)
+arm w8: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm w8: log rows: 600
+arm w8: keel-pin line: keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+arm w8: trace lines INSIDE the bench log (must be 0): 0
+arm w8: scp trace rc=0 lines=2733
+
+=== arm w1: KEEL_PIN_WIDTH=1, trace -> /tmp/keel-remote/addrtrace-w1.txt ===
+ls: cannot access '/tmp/keel-remote/addrtrace-w1.txt': No such file or directory
+pre-arm trace file removed (the line above should say No such file)
+arm w1: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm w1: log rows: 600
+arm w1: keel-pin line: keel-pin: mask=0 width=1 doms=0 nodedoms=1
+arm w1: trace lines INSIDE the bench log (must be 0): 0
+arm w1: scp trace rc=0 lines=2670
+
+=== done ===
+2026-09-02T05:18:00Z

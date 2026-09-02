@@ -1,0 +1,21 @@
+  SKIP n=1 elapsed=0: String() emitted no ns/op field
+  ok   n=      10 elapsed=      9994 go=     999.4 pretty=     999.4 control(%.4g)=     999.4
+  ok   n=      10 elapsed=      9995 go=     999.5 pretty=     999.5 control(%.4g)=     999.5
+  ok   n=      10 elapsed=      9999 go=     999.9 pretty=     999.9 control(%.4g)=     999.9
+  ok   n=      10 elapsed=     99994 go=      9999 pretty=      9999 control(%.4g)=      9999
+  ok   n=      10 elapsed=     99995 go=     10000 pretty=     10000 control(%.4g)=     1e+04
+  ok   n=      10 elapsed=    999949 go=     99995 pretty=     99995 control(%.4g)= 9.999e+04
+  ok   n=      10 elapsed=    999950 go=     99995 pretty=     99995 control(%.4g)=     1e+05
+  ok   n=      10 elapsed=   9999499 go=    999950 pretty=    999950 control(%.4g)= 9.999e+05
+  ok   n=      10 elapsed=   9999500 go=    999950 pretty=    999950 control(%.4g)=     1e+06
+  ok   n=       5 elapsed=     99227 go=     19845 pretty=     19845 control(%.4g)= 1.985e+04
+  ok   n=  225726 elapsed=4478400682 go=     19840 pretty=     19840 control(%.4g)= 1.984e+04
+  ok   n=  225445 elapsed=4319726863 go=     19161 pretty=     19161 control(%.4g)= 1.916e+04
+  ok   n=   10000 elapsed=1612530000 go=    161253 pretty=    161253 control(%.4g)= 1.613e+05
+  ok   n= 1000000 elapsed=1328000000 go=      1328 pretty=      1328 control(%.4g)=      1328
+  ok   n=      30 elapsed=       501 go=     16.70 pretty=     16.70 control(%.4g)=      16.7
+  ok   n=      30 elapsed=         3 go=    0.1000 pretty=    0.1000 control(%.4g)=       0.1
+  ok   n=    1000 elapsed=         7 go=  0.007000 pretty=  0.007000 control(%.4g)=     0.007
+  ok   n=  100000 elapsed=         3 go= 0.0000300 pretty= 0.0000300 control(%.4g)=     3e-05
+pretty() vs the toolchain: 18 match, 0 mismatch (1 not observable through String())
+positive control (4 sig figs everywhere): 13 of 18 mismatch -- a nonzero count is what makes the 18/18 above meaningful

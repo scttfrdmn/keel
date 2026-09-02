@@ -9,6 +9,16 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`#147` decided by measurement: panel placement is refuted on 7 of 8 bimodal cells, and core
+  migration on the 2 that survive width 1** (`docs/issue147-addr-537661a.md`, logs and instruments in
+  `archive/addr147/`). Two arms on `janus.local`, one binary (`sha256=d0d46d26c15cc8b2`), pinned
+  `width=8` and `width=1`, 20 rows × 30 samples each, analyzed strictly against the pre-registration
+  posted before the run. The registered R1 prediction **failed** — 2 of 19 and 3 of 18 rows had all
+  three addresses constant against "≥ 8 of 20" — and failed informatively: all five constant rows are
+  `kc=512`, the inverse of the dev host. Two findings the run was not looking for: the R5 join needed
+  `testing.prettyPrint`'s **exact rendering** rather than 4-sig-fig rounding (double rounding both
+  collides and misses; +7 measurable row-arms, transcription checked 18/18 against the toolchain), and
+  #147's own classifier is defeated by a single outlier — one 4373 among 1213…1384 hides a 9.2% split.
 - **`KEEL_ADDR_TRACE` (`#147`): one line per benchmark execution recording where `kernelPanels` put
   the three panels, so the placement hypothesis can be decided instead of argued.** `BenchmarkKernel`
   allocates inside the `b.Run` closure, so every ramp step and every timed run gets fresh panels;

@@ -1,0 +1,16 @@
+== w8: post-hoc outlier-robust classifier ==
+  + 2x32/avx512/kc=8         gap= 2.33% H=4 L=26 tuples=10 mode-pure=False
+      seq LLLLLLHLHLLLLHLLLHLLLLLLLLLLLL
+      a tuple appears in both modes -> REFUTED
+  + 2x32/scalar/kc=32        gap= 9.23% H=18 L=12 tuples=10 mode-pure=False
+      seq LLLLLLLLLLLLHHHHHHHHHHHHHHHHHH
+      a tuple appears in both modes -> REFUTED
+  + 2x32/scalar/kc=512       gap= 2.48% H=21 L=9 tuples=5 mode-pure=False
+      seq HLLHHHHHHHLHLLLHHLHLLHHHHHHHHH
+      a tuple appears in both modes -> REFUTED
+  + 4x32/scalar/kc=32        gap= 8.80% H=25 L=5 tuples=11 mode-pure=False
+      seq LLLLLHHHHHHHHHHHHHHHHHHHHHHHHH
+      a tuple appears in both modes -> REFUTED
+  cells added by the variant: 4
+== w1: post-hoc outlier-robust classifier ==
+  cells added by the variant: 0
