@@ -38,3 +38,10 @@ bench/results/*.local.*
 # tools/shapegen candidate scratch. Under internal/vec because that is where simd
 # imports live; dot-prefixed so `go ./...` cannot pick up a crashed sweep's leftovers.
 /internal/vec/.shapegen-*
+# Python bytecode. The #147 analysis instruments import each other (control147.py and
+# sensitivity147.py both `from analyze147 import ...`), so running any of them writes a
+# __pycache__ beside the archived evidence -- and `git add -A archive/addr147` tracked one
+# before this line existed. Bytecode is a build artifact of a specific interpreter version
+# and reproduces nothing.
+__pycache__/
+*.pyc

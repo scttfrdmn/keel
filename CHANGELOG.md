@@ -19,6 +19,11 @@ While the major version is 0, minor versions may contain breaking changes.
   `testing.prettyPrint`'s **exact rendering** rather than 4-sig-fig rounding (double rounding both
   collides and misses; +7 measurable row-arms, transcription checked 18/18 against the toolchain), and
   #147's own classifier is defeated by a single outlier — one 4373 among 1213…1384 hides a 9.2% split.
+  The archive's **extensions turn out to be load-bearing**: `tools/benchci`'s corpus sweep globs
+  `archive/*/*.txt` and fails on a match that yields no readings, so eight traces and instrument
+  outputs named `.txt` reddened CI — the test doing exactly its job. Under `archive/`, `.txt` now means
+  raw benchmark log and nothing else (`.trace`, `.out`, `.log` for the rest), and renaming the two real
+  logs *into* the convention grew the corpus 121 files / 1765 readings → 123 / 1885, still 0 escapes.
 - **`KEEL_ADDR_TRACE` (`#147`): one line per benchmark execution recording where `kernelPanels` put
   the three panels, so the placement hypothesis can be decided instead of argued.** `BenchmarkKernel`
   allocates inside the `b.Run` closure, so every ramp step and every timed run gets fresh panels;

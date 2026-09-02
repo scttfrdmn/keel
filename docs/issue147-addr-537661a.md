@@ -7,14 +7,14 @@ Two arms on `janus.local` at `537661a`, launched detached, 2026-09-02 04:45–05
 before the run as [#147 comment](https://github.com/scttfrdmn/keel/issues/147) — criteria R1–R5,
 their predictions, and the branches that would teach nothing. Every number below is re-derivable:
 
-    python3 archive/addr147/analyze147.py archive/addr147/addr147-537661a-w8.log \
-        archive/addr147/addr147-537661a-w8-trace.txt w8
+    python3 archive/addr147/analyze147.py archive/addr147/bench-addr147-537661a-w8.txt \
+        archive/addr147/addr147-537661a-w8.trace w8
 
-reproduces `archive/addr147/analysis-w8.txt` byte for byte (checked; likewise `w1`).
+reproduces `archive/addr147/analysis-w8.out` byte for byte (checked; likewise `w1`).
 
 The analyzer was controlled before any real data reached it: `archive/addr147/control147.py` drives
 all four registered R2 verdicts, the R5 refusal, the R5 *ambiguity* refusal, the unimodal no-op and
-the period-2 branch with synthetic input whose verdict is known by construction (`controls.txt`).
+the period-2 branch with synthetic input whose verdict is known by construction (`controls.out`).
 Control 8 exists because the `ramp-vs-timed` counter had only ever printed 0 — correctly, but a
 counter that has never printed anything else is an unread witness; it prints 30/30 there.
 
@@ -52,7 +52,7 @@ and the `sig4` column stays in the published table for every row. The transcript
 is checked against the toolchain rather than against a second reading of the same source —
 `testing.BenchmarkResult.String()` calls it, so Go itself renders the same values
 (`archive/addr147/prettycheck/main.go`, compared by `archive/addr147/prettycheck147.py`, output in
-`prettycheck.txt`):
+`prettycheck.out`):
 
     pretty() vs the toolchain: 18 match, 0 mismatch (1 not observable through String())
     positive control (4 sig figs everywhere): 13 of 18 mismatch -- a nonzero count is what
@@ -136,7 +136,7 @@ above; it is not applied retroactively to anything.
 
 ## An unregistered cross-arm finding, recorded and not explained
 
-`archive/addr147/crossarm.txt`. Every `avx512` row lands within 0.97–1.10 of its width-8 median at
+`archive/addr147/crossarm.out`. Every `avx512` row lands within 0.97–1.10 of its width-8 median at
 width 1, and the scalar `kc=128`/`kc=512` rows within 1.00–1.05. Four rows do not:
 
 | row | w8 median | w1 median | w1/w8 |
