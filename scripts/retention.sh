@@ -639,7 +639,6 @@ main() {
 
   local host
   while read -r host; do
-    [[ -n "$host" ]] || continue
     remote_host_header "$host" || continue
     if ! KEEL_REMOTE_ENV="$RENV" remote_exec "$host" "$BIN" "${BFLAGS[@]}" \
          -test.bench="$FILTER" >"$LOG" 2>&1; then
@@ -663,7 +662,7 @@ main() {
       feed)      feed_host "$host" "$CSV" "$LOG" ;;
     esac
     echo
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
 
   echo "done. Numbers above are this host set at this commit; nothing here is a criterion."
 }

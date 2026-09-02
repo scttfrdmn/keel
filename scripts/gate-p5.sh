@@ -385,7 +385,6 @@ if [[ -n "$HOSTS" ]]; then
   echo
   echo "-- hosts, governors and topology --"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     # This gate's copy of the governor check was the divergent one, and the divergence
     # was the *correct* version: it established that a reading exists before parsing
     # for one, so an unreachable host was never reported as an unreadable sysfs file.
@@ -433,7 +432,7 @@ if [[ -n "$HOSTS" ]]; then
     else
       pass "[$host] $ncpu CPUs, enough for the $P5_THREADS the criterion names"
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
 fi
 
 # --------------------------------------- parallel correctness, before throughput
@@ -451,7 +450,6 @@ else
     "cross-compiled linux/amd64 test binary (root package: parallel correctness)" \
     "cross-compile of the linux/amd64 test binary"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
     if [[ "$OK" -eq 0 ]]; then
@@ -528,7 +526,7 @@ else
     else
       fail "[$host] KEEL_FORCE=nonsense was accepted: an unrecognized force value must fail loudly, or a typo in somebody's harness measures the wrong backend for a year"
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   if [[ -n "$AVX512_GREEN" ]]; then
     pass "the suite ran green with the avx512 microkernel live (audited from $AVX512_GREEN)"
   else
@@ -689,7 +687,6 @@ elif [[ "$TREE_CLEAN" -eq 0 ]]; then
   unmeasured "the native race build did not run: this gate refused a dirty tree above, and a check that could not run is unmeasured rather than clean"
 else
   while read -r host; do
-    [[ -n "$host" ]] || continue
     hgo="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" 'command -v go >/dev/null 2>&1 && go version || echo none' 2>/dev/null || echo none)"
     if [[ "$hgo" == none || -z "$hgo" ]]; then
       unmeasured "[$host] no Go toolchain, so -race cannot be built natively here and this host's vector path is unmeasured for races"
@@ -717,7 +714,7 @@ else
     if [[ "$NRC" -eq 0 ]]; then
       RACE_HOSTS=$((RACE_HOSTS + 1))
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   if [[ "$RACE_HOSTS" -eq 0 ]]; then
     unmeasured "no host produced a race-detector reading on the vector path, so that criterion is unmeasured rather than clean"
   fi
@@ -818,7 +815,6 @@ else
     "cross-compiled linux/amd64 bench binary (Scale + Peak)" \
     "cross-compile of the linux/amd64 bench binary"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     # Re-read at the moment of measurement, not only in the preamble: a governor
     # that changed in between belongs to a machine somebody started using.
     # Split the way its two twins were (#73): this site was outside that sweep
@@ -1496,7 +1492,7 @@ else
     # Neither cleared nor missed anywhere: BASELINE was the whole of this host's verdict.
     [[ "$HOST_BASE" -eq 1 && "$HOST_CLEARED" -eq 0 && "$HOST_MISSED" -eq 0 ]] &&
       SCALE_HOSTS_BASEONLY=$((SCALE_HOSTS_BASEONLY + 1))
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   # TWO BARS IN ONE TALLY, named rather than summarised, built ONCE because four renderings
   # of one clause is four places for the next constant to be typed into three of.
   # HOST_CLEARED is lowered by a miss against SCALE_FLOOR on any of P5_JUDGED *or* against

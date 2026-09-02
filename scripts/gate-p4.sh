@@ -237,12 +237,9 @@ resolve_fleet
 # `unmeasured`; the sentence this replaced read the two as one and called both unmet. The
 # check itself now lives in remote.sh's assert_governor: this gate was the master the
 # other three copied, and all four shared a mislabel none of them could reveal (#83).
-if [[ -n "$HOSTS" ]]; then
-  while read -r host; do
-    [[ -n "$host" ]] || continue
-    assert_governor "$host" preamble
-  done <<<"$HOSTS"
-fi
+while read -r host; do
+  assert_governor "$host" preamble
+done < <(hosts_lines)
 
 AVX512_GREEN=""
 if [[ -z "$HOSTS" ]]; then
@@ -252,7 +249,6 @@ else
     "cross-compiled linux/amd64 test binary (root package: P4 routines vs oracle)" \
     "cross-compile of linux/amd64 test binary"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     probe_or_unmeasured "$host" || continue
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
@@ -269,7 +265,7 @@ else
       AVX512_GREEN="$host"
       cp "$LOG" "$SWEEPLOG"
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   if [[ -n "$AVX512_GREEN" ]]; then
     pass "the lattices ran green with the avx512 microkernel live (target: $AVX512_GREEN)"
   else
@@ -481,7 +477,6 @@ else
     "cross-compile of linux/amd64 bench binary"
   DRIFT_CHECKED=""
   while read -r host; do
-    [[ -n "$host" ]] || continue
     # Re-read at the moment of measurement, not merely in the preamble: a governor
     # that changed in between belongs to a machine somebody started using, and the
     # reading it produces is not one §5 rule 5 covers. This site used to print no
@@ -611,7 +606,7 @@ else
         SYRK_INDET=$((SYRK_INDET + 1))
         ;;
     esac
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   [[ -n "$DRIFT_CHECKED" ]] || unmeasured "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA are unchecked against the object code — unmeasured, not drifted"
   # The aggregate inherits the three states, in the order that keeps a real miss
   # from hiding behind a noisy host: one host below the bar is a red whatever the

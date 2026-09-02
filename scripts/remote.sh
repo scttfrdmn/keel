@@ -508,6 +508,22 @@ resolve_fleet() {
   require_disk
 }
 
+# hosts_lines — the fleet, one host per line, and NOTHING at all when it is empty.
+# Feed it to a loop as `done < <(hosts_lines)`.
+#
+# Lifted from 22 iteration sites across nine scripts (#131), every one of which opened
+# with the same `[[ -n "$host" ]] || continue`. That guard is not defensive padding: a
+# here-string of the empty string is one empty LINE, not zero lines, so `<<<"$HOSTS"`
+# on an unconfigured fleet runs the body once with host="". Twenty-two copies of one
+# workaround for one property of `<<<`, and four of them additionally sat inside an
+# `if [[ -n "$HOSTS" ]]` wrapper doing the same job a second time.
+#
+# Why the process substitution is safe here, since it is a fail-open shape and this
+# repo treats those as defects: if `hosts_lines` itself died the loop would see zero
+# hosts, and zero hosts is a state every caller already renders as `unmeasured` rather
+# than as a pass. The failure direction is the one the verdict layer already refuses.
+hosts_lines() { sed '/^[[:space:]]*$/d' <<<"${HOSTS:-}"; }
+
 # probe_or_unmeasured HOST — the host's provenance line, or the refusal that a host which did
 # not answer produced no reading rather than a failure (DESIGN.md §5.6). Returns nonzero so the
 # caller's loop reads `|| continue`.

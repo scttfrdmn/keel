@@ -200,7 +200,6 @@ else
   N_CONFIGURED=0
   N_SCORED=0
   while read -r host; do
-    [[ -n "$host" ]] || continue
     N_CONFIGURED=$((N_CONFIGURED + 1))
     provenance="$(remote_probe "$host" || true)"
     if [[ -z "$provenance" ]]; then
@@ -217,7 +216,7 @@ else
     remote_exec "$host" "$TESTBIN" -test.v >"$TESTLOG" 2>&1 || REMOTE_OK=$?
     record_target "$host" "$TESTLOG" "$REMOTE_OK"
     N_SCORED=$((N_SCORED + 1))
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
 
   if [[ "$N_SCORED" -eq "$N_CONFIGURED" ]]; then
     pass "every configured remote target ran ($N_SCORED/$N_CONFIGURED)"

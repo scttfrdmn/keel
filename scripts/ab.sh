@@ -243,9 +243,8 @@ ab_run() {
   echo
 
   while read -r host; do
-    [[ -n "$host" ]] || continue
     remote_host_header "$host" || continue
     ab_host "$host"
     echo
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
 }

@@ -163,6 +163,25 @@ While the major version is 0, minor versions may contain breaking changes.
   which is the mirror image of the same defect and stays open on #113.
 
 ### Changed
+- **The fleet is iterated through one function, `hosts_lines`, and 22 copies of one workaround are
+  gone** (`scripts/remote.sh`, `#131`). Every loop over the fleet was `done <<<"$HOSTS"` opening with
+  `[[ -n "$host" ]] || continue`, in nine scripts. That guard was not padding: a here-string of the
+  empty string is one empty **line**, not zero lines, so an unconfigured fleet ran every loop body
+  once with `host=""`. Now `done < <(hosts_lines)`, and the empty fleet yields **0** iterations
+  against **1** phantom iteration under the old unguarded shape — driven both ways rather than
+  asserted. The loop body still runs in the parent shell, with a **true-pipeline control** showing the
+  test can see the alternative (process substitution 2, here-string 2, pipeline **0**; a first control
+  put the pipe inside the process substitution and proved nothing, which is recorded because it was
+  published in-session before being corrected). Four redundant `if [[ -n "$HOSTS" ]]` wrappers went
+  with them; three that guard more than a loop were kept. **Net −14 shell lines** — the ledger's
+  first negative row since `ba6f286`, per-file deltas in `docs/apparatus-ledger.md`.
+- **The remaining apparatus debt is measured as spent apparatus, not redundancy** (`#131`). At 16466
+  shell lines: **zero** dead functions (the two first reported were a false positive from a
+  comment-stripper truncating `[[ $# -ge 1 ]]` at the `#`), **one** six-line duplicate function, ≤141
+  lines in repeated blocks, and **46.0% of the term is comment** — the prose the cap's own carve-out
+  authorises and the two named non-paydowns forbid reclaiming. So a lift can reach ~150 lines against
+  **817 owed**: the trend reverses by shipping substance or by removing a capability, and the second
+  is Scott's call, not the ledger's.
 - **Every fleet binary is built with `-trimpath`, so a build path can no longer reach a
   measurement** (`remote_build_test` in `scripts/remote.sh`, `#141`, ruled 2026-09-01: *"the
   null-A/B-builds-two-binaries class dies at the root or it recurs forever; a project whose

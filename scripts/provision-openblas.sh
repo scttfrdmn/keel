@@ -421,7 +421,6 @@ main() {
 # in install_openblas/install_go/link_go, which need a tty for sudo to prompt on. With
 # `done <<<"$HOSTS"` both of those were reading the host list instead.
   while read -r -u 3 host; do
-    [[ -n "$host" ]] || continue
     say "$host"
     p="$(probe "$host")"
     if [[ -z "$p" ]]; then
@@ -511,7 +510,7 @@ main() {
       bad "$host is provisioned but not measurable: governor=$GOV_SHOWN, not performance"
       RC=1
     fi
-  done 3<<<"$HOSTS"
+  done 3< <(hosts_lines)
 
   echo
   if [[ "$RC" -eq 0 ]]; then

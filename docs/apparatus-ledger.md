@@ -83,12 +83,14 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-09-01 | `9862637` | +71 | **866** | **The planted-delta control, authorised as debt and over its estimate.** Scott: *"authorised as debt, and it was never optional… ~30 lines, its own ledger row, landed with the control shown to catch the plant."* Authorised at ~30; **+71 disclosed**, measured per hunk: `ab_control` and its doc block +47, `ab_control_samples` +8, `ab_arm_file` +6, the call site in `ab_run` +4, and +9/−5 converting `ab_host` to the shared namer. Half of it is the doc block, and it is what makes the row honest rather than shorter: the control exists because #141's checklist asked for it *before* the harness was written and it was skipped, and the block names that, the exact-×1.1 construction, and what the control cannot see (§5 rule 12). The `ab_arm_file` lift is the load-bearing part — the control drives the run's own two SHAs through the same namer `ab_host` uses, so the collision it was written for is covered by construction rather than by a second assertion. |
 | 2026-09-01 | `9862637` | +58 | **924** | **The build-flags line, ruled as an instrument change.** Scott: *"the declaration row grows a **build-flags line** (the deeper fix: flags are part of the binary's provenance and belong in every log's self-description)."* `remote.sh` +32 (`build_settings`, plus `builder_toolchain` restated to carry the flags and the measured `set -e` fact behind its two-guard form) and `ab.sh` +26 (`ab_arm_provenance` and its two call sites). **Not exempt**, and the exemption was checked rather than assumed: it covers a criterion's own terms *on the signing path*, and `ab.sh`'s own header says its callers certify nothing. Booked in full. |
 | 2026-09-01 | `065608d` | +9 | **933** | **`-trimpath` in `remote_build_test`, ruled as an instrument change.** Scott: *"`-trimpath`: yes, now… the null-A/B-builds-two-binaries class dies at the root or it recurs forever."* `remote.sh` +10/−1, of which **one line is the flag** and nine are the comment that says why a build flag is a measurement decision — the measured 4-digests-from-4-paths fact, the `1.71/0.99/1.32%` layout floor it sits beside, and that the flag is readable back out of the artifact. Deliberately not shortened: this is the rule's own example of a fix whose honest form is a comment, and the cap permits that at the cost of budget rather than by exemption. Booked in full; **not** exempt, on the same reading as the row above. |
+| 2026-09-01 | `PENDING` | **−14** | **919** | **`hosts_lines`, the third real paydown and the first negative row since `ba6f286`.** One function in `remote.sh` (+16, of which 11 are the comment recording *why* the 22 copies existed) against 22 iteration sites converted to `done < <(hosts_lines)`, 22 `[[ -n "$host" ]] || continue` guards deleted and four redundant `if [[ -n "$HOSTS" ]]` wrappers removed across nine scripts. Per file: `gate-p1.sh` −6, `gate-p3.sh` −6, `gate-p2.sh` −5, `gate-p4.sh` −5, `gate-p5.sh` −4, `ab.sh` −1, `gate-p0.sh` −1, `provision-openblas.sh` −1, `retention.sh` −1, `remote.sh` **+16**. It is a lift by the definition above and not a comment deletion: what the 22 guards worked around is one property of `<<<` — a here-string of the empty string is one empty *line*, not zero lines, so an unconfigured fleet ran every loop body once with `host=""`. Both readings agree: `git diff --numstat` gives −14, and `gate-docs.sh`'s counter moved 16480 → 16466. Three wrappers were **kept** (`gate-p1.sh:295`, `gate-p3.sh:903`, `gate-p5.sh:384`) because they guard more than a loop. |
 
-**Current debt: +933 net shell lines** unpaid by a routine, a kernel or a library fix, of which
+**Current debt: +919 net shell lines** unpaid by a routine, a kernel or a library fix, of which
 **+97 is a re-reading rather than a spend** — the tree did not grow, the counter stopped measuring
-by file extension — and **+5 is exempt**, so **+831 is owed** once both are set aside. Shell term
-16480, library term 8964, historical ratio 1.84x (measured 2026-09-01 with the `-trimpath` row above
-staged). Both readings of `9862637`'s `+129` agree — `git show --numstat --format= 9862637 -- '*.sh'`
+by file extension — and **+5 is exempt**, so **+817 is owed** once both are set aside. Shell term
+16466, library term 8964, historical ratio 1.84x (measured 2026-09-01 with the `hosts_lines` row
+above staged; the ratio is unchanged at two decimals by a 14-line paydown, which is the reading rule
+at the top of this file demonstrating itself in the paying direction for the first time). Both readings of `9862637`'s `+129` agree — `git show --numstat --format= 9862637 -- '*.sh'`
 gives 102 + 36 added against 5 + 4 removed, and `gate-docs.sh`'s own counter moved 16342 → 16471 —
 which is the cross-check that makes the figure a measurement rather than a subtraction. The
 `-trimpath` commit adds `+9` on the same two readings (`10 − 1` in `remote.sh`; the counter 16471 →
@@ -152,3 +154,27 @@ Two things are **not** paydown, stated so they cannot be attempted:
 
 The honest forms are a **lift** (two implementations become one, as in `25e8a86` and `ba6f286`)
 and shipping a routine or kernel that the apparatus already exists to measure.
+
+## How much of the total a lift can still reach: measured, 2026-09-01
+
+Before the `hosts_lines` row above was cut, the tree was measured for what else a lift could take.
+The answer bounds the remaining paydown, so it belongs beside the total rather than in a comment:
+
+- **Composition.** The 16466 lines under the shell term — all 31 files, every one of them under
+  `scripts/` — are **8116 code / 7580 comment / 770 blank**, i.e. **46.0% comment**. Counted by
+  whole line, so a trailing `# …` on a command counts as code and the comment share is a lower
+  bound. The *code* in `scripts/` (8116) is smaller than the library term (8964); the
+  ratio is above 1 because of the prose. That prose is what the cap's own carve-out authorises
+  (*"a fix whose honest form is a comment is still allowed; it just spends budget"*), and the two
+  non-paydowns above forbid reclaiming it.
+- **Dead code: zero.** No function in `scripts/` is uncalled. The first pass reported two in
+  `detach.sh` and both were false positives — the caller was `run) [[ $# -ge 1 ]] || die "…";
+  cmd_run "$@" ;;`, and a comment-stripper that split on `#` truncated the line at `$#`.
+- **Duplicate functions: one, six lines** (`field` in `gate-lib.sh` against `fieldof` in
+  `provision-openblas.sh`, which does not source it).
+- **Repeated blocks of six lines or more: ~141 code lines** in total, upper bound, counting every
+  occurrence beyond the first.
+
+So the outstanding total is **spent apparatus, not redundancy**, and it cannot be paid down to zero
+by lifting: the reachable ceiling is on the order of 150 lines against 817 owed. The trend reverses
+by shipping substance or by removing a capability, and the second is not the ledger's call to make.

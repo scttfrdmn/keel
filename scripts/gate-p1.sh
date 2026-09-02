@@ -149,12 +149,9 @@ resolve_fleet
 # on `powersave`, and one of their rates is published (#79). The check itself now
 # lives in remote.sh's assert_governor — it used to be a copy of gate-p4's, and
 # four such copies shared a mislabel none of them could reveal (#83).
-if [[ -n "$HOSTS" ]]; then
-  while read -r host; do
-    [[ -n "$host" ]] || continue
-    assert_governor "$host" preamble
-  done <<<"$HOSTS"
-fi
+while read -r host; do
+  assert_governor "$host" preamble
+done < <(hosts_lines)
 
 N_CONF=0
 N_SCORED=0
@@ -165,7 +162,6 @@ else
     "cross-compiled linux/amd64 test binary" \
     "cross-compile of linux/amd64 test binary"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     N_CONF=$((N_CONF + 1))
     probe_or_unmeasured "$host" || continue
 
@@ -187,7 +183,7 @@ else
       sed 's/^/        /' "$LOG" | tail -30
     fi
     N_SCORED=$((N_SCORED + 1))
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   if [[ "$N_SCORED" -eq "$N_CONF" ]]; then
     pass "every configured remote target ran ($N_SCORED/$N_CONF)"
   else
@@ -225,7 +221,6 @@ else
     "cross-compile of linux/amd64 bench binary"
 
   while read -r host; do
-    [[ -n "$host" ]] || continue
     # Re-read at the moment of measurement, not merely in the preamble above: a
     # governor that changed in between belongs to a machine somebody started
     # using, and the reading it produces is not one §5 rule 5 covers. Silent on
@@ -275,7 +270,7 @@ else
     else
       fail "[$host] Sdot n=4096 speedup ${pt}x, only ${lo}x net of CI (< 4x required)"
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
 
   # The aggregate, three-way over coverage state (#73's tier C). Every host that
   # got this far is under `performance`, asserted twice above, so this line no
@@ -297,7 +292,6 @@ echo
 echo "-- measured FMA peak per host (issue #11; provenance, not a P1 criterion) --"
 if [[ -n "$HOSTS" ]]; then
   while read -r host; do
-    [[ -n "$host" ]] || continue
     if ! remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" -test.bench='Peak' \
          >"$BENCHLOG" 2>&1; then
       # Not a P1 criterion, but a failure here is either a collapsed accumulator
@@ -346,7 +340,7 @@ if [[ -n "$HOSTS" ]]; then
         else printf " (between the two shapes; treat with suspicion)"
       }')"
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
 fi
 
 assumed_ledger

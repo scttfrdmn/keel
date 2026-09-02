@@ -389,13 +389,10 @@ resolve_fleet
 # only one of the five with the
 # `sudo tee` remediation hint for a host that has no cpupower — the union of the
 # hints is what the lifted version prints.
-if [[ -n "$HOSTS" ]]; then
-  while read -r host; do
-    [[ -n "$host" ]] || continue
-    assert_governor "$host" preamble
-    admission_readback "$host" "$GOV_PROV"
-  done <<<"$HOSTS"
-fi
+while read -r host; do
+  assert_governor "$host" preamble
+  admission_readback "$host" "$GOV_PROV"
+done < <(hosts_lines)
 
 AVX512_GREEN=""
 SCALAR_FORCED=""
@@ -420,7 +417,6 @@ else
     "cross-compiled linux/amd64 test binary (root package: Sgemm vs oracle)" \
     "cross-compile of linux/amd64 test binary"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     probe_or_unmeasured "$host" || continue
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
@@ -462,7 +458,7 @@ else
       fail "[$host] KEEL_FORCE=scalar: the sweep passes with dispatch overridden"
       sed 's/^/        /' "$LOG" | tail -20
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   # The two aggregates, three-way over coverage state (#73's tier C). Both used to
   # collapse "the fleet came back short" into "the fleet had nothing to ask": a set
   # of hosts with no AVX-512 read as a FAIL saying no target ran it green, which is
@@ -907,7 +903,6 @@ if [[ -n "$HOSTS" ]]; then
     "cross-compiled linux/amd64 bench binary (Sgemm + peak)" \
     "cross-compile of linux/amd64 bench binary"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" \
          -test.bench="$SGEMM_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
       unmeasured "[$host] the Sgemm benchmark run failed, so this host's rates are unmeasured"
@@ -991,7 +986,7 @@ if [[ -n "$HOSTS" ]]; then
         pass "[$host] the dispatched $hkern is no slower than $altkern at 2048^3 ($(printf '%.1f' "$disppt") vs $(printf '%.1f' "$altpt") GFLOP/s, $(printf '%.1f' "$altlo") net of CI; separate invocations)"
       fi
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
 fi
 
 # The reference: same host, same invocation, built natively behind the cgo tag —
@@ -1030,7 +1025,6 @@ elif [[ -n "$(git status --porcelain)" ]]; then
   fail "the working tree is dirty, so \`git archive HEAD\` would measure something other than what is here; commit first"
 else
   while read -r host; do
-    [[ -n "$host" ]] || continue
     # Re-read, and re-checked, because the preamble's assertion has to hold at the
     # moment of measurement and not merely at the start of the gate. A governor that
     # changed in between belongs to a machine somebody started using, and the reading
@@ -1458,7 +1452,7 @@ else
       OB_MISSED=$((OB_MISSED + 1))
       fail "[$host] Sgemm at 2048^3 is only ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (< 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   # Three-way over coverage state, the same shape as criterion 5b's aggregate and for
   # the same reason: a host that could not be judged must not be re-reported here as a
   # host that missed the bar. That would be one cause producing two verdicts, the

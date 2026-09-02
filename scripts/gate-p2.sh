@@ -224,14 +224,11 @@ resolve_fleet
 # published, with the criterion satisfied by a different machine (#79). The
 # check itself now lives in remote.sh's assert_governor: it was a copy of gate-p4's,
 # and four such copies shared a mislabel none of them could reveal (#83).
-if [[ -n "$HOSTS" ]]; then
-  while read -r host; do
-    [[ -n "$host" ]] || continue
-    assert_governor "$host" preamble
-    # The class is a property of the host, knowable before any benchmark runs.
-    admission_readback "$host" "$GOV_PROV"
-  done <<<"$HOSTS"
-fi
+while read -r host; do
+  assert_governor "$host" preamble
+  # The class is a property of the host, knowable before any benchmark runs.
+  admission_readback "$host" "$GOV_PROV"
+done < <(hosts_lines)
 
 AVX512_GREEN=""
 AVX512_SEEN=0
@@ -242,7 +239,6 @@ else
     "cross-compiled linux/amd64 kernel test binary" \
     "cross-compile of linux/amd64 kernel test binary"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     probe_or_unmeasured "$host" || continue
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
@@ -267,7 +263,7 @@ else
     if grep -qE 'keel-kern-backends-exercised:.*(^| )avx512( |$)' "$LOG"; then
       AVX512_SEEN=$((AVX512_SEEN + 1))
     fi
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
   if [[ -n "$AVX512_GREEN" ]]; then
     pass "kernel tests green with the avx512 tile exercised (target: $AVX512_GREEN)"
   elif [[ "$AVX512_SEEN" -gt 0 ]]; then
@@ -404,7 +400,6 @@ else
     "cross-compiled linux/amd64 bench binary" \
     "cross-compile of linux/amd64 bench binary"
   while read -r host; do
-    [[ -n "$host" ]] || continue
     # Re-read at the moment of measurement, not merely in the preamble above: a
     # governor that changed in between belongs to a machine somebody started
     # using, and the reading it produces is not one §5 rule 5 covers. Silent on
@@ -614,7 +609,7 @@ else
       *)
         fail "[$host] unclassifiable throughput verdict '$CLASS/$RESULT' (why=$WHY)" ;;
     esac
-  done <<<"$HOSTS"
+  done < <(hosts_lines)
 
   # The aggregate, over ONE coverage decision shared with criterion 6 (`fleet_coverage`,
   # #90's ruling of 2026-08-16). Every host that got this far is under `performance`,
