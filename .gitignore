@@ -2,6 +2,14 @@
 *.test
 *.out
 *.prof
+# ...except under archive/, where `.out` is the convention for an instrument's recorded
+# output because `.txt` is reserved for raw benchmark logs (tools/benchci globs those and
+# fails on a match that yields no readings). The two conventions collide: following the
+# archive convention put the evidence a published report cites inside `*.out` above, and
+# `git add -A` then skipped it in silence. archive/addr147's `.out` files are tracked only
+# by accident of history -- they were committed under their first, wrong `.txt` names and a
+# rename keeps a tracked file tracked. archive/width148's were not, and nothing said so.
+!archive/**/*.out
 /bin/
 # `go build ./tools/...` drops this in the repo root
 /shapegen

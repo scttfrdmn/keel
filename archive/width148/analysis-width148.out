@@ -1,0 +1,135 @@
+arms: 8  rows per arm: 20  samples per row: [30]
+unparsed BenchmarkKernel lines: 0 (must be 0)
+
+=== 1. CONTROL: the twelve avx512 rows, declared before the run ===
+If these move, the scalar reading is about the host. #147 measured every
+avx512 row within 0.97-1.10 of its width-8 median at width 1.
+  pass a  w4/w8 ns ratio over 12 avx512 rows: 0.995-1.005
+  pass a  w2/w8 ns ratio over 12 avx512 rows: 0.999-1.050
+  pass a  w1/w8 ns ratio over 12 avx512 rows: 0.990-1.054
+  pass b  w4/w8 ns ratio over 12 avx512 rows: 0.972-1.002
+  pass b  w2/w8 ns ratio over 12 avx512 rows: 0.998-1.001
+  pass b  w1/w8 ns ratio over 12 avx512 rows: 0.984-1.030
+  worst deviation from 1.000: 0.054 at pass a w1
+
+=== 2. DRIFT: pass A (8,4,2,1) against pass B (1,2,4,8) ===
+Within-pass ratios to that pass's own w8 arm. A real width effect reads the
+same in both passes; a drift monotone in time does not, because the two
+passes visit each width at mirrored positions in the clock.
+  w4: ratio_A/ratio_B over 20 rows: 0.865-1.150  median 1.000
+  w2: ratio_A/ratio_B over 20 rows: 0.867-1.398  median 1.002
+  w1: ratio_A/ratio_B over 20 rows: 0.868-1.154  median 1.003
+  raw cross-pass agreement at each width (median_A/median_B, same width):
+    w8: 0.867-1.153  median 1.000
+    w4: 0.868-1.150  median 1.000
+    w2: 0.999-1.212  median 1.002
+    w1: 0.998-1.071  median 1.002
+
+=== 3. REGISTERED CRITERION: small-kc scalar rows at width 4 ===
+"the small-kc rows read within 1.15x of their width-8 rate at width 4"
+Rate = the log's own GFLOP/s column, which is the column #148's table published.
+  -- pass a --
+    2x32/kc=8   w8= 3.186 w4= 2.770 GFLOP/s  w4/w8=0.869 [0.868,0.871]  OUTSIDE 1.15x  (registered)
+    4x32/kc=8   w8= 2.764 w4= 2.771 GFLOP/s  w4/w8=1.003 [1.001,1.004]  within 1.15x  (registered)
+    2x32/kc=32  w8= 3.654 w4= 3.651 GFLOP/s  w4/w8=0.999 [0.996,1.001]  within 1.15x  (registered)
+    4x32/kc=32  w8= 3.067 w4= 3.548 GFLOP/s  w4/w8=1.157 [1.154,1.159]  OUTSIDE 1.15x  (registered)
+    2x32/kc=128 w8= 0.895 w4= 0.927 GFLOP/s  w4/w8=1.035 [0.993,1.117]  within 1.15x  (outside the registered set)
+    4x32/kc=128 w8= 0.871 w4= 0.887 GFLOP/s  w4/w8=1.018 [1.002,1.054]  within 1.15x  (outside the registered set)
+    2x32/kc=512 w8= 0.888 w4= 0.893 GFLOP/s  w4/w8=1.005 [0.992,1.032]  within 1.15x  (outside the registered set)
+    4x32/kc=512 w8= 0.864 w4= 0.866 GFLOP/s  w4/w8=1.002 [0.995,1.006]  within 1.15x  (outside the registered set)
+  -- pass b --
+    2x32/kc=8   w8= 2.768 w4= 2.768 GFLOP/s  w4/w8=1.000 [0.998,1.001]  within 1.15x  (registered)
+    4x32/kc=8   w8= 3.184 w4= 3.188 GFLOP/s  w4/w8=1.001 [0.999,1.003]  within 1.15x  (registered)
+    2x32/kc=32  w8= 3.168 w4= 3.171 GFLOP/s  w4/w8=1.001 [0.999,1.002]  within 1.15x  (registered)
+    4x32/kc=32  w8= 3.538 w4= 3.538 GFLOP/s  w4/w8=1.000 [0.998,1.002]  within 1.15x  (registered)
+    2x32/kc=128 w8= 0.927 w4= 0.927 GFLOP/s  w4/w8=1.001 [0.941,1.057]  within 1.15x  (outside the registered set)
+    4x32/kc=128 w8= 0.879 w4= 0.874 GFLOP/s  w4/w8=0.993 [0.964,1.007]  within 1.15x  (outside the registered set)
+    2x32/kc=512 w8= 0.887 w4= 0.892 GFLOP/s  w4/w8=1.006 [0.994,1.009]  within 1.15x  (outside the registered set)
+    4x32/kc=512 w8= 0.865 w4= 0.862 GFLOP/s  w4/w8=0.996 [0.992,1.007]  within 1.15x  (outside the registered set)
+  registered rows within 1.15x at width 4: 6 of 8
+
+=== 3b. The SHAPE the criterion was asked about: every width, not just 4 ===
+#148 registered the dichotomy 'monotone in width' vs 'a step between 8 and
+everything else'. Ratios of median GFLOP/s to the same pass's w8 arm:
+    row                    a4/a8   a2/a8   a1/a8     b4/b8   b2/b8   b1/b8
+    scalar 2x32/kc=8       0.869    0.868    0.258    1.000    1.152    0.298 *
+    scalar 4x32/kc=8       1.003    1.154    0.271    1.001    1.001    0.252 *
+    scalar 2x32/kc=32      0.999    0.825    0.232    1.001    1.153    0.268 *
+    scalar 4x32/kc=32      1.157    1.155    0.278    1.000    1.001    0.241 *
+    scalar 2x32/kc=128     1.035    0.948    0.977    1.001    0.984    0.947
+    scalar 4x32/kc=128     1.018    1.006    0.998    0.993    0.998    0.992
+    scalar 2x32/kc=512     1.005    0.954    0.994    1.006    1.001    0.994
+    scalar 4x32/kc=512     1.002    1.002    0.996    0.996    0.999    0.995
+    avx512 2x32/kc=8       0.998    1.000    0.995    1.001    1.001    0.998
+    avx512 4x32/kc=8       1.000    1.000    0.949    1.001    1.001    0.999
+    avx512 6x32/kc=8       0.997    0.976    0.969    1.001    1.001    0.971
+    avx512 2x32/kc=32      1.000    0.999    0.995    1.000    1.001    0.998
+    avx512 4x32/kc=32      1.001    1.000    0.949    1.001    1.000    0.999
+    avx512 6x32/kc=32      0.995    0.980    0.991    1.029    1.001    0.995
+    avx512 2x32/kc=128     1.000    1.001    0.996    0.999    1.001    0.999
+    avx512 4x32/kc=128     1.000    0.999    0.951    1.001    1.001    0.998
+    avx512 6x32/kc=128     1.002    0.986    0.999    1.001    1.001    0.999
+    avx512 2x32/kc=512     1.005    0.983    1.010    1.001    1.001    1.016
+    avx512 4x32/kc=512     1.000    1.000    0.995    1.001    1.000    1.000
+    avx512 6x32/kc=512     1.002    0.953    1.003    1.002    1.002    1.001
+    (* = a row in the registered set)
+
+=== 3c. The rows at the extremes of section 2's ranges ===
+A range is not a finding until the row holding its end is named.
+  w4 min: 0.865  scalar 4x32/kc=32  ratio_A=0.865 ratio_B=1.000
+  w4 max: 1.150  scalar 2x32/kc=8  ratio_A=1.150 ratio_B=1.000
+  w2 min: 0.867  scalar 4x32/kc=32  ratio_A=0.866 ratio_B=0.999
+  w2 max: 1.398  scalar 2x32/kc=32  ratio_A=1.212 ratio_B=0.867
+  w1 min: 0.868  scalar 4x32/kc=32  ratio_A=3.601 ratio_B=4.151
+  w1 max: 1.154  scalar 2x32/kc=8  ratio_A=3.878 ratio_B=3.359
+
+=== 3d. The level structure behind those extremes (unregistered) ===
+Per-arm medians of the four registered rows, sorted, to show whether the
+spread is a continuum or a small set of discrete levels visited per process.
+  2x32/kc=8   above 1.5: 2.766(a2) 2.768(b4) 2.768(b8) 2.770(a4) 3.186(a8) 3.190(b2)
+             at/below 1.5: 0.821(a1) 0.824(b1)
+  4x32/kc=8   above 1.5: 2.764(a8) 2.771(a4) 3.184(b8) 3.187(b2) 3.188(b4) 3.189(a2)
+             at/below 1.5: 0.750(a1) 0.804(b1)
+  2x32/kc=32  above 1.5: 3.014(a2) 3.168(b8) 3.171(b4) 3.651(a4) 3.654(a8) 3.654(b2)
+             at/below 1.5: 0.848(b1) 0.849(a1)
+  4x32/kc=32  above 1.5: 3.067(a8) 3.538(b4) 3.538(b8) 3.541(b2) 3.544(a2) 3.548(a4)
+             at/below 1.5: 0.852(a1) 0.852(b1)
+
+=== 4. The full sweep, median GFLOP/s, both passes ===
+  -- scalar --
+    row              a8       a4       a2       a1       b8       b4       b2       b1     
+    2x32/kc=8        3.186    2.770    2.766    0.821    2.768    2.768    3.190    0.824  
+    2x32/kc=32       3.654    3.651    3.014    0.849    3.168    3.171    3.654    0.848  
+    2x32/kc=128      0.895    0.927    0.848    0.875    0.927    0.927    0.912    0.878  
+    2x32/kc=512      0.888    0.893    0.848    0.883    0.887    0.892    0.888    0.881  
+    4x32/kc=8        2.764    2.771    3.189    0.750    3.184    3.188    3.187    0.804  
+    4x32/kc=32       3.067    3.548    3.544    0.852    3.538    3.538    3.541    0.852  
+    4x32/kc=128      0.871    0.887    0.877    0.870    0.879    0.874    0.878    0.872  
+    4x32/kc=512      0.864    0.866    0.866    0.861    0.865    0.862    0.865    0.861  
+  -- avx512 --
+    row              a8       a4       a2       a1       b8       b4       b2       b1     
+    2x32/kc=8        67.960   67.800   67.980   67.640   67.905   67.985   67.940   67.780 
+    2x32/kc=32       91.380   91.335   91.250   90.890   91.305   91.310   91.415   91.095 
+    2x32/kc=128      99.700   99.720   99.760   99.315   99.680   99.555   99.780   99.540 
+    2x32/kc=512      93.765   94.250   92.180   94.720   93.640   93.730   93.740   95.120 
+    4x32/kc=8        61.430   61.420   61.420   58.285   61.395   61.450   61.435   61.315 
+    4x32/kc=32       73.220   73.265   73.230   69.500   73.180   73.255   73.145   73.140 
+    4x32/kc=128      76.090   76.125   76.050   72.380   76.105   76.145   76.160   75.935 
+    4x32/kc=512      77.365   77.375   77.365   77.005   77.360   77.430   77.385   77.365 
+    6x32/kc=8        70.890   70.645   69.175   68.685   70.760   70.825   70.865   68.700 
+    6x32/kc=32       80.580   80.165   78.940   79.895   80.350   82.715   80.425   79.970 
+    6x32/kc=128      84.140   84.290   82.935   84.085   84.345   84.415   84.455   84.225 
+    6x32/kc=512      82.530   82.680   78.635   82.785   82.855   82.980   83.035   82.900 
+
+=== 5. Against #147's own two arms (same binary, sha256=d0d46d26c15cc8b2) ===
+#147 published these medians; this sweep re-draws the same widths from the
+same artifact, so a difference here is a between-draw difference and nothing else.
+    row               #147 w8       a8       b8    #147 w1       a1       b1
+    2x32/kc=8           2.926    3.186    2.768      0.772    0.821    0.824
+    2x32/kc=32          2.976    3.654    3.168      0.801    0.849    0.848
+    2x32/kc=128         0.870    0.895    0.927      0.827    0.875    0.878
+    2x32/kc=512         0.839    0.888    0.887      0.838    0.883    0.881
+    4x32/kc=8           3.184    2.764    3.184      0.759    0.750    0.804
+    4x32/kc=32          3.206    3.067    3.538      0.804    0.852    0.852
+    4x32/kc=128         0.845    0.871    0.879      0.818    0.870    0.872
+    4x32/kc=512         0.813    0.864    0.865      0.807    0.861    0.861

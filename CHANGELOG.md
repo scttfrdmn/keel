@@ -9,6 +9,24 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`#148` answered, and with a shape it did not offer: the scalar collapse is a step between width 1
+  and width 2, not a gradient** (`docs/issue148-width-d3c1e82.md`, evidence in `archive/width148/`).
+  Eight arms of one binary — byte-identical to `#147`'s, so these are further draws of that artifact —
+  `KEEL_PIN_WIDTH` ∈ {8,4,2,1} run twice with the second pass reversed. All four registered rows fall
+  to **0.232–0.298** of their width-8 rate at width 1 in both passes, and show no degradation at width
+  2 or 4. That refutes a contention gradient (`GOMAXPROCS` is 1, so widths 2/4/8 differ only in how
+  many cores one thread may occupy, and they are indistinguishable) and refutes frequency residency
+  **by sign** (one busy core boosts higher under `performance`, not 3.4–4.3× lower). The registered
+  prediction scores **6 of 8** — and the two misses expose that the band has no resolution where it was
+  registered: the between-invocation level structure found in §6 is 5–15% wide and the band is 15%.
+  The load record the driver added is what makes the finding publishable at all: a co-tenant was
+  present for two arms, and the **cleaner** width-1 arm collapses as much as the contaminated one.
+- **`.gitignore` now carries `!archive/**/*.out`, because yesterday's archive convention collided with
+  line 3.** `*.out` is there for profiles; `archive/`'s instrument outputs are `.out` because `.txt` is
+  reserved for raw benchmark logs — so following the convention made `git add -A` skip the very file a
+  published report cites as its reproducibility witness, silently. `archive/addr147/`'s five `.out`
+  files are tracked only by accident: they were committed under their first, wrong `.txt` names, and a
+  rename keeps a tracked file tracked. Both directions are now checked, and both are empty.
 - **`#148`'s width sweep, committed before its data exists** (`archive/width148/driver-width148.sh`).
   `KEEL_PIN_WIDTH` ∈ {1,2,4,8} against one binary, to separate a monotone width effect from a step
   between 8 and everything else. Two design choices are stated in the driver because they are *not* in

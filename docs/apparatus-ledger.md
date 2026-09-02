@@ -86,15 +86,24 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-09-01 | `5cdcbc3` | **−14** | **919** | **`hosts_lines`, the third real paydown and the first negative row since `ba6f286`.** One function in `remote.sh` (+16, of which 11 are the comment recording *why* the 22 copies existed) against 22 iteration sites converted to `done < <(hosts_lines)`, 22 `[[ -n "$host" ]] || continue` guards deleted and four redundant `if [[ -n "$HOSTS" ]]` wrappers removed across nine scripts. Per file: `gate-p1.sh` −6, `gate-p3.sh` −6, `gate-p2.sh` −5, `gate-p4.sh` −5, `gate-p5.sh` −4, `ab.sh` −1, `gate-p0.sh` −1, `provision-openblas.sh` −1, `retention.sh` −1, `remote.sh` **+16**. It is a lift by the definition above and not a comment deletion: what the 22 guards worked around is one property of `<<<` — a here-string of the empty string is one empty *line*, not zero lines, so an unconfigured fleet ran every loop body once with `host=""`. Both readings agree: `git diff --numstat` gives −14, and `gate-docs.sh`'s counter moved 16480 → 16466. Three wrappers were **kept** (`gate-p1.sh:295`, `gate-p3.sh:903`, `gate-p5.sh:384`) because they guard more than a loop. |
 | 2026-09-02 | `4b8ee5f` | +99 | **1018** | **Archived provenance, booked as owed because inventing an exemption for it is not mine to do.** `archive/addr147/driver-addr147.sh`, the launcher of the two-arm run `docs/issue147-addr-537661a.md` reports. It is **not** in `scripts/`, so the cap's literal object does not reach it, but the shell term counts shell by content tree-wide (`3087301`'s ruling) and the counter has been seeing these 99 lines untracked all along: 16466 → 16565, exactly +99, and the delta is entirely this file. This session lands no routine, kernel or library fix, so under the strict reading it is an unpaid spend. Booked in full at +99 rather than argued down. **Two definition holes found while measuring it, both disclosed rather than banked** (`#131`): (a) the shell term is blind to the 466 lines of *Python* instruments in the same directory — `shell_files`'s shebang sweep matches `#!…sh`, and `#!/usr/bin/env python3` is not shell, so 466 lines of apparatus by any honest reading cost the ratio nothing; (b) the **library** term counts `archive/addr147/prettycheck/main.go`'s 29 lines as shipped substance, because `git ls-files '*.go'` matches at any depth — 29 lines of denominator this commit did not ship, moving the apparatus ratio the *flattering* way. (b) is the smaller number and the worse kind: it is the denominator absorbing a spend. The clean structural answer is to exclude `archive/` from **both** terms, since it holds evidence rather than apparatus or library — but that is a criterion amendment and it is Scott's call, so the row stands as measured until he rules. |
 
-**Current debt: +1018 net shell lines** as of 2026-09-02, unpaid by a routine, a kernel or a library
-fix, of which **+97 is a re-reading rather than a spend** — the tree did not grow, the counter
-stopped measuring by file extension — and **+5 is exempt**, so **+916 is owed** once both are set
-aside. Shell term 16565, library term 8993, historical ratio 1.84x, measured 2026-09-02 with the
-`archive/addr147` row above staged. The paragraph below is the **2026-09-01** reading and is kept as
-written, because it is the cross-check for that session's rows and not a claim about today's tree:
-the +99 does not move the printed ratio at two decimals, which is the reading rule at the top of this
-file firing in the *spending* direction — 16466 → 16565 is a 0.6% numerator move and prints as
-nothing.
+| 2026-09-02 | `d3c1e82` | +158 | **1176** | **Archived driver, booked in full under the definition still in force at this commit.** `archive/width148/driver-width148.sh`, the launcher of `#148`'s eight-arm width sweep (`docs/issue148-width-d3c1e82.md`). Same class as `4b8ee5f`'s row above and measured the same way: 16565 → 16723, exactly +158, the delta entirely this file. Scott has since **ruled** the structural fix that row asked for — *exclude `archive/` from both terms, dated, both readings printed once at the changeover, and `archive/` stays fully inside every other check* — so under the amended definition this row and `4b8ee5f`'s +99 are both zero. The code change is **not in this commit**: it edits `scripts/gate-docs.sh`, this session lands no routine, kernel or library fix, and the cap does not suspend itself for a change that improves the cap's own metric. So the row is booked at +158 under the definition this commit was measured with, and the changeover — with both readings printed once, as the ruling requires — is owed to the first paying session. Hole (a) from `4b8ee5f`'s row grew rather than closed: `analyze-width148.py` is another **205** lines of Python instrument that the shell term cannot see, bringing the archived-Python total the counter is blind to from 466 to 671. |
+
+**Current debt: +1176 net shell lines** as of 2026-09-02 (second reading, `d3c1e82`), unpaid by a
+routine, a kernel or a library fix, of which **+97 is a re-reading rather than a spend** — the tree
+did not grow, the counter stopped measuring by file extension — and **+5 is exempt**, so **+1074 is
+owed** once both are set aside. Shell term 16723, library term 8993, historical ratio 1.86x, measured
+`d3c1e82` with the `archive/width148` row above staged. **+257 of the owed total is `archive/`
+drivers** (`4b8ee5f` +99, `d3c1e82` +158) that Scott's ruling has since moved out of the definition;
+they stay booked until the changeover lands, because a ledger that anticipates its own amendment
+stops being a record of what the counter said. The two paragraphs below are the **2026-09-02 (first)**
+and **2026-09-01** readings and are kept as written, because each is the cross-check for its own
+session's rows and not a claim about today's tree.
+
+**2026-09-02, first reading (`4b8ee5f`):** +1018 net, +916 owed, shell term 16565, library term 8993,
+historical ratio 1.84x. The +99 does not move the printed ratio at two decimals, which is the reading
+rule at the top of this file firing in the *spending* direction — 16466 → 16565 is a 0.6% numerator
+move and prints as nothing. The +158 above finally does move it, 1.84x → 1.86x, which is the same
+rule's other face: it took two archived drivers in two days to reach one printed hundredth.
 
 Shell term 16466, library term 8964, historical ratio 1.84x (measured 2026-09-01 with the `hosts_lines` row
 above staged; the ratio is unchanged at two decimals by a 14-line paydown, which is the reading rule

@@ -1,0 +1,252 @@
+
+=== provenance and the frozen-tree guard ===
+2026-09-02T17:04:25Z
+settings: HOST=janus.local FILTER=BenchmarkKernel COUNT=30 BTIME=1s
+settings: WIDTHS_A=[8 4 2 1] WIDTHS_B=[1 2 4 8] TAG=<none>
+driver host: terror
+rev: d3c1e825900dc8941cb7be6eb41cb7e943a4cd01
+inherited KEEL_*/HOST env: 
+tree clean: yes
+sourced scripts/remote.sh; KEEL_REMOTE_DIR=/tmp/keel-remote; default KEEL_PIN_WIDTH=8
+go: go version go1.27.0 darwin/arm64
+
+=== build: ONE binary, used by ALL arms ===
+remote_build_test rc=0
+binary: sha256=d0d46d26c15cc8b2 bytes=5066553 flags=[-buildmode=exe -compiler=gc -trimpath=true]
+toolchain read off the artifact:         builder toolchain go1.27.0-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off bench.test and not off this shell's go
+binary IDENTICAL to #147's traced binary: this sweep's w8/w1 arms are further draws of the same artifact
+
+=== arm a8: pass a, KEEL_PIN_WIDTH=8 ===
+-- host sample: before a8 --
+   uptime:  10:04:26 up 41 days, 14:31,  0 users,  load average: 0.01, 0.00, 0.00
+   loadavg: 0.01 0.00 0.00 1/698 2535981
+   freq_khz cpu0-7: 4035955 3987305 3800060 1200000 1200000 1200000 3797172 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2725967 nvidia-smi
+           1  0.0 3594703 systemd
+           2  0.0 3594703 kthreadd
+   utc: 2026-09-02T17:04:26Z
+arm a8: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm a8: log rows: 600
+arm a8: scalar rows: 240
+arm a8: keel-pin line: keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+arm a8: gomaxprocs line: keel-bench-gomaxprocs: 1
+-- host sample: after a8 --
+   uptime:  10:20:24 up 41 days, 14:47,  0 users,  load average: 1.00, 0.98, 0.69
+   loadavg: 1.00 0.98 0.69 1/699 2537125
+   freq_khz cpu0-7: 3600043 3598674 3600227 1200000 1200000 1200000 3610400 3600975
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2726926 nvidia-smi
+           1  0.0 3595662 systemd
+           2  0.0 3595662 kthreadd
+   utc: 2026-09-02T17:20:24Z
+
+=== arm a4: pass a, KEEL_PIN_WIDTH=4 ===
+-- host sample: before a4 --
+   uptime:  10:20:24 up 41 days, 14:47,  0 users,  load average: 1.00, 0.98, 0.69
+   loadavg: 1.00 0.98 0.69 1/699 2537170
+   freq_khz cpu0-7: 3700952 3761231 3598713 3541754 1200000 1200000 3600047 3599673
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2726926 nvidia-smi
+           1  0.0 3595662 systemd
+           2  0.0 3595662 kthreadd
+   utc: 2026-09-02T17:20:24Z
+arm a4: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm a4: log rows: 600
+arm a4: scalar rows: 240
+arm a4: keel-pin line: keel-pin: mask=0,1,2,3 width=4 doms=0,0,0,0 nodedoms=1
+arm a4: gomaxprocs line: keel-bench-gomaxprocs: 1
+-- host sample: after a4 --
+   uptime:  10:36:08 up 41 days, 15:03,  0 users,  load average: 1.00, 1.00, 0.92
+   loadavg: 1.00 1.00 0.92 1/696 2538300
+   freq_khz cpu0-7: 3550623 3542113 3591758 3500018 3559412 3499615 3565426 3500011
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2727869 nvidia-smi
+           1  0.0 3596605 systemd
+           2  0.0 3596605 kthreadd
+   utc: 2026-09-02T17:36:08Z
+
+=== arm a2: pass a, KEEL_PIN_WIDTH=2 ===
+-- host sample: before a2 --
+   uptime:  10:36:08 up 41 days, 15:03,  0 users,  load average: 1.00, 1.00, 0.92
+   loadavg: 1.00 1.00 0.92 1/696 2538345
+   freq_khz cpu0-7: 3599612 3599970 3600238 1200000 3639371 3654749 3603618 3501538
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2727869 nvidia-smi
+           1  0.0 3596605 systemd
+           2  0.0 3596605 kthreadd
+   utc: 2026-09-02T17:36:08Z
+arm a2: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm a2: log rows: 600
+arm a2: scalar rows: 240
+arm a2: keel-pin line: keel-pin: mask=0,1 width=2 doms=0,0 nodedoms=1
+arm a2: gomaxprocs line: keel-bench-gomaxprocs: 1
+-- host sample: after a2 --
+   uptime:  10:51:54 up 41 days, 15:19,  0 users,  load average: 1.93, 1.72, 1.33
+   loadavg: 1.93 1.72 1.33 2/710 2540092
+   freq_khz cpu0-7: 3537256 3512475 3499729 1200000 1200000 3500025 1200000 3201787
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+     2540002  110       7 amd-main.test
+      911375  1.0 2728815 nvidia-smi
+           1  0.0 3597551 systemd
+   utc: 2026-09-02T17:51:54Z
+
+=== arm a1: pass a, KEEL_PIN_WIDTH=1 ===
+-- host sample: before a1 --
+   uptime:  10:51:54 up 41 days, 15:19,  0 users,  load average: 1.93, 1.72, 1.33
+   loadavg: 1.93 1.72 1.33 2/710 2540137
+   freq_khz cpu0-7: 3600004 3699980 3700919 1200000 1200000 3600661 1200000 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+     2540002  111       7 amd-main.test
+      911375  1.0 2728815 nvidia-smi
+           1  0.0 3597551 systemd
+   utc: 2026-09-02T17:51:54Z
+arm a1: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm a1: log rows: 600
+arm a1: scalar rows: 240
+arm a1: keel-pin line: keel-pin: mask=0 width=1 doms=0 nodedoms=1
+arm a1: gomaxprocs line: keel-bench-gomaxprocs: 1
+-- host sample: after a1 --
+   uptime:  11:08:47 up 41 days, 15:36,  0 users,  load average: 1.50, 1.20, 1.23
+   loadavg: 1.50 1.20 1.23 1/696 2542236
+   freq_khz cpu0-7: 3798881 3800505 3800578 1200000 1200000 1200000 1200000 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2729828 nvidia-smi
+           1  0.0 3598564 systemd
+           2  0.0 3598564 kthreadd
+   utc: 2026-09-02T18:08:47Z
+
+=== arm b1: pass b, KEEL_PIN_WIDTH=1 ===
+-- host sample: before b1 --
+   uptime:  11:08:47 up 41 days, 15:36,  0 users,  load average: 1.50, 1.20, 1.23
+   loadavg: 1.50 1.20 1.23 1/696 2542281
+   freq_khz cpu0-7: 3434171 3219883 3496623 1200000 1200000 1200000 1200000 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2729828 nvidia-smi
+           1  0.0 3598564 systemd
+           2  0.0 3598564 kthreadd
+   utc: 2026-09-02T18:08:47Z
+arm b1: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm b1: log rows: 600
+arm b1: scalar rows: 240
+arm b1: keel-pin line: keel-pin: mask=0 width=1 doms=0 nodedoms=1
+arm b1: gomaxprocs line: keel-bench-gomaxprocs: 1
+-- host sample: after b1 --
+   uptime:  11:25:42 up 41 days, 15:52,  0 users,  load average: 1.00, 1.00, 1.06
+   loadavg: 1.00 1.00 1.06 1/698 2543474
+   freq_khz cpu0-7: 3800563 3899303 1200000 1200000 1200000 4000013 1200000 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2730843 nvidia-smi
+           1  0.0 3599579 systemd
+           2  0.0 3599579 kthreadd
+   utc: 2026-09-02T18:25:42Z
+
+=== arm b2: pass b, KEEL_PIN_WIDTH=2 ===
+-- host sample: before b2 --
+   uptime:  11:25:42 up 41 days, 15:52,  0 users,  load average: 1.00, 1.00, 1.06
+   loadavg: 1.00 1.00 1.06 1/698 2543519
+   freq_khz cpu0-7: 3635914 3671261 3598702 1200000 1200000 3704374 1200000 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2730843 nvidia-smi
+           1  0.0 3599579 systemd
+           2  0.0 3599579 kthreadd
+   utc: 2026-09-02T18:25:42Z
+arm b2: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm b2: log rows: 600
+arm b2: scalar rows: 240
+arm b2: keel-pin line: keel-pin: mask=0,1 width=2 doms=0,0 nodedoms=1
+arm b2: gomaxprocs line: keel-bench-gomaxprocs: 1
+-- host sample: after b2 --
+   uptime:  11:41:25 up 41 days, 16:08,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/697 2544649
+   freq_khz cpu0-7: 3599765 3628239 1200000 3599774 1200000 3767763 1200000 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2731787 nvidia-smi
+           1  0.0 3600523 systemd
+           2  0.0 3600523 kthreadd
+   utc: 2026-09-02T18:41:25Z
+
+=== arm b4: pass b, KEEL_PIN_WIDTH=4 ===
+-- host sample: before b4 --
+   uptime:  11:41:25 up 41 days, 16:08,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/697 2544694
+   freq_khz cpu0-7: 3499979 3523850 3498731 3556394 1200000 3464635 1200000 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2731787 nvidia-smi
+           1  0.0 3600523 systemd
+           2  0.0 3600523 kthreadd
+   utc: 2026-09-02T18:41:25Z
+arm b4: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm b4: log rows: 600
+arm b4: scalar rows: 240
+arm b4: keel-pin line: keel-pin: mask=0,1,2,3 width=4 doms=0,0,0,0 nodedoms=1
+arm b4: gomaxprocs line: keel-bench-gomaxprocs: 1
+-- host sample: after b4 --
+   uptime:  11:57:12 up 41 days, 16:24,  0 users,  load average: 1.00, 1.01, 1.00
+   loadavg: 1.00 1.01 1.00 1/696 2545825
+   freq_khz cpu0-7: 3909634 3613341 3656615 3722317 3660190 3760626 1200000 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2732733 nvidia-smi
+           1  0.0 3601469 systemd
+           2  0.0 3601469 kthreadd
+   utc: 2026-09-02T18:57:12Z
+
+=== arm b8: pass b, KEEL_PIN_WIDTH=8 ===
+-- host sample: before b8 --
+   uptime:  11:57:12 up 41 days, 16:24,  0 users,  load average: 1.00, 1.01, 1.00
+   loadavg: 1.00 1.01 1.00 1/696 2545870
+   freq_khz cpu0-7: 3501331 3497049 3699271 1200000 3615319 3637879 3603987 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2732733 nvidia-smi
+           1  0.0 3601469 systemd
+           2  0.0 3601469 kthreadd
+   utc: 2026-09-02T18:57:12Z
+arm b8: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm b8: log rows: 600
+arm b8: scalar rows: 240
+arm b8: keel-pin line: keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+arm b8: gomaxprocs line: keel-bench-gomaxprocs: 1
+-- host sample: after b8 --
+   uptime:  12:12:49 up 41 days, 16:40,  0 users,  load average: 1.02, 1.02, 1.00
+   loadavg: 1.02 1.02 1.00 1/695 2547010
+   freq_khz cpu0-7: 3760960 3792908 3144516 3799854 1200000 3730288 3801639 1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2733670 nvidia-smi
+           1  0.0 3602406 systemd
+           2  0.0 3602406 kthreadd
+   utc: 2026-09-02T19:12:49Z
+
+=== done ===
+2026-09-02T19:12:49Z
