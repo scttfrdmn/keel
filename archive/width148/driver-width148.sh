@@ -58,8 +58,11 @@ HOST="${HOST:-janus.local}"
 FILTER="${FILTER:-BenchmarkKernel}"
 COUNT="${COUNT:-30}"
 BTIME="${BTIME:-1s}"
-WIDTHS_A="${WIDTHS_A:-8 4 2 1}"
-WIDTHS_B="${WIDTHS_B:-1 2 4 8}"
+# `-` and not `:-`, found by the smoke run: with `:-`, WIDTHS_B="" falls back to the
+# full default, so asking for one arm silently ran five. An override that ignores the
+# value it was given is the failure mode a smoke run exists to catch.
+WIDTHS_A="${WIDTHS_A-8 4 2 1}"
+WIDTHS_B="${WIDTHS_B-1 2 4 8}"
 TAG="${TAG:-}"
 OUT="build"
 
