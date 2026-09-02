@@ -9,6 +9,23 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **DESIGN.md §5 rule 25 — an A/B arm is an estimator, never a draw** (ruled 2026-09-01 on `#147`).
+  The same shape as rule 16 on a new object, and **its own item rather than a widening of 16**: 16's
+  object is a published reference minted for later runs to check against, an arm is consumed inside
+  its own run, so citing 16 for an arm lands on a real-but-different rule and reads as well-formed.
+  A probe of a modal quantity is multi-draw per arm with the mode structure characterized first, or it
+  does not run — and the characterization states its statistic before it runs. It orders **no**
+  modality detector (that needs a threshold, the class rule 20's amendment buried) and **no**
+  criterion amendment: `#110`/`#116` amend for modality only if a verdict on a *judged fleet* row is
+  demonstrated to have flipped through modal structure, a standard stated before any such result
+  exists. Ruling record: `docs/rulings.md`, rule 25.
+- **DESIGN.md §5 rule 24 gains a third clause — judge raw, print rounded** (ruled 2026-09-01 on
+  `#147`). A predicate binds to a named metric column **and** adjudicates at full precision from the
+  raw samples, never from the printed table; where only historical logs exist the boundary band is
+  **one display quantum of the named column at that magnitude** — derived from the format's own
+  resolution, not minted as a constant — and a comparison inside it renders neither branch. The
+  existing reporting-layer law reaching down a layer, the same discipline that computes `D` from the
+  real asymmetric bounds and never from the printed `± W%`.
 - **All three `janus` null-A/B draws preserved with their per-sample arm logs** — nine files in
   `archive/pinned8/` with sha256 in its README (`#141`, `#147`). The driver transcripts were never
   the point: the finding is in the 690 per-sample rows each arm log holds, and a benchstat table

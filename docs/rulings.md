@@ -1772,3 +1772,188 @@ The enumeration is only as right as the pattern that runs it, and it has the sam
 subject: a bare `avx512` over the row list returns **13**, not 12, because `BenchmarkPeak/avx512`
 matches a predicate written for `Kernel/*/avx512`. One row of scope error, in the check built to
 catch scope errors, and it is caught here only because the four counts were made to sum to 23.
+
+### The third clause — judge raw, print rounded, added 2026-09-01, the same day as the second
+
+**Adopted 2026-09-01**, ruling on #147. Scott took neither option as posed — neither "naming the
+column is enough" nor "every threshold carries a ≥0.05pp guard band":
+
+> Neither option as posed — the existing law reaches down a layer. The finding is the display-quantum
+> disease at the pre-registration layer, and the cure is the one already on the books: **judge raw,
+> print rounded.** Predicates bind to a *named column* **and** adjudicate at full precision from the
+> raw samples — never from the printed table. The guard band survives only for the historical case
+> where raw samples don't exist: there, the boundary band is **one display quantum of the named
+> column at that magnitude** — derived, not a fixed 0.05pp — and a comparison landing inside it
+> renders neither-branch. That grounds the band in the claim's own resolution, same as rule 20's
+> amendment, instead of minting a new constant.
+
+#### The measurement that forced it
+
+Per sample `GFLOP/s` is exactly `flops/call ÷ ns/op`, verified to the printed digit
+(`3072.0 / 44.67 = 68.770987`, reported `68.77`). But `testing` formats each metric to **four
+significant figures independently**, so one ulp is 0.023% at `43.85` and 0.014% at `70.08` and each
+column carries its own quantization. Across #141's twelve predicate rows the `|sec/op|` vs
+`|GFLOP/s|` discrepancy is **0.003–0.041 percentage points**, and two of the twelve sat inside that
+band and **changed disposition between the two halves of one table**:
+
+| row | `sec/op` | `GFLOP/s` | threshold | dispositions |
+|---|---:|---:|---:|---|
+| `Kernel/6x32/avx512/kc=8` | **−1.9954%** | **+2.0049%** | 2% | no vote / **dirty** |
+| `Kernel/4x32/avx512/kc=512` | **−0.2945%** | **+0.3109%** | 0.30% | clean / no vote |
+
+Under `GFLOP/s`, #141's branch S would have fired. What resolved it legitimately is that the
+pre-registration named `sec/op` in advance — so the column choice was a decision and not a
+convenience, which is the first clause doing its job one layer up from where it was written.
+
+**A refuted explanation, kept because the refutation is the useful part.** The first cause reached
+for was an even-`n` median interacting with the modes of #147's bimodal rows. Measured, the
+discrepancy is **flat across all twelve rows** rather than concentrated on the bimodal one, which
+refutes it. Two independent findings — modal samples and independent quantization — were one
+sentence away from being fused into a single causal story with one mechanism carrying both.
+
+#### What binds now, beyond the first three clauses
+
+(g) **A predicate names its metric column, and adjudicates from the raw samples at full precision.**
+The printed table is the rendering; the comparison operand is the value. Same discipline as rule 20's
+`D`, computed from the real asymmetric bounds `hi − lo` and never from the printed `± W%`.
+
+(h) **Where only historical logs exist, the band is derived, not chosen**: one display quantum of the
+named column at the magnitude in play. A comparison landing inside it renders **neither branch** —
+the `UNMEASURED` third state again, not a pass and not a fail.
+
+#### Coverage, and what stays unseen (§5 rule 12)
+
+No check enforces either clause. (a) The band is per magnitude, so it cannot be pinned as a constant
+anywhere — `0.023%` at `43.85 ns` and `0.014%` at `70.08 GFLOP/s` are the same rule with different
+values, and a fixture would have to carry the magnitudes to be meaningful. (b) The twelve-row
+discrepancy figure is exact for W1 on `janus.local` and is **not** portable: it is a property of the
+magnitudes those rows print at, so a host whose rates round differently has a different band. (c)
+What the measurement cannot distinguish is a genuine sub-quantum difference from a rounding artifact
+— by construction, since it is the resolution of the display — so the clause refuses rather than
+resolves, and that is the point.
+
+## Rule 25 — an A/B arm is an estimator, never a draw
+
+**Adopted 2026-09-01**, ruling on #147. Scott, on the witness's outcome:
+
+> The compared quantity is *modal*, and an n=1-vs-n=1 comparison cannot adjudicate a modal quantity
+> no matter how tight each draw looks. That's rule 16 arriving at the comparison layer — *an arm is
+> an estimator too, never a draw* — and it retroactively explains why this corner of the fleet has
+> resisted three attribution attempts: everyone kept comparing single draws of a distribution that
+> has more than one place to land.
+
+### Why it is its own item and not a widening of rule 16
+
+Rule 16's object is a **published reference** — a number minted for a later run to be checked
+against, a README rate, a registered baseline, an archived denominator. An A/B arm is not that: it is
+consumed inside its own run and published only as evidence for that run's verdict. Citing 16 for an
+arm therefore lands on a **real-but-different rule and reads as well-formed**, which is the mis-mint
+class the concordance audit exists to catch. Scott's ruling on the catch:
+
+> It becomes its own item, cross-linked to 16 as the same shape on a new object — the constitution's
+> established pattern — rather than a widening that would retroactively blur every existing citation
+> of 16.
+
+So the two rules are siblings over one shape, and neither is a special case of the other: 16 governs
+a number that outlives its run, 25 governs a number consumed inside one.
+
+### What happened
+
+#141's `-trimpath` witness (W1) was a null A/B — one revision, both arms, so every delta is the host
+between two windows. Its non-timing half worked exactly as ruled: both arms print
+`sha256=34a87563622bb6c3…`, `bytes=5066630`, `flags=[-buildmode=exe -compiler=gc -trimpath=true]`,
+the base arm having built in a worktree at a different path, so **the two arms are literally one
+binary** and the two-binaries class is dead. The timing half was another matter. Classifying all 690
+per-sample rows per arm — largest sorted-adjacent gap over 1.5% of the median **with both clusters
+≥3 members** — partitions the three draws' 138 (row, arm) cells into **18 bimodal / 20
+single-outlier / 100 clean**. The cluster-size condition is load-bearing: without it, 20 single wild
+samples read as modes.
+
+It tracks the **backend**, not `kc`: scalar 12 bimodal + 16 outlier of 48 cells, avx512 6 + 4 of 72,
+`Peak/*` **0 of 18**. By `kc` the bimodal counts are 6/3/4/5 across 8/32/128/512 — flat, which
+**refutes** the prediction (mine, from the allocation-size hypothesis) that it would concentrate at
+small `kc`. And no row is bimodal in all six arms: the `≥2%` set re-rolled across the three draws as
+`{2x32/kc=32, 2x32/kc=512, 6x32/kc=8}` → `{2x32/kc=512, 6x32/kc=128}` → `{}`. **Bimodality is a
+property of the draw, not of the row** — which is exactly what makes a one-window arm an estimator
+with unstated variance rather than an observation.
+
+### The two signatures, and the discriminator
+
+`testing`'s `launch()` sizes the final `b.N` from the ramp's measured rate plus a 20% margin, so
+elapsed lands near `1.2 × benchtime`. **Measured on this data rather than recalled: 1.2043 s**, the
+median over 240 samples from four unimodal rows. With that constant, predict each mode's `b.N` from
+its *own* rate and from the *other* mode's rate and see which fits. Ten of the 18 cells are decisive
+(best fit under 1%, beating the alternative by more than 3×).
+
+| | signature A | signature B |
+|---|---|---|
+| cells | 2 | 8 |
+| pattern | `HLHL…` strict period-2, 15\|15, slow mode on even `k` **15/15 in two independent runs** | long contiguous blocks, e.g. `HHHHHHHHHHHHHLLLLLLLLLLLLLLLLL` |
+| gap | 3.81% / 3.88% | 15.52% |
+| `b.N` fits | the **other** mode's rate, error **0.23% / 0.14%** | its **own** rate, errors **0.24–0.73%** |
+| elapsed | **off target**: 1.2515 s vs 1.1560 s, ratio 1.0826 | on target: 1.2005 s vs 1.1956 s, ratio 1.0041 |
+| reading | the mode **flips** between the ramp and the timed run | the mode **persists** across both |
+
+Two artifact explanations are refuted. Reported `ns/op` is the timed run's own elapsed over its own
+`b.N`, so a mis-sized `b.N` scales elapsed and leaves the rate unchanged. And cold-start
+amortization has the **wrong sign** for signature A specifically: the slow mode carries *more*
+iterations, and amortizing a fixed overhead over more iterations pushes `ns/op` down, not up.
+
+**No mechanism is attributed.** Two hypotheses, each with a decisive test: per-execution allocation
+placement (`BenchmarkKernel` calls `kernelPanels` **inside** the `b.Run` closure, `bench/kernel_test.go:50`,
+so every ramp step *and* the timed run freshly `make`s three panels), and core/frequency placement as
+in #15. `Peak/*` clean in 18/18 is suggestive of a memory-side story but **cannot separate them** —
+`BenchmarkPeak` is the only benchmark that allocates nothing *and* touches no memory while timed, so
+the two hypotheses share one control — and it is #14's argument on new data, **one witness, not two**
+(§5 rule 10).
+
+### What binds now
+
+(a) **A probe of a modal quantity is multi-draw per arm with the mode structure characterized first,
+or it does not run.** Scott: *"the next probe, if one runs, is multi-draw per arm with the mode
+structure characterized first, or it doesn't run."*
+
+(b) **The characterization states its own test before running it** — the statistic, not merely the
+intent. For the authorized allocation-address test that means defining what counts as period-2
+before any addresses are printed, on the same standing as any other pre-registration (rule 24).
+
+(c) **A classifier built after the fact is a description, not a test, and says so.** The 1.5%/≥3
+threshold above was chosen after seeing the data; it is stated that way wherever it is cited.
+
+(d) **Before reading any A/B delta, ask whether the row is modal.** `go test -count` cannot answer
+it across runs — every sample sits in one contiguous window — which is the same property that makes
+it the inner loop and not the outer one.
+
+### What it deliberately does not order
+
+**No modality detector, and no criterion amendment.** Scott:
+
+> No amendment — and here's the standard, stated now so it predates any result it might ever judge:
+> the #110/#116-class criteria amend for modality **only if a verdict on a judged fleet row is
+> demonstrated to have flipped via modal structure.** Until then #147 is a disclosure, and note the
+> instruments for *seeing* modality already exist threshold-free — rule 20's range-beside-CI and
+> #132's disparity statistic are precisely modality's signature made visible, and they got that way
+> by deleting thresholds. An amendment now would mean building a modality *detector*, which means
+> choosing a threshold, which is the class we just finished burying. One dev-tier host's finding
+> doesn't reopen that grave.
+
+The residue is likewise **disclosure and not a ledger entry**: the apparatus ledger counts shell
+lines, an open question's record is its issue, and #147 holds the state honestly. Scott's grounds:
+the residue *gates nothing* — janus is dev-tier, the sentinel is fleet-only by rule, and #141's own
+question closed on T — and *"a measurement debt is owed when something judged depends on the answer;
+nothing does."*
+
+### Coverage, and what stays unseen (§5 rule 12)
+
+- **One host.** `janus.local` only. Nothing here says whether vesta or antares behave this way; #15
+  says vesta does something related *between* runs.
+- **One `n`.** Whether the modes have a period longer than a 30-sample window, or a structure the
+  classifier misses, is unmeasured.
+- **The 20 outlier cells are unexplained**, not classified as clean — possibly the same mechanism
+  with an unlucky split, possibly scheduling stalls, possibly both.
+- **8 of 18 bimodal cells return no verdict** from the `b.N` discriminator; in one
+  (`2x32/scalar/kc=128`, `df/base`) both hypotheses miss by ~270%. The test declines rather than
+  picking the smaller error, so the two-signature account covers 10 cells and not 18.
+- **No check enforces this rule**, and none plausibly could: whether a quantity is modal is a
+  property of the samples, and asserting it automatically is the detector this rule declines to
+  order.
