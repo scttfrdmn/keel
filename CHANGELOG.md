@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`KEEL_ADDR_TRACE` (`#147`): one line per benchmark execution recording where `kernelPanels` put
+  the three panels, so the placement hypothesis can be decided instead of argued.** `BenchmarkKernel`
+  allocates inside the `b.Run` closure, so every ramp step and every timed run gets fresh panels;
+  the trace prints `a`/`b`/`c` plus `n` and `elapsed_ns`, which join a trace line to the reported
+  sample by arithmetic (`elapsed/n` = the printed `ns/op`) rather than by position. Off unless the
+  variable names a file, and it **names a file rather than writing stderr because stderr spliced the
+  result line**: `testing` writes a row's name and its numbers as two writes to one descriptor and
+  every caller merges `2>&1`, so a trace line landed between them and displaced a sample's numbers
+  onto the next line — measured twice before this landed, and it would have handed benchstat a table
+  with a row missing. An unopenable path panics rather than running untraced. The dev-host control
+  reading already shows the addresses are **not** uniform across rows (`4x32/scalar/kc=8` holds all
+  three panels at one address apiece; `2x32/scalar/kc=512` moves all three across page-aligned
+  addresses), which is what makes a bimodal-but-address-constant row a refutation rather than a shrug.
 - **D1 executed (`#126`): CL 803220 patch set 1 hoists an AVX2 op above its feature guard, and the
   test that exists to catch it faults on amd64.** Andreas Goetz reported this from `-S` output on
   2026-07-25 and stated he could not run it (*"I'm on an arm64 host"*); nobody had run it since. On

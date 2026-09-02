@@ -6,10 +6,57 @@ package bench
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"testing"
 
 	"github.com/scttfrdmn/keel/internal/kern"
 )
+
+// addrTrace gates #147's decisive test for its first hypothesis: that the
+// within-run bimodality on janus is per-execution allocation placement, because
+// kernelPanels runs INSIDE the b.Run closure and so re-allocates on every ramp
+// step and again on the timed run.
+//
+// One line per execution, carrying the three panel addresses and the join key back
+// to the reported sample (b.N and the elapsed the sample's ns/op is computed from).
+// Both trace points sit outside the timed region — the addresses are captured
+// before b.ResetTimer and printed after b.StopTimer — so the trace cannot move the
+// number it is trying to explain.
+//
+// The addresses are not uniform and that is why the test can decide anything: on
+// the dev host (darwin/arm64, 12 executions per row) `4x32/scalar/kc=8` holds all
+// three panels at ONE address apiece while `2x32/scalar/kc=512` moves all three
+// across page-aligned addresses. A bimodal row whose addresses never move refutes
+// the placement hypothesis on that row with no correlation to compute.
+//
+// KEEL_ADDR_TRACE NAMES A FILE, and that is not a convenience. Written to stderr
+// instead, the trace SPLICED THE RESULT LINE: `testing` writes a benchmark's name
+// and its numbers as two writes to one descriptor, every caller merges `2>&1`, and
+// a trace line landing between them produced
+//
+//	BenchmarkKernel/2x32/scalar/kc=8-12    keel-addrtrace name=… c=0x84e61294000
+//
+// with the sample's own numbers displaced onto a later line — measured here, twice,
+// before this file was committed. benchstat then parses a table missing that row.
+// A separate file keeps the bench log byte-identical to an untraced run, which is
+// also what makes this run comparable with #147's three draws.
+//
+// It fails closed: an unopenable path panics rather than running 20 rows that
+// silently record nothing (an absent instrument that reports success is the failure
+// mode this project keeps finding).
+var addrTraceOut = openAddrTrace()
+
+func openAddrTrace() *os.File {
+	p := os.Getenv("KEEL_ADDR_TRACE")
+	if p == "" {
+		return nil
+	}
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		panic(fmt.Sprintf("KEEL_ADDR_TRACE=%s cannot be opened (%v); refusing to run untraced", p, err))
+	}
+	return f
+}
 
 // BenchmarkKernel measures each microkernel shape on packed panels, with no
 // blocking around it: the numerator of P2's percent-of-peak.
@@ -63,6 +110,15 @@ func BenchmarkKernel(b *testing.B) {
 				// arithmetic from the benchmark output alone rather than trusting
 				// the name to encode the shape.
 				b.ReportMetric(flopsPerCall, "flops/call")
+				if addrTraceOut != nil {
+					// %p on a slice is the address of its first element, which is
+					// the placement in question. elapsed_ns and n together are the
+					// join: the timed run is the execution whose elapsed/n equals
+					// the ns/op the table reports, so a sample's addresses are
+					// identified by arithmetic rather than by position in the stream.
+					fmt.Fprintf(addrTraceOut, "keel-addrtrace name=%s n=%d elapsed_ns=%d a=%p b=%p c=%p\n",
+						b.Name(), b.N, b.Elapsed().Nanoseconds(), a, bp, c)
+				}
 				kernelSink = c[0]
 			})
 		}
