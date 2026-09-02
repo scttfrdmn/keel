@@ -9,6 +9,38 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`#148`'s test 3 driver, with an IN-DRIVER quietness precondition that renders an arm
+  UNMEASURED rather than measuring through a co-tenant** (`archive/mech148/driver-mech148.sh`,
+  plus `test-driver-mech148.sh`). Ruled 2026-09-02 after the launch was refused on a busy host:
+  *"a precondition only the operator remembers to check isn't one."* Per-arm, so a co-tenant costs
+  the arms it overlaps and partial evidence survives; sampled between arms and never during one.
+  **The field is the 5-minute load average and that is derived, not preferred** — the one
+  contaminated sample in test 2's tracked record (`core148-97a21f4.log:257`, `0.99 2.17 1.83`) has
+  a **1-minute value of 0.99, inside the clean 1-minute range [0.92, 1.05]**, so a 1-minute bound
+  scores **0 of 1** on the only positive example that exists; `/proc/loadavg`'s runnable field is
+  no better here, reading `1` in **16 of 16** samples including the contaminated one, because the
+  co-tenant shape is a benchmark respawning about once a second. **The bound, 1.25, is built from
+  three tracked quantities**: the driver's own one-thread floor (confirmed, clean samples span
+  [0.98, 1.02]), headroom of 0.23 above the clean maximum 1.02 (**0 of 15 clean samples refuse**),
+  and margin below the tracked excursion 2.17 (**1 of 1 refuses**). Its single free parameter is
+  named rather than hidden: a co-tenant under ~¼ cpu sustained over five minutes is invisible.
+  **Three further refusals the registration requires**: the binary must be the boundaries' own
+  `d0d46d26c15cc8b2` (absolute GFLOP/s transfer to no other artifact, so rescaling would make them
+  chosen); inherited `GOGC`/`GODEBUG`/`GOMAXPROCS`/`KEEL_PIN_CPUS` abort the run, since an
+  inherited `GOGC=off` would give the *collapse control* the treatment arm's treatment; and a
+  `gctrace` probe must witness that `GOGC=off` actually suppresses GC on this binary and host.
+  That last one exists because **the registered prediction is the null, which inverts the usual
+  risk — every way a treatment can silently fail to apply produces exactly the predicted result.**
+  `GOMAXPROCS=1` leads every env string as the canary for `scripts/remote.sh:1687`'s unquoted
+  word-split, asserted per arm off the existing `keel-bench-gomaxprocs:` readback rather than by
+  new mechanism; `asyncpreemptoff`'s honouring has no cheap witness and is declared out of domain
+  with the action named. **Verified by driving it red**: 41/41 checks pass, including all five
+  fail-closed branches no healthy run can reach, and the arm table is cross-checked against
+  `predictions-mech148.py` with **4 of 4 planted defects caught** (dropped treatment, changed
+  reference mask, canary moved out of first place, un-reversed second pass). Zero `scripts/`
+  lines — `archive/` is out of both ratio terms by `be6cca9`, which the docs gate confirms
+  independently at **−961 shell** with the shell term unchanged at **16581**.
+
 - **`#148`'s test 3 is pre-registered in SAMPLE-SHAPE space, boundaries derived and cited**
   (`archive/mech148/predictions-mech148.py`, committed before the run exists). Scott's ruling:
   *"rule 24 says predictions live in the instrument's output space, which for a mode-switching
@@ -74,13 +106,30 @@ While the major version is 0, minor versions may contain breaking changes.
   and routing an enumerator through `tools/` to dodge that cap would be gaming the metric.
 
 ### Changed
+- **The standing archived-instrument ledger line now discloses the HOLE, not its Python subtotal**
+  (`docs/apparatus-ledger.md`): **2493 lines** = Python 1503 + shell **961** + Go 29, with the
+  five-file shell decomposition. Forced by this session: the growth booked was `mech148/`'s **+449
+  of shell**, which a Python-only headline would not have moved at all — *a disclosure whose number
+  stays still while the thing disclosed grows by 449 lines* is the same defect as a cap metric its
+  denominator absorbs, one level up. Hand count cross-checked against `gate-docs.sh`'s own
+  exclusion figure (`−961 shell`), an independent counter that finds shell by shebang as well as by
+  glob.
+- **Two published under-read figures are VOID: 73.5% and 29.5%.** Both counted the whole archived
+  shell term as *named by* `be6cca9`'s row, including `core148`'s 255 lines — which the very next
+  sentence of the same paragraph said were never booked. Both could not be true. That row
+  enumerated 99 + 158 + 29 = **286** by name, so under the one consistent convention the row
+  under-reads the exclusion by **88.5%** (2207 of 2493) now, **86.0%** at the 2044-line total, and
+  **84.4%** at the 1835-line total where 29.5%-named was published. Restated as an enumeration
+  rather than a language split, because the language split is what let an inconsistency sit
+  adjacent to its own refutation.
 - **Archived analyzers are a STANDING disclosed ledger line, outside the ratio**
   (`docs/apparatus-ledger.md`, ruled 2026-09-02). **1294 lines** as of `b2c8606`, updated whenever it
   grows. The `archive/`-out-of-both-terms amendment below was argued about *drivers*; the hole it
   opened now hides more analyzer than driver, and Scott's ruling is that the exclusion stands and the
   quantity becomes visible — disclosed, not ratioed. Stated with its full reach rather than its
   headline: the exclusion covers **1835** lines of archived instrument, 1294 Python plus 512 shell plus
-  29 Go, so the 541 that amendment named out loud is **29.5%** of it.
+  29 Go, so the 541 that amendment named out loud is **29.5%** of it. *(That last figure is VOID —
+  see the correction two bullets above; the row named 286, not 541, so it is 15.6% of 1835.)*
 - **`archive/` is out of both apparatus-ratio terms** (`scripts/gate-docs.sh`, ruled 2026-09-02). An
   archived driver is evidence, not apparatus or library: frozen at the hash that produced its data,
   never edited again, and accruing once per campaign — so counting it made the ratio drift on

@@ -122,30 +122,43 @@ what makes it durable is that each figure below carries its own date and definit
 "all 31 files, every one of them under `scripts/`" is true **by construction** rather than by
 observation.
 
-**STANDING — archived analyzers: 1503 lines, outside the ratio, by ruling.** Measured
-2026-09-02, and this line is updated whenever it grows; it read **1294** at `b2c8606` and
-`archive/mech148/predictions-mech148.py` is the +209 that moved it, which is the line doing its job
-on its first opportunity. Scott's ruling, verbatim:
+**STANDING — archived instrument outside the ratio, by ruling: 2493 lines.** Measured 2026-09-02,
+and this line is updated whenever it grows. Scott's ruling, verbatim:
 *"the ratio stays apparatus-code over library-code; per-experiment archived analyzers are
 evidence-reproduction code — but a hole that has grown to 1294 lines and now hides more analyzer
 than driver must be visible… Disclosed-not-ratioed."* The derivation is
-`git ls-files -co --exclude-standard 'archive/*' | grep -E '\.py$' | xargs wc -l`, tracked and
-untracked both, currently ten files: `addr147/` 465 (`analyze147` 219, `control147` 78,
-`sensitivity147` 78, `prettycheck147` 60, `crossarm147` 31), `width148/analyze-width148` 205,
-`core148/` 623 (`analyze-core148` 303, `test-analyze-core148` 182, `predictions-core148` 138),
-`mech148/predictions-mech148` 209.
-**Stated in full rather than as the Python subtotal**, because the exclusion's true reach is
-**2044** lines of archived instrument, not 1503: the same 1503 of Python, plus **512 of archived
-shell** (`core148/driver-core148.sh` 255, `width148/driver-width148.sh` 158,
-`addr147/driver-addr147.sh` 99) and **29 of archived Go**
-(`addr147/prettycheck/main.go`). The shell 512 and the Go 29 are the part `be6cca9`'s amendment
-named out loud: 512 is that row's `−257` (`addr147` 99 + `width148` 158) plus `core148`'s 255,
-which was never booked because the amendment was already in force when it landed, and the Go 29
-is the hole-(b) denominator the same row closed. The Python is the part it did not name, so a
-reader of that row alone would under-read the exclusion by **73.5%** — and that share grows with
-every campaign, which is the whole argument for a standing line rather than a per-row note. Which is why this line
-exists and why it is the figure the ruling quotes. Growing this number is not a spend and does
-not touch the cap; **hiding** its growth is what the ruling forbids.
+`git ls-files -co --exclude-standard -- archive/ | grep -E '\.(py|sh|go)$' | xargs wc -l`, tracked
+and untracked both, in three languages:
+
+- **Python, 1503** across ten files: `addr147/` 465 (`analyze147` 219, `control147` 78,
+  `sensitivity147` 78, `prettycheck147` 60, `crossarm147` 31), `width148/analyze-width148` 205,
+  `core148/` 623 (`analyze-core148` 303, `test-analyze-core148` 182, `predictions-core148` 138),
+  `mech148/predictions-mech148` 209.
+- **Shell, 961** across five files: `mech148/` 449 (`driver-mech148` 319,
+  `test-driver-mech148` 130), `core148/driver-core148` 255, `width148/driver-width148` 158,
+  `addr147/driver-addr147` 99.
+- **Go, 29**: `addr147/prettycheck/main.go`.
+
+**The headline is the full reach and not the Python subtotal**, and this session is why the
+distinction had to be settled rather than left implicit. The line read **1294** at `b2c8606`,
+then **1503** when `predictions-mech148.py` added 209 — but the growth booked here now is
+`mech148/`'s **+449 of shell**, which a Python-only headline would not have moved at all. A
+disclosure whose number stays still while the thing disclosed grows by 449 lines is the same
+defect as a cap metric its denominator absorbs, one level up: the figure would have read honest
+and stayed wrong. So the object of this line is the **hole**, in whatever language it is written.
+The shell and Go parts are what `be6cca9`'s amendment named out loud — its `−257` is `addr147`'s
+99 plus `width148`'s 158, `core148`'s 255 was never booked because the amendment was already in
+force when it landed, and the Go 29 is the hole-(b) denominator the same row closed. So what that
+row **enumerated by name** is 99 + 158 + 29 = **286**, and a reader of it alone would under-read
+this exclusion by **88.5%** (2207 of 2493).
+**That corrects a figure published in this file yesterday**, which put the under-read at 73.5% by
+treating the whole shell term as named — including `core148`'s 255, which the very next sentence
+of the same paragraph said was never booked. The two statements could not both be true; 73.5% is
+VOID, the same convention gives **86.0%** at yesterday's 2044-line total, and the reason to state
+it as an enumeration rather than a language split is that the language split is what let an
+inconsistency sit next to its own refutation.
+Growing this number is not a spend and does not touch the cap; **hiding** its growth is what the
+ruling forbids.
 
 The paragraph below is the **2026-09-02 (second)** reading and the two after it the **2026-09-02
 (first)** and **2026-09-01** readings, kept as written because each is the cross-check for its own
