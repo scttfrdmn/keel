@@ -751,6 +751,62 @@ into is not currently available. Martin Möhrmann reviews all three and is the r
 appeared on CL 1 and vanished; that is a coincidence of names until something demonstrates
 otherwise.
 
+## D1 executed: patch set 1 hoists the AVX2 op above its guard, and the test faults
+
+Run 2026-09-02 on `antares.local` (AMD RYZEN AI MAX+ 395, 32 threads, linux/amd64,
+`GOAMD64=v1`, bootstrap go1.27.0), detached; verbatim log tracked at
+`docs/cl2-d1-803220-ps1-antares.log`. Approved as D1 on
+[#126](https://github.com/scttfrdmn/keel/issues/126) with the instruction to publish either
+outcome to the CL thread. **Andreas Goetz's 2026-07-25 finding reproduces at runtime.**
+
+| arm | revision | verdict |
+|---|---|---|
+| 1 — the license | `e36c20c7` (patch set 1's parent) | **PASS**, `rc=0` |
+| 2 — the finding | `ecafbe48` (CL 803220 ps 1) | **FAIL**, `rc=1` — `SIGTRAP` in `testLoop3` at `versions_simd_test.go:31` |
+| 3 — the instrument control | `e36c20c7` + one unguarded AVX2 loop | **FAIL**, `rc=1`, which is this arm's *passing* outcome |
+
+The two toolchains differ by exactly the CL — `git diff --stat` between them is `licm.go`
++73/−1 and `licm_test.go` +57 and nothing else — and both built `make.bash rc=0`, read back off
+the artifacts as `go1.28-devel_e36c20c7` and `go1.28-devel_ecafbe48`. Arm 2's stack is the whole
+finding: `simd/archsimd.BroadcastFloat64x2` ← `amd64_test.testLoop3` (`versions_simd_test.go:31`,
+the first line of the loop body) ← `amd64_test.TestLoop` (`versions_test.go:444`, which is
+`testLoop3(6, 7)`) — the site Goetz named from `-S` output alone, reached with `cpu.avx2` reported
+off. So the `-S` reading and the runtime outcome **agree**.
+
+**The verdict is silicon-independent, which is worth stating because the obvious objection is that
+antares has AVX2.** `TestGoAMD64v1` does not rely on the CPU lacking a feature: it copies its own
+test binary, rewrites every non-v1 opcode into a faulting instruction, and re-runs the copy with
+`GODEBUG=cpu.avx2=off,…`. `featureToOpcodes["avx2"]` is exactly `{vmovsd, vpbroadcastq, vmulpd,
+vpextrq}` — the four instructions `testLoop3`'s shape emits — so a hoisted op executes a
+deliberate trap on any host. Hence `SIGTRAP`, not `SIGILL`.
+
+Two cross-checks that came free and both discriminate:
+
+- **Arms 1 and 2 clobber byte-identical opcode multisets** (101 instructions, `popcnt` 58,
+  `pinsrq` 16, `roundsd` 10, `vpextrq` 9, `vmovsd`/`vpbroadcastq`/`vmulpd` 2 each, `pextrd` 1,
+  `vfmadd231sd` 1). The binaries differ in *placement*, not in what was clobbered, so arm 2's
+  fault cannot be "patch set 1 emitted some other instruction that happened to get trapped."
+- **Arm 3's tally is arm 1's plus exactly one more of each of the four AVX2 opcodes** — one extra
+  copy of `testLoop3`'s body, which is what the control adds and an independent witness that the
+  control is the loop it claims to be.
+
+**What this does not establish (§5 rule 12).** It confirms the *defect*, on one loop shape, on one
+host, at `GOAMD64=v1`. It says nothing about Goetz's four other reported cases (`VPERMB`/VBMI,
+`VGF2P8*`/GFNI, `VPEXPANDB`/VBMI2, `VPOPCNTB`/BITALG, the masked-128 EVEX case, and
+AES/SHA/FMA/PCLMULQDQ mapping to `CPUNone`), none of which this test covers; it does not test his
+proposed `Block.CertainCPUfeatures` cure, which is unmailed; and it is a correctness verdict with
+no timing content, which is D2's job.
+
+**A first run reported all three arms `rc=9` UNMEASURED and the cause was the guard's own defect.**
+The guard asserted that `versions_simd_test.go` was in the package, because without
+`GOEXPERIMENT=simd` the `versions_nosimd_test.go` variant compiles instead, the SIMD shapes never
+exist, and `TestGoAMD64v1` passes having measured nothing. It read `.TestGoFiles` and got `[]` —
+these tests are `package amd64_test`, hence an *external* test package, hence `.XTestGoFiles`. It
+failed closed, which is the only reason the vacuous arms were not scored as results. Run 2 controls
+the guard in both directions before scoring anything (`simd` → the simd file present; `none` → the
+nosimd file present and the simd one absent), on the standing rule that a checker returning the
+same answer in both worlds is a decoration.
+
 ## Three figures did not survive verification and are not in any CL description
 
 Numbers reach a CL description only after being re-read from the tree, because a

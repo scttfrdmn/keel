@@ -1,0 +1,720 @@
+# Copyright 2026 Scott Friedman
+# SPDX-License-Identifier: Apache-2.0
+#
+# D1 for keel issue #126: golang/go CL 803220 patch set 1 executed on amd64, which its
+# reporter could not do. Verbatim output of the detached run keel-d1b-803220-ps1-antares,
+# 2026-09-02. This comment block is the ONLY addition; everything below it is the run's own
+# stdout as written to the gitignored build/d1b-803220-ps1-antares.log.
+#
+# Host: antares.local, AMD RYZEN AI MAX+ 395 w/ Radeon 8060S, 32 threads, linux/amd64,
+# GOAMD64=v1, bootstrap go1.27.0. This arm needs no quiet-host discipline: it is a
+# correctness test, not a measurement.
+#
+# Revisions, fetched at depth 2 so the CL and its parent arrive together:
+#   ps1  ecafbe48e206bd28e53385cb78e4448e1a5eb1b5  CL 803220/1, Junyang Shao, 2026-07-20
+#   base e36c20c7a55b0b77a5dbbfe84641f2f0dd84c0b0  its parent, the control revision
+#   git diff --stat base ps1 = licm.go +73/-1, licm_test.go +57 -- exactly the CL.
+#
+# The repro, which is the whole of it. The driver lived in /tmp rather than scripts/ (the
+# apparatus cap has no paid session to spend against this month), so the commands are
+# recorded here instead and this file is the reproducible record:
+#
+#   git init && git remote add origin https://go.googlesource.com/go
+#   git fetch --depth=2 origin refs/changes/20/803220/1
+#   git checkout -f ecafbe48e206bd28e53385cb78e4448e1a5eb1b5     # and, in a copy, its parent
+#   ( cd src && GOROOT_BOOTSTRAP=/usr/local/go bash make.bash )  # once per revision
+#   cd src/cmd/compile/internal/amd64
+#   GOEXPERIMENT=simd ../../../../../bin/go list -f '{{.TestGoFiles}} {{.XTestGoFiles}}' .
+#   GOEXPERIMENT=simd ../../../../../bin/go test -count=1 -v -run 'TestGoAMD64v1|TestLoop' .
+#
+# Three arms, and the third is why the second is evidence:
+#   ARM1 base           rc=0  PASS   -- the license: the test passes at the control revision
+#   ARM2 ps1            rc=1  FAIL   -- the finding: SIGTRAP in testLoop3 at versions_simd_test.go:31
+#   ARM3 base+unguarded rc=1  FAIL   -- the instrument control, where NONZERO is the pass
+#
+# ARM3 is testLoop3's body with `if !archsimd.X86.AVX2()` removed and nothing else changed;
+# without it, a green ARM2 could not be told apart from a harness that cannot see a fault at
+# all. Its clobber tally is ARM1's plus exactly one more of each of the four avx2 opcodes,
+# which is an independent witness that the control is the loop it claims to be.
+#
+# A first run (build/d1-803220-ps1-antares.log, kept) reported all three arms rc=9 UNMEASURED:
+# its guard read `.TestGoFiles`, and these tests are `package amd64_test`, so they are an
+# external test package and live in `.XTestGoFiles`. The guard failed closed on its own defect.
+# Run 2 therefore controls the guard both ways before scoring any arm -- GOEXPERIMENT=simd must
+# show versions_simd_test.go, GOEXPERIMENT=none must show versions_nosimd_test.go and not the
+# simd one -- because a checker that returns the same answer in both worlds is not a checker.
+#
+driver: 2026-09-02T04:18:02Z  host=antares.local  script=d1b.sh
+scp rc=0
+
+=== provenance ===
+antares
+2026-09-02T04:18:02Z
+base make.bash: Installed Go for linux/amd64 in /home/scttfrdmn/keel-d1-803220/base
+ps1  make.bash: Installed Go for linux/amd64 in /home/scttfrdmn/keel-d1-803220/ps1
+go version go1.28-devel_e36c20c7 Mon Jul 20 09:27:03 2026 -0700 linux/amd64
+go version go1.28-devel_ecafbe48 Mon Jul 20 12:23:41 2026 -0700 linux/amd64
+
+=== guard control: with and without GOEXPERIMENT=simd ===
+with simd   : [] [keel_d1_control_test.go versions_simd_test.go versions_test.go]
+without simd: [] [versions_nosimd_test.go versions_test.go]
+  ok  simd on  -> versions_simd_test.go present
+  ok  simd off -> versions_nosimd_test.go present (the vacuous variant)
+  ok  simd off -> versions_simd_test.go correctly absent
+GUARD_CONTROL_OK=1
+removed stale control file rc=0 (absent is fine)
+
+=== BASE(e36c20c7a55b0b77a5dbbfe84641f2f0dd84c0b0): toolchain read off the artifact ===
+go version go1.28-devel_e36c20c7 Mon Jul 20 09:27:03 2026 -0700 linux/amd64
+v1
+test files: [] [versions_simd_test.go versions_test.go]
+GUARD ok
+NOTE: no control file in this build
+
+=== BASE(e36c20c7a55b0b77a5dbbfe84641f2f0dd84c0b0): GOEXPERIMENT=simd go test -count=1 -v -run TestGoAMD64v1|TestLoop . ===
+=== RUN   TestGoAMD64v1
+    versions_test.go:163: clobbering instruction   40290c:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   402945:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   40297d:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029b2:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029f9:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029fd:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   402a54:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   40e731:	c4 e3 f9 16 c0 00    	vpextrq $0x0,%xmm0,%rax
+    versions_test.go:163: clobbering instruction   40e7af:	c4 e3 f9 16 c0 00    	vpextrq $0x0,%xmm0,%rax
+    versions_test.go:163: clobbering instruction   4108e4:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   412837:	c4 e3 f9 16 c6 00    	vpextrq $0x0,%xmm0,%rsi
+    versions_test.go:163: clobbering instruction   412aa5:	c4 e3 f9 16 c2 00    	vpextrq $0x0,%xmm0,%rdx
+    versions_test.go:163: clobbering instruction   412f55:	c4 e3 f9 16 c6 00    	vpextrq $0x0,%xmm0,%rsi
+    versions_test.go:163: clobbering instruction   4131a4:	c4 e3 f9 16 c2 00    	vpextrq $0x0,%xmm0,%rdx
+    versions_test.go:163: clobbering instruction   4135a7:	c4 e3 f9 16 c1 00    	vpextrq $0x0,%xmm0,%rcx
+    versions_test.go:163: clobbering instruction   418ce7:	f3 45 0f b8 ff       	popcnt %r15d,%r15d
+    versions_test.go:163: clobbering instruction   439c19:	f3 48 0f b8 c0       	popcnt %rax,%rax
+    versions_test.go:163: clobbering instruction   439d46:	f3 48 0f b8 d0       	popcnt %rax,%rdx
+    versions_test.go:163: clobbering instruction   439f36:	f3 4d 0f b8 e3       	popcnt %r11,%r12
+    versions_test.go:163: clobbering instruction   43a0b6:	f3 4c 0f b8 c0       	popcnt %rax,%r8
+    versions_test.go:163: clobbering instruction   43f88b:	f3 4c 0f b8 e8       	popcnt %rax,%r13
+    versions_test.go:163: clobbering instruction   448929:	f3 48 0f b8 df       	popcnt %rdi,%rbx
+    versions_test.go:163: clobbering instruction   448e2b:	f3 48 0f b8 ca       	popcnt %rdx,%rcx
+    versions_test.go:163: clobbering instruction   449173:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   4491de:	f3 48 0f b8 c0       	popcnt %rax,%rax
+    versions_test.go:163: clobbering instruction   44922d:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   449291:	f3 48 0f b8 cb       	popcnt %rbx,%rcx
+    versions_test.go:163: clobbering instruction   4e9a24:	66 0f 3a 0b d9 03    	roundsd $0x3,%xmm1,%xmm3
+    versions_test.go:163: clobbering instruction   4e9ad8:	66 0f 3a 0b d9 03    	roundsd $0x3,%xmm1,%xmm3
+    versions_test.go:163: clobbering instruction   4e9c2f:	66 0f 3a 0b ec 03    	roundsd $0x3,%xmm4,%xmm5
+    versions_test.go:163: clobbering instruction   591b87:	66 0f 3a 0b c8 03    	roundsd $0x3,%xmm0,%xmm1
+    versions_test.go:163: clobbering instruction   59242f:	66 0f 3a 0b d8 03    	roundsd $0x3,%xmm0,%xmm3
+    versions_test.go:163: clobbering instruction   62338d:	66 0f 3a 16 c8 01    	pextrd $0x1,%xmm1,%eax
+    versions_test.go:163: clobbering instruction   7342a0:	f3 48 0f b8 f8       	popcnt %rax,%rdi
+    versions_test.go:163: clobbering instruction   775686:	f3 0f b8 c8          	popcnt %eax,%ecx
+    versions_test.go:163: clobbering instruction   7a13bd:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   81137b:	f3 48 0f b8 f6       	popcnt %rsi,%rsi
+    versions_test.go:163: clobbering instruction   8113da:	f3 48 0f b8 d7       	popcnt %rdi,%rdx
+    versions_test.go:163: clobbering instruction   820b1b:	f3 4c 0f b8 e0       	popcnt %rax,%r12
+    versions_test.go:163: clobbering instruction   820b62:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   8256f2:	f3 4c 0f b8 d8       	popcnt %rax,%r11
+    versions_test.go:163: clobbering instruction   825746:	f3 4d 0f b8 e0       	popcnt %r8,%r12
+    versions_test.go:163: clobbering instruction   826626:	f3 48 0f b8 f0       	popcnt %rax,%rsi
+    versions_test.go:163: clobbering instruction   826654:	f3 48 0f b8 d1       	popcnt %rcx,%rdx
+    versions_test.go:163: clobbering instruction   827034:	f3 4d 0f b8 d2       	popcnt %r10,%r10
+    versions_test.go:163: clobbering instruction   827075:	f3 48 0f b8 d0       	popcnt %rax,%rdx
+    versions_test.go:163: clobbering instruction   8288a2:	f3 4d 0f b8 c7       	popcnt %r15,%r8
+    versions_test.go:163: clobbering instruction   82891d:	f3 4c 0f b8 cf       	popcnt %rdi,%r9
+    versions_test.go:163: clobbering instruction   828b39:	f3 4c 0f b8 ce       	popcnt %rsi,%r9
+    versions_test.go:163: clobbering instruction   828bbc:	f3 48 0f b8 cf       	popcnt %rdi,%rcx
+    versions_test.go:163: clobbering instruction   8292d7:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   829326:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   8293f1:	f3 4d 0f b8 ca       	popcnt %r10,%r9
+    versions_test.go:163: clobbering instruction   82943e:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   8296aa:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   8296fb:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   82afc8:	f3 4d 0f b8 f9       	popcnt %r9,%r15
+    versions_test.go:163: clobbering instruction   82b044:	f3 49 0f b8 fc       	popcnt %r12,%rdi
+    versions_test.go:163: clobbering instruction   82c4f2:	f3 4d 0f b8 d2       	popcnt %r10,%r10
+    versions_test.go:163: clobbering instruction   82c552:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   835dcc:	f3 4c 0f b8 d8       	popcnt %rax,%r11
+    versions_test.go:163: clobbering instruction   835e1c:	f3 4d 0f b8 e0       	popcnt %r8,%r12
+    versions_test.go:163: clobbering instruction   8669da:	66 0f 3a 0b c0 02    	roundsd $0x2,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   874c9a:	66 0f 3a 0b c0 01    	roundsd $0x1,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   8a4bec:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4c3c:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4d09:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4d56:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4e29:	f3 48 0f b8 c9       	popcnt %rcx,%rcx
+    versions_test.go:163: clobbering instruction   8a4e77:	f3 48 0f b8 c9       	popcnt %rcx,%rcx
+    versions_test.go:163: clobbering instruction   8aa1ba:	66 0f 3a 0b c0 00    	roundsd $0x0,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   8c06fa:	66 0f 3a 0b c0 03    	roundsd $0x3,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   912336:	c5 83 11 c2          	vmovsd %xmm0,%xmm15,%xmm2
+    versions_test.go:163: clobbering instruction   91233a:	c4 e2 79 59 d2       	vpbroadcastq %xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   91233f:	c5 e9 59 d2          	vmulpd %xmm2,%xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   912343:	c4 e3 f9 16 d1 00    	vpextrq $0x0,%xmm2,%rcx
+    versions_test.go:163: clobbering instruction   912376:	c5 83 11 c2          	vmovsd %xmm0,%xmm15,%xmm2
+    versions_test.go:163: clobbering instruction   91237a:	c4 e2 79 59 d2       	vpbroadcastq %xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   91237f:	c5 e9 59 d2          	vmulpd %xmm2,%xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   912383:	c4 e3 f9 16 d0 00    	vpextrq $0x0,%xmm2,%rax
+    versions_test.go:163: clobbering instruction   913c18:	f3 4c 0f b8 c6       	popcnt %rsi,%r8
+    versions_test.go:163: clobbering instruction   913d4c:	f3 44 0f b8 c6       	popcnt %esi,%r8d
+    versions_test.go:163: clobbering instruction   914e88:	66 0f 3a 0b d0 00    	roundsd $0x0,%xmm0,%xmm2
+    versions_test.go:163: clobbering instruction   9150d6:	c4 e2 f9 b9 d1       	vfmadd231sd %xmm1,%xmm0,%xmm2
+    versions_test.go:163: clobbering instruction   915332:	f3 48 0f b8 f3       	popcnt %rbx,%rsi
+    versions_test.go:163: clobbering instruction   9244eb:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   9245cb:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   9245e4:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   92472b:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   924744:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   92475d:	66 48 0f 3a 22 df 01 	pinsrq $0x1,%rdi,%xmm3
+    versions_test.go:163: clobbering instruction   924776:	66 48 0f 3a 22 e7 01 	pinsrq $0x1,%rdi,%xmm4
+    versions_test.go:163: clobbering instruction   92496b:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   92498f:	66 4d 0f 3a 22 c8 00 	pinsrq $0x0,%r8,%xmm9
+    versions_test.go:163: clobbering instruction   9249e7:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   9249fb:	66 48 0f 3a 22 df 01 	pinsrq $0x1,%rdi,%xmm3
+    versions_test.go:163: clobbering instruction   924a0f:	66 48 0f 3a 22 e7 01 	pinsrq $0x1,%rdi,%xmm4
+    versions_test.go:163: clobbering instruction   924a23:	66 48 0f 3a 22 ef 01 	pinsrq $0x1,%rdi,%xmm5
+    versions_test.go:163: clobbering instruction   924a37:	66 48 0f 3a 22 f7 01 	pinsrq $0x1,%rdi,%xmm6
+    versions_test.go:163: clobbering instruction   924a4b:	66 48 0f 3a 22 ff 01 	pinsrq $0x1,%rdi,%xmm7
+    versions_test.go:163: clobbering instruction   924a5f:	66 4c 0f 3a 22 c7 01 	pinsrq $0x1,%rdi,%xmm8
+--- PASS: TestGoAMD64v1 (0.76s)
+=== RUN   TestLoop
+--- PASS: TestLoop (0.00s)
+PASS
+ok  	cmd/compile/internal/amd64	0.765s
+BASE(e36c20c7a55b0b77a5dbbfe84641f2f0dd84c0b0) TEST rc=0
+ARM1_BASE_RC=0
+
+=== PS1(ecafbe48e206bd28e53385cb78e4448e1a5eb1b5): toolchain read off the artifact ===
+go version go1.28-devel_ecafbe48 Mon Jul 20 12:23:41 2026 -0700 linux/amd64
+v1
+test files: [] [versions_simd_test.go versions_test.go]
+GUARD ok
+NOTE: no control file in this build
+
+=== PS1(ecafbe48e206bd28e53385cb78e4448e1a5eb1b5): GOEXPERIMENT=simd go test -count=1 -v -run TestGoAMD64v1|TestLoop . ===
+=== RUN   TestGoAMD64v1
+    versions_test.go:163: clobbering instruction   40290c:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   402945:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   40297d:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029b2:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029f9:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029fd:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   402a54:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   40e731:	c4 e3 f9 16 c0 00    	vpextrq $0x0,%xmm0,%rax
+    versions_test.go:163: clobbering instruction   40e7af:	c4 e3 f9 16 c0 00    	vpextrq $0x0,%xmm0,%rax
+    versions_test.go:163: clobbering instruction   4108e4:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   412837:	c4 e3 f9 16 c6 00    	vpextrq $0x0,%xmm0,%rsi
+    versions_test.go:163: clobbering instruction   412aa5:	c4 e3 f9 16 c2 00    	vpextrq $0x0,%xmm0,%rdx
+    versions_test.go:163: clobbering instruction   412f55:	c4 e3 f9 16 c6 00    	vpextrq $0x0,%xmm0,%rsi
+    versions_test.go:163: clobbering instruction   4131a4:	c4 e3 f9 16 c2 00    	vpextrq $0x0,%xmm0,%rdx
+    versions_test.go:163: clobbering instruction   4135a7:	c4 e3 f9 16 c1 00    	vpextrq $0x0,%xmm0,%rcx
+    versions_test.go:163: clobbering instruction   418ce7:	f3 45 0f b8 ff       	popcnt %r15d,%r15d
+    versions_test.go:163: clobbering instruction   439c19:	f3 48 0f b8 c0       	popcnt %rax,%rax
+    versions_test.go:163: clobbering instruction   439d46:	f3 48 0f b8 d0       	popcnt %rax,%rdx
+    versions_test.go:163: clobbering instruction   439f36:	f3 4d 0f b8 e3       	popcnt %r11,%r12
+    versions_test.go:163: clobbering instruction   43a0b6:	f3 4c 0f b8 c0       	popcnt %rax,%r8
+    versions_test.go:163: clobbering instruction   43f88b:	f3 4c 0f b8 e8       	popcnt %rax,%r13
+    versions_test.go:163: clobbering instruction   448929:	f3 48 0f b8 df       	popcnt %rdi,%rbx
+    versions_test.go:163: clobbering instruction   448e2b:	f3 48 0f b8 ca       	popcnt %rdx,%rcx
+    versions_test.go:163: clobbering instruction   449173:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   4491de:	f3 48 0f b8 c0       	popcnt %rax,%rax
+    versions_test.go:163: clobbering instruction   44922d:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   449291:	f3 48 0f b8 cb       	popcnt %rbx,%rcx
+    versions_test.go:163: clobbering instruction   4e9a24:	66 0f 3a 0b d9 03    	roundsd $0x3,%xmm1,%xmm3
+    versions_test.go:163: clobbering instruction   4e9ad8:	66 0f 3a 0b d9 03    	roundsd $0x3,%xmm1,%xmm3
+    versions_test.go:163: clobbering instruction   4e9c2f:	66 0f 3a 0b ec 03    	roundsd $0x3,%xmm4,%xmm5
+    versions_test.go:163: clobbering instruction   591b87:	66 0f 3a 0b c8 03    	roundsd $0x3,%xmm0,%xmm1
+    versions_test.go:163: clobbering instruction   59242f:	66 0f 3a 0b d8 03    	roundsd $0x3,%xmm0,%xmm3
+    versions_test.go:163: clobbering instruction   62338d:	66 0f 3a 16 c8 01    	pextrd $0x1,%xmm1,%eax
+    versions_test.go:163: clobbering instruction   7342a0:	f3 48 0f b8 f8       	popcnt %rax,%rdi
+    versions_test.go:163: clobbering instruction   775686:	f3 0f b8 c8          	popcnt %eax,%ecx
+    versions_test.go:163: clobbering instruction   7a13bd:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   81169b:	f3 48 0f b8 f6       	popcnt %rsi,%rsi
+    versions_test.go:163: clobbering instruction   8116fa:	f3 48 0f b8 d7       	popcnt %rdi,%rdx
+    versions_test.go:163: clobbering instruction   820e3b:	f3 4c 0f b8 e0       	popcnt %rax,%r12
+    versions_test.go:163: clobbering instruction   820e82:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   825a12:	f3 4c 0f b8 d8       	popcnt %rax,%r11
+    versions_test.go:163: clobbering instruction   825a66:	f3 4d 0f b8 e0       	popcnt %r8,%r12
+    versions_test.go:163: clobbering instruction   826946:	f3 48 0f b8 f0       	popcnt %rax,%rsi
+    versions_test.go:163: clobbering instruction   826974:	f3 48 0f b8 d1       	popcnt %rcx,%rdx
+    versions_test.go:163: clobbering instruction   827354:	f3 4d 0f b8 d2       	popcnt %r10,%r10
+    versions_test.go:163: clobbering instruction   827395:	f3 48 0f b8 d0       	popcnt %rax,%rdx
+    versions_test.go:163: clobbering instruction   828bc2:	f3 4d 0f b8 c7       	popcnt %r15,%r8
+    versions_test.go:163: clobbering instruction   828c3d:	f3 4c 0f b8 cf       	popcnt %rdi,%r9
+    versions_test.go:163: clobbering instruction   828e59:	f3 4c 0f b8 ce       	popcnt %rsi,%r9
+    versions_test.go:163: clobbering instruction   828edc:	f3 48 0f b8 cf       	popcnt %rdi,%rcx
+    versions_test.go:163: clobbering instruction   8295f7:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   829646:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   829711:	f3 4d 0f b8 ca       	popcnt %r10,%r9
+    versions_test.go:163: clobbering instruction   82975e:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   8299ca:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   829a1b:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   82b2e8:	f3 4d 0f b8 f9       	popcnt %r9,%r15
+    versions_test.go:163: clobbering instruction   82b364:	f3 49 0f b8 fc       	popcnt %r12,%rdi
+    versions_test.go:163: clobbering instruction   82c812:	f3 4d 0f b8 d2       	popcnt %r10,%r10
+    versions_test.go:163: clobbering instruction   82c872:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   8360ec:	f3 4c 0f b8 d8       	popcnt %rax,%r11
+    versions_test.go:163: clobbering instruction   83613c:	f3 4d 0f b8 e0       	popcnt %r8,%r12
+    versions_test.go:163: clobbering instruction   866cfa:	66 0f 3a 0b c0 02    	roundsd $0x2,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   874fba:	66 0f 3a 0b c0 01    	roundsd $0x1,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   8a4f0c:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4f5c:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a5029:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a5076:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a5149:	f3 48 0f b8 c9       	popcnt %rcx,%rcx
+    versions_test.go:163: clobbering instruction   8a5197:	f3 48 0f b8 c9       	popcnt %rcx,%rcx
+    versions_test.go:163: clobbering instruction   8aa4da:	66 0f 3a 0b c0 00    	roundsd $0x0,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   8c0a1a:	66 0f 3a 0b c0 03    	roundsd $0x3,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   912656:	c5 83 11 c2          	vmovsd %xmm0,%xmm15,%xmm2
+    versions_test.go:163: clobbering instruction   91265a:	c4 e2 79 59 d2       	vpbroadcastq %xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   91265f:	c5 e9 59 d2          	vmulpd %xmm2,%xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   912663:	c4 e3 f9 16 d1 00    	vpextrq $0x0,%xmm2,%rcx
+    versions_test.go:163: clobbering instruction   912681:	c5 83 11 c1          	vmovsd %xmm0,%xmm15,%xmm1
+    versions_test.go:163: clobbering instruction   912685:	c4 e2 79 59 c9       	vpbroadcastq %xmm1,%xmm1
+    versions_test.go:163: clobbering instruction   91268a:	c5 f1 59 c9          	vmulpd %xmm1,%xmm1,%xmm1
+    versions_test.go:163: clobbering instruction   91268e:	c4 e3 f9 16 c9 00    	vpextrq $0x0,%xmm1,%rcx
+    versions_test.go:163: clobbering instruction   913f38:	f3 4c 0f b8 c6       	popcnt %rsi,%r8
+    versions_test.go:163: clobbering instruction   91406c:	f3 44 0f b8 c6       	popcnt %esi,%r8d
+    versions_test.go:163: clobbering instruction   9151a8:	66 0f 3a 0b d0 00    	roundsd $0x0,%xmm0,%xmm2
+    versions_test.go:163: clobbering instruction   9153f6:	c4 e2 f9 b9 d1       	vfmadd231sd %xmm1,%xmm0,%xmm2
+    versions_test.go:163: clobbering instruction   915652:	f3 48 0f b8 f3       	popcnt %rbx,%rsi
+    versions_test.go:163: clobbering instruction   92480b:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   9248eb:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   924904:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   924a4b:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   924a64:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   924a7d:	66 48 0f 3a 22 df 01 	pinsrq $0x1,%rdi,%xmm3
+    versions_test.go:163: clobbering instruction   924a96:	66 48 0f 3a 22 e7 01 	pinsrq $0x1,%rdi,%xmm4
+    versions_test.go:163: clobbering instruction   924c8b:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   924caf:	66 4d 0f 3a 22 c8 00 	pinsrq $0x0,%r8,%xmm9
+    versions_test.go:163: clobbering instruction   924d07:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   924d1b:	66 48 0f 3a 22 df 01 	pinsrq $0x1,%rdi,%xmm3
+    versions_test.go:163: clobbering instruction   924d2f:	66 48 0f 3a 22 e7 01 	pinsrq $0x1,%rdi,%xmm4
+    versions_test.go:163: clobbering instruction   924d43:	66 48 0f 3a 22 ef 01 	pinsrq $0x1,%rdi,%xmm5
+    versions_test.go:163: clobbering instruction   924d57:	66 48 0f 3a 22 f7 01 	pinsrq $0x1,%rdi,%xmm6
+    versions_test.go:163: clobbering instruction   924d6b:	66 48 0f 3a 22 ff 01 	pinsrq $0x1,%rdi,%xmm7
+    versions_test.go:163: clobbering instruction   924d7f:	66 4c 0f 3a 22 c7 01 	pinsrq $0x1,%rdi,%xmm8
+    versions_test.go:82: couldn't execute test: exit status 2
+        SIGTRAP: trace trap
+        PC=0x912682 m=0 sigcode=128
+        
+        goroutine 29 gp=0x3a1fa2025a0 m=0 mp=0x102b660 [running]:
+        simd/archsimd.BroadcastFloat64x2(...)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/simd/archsimd/other_gen_amd64.go:94
+        cmd/compile/internal/amd64_test.testLoop3(0x547933?, 0x7?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/cmd/compile/internal/amd64/versions_simd_test.go:31 +0x2 fp=0x3a1fa1bff50 sp=0x3a1fa1bff48 pc=0x912682
+        cmd/compile/internal/amd64_test.TestLoop(0x3a1fa2b5688?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/cmd/compile/internal/amd64/versions_test.go:444 +0x45 fp=0x3a1fa1bff70 sp=0x3a1fa1bff50 pc=0x915605
+        testing.tRunner(0x3a1fa2b5688, 0xe22628)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/testing/testing.go:2200 +0xea fp=0x3a1fa1bffc0 sp=0x3a1fa1bff70 pc=0x54832a
+        testing.(*T).Run.gowrap1()
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/testing/testing.go:2265 +0x1b fp=0x3a1fa1bffe0 sp=0x3a1fa1bffc0 pc=0x54e2bb
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x3a1fa1bffe8 sp=0x3a1fa1bffe0 pc=0x4960c1
+        created by testing.(*T).Run in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/testing/testing.go:2265 +0x4d4
+        
+        goroutine 1 gp=0x3a1fa1121e0 m=nil [chan receive]:
+        runtime.gopark(0x7f31fad286e0?, 0x7f31faa726c8?, 0xa8?, 0xa?, 0xdcce58?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:474 +0xca fp=0x3a1fa265908 sp=0x3a1fa2658e8 pc=0x48f64a
+        runtime.chanrecv(0x3a1fa21b400, 0x3a1fa2659ef, 0x1)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/chan.go:667 +0x4ae fp=0x3a1fa265980 sp=0x3a1fa265908 pc=0x41c8ce
+        runtime.chanrecv1(0x18?, 0xdefbf8?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/chan.go:509 +0x12 fp=0x3a1fa2659a8 sp=0x3a1fa265980 pc=0x41c3f2
+        testing.(*T).Run(0x3a1fa2b4008, {0x931e9c?, 0x3a1fa265aa0?}, 0xe22628)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/testing/testing.go:2273 +0x4f2 fp=0x3a1fa265a80 sp=0x3a1fa2659a8 pc=0x548892
+        testing.runTests.func1(0x3a1fa2b4008)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/testing/testing.go:2749 +0x37 fp=0x3a1fa265ac0 sp=0x3a1fa265a80 pc=0x54e537
+        testing.tRunner(0x3a1fa2b4008, 0x3a1fa265bc8)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/testing/testing.go:2200 +0xea fp=0x3a1fa265b10 sp=0x3a1fa265ac0 pc=0x54832a
+        testing.runTests({0x0, 0x0}, {0x95ba4c, 0x1a}, 0x3a1fa2222e8, {0xed9860, 0xa, 0xa}, {0x0, 0x0, ...})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/testing/testing.go:2747 +0x510 fp=0x3a1fa265bf8 sp=0x3a1fa265b10 pc=0x54a8f0
+        testing.(*M).Run(0x3a1fa220a00)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/testing/testing.go:2607 +0x6af fp=0x3a1fa265e38 sp=0x3a1fa265bf8 pc=0x5494af
+        main.main()
+        	_testmain.go:66 +0x9b fp=0x3a1fa265eb8 sp=0x3a1fa265e38 pc=0x91589b
+        runtime.main()
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:302 +0x427 fp=0x3a1fa265fe0 sp=0x3a1fa265eb8 pc=0x455f67
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x3a1fa265fe8 sp=0x3a1fa265fe0 pc=0x4960c1
+        
+        goroutine 2 gp=0x3a1fa112780 m=nil [force gc (idle)]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:474 +0xca fp=0x3a1fa1c2fa8 sp=0x3a1fa1c2f88 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:480
+        runtime.forcegchelper()
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:387 +0xb3 fp=0x3a1fa1c2fe0 sp=0x3a1fa1c2fa8 pc=0x456233
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x3a1fa1c2fe8 sp=0x3a1fa1c2fe0 pc=0x4960c1
+        created by runtime.init.7 in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:375 +0x1a
+        
+        goroutine 3 gp=0x3a1fa112d20 m=nil [GC sweep wait]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:474 +0xca fp=0x3a1fa1c3788 sp=0x3a1fa1c3768 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:480
+        runtime.bgsweep(0x3a1fa1e2000)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mgcsweep.go:279 +0x94 fp=0x3a1fa1c37c8 sp=0x3a1fa1c3788 pc=0x43edf4
+        runtime.gcenable.gowrap1()
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mgc.go:214 +0x17 fp=0x3a1fa1c37e0 sp=0x3a1fa1c37c8 pc=0x485037
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x3a1fa1c37e8 sp=0x3a1fa1c37e0 pc=0x4960c1
+        created by runtime.gcenable in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mgc.go:214 +0x66
+        
+        goroutine 4 gp=0x3a1fa112f00 m=nil [GC scavenge wait]:
+        runtime.gopark(0x3a1fa1e2000?, 0x978d98?, 0x1?, 0x0?, 0x3a1fa112f00?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:474 +0xca fp=0x3a1fa1c3f78 sp=0x3a1fa1c3f58 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:480
+        runtime.(*scavengerState).park(0x1028180)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mgcscavenge.go:425 +0x49 fp=0x3a1fa1c3fa8 sp=0x3a1fa1c3f78 pc=0x43c9c9
+        runtime.bgscavenge(0x3a1fa1e2000)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mgcscavenge.go:653 +0x3c fp=0x3a1fa1c3fc8 sp=0x3a1fa1c3fa8 pc=0x43cf1c
+        runtime.gcenable.gowrap2()
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mgc.go:215 +0x17 fp=0x3a1fa1c3fe0 sp=0x3a1fa1c3fc8 pc=0x484ff7
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x3a1fa1c3fe8 sp=0x3a1fa1c3fe0 pc=0x4960c1
+        created by runtime.gcenable in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mgc.go:215 +0xa5
+        
+        goroutine 17 gp=0x3a1fa202000 m=nil [GOMAXPROCS updater (idle)]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:474 +0xca fp=0x3a1fa1be788 sp=0x3a1fa1be768 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:480
+        runtime.updateMaxProcsGoroutine()
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:7146 +0xe7 fp=0x3a1fa1be7e0 sp=0x3a1fa1be788 pc=0x463767
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x3a1fa1be7e8 sp=0x3a1fa1be7e0 pc=0x4960c1
+        created by runtime.defaultGOMAXPROCSUpdateEnable in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:7134 +0x37
+        
+        goroutine 18 gp=0x3a1fa2021e0 m=nil [finalizer wait]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:474 +0xca fp=0x3a1fa1bee20 sp=0x3a1fa1bee00 pc=0x48f64a
+        runtime.runFinalizers()
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mfinal.go:210 +0x107 fp=0x3a1fa1befe0 sp=0x3a1fa1bee20 pc=0x42ff67
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x3a1fa1befe8 sp=0x3a1fa1befe0 pc=0x4960c1
+        created by runtime.createfing in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mfinal.go:172 +0x3d
+        
+        goroutine 19 gp=0x3a1fa2023c0 m=nil [cleanup wait]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:474 +0xca fp=0x3a1fa1bf768 sp=0x3a1fa1bf748 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/proc.go:480
+        runtime.(*cleanupQueue).dequeue(0x1028500)
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mcleanup.go:522 +0xd3 fp=0x3a1fa1bf7a0 sp=0x3a1fa1bf768 pc=0x42ccb3
+        runtime.runCleanups()
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mcleanup.go:718 +0x45 fp=0x3a1fa1bf7e0 sp=0x3a1fa1bf7a0 pc=0x42d305
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x3a1fa1bf7e8 sp=0x3a1fa1bf7e0 pc=0x4960c1
+        created by runtime.(*cleanupQueue).createGs in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/ps1/src/runtime/mcleanup.go:672 +0xa5
+        
+        rax    0x6
+        rbx    0x7
+        rcx    0x12
+        rdx    0x0
+        rdi    0x429e06c3c0000000
+        rsi    0x3
+        rbp    0x3a1fa1bff60
+        rsp    0x3a1fa1bff48
+        r8     0x0
+        r9     0x0
+        r10    0x0
+        r11    0x0
+        r12    0x3a1fa1bff30
+        r13    0xc0
+        r14    0x3a1fa2025a0
+        r15    0x102bb68
+        rip    0x912682
+        rflags 0x246
+        cs     0x33
+        fs     0x0
+        gs     0x0
+--- FAIL: TestGoAMD64v1 (0.76s)
+=== RUN   TestLoop
+--- PASS: TestLoop (0.00s)
+FAIL
+FAIL	cmd/compile/internal/amd64	0.760s
+FAIL
+PS1(ecafbe48e206bd28e53385cb78e4448e1a5eb1b5) TEST rc=1
+ARM2_PS1_RC=1
+
+=== control: writing the unguarded avx2 loop into the BASE tree ===
+write control rc=0
+
+=== BASE+UNGUARDED-CONTROL: toolchain read off the artifact ===
+go version go1.28-devel_e36c20c7 Mon Jul 20 09:27:03 2026 -0700 linux/amd64
+v1
+test files: [] [keel_d1_control_test.go versions_simd_test.go versions_test.go]
+GUARD ok
+NOTE: the unguarded control file IS in this build
+
+=== BASE+UNGUARDED-CONTROL: GOEXPERIMENT=simd go test -count=1 -v -run TestGoAMD64v1|TestLoop . ===
+=== RUN   TestGoAMD64v1
+    versions_test.go:163: clobbering instruction   40290c:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   402945:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   40297d:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029b2:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029f9:	f3 0f b8 d2          	popcnt %edx,%edx
+    versions_test.go:163: clobbering instruction   4029fd:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   402a54:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   40e731:	c4 e3 f9 16 c0 00    	vpextrq $0x0,%xmm0,%rax
+    versions_test.go:163: clobbering instruction   40e7af:	c4 e3 f9 16 c0 00    	vpextrq $0x0,%xmm0,%rax
+    versions_test.go:163: clobbering instruction   4108e4:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   412837:	c4 e3 f9 16 c6 00    	vpextrq $0x0,%xmm0,%rsi
+    versions_test.go:163: clobbering instruction   412aa5:	c4 e3 f9 16 c2 00    	vpextrq $0x0,%xmm0,%rdx
+    versions_test.go:163: clobbering instruction   412f55:	c4 e3 f9 16 c6 00    	vpextrq $0x0,%xmm0,%rsi
+    versions_test.go:163: clobbering instruction   4131a4:	c4 e3 f9 16 c2 00    	vpextrq $0x0,%xmm0,%rdx
+    versions_test.go:163: clobbering instruction   4135a7:	c4 e3 f9 16 c1 00    	vpextrq $0x0,%xmm0,%rcx
+    versions_test.go:163: clobbering instruction   418ce7:	f3 45 0f b8 ff       	popcnt %r15d,%r15d
+    versions_test.go:163: clobbering instruction   439c19:	f3 48 0f b8 c0       	popcnt %rax,%rax
+    versions_test.go:163: clobbering instruction   439d46:	f3 48 0f b8 d0       	popcnt %rax,%rdx
+    versions_test.go:163: clobbering instruction   439f36:	f3 4d 0f b8 e3       	popcnt %r11,%r12
+    versions_test.go:163: clobbering instruction   43a0b6:	f3 4c 0f b8 c0       	popcnt %rax,%r8
+    versions_test.go:163: clobbering instruction   43f88b:	f3 4c 0f b8 e8       	popcnt %rax,%r13
+    versions_test.go:163: clobbering instruction   448929:	f3 48 0f b8 df       	popcnt %rdi,%rbx
+    versions_test.go:163: clobbering instruction   448e2b:	f3 48 0f b8 ca       	popcnt %rdx,%rcx
+    versions_test.go:163: clobbering instruction   449173:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   4491de:	f3 48 0f b8 c0       	popcnt %rax,%rax
+    versions_test.go:163: clobbering instruction   44922d:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   449291:	f3 48 0f b8 cb       	popcnt %rbx,%rcx
+    versions_test.go:163: clobbering instruction   4e9a24:	66 0f 3a 0b d9 03    	roundsd $0x3,%xmm1,%xmm3
+    versions_test.go:163: clobbering instruction   4e9ad8:	66 0f 3a 0b d9 03    	roundsd $0x3,%xmm1,%xmm3
+    versions_test.go:163: clobbering instruction   4e9c2f:	66 0f 3a 0b ec 03    	roundsd $0x3,%xmm4,%xmm5
+    versions_test.go:163: clobbering instruction   591b87:	66 0f 3a 0b c8 03    	roundsd $0x3,%xmm0,%xmm1
+    versions_test.go:163: clobbering instruction   59242f:	66 0f 3a 0b d8 03    	roundsd $0x3,%xmm0,%xmm3
+    versions_test.go:163: clobbering instruction   62338d:	66 0f 3a 16 c8 01    	pextrd $0x1,%xmm1,%eax
+    versions_test.go:163: clobbering instruction   7342a0:	f3 48 0f b8 f8       	popcnt %rax,%rdi
+    versions_test.go:163: clobbering instruction   775686:	f3 0f b8 c8          	popcnt %eax,%ecx
+    versions_test.go:163: clobbering instruction   7a13bd:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   81137b:	f3 48 0f b8 f6       	popcnt %rsi,%rsi
+    versions_test.go:163: clobbering instruction   8113da:	f3 48 0f b8 d7       	popcnt %rdi,%rdx
+    versions_test.go:163: clobbering instruction   820b1b:	f3 4c 0f b8 e0       	popcnt %rax,%r12
+    versions_test.go:163: clobbering instruction   820b62:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   8256f2:	f3 4c 0f b8 d8       	popcnt %rax,%r11
+    versions_test.go:163: clobbering instruction   825746:	f3 4d 0f b8 e0       	popcnt %r8,%r12
+    versions_test.go:163: clobbering instruction   826626:	f3 48 0f b8 f0       	popcnt %rax,%rsi
+    versions_test.go:163: clobbering instruction   826654:	f3 48 0f b8 d1       	popcnt %rcx,%rdx
+    versions_test.go:163: clobbering instruction   827034:	f3 4d 0f b8 d2       	popcnt %r10,%r10
+    versions_test.go:163: clobbering instruction   827075:	f3 48 0f b8 d0       	popcnt %rax,%rdx
+    versions_test.go:163: clobbering instruction   8288a2:	f3 4d 0f b8 c7       	popcnt %r15,%r8
+    versions_test.go:163: clobbering instruction   82891d:	f3 4c 0f b8 cf       	popcnt %rdi,%r9
+    versions_test.go:163: clobbering instruction   828b39:	f3 4c 0f b8 ce       	popcnt %rsi,%r9
+    versions_test.go:163: clobbering instruction   828bbc:	f3 48 0f b8 cf       	popcnt %rdi,%rcx
+    versions_test.go:163: clobbering instruction   8292d7:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   829326:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   8293f1:	f3 4d 0f b8 ca       	popcnt %r10,%r9
+    versions_test.go:163: clobbering instruction   82943e:	f3 4d 0f b8 c0       	popcnt %r8,%r8
+    versions_test.go:163: clobbering instruction   8296aa:	f3 4d 0f b8 c9       	popcnt %r9,%r9
+    versions_test.go:163: clobbering instruction   8296fb:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   82afc8:	f3 4d 0f b8 f9       	popcnt %r9,%r15
+    versions_test.go:163: clobbering instruction   82b044:	f3 49 0f b8 fc       	popcnt %r12,%rdi
+    versions_test.go:163: clobbering instruction   82c4f2:	f3 4d 0f b8 d2       	popcnt %r10,%r10
+    versions_test.go:163: clobbering instruction   82c552:	f3 48 0f b8 d2       	popcnt %rdx,%rdx
+    versions_test.go:163: clobbering instruction   835dcc:	f3 4c 0f b8 d8       	popcnt %rax,%r11
+    versions_test.go:163: clobbering instruction   835e1c:	f3 4d 0f b8 e0       	popcnt %r8,%r12
+    versions_test.go:163: clobbering instruction   8669da:	66 0f 3a 0b c0 02    	roundsd $0x2,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   874c9a:	66 0f 3a 0b c0 01    	roundsd $0x1,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   8a4bec:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4c3c:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4d09:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4d56:	f3 0f b8 c9          	popcnt %ecx,%ecx
+    versions_test.go:163: clobbering instruction   8a4e29:	f3 48 0f b8 c9       	popcnt %rcx,%rcx
+    versions_test.go:163: clobbering instruction   8a4e77:	f3 48 0f b8 c9       	popcnt %rcx,%rcx
+    versions_test.go:163: clobbering instruction   8aa1ba:	66 0f 3a 0b c0 00    	roundsd $0x0,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   8c06fa:	66 0f 3a 0b c0 03    	roundsd $0x3,%xmm0,%xmm0
+    versions_test.go:163: clobbering instruction   912325:	c5 83 11 c2          	vmovsd %xmm0,%xmm15,%xmm2
+    versions_test.go:163: clobbering instruction   912329:	c4 e2 79 59 d2       	vpbroadcastq %xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   91232e:	c5 e9 59 d2          	vmulpd %xmm2,%xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   912332:	c4 e3 f9 16 d1 00    	vpextrq $0x0,%xmm2,%rcx
+    versions_test.go:163: clobbering instruction   9123b6:	c5 83 11 c2          	vmovsd %xmm0,%xmm15,%xmm2
+    versions_test.go:163: clobbering instruction   9123ba:	c4 e2 79 59 d2       	vpbroadcastq %xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   9123bf:	c5 e9 59 d2          	vmulpd %xmm2,%xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   9123c3:	c4 e3 f9 16 d1 00    	vpextrq $0x0,%xmm2,%rcx
+    versions_test.go:163: clobbering instruction   9123f6:	c5 83 11 c2          	vmovsd %xmm0,%xmm15,%xmm2
+    versions_test.go:163: clobbering instruction   9123fa:	c4 e2 79 59 d2       	vpbroadcastq %xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   9123ff:	c5 e9 59 d2          	vmulpd %xmm2,%xmm2,%xmm2
+    versions_test.go:163: clobbering instruction   912403:	c4 e3 f9 16 d0 00    	vpextrq $0x0,%xmm2,%rax
+    versions_test.go:163: clobbering instruction   913c98:	f3 4c 0f b8 c6       	popcnt %rsi,%r8
+    versions_test.go:163: clobbering instruction   913dcc:	f3 44 0f b8 c6       	popcnt %esi,%r8d
+    versions_test.go:163: clobbering instruction   914f08:	66 0f 3a 0b d0 00    	roundsd $0x0,%xmm0,%xmm2
+    versions_test.go:163: clobbering instruction   915156:	c4 e2 f9 b9 d1       	vfmadd231sd %xmm1,%xmm0,%xmm2
+    versions_test.go:163: clobbering instruction   9153b2:	f3 48 0f b8 f3       	popcnt %rbx,%rsi
+    versions_test.go:163: clobbering instruction   92456b:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   92464b:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   924664:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   9247ab:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   9247c4:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   9247dd:	66 48 0f 3a 22 df 01 	pinsrq $0x1,%rdi,%xmm3
+    versions_test.go:163: clobbering instruction   9247f6:	66 48 0f 3a 22 e7 01 	pinsrq $0x1,%rdi,%xmm4
+    versions_test.go:163: clobbering instruction   9249eb:	66 48 0f 3a 22 cf 01 	pinsrq $0x1,%rdi,%xmm1
+    versions_test.go:163: clobbering instruction   924a0f:	66 4d 0f 3a 22 c8 00 	pinsrq $0x0,%r8,%xmm9
+    versions_test.go:163: clobbering instruction   924a67:	66 48 0f 3a 22 d7 01 	pinsrq $0x1,%rdi,%xmm2
+    versions_test.go:163: clobbering instruction   924a7b:	66 48 0f 3a 22 df 01 	pinsrq $0x1,%rdi,%xmm3
+    versions_test.go:163: clobbering instruction   924a8f:	66 48 0f 3a 22 e7 01 	pinsrq $0x1,%rdi,%xmm4
+    versions_test.go:163: clobbering instruction   924aa3:	66 48 0f 3a 22 ef 01 	pinsrq $0x1,%rdi,%xmm5
+    versions_test.go:163: clobbering instruction   924ab7:	66 48 0f 3a 22 f7 01 	pinsrq $0x1,%rdi,%xmm6
+    versions_test.go:163: clobbering instruction   924acb:	66 48 0f 3a 22 ff 01 	pinsrq $0x1,%rdi,%xmm7
+    versions_test.go:163: clobbering instruction   924adf:	66 4c 0f 3a 22 c7 01 	pinsrq $0x1,%rdi,%xmm8
+    versions_test.go:82: couldn't execute test: exit status 2
+        SIGTRAP: trace trap
+        PC=0x912326 m=0 sigcode=128
+        
+        goroutine 8 gp=0x18a77c353a40 m=0 mp=0x102b660 [running]:
+        simd/archsimd.BroadcastFloat64x2(...)
+        	/home/scttfrdmn/keel-d1-803220/base/src/simd/archsimd/other_gen_amd64.go:94
+        cmd/compile/internal/amd64_test.keelD1Unguarded(0x547933?, 0x4be6f3?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/cmd/compile/internal/amd64/keel_d1_control_test.go:21 +0x6 fp=0x18a77c407750 sp=0x18a77c407748 pc=0x912326
+        cmd/compile/internal/amd64_test.TestKeelD1Unguarded(0x18a77c53e248?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/cmd/compile/internal/amd64/keel_d1_control_test.go:29 +0x25 fp=0x18a77c407770 sp=0x18a77c407750 pc=0x912385
+        testing.tRunner(0x18a77c53e248, 0xe22908)
+        	/home/scttfrdmn/keel-d1-803220/base/src/testing/testing.go:2200 +0xea fp=0x18a77c4077c0 sp=0x18a77c407770 pc=0x54832a
+        testing.(*T).Run.gowrap1()
+        	/home/scttfrdmn/keel-d1-803220/base/src/testing/testing.go:2265 +0x1b fp=0x18a77c4077e0 sp=0x18a77c4077c0 pc=0x54e2bb
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/asm_amd64.s:1264 +0x1 fp=0x18a77c4077e8 sp=0x18a77c4077e0 pc=0x4960c1
+        created by testing.(*T).Run in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/base/src/testing/testing.go:2265 +0x4d4
+        
+        goroutine 1 gp=0x18a77c3521e0 m=nil [chan receive]:
+        runtime.gopark(0x764b986f9108?, 0x764b98702420?, 0xc0?, 0x47?, 0xdcd138?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:474 +0xca fp=0x18a77c493908 sp=0x18a77c4938e8 pc=0x48f64a
+        runtime.chanrecv(0x18a77c423000, 0x18a77c4939ef, 0x1)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/chan.go:667 +0x4ae fp=0x18a77c493980 sp=0x18a77c493908 pc=0x41c8ce
+        runtime.chanrecv1(0x18?, 0xdefed8?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/chan.go:509 +0x12 fp=0x18a77c4939a8 sp=0x18a77c493980 pc=0x41c3f2
+        testing.(*T).Run(0x18a77c53e008, {0x94d2d0?, 0x18a77c493aa0?}, 0xe22908)
+        	/home/scttfrdmn/keel-d1-803220/base/src/testing/testing.go:2273 +0x4f2 fp=0x18a77c493a80 sp=0x18a77c4939a8 pc=0x548892
+        testing.runTests.func1(0x18a77c53e008)
+        	/home/scttfrdmn/keel-d1-803220/base/src/testing/testing.go:2749 +0x37 fp=0x18a77c493ac0 sp=0x18a77c493a80 pc=0x54e537
+        testing.tRunner(0x18a77c53e008, 0x18a77c493bc8)
+        	/home/scttfrdmn/keel-d1-803220/base/src/testing/testing.go:2200 +0xea fp=0x18a77c493b10 sp=0x18a77c493ac0 pc=0x54832a
+        testing.runTests({0x0, 0x0}, {0x95ba5f, 0x1a}, 0x18a77c35e300, {0xeda340, 0xb, 0xb}, {0x0, 0x0, ...})
+        	/home/scttfrdmn/keel-d1-803220/base/src/testing/testing.go:2747 +0x510 fp=0x18a77c493bf8 sp=0x18a77c493b10 pc=0x54a8f0
+        testing.(*M).Run(0x18a77c446aa0)
+        	/home/scttfrdmn/keel-d1-803220/base/src/testing/testing.go:2607 +0x6af fp=0x18a77c493e38 sp=0x18a77c493bf8 pc=0x5494af
+        main.main()
+        	_testmain.go:68 +0x9b fp=0x18a77c493eb8 sp=0x18a77c493e38 pc=0x9155fb
+        runtime.main()
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:302 +0x427 fp=0x18a77c493fe0 sp=0x18a77c493eb8 pc=0x455f67
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/asm_amd64.s:1264 +0x1 fp=0x18a77c493fe8 sp=0x18a77c493fe0 pc=0x4960c1
+        
+        goroutine 2 gp=0x18a77c352780 m=nil [force gc (idle)]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:474 +0xca fp=0x18a77c404fa8 sp=0x18a77c404f88 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:480
+        runtime.forcegchelper()
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:387 +0xb3 fp=0x18a77c404fe0 sp=0x18a77c404fa8 pc=0x456233
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/asm_amd64.s:1264 +0x1 fp=0x18a77c404fe8 sp=0x18a77c404fe0 pc=0x4960c1
+        created by runtime.init.7 in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:375 +0x1a
+        
+        goroutine 3 gp=0x18a77c352d20 m=nil [GC sweep wait]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:474 +0xca fp=0x18a77c405788 sp=0x18a77c405768 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:480
+        runtime.bgsweep(0x18a77c422000)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mgcsweep.go:279 +0x94 fp=0x18a77c4057c8 sp=0x18a77c405788 pc=0x43edf4
+        runtime.gcenable.gowrap1()
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mgc.go:214 +0x17 fp=0x18a77c4057e0 sp=0x18a77c4057c8 pc=0x485037
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/asm_amd64.s:1264 +0x1 fp=0x18a77c4057e8 sp=0x18a77c4057e0 pc=0x4960c1
+        created by runtime.gcenable in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mgc.go:214 +0x66
+        
+        goroutine 4 gp=0x18a77c352f00 m=nil [GC scavenge wait]:
+        runtime.gopark(0x18a77c422000?, 0x978db0?, 0x1?, 0x0?, 0x18a77c352f00?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:474 +0xca fp=0x18a77c405f78 sp=0x18a77c405f58 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:480
+        runtime.(*scavengerState).park(0x1028180)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mgcscavenge.go:425 +0x49 fp=0x18a77c405fa8 sp=0x18a77c405f78 pc=0x43c9c9
+        runtime.bgscavenge(0x18a77c422000)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mgcscavenge.go:653 +0x3c fp=0x18a77c405fc8 sp=0x18a77c405fa8 pc=0x43cf1c
+        runtime.gcenable.gowrap2()
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mgc.go:215 +0x17 fp=0x18a77c405fe0 sp=0x18a77c405fc8 pc=0x484ff7
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/asm_amd64.s:1264 +0x1 fp=0x18a77c405fe8 sp=0x18a77c405fe0 pc=0x4960c1
+        created by runtime.gcenable in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mgc.go:215 +0xa5
+        
+        goroutine 5 gp=0x18a77c3534a0 m=nil [GOMAXPROCS updater (idle)]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:474 +0xca fp=0x18a77c404788 sp=0x18a77c404768 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:480
+        runtime.updateMaxProcsGoroutine()
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:7146 +0xe7 fp=0x18a77c4047e0 sp=0x18a77c404788 pc=0x463767
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/asm_amd64.s:1264 +0x1 fp=0x18a77c4047e8 sp=0x18a77c4047e0 pc=0x4960c1
+        created by runtime.defaultGOMAXPROCSUpdateEnable in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:7134 +0x37
+        
+        goroutine 6 gp=0x18a77c353680 m=nil [finalizer wait]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:474 +0xca fp=0x18a77c406620 sp=0x18a77c406600 pc=0x48f64a
+        runtime.runFinalizers()
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mfinal.go:210 +0x107 fp=0x18a77c4067e0 sp=0x18a77c406620 pc=0x42ff67
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/asm_amd64.s:1264 +0x1 fp=0x18a77c4067e8 sp=0x18a77c4067e0 pc=0x4960c1
+        created by runtime.createfing in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mfinal.go:172 +0x3d
+        
+        goroutine 7 gp=0x18a77c353860 m=nil [cleanup wait]:
+        runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:474 +0xca fp=0x18a77c406f68 sp=0x18a77c406f48 pc=0x48f64a
+        runtime.goparkunlock(...)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/proc.go:480
+        runtime.(*cleanupQueue).dequeue(0x1028500)
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mcleanup.go:522 +0xd3 fp=0x18a77c406fa0 sp=0x18a77c406f68 pc=0x42ccb3
+        runtime.runCleanups()
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mcleanup.go:718 +0x45 fp=0x18a77c406fe0 sp=0x18a77c406fa0 pc=0x42d305
+        runtime.goexit({})
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/asm_amd64.s:1264 +0x1 fp=0x18a77c406fe8 sp=0x18a77c406fe0 pc=0x4960c1
+        created by runtime.(*cleanupQueue).createGs in goroutine 1
+        	/home/scttfrdmn/keel-d1-803220/base/src/runtime/mcleanup.go:672 +0xa5
+        
+        rax    0x6
+        rbx    0x74e71
+        rcx    0x912360
+        rdx    0xe22908
+        rdi    0x429e06c400000000
+        rsi    0x0
+        rbp    0x18a77c407760
+        rsp    0x18a77c407748
+        r8     0x0
+        r9     0x0
+        r10    0x0
+        r11    0x0
+        r12    0x18a77c407730
+        r13    0xc0
+        r14    0x18a77c353a40
+        r15    0x54826d
+        rip    0x912326
+        rflags 0x206
+        cs     0x33
+        fs     0x0
+        gs     0x0
+--- FAIL: TestGoAMD64v1 (0.76s)
+=== RUN   TestLoop
+--- PASS: TestLoop (0.00s)
+FAIL
+FAIL	cmd/compile/internal/amd64	0.760s
+FAIL
+BASE+UNGUARDED-CONTROL TEST rc=1
+ARM3_CONTROL_RC=1  (NONZERO is the passing outcome for this arm)
+control file removed again rc=0
+
+=== done ===
+2026-09-02T04:18:24Z
+REMOTE_RC=0  (the script's own exit; the per-arm verdicts are the ARM*_RC lines)
+driver done: 2026-09-02T04:18:24Z

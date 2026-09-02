@@ -9,6 +9,24 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **D1 executed (`#126`): CL 803220 patch set 1 hoists an AVX2 op above its feature guard, and the
+  test that exists to catch it faults on amd64.** Andreas Goetz reported this from `-S` output on
+  2026-07-25 and stated he could not run it (*"I'm on an arm64 host"*); nobody had run it since. On
+  `antares.local` (AMD RYZEN AI MAX+ 395, linux/amd64, `GOAMD64=v1`), three arms: the parent
+  revision `e36c20c7` **passes**, patch set 1 `ecafbe48` **fails** with `SIGTRAP` in `testLoop3` at
+  `versions_simd_test.go:31` reached from `TestLoop`'s `testLoop3(6, 7)`, and an unguarded-AVX2
+  control at the parent revision **also fails**, which is that arm's passing outcome and the reason
+  the second arm is evidence rather than an absence. The `-S` reading and the runtime outcome agree.
+  The verdict is **silicon-independent**: `TestGoAMD64v1` rewrites every non-v1 opcode in its own
+  binary into a faulting instruction and re-runs it under `GODEBUG=cpu.avx2=off`, and
+  `featureToOpcodes["avx2"]` is exactly the four opcodes this loop emits — hence `SIGTRAP`, not
+  `SIGILL`, on a host that has AVX2. Arms 1 and 2 clobber byte-identical opcode multisets (101
+  instructions), so the fault is placement and not a different instruction; arm 3's tally is arm 1's
+  plus exactly one of each AVX2 opcode. Verbatim run at `docs/cl2-d1-803220-ps1-antares.log`; what it
+  does **not** cover — Goetz's four other reported cases, his unmailed cure, and any timing claim —
+  is stated inside the result. A first run scored all three arms `rc=9` **unmeasured** because its
+  vacuous-pass guard read `.TestGoFiles` while these tests are an external test package in
+  `.XTestGoFiles`; it failed closed, and run 2 controls the guard in both directions before scoring.
 - **CL 2 recon (`#126`): neither adopt nor supersede CL 803220 — what is stalled upstream is a
   decision, not an implementation.** Read-only, 2026-09-01. The CL is unmoved at one patchset since
   2026-07-25 (**38 days**, no `Code-Review` vote of any sign), `/related` is empty and
