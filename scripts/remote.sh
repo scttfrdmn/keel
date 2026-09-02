@@ -899,6 +899,43 @@ keel_llc_first() {
   done
   [ -n "$got" ] && printf "%s" "$got"
 }
+# keel_pin_explicit LIST -- the mask a caller NAMED, for an experiment whose variable is
+# WHICH cpu rather than how many. keel_pin_mask below derives its mask from a width alone, so
+# every width-1 mask it can produce is cpu0, and that is exactly why #148 could not separate
+# one-core confinement from cpu0 specifically after measuring a 3.4-4.3x collapse at width 1.
+#
+# Sets the same globals plus two the derived path has no use for. KEEL_PIN_NCPU is the count,
+# because width is no longer an input here and a width field read off KEEL_PIN_WIDTH would be
+# a number the arm did not run under. KEEL_PIN_CORES is the FIRST THREAD SIBLING of each
+# listed cpu, and it is the whole discriminator for a two-sibling arm: distinct(cores) is how
+# many physical cores the list covers, so cpu0,cpu16 reads as one core and cpu0,cpu1 as two,
+# which the mask string alone cannot show.
+#
+# Refuses on a cpu sysfs does not have, or one whose siblings or cache level it will not
+# report, so a typo is UNMEASURED and never a different arm silently.
+keel_pin_explicit() {
+  KEEL_PIN_MASK=; KEEL_PIN_DOMLIST=; KEEL_PIN_NODEDOMS=; KEEL_PIN_CORES=; KEEL_PIN_NCPU=0
+  S=${KEEL_SYSFS:-/sys/devices/system}
+  T=$S/cpu
+  out=; dl=; cl=; n=0
+  for c in $(printf "%s" "$1" | tr "," " "); do
+    [ -d "$T/cpu$c" ] || return 1
+    sib=
+    [ -r "$T/cpu$c/topology/thread_siblings_list" ] && sib=$(cat "$T/cpu$c/topology/thread_siblings_list")
+    [ -n "$sib" ] || return 1
+    f=${sib%%,*}; f=${f%%-*}
+    d=$(keel_llc_first "$T/cpu$c")
+    [ -n "$d" ] || return 1
+    out="${out}${out:+,}$c"; dl="${dl}${dl:+,}$d"; cl="${cl}${cl:+,}$f"; n=$((n + 1))
+  done
+  [ "$n" -gt 0 ] || return 1
+  KEEL_PIN_MASK=$out; KEEL_PIN_DOMLIST=$dl; KEEL_PIN_CORES=$cl; KEEL_PIN_NCPU=$n
+  # The distinct domains THIS LIST spans, which is not what the derived path means by
+  # nodedoms (the domains the chosen node had to offer). Same field name, and the
+  # explicit=1 flag on the line is what tells a reader which of the two it is holding.
+  KEEL_PIN_NODEDOMS=$(printf "%s" "$dl" | tr "," "\n" | sort -u | wc -l | tr -d " ")
+  printf "%s\n" "$out"
+}
 keel_pin_mask() {
   want=$1
   # Cleared on entry, not only set on success: a refusal that leaves the previous calls
@@ -1591,21 +1628,39 @@ remote_exec() {
   for a2 in "$@"; do
     case "$a2" in -test.bench=*|-test.bench) wants_bench=1 ;; esac
   done
-  local pin_pre=""
+  # KEEL_PIN_CPUS selects the mask by NAME instead of by width, and the whole reason it
+  # exists is #148's decisive test 2: keel_pin_mask derives from a width alone, so every
+  # width-1 mask it can produce is cpu0, and a measured 3.4-4.3x collapse at width 1 could
+  # not be attributed between one-core confinement and cpu0 specifically. Set by an
+  # experimental driver and by nothing else — no gate sets it — and the line it writes leads
+  # with `explicit=1`, so `bench_pin` (anchored on `^keel-pin: mask=`) does not match it,
+  # gate-p5 finds no width and reports the arm UNMEASURED rather than scoping it to an era.
+  # Fail-closed by construction rather than by a check bolted on beside it.
+  local pin_pre="" pin_sel=""
   if [[ "$wants_bench" -eq 1 ]]; then
-    pin_pre="
-if ! command -v taskset >/dev/null 2>&1; then
-  echo 'keel-pin: REFUSED, no taskset on this host. DESIGN section 5 rule 5 pins fleet-wide and never selectively, so this measurement is not taken rather than taken unpinned.' > '$log'
+    if [[ -n "${KEEL_PIN_CPUS:-}" ]]; then
+      pin_sel="keel_pin_explicit '$KEEL_PIN_CPUS' >/dev/null; KEEL_MASK=\$KEEL_PIN_MASK
+if [ -z \"\$KEEL_MASK\" ]; then
+  echo 'keel-pin: REFUSED, KEEL_PIN_CPUS=$KEEL_PIN_CPUS names a cpu this host does not have, or one whose thread siblings or cache level sysfs will not report. An explicitly named arm is not taken on a substitute mask (DESIGN section 5 rule 5).' > '$log'
   printf '%s\n' 121 > '$st'; exit 121
 fi
-# NOT \$(keel_pin_mask ...): that subshell returned the mask and dropped the shape.
+PINLINE=\"keel-pin: explicit=1 mask=\$KEEL_MASK width=\$KEEL_PIN_NCPU cores=\$KEEL_PIN_CORES doms=\$KEEL_PIN_DOMLIST nodedoms=\$KEEL_PIN_NODEDOMS\""
+    else
+      pin_sel="# NOT \$(keel_pin_mask ...): that subshell returned the mask and dropped the shape.
 keel_pin_mask $KEEL_PIN_WIDTH >/dev/null; KEEL_MASK=\$KEEL_PIN_MASK
 if [ -z \"\$KEEL_MASK\" ]; then
   echo 'keel-pin: REFUSED, sysfs on this host yields no single NUMA node from which $KEEL_PIN_WIDTH distinct physical cores can be selected one-per-cache-domain -- no node list, no thread siblings to prove distinctness, no cache level to prove the spread, or too few cores. Not taken rather than taken unpinned (DESIGN section 5 rule 5).' > '$log'
   printf '%s\n' 121 > '$st'; exit 121
 fi
-PIN=\"taskset -c \$KEEL_MASK\"
 PINLINE=\"keel-pin: mask=\$KEEL_MASK width=$KEEL_PIN_WIDTH doms=\$KEEL_PIN_DOMLIST nodedoms=\$KEEL_PIN_NODEDOMS\""
+    fi
+    pin_pre="
+if ! command -v taskset >/dev/null 2>&1; then
+  echo 'keel-pin: REFUSED, no taskset on this host. DESIGN section 5 rule 5 pins fleet-wide and never selectively, so this measurement is not taken rather than taken unpinned.' > '$log'
+  printf '%s\n' 121 > '$st'; exit 121
+fi
+$pin_sel
+PIN=\"taskset -c \$KEEL_MASK\""
   fi
 
   local tmpd; tmpd="$(mktemp -d)"

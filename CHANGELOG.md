@@ -17,6 +17,29 @@ While the major version is 0, minor versions may contain breaking changes.
   other check. The owed total returns to **817**, the figure the standing 2026-09-01 ruling addresses.
 
 ### Added
+- **`KEEL_PIN_CPUS`: an affinity mask selected by NAME, so `#148`'s collapse can be attributed**
+  (`scripts/remote.sh`, exercised in `scripts/remote-exec-test.sh` §9a2). `keel_pin_mask` derives its
+  mask from a *width*, so its only width-1 answer is cpu0 — which is why the published 3.36–4.31×
+  collapse at width 1 could not be split between one-core confinement and cpu0 specifically. Set by an
+  experimental driver and by nothing else; no gate sets it. **Fail-closed by construction**: the line it
+  writes leads with `explicit=1`, `bench_pin` is anchored on `^keel-pin: mask=`, so an explicitly
+  masked arm yields no width and gate-p5 reports it `unmeasured` rather than scoping it to an era.
+  Records `cores=` — the first thread sibling of each named cpu — which is what lets a two-cpu arm on
+  ONE physical core be told apart from one on two. Refuses rather than substituting when a named cpu is
+  absent or its topology sysfs will not report. +113 lines, **exempt** under the decisive-discriminator
+  precedent with the row stated in `docs/apparatus-ledger.md`.
+- **`#148`'s test 2, committed before its data exists** (`archive/core148/`). Four named masks —
+  `ref=0,1`, `c0=0`, `c5=5`, `smt=0,<sibling read off the host>` — in two mirrored passes. The bands,
+  the estimator, the branch truth table and the one out-of-domain cell live in
+  `predictions-core148.py`, which the analyzer *imports* rather than restating, so the thresholds
+  cannot be re-typed once the deltas are visible. Verifying that module's first draft — whose harness
+  control was typed from recall and wrong on two of four rows — re-derived the level structure `#148`
+  §6 and `#147` already published: healthy arms are internally tight (30-sample spread ≈1.01) but each
+  invocation lands on one of 2–4 discrete levels spanning up to 1.21×, unrelated to width, and two
+  switched level mid-invocation. What is new is a number about *this* test — the envelope each
+  candidate estimator produces under that structure, measured on `#148`'s own arms: the worst healthy
+  floor is 0.868 and the worst collapse 0.296 against a registered boundary of 0.40, so the dichotomy
+  is resolvable with a factor of 2.2 to spare and **the bands stay where pre-registration put them**.
 - **`#148` answered, and with a shape it did not offer: the scalar collapse is a step between width 1
   and width 2, not a gradient** (`docs/issue148-width-d3c1e82.md`, evidence in `archive/width148/`).
   Eight arms of one binary — byte-identical to `#147`'s, so these are further draws of that artifact —

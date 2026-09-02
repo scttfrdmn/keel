@@ -677,6 +677,52 @@ pin_case "sibling lists spelled as ranges, want 4 (only 2 cores exist)" 4 "" "$R
 mkdir -p "$WORK/topo-empty"
 pin_case "no node directories in sysfs" 8 "" "$WORK/topo-empty"
 
+# ------------------- 9a2. keel_pin_explicit: the mask a caller NAMED
+#
+# #148's decisive test 2 needs WHICH cpu to be the variable, and keel_pin_mask cannot supply
+# that: it derives from a width, so its only width-1 answer is cpu0 and the collapse measured
+# there is unattributable between one-core confinement and cpu0 itself. Five fields asserted,
+# not one, because the mask string alone cannot show the thing the experiment turns on —
+# `cores` is the first thread sibling of each listed cpu, so distinct(cores) counts PHYSICAL
+# cores and 0,36 reads as one core while 0,1 reads as two.
+xpin_case() {
+  local note="$1" list="$2" wantv="$3" root="$4"
+  KEEL_SYSFS="$root" keel_pin_explicit "$list" > "$WORK/xpin.out" || true
+  local got="$KEEL_PIN_MASK|$KEEL_PIN_CORES|$KEEL_PIN_NCPU|$KEEL_PIN_DOMLIST|$KEEL_PIN_NODEDOMS"
+  [[ "$got" == "$wantv" ]] && pass_ "$note -> $got" || fail_ "$note -> $got, expected $wantv"
+}
+xpin_case "skx, cpu5 alone: the arm keel_pin_mask cannot produce" 5 "5|5|1|0|1" "$SKX"
+# THE DISCRIMINATOR FOR A TWO-SIBLING ARM, and the contrast that gives it meaning. Both
+# lists are width 2 and only `cores` tells them apart: the runtime gets a second logical cpu
+# in the first and a second physical core in the second, which is the pair that separates
+# "the runtime shares the one permitted core" from "one core is not enough throughput".
+xpin_case "skx, cpu0+cpu36 (thread siblings): two cpus, ONE core" 0,36 "0,36|0,0|2|0,0|1" "$SKX"
+xpin_case "skx, cpu0+cpu1 (distinct cores): two cpus, TWO cores"  0,1  "0,1|0,1|2|0,0|1" "$SKX"
+# A cross-socket list is RECORDED, not refused: an explicit list is the caller naming the
+# arm, and refusing would also refuse a legitimate cross-node experiment. What must not
+# happen is it passing unnoticed — `doms=0,18` and `nodedoms=2` are the witness, on the same
+# line as the numbers, so a reader of the archive sees the span without knowing the host.
+xpin_case "skx, cpu0+cpu18 (different sockets): recorded as 2 domains" 0,18 "0,18|0,18|2|0,18|2" "$SKX"
+# Every refusal branch, and each one must clear the globals rather than leave the previous
+# success standing — driven immediately after four successes, the only ordering that shows it.
+xpin_case "a cpu this host does not have" 999 "||0||" "$SKX"
+xpin_case "one good cpu and one absent: the whole list refuses" 5,999 "||0||" "$SKX"
+xpin_case "a cpu with no sibling list (distinctness unprovable)" 0 "||0||" "$NOSIB"
+xpin_case "a cpu with no cache topology (domain unprovable)" 0 "||0||" "$NOLLC"
+xpin_case "an empty list names no arm" "" "||0||" "$SKX"
+# Range-spelled sibling lists, the same spelling hazard pin_case drives above: if `first`
+# did not survive `0-1`, cpu1 would report itself as its own core and the sibling arm would
+# read as two cores when it is one.
+xpin_case "range-spelled siblings: cpu0+cpu1 is ONE core" 0,1 "0,1|0,0|2|0,0|1" "$RANGE"
+# The global and stdout agree, so callers may use either — the same claim shape_case makes
+# about the derived path, and for the same reason: two answers that could drift apart.
+[[ "$KEEL_PIN_MASK" == "$(cat "$WORK/xpin.out")" ]] &&
+  pass_ "keel_pin_explicit: the global mask and the printed mask are the same string" ||
+  fail_ "keel_pin_explicit: global '$KEEL_PIN_MASK' but stdout '$(cat "$WORK/xpin.out")'"
+# The pin LINE's explicit=1 flag is asserted against the shipped parser in 9c below, where
+# `mklog` and `bench_pin` exist — the fail-closed claim is a property of that parser, not of
+# the selector above, and it is checked where the parser is.
+
 # ------------------- 9b. and remote_exec refuses the measurement it cannot pin
 #
 # The live half, on whatever far side this machine has. Both arms are assertions: a far
@@ -749,6 +795,18 @@ mklog 'keel-pin: mask=0,1,2,3,4,5,6,7 width=8' \
       'BenchmarkScale/n=1024/threads=1-8   	      10	 118000000 ns/op' \
       'BenchmarkScale/n=1024/threads=8-8   	      10	  16000000 ns/op'
 rb_case "a pinned sweep: mask, width and GOMAXPROCS all read" "0,1,2,3,4,5,6,7|8|8"
+# THE EXPLICIT ARM'S FAIL-CLOSED PROPERTY, asserted against the shipped parser and in both
+# directions. `keel-pin: explicit=1 mask=…` must yield NO width, because bench_pin anchors on
+# `^keel-pin: mask=` — so gate-p5 finds nothing and calls the arm unmeasured instead of
+# scoping an experimentally placed reading to an era. The second case is the control on the
+# first: the SAME line without the flag still parses, so what closed the gate is the flag and
+# not some incidental difference in the line's shape.
+mklog 'keel-pin: explicit=1 mask=5 width=1 cores=5 doms=0 nodedoms=1' \
+      'BenchmarkScale/n=1024/threads=1-1   	      10	 118000000 ns/op'
+rb_case "an explicit mask yields no width, so gate-p5 reports it unmeasured" "||1"
+mklog 'keel-pin: mask=5 width=1 doms=0 nodedoms=1' \
+      'BenchmarkScale/n=1024/threads=1-1   	      10	 118000000 ns/op'
+rb_case "the same line without the flag still parses: the guard IS the flag" "5|1|1"
 # THE FAIL ARM. Same mask line, rows named -192: the harness asked and the kernel did not
 # deliver, which is free placement wearing a pinned label. This is the log shape every
 # reading published before 2026-08-21 has (minus the mask line), and the criterion has to

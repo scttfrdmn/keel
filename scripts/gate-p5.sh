@@ -865,7 +865,7 @@ else
     PINM="$(bench_pin "$BENCHLOG")"; PINW="${PINM##* }"; PINM="${PINM%% *}"
     PING="$(bench_gomaxprocs "$BENCHLOG")"
     if [[ -z "$PINW" ]]; then
-      unmeasured "[$host] this sweep recorded no affinity mask, so its placement is unknown rather than free: remote_exec writes a keel-pin line before every benchmark it pins and refuses the ones it cannot, so a log with neither is an instrument that did not report, and nothing here may be scoped to the $P5_ERA era on trust"
+      unmeasured "[$host] $(grep -q '^keel-pin: explicit=1' "$BENCHLOG" && echo "this sweep was pinned to an EXPLICITLY NAMED cpu list (KEEL_PIN_CPUS), which is an experimental arm and never an era reading: its placement is recorded on its own keel-pin line and is deliberately unparseable to bench_pin, so the arm is unmeasured HERE by construction rather than by a check — read it from the archive directory that declared it" || echo "this sweep recorded no affinity mask, so its placement is unknown rather than free: remote_exec writes a keel-pin line before every benchmark it pins and refuses the ones it cannot, so a log with neither is an instrument that did not report, and nothing here may be scoped to the $P5_ERA era on trust")"
       continue
     elif [[ "$PING" != "$PINW" ]]; then
       fail "[$host] the affinity mask was requested and did not take: the harness pinned $PINW cores ($PINM) and Go read GOMAXPROCS as [$PING] off its own affinity. A mask that only the requesting side can see is free placement with a label, which is the one artifact the era ledger exists to make impossible (§5 rule 5, #6)"
