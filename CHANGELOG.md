@@ -40,6 +40,23 @@ While the major version is 0, minor versions may contain breaking changes.
   candidate estimator produces under that structure, measured on `#148`'s own arms: the worst healthy
   floor is 0.868 and the worst collapse 0.296 against a registered boundary of 0.40, so the dichotomy
   is resolvable with a factor of 2.2 to spare and **the bands stay where pre-registration put them**.
+- **`#148`'s collapse is not cpu0, and the SMT recovery is not graded** (`docs/issue148-core-97a21f4.md`,
+  evidence in `archive/core148/`). Branch A dies by identity rather than by a band: `c5/c0` is
+  **0.9946 / 0.9968 / 0.9988 / 0.9980** across the four registered rows, so one core off cpu0 collapses
+  exactly as far as cpu0 does. Scores A **4/8**, B **11/12**, C **9/12** — **no registered branch is
+  fully consistent**, 0 indeterminate cells, 16 control rows intact in all 8 arm-passes (worst 0.945).
+  B fails only where two hyperthreads on one core cannot help it: `2x32/kc=8`'s `smt` reads 0.986.
+  **The published median-based `smt/c0` sequence (3.321×, 1.325×, 1.030×, 1.005×) is not a gradient**,
+  which reading the per-sample logs rather than the medians corrected: the distributions are complete
+  recovery (60/60 samples), *intermittent* recovery (20/60 recovered, 12/60 still confined), and none
+  (60/60 confined, twice), so 1.325× is the midpoint of a switch and not a level. My per-call-fixed-cost
+  explanation for the ordering is **refuted by its own instrument** — `c0 − ref` is 873/1900/3534/7300 ns,
+  doubling with `flopsPerCall`. Also measured: three of five within-arm excursions sit in `bref`, the
+  pass-B reference, whose window overlaps the one host sample whose 5-minute load average (2.17) no
+  single runnable thread explains — the scores are **identical** under pass A alone, pass B alone and
+  the adversarial highest-reference choice, and the registration's `ref` check, which validated a pooled
+  median against admissible levels, could not have seen it. Test 3 (`GOGC=off`,
+  `GODEBUG=asyncpreemptoff=1` at one cpu) needs **zero apparatus lines**.
 - **`#148` answered, and with a shape it did not offer: the scalar collapse is a step between width 1
   and width 2, not a gradient** (`docs/issue148-width-d3c1e82.md`, evidence in `archive/width148/`).
   Eight arms of one binary — byte-identical to `#147`'s, so these are further draws of that artifact —

@@ -1,0 +1,268 @@
+
+=== provenance and the frozen-tree guard ===
+2026-09-02T20:06:23Z
+settings: HOST=janus.local FILTER=BenchmarkKernel COUNT=30 BTIME=1s OTHER=5
+settings: ARMS_A=[ref c0 c5 smt] ARMS_B=[smt c5 c0 ref] TAG=<none>
+driver host: terror
+rev: 97a21f41c5aa2d19bbe227e78debbd836f928269
+inherited KEEL_*/HOST env: 
+tree clean: yes
+sourced scripts/remote.sh; KEEL_REMOTE_DIR=/tmp/keel-remote
+go: go version go1.27.0 darwin/arm64
+
+=== topology preflight: the arms are DERIVED from the host, not asserted about it ===
+   siblings0=0,16
+   siblings1=1,17
+   siblings5=5,21
+   online=0-31
+derived: core(0)=0 core(1)=1 core(5)=5 sibling(0)=16
+preflight: OK -- ref=0,1 is two cores; c5 is a third core; smt=0,16 is one core, two cpus
+
+=== build: ONE binary, used by ALL arms ===
+remote_build_test rc=0
+binary: sha256=d0d46d26c15cc8b2 bytes=5066553 flags=[-buildmode=exe -compiler=gc -trimpath=true]
+toolchain read off the artifact:         builder toolchain go1.27.0-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off bench.test and not off this shell's go
+binary IDENTICAL to #147/test-1's binary: ref is a further draw of test 1's own w2 arm
+
+=== arm aref: pass a, KEEL_PIN_CPUS=0,1 ===
+-- host sample: before aref --
+   uptime:  13:06:24 up 41 days, 17:33,  0 users,  load average: 0.00, 0.00, 0.00
+   loadavg: 0.00 0.00 0.00 1/693 2547634
+   freq_khz: cpu0=3879169 cpu1=3831306 cpu5=3501911 cpu16=1200000 cpu6=1200000 cpu7=3801306
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2736885 nvidia-smi
+           1  0.0 3605621 systemd
+           2  0.0 3605621 kthreadd
+   utc: 2026-09-02T20:06:24Z
+arm aref: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm aref: log rows: 600
+arm aref: scalar rows: 240
+arm aref: keel-pin line: keel-pin: explicit=1 mask=0,1 width=2 cores=0,1 doms=0,0 nodedoms=1
+arm aref: gomaxprocs line: keel-bench-gomaxprocs: 1
+arm aref: cores readback OK: 2 distinct physical core(s), as the design requires
+-- host sample: after aref --
+   uptime:  13:22:22 up 41 days, 17:49,  0 users,  load average: 1.05, 0.99, 0.68
+   loadavg: 1.05 0.99 0.68 1/695 2548638
+   freq_khz: cpu0=3611114 cpu1=3675758 cpu5=3560941 cpu16=1200000 cpu6=3657092 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2737843 nvidia-smi
+           1  0.0 3606579 systemd
+           2  0.0 3606579 kthreadd
+   utc: 2026-09-02T20:22:22Z
+
+=== arm ac0: pass a, KEEL_PIN_CPUS=0 ===
+-- host sample: before ac0 --
+   uptime:  13:22:22 up 41 days, 17:49,  0 users,  load average: 1.05, 0.99, 0.68
+   loadavg: 1.05 0.99 0.68 1/695 2548679
+   freq_khz: cpu0=3599969 cpu1=3566763 cpu5=3531611 cpu16=1200000 cpu6=3700615 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2737843 nvidia-smi
+           1  0.0 3606579 systemd
+           2  0.0 3606579 kthreadd
+   utc: 2026-09-02T20:22:22Z
+arm ac0: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm ac0: log rows: 600
+arm ac0: scalar rows: 240
+arm ac0: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm ac0: gomaxprocs line: keel-bench-gomaxprocs: 1
+arm ac0: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after ac0 --
+   uptime:  13:39:14 up 41 days, 18:06,  0 users,  load average: 0.92, 0.98, 0.92
+   loadavg: 0.92 0.98 0.92 1/696 2549717
+   freq_khz: cpu0=3730441 cpu1=3707590 cpu5=1200000 cpu16=1200000 cpu6=1200000 cpu7=3599378
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2738856 nvidia-smi
+           1  0.0 3607592 systemd
+           2  0.0 3607592 kthreadd
+   utc: 2026-09-02T20:39:14Z
+
+=== arm ac5: pass a, KEEL_PIN_CPUS=5 ===
+-- host sample: before ac5 --
+   uptime:  13:39:14 up 41 days, 18:06,  0 users,  load average: 0.92, 0.98, 0.92
+   loadavg: 0.92 0.98 0.92 1/697 2549759
+   freq_khz: cpu0=3699584 cpu1=3615546 cpu5=1200000 cpu16=1200000 cpu6=1200000 cpu7=3761985
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2738856 nvidia-smi
+           1  0.0 3607592 systemd
+           2  0.0 3607592 kthreadd
+   utc: 2026-09-02T20:39:14Z
+arm ac5: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm ac5: log rows: 600
+arm ac5: scalar rows: 240
+arm ac5: keel-pin line: keel-pin: explicit=1 mask=5 width=1 cores=5 doms=0 nodedoms=1
+arm ac5: gomaxprocs line: keel-bench-gomaxprocs: 1
+arm ac5: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after ac5 --
+   uptime:  13:56:10 up 41 days, 18:23,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/698 2550806
+   freq_khz: cpu0=3700645 cpu1=3700694 cpu5=1200000 cpu16=1200000 cpu6=3599998 cpu7=3599410
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2739871 nvidia-smi
+           1  0.0 3608607 systemd
+           2  0.0 3608607 kthreadd
+   utc: 2026-09-02T20:56:10Z
+
+=== arm asmt: pass a, KEEL_PIN_CPUS=0,16 ===
+-- host sample: before asmt --
+   uptime:  13:56:10 up 41 days, 18:23,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/698 2550847
+   freq_khz: cpu0=3500455 cpu1=3509580 cpu5=3799919 cpu16=1200000 cpu6=3601459 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2739871 nvidia-smi
+           1  0.0 3608607 systemd
+           2  0.0 3608607 kthreadd
+   utc: 2026-09-02T20:56:10Z
+arm asmt: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm asmt: log rows: 600
+arm asmt: scalar rows: 240
+arm asmt: keel-pin line: keel-pin: explicit=1 mask=0,16 width=2 cores=0,0 doms=0,0 nodedoms=1
+arm asmt: gomaxprocs line: keel-bench-gomaxprocs: 1
+arm asmt: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after asmt --
+   uptime:  14:13:56 up 41 days, 18:41,  0 users,  load average: 0.92, 0.98, 0.99
+   loadavg: 0.92 0.98 0.99 1/693 2551947
+   freq_khz: cpu0=3897413 cpu1=3899881 cpu5=3995572 cpu16=1200000 cpu6=3900018 cpu7=3799420
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2740938 nvidia-smi
+           1  0.0 3609674 systemd
+           2  0.0 3609674 kthreadd
+   utc: 2026-09-02T21:13:56Z
+
+=== arm bsmt: pass b, KEEL_PIN_CPUS=0,16 ===
+-- host sample: before bsmt --
+   uptime:  14:13:56 up 41 days, 18:41,  0 users,  load average: 0.92, 0.98, 0.99
+   loadavg: 0.92 0.98 0.99 1/693 2551988
+   freq_khz: cpu0=3525029 cpu1=3589314 cpu5=3599979 cpu16=1200000 cpu6=3503217 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2740938 nvidia-smi
+           1  0.0 3609674 systemd
+           2  0.0 3609674 kthreadd
+   utc: 2026-09-02T21:13:56Z
+arm bsmt: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bsmt: log rows: 600
+arm bsmt: scalar rows: 240
+arm bsmt: keel-pin line: keel-pin: explicit=1 mask=0,16 width=2 cores=0,0 doms=0,0 nodedoms=1
+arm bsmt: gomaxprocs line: keel-bench-gomaxprocs: 1
+arm bsmt: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after bsmt --
+   uptime:  14:31:37 up 41 days, 18:58,  0 users,  load average: 1.01, 1.01, 1.00
+   loadavg: 1.01 1.01 1.00 1/694 2553075
+   freq_khz: cpu0=3855320 cpu1=3599998 cpu5=3599365 cpu16=1200000 cpu6=3599692 cpu7=3599993
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2741998 nvidia-smi
+           1  0.0 3610734 systemd
+           2  0.0 3610734 kthreadd
+   utc: 2026-09-02T21:31:37Z
+
+=== arm bc5: pass b, KEEL_PIN_CPUS=5 ===
+-- host sample: before bc5 --
+   uptime:  14:31:37 up 41 days, 18:58,  0 users,  load average: 1.01, 1.01, 1.00
+   loadavg: 1.01 1.01 1.00 1/695 2553117
+   freq_khz: cpu0=3643454 cpu1=3634256 cpu5=3599145 cpu16=1200000 cpu6=3599423 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2741998 nvidia-smi
+           1  0.0 3610734 systemd
+           2  0.0 3610734 kthreadd
+   utc: 2026-09-02T21:31:37Z
+arm bc5: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bc5: log rows: 600
+arm bc5: scalar rows: 240
+arm bc5: keel-pin line: keel-pin: explicit=1 mask=5 width=1 cores=5 doms=0 nodedoms=1
+arm bc5: gomaxprocs line: keel-bench-gomaxprocs: 1
+arm bc5: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after bc5 --
+   uptime:  14:48:35 up 41 days, 19:15,  0 users,  load average: 0.92, 0.98, 0.99
+   loadavg: 0.92 0.98 0.99 1/696 2554163
+   freq_khz: cpu0=3959779 cpu1=1200000 cpu5=3695696 cpu16=1200000 cpu6=1200000 cpu7=3681319
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2743017 nvidia-smi
+           1  0.0 3611753 systemd
+           2  0.0 3611753 kthreadd
+   utc: 2026-09-02T21:48:35Z
+
+=== arm bc0: pass b, KEEL_PIN_CPUS=0 ===
+-- host sample: before bc0 --
+   uptime:  14:48:35 up 41 days, 19:15,  0 users,  load average: 0.92, 0.98, 0.99
+   loadavg: 0.92 0.98 0.99 1/696 2554204
+   freq_khz: cpu0=3599070 cpu1=3599992 cpu5=3600011 cpu16=3599747 cpu6=1200000 cpu7=3600028
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2743017 nvidia-smi
+           1  0.0 3611753 systemd
+           2  0.0 3611753 kthreadd
+   utc: 2026-09-02T21:48:35Z
+arm bc0: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bc0: log rows: 600
+arm bc0: scalar rows: 240
+arm bc0: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm bc0: gomaxprocs line: keel-bench-gomaxprocs: 1
+arm bc0: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after bc0 --
+   uptime:  15:05:28 up 41 days, 19:32,  0 users,  load average: 1.04, 1.02, 1.00
+   loadavg: 1.04 1.02 1.00 1/698 2555258
+   freq_khz: cpu0=3661815 cpu1=3695682 cpu5=1200000 cpu16=1200000 cpu6=1200000 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2744029 nvidia-smi
+           1  0.0 3612765 systemd
+           2  0.0 3612765 kthreadd
+   utc: 2026-09-02T22:05:28Z
+
+=== arm bref: pass b, KEEL_PIN_CPUS=0,1 ===
+-- host sample: before bref --
+   uptime:  15:05:28 up 41 days, 19:32,  0 users,  load average: 1.04, 1.02, 1.00
+   loadavg: 1.04 1.02 1.00 1/698 2555299
+   freq_khz: cpu0=3510503 cpu1=3676668 cpu5=1200000 cpu16=1200000 cpu6=1200000 cpu7=3638739
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2744029 nvidia-smi
+           1  0.0 3612765 systemd
+           2  0.0 3612765 kthreadd
+   utc: 2026-09-02T22:05:28Z
+arm bref: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bref: log rows: 600
+arm bref: scalar rows: 240
+arm bref: keel-pin line: keel-pin: explicit=1 mask=0,1 width=2 cores=0,1 doms=0,0 nodedoms=1
+arm bref: gomaxprocs line: keel-bench-gomaxprocs: 1
+arm bref: cores readback OK: 2 distinct physical core(s), as the design requires
+-- host sample: after bref --
+   uptime:  15:21:17 up 41 days, 19:48,  0 users,  load average: 0.99, 2.17, 1.83
+   loadavg: 0.99 2.17 1.83 1/703 2556983
+   freq_khz: cpu0=3439362 cpu1=3600126 cpu5=3626647 cpu16=1200000 cpu6=3600105 cpu7=3682417
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2744979 nvidia-smi
+     2556393  0.2     336 Runner.Listener
+     2556400  0.2     336 Runner.Listener
+   utc: 2026-09-02T22:21:17Z
+
+=== done ===
+2026-09-02T22:21:17Z

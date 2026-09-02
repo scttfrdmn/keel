@@ -1,0 +1,127 @@
+=== 0. THE IMPORTED THRESHOLDS, and where they came from ===
+  module: archive/core148/predictions-core148.py
+  committed at: 4dd6334 2026-09-02T13:03:46-07:00
+  collapse band (0.0, 0.4)   intact band (0.85, 1.15)
+  estimator: pooled-median (primary), max-of-two-pass-medians (secondary, must agree)
+  registered rows: 4   arms: ['ref', 'c0', 'c5', 'smt']   reference: ref
+  positive control: c0   ref admissible slack: 0.05
+  branch A: ref=intact  c0=collapse  c5=intact  smt=ood
+            cpu0-specific: interrupt affinity or kernel work on cpu0 and its sibling
+  branch B: ref=intact  c0=collapse  c5=collapse  smt=collapse
+            one physical core is not enough throughput, whichever core it is
+  branch C: ref=intact  c0=collapse  c5=collapse  smt=intact
+            the Go runtime's own threads contend for the single permitted cpu
+
+=== 1. SHAPE: is this the run the analysis assumes? ===
+  arms: 8 (expect 8)   rows per arm: 20 (expect 20)   samples per row: [30] (expect [30])
+  unparsed BenchmarkKernel lines: 0 (must be 0)
+
+=== 2. IS THE RUN INTERPRETABLE? Four checks, any of which refuses ===
+  2a. the cores= readback, per arm, against what the arm was BUILT to be
+      smt must report ONE physical core and ref must report TWO. This is the
+      discriminator itself, taken from the log rather than from the request.
+      aref: mask=0,1    cores=0,1    distinct=2 want=2 nodedoms=1  ok
+      ac0: mask=0      cores=0      distinct=1 want=1 nodedoms=1  ok
+      ac5: mask=5      cores=5      distinct=1 want=1 nodedoms=1  ok
+      asmt: mask=0,16   cores=0,0    distinct=1 want=1 nodedoms=1  ok
+      bref: mask=0,1    cores=0,1    distinct=2 want=2 nodedoms=1  ok
+      bc0: mask=0      cores=0      distinct=1 want=1 nodedoms=1  ok
+      bc5: mask=5      cores=5      distinct=1 want=1 nodedoms=1  ok
+      bsmt: mask=0,16   cores=0,0    distinct=1 want=1 nodedoms=1  ok
+
+  2b. the POSITIVE CONTROL: every branch predicts c0 collapses
+      2x32/kc=8   c0/ref = 0.297  collapse
+      4x32/kc=8   c0/ref = 0.252  collapse
+      2x32/kc=32  c0/ref = 0.267  collapse
+      4x32/kc=32  c0/ref = 0.241  collapse
+
+  2c. does ref land on a level test 1 measured? (admissible LEVELS, not one median)
+      2x32/kc=8   ref= 2.776  admissible [2.766,3.190] +-5% -> [2.628,3.349]  ok
+      2x32/kc=32  ref= 3.179  admissible [3.014,3.654] +-5% -> [2.863,3.837]  ok
+      4x32/kc=8   ref= 3.190  admissible [2.764,3.189] +-5% -> [2.626,3.348]  ok
+      4x32/kc=32  ref= 3.542  admissible [3.067,3.548] +-5% -> [2.914,3.725]  ok
+
+  2d. the 16 CONTROL rows must be intact in all 8 arm-passes
+      control rows outside the intact band: 0 (must be 0)
+      worst control deviation from 1.000: 0.945 at scalar 2x32/kc=128 c5
+
+  all four checks pass: the registered criterion can be read.
+
+=== 3. THE REGISTERED CRITERION, per row, per arm, both estimators ===
+  ratio of an arm's estimator to the same run's ref arm.
+  collapse = (0.0, 0.4), intact = (0.85, 1.15), anything else INDETERMINATE.
+    row                                 c0                    c5                   smt
+    2x32/kc=8        0.297/ 0.258     coll 0.295/ 0.258     coll 0.986/ 0.857     inta
+    4x32/kc=8        0.252/ 0.252     coll 0.252/ 0.252     coll 0.334/ 0.343     coll
+    2x32/kc=32       0.267/ 0.232     coll 0.267/ 0.232     coll 0.275/ 0.240     coll
+    4x32/kc=32       0.241/ 0.240     coll 0.240/ 0.240     coll 0.242/ 0.241     coll
+    (primary/secondary; a disagreement between estimators is INDETERMINATE, not a tiebreak)
+
+  3b. per-pass, so the mirrored order can be read as the drift check it is
+      c0   2x32/kc=8: 0.296|0.258  4x32/kc=8: 0.252|0.252  2x32/kc=32: 0.268|0.232  4x32/kc=32: 0.240|0.241
+      c5   2x32/kc=8: 0.295|0.258  4x32/kc=8: 0.251|0.252  2x32/kc=32: 0.268|0.232  4x32/kc=32: 0.240|0.240
+      smt  2x32/kc=8: 0.988|0.857  4x32/kc=8: 0.328|0.343  2x32/kc=32: 0.276|0.240  4x32/kc=32: 0.241|0.242
+      (pass A | pass B, each to its own pass's ref. A real effect agrees; drift does not.)
+
+=== 4. WHICH BRANCH, scored against section 3 and nothing else ===
+  branch A -- cpu0-specific: interrupt affinity or kernel work on cpu0 and its sibling
+    4/8 registered row-arms agree
+      c0: predicted collapse, 4/4 rows agree
+      c5: predicted intact, 0/4 rows agree
+      smt=out-of-domain
+  branch B -- one physical core is not enough throughput, whichever core it is
+    11/12 registered row-arms agree
+      c0: predicted collapse, 4/4 rows agree
+      c5: predicted collapse, 4/4 rows agree
+      smt: predicted collapse, 3/4 rows agree
+  branch C -- the Go runtime's own threads contend for the single permitted cpu
+    9/12 registered row-arms agree
+      c0: predicted collapse, 4/4 rows agree
+      c5: predicted collapse, 4/4 rows agree
+      smt: predicted intact, 1/4 rows agree
+
+=== VERDICT ===
+  NO registered branch is fully consistent with the data.
+  That is a result, not a failure: the mechanism is none of the three as stated,
+  and the pattern below is what a fourth candidate has to explain.
+    branch A: 4/8
+    branch B: 11/12
+    branch C: 9/12
+  indeterminate row-arms: 0 of 12
+
+=== 5. THE FULL SWEEP, median GFLOP/s per arm-pass ===
+  -- scalar --
+    row              aref    ac0     ac5     asmt    bref    bc0     bc5     bsmt  
+    2x32/kc=8        2.772   0.820   0.818   2.737   3.194   0.825   0.823   2.737  *
+    2x32/kc=32       3.173   0.849   0.849   0.874   3.654   0.850   0.848   0.877  *
+    2x32/kc=128      0.929   0.877   0.878   0.880   0.924   0.877   0.875   0.881 
+    2x32/kc=512      0.887   0.886   0.886   0.889   0.888   0.886   0.888   0.888 
+    4x32/kc=8        3.191   0.806   0.802   1.046   3.189   0.805   0.803   1.095  *
+    4x32/kc=32       3.546   0.852   0.850   0.856   3.538   0.852   0.850   0.855  *
+    4x32/kc=128      0.872   0.870   0.870   0.873   0.876   0.873   0.870   0.870 
+    4x32/kc=512      0.869   0.862   0.863   0.865   0.865   0.861   0.862   0.865 
+  -- avx512 --
+    row              aref    ac0     ac5     asmt    bref    bc0     bc5     bsmt  
+    2x32/kc=8        68.020  67.825  67.710  67.480  68.025  67.795  67.565  67.570
+    2x32/kc=32       91.450  91.000  90.985  90.820  91.340  91.135  91.000  90.870
+    2x32/kc=128      99.680  99.420  99.370  99.540  99.835  99.555  99.370  99.470
+    2x32/kc=512      98.560  94.815  94.950  98.175  93.665  95.000  94.815  98.755
+    4x32/kc=8        61.440  61.255  61.245  61.280  61.450  61.305  61.200  61.310
+    4x32/kc=32       73.210  72.990  72.995  72.970  73.280  73.055  72.955  73.155
+    4x32/kc=128      76.160  75.900  75.910  76.035  76.155  76.025  75.915  76.010
+    4x32/kc=512      77.460  77.195  77.180  77.370  77.425  77.240  77.075  77.320
+    6x32/kc=8        70.845  68.750  68.670  72.970  70.960  69.965  68.600  72.960
+    6x32/kc=32       80.320  79.845  79.555  83.280  83.400  82.555  79.900  83.325
+    6x32/kc=128      84.420  83.865  83.775  87.650  87.825  87.475  84.205  87.725
+    6x32/kc=512      82.975  82.535  82.465  87.240  87.160  87.155  82.780  87.125
+    (* = a row in the registered set)
+
+=== 6. THE LEVEL STRUCTURE in this run's own arms (unregistered) ===
+  Per-arm medians of the registered rows, sorted, so the discrete levels that
+  #148 section 6 and #147 documented can be seen in THIS run rather than assumed
+  from the last one. The estimator was chosen against them; this is the check that
+  the structure is still the shape that choice was made for.
+    2x32/kc=8   0.818(ac5)  0.820(ac0)  0.823(bc5)  0.825(bc0)  2.737(asmt)  2.737(bsmt)  2.772(aref)  3.194(bref)
+    4x32/kc=8   0.802(ac5)  0.803(bc5)  0.805(bc0)  0.806(ac0)  1.046(asmt)  1.095(bsmt)  3.189(bref)  3.191(aref)
+    2x32/kc=32  0.848(bc5)  0.849(ac5)  0.849(ac0)  0.850(bc0)  0.874(asmt)  0.877(bsmt)  3.173(aref)  3.654(bref)
+    4x32/kc=32  0.850(ac5)  0.850(bc5)  0.852(ac0)  0.852(bc0)  0.855(bsmt)  0.856(asmt)  3.538(bref)  3.546(aref)
