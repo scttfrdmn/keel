@@ -178,3 +178,34 @@ The answer bounds the remaining paydown, so it belongs beside the total rather t
 So the outstanding total is **spent apparatus, not redundancy**, and it cannot be paid down to zero
 by lifting: the reachable ceiling is on the order of 150 lines against 817 owed. The trend reverses
 by shipping substance or by removing a capability, and the second is not the ledger's call to make.
+
+## Ruled 2026-09-01: the 817 stands, and no capability gets cut
+
+The decision the measurement above asked for, answered the same day, and it changes what this
+whole file means:
+
+> *"No capability gets cut… The debt is **spent apparatus, not redundancy** — every line bought a
+> defect found or a verdict made honest. Cutting a working, measured capability to move a ratio
+> would be rule 22's letter-over-mechanism error committed against our own tooling: the ratio's
+> *mechanism* is 'apparatus proportionate to substance,' and the correct payment is the
+> denominator — **the ratio reverses by shipping v0.2.0 and v0.3.0**, whose refactor, NEON kernels,
+> and f64 add library lines by the thousand… A ledger's job is honesty, not thinness."*
+
+Three consequences, and they bind:
+
+1. **The 817 is a recorded figure with no deletion mandate attached.** It stays measured, itemized
+   and re-derivable; it is no longer a queue of work. A future session that opens this file looking
+   for lines to remove is looking for the wrong thing — see the two non-paydowns above, of which
+   this ruling is now effectively the third and largest.
+2. **The binding discipline is unchanged**: apparatus grows only in a session that also lands a
+   routine, a kernel or a library fix. What was retired is the *deletion* obligation, not the cap.
+3. **The ratio is re-read at each milestone**, against a denominator that will have moved. `#131`
+   is not closed by paying 817 down; it is closed by v0.2.0's library term.
+
+The reasoning is DESIGN.md §5 rule 22 applied to this ledger's own criterion: the shorthand is a
+line count against a directory, the mechanism it stands for is proportion between apparatus and
+shipped substance, and a criterion is applied by the mechanism it names. Deleting a gate criterion
+to move the numerator satisfies the wording while inverting the mechanism — the tree would measure
+better and see less. `hosts_lines` (`5cdcbc3`) is the shape that is still wanted, and the reason is
+that it *removed a defect class while shrinking*: 22 sites where an unconfigured fleet ran a loop
+body once with `host=""`. A paydown that only removes lines has no such second term.

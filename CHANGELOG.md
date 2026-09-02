@@ -175,6 +175,15 @@ While the major version is 0, minor versions may contain breaking changes.
   published in-session before being corrected). Four redundant `if [[ -n "$HOSTS" ]]` wrappers went
   with them; three that guard more than a loop were kept. **Net −14 shell lines** — the ledger's
   first negative row since `ba6f286`, per-file deltas in `docs/apparatus-ledger.md`.
+- **Ruled 2026-09-01 (`#131`): the 817 stands as a recorded figure and no capability gets cut.** The
+  composition measurement below settled it — *"the debt is spent apparatus, not redundancy… cutting a
+  working, measured capability to move a ratio would be rule 22's letter-over-mechanism error
+  committed against our own tooling: the ratio's mechanism is 'apparatus proportionate to substance,'
+  and the correct payment is the denominator… A ledger's job is honesty, not thinness."* So: the
+  deletion obligation is retired, **the cap is not** (apparatus still grows only in a session that
+  lands a routine, a kernel or a library fix), and the ratio is re-read at each milestone against a
+  denominator that v0.2.0's refactor, NEON kernels and f64 will move by the thousand. `#131` is
+  closed by the library term, not by paying 817 down. Recorded in `docs/apparatus-ledger.md`.
 - **The remaining apparatus debt is measured as spent apparatus, not redundancy** (`#131`). At 16466
   shell lines: **zero** dead functions (the two first reported were a false positive from a
   comment-stripper truncating `[[ $# -ge 1 ]]` at the `#`), **one** six-line duplicate function, ≤141
