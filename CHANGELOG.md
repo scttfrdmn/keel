@@ -9,6 +9,15 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`#148`'s width sweep, committed before its data exists** (`archive/width148/driver-width148.sh`).
+  `KEEL_PIN_WIDTH` ∈ {1,2,4,8} against one binary, to separate a monotone width effect from a step
+  between 8 and everything else. Two design choices are stated in the driver because they are *not* in
+  the pre-registration: the sweep runs **twice with the second pass reversed** (8 4 2 1, then 1 2 4 8),
+  because drift is monotone in time and a single ordered pass cannot tell that from monotone in width;
+  and it measures **all 20 rows**, with the 12 `avx512` rows declared in advance as the control that
+  says whether the machine was quiet. Load and per-core frequency are sampled between every pair of
+  arms and never during one — as much of `#148`'s decisive test 3 as is reachable without a `scripts/`
+  change, since the harness's own provenance block still records no co-tenant load (`#81`).
 - **`#147` decided by measurement: panel placement is refuted on 7 of 8 bimodal cells, and core
   migration on the 2 that survive width 1** (`docs/issue147-addr-537661a.md`, logs and instruments in
   `archive/addr147/`). Two arms on `janus.local`, one binary (`sha256=d0d46d26c15cc8b2`), pinned
