@@ -8,7 +8,50 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **RETRACTED: "gate-p5's last record is RED at `d2fe477`, 2026-08-22."** Published in `#148`'s test-2
+  comment; false in the commit, the date and the cause, and the reason is that **no instrument answered
+  "what was gate-p5's last verdict" so one was improvised** — `ls -t build/gate-p5-*.status`. Three
+  defects, all structural. It reads `build/`, which is gitignored, so it cannot see a single one of the
+  8 tracked certificates in `archive/pinned8/` — the gap `7f1313d` had already found one level up and
+  named `#114`'s law. Within `build/` it keys on `.status` *presence*, and the four newest local logs
+  (`450a783`, `2a5bfa3`, Aug 22 12:23–14:16) have no status sibling, so a sweep that claims "latest"
+  silently preferred an older completed run — the same asymmetry as `died` vs `never-started`, a killed
+  run leaving a log and no status. And what those four skipped logs say is the third defect: the Strsm
+  failures are **gone** from them, because `450a783` is *"suspend both bars for the founding run"* — so
+  the cause I published had been superseded **within the same day**, and by the newest local log
+  (`2a5bfa3-rerun`) the red is README rows disagreeing with the run plus four UNMEASURED race-detector
+  criteria instead. The **7.0× bar itself is retired**; the replacement is a 6.067× per-routine
+  regression bar derived at `archive/pinned8/release-a2-68a9bec.log:1750`, whose next line exists to say
+  it is not the retired 6.0× returning. The figures I quoted were transcribed faithfully from a real log
+  — 6.982× / 7.257× / 6.806×, net of CI 6.756× / 6.881× / 6.637×, all four present at
+  `build/gate-p5-d2fe477.log:175,198,221` — which is the whole trouble: nothing about them was wrong
+  except that they came from the wrong log. **All four skipped logs are also RED, so the verdict word
+  did not move**, and that is why the defect was invisible rather than a reason to think it benign.
+  What the tracked record actually says, ordered by each rev's commit date: gate-p5's
+  latest verdict is **RED at `ba6f286`, 2026-08-31** (71 PASS / 1 FAIL) and its latest **GREEN** is
+  **`68a9bec`, 2026-08-29** (72 / 0 / 0 / 0 / 0) — so the retraction cuts **both** ways, since the
+  tracked green is real and is also not the last word. `ba6f286`'s lone FAIL is a **cascade**, not a P5
+  criterion: p5 ← p4 ← p3 ← one reading, `[janus.local] sentinel … 43.2% of peak`, already attributed
+  in `docs/certificates/v0.1.0.md` (`#141`) as a transient excursion against a reproducible 47.90%, and
+  the newer `afb108e` gate-p3 green does **not** re-measure it — `janus.local` appears in that run
+  nowhere, which is `f84a9ac`'s finding.
+- **`docs/gates.md` gains the index that was missing**, so the question is answerable from tracked
+  evidence: where certificates live, the enumerator (`git grep -nE '(^|verdict: )gate-p[0-9]+:
+  (GREEN|RED)' -- archive/`, both forms, because a gate invoked under another prints its verdict
+  nested), ordering by the rev's commit date rather than by mtime, the as-of-dated reading, and what
+  the enumeration cannot see — no `gate-p0`/`p1`/`p2` verdict is tracked at all, and a killed run is
+  absent rather than red. Zero `scripts/` lines: this session lands no routine, kernel or library fix,
+  and routing an enumerator through `tools/` to dodge that cap would be gaming the metric.
+
 ### Changed
+- **Archived analyzers are a STANDING disclosed ledger line, outside the ratio**
+  (`docs/apparatus-ledger.md`, ruled 2026-09-02). **1294 lines** as of `b2c8606`, updated whenever it
+  grows. The `archive/`-out-of-both-terms amendment below was argued about *drivers*; the hole it
+  opened now hides more analyzer than driver, and Scott's ruling is that the exclusion stands and the
+  quantity becomes visible — disclosed, not ratioed. Stated with its full reach rather than its
+  headline: the exclusion covers **1835** lines of archived instrument, 1294 Python plus 512 shell plus
+  29 Go, so the 541 that amendment named out loud is **29.5%** of it.
 - **`archive/` is out of both apparatus-ratio terms** (`scripts/gate-docs.sh`, ruled 2026-09-02). An
   archived driver is evidence, not apparatus or library: frozen at the hash that produced its data,
   never edited again, and accruing once per campaign — so counting it made the ratio drift on

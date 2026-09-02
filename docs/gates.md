@@ -24,6 +24,51 @@ change who can read it, and this prose was repo-only before the move. `DESIGN.md
 the authority for what a phase requires; a gate script is the authority for what is
 actually checked; this file explains the distance between them and settles neither.
 
+### Where a gate's last verdict is recorded
+
+Added 2026-09-02 because no instrument answered it and a session improvised one. This file
+explains the criteria; it is not the record of what they last returned, and neither is a gate
+script. **The record is the tracked certificate logs under `archive/pinned8/`.** `build/` is
+gitignored, so the `gate-pN-<rev>.log` and `.status` files a local run leaves are *not* the
+record — that is `7f1313d`'s finding and `#114`'s law one level up: v0.1.0's release notes cited
+their certificate as `build/release-a2-68a9bec.log`, which resolved only on the machine that
+produced it.
+
+Enumerate from tracked evidence, never from `build/`, and order by the **rev's commit date**
+rather than by file mtime. Both verdict forms are needed, because a gate invoked *under* another
+prints its verdict nested:
+
+```
+git grep -nE '(^|verdict: )gate-p[0-9]+: (GREEN|RED)' -- archive/
+```
+
+**As of 2026-09-02 (`b2c8606`)** that returns 13 verdict lines over 8 files — 3 for `gate-p3`, 5
+for `gate-p4`, 5 for `gate-p5` — of which the four a reader usually wants are:
+
+| gate | verdict | rev | rev date | tracked at |
+|---|---|---|---|---|
+| `gate-p5` | latest: **RED**, 71 PASS / 1 FAIL | `ba6f286` | 2026-08-31 | `validate113-ba6f286.log:1901` |
+| `gate-p5` | latest **GREEN**, 72 / 0 / 0 / 0 / 0 | `68a9bec` | 2026-08-29 | `release-a2-68a9bec.log:1850` |
+| `gate-p4` | latest **GREEN**, 65 PASS / 0 FAIL | `68a9bec` | 2026-08-29 | `release-a2-68a9bec.log:1841` |
+| `gate-p3` | latest: **GREEN**, 52 / 0 / 0 / 0 / 0 | `afb108e` | 2026-08-31 | `p2onfleet-afb108e.log:1876` |
+
+`ba6f286`'s single FAIL is a **cascade, not a P5 criterion**: gate-p5 fails because gate-p4 is
+red, which fails because gate-p3 is red, which fails on exactly one criterion — `[janus.local]
+sentinel: dispatched 2x32/avx512/kc=128 fell below P2's floor — 43.2% of peak, 42.4% net of CI,
+issue-bound` (`gate-p3-under-p4-ba6f286-20260901T001246Z.log:83`). That reading is attributed in
+[`docs/certificates/v0.1.0.md`](certificates/v0.1.0.md) (`#141`) as a transient excursion against
+a reproducible 47.90%. **The newer `afb108e` green does not re-measure it** — its three hosts are
+the fleet and `janus.local` appears in it nowhere, which is `f84a9ac`'s finding — so that
+attribution rests on the drift logs and not on a later green.
+
+Three things this enumeration cannot see (`DESIGN.md` §5 rule 12). No `gate-p0`, `gate-p1` or
+`gate-p2` verdict line is tracked at all, and `p2onfleet-afb108e.log` is named for P2 while
+carrying a `gate-p3` verdict — so a gate's absence here is not a claim about that gate. A run
+whose driver was killed writes no verdict line, so it is absent rather than red: that is the
+`died` / `never-started` distinction and not a gate result. And a rev with no certificate is
+**unmeasured** — `HEAD` is such a rev for gate-p5, and `ba6f286`'s own commit message says so of
+itself.
+
 ---
 
 ## P2 — the spill audit and the percent-of-peak floor

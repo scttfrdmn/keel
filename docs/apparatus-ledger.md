@@ -93,8 +93,9 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 | 2026-09-02 | `4dd6334` | +113 | **1034** | **EXEMPT, not owed** — the `KEEL_PIN_CPUS` discriminator for `#148`'s test 2. Scott's grant, verbatim: *"Test 2's lines are exempt under the decisive-discriminator precedent — the same ruling that bought the janus repeat: a single blocking discriminator on a published finding does not wait on ledger optics. Narrow scope (only what the discriminator needs), exempt row stated."* This row is that statement. **What the scope buys and why nothing smaller does:** `keel_pin_mask` derives its mask from a *width*, so the only width-1 mask it can produce is cpu0 — which is exactly why test 1's published 3.36–4.31x collapse cannot be attributed between one-core confinement and cpu0 specifically. Naming the cpus is the whole discriminator. Per file: `remote.sh` **+61/−6** (`keel_pin_explicit`, plus the `pin_pre` block restructured around a `pin_sel` variable so the taskset probe and `PIN=` stay shared and only the selector branches), `remote-exec-test.sh` **+58** (section 9a2's `xpin_case` fixtures: the one-core-two-cpus case `0,36 → cores=0,0`, the two-core case `0,1 → cores=0,1`, cross-socket recorded rather than refused, five refusals, the range-spelled `0-1` sibling form, and two `rb_case` calls proving the parser claim below), `gate-p5.sh` **1/1, zero net**. Both readings agree on +113: `git diff --numstat` and the counter (16468 → 16581). **The fail-closed property is by construction, not by an added check**: the line the explicit path writes leads with `explicit=1`, and `bench_pin` is anchored on `^keel-pin: mask=` (`scripts/bench.sh:141`), so it yields no width and gate-p5 reports such an arm `unmeasured` rather than scoping it to an era. The driver and analyzer are under `archive/core148/` and cost the ratio nothing under `be6cca9`'s amendment — evidence, not apparatus. |
 | 2026-09-02 | `97a21f4` | **+0** | **1034** | **A result, a mislabel fixed at zero net, and hole (a) nearly doubling.** `#148`'s test 2 read out (`docs/issue148-core-97a21f4.md`, evidence `archive/core148/`); the shell term is **16581** before and after, so the campaign that needed the `+113` exemption spends nothing further. One `scripts/` change, **1/1 zero net**: `gate-docs.sh`'s changeover clause asserted it was *"printed once and only in the commit that makes it"* while **computing** the old-definition figure as `shell + archive` every run — which drifts upward with each campaign archived, so by this rev it printed **17093** against the **16725** this ledger's `be6cca9` row and `CHANGELOG.md` both pin. A reader diffing those would have read an archived driver as a 368-line shell regression. The pair is now pinned to `be6cca9` with the drift named in the line itself; the fail-safe design was never the excuse, since the next session reads the label, not the classifier. **Hole (a) grows from 671 to 1294** — `archive/core148/` adds `analyze-core148.py` 303, `test-analyze-core148.py` 182 and `predictions-core148.py` 138, all Python instrument the shell term cannot see, and this campaign alone is 623 of the 1294. Disclosed, not booked: the `be6cca9` ruling puts `archive/` outside both terms *by kind*, and an archived analyzer is evidence on the same argument as an archived driver — frozen at the hash that produced its data, never edited again. What is worth noting is the **shape**: the exclusion is doing the work it was ruled for, and the quantity it hides is now 1294 lines and growing faster than the drivers it was ruled about. |
 
-**Current debt: +1034 net shell lines** as of 2026-09-02 (fourth reading, at `4dd6334`; the `97a21f4`
-row above adds no shell and does not move it), of which
+**Current debt: +1034 net shell lines** as of 2026-09-02 (fourth reading, at `4dd6334`; `97a21f4`
+adds no shell, and the commit that adds the STANDING line below touches no `scripts/` file at
+all, so neither moves it), of which
 **+97 is a re-reading**, **−257 is a definition correction**, and **+120 is exempt** (`774c02a`'s +5,
 `be6cca9`'s +2 and the +113 above) — leaving **817 owed**, unchanged.
 
@@ -120,6 +121,27 @@ and the pair that could be confused no longer sits in the same paragraph, which 
 what makes it durable is that each figure below carries its own date and definition. That section's
 "all 31 files, every one of them under `scripts/`" is true **by construction** rather than by
 observation.
+
+**STANDING — archived analyzers: 1294 lines, outside the ratio, by ruling.** Measured
+2026-09-02 at `b2c8606`, and this line is updated whenever it grows. Scott's ruling, verbatim:
+*"the ratio stays apparatus-code over library-code; per-experiment archived analyzers are
+evidence-reproduction code — but a hole that has grown to 1294 lines and now hides more analyzer
+than driver must be visible… Disclosed-not-ratioed."* The derivation is
+`git ls-files -co --exclude-standard 'archive/*' | grep -E '\.py$' | xargs wc -l`, tracked and
+untracked both, currently nine files: `addr147/` 465 (`analyze147` 219, `control147` 78,
+`sensitivity147` 78, `prettycheck147` 60, `crossarm147` 31), `width148/analyze-width148` 205,
+`core148/` 623 (`analyze-core148` 303, `test-analyze-core148` 182, `predictions-core148` 138).
+**Stated in full rather than as the Python subtotal**, because the exclusion's true reach is
+1835 lines of archived instrument, not 1294: the same 1294 of Python, plus **512 of archived
+shell** (`core148/driver-core148.sh` 255, `width148/driver-width148.sh` 158,
+`addr147/driver-addr147.sh` 99) and **29 of archived Go**
+(`addr147/prettycheck/main.go`). The shell 512 and the Go 29 are the part `be6cca9`'s amendment
+named out loud: 512 is that row's `−257` (`addr147` 99 + `width148` 158) plus `core148`'s 255,
+which was never booked because the amendment was already in force when it landed, and the Go 29
+is the hole-(b) denominator the same row closed. The 1294 is the part it did not name, so a
+reader of that row alone would under-read the exclusion by 70%. Which is why this line
+exists and why it is the figure the ruling quotes. Growing this number is not a spend and does
+not touch the cap; **hiding** its growth is what the ruling forbids.
 
 The paragraph below is the **2026-09-02 (second)** reading and the two after it the **2026-09-02
 (first)** and **2026-09-01** readings, kept as written because each is the cross-check for its own
