@@ -774,11 +774,13 @@ the first line of the loop body) ← `amd64_test.TestLoop` (`versions_test.go:44
 off. So the `-S` reading and the runtime outcome **agree**.
 
 **The verdict is silicon-independent, which is worth stating because the obvious objection is that
-antares has AVX2.** `TestGoAMD64v1` does not rely on the CPU lacking a feature: it copies its own
-test binary, rewrites every non-v1 opcode into a faulting instruction, and re-runs the copy with
-`GODEBUG=cpu.avx2=off,…`. `featureToOpcodes["avx2"]` is exactly `{vmovsd, vpbroadcastq, vmulpd,
-vpextrq}` — the four instructions `testLoop3`'s shape emits — so a hoisted op executes a
-deliberate trap on any host. Hence `SIGTRAP`, not `SIGILL`.
+antares has AVX2** — and it does, `/proc/cpuinfo` lists `avx2`. `TestGoAMD64v1` does not rely on
+the CPU lacking a feature: it copies its own test binary and overwrites the bytes of every opcode in
+`featureToOpcodes` with faulting ones **without consulting host capability at all**, then re-runs
+the copy with `cpu.<feature>=off` in `GODEBUG` for each feature `runtimeFeatures` names.
+`featureToOpcodes["avx2"]` is exactly `{vmovsd, vpbroadcastq, vmulpd, vpextrq}` — the four
+instructions `testLoop3`'s shape emits — and `"avx2"` is in `runtimeFeatures`, so a hoisted op
+executes a deliberate trap on any host. Hence `SIGTRAP`, not `SIGILL`.
 
 Two cross-checks that came free and both discriminate:
 
@@ -791,7 +793,7 @@ Two cross-checks that came free and both discriminate:
   control is the loop it claims to be.
 
 **What this does not establish (§5 rule 12).** It confirms the *defect*, on one loop shape, on one
-host, at `GOAMD64=v1`. It says nothing about Goetz's four other reported cases (`VPERMB`/VBMI,
+host, at `GOAMD64=v1`. It says nothing about Goetz's other reported cases (`VPERMB`/VBMI,
 `VGF2P8*`/GFNI, `VPEXPANDB`/VBMI2, `VPOPCNTB`/BITALG, the masked-128 EVEX case, and
 AES/SHA/FMA/PCLMULQDQ mapping to `CPUNone`), none of which this test covers; it does not test his
 proposed `Block.CertainCPUfeatures` cure, which is unmailed; and it is a correctness verdict with
@@ -806,6 +808,24 @@ failed closed, which is the only reason the vacuous arms were not scored as resu
 the guard in both directions before scoring anything (`simd` → the simd file present; `none` → the
 nosimd file present and the simd one absent), on the standing rule that a checker returning the
 same answer in both worlds is a decoration.
+
+**Published to the CL thread 2026-09-02, comment `9ffad9da_17ce3670`,** threaded as a reply to
+Goetz's `5b16dd61_52f18383` on `/PATCHSET_LEVEL`; verified from Gerrit's `/detail`, messages 3 → 4,
+the new one attributed to Scott Friedman. It carries only measured facts — both revision SHAs, both
+toolchain read-backs, arm 2's stack, the exact-CL `diff --stat`, the silicon-independence mechanism,
+the arm-3 control, both clobber tallies, and the scope paragraph — plus a permalink to
+`docs/cl2-d1-803220-ps1-antares.log` pinned at `cdd49a4`, so every figure in it can be re-derived
+from the log rather than taken on the comment's word.
+
+Two judgement calls in it, both recorded rather than buried. **It is posted `unresolved: true`,**
+where Goetz's own comment is `unresolved: false`: an unresolved thread is what appears on the
+author's dashboard, and a reproduced failure of an existing test earns that visibility in a way an
+inspection does not — the comment says so plainly and invites him to resolve it if he would rather
+track it elsewhere. And **the framing locates the disagreement in the instruments, not in a person**:
+"the `-S` reading and the runtime outcome agree" and "you noted you were on an arm64 host and could
+only inspect `-S` output, so here is the run", never a characterization of how he read his own
+output. That was a condition on the *pass* branch of the approval, and it costs nothing to honour on
+the fault branch too.
 
 ## Three figures did not survive verification and are not in any CL description
 
