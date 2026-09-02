@@ -8,6 +8,35 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **`#148`'s test 3 is pre-registered in SAMPLE-SHAPE space, boundaries derived and cited**
+  (`archive/mech148/predictions-mech148.py`, committed before the run exists). Scott's ruling:
+  *"rule 24 says predictions live in the instrument's output space, which for a mode-switching
+  quantity IS THE SHAPE: exact per-mode counts, n/60."* Both legitimacy conditions met by
+  construction. **The boundaries are not new constants** — they are 1.15× and 1.50× of each row's
+  own pooled `c0` median, both factors published in test 2's report at
+  `docs/issue148-core-97a21f4.md:121`, with the medians recomputed from
+  `archive/core148/`'s tracked per-sample logs: **0.9479 / 1.2365**, **0.9262 / 1.2081**,
+  **0.9768 / 1.2741**, **0.9799 / 1.2781** GFLOP/s. **The count rule is arithmetic, not a band** —
+  test 2 classified 16 arm-rows under these boundaries and 15 came out perfectly pure, so
+  "unimodal" here *means* 60/60 and anything else is another shape. **Validated against the prior
+  result before being trusted on new data**: all **16 of 16** arm-rows reproduce test 2's published
+  shape table exactly, including the bimodal `4x32/kc=8` `smt` cell at **12 / 28 / 20** and the one
+  middle sample in `ref` on `2x32/kc=32` that is the documented 1.058 GFLOP/s excursion — and the
+  comparison was driven **red** first with two planted falsehoods, both detected. **A boundary in
+  absolute GFLOP/s carried from test 2 cannot be moved by this run's own reference**, which closes
+  test 2's registration blind spot (a `ref` check on a pooled median that a partly contaminated arm
+  passes); the price is a precondition, and the module refuses rather than rescaling if the binary
+  or host differ. Registered prediction, 12 cells, all 60/60 CONFINED: **branch C's removable part
+  is not the mechanism**, `GOGC=off` and `GODEBUG=asyncpreemptoff=1` removing work the K-loop does
+  not do and a cost test 2's own instrument already refuted the shape of. Falsifier stated as a
+  count: **≥1/60 RECOVERED in any treatment arm on any row**, with the arm attributing it. Four
+  things declared out of domain in advance, chief among them that **no environment variable removes
+  sysmon, the scavenger, the netpoller or kernel-side work on the confined cpu** — so a null result
+  *bounds* C rather than refuting it, and points at a distinct candidate D that branch A's death by
+  identity does not touch. Zero `scripts/` lines; the module is archived evidence, disclosed in the
+  standing ledger line, which it grows 1294 → **1503** on its first opportunity.
+
 ### Fixed
 - **RETRACTED: "gate-p5's last record is RED at `d2fe477`, 2026-08-22."** Published in `#148`'s test-2
   comment; false in the commit, the date and the cause, and the reason is that **no instrument answered

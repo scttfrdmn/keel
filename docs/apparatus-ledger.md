@@ -122,24 +122,28 @@ what makes it durable is that each figure below carries its own date and definit
 "all 31 files, every one of them under `scripts/`" is true **by construction** rather than by
 observation.
 
-**STANDING — archived analyzers: 1294 lines, outside the ratio, by ruling.** Measured
-2026-09-02 at `b2c8606`, and this line is updated whenever it grows. Scott's ruling, verbatim:
+**STANDING — archived analyzers: 1503 lines, outside the ratio, by ruling.** Measured
+2026-09-02, and this line is updated whenever it grows; it read **1294** at `b2c8606` and
+`archive/mech148/predictions-mech148.py` is the +209 that moved it, which is the line doing its job
+on its first opportunity. Scott's ruling, verbatim:
 *"the ratio stays apparatus-code over library-code; per-experiment archived analyzers are
 evidence-reproduction code — but a hole that has grown to 1294 lines and now hides more analyzer
 than driver must be visible… Disclosed-not-ratioed."* The derivation is
 `git ls-files -co --exclude-standard 'archive/*' | grep -E '\.py$' | xargs wc -l`, tracked and
-untracked both, currently nine files: `addr147/` 465 (`analyze147` 219, `control147` 78,
+untracked both, currently ten files: `addr147/` 465 (`analyze147` 219, `control147` 78,
 `sensitivity147` 78, `prettycheck147` 60, `crossarm147` 31), `width148/analyze-width148` 205,
-`core148/` 623 (`analyze-core148` 303, `test-analyze-core148` 182, `predictions-core148` 138).
+`core148/` 623 (`analyze-core148` 303, `test-analyze-core148` 182, `predictions-core148` 138),
+`mech148/predictions-mech148` 209.
 **Stated in full rather than as the Python subtotal**, because the exclusion's true reach is
-1835 lines of archived instrument, not 1294: the same 1294 of Python, plus **512 of archived
+**2044** lines of archived instrument, not 1503: the same 1503 of Python, plus **512 of archived
 shell** (`core148/driver-core148.sh` 255, `width148/driver-width148.sh` 158,
 `addr147/driver-addr147.sh` 99) and **29 of archived Go**
 (`addr147/prettycheck/main.go`). The shell 512 and the Go 29 are the part `be6cca9`'s amendment
 named out loud: 512 is that row's `−257` (`addr147` 99 + `width148` 158) plus `core148`'s 255,
 which was never booked because the amendment was already in force when it landed, and the Go 29
-is the hole-(b) denominator the same row closed. The 1294 is the part it did not name, so a
-reader of that row alone would under-read the exclusion by 70%. Which is why this line
+is the hole-(b) denominator the same row closed. The Python is the part it did not name, so a
+reader of that row alone would under-read the exclusion by **73.5%** — and that share grows with
+every campaign, which is the whole argument for a standing line rather than a per-row note. Which is why this line
 exists and why it is the figure the ruling quotes. Growing this number is not a spend and does
 not touch the cap; **hiding** its growth is what the ruling forbids.
 
