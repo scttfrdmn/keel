@@ -700,6 +700,57 @@ was a REVIEWER in the morning's baseline and is absent from the evening's. The d
 now finds the watch by its prompt rather than by an id, because the id changes on every
 re-baseline and a hard-coded one reports a healthy watch as lapsed.
 
+## CL 2's recon: what is stalled upstream is a decision, not an implementation
+
+Read-only, 2026-09-01, eight Gerrit queries plus the GitHub issue and its timeline; full plan
+and query log on [#126](https://github.com/scttfrdmn/keel/issues/126). CL 803220 is byte-for-byte
+where the 2026-08-31 recon left it — `NEW`, `work_in_progress: true`, one patchset
+(`ecafbe48e206`), last activity 2026-07-25, **38 days**, and **no `Code-Review` vote of any
+sign**. `golang/go#79984` has had no comment since mine on 2026-08-15, so the offer to run the CL
+against keel is 17 days unanswered rather than declined.
+
+Three facts decide the adopt/rebase/supersede question, and none of them is the status:
+
+- **Nothing supersedes it and there is no stack.** `/related` returns `{"changes":[]}`;
+  `q=message:79984` returns exactly one CL. Adopt has no competitor and no ally.
+- **The offered fix was never mailed.** Andreas Goetz's 2026-07-25 comment reports that patchset 1
+  lifts AVX2 above `CMPB cpu.X86+68(SB), $0` in `versions_simd_test.go`'s `testLoop3`, and closes
+  by offering a working guard-barrier implementation. `owner:cpuidle@gmail.com` returns five CLs,
+  all x/oauth2 or cmd/go, none in `cmd/compile`, none since 2025-04-18. So the implementation
+  exists in a third party's tree and has waited 38 days for a word from the author.
+- **The CL's own test cannot see the defect, and Gerrit's counter cannot either.** Patchset 1 is
+  `licm.go` +72/−1 and `licm_test.go` **+57**: it ships an SSA-level unit test that passes while
+  the codegen is wrong, which is why the finding came from hand-inspected `-S` output. That
+  finding is filed `unresolved: false`, so `unresolved_comment_count` is **0** and the dashboard
+  shows nothing outstanding — the exact inverse of CL 1, where the reply is unresolved on purpose.
+
+**Ruled here: neither adopt nor supersede.** Rebasing patchset 1 forward adopts a demonstrated
+correctness defect and re-mails another author's WIP as a review request. Superseding writes, for
+the third time, code that already exists — the duplicate-with-its-own-causal-story failure in a
+new dress. What keel has that nobody upstream has is amd64 hardware and a kernel harness, so the
+two deliverables are **D1**, execute Goetz's finding (he states he could not: *"I'm on an arm64
+host… only inspect `-S` output"*), and **D2**, measure what the hoist is worth. D2's number is an
+**upper bound** on a correct fix, never an estimate — a certainty-based barrier can only refuse
+hoists patchset 1 permits — and *"a correct fix hoists nothing in keel's shape"* is inside its
+pre-registered outcome space, since keel's kernels sit behind a dispatch check and Goetz's own
+diagnosis is that a preheader can fail to prove a feature it has. If that outcome lands,
+[#54](https://github.com/scttfrdmn/keel/issues/54) needs a rewrite rather than a checkbox.
+
+**Escalation trigger, stated before any result it could judge:** `golang/go#79984` is milestoned
+Go1.28 and the freeze window is Nov–Jan, so **if on 2026-10-01 CL 803220 still has no patchset 2
+and no CL from Goetz exists, the supersede branch reopens as a decision.** A month is enough for a
+compiler CL only if the decision is made then rather than discovered later.
+
+Adjacent, and recorded for CL 1's next exchange rather than acted on: **Jorropo's stack has not
+moved either.** 778820 (`ssa/_gen` commuted forms, +3948/−3933, ps10) has **no `Code-Review` vote**
+after three and a half months; 778460 (ps12) is **`+2` Russ Cox, `+2` Keith Randall, `+1` Michael
+Pratt** and unsubmitted because its foundation is unapproved; 810740 (ps4) is **trybot `−1`**. All
+three `NEW`, all three last touched 2026-08-05 — 27 days — with Jorropo removing `Commit-Queue`
+from all three himself inside 30 minutes. So the mechanism CL 1's objection directs the change
+into is not currently available. Martin Möhrmann reviews all three and is the reviewer who
+appeared on CL 1 and vanished; that is a coincidence of names until something demonstrates
+otherwise.
+
 ## Three figures did not survive verification and are not in any CL description
 
 Numbers reach a CL description only after being re-read from the tree, because a
@@ -854,7 +905,11 @@ right thing to start.
   tracker on 2026-08-29** and is stated as of that date. `golang/go#79984`'s fix,
   **CL 803220**, was `NEW` — open, not merged — and that is the one status most
   likely to have moved by the time anyone acts on this file. Re-read before
-  starting; do not trust this table's freshness.
+  starting; do not trust this table's freshness. **Re-read 2026-09-01 and it had
+  not moved** — same patchset, same 2026-07-25 timestamp, no vote — so the bullet
+  was right to demand the re-read and wrong about which way it would come out.
+  A status that has been stale for 38 days is a finding in its own right, and it
+  is the one the CL 2 recon section above is about.
 - **No CL has been written, and no keel delta has been measured against a patched
   toolchain.** Every claim about what a fix would be worth to keel is an
   expectation, including #104's 55%.

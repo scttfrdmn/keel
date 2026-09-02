@@ -9,6 +9,17 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **CL 2 recon (`#126`): neither adopt nor supersede CL 803220 — what is stalled upstream is a
+  decision, not an implementation.** Read-only, 2026-09-01. The CL is unmoved at one patchset since
+  2026-07-25 (**38 days**, no `Code-Review` vote of any sign), `/related` is empty and
+  `q=message:79984` returns exactly one CL, so nothing supersedes it; a working guard-barrier fix was
+  **offered on the CL and never mailed** by an author with no `cmd/compile` history; and patchset 1's
+  own `licm_test.go` passes while the codegen is wrong, with the correctness finding filed
+  `unresolved: false` so the dashboard shows nothing outstanding. keel's two deliverables are
+  therefore **execute** the inspection-only finding on amd64 hardware its reporter lacked, and
+  **measure** the hoist as an *upper bound* on a correct fix — with "hoists nothing in keel's shape"
+  pre-registered inside the outcome space. Escalation trigger stated before any result: no patchset 2
+  by 2026-10-01 reopens supersede. Plan: `docs/upstream-plan.md`, `#126`.
 - **DESIGN.md §5 rule 25 — an A/B arm is an estimator, never a draw** (ruled 2026-09-01 on `#147`).
   The same shape as rule 16 on a new object, and **its own item rather than a widening of 16**: 16's
   object is a published reference minted for later runs to check against, an arm is consumed inside
