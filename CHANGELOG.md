@@ -8,6 +8,14 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **`archive/` is out of both apparatus-ratio terms** (`scripts/gate-docs.sh`, ruled 2026-09-02). An
+  archived driver is evidence, not apparatus or library: frozen at the hash that produced its data,
+  never edited again, and accruing once per campaign — so counting it made the ratio drift on
+  accumulation rather than on code. Both readings print once, in the commit that makes the change:
+  **16725 / 8993 / 1.86x** old against **16468 / 8964 / 1.84x** new. `archive/` stays inside every
+  other check. The owed total returns to **817**, the figure the standing 2026-09-01 ruling addresses.
+
 ### Added
 - **`#148` answered, and with a shape it did not offer: the scalar collapse is a step between width 1
   and width 2, not a gradient** (`docs/issue148-width-d3c1e82.md`, evidence in `archive/width148/`).

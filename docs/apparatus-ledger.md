@@ -88,7 +88,36 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 
 | 2026-09-02 | `d3c1e82` | +158 | **1176** | **Archived driver, booked in full under the definition still in force at this commit.** `archive/width148/driver-width148.sh`, the launcher of `#148`'s eight-arm width sweep (`docs/issue148-width-d3c1e82.md`). Same class as `4b8ee5f`'s row above and measured the same way: 16565 → 16723, exactly +158, the delta entirely this file. Scott has since **ruled** the structural fix that row asked for — *exclude `archive/` from both terms, dated, both readings printed once at the changeover, and `archive/` stays fully inside every other check* — so under the amended definition this row and `4b8ee5f`'s +99 are both zero. The code change is **not in this commit**: it edits `scripts/gate-docs.sh`, this session lands no routine, kernel or library fix, and the cap does not suspend itself for a change that improves the cap's own metric. So the row is booked at +158 under the definition this commit was measured with, and the changeover — with both readings printed once, as the ruling requires — is owed to the first paying session. Hole (a) from `4b8ee5f`'s row grew rather than closed: `analyze-width148.py` is another **205** lines of Python instrument that the shell term cannot see, bringing the archived-Python total the counter is blind to from 466 to 671. |
 
-**Current debt: +1176 net shell lines** as of 2026-09-02 (second reading, `d3c1e82`), unpaid by a
+| 2026-09-02 | `<this commit>` | **−257** | **919** | **Definition correction, not a paydown, and the changeover the two rows above were waiting for.** Scott ruled `archive/` out of **both** ratio terms; this is the commit that makes the counter agree. `gate-docs.sh` prints both readings once here and only here, as the ruling requires: **16725 / 8993 / 1.86x** under the old definition against **16468 / 8964 / 1.84x** under this one. The −257 is `4b8ee5f`'s +99 and `d3c1e82`'s +158 exactly, and the library term drops 29 for `archive/addr147/prettycheck/main.go` — hole (b) of `4b8ee5f`'s row, the denominator absorbing a spend, now closed. **Why an archived driver is neither term:** it is evidence. It is frozen at the hash that produced its data by the same rule that freezes the tree for a run, it is never edited again, and it accrues once per campaign forever — so counting it made the ratio drift on *accumulation* rather than on code, which is the one thing a maintenance-burden metric may not do. Exercised in both directions rather than inferred from the delta: a `.sh`, a shebang-only file and a `.go` planted under `archive/` move neither term, and **the same three at the repo root move both** (+4 shell, +1 library), so the exclusion is scoped and the counter is still live. `archive/` remains inside every other check — citation-lint still reads 437 sites over 33 items, unchanged. |
+| 2026-09-02 | `<this commit>` | +2 | **921** | **EXEMPT, not owed.** The two lines in `gate-docs.sh` that compute the `archive/` subtotals so the changeover reading above is *measured* rather than quoted. Scott's ruling grants it: *"a ruled disclosure amendment doesn't wait on the cap it corrects; deferring my own amendment to satisfy my own cap would be the rules deadlocking against their shared purpose."* The no-net-lines path was checked first, as instructed, and reaches most of the change — the `archive/*` exclusion folded into `shell_files`'s existing `case`, and `^archive/` folded into the library term's existing `grep -v`, both zero net — but the changeover cannot print two readings without computing the second one, and the `#131` restatement form requires it computed. The explanation itself costs nothing: it went into the existing `info` string beside the two prior RESTATED clauses, which is where this counter's definition history already lives. |
+
+**Current debt: +921 net shell lines** as of 2026-09-02 (third reading, this commit), of which
+**+97 is a re-reading**, **−257 is a definition correction**, and **+7 is exempt** (`774c02a`'s +5 and
+the +2 above) — leaving **817 owed**.
+
+**That total does not compose from a single signed correction bucket, and the trap is worth naming**,
+because a future session will try to re-derive it and land on 1074. The two corrections are opposite
+*kinds*. `+97` added counter-lines that were **never a spend** (`fakessh` was as old as the file), so
+it is subtracted from owed. `−257` removes counter-lines that **were** a spend and were booked as owed
+— so it is subtracted from owed as well. Both adjustments push the same direction while carrying
+opposite signs in the total column, which is why `total − re-readings − exempt` gives the wrong
+answer here. The derivation that holds is term by term: **1074 owed at `d3c1e82`, minus the 257 of
+`archive/` drivers the ruling moved out of the definition, is 817.** That is the same **817** the
+2026-09-01 ruling below addresses, and it is not a coincidence: the two archive drivers are the whole
+of what carried the owed total above it, so the amendment returns the figure to exactly the one the
+standing ruling was made about. It is a useful arithmetic check that the −257 is those two files and
+nothing else.
+
+Shell term **16468**, library term **8964**, ratio **1.84x**. One near-collision to disarm: the
+composition section below reports **16466** for 2026-09-01, four lines from today's 16468 under a
+*different definition* — the two figures are unrelated, and that section's "all 31 files, every one
+of them under `scripts/`" is now true **by construction** rather than by observation.
+
+The paragraph below is the **2026-09-02 (second)** reading and the two after it the **2026-09-02
+(first)** and **2026-09-01** readings, kept as written because each is the cross-check for its own
+session's rows and not a claim about today's tree.
+
+**Second reading, `d3c1e82`: +1176 net shell lines**, unpaid by a
 routine, a kernel or a library fix, of which **+97 is a re-reading rather than a spend** — the tree
 did not grow, the counter stopped measuring by file extension — and **+5 is exempt**, so **+1074 is
 owed** once both are set aside. Shell term 16723, library term 8993, historical ratio 1.86x, measured
