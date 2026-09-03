@@ -9,6 +9,24 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **DESIGN.md §5 rule 26 — when the prediction is the null, every treatment needs an applied-witness**
+  (ruled 2026-09-03 on `#148`'s test 3). Where a pre-registration predicts *no change*, a treatment
+  that silently never arrived prints **exactly the predicted reading**, so the run corroborates its
+  author and corroboration is indistinguishable from an untreated control — the vacuous-pass family's
+  new most-dangerous member, because every other member's failure *costs* the author their result and
+  this one pays them. What binds: each treatment names an observable proving it arrived, read off the
+  run itself and not assumed from the launcher; a treatment with no available witness is declared out
+  of domain in the registration rather than carried as a quiet arm. Four consequences, one per refusal
+  already in `driver-mech148.sh` — prefer a witness the apparatus already prints (`GOMAXPROCS` leads
+  every env string and `bench_test.go`'s readback was already printing it), the witness is non-judged
+  and runs before the arms (`gcprobe`), provable arrival with unprovable effect takes rule 12's form
+  (`asyncpreemptoff`), and what a boundary was derived on is part of the treatment (a digest mismatch
+  refuses, never rescales — a rescaled boundary is a chosen one, chosen toward the null). Direction
+  per rule 15: an applied-witness converts a corroboration into `UNMEASURED` and can never manufacture
+  the alternative branch. Deliberately **not** rule 24 (a prediction can be in the right units at the
+  right granularity and still be about nothing), not rule 12, and not rule 7 — 7 asks whether the
+  *instrument* can see a signal, this asks whether the *subject* was ever given one. Ruling record:
+  `docs/rulings.md`, rule 26.
 - **`#148`'s test 3 driver, with an IN-DRIVER quietness precondition that renders an arm
   UNMEASURED rather than measuring through a co-tenant** (`archive/mech148/driver-mech148.sh`,
   plus `test-driver-mech148.sh`). Ruled 2026-09-02 after the launch was refused on a busy host:

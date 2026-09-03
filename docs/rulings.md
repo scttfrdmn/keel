@@ -1957,3 +1957,133 @@ nothing does."*
 - **No check enforces this rule**, and none plausibly could: whether a quantity is modal is a
   property of the samples, and asserting it automatically is the detector this rule declines to
   order.
+
+## Rule 26 — when the prediction is the null, every treatment needs an applied-witness
+
+**Adopted 2026-09-03**, ruling on #148's test 3. Scott, elevating a finding made while building that
+test's driver:
+
+> And the null-inversion insight earns a law, because it generalizes to every experiment this project
+> will ever run whose registered prediction is "nothing changes": *when the prediction is the null,
+> every treatment needs an applied-witness* — silent treatment-failure produces exactly the predicted
+> result, so the usual risk asymmetry inverts and the vacuous-pass family gets a new most-dangerous
+> member. Your four refusals are the complete set for this run: the binary digest (absolute
+> boundaries transfer to no other artifact — a refusal, correctly, not a note), the inherited-env
+> abort (an inherited `GOGC=off` would hand the *control* the treatment), the gctrace witness that
+> `GOGC=off` *actually suppresses GC* before any arm runs, and asyncpreemptoff honestly declared
+> out-of-domain — arrival proven, honoring not, the action named. That last one is the rule-12 form
+> at its best: the experiment states what it cannot witness rather than pretending the set is
+> complete.
+
+### The inversion
+
+Every other member of the vacuous-pass family has a tell, and the tell is that the apparatus's
+failure *costs* the author the result they wanted: an absent instrument fails closed, a stuck one
+prints a constant a reader can recognise, an unqueried cell renders as a dash, a search with a broken
+pattern returns nothing where something was expected. The author is therefore the defect's first
+victim and has an incentive to notice.
+
+A null prediction reverses the incentive. If the registration says *this treatment changes nothing*,
+then a treatment that never arrived leaves the subject sitting at the control level — which is the
+predicted reading, digit for digit. The run corroborates its author, the table is clean, no verdict
+vocabulary fires, and **corroboration is indistinguishable from an untreated control**. Nothing in
+the output complains, because there is nothing for the output to complain about: the apparatus's
+failure mode *is* the hypothesis.
+
+### What was at risk
+
+`archive/mech148/predictions-mech148.py` registers **12 (row, arm) cells — four rows × the three
+treatment arms — every one `unimodal-at-confined`**, with `PREDICT_COUNTS` all `(60, 0, 0)`: the
+prediction is that no treatment moves the confined level at all. Five arms, two of them controls, with
+the registration's own `role` strings:
+
+| arm | mask / env | role in the registration | what a silent treatment failure prints |
+|---|---|---|---|
+| `ref` | `0,1`, `GOMAXPROCS=1` | recovered control | the **confined** level — it reads as the collapse it exists to disprove |
+| `c0` | `0`, `GOMAXPROCS=1` | collapse positive control | the confined level, which is also its correct reading |
+| `gc` | `0`, `+GOGC=off` | removes GC assist and worker activity | the confined level, i.e. the prediction |
+| `pre` | `0`, `+asyncpreemptoff=1` | removes async preemption signals | the confined level, i.e. the prediction |
+| `both` | `0`, both | the joint arm | the confined level, i.e. the prediction |
+
+The two controls fail in opposite directions, and that is the point: an unapplied mask makes `ref`
+look collapsed, which would **manufacture** a finding, while an inherited `GOGC=off` makes `c0` carry
+the `gc` arm's treatment, which would **erase** the contrast. Only the three treatment arms hold cells
+the registration scores, and all three of them fail silently *toward* the prediction.
+
+Three concrete mechanisms would have produced that table with no treatment applied anywhere:
+`scripts/remote.sh:1687` interpolates `$KEEL_REMOTE_ENV` **unquoted** ahead of `env`, so the
+assignments arrive only by word-splitting; a `GOGC` or `GODEBUG` inherited from the launching shell
+would hand the **control** arm the treatment, collapsing the contrast from the other side; and a
+binary rebuilt since test 2 would make the registered absolute boundaries describe a different
+artifact.
+
+### What binds now
+
+**Each treatment names an observable that proves it arrived, that observable is read off the run
+itself rather than assumed from the launcher, and a treatment with no available witness is declared
+out of domain in the registration rather than carried as a quiet arm.** Four consequences, one per
+refusal, with the driver's site for each:
+
+| # | consequence | site | outcome on failure |
+|---|---|---|---|
+| a | prefer a witness the apparatus already prints | `keel-bench-gomaxprocs:` readback, per arm | `WARNING` + "treat as unmeasured" |
+| b | the witness is non-judged and runs before the arms | `gcprobe()`, `^gc [0-9]` counts with and without `GOGC=off` | `exit 9` if suppression is not observed |
+| c | provable arrival + unprovable effect gets rule 12's form | `asyncpreemptoff` declared out of domain | disclosed, action named |
+| d | what a boundary was derived on is part of the treatment | `WANT_SHA` digest check | `exit 8`, never a rescale |
+
+(a) is the cheapest form and the first place to look: `GOMAXPROCS` **leads every env string** so that
+it is the value that breaks first if the word-split ever stops, and `bench/bench_test.go`'s readback
+was *already printing* the value — the rule cost an ordering and an assertion, not a mechanism. The
+inherited-env abort (`exit 4` over `KEEL_PIN_CPUS`, `GOGC`, `GODEBUG`, `GOMAXPROCS`) belongs to the
+same consequence from the other end: it protects the control rather than the treatment, and under a
+null prediction those are the same protection.
+
+(d) is worth stating as a refusal rather than a courtesy. The registered boundaries are **absolute
+GFLOP/s**, derived on `sha256=d0d46d26c15cc8b2`; the tempting repair when a rebuilt binary shows up
+is to rescale them against this run's own reference arm. That would make the boundaries *chosen*, and
+chosen in the direction that confirms a null — so the digest mismatch stops the run.
+
+### Direction, and what it is not
+
+Per rule 15, the direction is stated: an applied-witness can only convert a **corroboration into
+`UNMEASURED`**. It never manufactures the alternative branch, because failing to prove that a
+treatment arrived is silent about what would have happened had it arrived. That is the rule's safety
+and equally its limit — it cannot rescue a run, only decline to bank one.
+
+- **Not rule 24.** 24 asks whether a prediction is expressible in the instrument's own output space,
+  at its own row granularity. A prediction can be registered in exactly the right units, at the right
+  granularity, with thresholds for every row — and still be about nothing, because the treatment it
+  names never reached the far side. 24 may not be cited for this.
+- **Not rule 12.** 12 governs disclosing the reach of a claim; this governs whether the claim has any
+  reach. They meet at consequence (c), where the honest move *is* a 12-style disclosure — which is
+  the seam, not an identity.
+- **Not rule 7's positive control.** A positive control asks whether the **instrument** can see a
+  signal; this asks whether the **subject** was ever given one. The two failures are independent and
+  a run can need both, as this one does.
+
+### Coverage, and what stays unseen (§5 rule 12)
+
+- **`asyncpreemptoff`'s honouring is unwitnessed.** Unknown `GODEBUG` keys are ignored silently and
+  this binary counts no preemption signals, so `pre` and half of `both` rest on arrival alone. The
+  action that would close it is a patched runtime carrying preemption counters. That action is
+  already on the registration's record — `OUT_OF_DOMAIN` item 1 names "a patched runtime" as the fix
+  for a *different* limitation of this campaign (sysmon, the scavenger, the netpoller) — so the action
+  is disclosed while this limitation is not itself an enumerated item, and a limitation with a named
+  action is not a debt.
+- **The gctrace probe's own failure branch fails *open*.** If the probe returns nothing (an ssh
+  hiccup, say), the arms still run and the log says the analyzer must read a confined result as
+  consistent with both "no effect" and "no treatment". A network fault is not evidence about `GOGC`,
+  so refusing there would let an unrelated hiccup destroy a whole run — but the consequence is that
+  this one branch is enforced by **a human reading the log**, not by the driver.
+- **The `GOMAXPROCS` canary witnesses the transport, not each variable.** It proves the env string
+  word-split; it does not separately prove that `GOGC=off` was among the words that arrived. `gcprobe`
+  covers `GOGC` from the runtime side, and nothing covers a hypothetical future variable added to an
+  env string without its own witness.
+- **No check enforces this rule across the repo**, and the driver's witnesses are exercised by
+  `archive/mech148/test-driver-mech148.sh` only for the quietness gate and the arm table. Whether a
+  registered prediction *is* a null is a property of the registration's prose, and asserting it
+  mechanically is not attempted.
+- **Untested against a real treatment failure.** Every witness above has been driven on a healthy
+  path or by hand; none has yet caught a live silent-treatment-failure, so the rule's *sensitivity*
+  is argued from mechanism rather than measured (rule 10: mechanism plus one healthy run is one
+  witness).
