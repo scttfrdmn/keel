@@ -1,0 +1,347 @@
+
+=== provenance and the frozen-tree guard ===
+2026-09-03T17:44:58Z
+settings: HOST=janus.local FILTER=BenchmarkKernel COUNT=30 BTIME=1s
+settings: ARMS_A=[ref c0 gc pre both] ARMS_B=[both pre gc c0 ref] TAG=<none>
+settings: QUIET_L5_MAX=1.25 WANT_SHA=d0d46d26c15cc8b2 GOTOOLCHAIN=go1.27.0
+driver host: terror
+rev: 205a7a8dddfb412ae04521ed1dde34e115031eb7
+inherited KEEL_*/HOST/GO* env: 
+tree clean: yes
+sourced scripts/remote.sh; KEEL_REMOTE_DIR=/tmp/keel-remote
+go: go version go1.27.0 darwin/arm64
+
+=== topology preflight: ref is DERIVED as two cores, not asserted to be ===
+   siblings0=0,16
+   siblings1=1,17
+   online=0-31
+derived: core(0)=0 core(1)=1
+preflight: OK -- ref=0,1 is two distinct physical cores
+
+=== build: ONE binary, used by ALL arms, and it must be the boundaries' own binary ===
+remote_build_test rc=0
+binary: sha256=d0d46d26c15cc8b2 bytes=5066553 flags=[-buildmode=exe -compiler=gc -trimpath=true]
+toolchain read off the artifact:         builder toolchain go1.27.0-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off bench.test and not off this shell's go
+binary IDENTICAL to the boundaries' binary: BOUNDS apply as registered
+
+=== treatment witness: does GOGC=off actually arrive, and does it have anything to remove? ===
+heap goal with GC on: 4 MB   with GOGC=off: 8532210231539 MB
+heap-triggered (non-forced) cycles: GC on 0, GOGC=off 0
+treatment ARRIVED: GOGC=off raises the heap goal 4 -> 8532210231539 MB, which is the
+  runtime saying in its own output that it honoured the variable.
+NOTE: 0 heap-triggered cycles with GC ON, so the gc treatment has nothing to remove here.
+  The gc/both cells are OUT OF DOMAIN for the GC hypothesis by predictions-mech148.py's
+  item 5; they still run, and still characterize the confined level.
+
+=== arm aref: pass a, KEEL_PIN_CPUS=0,1, env=[GOMAXPROCS=1] ===
+-- host sample: before aref --
+   uptime:  10:44:59 up 42 days, 15:12,  0 users,  load average: 0.08, 0.17, 0.11
+   loadavg: 0.08 0.17 0.11 1/698 2576109
+   freq_khz: cpu0=3700344 cpu1=3700016 cpu2=3700030 cpu3=1200000 cpu6=3701592 cpu7=3700005
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2814800 nvidia-smi
+           1  0.0 3683536 systemd
+           2  0.0 3683536 kthreadd
+   utc: 2026-09-03T17:44:59Z
+arm aref: host quiet (5-minute load 0.17), proceeding
+arm aref: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm aref: log rows: 600
+arm aref: scalar rows: 240
+arm aref: keel-pin line: keel-pin: explicit=1 mask=0,1 width=2 cores=0,1 doms=0,0 nodedoms=1
+arm aref: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm aref: cores readback OK: 2 distinct physical core(s), as the design requires
+-- host sample: after aref --
+   uptime:  11:00:54 up 42 days, 15:28,  0 users,  load average: 1.08, 1.01, 0.73
+   loadavg: 1.08 1.01 0.73 1/696 2577112
+   freq_khz: cpu0=3501003 cpu1=3499587 cpu2=1200000 cpu3=3693060 cpu6=1200000 cpu7=3599847
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2815755 nvidia-smi
+           1  0.0 3684491 systemd
+           2  0.0 3684491 kthreadd
+   utc: 2026-09-03T18:00:54Z
+
+=== arm ac0: pass a, KEEL_PIN_CPUS=0, env=[GOMAXPROCS=1] ===
+-- host sample: before ac0 --
+   uptime:  11:00:54 up 42 days, 15:28,  0 users,  load average: 1.08, 1.01, 0.73
+   loadavg: 1.08 1.01 0.73 1/696 2577153
+   freq_khz: cpu0=3499979 cpu1=3483071 cpu2=3400292 cpu3=3397642 cpu6=3400557 cpu7=3400077
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2815755 nvidia-smi
+           1  0.0 3684491 systemd
+           2  0.0 3684491 kthreadd
+   utc: 2026-09-03T18:00:54Z
+arm ac0: host quiet (5-minute load 1.01), proceeding
+arm ac0: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm ac0: log rows: 600
+arm ac0: scalar rows: 240
+arm ac0: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm ac0: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm ac0: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after ac0 --
+   uptime:  11:17:41 up 42 days, 15:44,  0 users,  load average: 0.97, 1.01, 0.95
+   loadavg: 0.97 1.01 0.95 1/696 2578197
+   freq_khz: cpu0=3725951 cpu1=3799664 cpu2=3800721 cpu3=3798946 cpu6=1200000 cpu7=3800208
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2816762 nvidia-smi
+           1  0.0 3685498 systemd
+           2  0.0 3685498 kthreadd
+   utc: 2026-09-03T18:17:41Z
+
+=== arm agc: pass a, KEEL_PIN_CPUS=0, env=[GOMAXPROCS=1 GOGC=off] ===
+-- host sample: before agc --
+   uptime:  11:17:41 up 42 days, 15:44,  0 users,  load average: 0.97, 1.01, 0.95
+   loadavg: 0.97 1.01 0.95 1/696 2578238
+   freq_khz: cpu0=3628572 cpu1=3609838 cpu2=3705314 cpu3=3314069 cpu6=1200000 cpu7=3600890
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2816762 nvidia-smi
+           1  0.0 3685498 systemd
+           2  0.0 3685498 kthreadd
+   utc: 2026-09-03T18:17:41Z
+arm agc: host quiet (5-minute load 1.01), proceeding
+arm agc: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm agc: log rows: 600
+arm agc: scalar rows: 240
+arm agc: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm agc: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm agc: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after agc --
+   uptime:  11:34:33 up 42 days, 16:01,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/694 2579290
+   freq_khz: cpu0=3499494 cpu1=3500422 cpu2=3500017 cpu3=3499914 cpu6=3499246 cpu7=3505052
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2817774 nvidia-smi
+           1  0.0 3686510 systemd
+           2  0.0 3686510 kthreadd
+   utc: 2026-09-03T18:34:33Z
+
+=== arm apre: pass a, KEEL_PIN_CPUS=0, env=[GOMAXPROCS=1 GODEBUG=asyncpreemptoff=1] ===
+-- host sample: before apre --
+   uptime:  11:34:33 up 42 days, 16:01,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/694 2579331
+   freq_khz: cpu0=3500669 cpu1=3510967 cpu2=1200000 cpu3=3501687 cpu6=3495134 cpu7=3579628
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2817774 nvidia-smi
+           1  0.0 3686510 systemd
+           2  0.0 3686510 kthreadd
+   utc: 2026-09-03T18:34:33Z
+arm apre: host quiet (5-minute load 1.00), proceeding
+arm apre: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm apre: log rows: 600
+arm apre: scalar rows: 240
+arm apre: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm apre: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm apre: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after apre --
+   uptime:  11:48:37 up 42 days, 16:15,  0 users,  load average: 0.92, 0.98, 0.99
+   loadavg: 0.92 0.98 0.99 1/695 2580241
+   freq_khz: cpu0=3701460 cpu1=3699921 cpu2=1200000 cpu3=3856401 cpu6=3782234 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2818619 nvidia-smi
+           1  0.0 3687355 systemd
+           2  0.0 3687355 kthreadd
+   utc: 2026-09-03T18:48:37Z
+
+=== arm aboth: pass a, KEEL_PIN_CPUS=0, env=[GOMAXPROCS=1 GOGC=off GODEBUG=asyncpreemptoff=1] ===
+-- host sample: before aboth --
+   uptime:  11:48:37 up 42 days, 16:15,  0 users,  load average: 0.92, 0.98, 0.99
+   loadavg: 0.92 0.98 0.99 1/695 2580282
+   freq_khz: cpu0=3699973 cpu1=3701252 cpu2=3683232 cpu3=3763848 cpu6=3585885 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2818619 nvidia-smi
+           1  0.0 3687355 systemd
+           2  0.0 3687355 kthreadd
+   utc: 2026-09-03T18:48:37Z
+arm aboth: host quiet (5-minute load 0.98), proceeding
+arm aboth: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm aboth: log rows: 600
+arm aboth: scalar rows: 240
+arm aboth: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm aboth: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm aboth: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after aboth --
+   uptime:  12:02:48 up 42 days, 16:30,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/699 2581205
+   freq_khz: cpu0=3600460 cpu1=3538819 cpu2=3570449 cpu3=3628572 cpu6=3615462 cpu7=3650152
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2819469 nvidia-smi
+           1  0.0 3688205 systemd
+           2  0.0 3688205 kthreadd
+   utc: 2026-09-03T19:02:48Z
+
+=== arm bboth: pass b, KEEL_PIN_CPUS=0, env=[GOMAXPROCS=1 GOGC=off GODEBUG=asyncpreemptoff=1] ===
+-- host sample: before bboth --
+   uptime:  12:02:48 up 42 days, 16:30,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/699 2581246
+   freq_khz: cpu0=3499917 cpu1=3448899 cpu2=1200000 cpu3=1200000 cpu6=3434913 cpu7=3400886
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2819469 nvidia-smi
+           1  0.0 3688205 systemd
+           2  0.0 3688205 kthreadd
+   utc: 2026-09-03T19:02:48Z
+arm bboth: host quiet (5-minute load 1.00), proceeding
+arm bboth: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bboth: log rows: 600
+arm bboth: scalar rows: 240
+arm bboth: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm bboth: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm bboth: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after bboth --
+   uptime:  12:16:58 up 42 days, 16:44,  0 users,  load average: 1.02, 1.01, 1.00
+   loadavg: 1.02 1.01 1.00 1/698 2582159
+   freq_khz: cpu0=3640959 cpu1=3957250 cpu2=1200000 cpu3=1200000 cpu6=3699968 cpu7=3699886
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2820319 nvidia-smi
+           1  0.0 3689055 systemd
+           2  0.0 3689055 kthreadd
+   utc: 2026-09-03T19:16:58Z
+
+=== arm bpre: pass b, KEEL_PIN_CPUS=0, env=[GOMAXPROCS=1 GODEBUG=asyncpreemptoff=1] ===
+-- host sample: before bpre --
+   uptime:  12:16:58 up 42 days, 16:44,  0 users,  load average: 1.02, 1.01, 1.00
+   loadavg: 1.02 1.01 1.00 1/698 2582200
+   freq_khz: cpu0=3520457 cpu1=3599718 cpu2=3768219 cpu3=1200000 cpu6=3626323 cpu7=3498468
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2820319 nvidia-smi
+           1  0.0 3689055 systemd
+           2  0.0 3689055 kthreadd
+   utc: 2026-09-03T19:16:58Z
+arm bpre: host quiet (5-minute load 1.01), proceeding
+arm bpre: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bpre: log rows: 600
+arm bpre: scalar rows: 240
+arm bpre: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm bpre: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm bpre: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after bpre --
+   uptime:  12:31:08 up 42 days, 16:58,  0 users,  load average: 1.01, 1.01, 1.00
+   loadavg: 1.01 1.01 1.00 1/697 2583108
+   freq_khz: cpu0=3517228 cpu1=3564127 cpu2=3499947 cpu3=3554457 cpu6=3463325 cpu7=3397840
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2821170 nvidia-smi
+           1  0.0 3689906 systemd
+           2  0.0 3689906 kthreadd
+   utc: 2026-09-03T19:31:08Z
+
+=== arm bgc: pass b, KEEL_PIN_CPUS=0, env=[GOMAXPROCS=1 GOGC=off] ===
+-- host sample: before bgc --
+   uptime:  12:31:08 up 42 days, 16:58,  0 users,  load average: 1.01, 1.01, 1.00
+   loadavg: 1.01 1.01 1.00 1/697 2583149
+   freq_khz: cpu0=3599941 cpu1=3568911 cpu2=3575932 cpu3=3547266 cpu6=3511934 cpu7=3597757
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2821170 nvidia-smi
+           1  0.0 3689906 systemd
+           2  0.0 3689906 kthreadd
+   utc: 2026-09-03T19:31:08Z
+arm bgc: host quiet (5-minute load 1.01), proceeding
+arm bgc: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bgc: log rows: 600
+arm bgc: scalar rows: 240
+arm bgc: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm bgc: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm bgc: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after bgc --
+   uptime:  12:48:04 up 42 days, 17:15,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/696 2584255
+   freq_khz: cpu0=3897498 cpu1=3700291 cpu2=1200000 cpu3=3599981 cpu6=1200000 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2822185 nvidia-smi
+           1  0.0 3690921 systemd
+           2  0.0 3690921 kthreadd
+   utc: 2026-09-03T19:48:04Z
+
+=== arm bc0: pass b, KEEL_PIN_CPUS=0, env=[GOMAXPROCS=1] ===
+-- host sample: before bc0 --
+   uptime:  12:48:04 up 42 days, 17:15,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/696 2584296
+   freq_khz: cpu0=3599665 cpu1=3629465 cpu2=3641748 cpu3=3643990 cpu6=1200000 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2822185 nvidia-smi
+           1  0.0 3690921 systemd
+           2  0.0 3690921 kthreadd
+   utc: 2026-09-03T19:48:04Z
+arm bc0: host quiet (5-minute load 1.00), proceeding
+arm bc0: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bc0: log rows: 600
+arm bc0: scalar rows: 240
+arm bc0: keel-pin line: keel-pin: explicit=1 mask=0 width=1 cores=0 doms=0 nodedoms=1
+arm bc0: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm bc0: cores readback OK: 1 distinct physical core(s), as the design requires
+-- host sample: after bc0 --
+   uptime:  13:04:47 up 42 days, 17:32,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/696 2585350
+   freq_khz: cpu0=3697716 cpu1=3792106 cpu2=3701958 cpu3=3766713 cpu6=1200000 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2823189 nvidia-smi
+           1  0.0 3691925 systemd
+           2  0.0 3691925 kthreadd
+   utc: 2026-09-03T20:04:47Z
+
+=== arm bref: pass b, KEEL_PIN_CPUS=0,1, env=[GOMAXPROCS=1] ===
+-- host sample: before bref --
+   uptime:  13:04:47 up 42 days, 17:32,  0 users,  load average: 1.00, 1.00, 1.00
+   loadavg: 1.00 1.00 1.00 1/696 2585391
+   freq_khz: cpu0=3499498 cpu1=3499494 cpu2=3498429 cpu3=3520549 cpu6=1200000 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2823189 nvidia-smi
+           1  0.0 3691925 systemd
+           2  0.0 3691925 kthreadd
+   utc: 2026-09-03T20:04:47Z
+arm bref: host quiet (5-minute load 1.00), proceeding
+arm bref: REMOTE_STATE=ok REMOTE_SUPERVISED=yes rc=0
+arm bref: log rows: 600
+arm bref: scalar rows: 240
+arm bref: keel-pin line: keel-pin: explicit=1 mask=0,1 width=2 cores=0,1 doms=0,0 nodedoms=1
+arm bref: gomaxprocs readback OK: 1, so the env string word-split as intended
+arm bref: cores readback OK: 2 distinct physical core(s), as the design requires
+-- host sample: after bref --
+   uptime:  13:20:49 up 42 days, 17:48,  0 users,  load average: 1.00, 1.01, 1.00
+   loadavg: 1.00 1.01 1.00 1/693 2586396
+   freq_khz: cpu0=3898969 cpu1=3860902 cpu2=3739516 cpu3=3761688 cpu6=3602406 cpu7=1200000
+   governor: performance
+   top by cpu:
+         PID %CPU ELAPSED COMMAND
+      911375  1.0 2824150 nvidia-smi
+           1  0.0 3692886 systemd
+           2  0.0 3692886 kthreadd
+   utc: 2026-09-03T20:20:49Z
+
+=== done ===
+2026-09-03T20:20:49Z

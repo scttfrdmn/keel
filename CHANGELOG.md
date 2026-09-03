@@ -9,6 +9,28 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The single-core collapse is async preemption, single-factor, and the pre-registered prediction
+  was wrong on 8 of 12 cells** (`docs/issue148-mech-205a7a8.md`, `#148`). Test 3 ran 10 arms × 30 on
+  janus off ONE hash-checked binary (`d0d46d26c15cc8b2`), all readbacks green, `=== done ===`:
+  `GODEBUG=asyncpreemptoff=1` on **one** core reaches **98.8–99.7% of the two-core control** (from
+  `bpre/bc0` = 3.36×–3.72×), and `both/pre` = 0.998–1.000, so nothing is left for a second factor.
+  The mechanism is narrower than "preemption" — the flag gates only `preemptM` (`proc.go:6940`), and
+  sysmon still runs, retakes and marks, so what costs is **SIGURG delivery and handling**. The rival
+  reading via `extern.go:227` (conservative stack scanning) needs a GC that never ran: 0
+  heap-triggered cycles. The four `gc` cells are `OOD for GC` on arm membership, characterizing the
+  confined level only. Scored by `archive/mech148/analyze-mech148.py`, which imports the registration
+  rather than reimplementing it and replays test 2's table first as a positive control (**16/16**);
+  its output re-derives byte-identically from the tracked logs alone.
+- **Pass b's reversal caught a 13–16% between-arm level term that is not any treatment** (same doc
+  §6, `#150`). `apre`/`bpre` and `aref`/`bref` have byte-identical env and mask and sit 12.6% and
+  15.4% apart, while each arm's own 30 samples are tight to 0.8–1.9% — so it is host state between
+  arms, not a bimodal arm. Two shapes, so at least two causes: `apre` uniform at 1.126–1.128 on all
+  four rows, `aref` row-selective at 1.163 on 4x32 and 1.005 on 2x32. Unattributed, and invisible to
+  the current provenance sampling because `freq_khz` is read only *between* arms (`#81`). No verdict
+  moves: the recovery is 3.4× and every refuted cell's worst sample clears its cut by 120–147%. Its
+  one real bite is disclosed rather than buried — the four `gc` cells clear theirs by 12.1–12.6%,
+  the same size as the term. Every level in the report is therefore computed within one pass; pooling
+  `apre` with `bpre` would publish a median that is a mixing fraction.
 - **Test 3's `GOGC=off` witness refused a healthy run, and the repair settled part of the campaign
   without an arm** (`archive/mech148/`, `#148`). The witness counted `gc #` trace lines and read `2`
   against `2` — a **false refusal** (`exit 9`): every cycle is `(forced)`, `testing`'s `runN` calls

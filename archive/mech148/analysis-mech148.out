@@ -1,0 +1,69 @@
+==============================================================================
+1. POSITIVE CONTROL: do the boundaries reproduce test 2's published shape table?
+==============================================================================
+   all 16 of test 2's arm-rows reproduce exactly, so the classifier is
+   known to separate a signal that is known to be present.
+
+==============================================================================
+2. ADMISSIBILITY, from the driver log and nowhere else
+==============================================================================
+   aboth  measured    both readbacks OK
+   ac0    measured    both readbacks OK
+   agc    measured    both readbacks OK
+   apre   measured    both readbacks OK
+   aref   measured    both readbacks OK
+   bboth  measured    both readbacks OK
+   bc0    measured    both readbacks OK
+   bgc    measured    both readbacks OK
+   bpre   measured    both readbacks OK
+   bref   measured    both readbacks OK
+
+==============================================================================
+3. PRECONDITIONS -- not scored; if these fail the twelve cells are uninterpretable
+==============================================================================
+   ref (recovered control), registered: RECOVERED >= 59/60 on every registered row
+      OK 2x32/kc=8   (C,M,R)=(0, 0, 60) n=60 range 2.748-2.778
+      OK 4x32/kc=8   (C,M,R)=(0, 0, 60) n=60 range 2.742-3.205
+      OK 2x32/kc=32  (C,M,R)=(0, 0, 60) n=60 range 3.136-3.257
+      OK 4x32/kc=32  (C,M,R)=(0, 0, 60) n=60 range 3.054-3.565
+   c0 (collapse positive control), registered: CONFINED 60/60 on every registered row
+      OK 2x32/kc=8   (C,M,R)=(60, 0, 0) n=60 range 0.810-0.832
+      OK 4x32/kc=8   (C,M,R)=(60, 0, 0) n=60 range 0.800-0.810
+      OK 2x32/kc=32  (C,M,R)=(60, 0, 0) n=60 range 0.841-0.860
+      OK 4x32/kc=32  (C,M,R)=(60, 0, 0) n=60 range 0.842-0.862
+   preconditions: ALL MET
+
+==============================================================================
+4. THE TWELVE REGISTERED CELLS, each against its own (60,0,0)
+==============================================================================
+   OOD = out of domain for the GC hypothesis by OUT_OF_DOMAIN item 5 (the GOGC
+   treatment arrives and has nothing to remove: 0 heap-triggered cycles either way).
+
+   row          arm   predicted    observed         n shape                  verdict
+   2x32/kc=8    gc    (60, 0, 0)   (60, 0, 0)      60 unimodal-at-confined   CONFIRMED, OOD for GC
+   2x32/kc=8    pre   (60, 0, 0)   (0, 0, 60)      60 unimodal-at-recovered  REFUTED (registered unimodal-at-confined)
+   2x32/kc=8    both  (60, 0, 0)   (0, 0, 60)      60 unimodal-at-recovered  REFUTED (registered unimodal-at-confined), OOD for GC
+   4x32/kc=8    gc    (60, 0, 0)   (60, 0, 0)      60 unimodal-at-confined   CONFIRMED, OOD for GC
+   4x32/kc=8    pre   (60, 0, 0)   (0, 0, 60)      60 unimodal-at-recovered  REFUTED (registered unimodal-at-confined)
+   4x32/kc=8    both  (60, 0, 0)   (0, 0, 60)      60 unimodal-at-recovered  REFUTED (registered unimodal-at-confined), OOD for GC
+   2x32/kc=32   gc    (60, 0, 0)   (60, 0, 0)      60 unimodal-at-confined   CONFIRMED, OOD for GC
+   2x32/kc=32   pre   (60, 0, 0)   (0, 0, 60)      60 unimodal-at-recovered  REFUTED (registered unimodal-at-confined)
+   2x32/kc=32   both  (60, 0, 0)   (0, 0, 60)      60 unimodal-at-recovered  REFUTED (registered unimodal-at-confined), OOD for GC
+   4x32/kc=32   gc    (60, 0, 0)   (60, 0, 0)      60 unimodal-at-confined   CONFIRMED, OOD for GC
+   4x32/kc=32   pre   (60, 0, 0)   (0, 0, 60)      60 unimodal-at-recovered  REFUTED (registered unimodal-at-confined)
+   4x32/kc=32   both  (60, 0, 0)   (0, 0, 60)      60 unimodal-at-recovered  REFUTED (registered unimodal-at-confined), OOD for GC
+
+   tally: CONFIRMED=4, REFUTED=8
+   cells: 12 (registration declares 12)
+
+==============================================================================
+5. THE REGISTERED FALSIFIER: >= 1/60 RECOVERED in any treatment arm on any row
+==============================================================================
+   2x32/kc=8 pre: 60/60 RECOVERED -- attribution: single-factor
+   2x32/kc=8 both: 60/60 RECOVERED -- attribution: joint
+   4x32/kc=8 pre: 60/60 RECOVERED -- attribution: single-factor
+   4x32/kc=8 both: 60/60 RECOVERED -- attribution: joint
+   2x32/kc=32 pre: 60/60 RECOVERED -- attribution: single-factor
+   2x32/kc=32 both: 60/60 RECOVERED -- attribution: joint
+   4x32/kc=32 pre: 60/60 RECOVERED -- attribution: single-factor
+   4x32/kc=32 both: 60/60 RECOVERED -- attribution: joint
