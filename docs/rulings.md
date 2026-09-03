@@ -2083,7 +2083,20 @@ and equally its limit — it cannot rescue a run, only decline to bank one.
   `archive/mech148/test-driver-mech148.sh` only for the quietness gate and the arm table. Whether a
   registered prediction *is* a null is a property of the registration's prose, and asserting it
   mechanically is not attempted.
-- **Untested against a real treatment failure.** Every witness above has been driven on a healthy
-  path or by hand; none has yet caught a live silent-treatment-failure, so the rule's *sensitivity*
-  is argued from mechanism rather than measured (rule 10: mechanism plus one healthy run is one
-  witness).
+- **Consequence (d) is measured; (a)–(c) are still argued from mechanism.** Updated 2026-09-03, two
+  hours after adoption, because the driver's first real launch **refused at `exit 8`** and the
+  refusal was correct: the dev host cross-compiles every fleet run (`scripts/remote.sh:662`) and it
+  had been upgraded go1.27.0 → go1.27.1, so the binary was `d10b953b924316d8` / 5066561 bytes where
+  the boundaries were derived on `d0d46d26c15cc8b2` / 5066553. **No keel input had changed** —
+  `git diff 97a21f4..HEAD -- '*.go' go.mod go.sum` is empty — so nothing in the tree, the commit
+  log, or the launch command could have revealed it, and every arm would have been scored against
+  boundaries belonging to a different artifact while printing the predicted confined level. Cause
+  established by **reproduction** rather than inference: rebuilding at `GOTOOLCHAIN=go1.27.0`
+  yields `d0d46d26c15cc8b2` / 5066553 exactly, so the registration needed no amendment and the
+  driver now pins the toolchain. What (a)–(c) still lack is a live catch of their own: they have
+  been driven on healthy paths and by hand only, so their *sensitivity* remains a mechanism
+  argument (rule 10 — mechanism plus one healthy run is one witness).
+- **The far side's toolchain was not in any witness before this.** The digest caught it downstream,
+  which is enough to refuse but not enough to *name* the cause; naming it took a hand diff and a
+  rebuild. A run whose log recorded the builder toolchain but had no digest bound to a registration
+  would have printed the change and proceeded.

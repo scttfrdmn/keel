@@ -73,6 +73,19 @@ ARMS_B="${ARMS_B-both pre gc c0 ref}"
 # same prefix at 97a21f4 (archive/core148/core148-97a21f4.log:23) and only reported it,
 # because its criterion was a ratio against its own reference and could absorb a rebuild.
 WANT_SHA="${WANT_SHA:-d0d46d26c15cc8b2}"
+# ...and the toolchain that yields that binary is PINNED here rather than left to whatever the
+# driver host happens to have, because the dev host cross-compiles every fleet run
+# (scripts/remote.sh:662) so its Go version IS part of the artifact. Measured, not assumed: the
+# first launch of this driver REFUSED at exit 8 with sha d10b953b924316d8 / 5066561 bytes, and
+# the cause was terror upgrading go1.27.0 -> go1.27.1 with NO keel input changed at all
+# (`git diff 97a21f4..HEAD -- '*.go' go.mod go.sum` is empty; test 2's log:23 records the
+# builder as go1.27.0-X:simd and this run's as go1.27.1-X:simd). Rebuilding at go1.27.0
+# reproduces d0d46d26c15cc8b2 / 5066553 bytes EXACTLY, so the registration needs no amendment
+# and none is taken. Pinned and not documented-for-the-operator for the reason ruled on
+# 2026-09-02: a precondition only the operator remembers to check isn't one. Nothing is trusted
+# here either -- WANT_SHA still adjudicates, so a pin that stops working refuses like anything
+# else.
+export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.27.0}"
 TAG="${TAG:-}"
 OUT="build"
 
@@ -111,7 +124,7 @@ say "provenance and the frozen-tree guard"
 date -u +%FT%TZ
 echo "settings: HOST=$HOST FILTER=$FILTER COUNT=$COUNT BTIME=$BTIME"
 echo "settings: ARMS_A=[$ARMS_A] ARMS_B=[$ARMS_B] TAG=${TAG:-<none>}"
-echo "settings: QUIET_L5_MAX=$QUIET_L5_MAX WANT_SHA=$WANT_SHA"
+echo "settings: QUIET_L5_MAX=$QUIET_L5_MAX WANT_SHA=$WANT_SHA GOTOOLCHAIN=$GOTOOLCHAIN"
 echo "driver host: $(hostname)"
 echo "rev: $FULLREV"
 # The tmux server this may run under inherits an environment, and a stale host list in it

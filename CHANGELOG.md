@@ -9,6 +9,20 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Rule 26's digest witness caught a live failure on its first launch, and the campaign's toolchain
+  is now pinned** (`archive/mech148/driver-mech148.sh`, `#148`). Test 3 launched into a quiet janus and
+  **refused at `exit 8`**: the binary was `d10b953b924316d8` / 5066561 bytes against boundaries derived
+  on `d0d46d26c15cc8b2` / 5066553. Cause, established by reproduction and not inference — the dev host
+  cross-compiles every fleet run (`scripts/remote.sh:662`) and terror had been upgraded go1.27.0 →
+  go1.27.1 with **no keel input changed at all** (`git diff 97a21f4..HEAD -- '*.go' go.mod go.sum` is
+  empty; test 2 recorded `go1.27.0-X:simd`, this run `go1.27.1-X:simd`). Rebuilding at
+  `GOTOOLCHAIN=go1.27.0` reproduces the registered digest and byte count **exactly**, so the
+  registration takes no amendment; the driver pins `GOTOOLCHAIN` rather than leaving it to the
+  operator's memory, and `WANT_SHA` still adjudicates so the pin is verified rather than trusted.
+  Without the digest bound to a registration, every arm would have been scored against another
+  artifact's boundaries while printing the predicted confined level — which is rule 26's whole subject.
+  `docs/rulings.md` rule 26's coverage is updated accordingly: consequence (d) is now **measured**,
+  (a)–(c) remain mechanism arguments.
 - **DESIGN.md §5 rule 26 — when the prediction is the null, every treatment needs an applied-witness**
   (ruled 2026-09-03 on `#148`'s test 3). Where a pre-registration predicts *no change*, a treatment
   that silently never arrived prints **exactly the predicted reading**, so the run corroborates its
