@@ -9,16 +9,44 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`#150`'s instrument: an in-arm frequency sampler, with its own perturbation registered as a
+  measured term and its quietness guard's pedestal derived** (`archive/freq150/`, pre-registration
+  `predictions-freq150.py`). `#81`'s gap made `#150`'s leading hypothesis untestable — every
+  `freq_khz` reading in every driver log is an *idle* one taken between arms — so the sampler reads
+  cpu0's `scaling_cur_freq` every 0.2s from a cpu **derived** disjoint from `{0,1,16,17}`. The clock
+  prediction is registered in shape space before the run: samples classified HIGH/LOW at 1.06 (the
+  geometric midpoint of 1.000 and the observed 1.127), an elevated arm predicted ≥95% HIGH, and a
+  missing elevation makes every cell `UNMEASURED` rather than "clock refuted". Because an in-arm
+  sampler is a co-tenant by construction, a four-arm off/on/on/off **palindrome** control measures
+  its own cost against a bound fixed in advance (4.2%, one third of the smallest elevation it hunts).
+  Two defects found before launch rather than after: `pgrep -f freq150-sampler.sh` matches the shell
+  ssh spawns to run it, so the sampler counter **could never read zero** and every sampler-OFF
+  control arm would have refused as `UNMEASURED` with a stray sampler it invented (measured on
+  janus: naive 1, bracketed 0, with nothing running); and `#149`'s position-dependent guard is now
+  pedestal-subtracted with the pedestal **derived, not assumed** — `derive-pedestal.py` measures
+  `SELF_N = 0.9800` (not 1.00) as the min of `l5/P` over 17 saturated clean instants from 20 distinct
+  instants across both campaign logs, deduplicated *by instant* rather than by read, and takes
+  `QUIET_FOREIGN_MAX = 0.27` from **test 3's own 1.25 minus that**, so the guard is never looser than
+  the bound it replaces at any run position and 4.6× tighter at the first arm; it refuses 0 of 18
+  clean instants and the 1 tracked co-tenant excursion. 54 assertions in
+  `test-driver-freq150.sh`, including the live sampler on the host and the pedestal cross-checked
+  awk-against-python instant by instant.
 - **The single-core collapse is async preemption, single-factor, and the pre-registered prediction
   was wrong on 8 of 12 cells** (`docs/issue148-mech-205a7a8.md`, `#148`). Test 3 ran 10 arms × 30 on
   janus off ONE hash-checked binary (`d0d46d26c15cc8b2`), all readbacks green, `=== done ===`:
-  `GODEBUG=asyncpreemptoff=1` on **one** core reaches **98.8–99.7% of the two-core control** (from
-  `bpre/bc0` = 3.36×–3.72×), and `both/pre` = 0.998–1.000, so nothing is left for a second factor.
+  `GODEBUG=asyncpreemptoff=1` on **one** core reaches **98.8–99.7% of the two-core control**, and
+  `both/pre` = 0.998–1.000, so nothing is left for a second factor. The magnitude's honest form is a
+  **duty cycle — 70.2%–73.1% of the cpu** — because the *ratio* is the invariant: across rows whose
+  call duration spans 7.2× the per-call delta spans 7.88× and the ratio only 1.108×, so a fixed
+  per-call cost is refuted and the statement needs no assumed rate.
   The mechanism is narrower than "preemption" — the flag gates only `preemptM` (`proc.go:6940`), and
   sysmon still runs, retakes and marks, so what costs is **SIGURG delivery and handling**. The rival
   reading via `extern.go:227` (conservative stack scanning) needs a GC that never ran: 0
   heap-triggered cycles. The four `gc` cells are `OOD for GC` on arm membership, characterizing the
-  confined level only. Scored by `archive/mech148/analyze-mech148.py`, which imports the registration
+  confined level only. **What is not measured is the rate × cost decomposition** (`#151`): the duty
+  cycle rules sysmon's nominal 10ms retake out arithmetically (it would need 7130 µs per event) and
+  leaves only the 20µs fast-poll branch open at ~14.3 µs per event against O(1–5 µs) for a bare
+  signal — so the mechanism sentence carried a cost model nothing had checked, and now says so. Scored by `archive/mech148/analyze-mech148.py`, which imports the registration
   rather than reimplementing it and replays test 2's table first as a positive control (**16/16**);
   its output re-derives byte-identically from the tracked logs alone.
 - **Pass b's reversal caught a 13–16% between-arm level term that is not any treatment** (same doc

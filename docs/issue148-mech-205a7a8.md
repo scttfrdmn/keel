@@ -108,6 +108,45 @@ buys. There is no material residue for a second mechanism to explain.
 already recovers ~99% of the gap, a joint arm has nothing left to contribute, and it does not
 contribute it.
 
+### It is a duty cycle, not a per-call cost: ~71% of the cpu
+
+"3.4× slower" understates what the shape of the data says. A fixed cost paid once per call would
+show as a constant **delta** in ns/op; a mechanism consuming a constant *fraction of the cpu* shows
+as a constant **ratio**. Across rows spanning **7.2×** in call duration:
+
+| row | `bpre` ns/op | `bc0` ns/op | delta | ratio | cpu lost |
+|---|---|---|---|---|---|
+| 2x32/kc=8 | 371.4 | 1247.5 | 876.1 | 3.359 | 70.2% |
+| 4x32/kc=8 | 746.4 | 2544.0 | 1797.6 | 3.408 | 70.7% |
+| 2x32/kc=32 | 1296.0 | 4823.5 | 3527.5 | 3.722 | 73.1% |
+| 4x32/kc=32 | 2691.0 | 9593.5 | 6902.5 | 3.565 | 71.9% |
+
+The delta spans **7.88×** and the ratio spans **1.108×**. So it is the ratio that is the invariant,
+and the statement that survives is rate-independent:
+
+> **Async preemption consumes 70.2%–73.1% of a Go process confined to one cpu**, on loops with no
+> call sites in the hot path.
+
+That form needs no assumption about how often anything fires, which is why it is the headline rather
+than the 3.4×.
+
+### The rate × cost decomposition is *not* measured, and the arithmetic constrains it
+
+§4's attribution names *what* is removed. It does not establish the rate at which it fires, and
+this report should not be read as having measured that. The duty cycle above puts a hard constraint
+on the pair:
+
+| assumed rate | required cpu occupancy per event |
+|---|---|
+| ~100/s — sysmon's nominal retake (`forcePreemptNS = 10ms`) | **7130 µs** — impossible |
+| ~50 000/s — sysmon's *fastest* poll (`delay = 20µs`) | **14.3 µs** — plausible |
+
+A bare Linux signal delivery, handler and `sigreturn` is O(1–5 µs). So only the fast-poll branch is
+arithmetically open, and even it requires each preemption to occupy ~3–14× a bare signal's cost —
+consistent with each SIGURG on a *single* cpu costing a full deschedule/reschedule round trip rather
+than a handler, but **not measured here**. Two unmeasured multipliers stand between the flag and the
+number, and naming them is the honest form. Filed as `#151`.
+
 ### What `asyncpreemptoff=1` actually removes
 
 Read from the runtime source, not from memory. The flag gates exactly one call: `preemptM(mp)`
@@ -229,19 +268,26 @@ instant rather than by read**, since the driver samples the same between-arm ins
 1. **The §6 level term.** Sample `freq_khz` *during* an arm, not only between arms (`#81`). If a
    uniform 12.7% tracks the clock, the term is explained and the `gc` cells' 12% margin stops
    being a caveat. No new apparatus, one added sampler.
-2. **The SIGURG claim, directly.** §4 attributes the collapse to signal delivery and handling
-   rather than to sysmon's marking. That is currently an inference from what the flag gates in
-   the source. A signal count (`/proc/<pid>/status` `SigQ`, or a `perf` count of `SIGURG`
-   deliveries) measured on `c0` versus `pre` would test it as a number.
+2. **The rate × cost decomposition** (`#151`). Not corroboration of a settled claim: the duty
+   cycle is measured, the decomposition is not, and the arithmetic in §4 rules out sysmon's
+   *nominal* rate outright. A `perf` count of SIGURG deliveries on `c0` versus `pre`, divided into
+   the 71%, yields per-event occupancy directly and decides between "sysmon polls far faster than
+   its retake period suggests" and "each preemption costs a full deschedule/reschedule."
 3. **Why `aref`'s elevation is row-selective.** It appears on 4x32 and not 2x32, which is a
    shape dependence a pure clock story does not predict. Unexplained; may resolve with (1).
 
 ## 10. What `#148` now knows
 
-- The single-core collapse is **async preemption**, single-factor, `~3.4×–3.7×` on the scalar
-  rows, and removing it on one core recovers 98.8–99.7% of a second physical core.
-- The mechanism is narrower than "preemption": sysmon still runs and still marks. What costs is
-  **SIGURG delivery and handling**.
+- The single-core collapse is **async preemption**, single-factor, and removing it on one core
+  recovers 98.8–99.7% of a second physical core.
+- Its magnitude is best stated as a **duty cycle: 70.2%–73.1% of the cpu**, because the *ratio* is
+  invariant (spans 1.108×) across rows whose call duration spans 7.2× while the per-call delta
+  spans 7.88×. That form assumes no rate.
+- The mechanism is narrower than "preemption": sysmon still runs and still marks, so what is
+  removed is **SIGURG delivery and handling**. But the **rate × cost decomposition is unmeasured**
+  — sysmon's nominal 10ms retake is arithmetically impossible (it would need 7130 µs per event) and
+  only the fast-poll branch is open, at ~14.3 µs per event against O(1–5 µs) for a bare signal.
+  `#151`.
 - **GC is not involved and this campaign cannot test it here** — 0 heap-triggered cycles means
   `GOGC=off` has nothing to remove. Four cells characterize the confined level and say nothing
   about the collector.
