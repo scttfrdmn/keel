@@ -2061,6 +2061,41 @@ and equally its limit — it cannot rescue a run, only decline to bank one.
   signal; this asks whether the **subject** was ever given one. The two failures are independent and
   a run can need both, as this one does.
 
+### What the first two launches taught, both on 2026-09-03
+
+The driver refused **twice before an arm ran**, and the two refusals have opposite characters — which
+between them measure the rule's cost as well as its value.
+
+**Launch 1, `exit 8`: a true refusal.** Recorded in the coverage list below.
+
+**Launch 2, `exit 9`: a FALSE refusal, and by the same defect the campaign had already been bitten
+by one level up.** The `GOGC=off` witness counted `gc #` trace lines and read `2` against `2`. Both
+cycles were `(forced)` — `testing`'s `runN` calls `runtime.GC()` and only then resets the timer — and
+GOGC has no authority over a forced cycle, so the field could not see the treatment even when the
+treatment was working perfectly. The witness was in the same line all along: the **heap goal**, which
+the runtime printed as `4 MB` against `8532210231539 MB`. So the field with a known positive was one
+`sed` expression away from the field with none, and the check that would have caught it is the one
+this campaign had *already* been ruled to run — replay the candidate against a case where the event
+must show (the 5-minute-load ruling, 2026-09-02). It was run for the quietness gate and skipped for
+this one.
+
+Two general facts follow, and the first is a **cost** of this rule rather than a benefit:
+
+- **An applied-witness can refuse a run that should have proceeded.** That is the price of the
+  direction clause: because a witness can only turn a corroboration into `UNMEASURED`, its failure
+  mode is a *lost run*, never a wrong verdict. Two lost launches in one hour is the actual, measured
+  rate of that cost on this campaign, and it is the right trade only because the alternative — a
+  quiet null — is unrecoverable, whereas a false refusal is loud and costs an hour.
+- **A witness can settle the question its arm was built to ask.** Asked at the *arms'* parameters,
+  the same probe returns **71 gc cycles and 0 heap-triggered ones, identical with and without
+  `GOGC=off`**. So the `gc` treatment arrives and removes nothing: GC assist and worker activity
+  cannot be causing the confined collapse, because there is no GC activity in the timed region to
+  cause it. That is a campaign result obtained from a precondition measurement, for one probe's cost,
+  before a single arm ran — and it is disclosed as `OUT_OF_DOMAIN` item 5 (added before any outcome
+  sample existed, so it shrinks the registration's reach rather than retro-scoping its predictions).
+  The arms still run, because their samples are further draws of the confined level and rule 25 wants
+  more of those.
+
 ### Coverage, and what stays unseen (§5 rule 12)
 
 - **`asyncpreemptoff`'s honouring is unwitnessed.** Unknown `GODEBUG` keys are ignored silently and
@@ -2070,8 +2105,8 @@ and equally its limit — it cannot rescue a run, only decline to bank one.
   for a *different* limitation of this campaign (sysmon, the scavenger, the netpoller) — so the action
   is disclosed while this limitation is not itself an enumerated item, and a limitation with a named
   action is not a debt.
-- **The gctrace probe's own failure branch fails *open*.** If the probe returns nothing (an ssh
-  hiccup, say), the arms still run and the log says the analyzer must read a confined result as
+- **The gctrace probe's own failure branch fails *open*.** If the probe yields no parsable heap
+  goal (an ssh hiccup, say), the arms still run and the log says the analyzer must read a confined result as
   consistent with both "no effect" and "no treatment". A network fault is not evidence about `GOGC`,
   so refusing there would let an unrelated hiccup destroy a whole run — but the consequence is that
   this one branch is enforced by **a human reading the log**, not by the driver.
@@ -2083,7 +2118,7 @@ and equally its limit — it cannot rescue a run, only decline to bank one.
   `archive/mech148/test-driver-mech148.sh` only for the quietness gate and the arm table. Whether a
   registered prediction *is* a null is a property of the registration's prose, and asserting it
   mechanically is not attempted.
-- **Consequence (d) is measured; (a)–(c) are still argued from mechanism.** Updated 2026-09-03, two
+- **Consequence (d) is measured by a true catch; (b) fired falsely and was repaired; (a) and (c) are still argued from mechanism.** Updated 2026-09-03, two
   hours after adoption, because the driver's first real launch **refused at `exit 8`** and the
   refusal was correct: the dev host cross-compiles every fleet run (`scripts/remote.sh:662`) and it
   had been upgraded go1.27.0 → go1.27.1, so the binary was `d10b953b924316d8` / 5066561 bytes where

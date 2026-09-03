@@ -206,4 +206,23 @@ OUT_OF_DOMAIN = (
     "These boundaries are absolute GFLOP/s from one host and one binary. They transfer to "
     "no other host and no rebuild; PRECONDITIONS refuses instead of rescaling, because a "
     "rescaled boundary is a chosen one.",
+
+    # Item 5. ADDED 2026-09-03, before any arm of test 3 had run and therefore before any
+    # outcome sample existed -- the evidence is a PRECONDITION measurement, not a result, and
+    # the amendment can only shrink what this registration may claim.
+    "The gc and both arms' GC half are out of domain FOR THE GC HYPOTHESIS, because the "
+    "treatment arrives and removes nothing. Measured on the boundaries' own binary at the "
+    "ARMS' parameters (GOMAXPROCS=1, benchtime=1s, the full BenchmarkKernel filter): 71 gc "
+    "cycles and 0 heap-triggered ones, identical with and without GOGC=off. Every cycle is "
+    "(forced) -- testing's runN calls runtime.GC() and only then resets the timer, so no "
+    "cycle is inside a timed window either. Arrival IS witnessed: the runtime raises the heap "
+    "goal from 4 MB to 8532210231539 MB, which is it reporting that it honoured the variable. "
+    "So a confirmed unimodal-at-confined on gc or both is not evidence about GC activity; the "
+    "mechanism was already absent before the treatment was applied. The arms still run and "
+    "their samples still characterize the confined level (rule 25 wants more draws of it), and "
+    "the PREDICT cells stand unamended -- what is declared here is their REACH, which is the "
+    "rule-12 form and not a retro-scoping of the prediction. This also settles part of the "
+    "campaign's question without an arm: GC assist and worker activity cannot be causing the "
+    "confined collapse on this row set, because there is no GC activity in the timed region "
+    "to cause it.",
 )

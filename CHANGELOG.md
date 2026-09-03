@@ -9,6 +9,22 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Test 3's `GOGC=off` witness refused a healthy run, and the repair settled part of the campaign
+  without an arm** (`archive/mech148/`, `#148`). The witness counted `gc #` trace lines and read `2`
+  against `2` — a **false refusal** (`exit 9`): every cycle is `(forced)`, `testing`'s `runN` calls
+  `runtime.GC()` and only then resets the timer, and GOGC has no authority over a forced cycle. The
+  right field was in the same line — the **heap goal**, `4 MB` against `8532210231539 MB`, the runtime
+  reporting that it honoured the variable — and it has a known positive where the line count has none.
+  Same defect the 2026-09-02 ruling had already named one level up: replay the candidate field against
+  a case where the event must show. Run for the quietness gate, skipped for this one.
+  **The finding:** asked at the *arms'* parameters the same probe returns **71 gc cycles, 0
+  heap-triggered, identical with and without `GOGC=off`** — so the treatment arrives and removes
+  nothing, and GC assist/worker activity cannot be causing the confined collapse because there is no
+  GC activity in the timed region to cause it. Registered as `OUT_OF_DOMAIN` item 5, added **before
+  any arm ran** so it shrinks the registration's reach rather than retro-scoping its predictions; the
+  `gc`/`both` arms still run because their samples are further draws of the confined level (rule 25).
+  Witness test now replays both real gctrace probes, the refuted line-count field, and four
+  fail-closed branches: **52 pass / 0 fail**, with three planted defects each caught at `rc=1`.
 - **Rule 26's digest witness caught a live failure on its first launch, and the campaign's toolchain
   is now pinned** (`archive/mech148/driver-mech148.sh`, `#148`). Test 3 launched into a quiet janus and
   **refused at `exit 8`**: the binary was `d10b953b924316d8` / 5066561 bytes against boundaries derived

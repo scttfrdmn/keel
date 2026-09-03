@@ -195,12 +195,24 @@ if [[ "$sha" != "$WANT_SHA" ]]; then
 fi
 echo "binary IDENTICAL to the boundaries' binary: BOUNDS apply as registered"
 
-say "treatment witness: does GOGC=off actually suppress GC on this binary and host?"
+say "treatment witness: does GOGC=off actually arrive, and does it have anything to remove?"
 # NON-JUDGED probe, and the reason it exists is in the header: predicting the null means a
-# treatment that never applied corroborates me. This runs the SAME binary twice for a second
-# with gctrace on, once with GOGC=off, and counts the runtime's own `gc #` lines. It witnesses
-# the RUNTIME honouring GOGC; it does not witness remote.sh's interpolation, which the
-# per-arm `keel-bench-gomaxprocs:` assertion covers instead (see the header).
+# treatment that never applied corroborates me. It runs the SAME binary twice with gctrace on,
+# once with GOGC=off, and reads TWO different things off the runtime's own `gc #` lines.
+#
+# WHICH FIELD, and this is the SECOND time this campaign that a plausible field was blind to the
+# event it was chosen to see. The first version counted `gc #` LINES and refused this run at
+# exit 9 on `2 vs 2` -- a false refusal, because every cycle at these parameters is `(forced)`,
+# i.e. `runtime.GC()` called by `testing`'s own runN before it resets the timer, and GOGC has no
+# authority over a forced cycle. The witness was in the same line all along: the HEAP GOAL, which
+# the runtime prints as it decided it. Measured on this host, first line of each probe:
+#     GC on:     0->0->0 MB,             4 MB goal, ... (forced)
+#     GOGC=off:  0->0->0 MB, 8532210231539 MB goal, ... (forced)
+# That is the runtime reporting, in its own voice, that it honoured GOGC=off. A `>` on the goal
+# has a known positive (4 against 8.5e12) where the line count had none, which is the check the
+# first version skipped: replay the candidate field against a case where the treatment MUST show.
+#
+# The second field is the count of NON-forced cycles, and it is a disclosure rather than a gate.
 gcprobe() {
   # SC2029 is the intent, not a slip: $KEEL_REMOTE_DIR and $FILTER must expand HERE, because
   # the far side has no keel checkout and no such variables.
@@ -208,20 +220,45 @@ gcprobe() {
   ssh "${KEEL_SSH_OPTS[@]}" "$HOST" \
     "cd '$KEEL_REMOTE_DIR' && env $1 GODEBUG=gctrace=1 taskset -c 0 ./bench.test \
        -test.run=NONE -test.bench='$FILTER/scalar' -test.benchtime=200x -test.count=1 2>&1 \
-     | /usr/bin/grep -c '^gc [0-9]'" 2>/dev/null
+     | /usr/bin/grep '^gc [0-9]'" 2>/dev/null
 }
-gc_on="$(gcprobe '')"; gc_off="$(gcprobe 'GOGC=off')"
-echo "gc cycles with GC on: ${gc_on:-<none>}   with GOGC=off: ${gc_off:-<none>}"
-if [[ -z "$gc_on" || -z "$gc_off" ]]; then
-  echo "WARNING: the gctrace probe returned nothing, so the gc and both arms' treatment is"
-  echo "  UNWITNESSED. The arms still run and are still scored, but the analyzer must read a"
-  echo "  confined result on them as consistent with 'no effect' AND with 'no treatment'."
-elif [[ "$gc_off" -ge "$gc_on" ]]; then
-  echo "REFUSED: GOGC=off did not reduce GC cycles ($gc_off vs $gc_on), so the gc and both arms"
-  echo "  would carry no treatment and their predicted-confined result would be unfalsifiable."
-  exit 9
+# The heap goal in MB off the FIRST gc line, empty if there is no parsable one.
+gcgoal() { sed -n 's/^gc [0-9].*, \([0-9][0-9]*\) MB goal,.*/\1/p' <<<"$1" | head -1; }
+# Cycles the runtime started on its own. `grep -c` cannot be used: it exits 1 on zero matches,
+# and zero is the answer this campaign turned out to have.
+gcnonforced() { local n; n="$(/usr/bin/grep '^gc [0-9]' <<<"$1" | /usr/bin/grep -v '(forced)' | /usr/bin/grep -c . )"; printf '%s' "${n:-0}"; }
+gc_on_raw="$(gcprobe '')"; gc_off_raw="$(gcprobe 'GOGC=off')"
+goal_on="$(gcgoal "$gc_on_raw")"; goal_off="$(gcgoal "$gc_off_raw")"
+nf_on="$(gcnonforced "$gc_on_raw")"; nf_off="$(gcnonforced "$gc_off_raw")"
+echo "heap goal with GC on: ${goal_on:-<unparsable>} MB   with GOGC=off: ${goal_off:-<unparsable>} MB"
+echo "heap-triggered (non-forced) cycles: GC on $nf_on, GOGC=off $nf_off"
+if [[ -z "$goal_on" || -z "$goal_off" ]]; then
+  echo "WARNING: the gctrace probe produced no parsable heap goal, so the gc and both arms'"
+  echo "  treatment is UNWITNESSED. The arms still run and are still scored, but the analyzer"
+  echo "  must read a confined result on them as consistent with 'no effect' AND 'no treatment'."
+elif awk -v a="$goal_off" -v b="$goal_on" 'BEGIN{exit !(a>b)}'; then
+  echo "treatment ARRIVED: GOGC=off raises the heap goal $goal_on -> $goal_off MB, which is the"
+  echo "  runtime saying in its own output that it honoured the variable."
 else
-  echo "treatment witnessed: GOGC=off cuts GC cycles $gc_on -> $gc_off on this binary and host"
+  echo "REFUSED: GOGC=off did not raise the heap goal ($goal_off vs $goal_on), so the runtime did"
+  echo "  not honour it and the gc and both arms would carry no treatment at all."
+  exit 9
+fi
+# ...and now the part that is a finding rather than a check, measured 2026-09-03 BEFORE any arm
+# ran and therefore before any outcome sample exists. At the ARMS' own parameters (benchtime=1s,
+# the full BenchmarkKernel filter) this binary produces 71 gc cycles and *0* heap-triggered ones,
+# with and without the treatment. Every cycle is forced by testing's runN, which calls
+# runtime.GC() and only then resets the timer, so none of them is inside a timed window either.
+# So GOGC=off ARRIVES and REMOVES NOTHING: there is no GC activity in the timed region for it to
+# take away. That is the asyncpreemptoff shape reached from the other side, and it is disclosed
+# in predictions-mech148.py's OUT_OF_DOMAIN rather than fixed, because nothing here is broken.
+# The gc and both arms still RUN -- their samples are further draws of the confined level, which
+# rule 25 wants more of -- but a confirmed `unimodal-at-confined` on them is not evidence about
+# the GC hypothesis. It cannot be: the mechanism was already absent.
+if [[ "$nf_on" == "0" ]]; then
+  echo "NOTE: 0 heap-triggered cycles with GC ON, so the gc treatment has nothing to remove here."
+  echo "  The gc/both cells are OUT OF DOMAIN for the GC hypothesis by predictions-mech148.py's"
+  echo "  item 5; they still run, and still characterize the confined level."
 fi
 # asyncpreemptoff has no equally cheap witness: unknown GODEBUG keys are ignored silently and
 # preemption signals are not counted in any output this binary produces. So arrival is proven

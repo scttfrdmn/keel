@@ -44,10 +44,12 @@ eval "$(extract quiet_violation)"
 eval "$(extract env_for)"
 eval "$(extract mask_for)"
 eval "$(extract cores_for)"
-for f in quiet_violation env_for mask_for cores_for; do
+eval "$(extract gcgoal)"
+eval "$(extract gcnonforced)"
+for f in quiet_violation env_for mask_for cores_for gcgoal gcnonforced; do
   declare -F "$f" >/dev/null || { echo "FATAL: could not extract $f() from $DRIVER"; exit 2; }
 done
-echo "extracted quiet_violation, env_for, mask_for, cores_for from $DRIVER"
+echo "extracted quiet_violation, env_for, mask_for, cores_for, gcgoal, gcnonforced from $DRIVER"
 
 sample() { printf 'uptime: up 41 days\nloadavg: %s 1/703 2556983\ngovernor: performance\n' "$1"; }
 
@@ -124,6 +126,39 @@ want="$(tr ' ' '\n' <<<"$regs" >/dev/null; cut -d'|' -f1 <<<"$regs" | sort | tr 
 [[ "$(tr ' ' '\n' <<<"$B" | sort | tr '\n' ' ')" == "$want" ]] && ok "pass b covers exactly the registered arms" || bad "pass b is [$B], registered set is [$want]"
 rev="$(tr ' ' '\n' <<<"$A" | tail -r 2>/dev/null || tr ' ' '\n' <<<"$A" | tac)"
 [[ "$(tr '\n' ' ' <<<"$rev")" == "$B " ]] && ok "pass b is pass a reversed" || bad "pass b is not pass a reversed: [$B] vs [$(tr '\n' ' ' <<<"$rev")]"
+
+echo
+echo "== 3. the GOGC witness, replayed against the lines the host actually printed =="
+# These two are verbatim janus output, 2026-09-03, one probe each. The whole point of this
+# section is the control the FIRST version of this witness never had: a case where the
+# treatment MUST show. The line-count field it used scores 0 on exactly this pair.
+GCON='gc 1 @0.000s 5%: 0.007+0.14+0.001 ms clock, 0.007+0/0.032/0.10+0.001 ms cpu, 0->0->0 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 2 @0.000s 6%: 0.004+0.088+0.001 ms clock, 0.004+0/0.025/0.060+0.001 ms cpu, 0->0->0 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)'
+GCOFF='gc 1 @0.000s 4%: 0.005+0.12+0.001 ms clock, 0.005+0/0.029/0.090+0.001 ms cpu, 0->0->0 MB, 8532210231539 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 2 @0.000s 5%: 0.003+0.082+0.001 ms clock, 0.003+0/0.024/0.056+0.001 ms cpu, 0->0->0 MB, 8532210231539 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)'
+eq() { [[ "$2" == "$3" ]] && ok "$1 -> $2" || bad "$1 -> got '$2', wanted '$3'"; }
+
+eq "goal off the real GC-on probe"      "$(gcgoal "$GCON")"  "4"
+eq "goal off the real GOGC=off probe"   "$(gcgoal "$GCOFF")" "8532210231539"
+# The discriminator itself, on the known positive.
+if awk -v a="$(gcgoal "$GCOFF")" -v b="$(gcgoal "$GCON")" 'BEGIN{exit !(a>b)}'; then
+  ok "the goal field separates the known positive (8532210231539 > 4)"
+else bad "the goal field does NOT separate the known positive"; fi
+# ...and the refuted field, replayed so the refutation stays visible rather than remembered.
+n_on="$(/usr/bin/grep -c '^gc [0-9]' <<<"$GCON")"; n_off="$(/usr/bin/grep -c '^gc [0-9]' <<<"$GCOFF")"
+[[ "$n_on" == "$n_off" ]] && ok "the REFUTED line-count field scores 0 on it ($n_on vs $n_off, no signal)" \
+  || bad "the line-count field separated the pair ($n_on vs $n_off), which contradicts the log"
+# Non-forced counting. 0 is the real answer on this campaign, so it must be a value and not an error.
+eq "non-forced over two forced cycles"  "$(gcnonforced "$GCON")"  "0"
+eq "non-forced over an empty probe"     "$(gcnonforced "")"       "0"
+eq "non-forced with one heap-triggered" "$(gcnonforced "$GCON
+gc 3 @0.100s 1%: 0.1+0.2+0.1 ms clock, 0->1->0 MB, 5 MB goal, 1 P")" "1"
+
+echo "  the branches no healthy probe reaches (the goal field must fail closed):"
+eq "goal off an empty probe"                 "$(gcgoal "")"                                  ""
+eq "goal off an ssh error"                   "$(gcgoal "ssh: connect to host janus.local port 22: refused")" ""
+eq "goal off a gc line with no goal field"   "$(gcgoal "gc 1 @0.000s 5%: 0.007 ms clock, 0->0->0 MB, 1 P")"  ""
+eq "goal off a non-gc line that mentions MB" "$(gcgoal "scavenge: 4 MB goal, released")"      ""
 
 echo
 printf 'test-driver-mech148: %d pass / %d fail\n' "$pass" "$fail"
