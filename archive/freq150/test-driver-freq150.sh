@@ -180,7 +180,17 @@ if ! bash -n "$STMP"; then bad "the extracted sampler is not valid bash"; fi
 if ! ssh -o BatchMode=yes -o ConnectTimeout=10 "$HOST" true 2>/dev/null; then
   bad "$HOST unreachable: the sampler cannot be witnessed, so the driver must not be launched"
 else
-  ssh -o BatchMode=yes "$HOST" "mkdir -p '$RDIR' && cat > '$RDIR/freq150-sampler.sh' && chmod +x '$RDIR/freq150-sampler.sh'" <"$STMP"
+  # Installed BY scp, the way the driver does it. Not by ssh's stdin: KEEL_SSH_OPTS carries -n, and
+  # the driver's first launch shipped an EMPTY sampler that way. So the hash of what landed is
+  # asserted here too -- it is the check that caught that, and it belongs in the test that would
+  # otherwise be the last thing to notice.
+  ssh -o BatchMode=yes "$HOST" "mkdir -p '$RDIR'" >/dev/null 2>&1
+  scp -q -o BatchMode=yes "$STMP" "$HOST:$RDIR/freq150-sampler.sh"
+  ssh -o BatchMode=yes "$HOST" "chmod +x '$RDIR/freq150-sampler.sh'"
+  want_hash="$({ shasum -a 256 "$STMP" 2>/dev/null || sha256sum "$STMP"; } | cut -c1-16)"
+  got_hash="$(ssh -o BatchMode=yes "$HOST" "sha256sum '$RDIR/freq150-sampler.sh' | cut -c1-16" | tr -d ' \n')"
+  [[ "$got_hash" == "$want_hash" ]] && ok "the sampler that landed on $HOST hashes $got_hash, as shipped" \
+                                    || bad "shipped $want_hash but $HOST has $got_hash"
   before="$(ssh -o BatchMode=yes "$HOST" "pgrep -c -f '$SPAT' || true" | tr -d ' \n')"
   [[ "$before" == "0" ]] && ok "bracket pattern reads 0 with no sampler running" \
                          || bad "bracket pattern reads $before with no sampler running"

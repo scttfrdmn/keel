@@ -313,16 +313,28 @@ SAMPLER
 shash="$({ shasum -a 256 "$SAMPLER_LOCAL" 2>/dev/null || sha256sum "$SAMPLER_LOCAL"; } | cut -c1-16)"
 echo "sampler: $(wc -l <"$SAMPLER_LOCAL" | tr -d ' ') lines, sha256=$shash"
 sed 's/^/   | /' "$SAMPLER_LOCAL"
+# SHIPPED BY scp, NOT BY ssh's STDIN, and this driver's first launch is why. `KEEL_SSH_OPTS` carries
+# `-n` (scripts/remote.sh:29), which redirects ssh's stdin from /dev/null -- so `cat > file` on the
+# far side received nothing and wrote an EMPTY sampler. The hash check below caught it (remote
+# e3b0c442..., the sha256 of the empty string, against b9d9c233...) and the run refused at exit 11
+# before any arm ran, which is that check earning its place: an empty sampler is a sampler that
+# produces a complete-looking trace of nothing. remote.sh already keeps `KEEL_SCP_OPTS` for exactly
+# this -- the same options minus `-n` (scripts/remote.sh:30) -- and already ships its own runner
+# script by scp, so the fix is the repo's existing instrument rather than a new one.
+ssh "${KEEL_SSH_OPTS[@]}" "$HOST" "mkdir -p '$KEEL_REMOTE_DIR'" >/dev/null 2>&1
+scp -q "${KEEL_SCP_OPTS[@]}" "$SAMPLER_LOCAL" "$HOST:$SAMPLER_REMOTE"
+echo "scp of the sampler: rc=$?"
 # shellcheck disable=SC2029  # every $VAR here must expand on THIS side
 pre="$(ssh "${KEEL_SSH_OPTS[@]}" "$HOST" "
-  mkdir -p '$KEEL_REMOTE_DIR' && cat > '$SAMPLER_REMOTE' && chmod +x '$SAMPLER_REMOTE'
+  chmod +x '$SAMPLER_REMOTE'
   echo \"remote sha: \$(sha256sum '$SAMPLER_REMOTE' | cut -c1-16)\"
   echo \"bash: \$(bash --version | head -1)\"
   echo \"epochrealtime: \$(bash -c 'echo \$EPOCHREALTIME')\"
-  s=\$( { /usr/bin/time -f %e sleep $SAMPLE_PERIOD ; } 2>&1 ); echo \"fractional sleep $SAMPLE_PERIOD took: \${s}s\"
+  t0=\$(date +%s.%N); sleep $SAMPLE_PERIOD; t1=\$(date +%s.%N)
+  echo \"fractional sleep $SAMPLE_PERIOD took: \$(awk -v a=\$t0 -v b=\$t1 'BEGIN{printf \"%.3f\", b-a}')s\"
   echo \"freq readable: \$(cat /sys/devices/system/cpu/cpu$SAMPLED_CPU/cpufreq/scaling_cur_freq 2>&1)\"
   echo \"taskset: \$(command -v taskset || echo MISSING)\"
-" <"$SAMPLER_LOCAL" 2>&1)"
+" 2>&1)"
 sed 's/^/   /' <<<"$pre"
 # Each precondition is asserted against its own phrase, and a phrase that matches nothing fails
 # closed. Three ways the sampler could silently become the noun it measures:
