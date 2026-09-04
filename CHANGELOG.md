@@ -26,6 +26,18 @@ While the major version is 0, minor versions may contain breaking changes.
   `labrun`'s status parse) runs `uv run --no-project python3`.
 
 ### Added
+- **`#136` NEON sweep on GB10: 4×16 wins, and a spiller ties it** (step 4, `docs/neon-sweep.md`,
+  `archive/neon136/`, run `neon136-649d9ee` on pollux). `BenchmarkKernel` over the five shapes,
+  GOMAXPROCS=1, via the pueue `measured` group, characterization-only. **Winner: 4×16 at 21.38
+  GFLOP/s**, beating the other non-spiller 8×8 by **19%** — the #130 by-element cost made concrete:
+  8×8 pays 2 DUP/FMA-pair to 4×16's 1, so the missing by-element FMLA penalizes high-MR shapes, at a
+  now-measured 19%. **Model-vs-clock disagreement (the finding): 8×12 spills 5 accumulators yet ties
+  the winner (−0.0%)** — its 24 independent FMA chains hide the spill latency, so a shallow spill is
+  throughput-free; the deep spillers (8×16, 4×32, 13 spilled) do cost (−8.7%, −4.8%). The spill
+  penalty is nonlinear — the register model is a necessary screen, not a sufficient ranking. Verdict:
+  ship 4×16 (when the arm64 judged tier lands behind #73/#119). Filed-and-moved: the bench summary's
+  backend/class labels are amd64-feature-gated and mislabel a NEON run as "scalar" (the per-shape kern
+  line is correct); dispatch-integration, not fixed inline.
 - **NEON SGEMM microkernels + the arm64 `kern` backend, `-S`-audited** (`#136` steps 2–3,
   `internal/vec/gemm_neon.go`, `internal/kern/kern_arm64.go`). Five candidate shapes — 8×8, 4×16
   (model-fit) + 8×12, 8×16, 4×32 — in the reflected-tile broadcast-A form, straight-line and

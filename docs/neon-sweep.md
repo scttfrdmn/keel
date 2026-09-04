@@ -143,3 +143,48 @@ Fixed here before any GB10 timing, so the output space cannot be chosen after th
 - **Discipline:** `-trimpath` (via `remote_build_test`), toolchain read back from the artifact,
   GOMAXPROCS=1, governor=performance asserted, a quietness refusal before the run, evidence tracked
   under `archive/neon136/`. Characterization-labeled in every line; no bars, no registry.
+
+---
+
+## Step 4 result — the sweep on GB10 (2026-09-04, pollux.local, run neon136-649d9ee)
+
+arm64 NEON binary (`-trimpath`, go1.27.0-X:simd read off the artifact), `BenchmarkKernel` over
+`kern.Measured()`, GOMAXPROCS=1, count=20, through the pueue `measured` group; governor=performance,
+1-min load 0.11. Median GFLOP/s per shape × kc (a measured rate — no BenchmarkPeak was run on GB10,
+so this is comparable across shapes on this host, not a percent-of-peak):
+
+| shape | kc=8 | kc=32 | kc=128 | kc=512 | -S audit |
+|---|---|---|---|---|---|
+| **4×16** | 16.87 | 20.12 | 21.03 | **21.38** | fit |
+| 8×12 | 16.34 | 19.93 | 20.97 | 21.37 | SPILL(5) |
+| 4×32 | 15.99 | 19.14 | 20.09 | 20.36 | SPILL(13) |
+| 8×16 | 15.00 | 18.22 | 19.22 | 19.53 | SPILL(13) |
+| 8×8  | 14.53 | 16.53 | 17.05 | 17.29 | fit |
+
+**Winner: 4×16, 21.38 GFLOP/s** — wins at every kc, and by **19%** over the other non-spiller, 8×8.
+Both are 16-accumulator, spill-free shapes, so the register model correctly said "the µarch decides
+between them" — and it decided decisively. The mechanism is the #130 by-element cost: 8×8 is 16 FMLA
+per **8** DUP (2:1), 4×16 is 16 per **4** DUP (4:1), so 8×8 pays twice the broadcast overhead per
+FMA. The missing by-element FMLA penalizes high-MR / low-NR shapes, and the sweep quantifies it at
+19% on this pair — the throughput number the #130 candidate could not otherwise get.
+
+**The disagreement is the finding (per the charter).** 8×12 **spills 5 accumulators** (the -S audit's
+verdict) yet **ties the winner** — 21.37 vs 21.38, −0.0%. The spill heuristic says "architecturally
+disfavored"; the clock says "as fast as the best non-spiller." The 24 accumulators give enough
+independent FMA chains to hide the spill traffic's latency, so a 5-accumulator spill is throughput-free
+here. The model proposed and the assembly disposed (8×12 spills); the clock then disposed of the
+*consequence* the spill was assumed to carry. **Deeper spill does cost, though:** 8×16 and 4×32 spill
+13 accumulators each and land −8.7% / −4.8% below the winner. So the spill penalty is nonlinear — nil
+at 5, real at 13 — which is a sharper statement than "spilling shapes lose."
+
+**Verdict for the port:** ship **4×16** as the NEON SGEMM microkernel (non-spilling, fastest at every
+size). 8×12 is a live alternative worth keeping for a future unroll/latency study — its tie with the
+winner despite spilling says the register-budget model is a necessary screen, not a sufficient
+ranking. All characterization: no judged verdict, no bar, no registry (the #73/#119 gate stands).
+
+**One arm64 provenance gap, filed-and-moved:** the bench summary lines read `keel-bench-backend:
+scalar` and `keel-bench-kern-class: … (no vector backend in this build)` because that machinery is
+gated on the amd64 feature detect (`HasAVX512`/etc.), which does not know NEON. The per-shape kern
+line is correct (`8x8/neon`, …) and the kernels demonstrably ran NEON (17–21 GFLOP/s, not scalar's
+~3), so this is a cosmetic label gap on arm64, not a wrong measurement. Wiring NEON into the
+L1-backend/class detection is dispatch integration beyond this sweep; recorded here, not fixed inline.
