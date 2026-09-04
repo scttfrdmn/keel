@@ -634,7 +634,12 @@ assert_no_strays() {
 # The flag lands INSIDE the artifact, where build_settings reads it back.
 remote_build_test() {
   local pkg="$1" out="$2"
-  GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+  # GOARCH is a parameter, default amd64, so every existing caller is byte-identical: the
+  # judged fleet is amd64 and nothing there sets KEEL_GOARCH. arm64 (#136's GB10 sweep) sets
+  # KEEL_GOARCH=arm64 to cross-compile a NEON binary here on the dev host and ship it, the same
+  # way amd64 binaries cross-compile from darwin/arm64. GOOS stays linux — every benchmark host,
+  # amd64 or arm64, is Linux; a darwin target would need the #138 placement law first.
+  GOEXPERIMENT=simd GOOS=linux GOARCH="${KEEL_GOARCH:-amd64}" CGO_ENABLED=0 \
     go test -c -trimpath -o "$out" "$pkg"
 }
 

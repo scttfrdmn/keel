@@ -121,3 +121,25 @@ MR confirms the by-element cost the #130 read predicted: one DUP per A element, 
 
 Consequence: 8×12 joins the spillers. The non-spilling candidates are **8×8 and 4×16**; 8×12, 8×16,
 4×32 are `referenceTiles` — measured in the sweep, not shippable, so nothing ships a spilling tile.
+
+---
+
+## Step 4 pre-registration — the sweep grid (before the run)
+
+Fixed here before any GB10 timing, so the output space cannot be chosen after the fact:
+
+- **Rows:** `BenchmarkKernel/<shape>/neon/kc=<K>` for every shape in `kern.Measured()` — **8x8,
+  4x16** (non-spilling) and **8x12, 8x16, 4x32** (referenceTiles: spilling, measured not shipped) —
+  × the harness's `kcs`. The quantity is **GFLOP/s** (`bench/bench_test.go`'s `rate`), a measured
+  rate, comparable across shapes on one host, never a judged verdict.
+- **Host:** `pollux.local` (GB10, Linux aarch64), pueue `measured` group (serialized against
+  co-tenants by the daemon). `castor.local` is the identical-hardware alternate.
+- **Predicted ranking, stated so it can be wrong:** among the non-spillers, the winner is whichever
+  of 8x8 / 4x16 the clock picks — both are 16-accumulator, ~1.5 mem-ops/FMA shapes, so the µarch's
+  load-port width and front-end decide, not the source. The spillers (8x12, 8x16, 4x32) are predicted
+  **below** the non-spillers at the in-cache sizes, by the spill traffic the -S audit counted; where
+  a spiller is NOT below (e.g. its extra accumulators hide memory latency at a bandwidth-bound size),
+  **that disagreement between the model and the clock is the finding**, per the charter.
+- **Discipline:** `-trimpath` (via `remote_build_test`), toolchain read back from the artifact,
+  GOMAXPROCS=1, governor=performance asserted, a quietness refusal before the run, evidence tracked
+  under `archive/neon136/`. Characterization-labeled in every line; no bars, no registry.
