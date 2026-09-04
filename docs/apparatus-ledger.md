@@ -95,13 +95,16 @@ hash, so the row would be wrong again and wrong in a way that reads as right.
 
 | 2026-09-03 | `e53bc25` | +33 | **1067** | **`scripts/labrun`, the fleet's pueue submit-wait-propagate helper, under Scott's explicit directive to onboard the lab queue.** Not `scripts/`-optional: every measured run on shared lab hardware now serializes through pueue, and `labrun` is the primitive that submits, waits, and propagates the real exit code (`pueue wait` alone always exits 0). Copied **byte-identical** from `~/src/pueue-local/PUEUE.md`, not reimplemented — its exit-code parse and two levels of `%q` quoting are deliberate pueue workarounds, each of which silently reports Success on failure if altered. Booked in full at +33: this session lands no routine, kernel or library fix, so under the strict reading it is an unpaid spend, and a fleet directive is authorization to add it, not an exemption from counting it. The measured-path rewrite it enables (rerouting `remote_exec` off `#62`'s remote-tmux onto pueue) is a separate, larger change owed a decision; when it lands it will move `remote.sh`, which is where that row's spend will be measured. `CLAUDE.md` (+286, the verbatim Part 1 block) and `CONTRIBUTING.md` (+27) are docs, in neither ratio term. |
 
-**Current debt: +1067 net shell lines** as of 2026-09-03 (fifth reading, at `e53bc25`, which adds
-`scripts/labrun`'s +33 over the fourth; `97a21f4`
+| 2026-09-03 | `c2e4586` | +155 | **1222** | **`remote_exec` routed through pueue, so measured runs on shared lab hosts serialize instead of fouling each other — Scott's fleet directive, continued from `e53bc25`.** `scripts/remote.sh` **+84** (the pueue submit/wait/vanished branch, the `measured`/`build` group selection, the `keel-queue:` provenance line, and the header block rewritten to document two mechanisms) and `scripts/remote-exec-test.sh` **+71** (section 10: a guarded positive control that drives the pueue branch on a live queue host — both groups, exit-code recovery, killed→vanished — and UNRUNs off-fleet, because the localhost cases never enter that branch). Both readings agree on +155: `git diff --numstat` and the counter, 16614 → 16769. Booked in full as an unpaid spend: this session lands no routine, kernel or library fix, and a fleet directive authorizes the lines rather than exempting them from the count. **Not** retiring `#62`: its remote-tmux path stays as the fallback for the judged AWS fleet, which has no pueue and one tenant. The exit code stays sourced from the runner's own status file, never pueue's result — a design fact the row records because getting it wrong would report Success on a failed benchmark. |
+
+**Current debt: +1222 net shell lines** as of 2026-09-03 (sixth reading, at `c2e4586`, which adds the
++155 pueue conversion over `e53bc25`'s +33; `97a21f4`
 adds no shell, and the commit that adds the STANDING line below touches no `scripts/` file at
 all, so neither moves it), of which
 **+97 is a re-reading**, **−257 is a definition correction**, and **+120 is exempt** (`774c02a`'s +5,
-`be6cca9`'s +2 and the +113 above) — leaving **850 owed** (`e53bc25`'s +33 for `labrun` is a spend,
-so it adds to owed; 817 was unchanged through `97a21f4`).
+`be6cca9`'s +2 and the +113 above) — leaving **1005 owed** (`e53bc25`'s +33 for `labrun` and this
+commit's +155 for the pueue conversion are both spends and add to owed; 817 was unchanged through
+`97a21f4`).
 
 **That total does not compose from a single signed correction bucket, and the trap is worth naming**,
 because a future session will try to re-derive it and land on 1074. The two corrections are opposite
