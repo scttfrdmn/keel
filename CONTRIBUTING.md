@@ -48,6 +48,33 @@ both kinds of contributor.
 - Tolerances come from `internal/oracle.Tolerance` only.
 - Benchmark numbers are never reported without CPU model + theoretical peak.
 
+## Running on lab hardware
+Lab machines are shared, so **everything whose numbers get recorded goes through the
+`pueue` queue** — never a bare `ssh host -- ./bench`. The authoritative reference (fleet
+table, groups, gotchas, the CUDA arch table, and the uv rules) is the "Running tests and
+benchmarks on lab hardware" block in `CLAUDE.md`. Two rules cover almost everything:
+
+- **Measured work → the `measured` group; unmeasured work → `build`.** Same two group
+  names on every host. A CPU-only run on a GPU box still goes to `measured`.
+- **Submit through `scripts/labrun <host> <group> -- <cmd>`.** It waits and propagates the
+  real exit code (`pueue wait` alone always exits 0). Do not wrap the queued command in
+  `tmux`/`nohup` — pueue detaches it already, and wrapping frees the measured slot while
+  the work is still running. The *local driver* on your own machine still runs under
+  `scripts/detach.sh`; that is a different tmux and stays.
+
+```bash
+# a measured benchmark on janus
+scripts/labrun janus.local measured -- ./bench.test -test.run=NONE -test.bench=BenchmarkKernel -test.count=30
+
+# an unmeasured unit-test / compile on the same host
+scripts/labrun janus.local build -- go test ./...
+```
+
+**Python goes through `uv`, always** — `uv run` in a project, `uv run --no-project python3`
+for a standalone snippet (add `--with <pkg>` for a one-off dep). Never bare `python3`,
+`pip`, `venv`, `pyenv`, or `conda`. keel ships no `requirements.txt`/`pyproject.toml`; its
+only Python is local log-analysis, which runs `uv run --no-project python3 <script>.py`.
+
 ## Versioning & releases
 - [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). While
   major is 0, minor bumps may break API.
