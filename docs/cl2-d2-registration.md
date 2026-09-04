@@ -92,3 +92,42 @@ invariant on *this* kernel; it says nothing about the other keel sites with hand
 (Axpy/Scal's alpha, the AVX2 Asum twin), nothing about whether a correct CL 803220 would collect any
 of the ceiling behind keel's dispatch check, and nothing about the other `golang/go#79984` shapes D1
 already scoped out. It is a timing upper bound, full stop.
+
+---
+
+## Result (2026-09-03, antares.local, go1.27.0, run `cl2-d2-361e872`)
+
+Two builds, arm A = HEAD (`d0d46d26…`, hand-hoisted), arm B = the inline patch
+(`1e177703…`), both `-trimpath`, `GOMAXPROCS=1` pinned to 8 cores one-per-domain, through
+antares's `measured` pueue group. benchstat `-count=10`, B relative to A:
+
+| n | working set | Δ sec/op (B vs A) | Δ GFLOP/s | outcome | predicted |
+|---|---|---|---|---|---|
+| 256 | 1 KB (L1) | **+13.52%** (p=0.000) | −11.91% | **O1** | O1-likely ✓ |
+| 4096 | 16 KB (L1) | +1.21% (p=0.000) | −1.19% | O1 (small) | O1-likely ✓ |
+| 65536 | 256 KB (~L2) | +4.48% (p=0.000) | −4.29% | O1 | mixed ✓ |
+| 1048576 | 4 MB (DRAM) | **−0.92%** (p=0.000) | +0.91% | **O2** | O2 predicted ✓ |
+
+**Ceiling: the hand-hoist is worth up to ≈13.5% at small in-cache vectors and nothing when
+bandwidth-bound.** Every registered per-row expectation held: O2 at the 4 MB bandwidth-bound row
+(the register-only broadcast is fully hidden — arm B is even a hair faster, a code-layout wash),
+O1 at the in-cache rows, largest where the loop is shortest and most latency-bound. Two rows clear
+the "worth a compiler fix" bar (≥2% CI-excluded): n=256 at 13.5% and n=65536 at 4.5%.
+
+**Attribution audited at the instruction level (§5 rule 11), not inferred from the delta.** The two
+binaries' `avx512Asum` (`archive/cl2-d2/asm-arm{A,B}-*.txt`) have **identical compute**: VADDPS 15=15,
+VPANDD 9=9 (the abs-AND), VMOVDQU64 4=4 (the loads), VEXTRACTF64X4 2=2 (the reduction). The *only*
+functional difference is mask materialization — VPBROADCASTD 1→4 and VMOVD 1→4, i.e. arm B rebuilds
+the sign mask once per block instead of once per call. The extra XCHGL (25→40) is NOP alignment
+padding, not work. So the delta is the hoist and nothing else.
+
+**This is an upper bound, and the caveat is not rhetorical.** A correct CL 803220 recovers ≤ these
+figures, and possibly none of them: keel's kernels sit behind an AVX-512 dispatch check, and Goetz's
+own diagnosis is that a certainty barrier will refuse to hoist a feature the preheader cannot prove.
+So the ceiling says the manual `m` is *earning up to 13.5%* today, not that the CL would.
+
+**Consequence for `#54`.** Its retirement condition ("drop the Abs512 mask parameter when CL 803220
+lands") is now a measured trade, not a checkbox: writing `avx512Asum` inline costs up to 13.5% at
+n=256 unless the landed CL actually hoists in keel's dispatch shape. `#54` should be rewritten to
+gate retirement on a re-run of this A/B against the *landed* toolchain showing the inline form
+regains arm A's numbers — not on the CL merging.

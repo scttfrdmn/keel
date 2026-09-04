@@ -1,0 +1,29 @@
+        goos: linux
+        goarch: amd64
+        pkg: github.com/scttfrdmn/keel/bench
+        cpu: AMD RYZEN AI MAX+ 395 w/ Radeon 8060S          
+                          │ base-361e872.txt │ new-361e872.txt │
+                          │                                      sec/op                                      │                         sec/op                           vs base                │
+        L1Sasum/n=256                                                                            5.325n ± 1%                                               6.045n ± 0%  +13.52% (p=0.000 n=10)
+        L1Sasum/n=4096                                                                           51.93n ± 0%                                               52.56n ± 0%   +1.21% (p=0.000 n=10)
+        L1Sasum/n=65536                                                                          1.083µ ± 0%                                               1.131µ ± 0%   +4.48% (p=0.000 n=10)
+        L1Sasum/n=1048576                                                                        34.05µ ± 0%                                               33.74µ ± 0%   -0.92% (p=0.000 n=10)
+        geomean                                                                                  317.7n                                                    331.8n        +4.43%
+        
+                          │ base-361e872.txt │ new-361e872.txt │
+                          │                                       B/s                                        │                           B/s                            vs base                │
+        L1Sasum/n=256                                                                           179.1Gi ± 1%                                              157.8Gi ± 0%  -11.91% (p=0.000 n=10)
+        L1Sasum/n=4096                                                                          293.8Gi ± 0%                                              290.3Gi ± 0%   -1.20% (p=0.000 n=10)
+        L1Sasum/n=65536                                                                         225.5Gi ± 0%                                              215.8Gi ± 0%   -4.30% (p=0.000 n=10)
+        L1Sasum/n=1048576                                                                       114.7Gi ± 0%                                              115.8Gi ± 0%   +0.93% (p=0.000 n=10)
+        geomean                                                                                 192.1Gi                                                   183.9Gi        -4.24%
+        
+                          │ base-361e872.txt │ new-361e872.txt │
+                          │                                     GFLOP/s                                      │                         GFLOP/s                          vs base                │
+        L1Sasum/n=256                                                                             48.08 ± 1%                                                42.35 ± 0%  -11.91% (p=0.000 n=10)
+        L1Sasum/n=4096                                                                            78.87 ± 0%                                                77.93 ± 0%   -1.19% (p=0.000 n=10)
+        L1Sasum/n=65536                                                                           60.54 ± 0%                                                57.94 ± 0%   -4.29% (p=0.000 n=10)
+        L1Sasum/n=1048576                                                                         30.80 ± 0%                                                31.08 ± 0%   +0.91% (p=0.000 n=10)
+        geomean                                                                                   51.57                                                     49.37        -4.25%
+
+done. Numbers above are this host set at these two builds; nothing here is a criterion.

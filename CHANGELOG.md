@@ -26,6 +26,19 @@ While the major version is 0, minor versions may contain breaking changes.
   `labrun`'s status parse) runs `uv run --no-project python3`.
 
 ### Added
+- **CL 2 / D2: the LICM hoist ceiling on `keel.Sasum`, measured as an upper bound** (`#126`,
+  `docs/cl2-d2-registration.md`, `archive/cl2-d2/`, run `cl2-d2-361e872` on antares via the new
+  `measured` pueue group). D1 confirmed CL 803220's correctness defect; D2 is the timing complement.
+  Mechanism confirmed at the instruction level first — on go1.27.0 the inline `vec.Abs512` form
+  compiles `avx512Asum`'s sign-mask broadcast to 4 `VPBROADCASTD` vs the hand-hoisted 1 — then timed
+  as a two-build A/B (arm A = HEAD hoisted, arm B = the inline patch, both `-trimpath`). Result: the
+  hoist is worth **+13.5% at n=256 (1 KB, L1), +4.5% at 256 KB, +1.2% at 16 KB, and −0.9% (a wash) at
+  4 MB** — every registered per-row expectation held, O2 at the bandwidth-bound row and O1 in cache.
+  Attribution audited at the instruction level (rule 11): the two binaries' compute is byte-identical
+  (VADDPS/VPANDD/VMOVDQU64/VEXTRACT all equal), the only difference is mask materialization. It is an
+  **upper bound** — a correct CL 803220 recovers ≤ this and possibly none, since keel's kernels sit
+  behind a dispatch check a certainty barrier may refuse to hoist past. Reframes `#54` from a
+  checkbox to a measured trade gated on a re-run against the landed toolchain.
 - **`#150`'s instrument: an in-arm frequency sampler, with its own perturbation registered as a
   measured term and its quietness guard's pedestal derived** (`archive/freq150/`, pre-registration
   `predictions-freq150.py`). `#81`'s gap made `#150`'s leading hypothesis untestable — every
