@@ -1,0 +1,94 @@
+<!-- Copyright 2026 Scott Friedman -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+# CL 2 / D2 registration: what the LICM hoist is worth in keel, as an upper bound
+
+D1 (`docs/cl2-d1-803220-ps1-antares.log`, `#126`) confirmed the *correctness* defect in CL 803220
+patch set 1. D2 is the timing complement the upstream issue does not have: **measure what hoisting
+the loop-invariant SIMD broadcast out of a keel kernel is worth.** This file is written and
+committed BEFORE the timing run, per the campaign discipline (rules 24/26) and the plan's own
+statement that D2's outcome space is pre-registered (`docs/upstream-plan.md`, "CL 2's recon").
+
+## Subject
+
+`avx512Asum` (`internal/l1/l1_amd64.go:227`), reached by `keel.Sasum`, benchmarked by
+`BenchmarkL1Sasum` (`bench/bench_test.go:290`). It is the kernel `#54` names: the abs sign-mask
+(`vec.AbsMask512()` → `archsimd.BroadcastInt32x16(keepMaskI32)`) is loop-invariant and hoisted **by
+hand** into `m` because the compiler will not lift it (`golang/go#79984`). `#54`'s retirement
+condition is to drop that manual `m` "when CL 803220 lands".
+
+## The mechanism is already confirmed, at the instruction level (go1.27.0)
+
+Measured on the dev host, `GOEXPERIMENT=simd GOOS=linux GOARCH=amd64`, `go1.27.0`, `go build
+-gcflags=-S`, `avx512Asum` only:
+
+| arm | source | `VPBROADCASTD` in `avx512Asum` | placement |
+|---|---|---|---|
+| A — hoisted (current HEAD) | `m := AbsMask512()` once; `AbsWith512(load, m)` | **1** | preheader (offset 00031, before the loop back-edge) |
+| B — inline | `Abs512(load)` = `AbsWith512(load, AbsMask512())` | **4** | one inside each loop/tail body |
+
+So on the shipping toolchain the compiler does **not** hoist the inline broadcast: the natural form
+recomputes it, once per block and once per main-loop iteration. **"A correct fix hoists nothing in
+keel's shape" is therefore refuted in one of its two senses** — the instruction *is* there to hoist,
+the manual `m` is doing real work the compiler leaves undone. The other sense (the hoist saves an
+instruction but no *time*) is exactly what the timing below decides, and is registered as O2.
+
+## What D2 measures
+
+`scripts/ab-bench.sh`-style two-build A/B (via `ab_run`): arm A = HEAD (hand-hoisted), arm B = the
+working tree with the inline patch (`archive/cl2-d2/inline-abs512.patch`), both cross-compiled by
+`remote_build_test` (`-trimpath`, so a null A/B is byte-identical — the two-binaries hazard is
+closed at the build). Benchmarked on **antares.local** (AMD Ryzen AI MAX+ 395, linux/amd64,
+`GOAMD64=v1`, the D1 host), now through the `measured` pueue group. Reported quantity: `benchstat`
+of B-over-A per size row, `ns/op` and the derived GFLOP/s, with the confidence interval.
+
+**The delta (B slower than A) is an UPPER BOUND on a correct fix, never an estimate.** Two reasons,
+both structural: (1) a certainty-based barrier — Goetz's `Block.CertainCPUfeatures` — can only
+*refuse* hoists that patch set 1 permits, so a correct fix hoists ≤ what a full manual hoist does;
+(2) keel's kernels sit behind a dispatch feature-check, and if a correct preheader cannot prove the
+feature it has, a correct fix hoists **none** of this. So a nonzero D2 number bounds the prize; it
+does not predict that CL 803220-done-right collects it. That question is not measurable today and is
+out of D2's domain.
+
+## Registered outcome space (before the run)
+
+Per size row n ∈ {256, 4096, 65536, 1048576}, on the A→B benchstat delta:
+
+- **O1 — a real ceiling.** B is slower than A, the CI excludes zero. The delta is the upper bound
+  the hoist buys at that n. Reported as the ceiling; `#54`'s manual `m` is earning it.
+- **O2 — the hoist saves an instruction but no time.** CI includes zero despite arm B's 4 broadcasts.
+  The recomputation overlaps other work (a `VPBROADCASTD` is a register op off the load/reduce
+  critical path). Then the ceiling is ≈0 at that n, and `#54`'s manual `m` could retire **now**,
+  independent of the CL, with no measurable loss — which would be a rewrite of `#54`, not a checkbox.
+
+**Per-row expectation, registered so it can be wrong.** Sasum is a streaming reduction: ~4 bytes read
+per element, one AND and one add of compute. At **n=1048576** (4 MB, out of cache) it is
+memory-bandwidth bound and the register-only broadcast should hide entirely → **O2 predicted**. At
+**n=65536** (256 KB, ~L2) mixed. At **n=4096** (16 KB, L1-resident) and **n=256** (1 KB) the loop is
+compute/latency bound and the per-iteration broadcast is most likely to show → **O1 most likely
+here if anywhere.** n=256 is additionally tail-heavy (few main-loop iterations), so its broadcast
+cost is spread across the one-shot tail blocks rather than the hot loop; it is reported but is the
+weakest row for attributing to the main-loop hoist.
+
+**Falsifier / the "worth a compiler fix" bar.** If every row is O2 (no row's CI excludes zero), D2's
+ceiling is "negligible on this kernel" and the CL's value for keel is bounded near zero — a result
+that reframes `#54` toward retire-the-workaround rather than await-the-fix. If any in-cache row is O1
+with a delta ≥ 2% (CI-excluded), that row's figure is the ceiling reported to the CL thread.
+
+## Method controls
+
+- **Null A/B first** (BASE_REF=HEAD, clean tree): A-vs-A must read as a wash, or the harness itself
+  is the confound (`ab.sh` handles the same-SHA naming; the reading is the positive control).
+- **Assembly archived** for both arms (`-S` of `avx512Asum`), so the timing sits beside the 1-vs-4
+  broadcast fact that motivates it (rule 11: the instrument adjudicates the reasoning).
+- **go1.27.0**, the toolchain keel ships and freq150/D1 used — not the dev host's default go1.27.1.
+- The working-tree patch is reverted after both binaries are built; the tree is frozen for the run's
+  life, and the patch is tracked so the arm is reproducible.
+
+## What D2 does not establish (§5 rule 12)
+
+One kernel (`Sasum`), one host (antares), `GOAMD64=v1`, one toolchain. It bounds the prize for *this*
+invariant on *this* kernel; it says nothing about the other keel sites with hand-hoisted broadcasts
+(Axpy/Scal's alpha, the AVX2 Asum twin), nothing about whether a correct CL 803220 would collect any
+of the ceiling behind keel's dispatch check, and nothing about the other `golang/go#79984` shapes D1
+already scoped out. It is a timing upper bound, full stop.

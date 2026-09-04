@@ -1,0 +1,45 @@
+diff --git a/internal/l1/l1_amd64.go b/internal/l1/l1_amd64.go
+index 00f4d48..f8b6b59 100644
+--- a/internal/l1/l1_amd64.go
++++ b/internal/l1/l1_amd64.go
+@@ -226,30 +226,26 @@ func avx512Scal(alpha float32, x []float32) {
+ 
+ func avx512Asum(x []float32) float32 {
+ 	a0, a1, a2, a3 := vec.Zero512(), vec.Zero512(), vec.Zero512(), vec.Zero512()
+-	// The sign mask is loop-invariant and the compiler will not lift it: LICM
+-	// does not lift SIMD ops (#54, T18, golang/go#79984). Hoisted by hand, as
+-	// alpha's broadcast already is in Axpy and Scal. Retires with #54.
+-	m := vec.AbsMask512()
+ 	for len(x) > step512 {
+-		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
+-		a1 = vec.Add512(a1, vec.AbsWith512(vec.Load512(x[16:32]), m))
+-		a2 = vec.Add512(a2, vec.AbsWith512(vec.Load512(x[32:48]), m))
+-		a3 = vec.Add512(a3, vec.AbsWith512(vec.Load512(x[48:64]), m))
++		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
++		a1 = vec.Add512(a1, vec.Abs512(vec.Load512(x[16:32])))
++		a2 = vec.Add512(a2, vec.Abs512(vec.Load512(x[32:48])))
++		a3 = vec.Add512(a3, vec.Abs512(vec.Load512(x[48:64])))
+ 		x = x[step512:]
+ 	}
+ 	if len(x) == step512 {
+-		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
+-		a1 = vec.Add512(a1, vec.AbsWith512(vec.Load512(x[16:32]), m))
+-		a2 = vec.Add512(a2, vec.AbsWith512(vec.Load512(x[32:48]), m))
+-		a3 = vec.Add512(a3, vec.AbsWith512(vec.Load512(x[48:64]), m))
++		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
++		a1 = vec.Add512(a1, vec.Abs512(vec.Load512(x[16:32])))
++		a2 = vec.Add512(a2, vec.Abs512(vec.Load512(x[32:48])))
++		a3 = vec.Add512(a3, vec.Abs512(vec.Load512(x[48:64])))
+ 		x = x[:0]
+ 	}
+ 	for len(x) >= lanes512 {
+-		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
++		a0 = vec.Add512(a0, vec.Abs512(vec.Load512(x[0:16])))
+ 		x = x[lanes512:]
+ 	}
+ 	if len(x) > 0 {
+-		a0 = vec.Add512(a0, vec.AbsWith512(vec.LoadPart512(x), m))
++		a0 = vec.Add512(a0, vec.Abs512(vec.LoadPart512(x)))
+ 	}
+ 	return vec.HSum512(vec.Add512(vec.Add512(a0, a1), vec.Add512(a2, a3)))
+ }
