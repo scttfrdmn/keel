@@ -21,7 +21,11 @@ object code, not from the datasheet:
 2. **`VFMLA` accumulates in place** — the destination *is* the addend. Unlike amd64's 213 form,
    which writes its first multiplicand and forces one scratch register per accumulator (the T10
    constraint, `kern.go:42`), arm64 needs **no per-FMA scratch**. This is why the amd64 8-accumulator
-   spill frontier does not carry over.
+   spill frontier does not carry over. Put in one line for the record: **NEON's `VFMLA` is natively
+   the 231-form accumulate that CL 1 (`#127`) teaches amd64's compiler to emit** — keel's first
+   upstream CL exists because the ssa layer lowers only the 213 form and accumulation pays a copy per
+   FMA; arm64 built those semantics into the instruction, so the port re-derives its tile family from
+   a fresh register budget instead of translating amd64's.
 3. **`BroadcastFloat32x4` emits a separate `VDUP`** (`VDUP V15.S[0], V9.S4`), not folded into the
    FMLA. archsimd exposes no by-element `MulAdd`, so the A operand costs one `VDUP` per element where
    NEON hardware's `FMLA Vd.4S, Vn.4S, Vm.S[i]` would index the lane in the FMLA itself. See `#130`.
