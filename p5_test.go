@@ -348,15 +348,26 @@ func TestP5Dispatch(t *testing.T) {
 		}
 	}
 
-	// The #40 ruling as a checkable relation rather than as prose: Level 3
-	// dispatches the Level-1 ladder with rungs REMOVED, in the same order. That is
-	// what makes the asymmetry a documented narrowing instead of a second,
-	// independently-drifting ladder — and it fails the moment someone adds a
-	// Level-3 backend that Level 1 does not have, which would mean the two levels
-	// disagree about what this machine is.
-	if !subsequence(knc, l1c) {
-		t.Errorf("kern chain %v is not a subsequence of the l1 chain %v: Level 3 is supposed to be "+
-			"the same ladder with the unbacked rungs removed", knc, l1c)
+	// The #40 ruling as a checkable relation, reframed to its mechanism (#153):
+	// each level's chain is the ARCH'S ISA LADDER with that level's unbacked rungs
+	// removed, in ladder order. The original form checked kern ⊆ l1, which encoded
+	// amd64's build ORDER — avx512 happened to back Level 1 first, so L1 ⊇ L3 held by
+	// history — rather than the mechanism. On arm64 Level 3 has a NEON kernel while
+	// Level 1 does not yet (#154), so L3 is AHEAD of L1: a legitimate partial port
+	// (ruled 2026-09-04), under which kern ⊆ l1 would fail on an accident. Both chains
+	// against the ladder still catches the real drift — a chain that reorders shared
+	// rungs, or advertises one this arch does not have — while permitting the two
+	// levels to be built out at different rates. The runnable-advertised checks below
+	// are unchanged; they are what caught #136's neon-absent-from-chain regression.
+	ladder := isaLadder()
+	for _, c := range []struct {
+		level string
+		chain []string
+	}{{"l1", l1c}, {"kern", knc}} {
+		if !subsequence(c.chain, ladder) {
+			t.Errorf("%s chain %v is not a subsequence of the arch ISA ladder %v: a dispatch chain is "+
+				"that ladder with its level's unbacked rungs removed, in ladder order (#153)", c.level, c.chain, ladder)
+		}
 	}
 
 	// The other direction, and the one a host can actually check: nothing runnable

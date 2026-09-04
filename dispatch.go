@@ -41,11 +41,9 @@ const envForce = "KEEL_FORCE"
 // implementation behind it. That is how #40 was found. A claim in a function can
 // be read by a gate; a claim in a paragraph can only be believed.
 
-// L1Chain reports the advertised Level-1 dispatch chain: the backends keel tries,
-// in that order, on a machine that has all of them.
-//
-// AvailableL1Backends answers the different question of what is runnable here.
-func L1Chain() []string { return []string{l1.AVX512, l1.AVX2, l1.Scalar} }
+// L1Chain and isaLadder are per-build (arch × goexperiment.simd): see
+// dispatch_ladder_{amd64,arm64,scalar}.go. L1 is the ladder minus its own unbacked
+// rungs, exactly as KernChain is for Level 3.
 
 // KernChain reports the advertised Level-3 dispatch chain: the distinct vector
 // backends of the microkernels registered for THIS build, widest tile first, with

@@ -9,6 +9,15 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The dispatch subsequence invariant is reframed to its mechanism (`#153`, ruled 2026-09-04):**
+  `TestP5Dispatch` checked `kern ⊆ l1`, which encoded amd64's build order (avx512 backed L1 first,
+  so L1 ⊇ L3 held by history) not a mechanism. #136's NEON L3 kernels — shipped without an L1 NEON
+  backend (`#154`) — put arm64's L3 *ahead* of its L1, a legitimate partial port that `kern ⊆ l1`
+  failed on an accident. Now each of `L1Chain`/`KernChain` must be a subsequence of the arch's ISA
+  ladder (`isaLadder()`: amd64 `[avx512,avx2,scalar]`, arm64 `[neon,scalar]`, else `[scalar]`). `L1Chain`
+  is arch-correct (arm64 `[scalar]`), so the `keel-p5-dispatch` marker discloses the partial port as
+  `l1=scalar kern=neon,scalar`. Reframed, not weakened — the runnable-advertised checks that caught
+  #136's regression are unchanged.
 - **Measured runs on shared lab hardware now serialize through the fleet's `pueue` queue**
   (`scripts/remote.sh` `remote_exec`, `scripts/labrun`, `CLAUDE.md`, `CONTRIBUTING.md`). Several
   projects share the lab machines and nothing stopped two landing on one box at once — the exact
