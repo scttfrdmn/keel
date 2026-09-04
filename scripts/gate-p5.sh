@@ -1483,15 +1483,22 @@ else
     fi
 
     SCALE_HOSTS_MEASURED=$((SCALE_HOSTS_MEASURED + HOST_MEASURED))
-    SCALE_HOSTS_OK=$((SCALE_HOSTS_OK + HOST_CLEARED))
-    SCALE_HOSTS_MISSED=$((SCALE_HOSTS_MISSED + HOST_MISSED))
-    SCALE_HOSTS_NOTADM=$((SCALE_HOSTS_NOTADM + HOST_NOTADM))
-    SCALE_HOSTS_NOISY=$((SCALE_HOSTS_NOISY + HOST_NOISY))
     SCALE_NOISY_ROWS=$((SCALE_NOISY_ROWS + HOST_NOISY_ROWS))
     SCALE_HOSTS_BASE=$((SCALE_HOSTS_BASE + HOST_BASE))
-    # Neither cleared nor missed anywhere: BASELINE was the whole of this host's verdict.
-    [[ "$HOST_BASE" -eq 1 && "$HOST_CLEARED" -eq 0 && "$HOST_MISSED" -eq 0 ]] &&
-      SCALE_HOSTS_BASEONLY=$((SCALE_HOSTS_BASEONLY + 1))
+    # The five aggregate buckets PARTITION the fleet: each host lands in exactly one, by the
+    # strict precedence in scale_bucket, so the conservation residual below is never negative
+    # and no host is graded twice (#90). This replaced independent per-flag increments, under
+    # which a host noise-limited on scale AND BASELINE on README (vesta, the #119 exercise) was
+    # counted in both NOISY and BASEONLY — the old BASEONLY clause guarded CLEARED==0 && MISSED==0
+    # but not NOISY. scale_bucket is the one classifier; baseline-test.sh proves the sum.
+    case "$(scale_bucket "$HOST_CLEARED" "$HOST_MISSED" "$HOST_NOTADM" "$HOST_NOISY" "$HOST_BASE")" in
+      cleared)       SCALE_HOSTS_OK=$((SCALE_HOSTS_OK + 1)) ;;
+      missed)        SCALE_HOSTS_MISSED=$((SCALE_HOSTS_MISSED + 1)) ;;
+      unadmitted)    SCALE_HOSTS_NOTADM=$((SCALE_HOSTS_NOTADM + 1)) ;;
+      noise-limited) SCALE_HOSTS_NOISY=$((SCALE_HOSTS_NOISY + 1)) ;;
+      baseline-only) SCALE_HOSTS_BASEONLY=$((SCALE_HOSTS_BASEONLY + 1)) ;;
+      nocover) ;; # counted as the conservation residual (SCALE_NOCOVER) below, never negative now
+    esac
   done < <(hosts_lines)
   # TWO BARS IN ONE TALLY, named rather than summarised, built ONCE because four renderings
   # of one clause is four places for the next constant to be typed into three of.

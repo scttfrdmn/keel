@@ -9,6 +9,14 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The scaling aggregate's buckets now partition the fleet (`#90`, `#119`).** A host noise-limited
+  on the scale criterion AND BASELINE on another (vesta, the #119 live exercise) set both `HOST_NOISY`
+  and `HOST_BASE`, and the old independent per-flag increments counted it in two buckets — the
+  conservation residual went negative and the aggregate over-counted. Replaced by `scale_bucket`
+  (`gate-lib.sh`), one classifier assigning each host exactly one bucket by strict precedence
+  (missed > unadmitted > noise-limited > cleared > baseline-only > nocover); `baseline-test.sh` proves
+  the partition — every flag combination and the #119 fleet's conservation sum (fails before, passes
+  after). Buckets partition or the tally lies (§5 rule 6, #90) — gate arithmetic on the signing path.
 - **The dispatch subsequence invariant is reframed to its mechanism (`#153`, ruled 2026-09-04):**
   `TestP5Dispatch` checked `kern ⊆ l1`, which encoded amd64's build order (avx512 backed L1 first,
   so L1 ⊇ L3 held by history) not a mechanism. #136's NEON L3 kernels — shipped without an L1 NEON

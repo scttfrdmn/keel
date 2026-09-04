@@ -356,5 +356,26 @@ is 'an empty derivation set leaves a host to the registry rather than to the fle
 is 'the tracked registry was still not written' "$(cksum <scripts/host-baselines.tsv)" "$REG_BEFORE"
 is 'the tracked witness index was still not written' "$(cksum <scripts/judged-runs.tsv)" "$WIT_BEFORE"
 
+echo "-- scale_bucket: the scaling aggregate's buckets must PARTITION the fleet (#90, #119) --"
+# Each host lands in exactly ONE bucket, by strict precedence. The case that minted this:
+# a host noise-limited on scale AND BASELINE on README (vesta, #119 live exercise) set both
+# HOST_NOISY and HOST_BASE, and the old independent increments counted it twice — NOISY and
+# BASEONLY — so the conservation residual went negative and the aggregate over-counted (#90).
+is 'a clean clear is cleared'                         "$(scale_bucket 1 0 0 0 0)" 'cleared'
+is 'a missed bar outranks even a baseline elsewhere'  "$(scale_bucket 0 1 0 0 1)" 'missed'
+is 'unadmitted outranks noise and baseline'           "$(scale_bucket 0 0 1 0 1)" 'unadmitted'
+is 'noise+baseline is noise-limited (the vesta bug)'  "$(scale_bucket 0 0 0 1 1)" 'noise-limited'
+is 'baseline-only when baseline is the whole verdict' "$(scale_bucket 0 0 0 0 1)" 'baseline-only'
+is 'no verdict at all is nocover'                     "$(scale_bucket 0 0 0 0 0)" 'nocover'
+# Conservation, the property the runtime residual check exists to enforce: the #119 fleet
+# (antares baseline-only, vesta noise-limited+baseline) must sum to its host count, not over
+# it. Under the old logic this sum was 3 over 2 hosts — this fixture fails before, passes after.
+declare -A B=()
+for flags in "0 0 0 0 1" "0 0 0 1 1"; do b="$(scale_bucket $flags)"; B[$b]=$(( ${B[$b]:-0} + 1 )); done
+sum=0; for k in "${!B[@]}"; do sum=$(( sum + ${B[$k]} )); done
+is 'the #119 fleet sums to its host count, not over it' "$sum" '2'
+is 'vesta counted noise-limited, exactly once'          "${B[noise-limited]:-0}" '1'
+is 'antares counted baseline-only, exactly once'        "${B[baseline-only]:-0}" '1'
+
 printf '\n%d ok, %d not ok\n' "$OK" "$BAD"
 [[ "$BAD" -eq 0 ]]

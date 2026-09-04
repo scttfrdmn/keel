@@ -356,6 +356,29 @@ baseline_state() {
   fi
 }
 
+# scale_bucket CLEARED MISSED NOTADM NOISY BASE -> exactly one bucket word, by strict
+# precedence: missed > unadmitted > noise-limited > cleared > baseline-only > nocover.
+#
+# The scaling aggregate's five buckets (cleared/missed/unadmitted/noise-limited/baseline-only)
+# must PARTITION the fleet, so their sum reconciles to the host count and the conservation
+# residual is never negative -- the oldest gate law, buckets partition or the tally lies (#90).
+# Independent per-flag increments do NOT partition: a host noise-limited on the scaling
+# criterion AND BASELINE on another (vesta, the #119 live exercise) sets HOST_NOISY and
+# HOST_BASE both, and the old BASEONLY clause -- guarded only on CLEARED==0 && MISSED==0 --
+# counted it in two buckets. This is the single classifier: scalar 0/1 flags in, one word out,
+# precedence ordered by what most limits the host's headline verdict. baseline-test.sh drives
+# every flag combination and proves the fleet sum.
+scale_bucket() {
+  local cleared="$1" missed="$2" notadm="$3" noisy="$4" base="$5"
+  if   [[ "$missed"  -eq 1 ]]; then printf 'missed\n'
+  elif [[ "$notadm"  -eq 1 ]]; then printf 'unadmitted\n'
+  elif [[ "$noisy"   -eq 1 ]]; then printf 'noise-limited\n'
+  elif [[ "$cleared" -eq 1 ]]; then printf 'cleared\n'
+  elif [[ "$base"    -eq 1 ]]; then printf 'baseline-only\n'
+  else printf 'nocover\n'
+  fi
+}
+
 # baseline_candidate FILE FIELDS... — append one fully formed candidate row, tab-joined.
 # The gate calls this and nothing else: it never opens the registry or the witness index
 # for writing, because an instrument that mints the reference it will judge against has
