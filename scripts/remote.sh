@@ -1118,6 +1118,17 @@ remote_probe() {
   local line
   line="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" "$KEEL_GOV_PROBE_SH"'
     cpu=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2- | sed "s/^ *//")
+    if [ -z "$cpu" ]; then
+      # arm64 (and other non-x86) /proc/cpuinfo carries no "model name" line, so the
+      # registry KEY would be empty and every ratio criterion would read nokey (#137).
+      # lscpu maps the MIDR to the ARM core name -- Neoverse-V1 on Graviton3, Neoverse-V2
+      # on Graviton4 -- which distinguishes the two judged generations from each other.
+      # It does NOT distinguish Graviton4 from a lab Grace (GB10), also Neoverse-V2: that
+      # collision is latent and handled by admission, not the key -- GB10 is characterization
+      # (correctness class), so it is never judged against nor writes a Neoverse-V2 baseline.
+      cpu=$(lscpu 2>/dev/null | sed -n "s/^Model name: *//p" | head -1)
+      [ -n "$cpu" ] || cpu=$(uname -m)
+    fi
     ncpu=$(nproc)
     T=/sys/devices/system/cpu
     uniq_lines() { find "$T" -maxdepth 3 -name "$1" -exec cat {} + 2>/dev/null | sort -u | wc -l | tr -d " "; }
