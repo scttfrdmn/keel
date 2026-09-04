@@ -152,6 +152,7 @@ type Kernel struct {
 const (
 	Scalar = "scalar"
 	AVX512 = "avx512"
+	NEON   = "neon"
 )
 
 // Tile is the shape as it appears in benchmark and gate names, e.g. "4x32".

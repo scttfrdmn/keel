@@ -19,12 +19,18 @@ import (
 func TestPreferredPicksTheMeasuredWinnerPerClass(t *testing.T) {
 	var vec []kern.Kernel
 	for _, k := range kern.Kernels() {
-		if k.Name != kern.Scalar {
+		// Only AUDITED kernels are rankable: Preferred/betterFor rank by InsnsPerFMA and
+		// treat 0 (unaudited) as unrankable, so an unaudited kernel is not a candidate for a
+		// "measured winner". This is the test's premise, made explicit. On arm64 the NEON
+		// kernels are unaudited (characterization, not judged — InsnsPerFMA left 0 in
+		// kern_arm64.go), so this skips there exactly as it did before any vector kernel
+		// existed; the amd64 assertion below is unchanged.
+		if k.Name != kern.Scalar && k.InsnsPerFMA > 0 {
 			vec = append(vec, k)
 		}
 	}
 	if len(vec) == 0 {
-		t.Skip("no vector kernels in this build; nothing to rank")
+		t.Skip("no audited vector kernels in this build; nothing to rank")
 	}
 	want := map[kern.Class]string{
 		kern.ClassIssue: "2x32", // fewest instructions per FMA

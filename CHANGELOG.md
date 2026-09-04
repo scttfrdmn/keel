@@ -26,6 +26,18 @@ While the major version is 0, minor versions may contain breaking changes.
   `labrun`'s status parse) runs `uv run --no-project python3`.
 
 ### Added
+- **NEON SGEMM microkernels + the arm64 `kern` backend, `-S`-audited** (`#136` steps 2–3,
+  `internal/vec/gemm_neon.go`, `internal/kern/kern_arm64.go`). Five candidate shapes — 8×8, 4×16
+  (model-fit) + 8×12, 8×16, 4×32 — in the reflected-tile broadcast-A form, straight-line and
+  BCE-clean, all passing the oracle differential test for C+=A·B (60 subtests, edge `kc` and wide
+  `ldc`). `kern_nosimd.go` retagged to yield to the arm64 backend as it does to amd64; amd64 paths
+  and coverage untouched (make stock + both build lines + amd64 cross-build). **The `-S` audit grades
+  the register model 4 of 5:** 8×8/4×16 fit spill-free, 8×16/4×32 spill as predicted — and **8×12,
+  predicted to fit (28 live ≤ 32), spills**: the allocator uses all 32 V-registers and still spills 5
+  of its 24 accumulators, so the naive live-set model undercounts the scheduler's transients; the fit
+  frontier is 16 accumulators, not the 28-live line. Not an archsimd gap (the allocator uses every
+  register) — a characterization result; 8×12 reclassified as a non-shipping `referenceTile` on the
+  assembly's word. Every K-loop is call-free; VDUP=MR confirms the by-element cost (`#130`).
 - **NEON vec shim with its scalar twin, differentially tested first** (`#136` step 1,
   `internal/vec/vec_neon.go`) — keel's second ISA begins at the shim. A hot layer of
   128-bit `Float32x4` wrappers (`Load128`/`FMA128`/`Broadcast128`/`Store128`/…) and a

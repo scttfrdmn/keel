@@ -63,7 +63,7 @@ neighbors 12×8 and 6×16 to bracket the MR/NR trade, and 4×8 as the low-intens
 are predicted to spill and are carried only as read-confirmed exclusions (Kernel6x32's ghost: the
 prediction is falsifiable, the `-S` read judges it, not this table).
 
-## Step 3 — what the sweep will measure (pre-registration, to be completed with the harness)
+## Step 4 — what the sweep will measure (pre-registration, to be completed with the harness)
 
 - **Host:** GB10 (`pollux.local` / `castor.local`, Linux aarch64, 20 cores, pueue `measured` group),
   the arm64 home judged host *of record* — but run here as characterization, since the judged tier
@@ -87,3 +87,37 @@ prediction is falsifiable, the `-S` read judges it, not this table).
   before the first Graviton fleet campaign (`#137`).
 - Whether the by-element FMLA absence is a lowering-fusion miss or an archsimd API gap — recorded on
   `#130`, resolved against the graduation thread's context (`#128`), not extrapolated from x86.
+
+---
+
+## Step 3 — the -S audit, graded (before any timing)
+
+Built `GOOS=linux GOARCH=arm64 GOEXPERIMENT=simd go build -gcflags=-S`, go1.27.0, each kernel's
+steady-state K-loop read from the object code. FMLA = `MR·(NR/4)` per k-step, VDUP = `MR` (the
+broadcast-A cost, whole-function count), spill = distinct accumulators the allocator moved to a
+`cN_M(SP)` stack slot, CALL(loop) = calls in the steady state.
+
+| shape | model live | pred | V-regs used | FMLA | VDUP | acc spilled | CALL(loop) | grade |
+|---|---|---|---|---|---|---|---|---|
+| 8×8  | 19 | fit   | 28 (→V27) | 16 | 8 | 0  | 0 | **✓ fit** |
+| 4×16 | 21 | fit   | 26 (→V25) | 16 | 4 | 0  | 0 | **✓ fit** |
+| 8×12 | 28 | fit   | **32 (→V31)** | 24 | 8 | **5** | 0 | **✗ SPILL — model refuted** |
+| 8×16 | 37 | spill | 32 (→V31) | 32 | 8 | 13 | 0 | ✓ spill |
+| 4×32 | 41 | spill | 32 (→V31) | 32 | 4 | 13 | 0 | ✓ spill |
+
+**4 of 5 predictions correct; 8×12 refuted — the model proposes, the assembly disposes.** 8×12 was
+predicted to fit (28 live ≤ 32), but the allocator uses **all 32** V-registers and *still* spills 5
+of its 24 accumulators. So the naive live-set `MR·(NR/4) + NR/4 + 1` **undercounts the true peak**:
+24 accumulators plus the 3 B-vectors, the broadcast, and the scheduler's transients exceed 32 at
+once. The empirical fit frontier is between **16 accumulators (8×8, 4×16 fit, 26–28 regs) and 24
+(8×12 spills)** — not the 28-live line the model drew. This is not an archsimd or allocator gap: the
+allocator correctly uses every register (reaches V31); the model was optimistic, and the ~4–5 regs
+of scheduler headroom it ignored are the correction. No upstream filing — a characterization result,
+recorded here.
+
+Every K-loop is **call-free** (CALL=0 in the steady state); the 20–44 whole-function CALLs are
+write-back bounds-check stubs from the `c[i*ldc:…]` slicing, off the hot path, once per tile. VDUP =
+MR confirms the by-element cost the #130 read predicted: one DUP per A element, no by-element FMLA.
+
+Consequence: 8×12 joins the spillers. The non-spilling candidates are **8×8 and 4×16**; 8×12, 8×16,
+4×32 are `referenceTiles` — measured in the sweep, not shippable, so nothing ships a spilling tile.
