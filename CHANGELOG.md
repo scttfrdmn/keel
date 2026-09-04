@@ -38,7 +38,9 @@ While the major version is 0, minor versions may contain breaking changes.
   (VADDPS/VPANDD/VMOVDQU64/VEXTRACT all equal), the only difference is mask materialization. It is an
   **upper bound** — a correct CL 803220 recovers ≤ this and possibly none, since keel's kernels sit
   behind a dispatch check a certainty barrier may refuse to hoist past. Reframes `#54` from a
-  checkbox to a measured trade gated on a re-run against the landed toolchain.
+  checkbox to a measured trade gated on a re-run against the landed toolchain. Posted to CL 803220's
+  thread on Scott's ruling (comment `ed58a249`, threaded under D1, caveats before the number),
+  verified from Gerrit `/comments` — completing the pairing D1 opened.
 - **`#150`'s instrument: an in-arm frequency sampler, with its own perturbation registered as a
   measured term and its quietness guard's pedestal derived** (`archive/freq150/`, pre-registration
   `predictions-freq150.py`). `#81`'s gap made `#150`'s leading hypothesis untestable — every
