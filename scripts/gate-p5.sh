@@ -30,6 +30,10 @@ source scripts/bench.sh
 source scripts/roofline.sh
 # shellcheck source=scripts/gate-lib.sh
 source scripts/gate-lib.sh
+# The null-change witness (#155, docs/gate-arm64-port.md unit 1). Inert unless KEEL_REPLAY is
+# set — with it empty this source defines nothing and returns, so a normal run is byte-unchanged.
+# shellcheck source=scripts/gate-replay.sh
+source scripts/gate-replay.sh
 
 # pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
 # above: they were copied into all six gates and only one copy applied
@@ -677,11 +681,21 @@ race_verdict() {
   fi
 }
 RACE_LOCAL=0
-GOEXPERIMENT=simd go test -race -count=1 ./... >"$LOG" 2>&1 || RACE_LOCAL=$?
-race_verdict "[local $(go env GOHOSTOS)/$(go env GOHOSTARCH), scalar path]" "$RACE_LOCAL" "$LOG"
+# The local dev-host -race run is skipped under replay: it is a slow native compile the port
+# does not touch (DESIGN.md rule 12), so replaying it only costs minutes. Live runs are unaffected.
+if [[ -z "${KEEL_REPLAY:-}" ]]; then
+  GOEXPERIMENT=simd go test -race -count=1 ./... >"$LOG" 2>&1 || RACE_LOCAL=$?
+  race_verdict "[local $(go env GOHOSTOS)/$(go env GOHOSTARCH), scalar path]" "$RACE_LOCAL" "$LOG"
+fi
 
 RACE_HOSTS=0
-if [[ -z "$HOSTS" ]]; then
+if [[ -n "${KEEL_REPLAY:-}" ]]; then
+  # The -race host leg builds natively over its own ssh (not remote_exec), so the witness
+  # cannot replay it and it is out of the port's scope anyway (a native compile, not selection
+  # — DESIGN.md rule 12). Skipped under replay with a fixed line, so both replays carry it
+  # identically and it cancels in the before/after diff. Live runs are unaffected.
+  info "[replay] race detector skipped: a native compile over its own ssh, outside the witness scope"
+elif [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the race detector never saw the vector path: unmeasured, not clean and not raced"
 elif [[ "$TREE_CLEAN" -eq 0 ]]; then
   unmeasured "the native race build did not run: this gate refused a dirty tree above, and a check that could not run is unmeasured rather than clean"
