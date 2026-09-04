@@ -31,6 +31,14 @@ While the major version is 0, minor versions may contain breaking changes.
   clean instants and the 1 tracked co-tenant excursion. 54 assertions in
   `test-driver-freq150.sh`, including the live sampler on the host and the pedestal cross-checked
   awk-against-python instant by instant.
+- **`#150` freq150 result: the sampler is validated and the 13–16% elevation did not recur**
+  (`docs/issue150-freq150-71a73da.md`, `analyze-freq150.py`, rev `71a73da`, janus). The palindrome
+  control measured the sampler's own cost at 0.37–0.49% per row — ~30× under the term it hunts — so
+  the instrument is admissible. But no hunt arm reached the 1.08× GFLOP/s witness (widest excursion
+  0.6%), so the frequency comparison has no subject and every cell is `UNMEASURED`, **not** "clock
+  refuted" (rule 26 at the subject). Reported, never scored: the clock stepped ~0.3 GHz between arms
+  while throughput stayed flat to ±0.6%, so on this run clock and throughput decoupled. Second
+  observation of the elevation, and it did not reproduce under an identical sequence.
 - **The single-core collapse is async preemption, single-factor, and the pre-registered prediction
   was wrong on 8 of 12 cells** (`docs/issue148-mech-205a7a8.md`, `#148`). Test 3 ran 10 arms × 30 on
   janus off ONE hash-checked binary (`d0d46d26c15cc8b2`), all readbacks green, `=== done ===`:
