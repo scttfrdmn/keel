@@ -26,6 +26,17 @@ While the major version is 0, minor versions may contain breaking changes.
   `labrun`'s status parse) runs `uv run --no-project python3`.
 
 ### Added
+- **Design doc for genericizing the middle** (`#135`, `docs/generic-middle.md`) — v0.2.0's spine,
+  written before any refactor. Its finding: the **ISA seam is already cut**. `internal/block`,
+  `internal/pack`, `internal/par` are untagged portable Go with zero `amd64`/lane/`Float32x16`
+  assumptions (audited), parameterized over a `kern.Kernel` value that two existing consumers
+  (avx512, scalar) already exercise — so arm64 (`#136`) is a third `Kernel`, not a re-cut. The
+  element-type axis (f64, `#103`) is **designed but deferred**: only one existing consumer (f32), so
+  lifting the nest to `[T]` now would be speculative generality (criterion 4). The doc enumerates the
+  seven nest determinism invariants — bit-identical parallel↔serial output foremost — each paired
+  with the check that guards it (`TestP5Determinism`, `TestBPanelsPartIsTheSerialPack`, …), states
+  two gaps rather than papering them, and records where the middle must *not* be genericized (the
+  `#22` fringe add-back). No code changed.
 - **CL 2 / D2: the LICM hoist ceiling on `keel.Sasum`, measured as an upper bound** (`#126`,
   `docs/cl2-d2-registration.md`, `archive/cl2-d2/`, run `cl2-d2-361e872` on antares via the new
   `measured` pueue group). D1 confirmed CL 803220's correctness defect; D2 is the timing complement.
