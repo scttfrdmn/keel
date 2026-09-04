@@ -25,6 +25,14 @@ While the major version is 0, minor versions may contain breaking changes.
   keel ships no `requirements.txt`/`pyproject.toml`, so its only Python (local log-analysis, and
   `labrun`'s status parse) runs `uv run --no-project python3`.
 
+### Changed
+- **`KernChain()` derives the Level-3 dispatch chain from the registered kernels' backends**
+  (`dispatch.go`), instead of the hardcoded `[avx512, scalar]`. #136's NEON kernels made the
+  hardcode a lie on arm64 — a runnable `neon` backend absent from the advertised chain, an invariant
+  violation `TestP5Dispatch` enforces but that CI (amd64) structurally cannot see (#152). Now
+  structural: amd64 unchanged (`[avx512, scalar]` — no avx2 microkernel, so no avx2 rung, #40), arm64
+  yields `[neon, scalar]`. Surfaced by the #119 live gate exercise on darwin/arm64.
+
 ### Added
 - **`#136` NEON sweep on GB10: 4×16 wins, and a spiller ties it** (step 4, `docs/neon-sweep.md`,
   `archive/neon136/`, run `neon136-649d9ee` on pollux). `BenchmarkKernel` over the five shapes,

@@ -47,9 +47,29 @@ const envForce = "KEEL_FORCE"
 // AvailableL1Backends answers the different question of what is runnable here.
 func L1Chain() []string { return []string{l1.AVX512, l1.AVX2, l1.Scalar} }
 
-// KernChain reports the advertised Level-3 dispatch chain. It has two rungs, not
-// three: there is no AVX2 microkernel, so KEEL_FORCE=avx2 runs a scalar Level 3.
-func KernChain() []string { return []string{kern.AVX512, kern.Scalar} }
+// KernChain reports the advertised Level-3 dispatch chain: the distinct vector
+// backends of the microkernels registered for THIS build, widest tile first, with
+// scalar as the terminating fallback.
+//
+// Derived from kern.Kernels() rather than hardcoded, so the chain cannot drift from
+// what is runnable — the invariant TestP5Dispatch enforces (every runnable kernel's
+// backend appears here) is now structural. On amd64 this is [avx512, scalar]: two
+// rungs, not three, because there is no AVX2 microkernel (#40), so the loop finds no
+// avx2 backend and KEEL_FORCE=avx2 runs a scalar Level 3. On arm64 it is
+// [neon, scalar]. It was hardcoded [avx512, scalar] until #136's NEON kernels made
+// that a lie on arm64 — a runnable neon backend absent from the advertised chain,
+// which CI (amd64) could not see and a live darwin/arm64 gate run caught (#152).
+func KernChain() []string {
+	seen := map[string]bool{}
+	chain := []string{}
+	for _, k := range kern.Kernels() {
+		if k.Name != kern.Scalar && !seen[k.Name] {
+			seen[k.Name] = true
+			chain = append(chain, k.Name)
+		}
+	}
+	return append(chain, kern.Scalar)
+}
 
 // activeL1 is the Level-1 kernel set every public L1 routine calls through.
 // One indirect call per routine invocation, outside every loop.
