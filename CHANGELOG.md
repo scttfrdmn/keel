@@ -26,6 +26,15 @@ While the major version is 0, minor versions may contain breaking changes.
   `labrun`'s status parse) runs `uv run --no-project python3`.
 
 ### Added
+- **NEON codegen read for the `#136` MR×NR sweep** (`docs/neon-sweep.md`) — the charter's
+  before-any-timing step, from `-S` of a keel-style 4×8 probe on `go1.27.0`
+  `GOOS=linux GOARCH=arm64 GOEXPERIMENT=simd`. `Float32x4.MulAdd` emits a real fused `VFMLA` that
+  **accumulates in place** (no per-FMA scratch, so amd64's 8-accumulator spill frontier does not
+  carry over); `BroadcastFloat32x4` emits a separate `VDUP` (no by-element FMLA — a `#130` candidate,
+  recorded not filed, no measurable throughput delta). Derives the register-budget model
+  `live = MR·(NR/4) + NR/4 + 1` over 32 V-registers, pinning the sweep set (8×8, 8×12, 4×16 + 12×8,
+  6×16 + 4×8) and predicting 8×16/4×32 spill. Characterization only — the arm64 judged tier awaits
+  `#73`/`#119`. No shipping code changed; GB10 (`pollux`/`castor`) confirmed as the sweep host.
 - **Design doc for genericizing the middle** (`#135`, `docs/generic-middle.md`) — v0.2.0's spine,
   written before any refactor. Its finding: the **ISA seam is already cut**. `internal/block`,
   `internal/pack`, `internal/par` are untagged portable Go with zero `amd64`/lane/`Float32x16`
