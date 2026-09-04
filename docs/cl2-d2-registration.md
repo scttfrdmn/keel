@@ -115,7 +115,7 @@ O1 at the in-cache rows, largest where the loop is shortest and most latency-bou
 the "worth a compiler fix" bar (≥2% CI-excluded): n=256 at 13.5% and n=65536 at 4.5%.
 
 **Attribution audited at the instruction level (§5 rule 11), not inferred from the delta.** The two
-binaries' `avx512Asum` (`archive/cl2-d2/asm-arm{A,B}-*.txt`) have **identical compute**: VADDPS 15=15,
+binaries' `avx512Asum` (`archive/cl2-d2/asm-arm{A,B}-*.s`) have **identical compute**: VADDPS 15=15,
 VPANDD 9=9 (the abs-AND), VMOVDQU64 4=4 (the loads), VEXTRACTF64X4 2=2 (the reduction). The *only*
 functional difference is mask materialization — VPBROADCASTD 1→4 and VMOVD 1→4, i.e. arm B rebuilds
 the sign mask once per block instead of once per call. The extra XCHGL (25→40) is NOP alignment
