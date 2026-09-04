@@ -76,7 +76,15 @@ package vec
 const (
 	// Independent accumulator chains per iteration, per width.
 	Chains512 = 12
-	Chains256 = 10
+	// ChainsNEON is 16: enough independent accumulator chains to saturate a Neoverse
+	// V2's four 128-bit FMA pipes at ~4-cycle FMLA latency (4x4=16), which over-covers
+	// c7g's V1 and any N-series (two pipes, saturating at 8). NEON has 32 vector
+	// registers, so 16 accumulators plus two multiplicands (18) leaves ample headroom and
+	// nothing spills. Unlike amd64's 213-form FMA, arm64's VFMLA accumulates in place
+	// (#136), so each chain is one instruction with no register copy — property 4 of the
+	// ceiling holds more cleanly here than on amd64.
+	ChainsNEON = 16
+	Chains256  = 10
 	// Chains for the scalar reference ceiling.
 	ChainsScalar = 10
 )

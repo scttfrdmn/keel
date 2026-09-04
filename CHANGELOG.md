@@ -51,6 +51,17 @@ While the major version is 0, minor versions may contain breaking changes.
   yields `[neon, scalar]`. Surfaced by the #119 live gate exercise on darwin/arm64.
 
 ### Added
+- **The NEON compute arm of the ceiling instrument** (`internal/vec/peak_arm64.go`, `#137`
+  pre-flight, `#11`). Before this the arm64 build had no vector peak — `peak_nosimd.go` answered
+  with the scalar ceiling, so a NEON kernel's share would have divided by a scalar denominator and
+  read far above 100%. `neonPeak` is register-only NEON FMA saturation, 16 independent chains
+  (`ChainsNEON`) — enough to saturate a Neoverse V2's four pipes at ~4-cycle FMLA latency, with room
+  in 32 registers. Because arm64's `VFMLA` accumulates in place (#136), the natural `a = FMA128(x,y,a)`
+  form is one instruction per chain with no register copy, so the ceiling's property 4 holds more
+  cleanly than amd64's copy-forced 213 form. Verified: `TestPeakChainsAreIndependent` (the Witness)
+  passes on arm64, and it measures 75.4 GFLOP/s single-core on the dev-host M-series (saturating, not
+  latency-bound). The arm64 ceiling instrument is born here; arm64 baselines register scoped to the
+  era in which it is the reference (§5 rule 17(d)).
 - **`#136` NEON sweep on GB10: 4×16 wins, and a spiller ties it** (step 4, `docs/neon-sweep.md`,
   `archive/neon136/`, run `neon136-649d9ee` on pollux). `BenchmarkKernel` over the five shapes,
   GOMAXPROCS=1, via the pueue `measured` group, characterization-only. **Winner: 4×16 at 21.38

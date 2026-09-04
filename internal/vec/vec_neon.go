@@ -88,6 +88,17 @@ func Min128(x, y F32x4) F32x4 { return x.IfElse(x.Less(y), y) }
 // Abs128 clears the sign bit of every lane (FABS).
 func Abs128(x F32x4) F32x4 { return x.Abs() }
 
+// HSum128 sums the four lanes, folding in the same order as HSum512's tail
+// (a[0]+a[2], a[1]+a[3], then the pair) so it agrees bit-for-bit with the scalar
+// spec's tree. Off the hot path (one per dot product / one per peak reduction).
+func HSum128(x F32x4) float32 {
+	var a [4]float32
+	x.StoreArray(&a)
+	a[0] += a[2]
+	a[1] += a[3]
+	return a[0] + a[1]
+}
+
 // --------------------------------------------------------------- test layer
 // Block-in, Block-out, same signatures as the scalar spec, so the one
 // differential table drives every backend. A 16-lane Block is four Float32x4
