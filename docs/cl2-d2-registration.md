@@ -131,3 +131,13 @@ lands") is now a measured trade, not a checkbox: writing `avx512Asum` inline cos
 n=256 unless the landed CL actually hoists in keel's dispatch shape. `#54` should be rewritten to
 gate retirement on a re-run of this A/B against the *landed* toolchain showing the inline form
 regains arm A's numbers — not on the CL merging.
+
+## Posted upstream (2026-09-04)
+
+Posted to CL 803220's thread on Scott's ruling (caveats first, framed as workload evidence, not
+"what this CL buys keel"): comment `ed58a249_9b6527a0`, `/PATCHSET_LEVEL`, threaded as a reply to
+D1's `9ffad9da_17ce3670`, `unresolved: true` — left unresolved so D1's still-open finding is not
+cleared by the reply (the thread's state follows its last comment). Verified from Gerrit `/comments`
+and `/detail`, not the POST response: messages 4 → 5, three PATCHSET_LEVEL comments, `updated
+2026-09-04 16:02:21`. It completes the pairing D1 opened — the fault, then the reason it is worth
+fixing — with both qualifiers ahead of the number.
