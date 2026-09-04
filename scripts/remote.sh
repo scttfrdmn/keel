@@ -1551,44 +1551,56 @@ adm_judgeable() {
 # here, but the same expansion applied to a glob or a `$` would have silently
 # altered what got measured.
 #
-# THE MEASUREMENT NO LONGER LIVES INSIDE THE SSH CONNECTION (#62). It runs in a
-# detached remote tmux session, so the ssh carries control messages and the
-# program's lifetime is not the link's. The trigger for building this was the
-# fleet leaving the LAN: on a billed cloud instance a transient drop is a real
-# event class, and it used to SIGHUP a benchmark mid-flight and cost the run.
+# THE MEASUREMENT NO LONGER LIVES INSIDE THE SSH CONNECTION (#62), and since
+# 2026-09-03 it prefers the fleet's pueue queue where the host has one. Two mechanisms,
+# chosen per host by the launch itself (see the branch below):
+#   * pueue (the shared LAB hosts) — the runner is a pueue task in the `measured` or
+#     `build` group. pueue's daemon owns the process, so its life is not the ssh link's,
+#     AND the group's parallel=1 slot serializes it against every other project on that
+#     box. Contention that used to foul a measurement now WAITS. Because pueue holds the
+#     slot for the runner's whole life, the runner is its FOREGROUND child and is never
+#     wrapped in tmux — that would free the slot while the work ran.
+#   * remote tmux (the JUDGED AWS fleet, no pueue) — the pre-existing #62 path: a detached
+#     remote session so a transient drop on a billed instance cannot SIGHUP the benchmark.
+#     One tenant per on-demand instance, so there is nothing to serialize; the supervision,
+#     not the queue, is what that path needs.
 #
-# THE COMMAND CROSSES AS DATA, NOT AS SHELL WORDS, and that is the whole defence
-# against the hazard #62 named. Wrapping the existing command string in a tmux
-# argument would give the far side a SECOND expansion on top of printf %q, and
-# the failure mode of getting that wrong is not a loud error — it is a benchmark
-# that measured something adjacent to what was asked for. So the command is
-# written to a runner script LOCALLY, shipped by the scp that already ships the
-# binary, and tmux is handed one quoted path. The bytes the far side executes are
-# the bytes the old single-ssh form would have handed to its shell.
+# THE COMMAND CROSSES AS DATA, NOT AS SHELL WORDS, and that is the whole defence against
+# the hazard #62 named — and pueue's own "commands run through a shell twice" gotcha. The
+# command is written to a runner script LOCALLY, shipped by the scp that already ships the
+# binary, and both mechanisms are handed one quoted path (`sh '$runner'`). The bytes the
+# far side executes are the bytes the old single-ssh form would have handed to its shell,
+# whether pueue or tmux launches them.
 #
-# THREE OUTCOMES, AND ONLY ONE OF THEM IS AN EXIT CODE. The runner writes the
-# program's status to a status file after it exits — detach.sh's design, one hop
-# out — so "finished badly" and "never finished" stay distinguishable:
+# THREE OUTCOMES, AND ONLY ONE OF THEM IS AN EXIT CODE. The runner writes the program's
+# status to a status file after it exits — detach.sh's design, one hop out — so "finished
+# badly" and "never finished" stay distinguishable, identically under both mechanisms:
 #
-#   REMOTE_STATE=ok        a status file exists; the return value is the
-#                          program's own exit code, exactly as before.
-#   REMOTE_STATE=vanished  the session is gone and no status was written. The
-#                          return value is $REMOTE_EXIT_VANISHED, which is NOT a
-#                          program exit code and must not be read as one — see
-#                          remote_vanished below, and DESIGN.md §5.6.
-#   REMOTE_SUPERVISED=no   there was no usable tmux, so the run was unsupervised
-#                          (the pre-#62 behaviour). Not a failure and not an
-#                          exemption: still measured, still reported, and the
-#                          fact is in every gate's provenance line as `tmux=`
-#                          because a supervisor that is silently absent is worse
-#                          than one that is absent loudly.
+#   REMOTE_STATE=ok        a status file exists; the return value is the program's own exit
+#                          code, exactly as before. NOTE this is read from the runner's
+#                          status file, NOT from pueue's result: the runner ends by writing
+#                          `$?` to that file, so the runner process itself exits 0 even when
+#                          the benchmark failed, and pueue would report Success. The status
+#                          file is authoritative for the program; pueue only holds the slot.
+#   REMOTE_STATE=vanished  no status was written — the tmux session is gone, or the pueue
+#                          task was killed, or (REMOTE_QUEUE=pueue-failed) the daemon refused
+#                          the submission and the run was NOT taken off-queue on a shared
+#                          host. Returns $REMOTE_EXIT_VANISHED, which is NOT a program exit
+#                          code — see remote_vanished below, and DESIGN.md §5.6.
+#   REMOTE_SUPERVISED=no   no pueue and no usable tmux: unsupervised (the pre-#62 behaviour).
+#                          Not a failure and not an exemption; still measured, still reported,
+#                          the fact carried in REMOTE_QUEUE/REMOTE_SUPERVISED and the `tmux=`
+#                          provenance field, because a supervisor silently absent is worse
+#                          than one absent loudly.
 #
-# THE SUPERVISOR IS SILENT ON THE WIRE, deliberately and load-bearingly. This
-# function's stdout IS the program's output: every caller redirects `2>&1` into a
-# log that benchstat and anchored marker greps then parse, so one chatty line
-# from the supervisor would land in the parsed data. Hence state travels in
-# variables and never in output, and the log comes back through its own `cat`
-# whose stdout is passed straight through — not through `$(...)`, which strips
+# THE SUPERVISOR IS SILENT ON THE WIRE, deliberately and load-bearingly. This function's
+# stdout IS the program's output: every caller redirects `2>&1` into a log that benchstat
+# and anchored marker greps then parse, so one chatty line would land in the parsed data.
+# Hence state travels in variables and never in output. The one exception is the single
+# `keel-queue:` provenance line on a pueue host — structured data on the same footing as
+# the runner's own `keel-pin:` line, ignored by benchstat exactly as that one is, and NOT
+# emitted on the judged path, so those logs stay byte-identical. The log comes back through
+# its own `cat` whose stdout is passed straight through — not through `$(...)`, which strips
 # trailing newlines and would edit every log by a byte.
 #
 # The runner is shipped rather than fed on stdin because $KEEL_SSH_OPTS carries
@@ -1599,6 +1611,17 @@ adm_judgeable() {
 REMOTE_EXIT_VANISHED=125
 REMOTE_STATE=""
 REMOTE_SUPERVISED=""
+# The queue provenance of the last remote_exec, for the gate that records it and for the
+# `keel-queue:` line written into a lab-host log (2026-09-03, the pueue onboarding):
+#   REMOTE_QUEUE       pueue | tmux | none | pueue-failed — which mechanism ran the work.
+#   REMOTE_TASK_ID     the pueue task id, when REMOTE_QUEUE=pueue; else empty.
+#   REMOTE_GROUP       measured | build, the pueue group the run serialized into.
+#   REMOTE_CONCURRENT  tasks Running fleet-wide the instant this was queued — the
+#                      contention datum, so a divergence has its co-tenants on record.
+REMOTE_QUEUE=""
+REMOTE_TASK_ID=""
+REMOTE_GROUP=""
+REMOTE_CONCURRENT=""
 REMOTE_WAIT_RETRIES="${REMOTE_WAIT_RETRIES:-12}"
 REMOTE_EXEC_SEQ=0
 
@@ -1691,31 +1714,73 @@ EOF
   scp -q "${KEEL_SCP_OPTS[@]}" "$bin" "$tmpd/$id.sh" "$host:$KEEL_REMOTE_DIR/"
   rm -rf "$tmpd"
 
-  # One launch, which also decides supervision on the far side — a separate
-  # `command -v tmux` probe would be a third round trip to learn what the launch
-  # already knows. tmux present but unable to start a server (no writable $HOME,
-  # no /tmp) falls through to the unsupervised arm rather than losing the
-  # measurement: that arm is exactly the behaviour every gate had before #62.
-  local supervision
-  supervision="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" "
-    if command -v tmux >/dev/null 2>&1 && tmux new-session -d -s '$id' \"sh '$runner'\" 2>/dev/null; then
-      echo supervised
+  # The lab-queue group this run serializes into: `measured` (parallel=1, the single
+  # measurement slot) for a benchmark, `build` (wide) for a -test.run check or a read-back,
+  # whose timing is not a result. wants_bench is the same predicate the placement mask keys
+  # on, so group and mask cannot disagree. `if` and not `[[ … ]] && …`: a false `&&` list is
+  # the function's status where it stands and would abort a `set -e` caller (builder_toolchain
+  # learned this above).
+  local group="build"
+  if [[ "$wants_bench" -eq 1 ]]; then group="measured"; fi
+  local label="keel/$id"
+
+  # ONE launch that also decides the mechanism on the far side, cheapest-safe first:
+  #   pueue present  → submit to its queue. These are the SHARED lab hosts, and pueue is the
+  #                    whole reason contention now WAITS instead of fouling a measurement:
+  #                    two projects landing on one box was showing up as unexplained
+  #                    performance divergence in each (the class #150 chased). `pueue add -p`
+  #                    prints just the task id and holds the group's slot for the runner's
+  #                    FULL life — so the runner must be pueue's foreground child, NEVER
+  #                    wrapped in tmux, or the slot frees while the work runs, which is the
+  #                    one anti-pattern pueue exists to prevent.
+  #   pueue absent   → the pre-#62 → #62 path unchanged: a detached remote tmux session, or
+  #                    unsupervised if there is no tmux either. This is the JUDGED FLEET,
+  #                    which is AWS on-demand — one tenant, so there is nothing to serialize,
+  #                    and the tmux supervision is still wanted there because a transient
+  #                    drop on a billed instance used to SIGHUP a benchmark mid-flight (#62).
+  # A separate `command -v` probe would be a round trip to learn what the launch already
+  # knows. pueue present but `add` returning no id prints nothing and does NOT fall through
+  # to tmux: running measured work OFF the queue on a shared host is the failure this whole
+  # change removes, so it becomes `vanished`, not a quiet unsupervised run.
+  local launch
+  launch="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" "
+    if command -v pueue >/dev/null 2>&1; then
+      pueue add -g '$group' -w '$KEEL_REMOTE_DIR' -l '$label' -p -- sh '$runner'
+    elif command -v tmux >/dev/null 2>&1 && tmux new-session -d -s '$id' \"sh '$runner'\" 2>/dev/null; then
+      echo TMUX
     else
-      echo unsupervised
+      echo UNSUP
       sh '$runner'
     fi" 2>/dev/null || true)"
-  case "$supervision" in
-    supervised*) REMOTE_SUPERVISED=yes ;;
-    *)           REMOTE_SUPERVISED=no ;;
-  esac
 
-  # Wait on the far side, in one connection rather than a poll from here: a
-  # 25-minute benchmark polled from the driver is 300 ssh handshakes, each of
-  # which is a chance to fail at a moment when nothing was wrong. Retried
-  # because a dropped link during the wait is now survivable — the session is
-  # still running, and `has-session` makes reconnecting idempotent.
+  REMOTE_QUEUE=""; REMOTE_TASK_ID=""; REMOTE_GROUP=""; REMOTE_CONCURRENT=""
   local tok="" tries=0
-  if [[ "$REMOTE_SUPERVISED" == yes ]]; then
+  if [[ "$launch" =~ ^[0-9]+$ ]]; then
+    # pueue accepted the run and returned a task id; it holds the slot, so wait on it.
+    REMOTE_QUEUE=pueue; REMOTE_SUPERVISED=yes
+    REMOTE_TASK_ID="$launch"; REMOTE_GROUP="$group"
+    # Contention AT SUBMIT TIME: how many tasks were Running fleet-wide the instant this was
+    # queued. Parsed the way labrun parses pueue (uv, the fleet's only Python), and recorded
+    # beside the numbers by the keel-queue: line below — unrecorded contention is exactly the
+    # mystery divergence this apparatus now prevents at the source.
+    REMOTE_CONCURRENT="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" "pueue status --json" 2>/dev/null \
+      | uv run --no-project python3 -c '
+import json,sys
+try: d=json.load(sys.stdin).get("tasks",{})
+except Exception: print("?"); raise SystemExit
+def running(s): return (isinstance(s,dict) and "Running" in s) or s=="Running"
+print(sum(1 for t in d.values() if running(t.get("status"))))' 2>/dev/null || true)"
+    [[ -n "$REMOTE_CONCURRENT" ]] || REMOTE_CONCURRENT="?"
+    ssh "${KEEL_SSH_OPTS[@]}" "$host" "pueue wait -q '$launch'" >/dev/null 2>&1 || true
+    tok="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" \
+      "if [ -f '$st' ]; then cat '$st'; else echo vanished; fi" 2>/dev/null || true)"
+    ssh "${KEEL_SSH_OPTS[@]}" "$host" "pueue remove '$launch'" >/dev/null 2>&1 || true
+  elif [[ "$launch" == TMUX* ]]; then
+    # #62's remote tmux, unchanged. Wait on the far side in one connection rather than a poll
+    # from here: a 25-minute benchmark polled from the driver is 300 ssh handshakes, each a
+    # chance to fail when nothing was wrong. Retried because a dropped link during the wait is
+    # survivable — the session runs on, and `has-session` makes reconnecting idempotent.
+    REMOTE_QUEUE=tmux; REMOTE_SUPERVISED=yes
     while :; do
       tok="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" "
         while tmux has-session -t '$id' 2>/dev/null; do sleep 3; done
@@ -1725,15 +1790,34 @@ EOF
       [[ "$tries" -lt "$REMOTE_WAIT_RETRIES" ]] || break
       sleep 5
     done
-  else
+  elif [[ "$launch" == UNSUP* ]]; then
+    # No tmux either: the pre-#62 unsupervised behaviour, still not a failure and still measured.
+    REMOTE_QUEUE=none; REMOTE_SUPERVISED=no
     tok="$(ssh "${KEEL_SSH_OPTS[@]}" "$host" \
       "if [ -f '$st' ]; then cat '$st'; else echo vanished; fi" 2>/dev/null || true)"
+  else
+    # pueue was present but `add` yielded no id — the daemon is down, or the group is gone.
+    # Refuse rather than run this measured work off-queue on a shared host.
+    REMOTE_QUEUE=pueue-failed; REMOTE_SUPERVISED=no; tok="vanished"
   fi
 
-  # The log, byte-exact, on the caller's stdout. Emitted even when the run
-  # vanished: a truncated log is evidence about where it stopped, and the
-  # caller has REMOTE_STATE to keep it from being read as a complete one.
+  # The log, byte-exact, on the caller's stdout. Emitted even when the run vanished: a
+  # truncated log is evidence about where it stopped, and REMOTE_STATE keeps it from being
+  # read as complete. On a pueue host, one keel-queue: provenance line follows it — data, not
+  # supervisor chatter (benchstat parses only ^Benchmark lines, as it ignores keel-pin:), so
+  # host/group/task/concurrency land in the SAME artifact as the numbers they qualify. The
+  # NON-pueue path (the judged AWS fleet) emits nothing extra, so its logs and the certificates
+  # normalised from them stay byte-identical to before this change.
   ssh "${KEEL_SSH_OPTS[@]}" "$host" "cat '$log' 2>/dev/null" || true
+  if [[ "$REMOTE_QUEUE" == pueue ]]; then
+    # LEADING newline is load-bearing: the log is byte-exact and may end WITHOUT one (case 1
+    # of remote-exec-test.sh asserts that), so a bare append would glue keel-queue: onto the
+    # last line -- corrupting it if it were a Benchmark line, and defeating a `^keel-queue:`
+    # grep either way. The blank line this costs when the log already ended in \n is inert:
+    # benchstat and every marker grep here are line-anchored and skip it.
+    printf '\nkeel-queue: host=%s group=%s task=%s concurrent_at_submit=%s\n' \
+      "$host" "$REMOTE_GROUP" "$REMOTE_TASK_ID" "$REMOTE_CONCURRENT"
+  fi
   ssh "${KEEL_SSH_OPTS[@]}" "$host" "rm -f '$runner' '$log' '$st'" >/dev/null 2>&1 || true
 
   case "$tok" in

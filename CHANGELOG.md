@@ -8,6 +8,23 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **Measured runs on shared lab hardware now serialize through the fleet's `pueue` queue**
+  (`scripts/remote.sh` `remote_exec`, `scripts/labrun`, `CLAUDE.md`, `CONTRIBUTING.md`). Several
+  projects share the lab machines and nothing stopped two landing on one box at once — the exact
+  contention that shows up as unexplained per-run divergence (the class `#150` chased). `remote_exec`
+  now submits each run to the far host's `measured` (parallel=1) or `build` pueue group **when that
+  host has a live pueue client**; the judged AWS fleet (no pueue, one tenant) keeps `#62`'s
+  remote-tmux supervision, so `#62` is demoted to the fallback it is still needed for, not retired.
+  The program's exit code is still read from the runner's status file, not pueue's result (the runner
+  exits 0 writing that file, so pueue would report Success on a failed benchmark); a killed task or a
+  refused submission is `vanished`, never a silent off-queue run. Each pueue run records host, group,
+  task id and the concurrent-task count at submit time on a `keel-queue:` line in its own log.
+  Exercised live on janus (both groups, exit-7 recovery, killed→vanished) and codified as a guarded
+  section in `remote-exec-test.sh` that UNRUNs off-fleet. Python fleet-wide is standardized on `uv`;
+  keel ships no `requirements.txt`/`pyproject.toml`, so its only Python (local log-analysis, and
+  `labrun`'s status parse) runs `uv run --no-project python3`.
+
 ### Added
 - **`#150`'s instrument: an in-arm frequency sampler, with its own perturbation registered as a
   measured term and its quietness guard's pedestal derived** (`archive/freq150/`, pre-registration

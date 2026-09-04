@@ -1035,6 +1035,77 @@ else
   fi
 fi
 
+# ------------------------------------------ 10. the pueue mechanism, on a real queue host
+#
+# Cases 1-9 drive the #62 remote-tmux supervisor against localhost, which has no pueue on
+# its non-interactive PATH, so they never enter the branch added 2026-09-03. A branch nothing
+# enters is asserted, not tested (rule 12). This section drives it on a host that DOES have a
+# live pueue daemon -- KEEL_PUEUE_TEST_HOST, default janus.local -- and UNRUNs (info_, not a
+# failure) when none is reachable, so the suite still runs anywhere. It proves the three
+# properties the tmux cases prove, on the queue: a finished run recovers its own exit code, a
+# killed task is `vanished` not an exit code, and the group is chosen by whether it is a
+# benchmark. It also asserts the two things only the queue has: REMOTE_QUEUE=pueue and the
+# keel-queue: provenance line landing in the SAME log as the numbers.
+head_ "10. the pueue path, on a live queue host"
+PH="${KEEL_PUEUE_TEST_HOST:-janus.local}"
+PDIR="/tmp/keel-remote-pueuetest-$$"
+if ! ssh "${KEEL_SSH_OPTS[@]}" "$PH" "command -v pueue >/dev/null 2>&1 && pueue status >/dev/null 2>&1" 2>/dev/null; then
+  info_ "UNRUN: $PH has no reachable pueue daemon (set KEEL_PUEUE_TEST_HOST to one, or ignore off-fleet)"
+else
+  pforget() { ssh "${KEEL_SSH_OPTS[@]}" "$PH" "pueue status --json" 2>/dev/null | uv run --no-project python3 -c '
+import json,sys
+d=json.load(sys.stdin).get("tasks",{})
+def running(s): return (isinstance(s,dict) and "Running" in s) or s=="Running"
+for k,t in d.items():
+    if running(t.get("status")) and (t.get("label") or "").startswith("keel/"): print(k); break' 2>/dev/null; }
+  PBIN="$WORK/fake-bench-pueue"; cp "$BIN" "$PBIN"
+  KEEL_REMOTE_DIR="$PDIR"
+
+  # a) an unmeasured run -> the build group, exit code recovered, provenance recorded.
+  remote_exec "$PH" "$PBIN" -test.run='NoSuchTest' > "$WORK/p-build.log" 2>&1; rc=$?
+  [[ "$REMOTE_QUEUE" == pueue && "$rc" -eq 0 && "$REMOTE_STATE" == ok ]] \
+    && pass_ "build-group run: REMOTE_QUEUE=pueue, exit 0, REMOTE_STATE=ok (task $REMOTE_TASK_ID)" \
+    || fail_ "build-group run: queue=$REMOTE_QUEUE rc=$rc state=$REMOTE_STATE"
+  [[ "$REMOTE_GROUP" == build ]] && pass_ "a non-benchmark serialized into the build group" \
+    || fail_ "expected group=build for a -test.run, got '$REMOTE_GROUP'"
+  grep -qE "^keel-queue: host=$PH group=build task=[0-9]+ concurrent_at_submit=" "$WORK/p-build.log" \
+    && pass_ "keel-queue: provenance landed in the log ($(grep -o '^keel-queue:.*' "$WORK/p-build.log"))" \
+    || { fail_ "keel-queue: line missing or malformed:"; sed 's/^/        /' "$WORK/p-build.log"; }
+
+  # b) a benchmark -> the measured group. wants_bench also selects the pin branch, so cpu0 is
+  #    named explicitly (a bare width would derive a mask and this is not what case 9 tests).
+  KEEL_PIN_CPUS=0 remote_exec "$PH" "$PBIN" -test.run=NONE -test.bench='X' > "$WORK/p-meas.log" 2>&1; rc=$?
+  [[ "$REMOTE_QUEUE" == pueue && "$REMOTE_GROUP" == measured && "$rc" -eq 0 ]] \
+    && pass_ "benchmark run: serialized into the measured slot, exit 0 (task $REMOTE_TASK_ID)" \
+    || fail_ "benchmark run: queue=$REMOTE_QUEUE group=$REMOTE_GROUP rc=$rc"
+
+  # c) a failing program -> its own code out of the status file, NOT pueue's (the runner exits
+  #    0 writing that file, so pueue would say Success). The vanished/ok distinction's first half.
+  FAKE_RC=7 KEEL_REMOTE_ENV="FAKE_RC=7" remote_exec "$PH" "$PBIN" -test.run=NONE >/dev/null 2>&1; rc=$?
+  [[ "$rc" -eq 7 && "$REMOTE_STATE" == ok ]] \
+    && pass_ "a failing program's exit 7 came from the status file, not pueue's Success" \
+    || fail_ "expected 7/ok from the status file, got $rc/$REMOTE_STATE"
+
+  # d) the task killed mid-run -> vanished, never an exit code. The half a green run cannot prove.
+  KEEL_REMOTE_ENV="FAKE_SLEEP=30" remote_exec "$PH" "$PBIN" -test.run=NONE >/dev/null 2>&1 &
+  ep=$!; killed=no
+  for _ in $(seq 1 40); do
+    tid="$(pforget)"
+    if [[ -n "$tid" ]]; then ssh "${KEEL_SSH_OPTS[@]}" "$PH" "pueue kill $tid" >/dev/null 2>&1 && killed=yes; break; fi
+    sleep 1
+  done
+  wait "$ep" 2>/dev/null; rc=$?
+  if [[ "$killed" != yes ]]; then
+    info_ "UNRUN(d): never caught the task Running to kill it -- not asserting vanished on an unentered branch"
+  elif [[ "$rc" -eq "$REMOTE_EXIT_VANISHED" ]]; then
+    pass_ "a killed pueue task returned vanished ($rc), not a program exit code"
+  else
+    fail_ "a killed pueue task returned $rc, expected $REMOTE_EXIT_VANISHED (vanished)"
+  fi
+  ssh "${KEEL_SSH_OPTS[@]}" "$PH" "rm -rf '$PDIR'" >/dev/null 2>&1 || true
+  KEEL_REMOTE_DIR="/tmp/keel-remote-test-$$"
+fi
+
 head_ "verdict"
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"

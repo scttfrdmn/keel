@@ -187,10 +187,13 @@ sweep still launches under `scripts/detach.sh` (local tmux) so the orchestrator
 outlives the shell. That is not the same tmux the block forbids: the block's rule is
 about the *remote, queued* command, which pueue detaches itself — wrapping THAT in
 tmux frees the measured slot while the work runs. Local driver in tmux: required.
-Remote queued command in tmux: forbidden. The wiring that routes measured remote runs
-through pueue (retiring `remote_exec`'s own `#62` remote-tmux supervision) is a
-measurement-core change pending Scott's go; until it lands, remote runs still use
-remote.sh as documented there.
+Remote queued command in tmux: forbidden. As of `remote.sh`'s pueue conversion,
+`remote_exec` submits each run to the far host's `measured`/`build` pueue group **when
+that host has a live pueue client** (the shared lab hosts); a host without one (the
+judged AWS on-demand fleet — one tenant, nothing to serialize) keeps `#62`'s remote-tmux
+supervision. So `#62` was demoted to the fallback it is still needed for, not retired. A
+pueue host whose daemon refuses the submission is `vanished`, never a silent off-queue
+run on a shared box.
 
 ## Running tests and benchmarks on lab hardware
 
