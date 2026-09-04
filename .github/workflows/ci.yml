@@ -258,3 +258,62 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       # Gates are run locally by design (they need real hardware + perf
       # denominators); CI proves build integrity and a deterministic smoke.
+
+  simd-arm64:
+    # The witness the blindness class lacked (#152). CI runs amd64 runners, and the NEON
+    # code is arm64-tagged, so before this job an arm64-only break was invisible by
+    # construction — #136 shipped runnable NEON kernels whose backend was absent from the
+    # dispatch chain (#153), green on every amd64 commit, caught only by a live darwin/arm64
+    # gate run. This leg compiles AND runs the arm64+simd paths on an arm64 runner: the NEON
+    # differential table, TestP5Dispatch, the NEON kern oracle, and the peak Witness all
+    # execute on real NEON here.
+    name: GOEXPERIMENT=simd on arm64 (the NEON paths, #152)
+    runs-on: ubuntu-24.04-arm
+    env: { GOEXPERIMENT: simd }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with: { go-version: '1.27.x' }
+      - run: go version && go env GOTOOLCHAIN GOARCH
+      - run: go build ./...
+      - name: tests, default dispatch (NEON on this runner)
+        run: |
+          set -o pipefail
+          go test ./... 2>&1 | tee simd-arm64.log
+          # The read-back, sharing this job's environment; -count=1 so the cache cannot
+          # replay a reading from another. The probe selects no test (empty exercised
+          # markers by construction) and exists to make TestMain print the dispatch state.
+          go test -count=1 -v -run 'ZZZDispatchReadBackOnly' . 2>&1 | tee simd-arm64.log.readback
+      - name: assert NEON dispatched, and the partial-port disclosure holds
+        run: |
+          set -euo pipefail
+          kern="$(sed -n 's/^keel-sgemm-active: *//p' simd-arm64.log.readback | tail -1)"
+          l1="$(sed -n 's/^keel-l1-active: *//p' simd-arm64.log.readback | tail -1)"
+          if [ -z "$kern" ]; then
+            echo "::error::no dispatch read-back on arm64; a run that cannot say what it dispatched to has not reported its coverage" >&2
+            exit 1
+          fi
+          case "$kern" in
+            */neon) : ;;
+            *) echo "::error::arm64 dispatched Level 3 to '$kern', not a neon kernel — the NEON path did not run on this arm64 runner, so this leg proves nothing it exists to prove" >&2; exit 1 ;;
+          esac
+          # The disclosed partial port (#153/#154): Level 3 is neon, Level 1 is scalar-as-shipped
+          # until the NEON L1 backend lands. CI asserts the disclosure rather than trusting it.
+          if [ "$l1" != "scalar" ]; then
+            echo "::warning::arm64 Level 1 read back '$l1'; scalar is expected until the NEON L1 backend lands (#154). If NEON L1 shipped, update this assertion." >&2
+          fi
+          {
+            echo "### GOEXPERIMENT=simd on arm64 — the NEON paths, run in CI (#152)"
+            echo
+            echo "Closes the blindness class: an arm64-only regression is now caught here, not first on"
+            echo "the judged Graviton fleet. This leg RAN the NEON code (differential, dispatch, oracle,"
+            echo "peak Witness) on an arm64 runner."
+            echo
+            echo '| read-back | value |'
+            echo '|---|---|'
+            echo "| Level-3 microkernel (asserted \`*/neon\`) | \`$kern\` |"
+            echo "| Level-1 active (scalar until #154) | \`$l1\` |"
+            echo
+            echo "Level 3 NEON over a scalar Level 1 is the disclosed partial port (#153); the L1 NEON"
+            echo "backend is #154's v0.2.0 unit."
+          } >> "$GITHUB_STEP_SUMMARY"

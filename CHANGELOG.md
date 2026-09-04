@@ -51,6 +51,14 @@ While the major version is 0, minor versions may contain breaking changes.
   yields `[neon, scalar]`. Surfaced by the #119 live gate exercise on darwin/arm64.
 
 ### Added
+- **arm64 CI coverage (`#152`): a `simd-arm64` job on `ubuntu-24.04-arm`** that compiles and RUNS
+  the arm64+simd paths — the NEON differential table, `TestP5Dispatch`, the NEON kern oracle, the
+  peak Witness — on real NEON. Closes the blindness class the KernChain regression exposed: CI ran
+  only amd64 runners, so an arm64-only break (a runnable NEON backend absent from the dispatch chain,
+  #136/#153) was invisible by construction and caught only by a live darwin/arm64 gate run. The job
+  asserts Level 3 dispatched to a `*/neon` kernel (the path actually ran) and that the partial-port
+  disclosure holds (`l1=scalar` until the NEON L1 backend, #154). Landed before the Graviton campaign
+  leans on arm64 code.
 - **The NEON compute arm of the ceiling instrument** (`internal/vec/peak_arm64.go`, `#137`
   pre-flight, `#11`). Before this the arm64 build had no vector peak — `peak_nosimd.go` answered
   with the scalar ceiling, so a NEON kernel's share would have divided by a scalar denominator and
