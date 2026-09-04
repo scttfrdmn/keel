@@ -52,6 +52,7 @@ const (
 	BackendScalar = "scalar"
 	BackendAVX2   = "avx2"
 	BackendAVX512 = "avx512"
+	BackendNEON   = "neon"
 )
 
 // Available returns the backends that are both compiled into this binary and

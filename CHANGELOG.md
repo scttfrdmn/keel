@@ -26,6 +26,19 @@ While the major version is 0, minor versions may contain breaking changes.
   `labrun`'s status parse) runs `uv run --no-project python3`.
 
 ### Added
+- **NEON vec shim with its scalar twin, differentially tested first** (`#136` step 1,
+  `internal/vec/vec_neon.go`) — keel's second ISA begins at the shim. A hot layer of
+  128-bit `Float32x4` wrappers (`Load128`/`FMA128`/`Broadcast128`/`Store128`/…) and a
+  Block-typed test layer (four `Float32x4` quarters) registered in the differential harness
+  (`vec_arm64_test.go`), held **bit-exact against the scalar spec** on this arm64 host —
+  real NEON, not emulated. `FMA128` is a fused `VFMLA`; `Abs128` is native `FABS`; `HSum128`
+  folds in the spec's exact binary-tree order. **The differential test earned its
+  front-loading:** NEON `FMAX`/`FMIN` diverge from the x86-flavoured spec on NaN and signed
+  zero (FMAX propagates NaN and picks +0 over −0; the spec returns the second operand), so
+  `Max128`/`Min128` are built from `Greater`+`IfElse` (compare-select) to match the spec to
+  the bit rather than from native FMAX. Off every GEMM hot path (the sweep uses
+  FMA/Load/Broadcast/Store/Add); an L1 arm64 routine may revisit against a spec discussion.
+  `make stock`/`make build` and the amd64 backends are unaffected (arm64-tagged).
 - **NEON codegen read for the `#136` MR×NR sweep** (`docs/neon-sweep.md`) — the charter's
   before-any-timing step, from `-S` of a keel-style 4×8 probe on `go1.27.0`
   `GOOS=linux GOARCH=arm64 GOEXPERIMENT=simd`. `Float32x4.MulAdd` emits a real fused `VFMLA` that
