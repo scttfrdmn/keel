@@ -62,12 +62,20 @@ treatments:
 
 ## Units (execute and verify in order)
 
-1. **The witness.** A guarded replay mode (inert when unset) that feeds a tracked archive as the
-   per-host `BENCHLOG` and stubs the host-touching preconditions (governor, clock, `remote_exec`),
-   so the ceiling/scale/share analysis renders from fixed input. Scope: the throughput analysis
-   that consumes `GATE_PEAK`; the dispatch/forced/race checks run from separate logs the tracked
-   archives do not carry, so those are verified by their own markers (locally on the dev M-series).
-   Deliverable: `render(archive) == render(archive)` before/after every later unit, diff zero.
+1. **The witness.** Two mechanisms, because the port has two kinds of arch-sensitive rendering and
+   the tracked archives only cover one:
+   - *Throughput analysis* (ceiling/scale/share, the `GATE_PEAK` consumers): a guarded replay mode
+     (inert when unset) that feeds a tracked archive as the per-host `BENCHLOG` and stubs the
+     host-touching preconditions (governor, clock, `remote_exec`), so it renders from fixed input.
+     The "before" arm is always re-creatable (the archive is permanent), so ordering is free here.
+     Deliverable: `render(archive)` identical before/after every later unit, diff zero.
+   - *Dispatch/forced/race section*: its logs (the parallel-test run, the `KEEL_FORCE` runs) are
+     NOT in the tracked archives, so its witness is a **live amd64 run**, and its rendering is
+     deterministic (the markers and PASS/FAIL are functions of the code, not benchmark noise).
+     **Capture this baseline at the pre-port revision BEFORE unit 2 touches anything** (Scott's
+     ordering ruling): the "before" arm cannot be re-created after surgery without a checkout
+     dance, so baseline-first-then-surgery is what keeps the witness cheap. A lab amd64 host
+     (vesta/ceres/janus, no AWS spend) captures it.
 2. **gate-p5 selection.** VECTOR_GREEN generalisation + arch-conditional expectations (category 2) +
    marker-derived backend words (category 1) + `GATE_PEAK`. Prove byte-unchanged via Unit 1; fire
    arm64 branches locally.
