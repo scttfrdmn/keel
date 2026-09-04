@@ -8,6 +8,24 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **arm64 Graviton fleet support, for keel's first judged arm64 verdicts (`#137`).** The AWS
+  launcher, the OpenBLAS reference and the evidentiary allowlist all learned arm64:
+  `aws-fleet.sh` resolves the AMI per instance-type architecture (read from the provider's
+  `SupportedArchitectures`, not a family-letter guess — an amd64 image on a Graviton boots
+  nothing and bills anyway); `remote.sh` admits `c7g.16xlarge` (64c, Neoverse V1) and
+  `c8g.48xlarge` (192c, Neoverse V2) to `KEEL_EVIDENTIARY_SIZES`, each the family-max size
+  exactly as the amd64 entries are and read from `describe-instance-types` (Graviton is
+  `threads/core=1`, so the `#82` SMT confound does not arise); `provision-openblas.sh` builds
+  the arm64 reference from source with `DYNAMIC_ARCH=1` (Ubuntu 24.04's 0.3.26 predates the
+  Neoverse V2 / SVE2 kernels a reference must not read below), removing any distro copy so the
+  `-lopenblas` link cannot silently take the wrong one, and `verify()` reads the version back
+  out of the marker to confirm the source build linked; `gate-p3.sh` sweeps the arm64 coretypes
+  (`ARMV8`/`NEOVERSEN1`/`NEOVERSEV1`/`NEOVERSEV2`, selected by remote `uname -m`) and unions
+  those tuned families into the AVX2-or-better allowlist (a floor: an x86 host cannot report
+  `neoversev2`, so the union launders nothing). The ARMV8-vs-Neoverse spread the sweep measures
+  is the SVE≈NEON comparison the campaign publishes.
+
 ### Changed
 - **The scaling aggregate's buckets now partition the fleet (`#90`, `#119`).** A host noise-limited
   on the scale criterion AND BASELINE on another (vesta, the #119 live exercise) set both `HOST_NOISY`

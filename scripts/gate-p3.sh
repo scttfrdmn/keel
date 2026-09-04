@@ -165,7 +165,16 @@ OPENBLAS_REMOTE_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 # is slow, and a slow reference makes keel look good. Every other failure mode of
 # this gate costs a session; this one would cost the truth of a number. A new
 # legitimate target name failing here costs whoever sees it one line of diff.
-OPENBLAS_OK_CORES="haswell skylakex cooperlake sapphirerapids zen"
+#
+# The arm64 families (#137) are UNIONED in rather than switched by host arch, and the
+# union is safe for exactly the reason the list is an allowlist and not a denylist: it
+# contains no generic family, only tuned NEON/SVE kernels a Graviton reference may
+# legitimately pin (armv8 is the NEON baseline OpenBLAS ships for Graviton, not a
+# generic-C build; neoversen1/v1/v2 are the tuned targets). A cross-arch false accept is
+# impossible -- an x86 host cannot report `neoversev2` nor an arm64 host `skylakex` -- so
+# the union can only accept more legitimate corenames, never launder a slow one. The
+# CEILING is still the swept fastest; this floor only rejects an ancient or generic family.
+OPENBLAS_OK_CORES="haswell skylakex cooperlake sapphirerapids zen armv8 neoversen1 neoversev1 neoversev2"
 
 # The coretype candidates the reference is swept over, and the reason the sweep
 # exists at all (ruling on issue #31).
@@ -190,6 +199,16 @@ OPENBLAS_OK_CORES="haswell skylakex cooperlake sapphirerapids zen"
 # "where valid" is established by RUNNING each candidate rather than by consulting a
 # table: one that cannot execute here is recorded as unavailable, not assumed absent.
 OPENBLAS_CORETYPES="default Zen Haswell SkylakeX Cooperlake SapphireRapids"
+
+# The arm64 candidates (#137), selected per host by `uname -m` inside ob_coretype_sweep
+# rather than unioned with the x86 list: an x86 coretype forced on Graviton reports "- -"
+# (unavailable) and only adds noise, and worse, mixing arches muddies the SVE≈NEON reading
+# this sweep is the instrument for. ARMV8 is the NEON kernel family; NEOVERSEV1 (Graviton3)
+# and NEOVERSEV2 (Graviton4) are the SVE families -- the sweep's achieved rates across these
+# three ARE the SVE≈NEON comparison (docs/neon-sweep.md's fleet half). NEOVERSEN1 is included
+# as the tuned-but-NEON-only middle point; a candidate the silicon cannot run is recorded
+# unavailable, exactly as on x86, so listing one absent on a given Graviton costs nothing.
+OPENBLAS_CORETYPES_ARM64="default ARMV8 NEOVERSEN1 NEOVERSEV1 NEOVERSEV2"
 
 # sentinel_hosts / sentinel_declaration moved to scripts/remote.sh (#146): the set is
 # now derived FROM the fleet, so it belongs beside remote_hosts, and a second consumer
@@ -221,7 +240,7 @@ ob_preflight() {
     go=none
     command -v go >/dev/null 2>&1 && go=$(go version | cut -d" " -f3)
     lib=none
-    for d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib; do
+    for d in /usr/local/lib /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu /usr/lib; do
       if [ -e "$d/libopenblas.so" ]; then lib="$d/libopenblas.so"; break; fi
     done
     printf "distro=%s go=%s lib=%s\n" "$distro" "$go" "$lib"
@@ -284,7 +303,11 @@ ob_coretype_sweep() {
   # expand here. Everything the remote shell owns is escaped as \$.
   ssh "${KEEL_SCP_OPTS[@]}" "$host" 'bash -s' 2>/dev/null <<EOF
 cd '$OPENBLAS_REMOTE_DIR' || exit 1
-for ct in $OPENBLAS_CORETYPES; do
+case "\$(uname -m)" in
+  aarch64|arm64) cts='$OPENBLAS_CORETYPES_ARM64' ;;
+  *)             cts='$OPENBLAS_CORETYPES' ;;
+esac
+for ct in \$cts; do
   if [ "\$ct" = default ]; then unset OPENBLAS_CORETYPE; else export OPENBLAS_CORETYPE="\$ct"; fi
   out="\$(env GOMAXPROCS=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 ./bench-ob.test \
     -test.run=NONE -test.bench='$GATE_OPENBLAS' $(printf '%s ' "${BFLAGS[@]}") 2>&1)" || {

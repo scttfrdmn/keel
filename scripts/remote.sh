@@ -1327,7 +1327,20 @@ assert_governor() {
 # Xeon Platinum 8124M, 36 cores / 2 sockets, equal to c5n.metal's core count. c6i.32xlarge
 # was measured in the same run and is NOT added -- fma-bound at 48.7% of peak, so admitting
 # it would grant a judgement that fails P2 (#6 Q3, and see #86).
-KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge c5n.18xlarge"
+#
+# c7g.16xlarge and c8g.48xlarge added 2026-09-04 (#137, keel's first judged arm64 fleet),
+# each the family-MAX non-metal size exactly as the amd64 entries are -- read from `aws ec2
+# describe-instance-types` that day, not recalled: c7g.16xlarge is 64 vCPU / 64 cores
+# (Graviton3, Neoverse V1, the largest c7g and equal to c7g.metal's core count); c8g.48xlarge
+# is 192 vCPU / 192 cores (Graviton4, Neoverse V2, the largest non-metal c8g). Both report
+# DefaultThreadsPerCore=1, so vCPU == physical cores with no SMT to fold -- the #82 confound
+# that forced the exploration fleet onto describe-read physical-core sizes does not arise on
+# Graviton, where equal vCPU already means equal cores. c8g.48xlarge spans two Graviton4
+# sockets, no differently than the amd64 c7i.48xlarge/c7a.48xlarge here already do; "whole
+# host" is the ownership claim the class rests on, and family-max is a whole host. The
+# per-host read-back (core count, NUMA topology, corename) lands in the #137 launch record,
+# as c5n's did in its build log.
+KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge c5n.18xlarge c7g.16xlarge c8g.48xlarge"
 
 # host_admission PROV — set ADM_CLASS and ADM_INSTANCE from a provenance line
 # (docs/hosts.md, ruled 2026-08-17 on #104). ADM_CLASS is one of:

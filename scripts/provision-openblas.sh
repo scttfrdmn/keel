@@ -135,15 +135,20 @@ probe() {
     command -v go >/dev/null 2>&1 && go=$(go version | cut -d" " -f3)
     goat=none
     [ -x /usr/local/go/bin/go ] && goat=$(/usr/local/go/bin/go version | cut -d" " -f3)
+    arch=$(uname -m)
     lib=none
-    for d in /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib; do
+    # /usr/local/lib FIRST (#137): the arm64 reference is a DYNAMIC_ARCH source build that
+    # installs there, and it must be the one found even when a distro package also exists in
+    # the triplet dir. Harmless on amd64, where the distro path is the only populated one and
+    # /usr/local/lib is empty by convention here.
+    for d in /usr/local/lib /usr/lib64 /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu /usr/lib; do
       if [ -e "$d/libopenblas.so" ]; then lib="$d/libopenblas.so"; break; fi
     done
     cc=none
     for c in cc gcc clang; do
       if command -v "$c" >/dev/null 2>&1; then cc=$c; break; fi
     done
-    printf "distro=%s go=%s goat=%s lib=%s cc=%s governor=%s\n" "$distro" "$go" "$goat" "$lib" "$cc" "$gov"
+    printf "distro=%s arch=%s go=%s goat=%s lib=%s cc=%s governor=%s\n" "$distro" "$arch" "$go" "$goat" "$lib" "$cc" "$gov"
   ' 2>/dev/null
 }
 
@@ -212,6 +217,46 @@ install_openblas() {
   confirm "run it?" || return 1
   # shellcheck disable=SC2029  # $cmd is this script's own string, expanded here
   ssh "${SSH_TTY_OPTS[@]}" "$host" "$cmd"
+}
+
+# build_openblas_arm64 HOST — the same-host reference on Graviton, built FROM SOURCE with
+# DYNAMIC_ARCH=1 so every arm64 kernel family is present in one library and the load-time
+# OPENBLAS_CORETYPE knob can select among them. gate-p3.sh's ob_coretype_sweep is the
+# consumer, and the spread it measures across ARMV8 (NEON) and NEOVERSEV1/V2 (SVE) IS the
+# SVE≈NEON deliverable #137 charters (docs/neon-sweep.md's fleet half).
+#
+# Source and not the distro package (the amd64 path's choice) for one measured reason, the
+# same one openblasCorename() guards on x86: Ubuntu 24.04 ships OpenBLAS 0.3.26, whose arm64
+# DYNAMIC_ARCH set predates the Neoverse V2 / SVE2 tuning this campaign measures against. A
+# reference missing the host's best kernel reads LOW, which inflates keel's ratio — the one
+# direction a denominator must never err. The version is pinned ($OPENBLAS_VERSION, a tag)
+# and recorded by the marker, so it is as reproducible as a package.
+#
+# The distro package is REMOVED first (|| true — it is usually absent on the stock AMI): a
+# `-lopenblas` with no `-L` resolves by ld's search order, and two libopenblas.so with the
+# same SONAME is the one way this links the wrong one SILENTLY. One library on the host means
+# the reference cannot be anything but the source build, which verify() then confirms by
+# reading the version back out of the marker. USE_OPENMP=0 and the runtime OPENBLAS_NUM_THREADS=1
+# keep it single-threaded exactly as the amd64 reference is; NUM_THREADS is built to nproc so
+# the cap, not the build, sets the count.
+OPENBLAS_VERSION="${KEEL_OPENBLAS_VERSION:-v0.3.29}"
+OPENBLAS_BUILD_DIR="/tmp/keel-openblas-build"
+build_openblas_arm64() {
+  local host="$1" cmd
+  note "on $host: build OpenBLAS $OPENBLAS_VERSION from source (DYNAMIC_ARCH=1) into /usr/local"
+  note "  arm64 source build, not the distro package: 24.04's 0.3.26 predates the Neoverse V2/SVE2"
+  note "  kernels this reference must not read below (openblasCorename's guard, on arm64)"
+  confirm "remove any distro openblas, install build deps, clone $OPENBLAS_VERSION, build and 'sudo make install' it?" || return 1
+  cmd="$APT_WAIT sudo apt-get remove -y libopenblas0 libopenblas-dev libopenblas0-pthread 2>/dev/null || true
+    $APT_WAIT sudo apt-get update && sudo apt-get install -y gcc gfortran make git
+    rm -rf '$OPENBLAS_BUILD_DIR'
+    git clone --depth 1 --branch '$OPENBLAS_VERSION' https://github.com/OpenMathLib/OpenBLAS '$OPENBLAS_BUILD_DIR'
+    make -C '$OPENBLAS_BUILD_DIR' -j\"\$(nproc)\" DYNAMIC_ARCH=1 TARGET=ARMV8 USE_OPENMP=0 NUM_THREADS=\"\$(nproc)\" FC=gfortran CC=gcc
+    sudo make -C '$OPENBLAS_BUILD_DIR' PREFIX=/usr/local NO_STATIC=1 install
+    sudo ldconfig
+    rm -rf '$OPENBLAS_BUILD_DIR'"
+  # shellcheck disable=SC2029  # $cmd is this script's own string, expanded here
+  ssh "${SSH_TTY_OPTS[@]}" "$host" "set -e; $cmd"
 }
 
 # verify_go_tarball FILE — enforce a digest on the downloaded toolchain.
@@ -312,7 +357,7 @@ install_go() {
 # short -benchtime, because the question here is what the reference IS, not how fast
 # it is; the gate measures the rate under §5 rule 5's methodology.
 verify() {
-  local host="$1" out
+  local host="$1" goarch="${2:-}" out
   if [[ -n "$(git status --porcelain)" ]]; then
     bad "working tree is dirty; \`git archive HEAD\` would ship something other than what is here"
     return 1
@@ -340,6 +385,19 @@ verify() {
     return 1
   fi
   note "reference: $marker"
+  # On arm64 the reference MUST be the source build, not a distro libopenblas that won the
+  # `-lopenblas` link (#137). openblas_get_config() carries the version, so read it back: a
+  # missing version string means the wrong library linked despite build_openblas_arm64's
+  # removal of the distro copy, and that is a silently-wrong denominator this must catch.
+  if [[ "$goarch" == arm64 ]]; then
+    local wantver="${OPENBLAS_VERSION#v}"
+    if [[ "$marker" != *"$wantver"* ]]; then
+      bad "the linked OpenBLAS is not the pinned source build: the marker names no '$wantver' ($OPENBLAS_VERSION)"
+      bad "a distro libopenblas.so likely won the link; check that /usr/local/lib is on ldconfig and no package remains"
+      return 1
+    fi
+    note "linked reference confirmed as the $OPENBLAS_VERSION source build"
+  fi
   core="$(fieldof corename "$marker")"
   threads="$(fieldof threads "$marker")"
   local ok=0
@@ -381,7 +439,9 @@ main() {
   # the default alone would have left that path intact.
   GO_VERSION="${KEEL_GO_VERSION:-go1.27.0}"
   GO_MIN_MINOR=27            # not 26: 1.26 predates T23's archsimd rename (#70)
-  GO_TARBALL="$GO_VERSION.linux-amd64.tar.gz"
+  # GO_TARBALL is set PER HOST from its `uname -m` (#137): the arm64 Graviton fleet needs
+  # linux-arm64, the amd64 fleet linux-amd64, and a fleet may mix the two. verify_go_tarball
+  # and install_go read it as a global, so the loop assigns it before either is reached.
   SRC_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 
   # Interactive options: no -n (sudo needs stdin) and -t (sudo wants a tty).
@@ -389,7 +449,7 @@ main() {
 
   CHECK_ONLY=0
   ASSUME_YES=0
-  local a p distro ver atver lib cc HOSTS host
+  local a p distro ver atver lib cc arch goarch HOSTS host
   local -a ARGS=()
   for a in "$@"; do
     case "$a" in
@@ -431,6 +491,13 @@ main() {
     distro="$(fieldof distro "$p")"; ver="$(fieldof go "$p")"
     atver="$(fieldof goat "$p")"
     lib="$(fieldof lib "$p")";       cc="$(fieldof cc "$p")"
+    arch="$(fieldof arch "$p")"
+    case "$arch" in
+      aarch64|arm64) goarch=arm64 ;;
+      x86_64|amd64)  goarch=amd64 ;;
+      *) bad "unrecognized machine arch '$arch' from uname -m; cannot pick a go tarball or reference build"; RC=1; continue ;;
+    esac
+    GO_TARBALL="$GO_VERSION.linux-$goarch.tar.gz"
     # Classified by assert_governor, not by comparing the token here: it owns the
     # five-state taxonomy, and a second reader of one field is how the same knob came to
     # have two meanings in this tree. Only the parse is wanted, so its verdict lines go
@@ -471,7 +538,22 @@ main() {
       note "  or: echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
     fi
 
-    if [[ "$lib" == none ]]; then
+    # OpenBLAS: the amd64 reference is the distro package (reproducible, recorded by the
+    # marker); the arm64 reference is a DYNAMIC_ARCH SOURCE build (#137), forced even when a
+    # distro package is present because 0.3.26 predates the Neoverse V2/SVE2 kernels — see
+    # build_openblas_arm64. `lib` under /usr/local means the source build is already there;
+    # anything else on arm64 (none, or a distro path) triggers the source build, which removes
+    # the distro copy so the reference cannot be ambiguous.
+    if [[ "$goarch" == arm64 ]]; then
+      if [[ "$lib" != /usr/local/* ]]; then
+        if [[ "$CHECK_ONLY" -eq 1 ]]; then
+          bad "no /usr/local source OpenBLAS (lib=$lib); re-run without --check to build it from source"
+          RC=1; continue
+        fi
+        build_openblas_arm64 "$host" || { RC=1; continue; }
+        lib=/usr/local/lib/libopenblas.so   # what the build just installed; verify() re-reads it live
+      fi
+    elif [[ "$lib" == none ]]; then
       if [[ "$CHECK_ONLY" -eq 1 ]]; then
         bad "no libopenblas.so (re-run without --check to install it)"
         RC=1; continue
@@ -500,7 +582,7 @@ main() {
         install_go "$host" "$atver" || { RC=1; continue; }
       fi
     fi
-    verify "$host" || RC=1
+    verify "$host" "$goarch" || RC=1
     # After verify(), so that a host whose library and toolchain are fine but whose
     # governor is wrong ends on the reason it still cannot be measured, rather than on
     # "ready". The installs above are not skipped for it: the package work is valid and

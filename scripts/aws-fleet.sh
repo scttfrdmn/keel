@@ -107,6 +107,43 @@ case "$MARKET" in
   *) die "KEEL_FLEET_MARKET='$MARKET' is neither 'spot' nor 'on-demand' -- refusing to guess which one a judged run wanted" ;;
 esac
 
+# arch_of_type TYPE -- the AMI architecture EC2 boots this instance type on, read from the
+# provider (ProcessorInfo.SupportedArchitectures) rather than inferred from the family
+# letter. A Graviton 'g' suffix (c7g/c8g/m7g...) is a reliable tell today, but a wrong
+# guess boots an amd64 image on arm64 silicon -- which does not fail fast, it bills a host
+# that never comes up on ssh -- and the authoritative answer is one free read-only call.
+# Maps AWS's `x86_64`/`arm64` onto the token Canonical's SSM path uses (`amd64`/`arm64`).
+# This is the launch's SECOND non-spawn AWS call, and like the first (the SSM read) it is
+# not an instance operation: describe-instance-types is free and read-only.
+arch_of_type() {
+  local t="$1" a
+  a="$(aws --region "$REGION" ec2 describe-instance-types --instance-types "$t" \
+    --query 'InstanceTypes[0].ProcessorInfo.SupportedArchitectures[0]' --output text 2>/dev/null)"
+  case "$a" in
+    x86_64) echo amd64 ;;
+    arm64)  echo arm64 ;;
+    *) die "could not read a supported architecture for instance type '$t' (got '$a'); an AMI cannot be chosen without one, and guessing is what boots the wrong image" ;;
+  esac
+}
+
+# ami_for_arch ARCH -- the current Ubuntu 24.04 AMI for amd64 or arm64, from the SAME SSM
+# path the fleet has always used with the arch segment substituted. Memoized in AMI_CACHE
+# so a same-arch fleet reads SSM once. The distro pin (24.04, not spawn's AL2023 default)
+# is unchanged and load-bearing for the reason the old single-arch read named: provision-
+# openblas.sh's package maps cover ubuntu/debian and rhel/fedora, NOT amzn. Both arches
+# publish this path; #137's arm64 Graviton fleet is the first caller of the arm64 one.
+declare -A AMI_CACHE=()
+ami_for_arch() {
+  local arch="$1" ami
+  [[ -n "${AMI_CACHE[$arch]:-}" ]] && { printf '%s\n' "${AMI_CACHE[$arch]}"; return; }
+  ami="$(aws --region "$REGION" ssm get-parameters \
+    --names "/aws/service/canonical/ubuntu/server/24.04/stable/current/$arch/hvm/ebs-gp3/ami-id" \
+    --query 'Parameters[0].Value' --output text)"
+  [[ "$ami" == ami-* ]] || die "no Ubuntu 24.04 $arch AMI id from SSM (got '$ami')"
+  AMI_CACHE[$arch]="$ami"
+  printf '%s\n' "$ami"
+}
+
 # fleet_json -- the launcher's inventory of this project's instances, as a JSON array.
 # Selected by NAME PREFIX because `spawn list` reports no tags, and validated as an array
 # before use: an unparseable answer must not read as an empty fleet, which is the
@@ -162,19 +199,12 @@ cmd_up() {
       die "$role is running and this fleet does not name it; 'down' first (two fleets is how one gets forgotten)"
   done <<<"$up_now"
 
-  # THE ONE NON-SPAWN AWS CALL, and it is not an instance operation: an SSM parameter
-  # read. The distro is pinned to Ubuntu 24.04 rather than taking spawn's AL2023 default
-  # because provision-openblas.sh's package maps cover ubuntu/debian and rhel/fedora and
-  # NOT `amzn`, so AL2023 would reach `unrecognized distro id` after the fleet was
-  # billing. Changing the OS also changes which OpenBLAS build every published ratio is
-  # measured against, and that is not a change to make as a side effect of a launcher
-  # rewrite.
-  local ami
-  ami="$(aws --region "$REGION" ssm get-parameters \
-    --names /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id \
-    --query 'Parameters[0].Value' --output text)"
-  [[ "$ami" == ami-* ]] || die "no Ubuntu 24.04 AMI id from SSM (got '$ami')"
-  say "region $REGION, AMI $ami, TTL $TTL, market $MARKET"
+  # The AMI is resolved PER ROLE now (arch_of_type -> ami_for_arch, memoized), not once
+  # up front: a fleet may mix arches -- #137's is all arm64 Graviton, but the exploration
+  # fleet is amd64 -- and an amd64 image on a c7g boots nothing and bills anyway. The two
+  # SSM/describe calls are read-only and free, so validating them applies to a dry run too.
+  # The distro pin (Ubuntu 24.04) and its reason live in ami_for_arch's header.
+  say "region $REGION, TTL $TTL, market $MARKET"
 
   # Spot is the PRESENCE of a flag, not a value for one, so the arm is an array that is
   # either empty or the whole option.
@@ -190,13 +220,18 @@ cmd_up() {
   local dry_args=()
   [[ "${KEEL_FLEET_DRYRUN:-0}" != 1 ]] || { dry_args=(--estimate-only); say "DRY RUN: validating flags, nothing will be launched (spawn's price is wrong per size, spawn#543; truffle prices)"; }
 
-  local type uarch spec
+  local type uarch spec arch ami
   for spec in "${FLEET[@]}"; do
     IFS=: read -r role type uarch <<<"$spec"
     if grep -qxF "keel-$role" <<<"$up_now"; then
       say "$role  $type  (already running, not relaunched)"
       continue
     fi
+    # Resolve the AMI for THIS type's arch before launching it, so an amd64 image never
+    # reaches a Graviton instance. Both calls are read-only; a dry run resolves them too,
+    # which is how a wrong arch is caught by --estimate-only instead of by a dead ssh wait.
+    arch="$(arch_of_type "$type")"
+    ami="$(ami_for_arch "$arch")"
     # THE NAME IS THE JOIN KEY. It equals the ssh alias this script writes below and the
     # `name` spawn_probe matches on, so admission can only vouch for a host whose alias
     # and launcher record are the same string. Nothing enforces that from the far side;
@@ -222,7 +257,7 @@ cmd_up() {
       --command 'sudo apt-get update -y && sudo apt-get install -y tmux' \
       --wait-for-ssh -y "${dry_args[@]+"${dry_args[@]}"}" ||
       die "launching keel-$role ($type) failed; 'status' says what is billing"
-    say "$role  $type  ($uarch, $MARKET)"
+    say "$role  $type  ($uarch, $arch, AMI $ami, $MARKET)"
   done
   # A dry run has nothing to wire, and wiring would die on an empty inventory -- which
   # would read as a failed validation when the validation in fact passed.
