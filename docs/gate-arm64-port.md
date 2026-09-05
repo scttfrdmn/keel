@@ -44,7 +44,12 @@ treatments:
    `KERN_FUNCS="Kernel2x32,…"`, `GATE_PEAK_FUNC` name Go symbols disassembled locally with
    `-gcflags=-S`; on arm64 they are `neonPeak` and the #136 tiles (`Kernel8x8`, `Kernel4x16`, …).
    Not in any marker. Either reflect the name off `PeakKernel.Run`/the kernel registry (structural,
-   preferred) or an arch-conditional block (amd64 verbatim). This is gate-p2/p3 only.
+   preferred) or an arch-conditional block (amd64 verbatim). **This was scoped "gate-p2/p3 only" and
+   that was wrong (#158, surfaced by the #137 campaign):** `gate-p4.sh` has the same source-fact names
+   (`KERN_FUNCS`/`PEAK_FUNCS`/`GATE_PEAK`) AND is in gate-p5's carry closure (`gate-p5.sh` runs
+   gate-p4, which runs gate-p3). A gate that carries another gate needs its whole carry chain ported,
+   and the witness must drive the live **p5→p4→p3** chain on arm64 — not each gate in isolation, which
+   is how gate-p4's amd64 hardcodes reached a billed Graviton run.
 
 ## Structural differences that are not just names
 

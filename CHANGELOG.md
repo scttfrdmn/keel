@@ -52,6 +52,18 @@ While the major version is 0, minor versions may contain breaking changes.
   the 0.55 comparison unreachable), and 5b is REPORTED (the amd64 zero-spill frontier does not execute
   on NEON). Importing a standard that predates the run is the legitimate amend — nothing was measured
   first; the disclosure block names both changes and the rulings.
+- **The #137 Graviton campaign surfaced that `gate-p4.sh` was never ported to arm64 (`#158`).** The
+  #155 gate port did gate-p3/gate-p5 and the spill-audit tool, scoping the source-fact function names
+  "gate-p2/p3 only" — but gate-p4 has the same hardcodes (`KERN_FUNCS=Kernel2x32,Kernel4x32`,
+  `PEAK_FUNCS=avx512Peak,...`, `GATE_PEAK=Peak/avx512`) and is in gate-p5's carry closure (p5→p4→p3),
+  so on the arm64 fleet `Peak/avx512` selected a row the binary never emits ("head peak window did
+  not produce a result") and the audit ran against amd64 symbols. gate-p3/gate-p5's own arm64 ports
+  rendered correctly live (both hosts evidentiary, dispatch `8x8/neon`, 5b REPORTED, percent-of-peak
+  BASELINE). Fleet torn down, gap filed; the fix (arm64 block in gate-p4, witness driving the full
+  carry chain) is next-session work. Also recorded: keel's first measured NEON-vs-OpenBLAS Sgemm
+  ratio on Graviton is 30.9% (gvt3) / 54.4% (gvt4), below the 60% floor — the honest first number,
+  pending a coretype-swept run to pin the fair reference (gvt4's OpenBLAS auto-detected the slower
+  `neoversen1` family on V2 silicon).
 - **Measured runs on shared lab hardware now serialize through the fleet's `pueue` queue**
   (`scripts/remote.sh` `remote_exec`, `scripts/labrun`, `CLAUDE.md`, `CONTRIBUTING.md`). Several
   projects share the lab machines and nothing stopped two landing on one box at once — the exact
