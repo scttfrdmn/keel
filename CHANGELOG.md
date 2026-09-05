@@ -52,6 +52,17 @@ While the major version is 0, minor versions may contain breaking changes.
   the 0.55 comparison unreachable), and 5b is REPORTED (the amd64 zero-spill frontier does not execute
   on NEON). Importing a standard that predates the run is the legitimate amend — nothing was measured
   first; the disclosure block names both changes and the rulings.
+- **The CL 824624 daily watch was scheduled-but-not-firing, and is re-created durable with a
+  liveness witness (`#127`).** The watch cron was session-only (`durable:false`), so it fired only
+  while one session's REPL was idle-and-running and did not fire autonomously on 2026-09-04/-05 (no
+  session spawned in either 08:13 window; no `scheduled_tasks.json` existed) — a silent scheduler
+  reads identically to a quiet CL, the failure the died-vs-never-started vocabulary exists to catch,
+  turned on the watch itself. Established from execution history, not scheduled state. Re-created
+  **durable** (persisted to repo-local `.claude/scheduled_tasks.json`) and given its own witness:
+  every fire appends to `build/cl1-watch-heartbeat.log` before reading the CL, so a reading's first
+  act is to confirm the instrument ran (a >26h heartbeat gap is a lapsed-watch finding, distinct
+  from a quiet CL). Procedure documented in `docs/upstream-plan.md`. The CL itself is genuinely quiet
+  (full-signature match to the Sep-3 baseline, no new activity).
 - **The #137 Graviton campaign surfaced that `gate-p4.sh` was never ported to arm64 (`#158`).** The
   #155 gate port did gate-p3/gate-p5 and the spill-audit tool, scoping the source-fact function names
   "gate-p2/p3 only" — but gate-p4 has the same hardcodes (`KERN_FUNCS=Kernel2x32,Kernel4x32`,

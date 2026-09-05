@@ -700,6 +700,27 @@ was a REVIEWER in the morning's baseline and is absent from the evening's. The d
 now finds the watch by its prompt rather than by an id, because the id changes on every
 re-baseline and a hard-coded one reports a healthy watch as lapsed.
 
+### The daily watch, and its own liveness witness (2026-09-05)
+
+The daily watch was a **session-only** cron (`durable:false`): it fired only while one session's REPL
+was idle-and-running, so it did **not** fire autonomously on 2026-09-04 or -05 (no session was spawned
+in either 08:13 window across any project; no `.claude/scheduled_tasks.json` existed). A session-only
+cron cannot be a multi-day external clock, and **scheduled-but-not-firing reads identically to a quiet
+CL** — the failure the died-vs-never-started vocabulary exists to catch, here turned on the watch
+itself. Established from execution history, never scheduled state; the latter is the blind spot.
+
+**Fix:** re-created **durable** (persisted to `.claude/scheduled_tasks.json`), and the watch's liveness
+now has its own witness — every fire appends `<UTC> fired ps=<n> msgs=<n> unresolved=<n>` to
+`build/cl1-watch-heartbeat.log` **before** reading the CL. A reading's first act is to read the last
+heartbeats: a gap > ~26h is a **lapsed-watch** finding (fix the scheduler), distinct from a quiet CL
+(no new activity). The two must never be conflated — a "quiet" reading is trustworthy only behind a
+heartbeat that proves the instrument ran. Durable recurring crons auto-expire after 7 days; renew.
+
+**Procedure (no polling, one shot per fire):**
+- `curl -s 'https://go-review.googlesource.com/changes/824624/detail?o=ALL_REVISIONS&o=DETAILED_LABELS&o=MESSAGES'` — `/detail` WITHOUT `o=ALL_REVISIONS` returns zero revisions and reads as "0 patchsets", the instrument's blind spot, not a vanished patchset; plus `.../824624/comments` for comment ids.
+- Baseline = the signature in the paragraph above (status NEW, ps `fcc582225c`, 9 msgs, 2 comments/1 unresolved, only `LUCI-TryBot-Result+1`, no Code-Review vote ever, Möhrmann absent). New activity = a 10th message, a 3rd comment, any unresolved-count change, any nonzero Code-Review/Hold/Commit-Queue vote, or a new patchset.
+- Nothing changed → heartbeat, one line, stop. New activity → the action steps under "CL 1 is mailed". **The durable daily watch's own outward actions (mailing a patchset) are confirm-first — never auto-fired unattended**, since durability grants firing with no operator present. The one standing exception is the **Sep-7 day-seven ping** (cron `6607712e`, durable): Scott pre-authorized it 2026-09-03 as a single self-limiting nudge — one neutral line, only if still silent, nothing if a reviewer has replied — so it fires itself; that authorization is the confirmation, granted in advance.
+
 ## CL 2's recon: what is stalled upstream is a decision, not an implementation
 
 Read-only, 2026-09-01, eight Gerrit queries plus the GitHub issue and its timeline; full plan
