@@ -44,6 +44,14 @@ While the major version is 0, minor versions may contain breaking changes.
   is arch-correct (arm64 `[scalar]`), so the `keel-p5-dispatch` marker discloses the partial port as
   `l1=scalar kern=neon,scalar`. Reframed, not weakened — the runnable-advertised checks that caught
   #136's regression are unchanged.
+- **The Graviton pre-registration (`docs/graviton-registration.md`) is amended to the #155 rulings**
+  before any pass ran (`#137`). It was committed at `fa5dca4`, ahead of #155's two cross-ISA rulings,
+  so it still typed **p3 percent-of-peak** as a fixed-floor criterion judged against `PEAK_FLOOR=0.55`
+  and omitted **criterion 5b** from reported-not-judged. Corrected to what the arm64 gate now renders
+  (`gate-p3.sh:838`, `:685`): percent-of-peak is registered-baseline (BASELINE on the ladder passes,
+  the 0.55 comparison unreachable), and 5b is REPORTED (the amd64 zero-spill frontier does not execute
+  on NEON). Importing a standard that predates the run is the legitimate amend — nothing was measured
+  first; the disclosure block names both changes and the rulings.
 - **Measured runs on shared lab hardware now serialize through the fleet's `pueue` queue**
   (`scripts/remote.sh` `remote_exec`, `scripts/labrun`, `CLAUDE.md`, `CONTRIBUTING.md`). Several
   projects share the lab machines and nothing stopped two landing on one box at once — the exact

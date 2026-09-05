@@ -9,11 +9,37 @@ in advance so a surprising reading is adjudicated against a prediction, not rati
 Everything below is a prediction about what the **instruments render**, at the row granularity they
 render it — not a hope about what the silicon does.
 
+## Amendment 2026-09-05 (before any pass ran): two criteria re-typed to match the #155 rulings
+
+This file was committed at `fa5dca4`, before #155's two cross-ISA rulings landed. Those rulings
+(committed in #155, so predating this campaign session — nothing here has been measured yet) changed
+the arm64 gate's rendering for two criteria, so the predictions below are corrected to say what the
+gate now actually renders (`gate-p3.sh:685`, `:838`, verified by the #155 item-3 local replay).
+Importing a standard that predates the run is the legitimate amend; rewriting after a reading is not.
+Both changes are the same principle — *a bar travels with its derivation set, never across ISAs*:
+
+- **p3 percent-of-peak** moves from *fixed-floor, judged from the first pass* to *registered-baseline,
+  BASELINE on the ladder passes*. Ruling 2 (#155): `PEAK_FLOOR=0.55` is amd64-derived (an AVX-512
+  microkernel floor), so on a first-sight 4-lane NEON kernel it is a category error, not a bar. The
+  gate renders BASELINE and records the candidate baseline; `throughput_verdict`, where the 0.55
+  comparison lives, is unreachable on arm64 by construction. The "is 55% the right floor for NEON?"
+  question the original text posed as a finding-to-adjudicate is thereby *answered in advance* by the
+  ruling — it is not, so arm64 registers its own floor per rule 17 rather than being judged against a
+  borrowed one.
+- **criterion 5b** (shape-frontier reconciliation, `SWEEP_BEST_IPF`) is added to *reported-not-judged*.
+  Ruling 1 (#155): `SWEEP_BEST_IPF=4.625` and `shapegen -frontier` are amd64's zero-spill SHAPE
+  frontier; running them against NEON would rank arm64 shapes by a frontier they do not execute (a
+  rank inversion). REPORTED with its cause; the arm64 frontier is a filed v0.2.0 unit (#156).
+
 ## The fleet, as launched and read back
 
-Two full-size on-demand Graviton hosts, `truffle`/`spawn` under `AWS_PROFILE=aws`, 8h TTL, launched
-2026-09-04 from commit `64632e8` (arm64 fleet path) with the CPU-model key fixed in `c6e465a`. Both
-class **evidentiary** (`host_admission`, verified live), so their perf may be judged.
+Two full-size on-demand Graviton hosts, `truffle`/`spawn` under `AWS_PROFILE=aws`, 8h TTL. The first
+launch (2026-09-04, commit `64632e8`) surfaced #155 and was torn down; this campaign **relaunches at
+the frozen post-#155 revision `cd2be06`** (all three #155 units green, the gate rendering the arm64
+shape this file predicts). The CPU-model key was fixed in `c6e465a`. The read-back table below is
+from the first launch and is **re-verified live on relaunch** (same instance families → same keys and
+caches expected; any divergence is disclosed at launch, not assumed). Both class **evidentiary**
+(`host_admission`, verified live), so their perf may be judged.
 
 | host | instance | µarch | CPU-model key | cores | sockets | smt | caches |
 |---|---|---|---|---|---|---|---|
@@ -60,24 +86,32 @@ Registered-baseline criteria — **BASELINE on the two ladder passes, judged on 
   `own_baseline − 0.403×`.
 - **share/Sgemm, share/Ssyrk, share/Ssymm** (`CEIL_FRACTION=44.2`): both outside `CEIL_DERIVED_FROM`
   → BASELINE, candidate rows emitted. Confirmation judges at `own_baseline − 2.6` points.
+- **p3 percent-of-peak** (amended 2026-09-05 — see above; `gate-p3.sh:838`): both hosts first-sight →
+  BASELINE, "RECORDED as its candidate baseline, not judged against `PEAK_FLOOR=0.55`" (that floor and
+  the issue/fma frontier are amd64-derived), candidate row emitted. A reviewed landing commit types
+  the arm64 percent-of-peak floor from the host's own archives; the confirmation pass judges against
+  that own-derived floor, not against 0.55. The #136 sweep showed the shipped tiles are zero-spill and
+  competitive, so the recorded fraction is the finding, not a hurdle. Item-3 local replay rendered
+  `8x8/neon reaches 32.8% of measured NEON peak, RECORDED as candidate baseline` with the 0.55
+  comparison absent — the shape both hosts should reproduce.
 
 Reported-not-judged, fleet-wide (not an arm64 property):
 
 - **p5 ceiling scaling**: **NO FRACTION IN FORCE** — reported against each host's measured 8-thread
   ceiling, no pass/fail, exactly as on every amd64 host right now.
+- **criterion 5b** (shape-frontier reconciliation, `SWEEP_BEST_IPF`; amended 2026-09-05 — see above;
+  `gate-p3.sh:685`): REPORTED on arm64, not judged — the amd64 zero-spill frontier does not execute on
+  NEON, so ranking arm64 shapes by it is a rank inversion. The arm64 frontier is filed as a v0.2.0
+  unit (#156). This one *is* an arm64 property (unlike p5 ceiling scaling), by the ruling.
 
 Fixed-floor criteria — **judged from the first pass** (no `baseline_state`; an absolute floor on a
 live per-host reference, so nothing about them predates a first-sight host):
 
 - **p3 OpenBLAS ratio** (≥60% of same-host OpenBLAS at 2048³): judged. Reference is the **source-built
   DYNAMIC_ARCH** OpenBLAS 0.3.29, pinned to the fastest swept coretype. *Expected to pass* — but this
-  is the first NEON-vs-OpenBLAS-NEON ratio keel has ever measured, so the number is the finding.
-- **p3 percent-of-peak** (≥55% of the NEON ceiling from `peak_arm64.go`): judged. *Expected to pass*,
-  and this is the load-bearing uncertainty: the 55% floor was **derived on AVX-512 microkernels**. A
-  first-sight arm64 FAIL here is therefore a **cross-ISA floor-transfer question** (is 55% the right
-  floor for a four-lane NEON kernel?) before it is a keel regression — it is pre-registered as a
-  finding to adjudicate, not an automatic P2/P3 STOP. The #136 sweep already showed the shipped tiles
-  are zero-spill and competitive, so a gross miss would itself be surprising.
+  is the first NEON-vs-OpenBLAS-NEON ratio keel has ever measured, so the number is the finding. (This
+  one stays fixed-floor: it is a floor on a live per-host reference, not the amd64-derived 0.55, so no
+  ruling moved it — unlike percent-of-peak, now registered-baseline above.)
 - **p4 syrk/gemm** (≥0.85): judged; co-tenancy divides out (it does not consult admission, by ruling),
   so it is as applicable on Graviton as anywhere. *Expected to pass.*
 
