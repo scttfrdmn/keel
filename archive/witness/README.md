@@ -28,6 +28,20 @@ fields: the `RUN_STAMP` timestamp and the live disk-headroom reading — neither
 the witness is **non-vacuous** (`scripts/gate-witness.sh selfcheck`: a planted `GATE_PEAK=Peak/avx2`
 moves the rendering, so a zero-diff is a finding, not silence).
 
+## gate-p3 (unit 3)
+
+- **Spill-audit source facts** — `preport-p3-local-69d5f21.log` (60 lines). gate-p3's `-S`
+  spill audit is a LOCAL cross-compile disassembly (the tool targets amd64 from any host), so
+  this arm needs no corpus: replay with an empty corpus renders the local audit (0 spills for
+  `Kernel2x32`/`Kernel4x32`, register-only `avx512Peak`, `audited insns/FMA: 2x32 4.625 4x32
+  6.250 avx512Peak 2.250`, shapegen frontier) while the remote arm renders unmeasured. Reproduce:
+  `KEEL_REPLAY=replay KEEL_REPLAY_DIR=<dir with a probe-*.out> KEEL_REMOTE_HOSTS=keel-skx bash
+  scripts/gate-p3.sh` through the normalizer. Deterministic (zero diff) and non-vacuous (a planted
+  `GATE_PEAK_FUNC` change moves the audit line). This is unit 3's hardest category — the source-fact
+  function names no marker derives — and the port must arch-condition them AND the spill-audit tool
+  (`internal/spill`, which hardcodes GOARCH=amd64 and whose classification is amd64-specific per
+  `spill.go`). The remote arm (OpenBLAS ratio, coretype sweep) will use a tracked gate-p3 archive.
+
 ## Not witnessed here (covered elsewhere, or out of scope)
 
 The local builds/vet/lint, the local scalar/simd test runs, and the `-race` leg are skipped under

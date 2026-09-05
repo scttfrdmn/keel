@@ -1,0 +1,60 @@
+gate-replay: replay mode, corpus /tmp/keel-p3-boot
+== gate-p3: packing + blocking -> full Sgemm ==
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- builds --
+        [replay] builds/vet skipped: deterministic and outside the witness scope (DESIGN.md rule 12)
+
+-- Sgemm vs the float64 oracle: size sweep x transpose x alpha x beta --
+        the local run exercises the scalar path only (darwin/arm64 has no archsimd);
+        the sweep's extent is audited below from a host that ran it with avx512 live
+        [replay] local scalar/simd test runs skipped: timing-variable and outside the witness scope
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: <N> MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+        [keel-skx] admission class: unknown (instance=unread, virt=unread, spawn=unread) — no instance identity was read from this host
+        [keel-skx] Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | instance=c5n.18xlarge | virt=guest | 72 cpus | 36 cores | smt=2 | 2 sockets | governor=absent | tmux=yes | Linux 6.8.0-aws | L1d=32K L2=1024K L3=25344K | spawn=i-0witness:c5n.18xlarge:ondemand
+  [31mFAIL[0m  [keel-skx] Sgemm sweep passes
+  [33mUNMEASURED[0m  [keel-skx] no keel-sgemm-backends-exercised marker, so what this host exercised cannot be read: coverage unknown is coverage unestablished
+  [31mFAIL[0m  [keel-skx] KEEL_FORCE=scalar: the sweep passes with dispatch overridden
+  [33mUNMEASURED[0m  no host exercised the avx512 Sgemm at all, so whether the sweep passes with it live is unmeasured rather than short: there was no host to ask
+  [31mFAIL[0m  1 of 1 hosts that attempted the KEEL_FORCE=scalar run did not pass it (the per-host lines above say which)
+
+-- sweep extent (criteria 1 and 2: coverage is enforced, not trusted) --
+  [33mUNMEASURED[0m  no avx512 sweep log to audit, so the sweep's extent is unmeasured rather than short
+
+-- carried from P2 (criterion 4): the K-loop after packing and blocking --
+        compile-time property, audited against the linux/amd64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.Kernel2x32: steady-state loop [70,430] 74 insns for 16 arith (4.62 per arith): 0 vector stack refs, 8 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.Kernel4x32: steady-state loop [101,341] 50 insns for 8 arith (6.25 per arith): 0 vector stack refs, 12 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  0 accumulator spills in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 calls in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 surviving bounds checks in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)
+        check_bce: 133 bounds check(s) across vec+kern+pack+block, all outside the K-loop (provenance; the criterion is the loop-body audit above)
+  [32mPASS[0m  check_bce output recorded as provenance
+  [32mPASS[0m  SWEEP_BEST_IPF=4.625 reconciles against shapegen -frontier: 4.625 from 2x32 u=4 broadcast, best of 36 emittable zero-spill shapes
+
+-- throughput sentinel (criteria 5 and 5b): P2's floor re-run on the dispatched shape --
+  [32mPASS[0m  roofline verdict controls (76 fixtures)
+        audited insns/FMA: 2x32 4.625, 4x32 6.250, avx512Peak 2.250
+        sentinel declaration: every fleet host and nothing else ($KEEL_SENTINEL_OUT_OF_FLEET unset)
+        note: .keel-sentinel exists (mtime 2026-08-11T19:50:40Z) and is NOT read — retired as a selection input (#146)
+        judged as sentinels: keel-skx 
+  [33mUNMEASURED[0m  [keel-skx] sentinel: the kernel benchmark run failed, so this sentinel's classification is unmeasured
+  [33mUNMEASURED[0m  no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA are unchecked against the object code — unmeasured, not drifted
+
+-- Sgemm at 2048^3: percent of measured peak, and >= 60% of single-thread OpenBLAS --
+        -count=10 -benchtime=1s; the bar counts as cleared only net of both confidence intervals
+        each host is also run once more with KEEL_KERN_CLASS pinned to the other class (criterion 5b), which is where the extra Sgemm time goes
+  [33mUNMEASURED[0m  [keel-skx] the Sgemm benchmark run failed, so this host's rates are unmeasured
+  [31mFAIL[0m  the working tree is dirty, so `git archive HEAD` would measure something other than what is here; commit first
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p3 tally: 8 PASS / 4 FAIL / 6 UNMEASURED / 0 BASELINE / 0 REPORTED
+gate-p3: RED

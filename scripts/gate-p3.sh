@@ -21,6 +21,11 @@ source scripts/bench.sh
 source scripts/roofline.sh
 # shellcheck source=scripts/gate-lib.sh
 source scripts/gate-lib.sh
+# The null-change witness (#155 unit 3, docs/gate-arm64-port.md). Inert unless KEEL_REPLAY is
+# set — a normal run is byte-unchanged. The local -S spill audit (carry_p2_properties) runs in
+# replay deterministically: it is the subject unit 3 changes, so it must be witnessed, not skipped.
+# shellcheck source=scripts/gate-replay.sh
+source scripts/gate-replay.sh
 
 # ------------------------------------------- the instrument exercise (#86)
 # KEEL_INSTRUMENT_WIDEN_CI=<pct> widens every CEILING-SET mix's fraction-of-peak
@@ -351,10 +356,16 @@ assert_no_strays
 
 # ------------------------------------------------------------------- builds
 echo "-- builds --"
-if GOEXPERIMENT=simd go build ./... 2>&1; then pass "make build (GOEXPERIMENT=simd)"; else fail "make build (GOEXPERIMENT=simd)"; fi
-if go build ./... 2>&1; then pass "make stock (scalar path, no experiment)"; else fail "make stock (scalar path, no experiment)"; fi
-if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
-if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/amd64)"; else fail "go vet (GOEXPERIMENT=simd, linux/amd64)"; fi
+# Skipped under replay (#155 witness): deterministic and outside the port's scope (they build
+# the Go tree, not the arch selection). Inert when KEEL_REPLAY is unset. See gate-p5's guard.
+if [[ -n "${KEEL_REPLAY:-}" ]]; then
+  info "[replay] builds/vet skipped: deterministic and outside the witness scope (DESIGN.md rule 12)"
+else
+  if GOEXPERIMENT=simd go build ./... 2>&1; then pass "make build (GOEXPERIMENT=simd)"; else fail "make build (GOEXPERIMENT=simd)"; fi
+  if go build ./... 2>&1; then pass "make stock (scalar path, no experiment)"; else fail "make stock (scalar path, no experiment)"; fi
+  if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
+  if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/amd64)"; else fail "go vet (GOEXPERIMENT=simd, linux/amd64)"; fi
+fi
 
 gate_tmpdir
 KERNBIN="$BINDIR/kern.test"
@@ -373,13 +384,19 @@ info "the local run exercises the scalar path only (darwin/arm64 has no archsimd
 info "the sweep's extent is audited below from a host that ran it with avx512 live"
 
 LOCAL_OK=0
-GOEXPERIMENT=simd go test -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
-test_verdict "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK" "all tests pass"
-# The scalar path must also pass on a stock toolchain: keel is a pure-Go library
-# first and an experiment second.
 STOCK_OK=0
-go test -count=1 ./... >"$LOG" 2>&1 || STOCK_OK=$?
-test_verdict "local, stock toolchain" "$LOG" "$STOCK_OK" "all tests pass without GOEXPERIMENT=simd"
+if [[ -n "${KEEL_REPLAY:-}" ]]; then
+  # Skipped under replay (#155 witness): local go-test runs, timing-variable and outside the
+  # port's scope (they exercise the scalar path, not the arch selection). Inert when off.
+  info "[replay] local scalar/simd test runs skipped: timing-variable and outside the witness scope"
+else
+  GOEXPERIMENT=simd go test -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
+  test_verdict "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK" "all tests pass"
+  # The scalar path must also pass on a stock toolchain: keel is a pure-Go library
+  # first and an experiment second.
+  go test -count=1 ./... >"$LOG" 2>&1 || STOCK_OK=$?
+  test_verdict "local, stock toolchain" "$LOG" "$STOCK_OK" "all tests pass without GOEXPERIMENT=simd"
+fi
 
 resolve_fleet
 
