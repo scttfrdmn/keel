@@ -70,11 +70,23 @@ While the major version is 0, minor versions may contain breaking changes.
   so on the arm64 fleet `Peak/avx512` selected a row the binary never emits ("head peak window did
   not produce a result") and the audit ran against amd64 symbols. gate-p3/gate-p5's own arm64 ports
   rendered correctly live (both hosts evidentiary, dispatch `8x8/neon`, 5b REPORTED, percent-of-peak
-  BASELINE). Fleet torn down, gap filed; the fix (arm64 block in gate-p4, witness driving the full
-  carry chain) is next-session work. Also recorded: keel's first measured NEON-vs-OpenBLAS Sgemm
+  BASELINE). Fleet torn down, gap filed. Also recorded: keel's first measured NEON-vs-OpenBLAS Sgemm
   ratio on Graviton is 30.9% (gvt3) / 54.4% (gvt4), below the 60% floor — the honest first number,
   pending a coretype-swept run to pin the fair reference (gvt4's OpenBLAS auto-detected the slower
   `neoversen1` family on V2 silicon).
+- **gate-p4 is ported to arm64 under a carry-chain witness (`#158` closed).** The arm64 arch-conditional
+  block (`KERN_FUNCS=Kernel8x8,Kernel4x16`, `PEAK_FUNCS=neonPeak,scalarPeak`, `GATE_PEAK=Peak/neon`,
+  `P4_BACKENDS=neon scalar`, the NEON bench filter, and the `active != */scalar` VECTOR_GREEN
+  generalization) sits after the byte-verbatim amd64 assignments, so it is dead on amd64. Proven by a
+  new **carry-chain witness** (`gate-witness.sh` carry-chain mode over a live-recorded `p5→p4→p3`
+  corpus, `archive/witness/p4cc-corpus-3195579.tar.gz`): deterministic (two replays byte-identical),
+  non-vacuous (a planted gate-p4 `KERN_FUNCS` change is caught through the chain — the property #155's
+  isolated witnesses lacked), and the amd64 rendering **byte-identical before/after** the port. The
+  chain-under-replay needed gate-p5/gate-p4's dirty-tree refusals replay-skipped (the #155 pattern, one
+  scope-level up; byte-unchanged on real runs). arm64 fired locally: the audit resolves Kernel8x8 /
+  Kernel4x16 (zero K-loop spills) and neonPeak (register-only) — the valid percent-of-peak ceiling the
+  original #137 failure lacked when it audited the absent amd64 `avx512Peak`. The witness also surfaced
+  a pre-existing bug (`#159`: gate-p4 calls `fleet_shortfall` without sourcing `roofline.sh`).
 - **Measured runs on shared lab hardware now serialize through the fleet's `pueue` queue**
   (`scripts/remote.sh` `remote_exec`, `scripts/labrun`, `CLAUDE.md`, `CONTRIBUTING.md`). Several
   projects share the lab machines and nothing stopped two landing on one box at once — the exact

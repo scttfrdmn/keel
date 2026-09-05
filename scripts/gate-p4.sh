@@ -104,6 +104,19 @@ GATE_PEAK="Peak/avx512"
 # would be four independent depth-unconstrained patterns and would run benchmarks
 # nothing here reads while missing the ones it does.
 P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(avx512|n=2048)'
+# arm64 port (#158): the source-fact function names, the peak-row selector and the bench filter are
+# arch-conditional, keyed on the target arch — the amd64 values above are byte-verbatim (this block is
+# dead when KEEL_GOARCH is unset/amd64, so the amd64 rendering is unchanged, proven by the carry-chain
+# witness). The #155 spec scoped source-facts "gate-p2/p3 only" and missed gate-p4, carried by gate-p5.
+# arm64 tiles/peak are #136's NEON kernels; `neonPeak` is the arm64 peak kernel. Same treatment as
+# gate-p3.sh's unit-3b block.
+if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+  P4_BACKENDS="neon scalar"
+  KERN_FUNCS="Kernel8x8,Kernel4x16"
+  PEAK_FUNCS="neonPeak,scalarPeak"
+  GATE_PEAK="Peak/neon"
+  P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(neon|n=2048)'
+fi
 # The delegated P3 gate's full output. build/ is gitignored; the path is printed
 # because CLAUDE.md wants gate output verbatim in the umbrella issue.
 # Revision-stamped for #78's reason — see the same assignment in gate-p5.sh.
@@ -194,7 +207,11 @@ if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go ve
 # by construction. Checked here, before anything expensive, because arriving at a
 # knowable failure after a full gate run is a waste rather than a finding.
 TREE_CLEAN=1
-if [[ -n "$(git status --porcelain)" ]]; then
+# Replay-skipped (#158): guards `git archive HEAD`, which REPLAY never does — under KEEL_REPLAY the
+# delegated P3 gate must run regardless of an uncommitted edit, or the carry-chain witness cannot
+# render its `after` arm. Byte-unchanged on real runs (KEEL_REPLAY unset ⇒ `-z` true ⇒ original
+# dirty check). Same #155 pattern as gate-p3.sh and gate-p5.sh.
+if [[ -z "${KEEL_REPLAY:-}" && -n "$(git status --porcelain)" ]]; then
   TREE_CLEAN=0
   fail "the working tree is dirty, so the delegated P3 gate (criterion 8) cannot run: its OpenBLAS reference is built from \`git archive HEAD\`, which would measure something other than what is here"
   info "  commit first; this gate's own criteria still run below"
@@ -202,6 +219,7 @@ fi
 
 gate_tmpdir
 SWEEPLOG="$BINDIR/sweep-avx512.log"
+[[ "${KEEL_GOARCH:-amd64}" != arm64 ]] || SWEEPLOG="$BINDIR/sweep-neon.log"
 AUDITKERN="$BINDIR/audit-kern.log"
 AUDITPEAK="$BINDIR/audit-peak.log"
 
@@ -209,7 +227,12 @@ AUDITPEAK="$BINDIR/audit-peak.log"
 echo
 echo "-- Level 2 and derived Level 3 vs the float64 oracle --"
 info "the local run exercises the scalar path only (darwin/arm64 has no archsimd);"
-info "every lattice below is audited from a host that ran it with avx512 live"
+# #158: the audited backend word is arch-conditional (amd64 verbatim); active is not yet known here.
+if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+  info "every lattice below is audited from a host that ran it with neon live"
+else
+  info "every lattice below is audited from a host that ran it with avx512 live"
+fi
 
 LOCAL_OK=0
 GOEXPERIMENT=simd go test -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
@@ -243,7 +266,11 @@ done < <(hosts_lines)
 
 AVX512_GREEN=""
 if [[ -z "$HOSTS" ]]; then
-  unmeasured "P4 needs an amd64 host to execute the AVX-512 paths and none is configured, so they are unmeasured on real silicon"
+  if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+    unmeasured "P4 needs an arm64 host to execute the NEON paths and none is configured, so they are unmeasured on real silicon"
+  else
+    unmeasured "P4 needs an amd64 host to execute the AVX-512 paths and none is configured, so they are unmeasured on real silicon"
+  fi
 else
   remote_build_test_or_fail . "$BIN" "$LOG" \
     "cross-compiled linux/amd64 test binary (root package: P4 routines vs oracle)" \
@@ -261,13 +288,20 @@ else
       sed 's/^/        /' "$LOG" | tail -60
     fi
     active="$(marker sgemm-active "$LOG")"
-    if [[ "$OK" -eq 0 && "$active" == */avx512 ]]; then
+    # #158: green on a VECTOR backend (arch-agnostic), not literally avx512. On amd64 active is
+    # `*/avx512` or `*/scalar` (no avx2 microkernel, #40), so `!= */scalar` is byte-identical in
+    # effect, and VECTOR_BACKEND derives "avx512" so the pass line renders unchanged; on arm64 it
+    # is `*/neon`. Same VECTOR_GREEN generalization gate-p5 carries (unit 2).
+    if [[ "$OK" -eq 0 && -n "$active" && "$active" != */scalar ]]; then
       AVX512_GREEN="$host"
+      VECTOR_BACKEND="${active##*/}"
       cp "$LOG" "$SWEEPLOG"
     fi
   done < <(hosts_lines)
   if [[ -n "$AVX512_GREEN" ]]; then
-    pass "the lattices ran green with the avx512 microkernel live (target: $AVX512_GREEN)"
+    pass "the lattices ran green with the $VECTOR_BACKEND microkernel live (target: $AVX512_GREEN)"
+  elif [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+    unmeasured "no neon-green lattice run to audit, so every extent check below it is unmeasured (a fleet that ran green without a vector backend is a separate verdict, and the per-host lines above carry it)"
   else
     unmeasured "no avx512-green lattice run to audit, so every extent check below it is unmeasured (a fleet that ran green without avx512 is a separate verdict, and the per-host lines above carry it)"
   fi
@@ -277,7 +311,7 @@ fi
 echo
 echo "-- lattice extent (criteria 1, 2, 3, 5 and 6: coverage is enforced, not trusted) --"
 if [[ ! -s "$SWEEPLOG" ]]; then
-  unmeasured "no avx512 lattice log to audit, so every routine's coverage is unmeasured"
+  unmeasured "no $([[ "${KEEL_GOARCH:-amd64}" == arm64 ]] && echo neon || echo avx512) lattice log to audit, so every routine's coverage is unmeasured"
 else
   L3_KERN="$(marker sgemm-active "$SWEEPLOG")"
   L3_CFG="$(marker sgemm-config "$SWEEPLOG")"

@@ -152,6 +152,27 @@ treatments:
    confirmation + the SVE≈NEON table (`ob_coretype_sweep` is already arm64-aware) + teardown, per
    `docs/graviton-registration.md`.
 
+## #158: gate-p4 ported under a carry-chain witness (2026-09-05, closed)
+
+The #137 campaign surfaced that gate-p4 was never ported (it hardcoded amd64 `KERN_FUNCS`/`PEAK_FUNCS`/
+`GATE_PEAK` and is carried by gate-p5, p5→p4→p3). Ported the same way gate-p3 was, and proven by a
+**carry-chain witness** — the thing #155's per-gate witnesses structurally lacked:
+
+- **Corpus** (`archive/witness/p4cc-corpus-3195579.tar.gz`): a live `record` of the whole chain on
+  vesta (amd64) at `3195579`. Reproduce with
+  `KEEL_REPLAY=record KEEL_REPLAY_DIR=<dir> KEEL_REMOTE_HOSTS=vesta.local bash scripts/gate-p5.sh`.
+- **Witness** (`gate-witness.sh` carry-chain mode, `KEEL_WITNESS_NOBUILD=1`): replays `p5→p4→p3`,
+  concatenating the sub-gate logs (P4LOG/P3LOG) where the gate-p4 audit renders — gate-p5 stdout alone
+  shows only the tally, which is why a p5-stdout-only witness was inert (the fail-first caught that).
+- **Proven**: deterministic (two replays byte-identical) and non-vacuous (a planted gate-p4 `KERN_FUNCS`
+  change is caught through the chain); the amd64 rendering is **byte-identical before/after** the port.
+- **Two enablers**, both #155-pattern and byte-unchanged on real runs: gate-p5/gate-p4's dirty-tree
+  refusals are replay-skipped (they guard `git archive HEAD`, which replay never does), and the live
+  direct-ssh benchmark NUMBERS (gate-p4 criterion-7, gate-p3 OpenBLAS — the #157 gap, confirmed to span
+  gate-p4) are number-normalized in carry-chain mode (the port's amd64 branch touches none of them).
+- **arm64 fired**: the audit resolves Kernel8x8/Kernel4x16 (zero K-loop spills) and neonPeak
+  (register-only) — the valid percent-of-peak ceiling the campaign's first run lacked.
+
 ## Branch-firing evidence (dev M-series, NEON, no spend, 2026-09-04)
 
 Every arm64 selection target already exists and fires locally under `GOEXPERIMENT=simd`:

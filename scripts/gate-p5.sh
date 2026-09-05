@@ -392,7 +392,13 @@ fi
 # reaching a knowable failure after an hour of benchmarks is a waste rather than a
 # finding.
 TREE_CLEAN=1
-if [[ -n "$(git status --porcelain)" ]]; then
+# Replay-skipped (#158): the dirty-tree refusal guards `git archive HEAD`, which REPLAY never does
+# (the remote calls are stubbed from the corpus), so under KEEL_REPLAY the carry chain must run
+# regardless of an uncommitted edit — otherwise the null-change witness could never render the
+# `after` arm (the port edit is itself uncommitted). Byte-unchanged on real runs: KEEL_REPLAY unset
+# makes `-z` vacuously true, so the condition reduces to the original dirty check. Same #155 pattern
+# gate-p3.sh already carries.
+if [[ -z "${KEEL_REPLAY:-}" && -n "$(git status --porcelain)" ]]; then
   TREE_CLEAN=0
   fail "the working tree is dirty, so neither the native race build nor the delegated P4 gate can run: both build \`git archive HEAD\`, which would measure something other than what is here"
   info "  commit first; this gate's own criteria still run below"
