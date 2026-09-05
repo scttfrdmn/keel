@@ -82,16 +82,18 @@ case "${1:-}" in
       echo "WITNESS FAIL: renderings differ — the edit changed the rendered gate output:"; cat /tmp/gate-witness.diff; exit 1
     fi ;;
   selfcheck)
-    # Non-vacuity: a planted GATE_PEAK change MUST make render() differ.
+    # Non-vacuity: a planted CEIL_FRACTION change MUST make render() differ (it moves the share
+    # bar every scale criterion divides against — a value that survives into the rendering). Was
+    # a GATE_PEAK plant until unit 2 made GATE_PEAK marker-derived (no constant left to plant).
     render /tmp/gate-witness.base
     cp scripts/gate-p5.sh /tmp/gate-p5.witnessorig
     trap 'cp /tmp/gate-p5.witnessorig scripts/gate-p5.sh' EXIT
-    sed -i.bak 's|^GATE_PEAK="Peak/avx512"|GATE_PEAK="Peak/avx2"|' scripts/gate-p5.sh && rm -f scripts/gate-p5.sh.bak
+    sed -i.bak 's|^CEIL_FRACTION=44.2|CEIL_FRACTION=43.0|' scripts/gate-p5.sh && rm -f scripts/gate-p5.sh.bak
     render /tmp/gate-witness.planted
     cp /tmp/gate-p5.witnessorig scripts/gate-p5.sh; trap - EXIT
     if diff -q /tmp/gate-witness.base /tmp/gate-witness.planted >/dev/null; then
-      echo "NON-VACUITY FAIL: the witness did not detect a planted GATE_PEAK change — it is inert"; exit 1
+      echo "NON-VACUITY FAIL: the witness did not detect a planted CEIL_FRACTION change — it is inert"; exit 1
     fi
-    echo "NON-VACUITY PASS: the witness detects a planted GATE_PEAK change (fails first)" ;;
+    echo "NON-VACUITY PASS: the witness detects a planted CEIL_FRACTION change (fails first)" ;;
   *) echo "usage: $0 render OUT | check A B | selfcheck" >&2; exit 2 ;;
 esac

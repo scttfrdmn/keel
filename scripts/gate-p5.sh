@@ -231,7 +231,11 @@ STRSM_AMDAHL_NOTE=1
 
 # Benchmark row names. The thread count is IN THE NAME (criterion 2).
 scale_name() { printf 'Scale/%s/n=%d/threads=%d' "$1" "$P5_SIZE" "$2"; }
-GATE_PEAK="Peak/avx512"
+# GATE_PEAK is DERIVED per host from the sweep's active-kernel marker (#155 unit 2), set in the
+# throughput loop before any compute_name/PEAK1 use; empty here because there is no arch to name
+# until a host's own marker names it (amd64 -> Peak/avx512, arm64 -> Peak/neon). No host uses it
+# before the loop sets it.
+GATE_PEAK=""
 # The ceiling's own rows (ruling on #6). compute_name's width tracks GATE_PEAK's so the
 # two peaks can never be read from different kernels; stream_name's patterns are the
 # read-only and read-modify-write halves of the bandwidth bracket.
@@ -276,12 +280,28 @@ P5_NOSTATE_REQ="goroutines-return-to-baseline repeat-call-bit-identical"
 # The narrowing is a criterion change, so it is written where the criteria are, with
 # the ruling's date and number beside it; the day an AVX2 microkernel is measured on
 # AVX2-native silicon, KERN_CHAIN grows a rung and this comment is what says why.
-P5_L1_CHAIN="avx512,avx2,scalar"
-P5_KERN_CHAIN="avx512,scalar"
-P5_FORCED="scalar avx2 avx512"
-# Backends that are Level 1 only: forcing one must produce that L1 backend and a
-# *scalar* microkernel, with the library saying so.
-P5_L1_ONLY="avx2"
+# These are the gate's INDEPENDENT ASSERTION of the #40 dispatch ruling per arch — arch-
+# conditional CONSTANTS, never derived from KernChain()/L1Chain() (#155 spec, unit 2): a check
+# whose expectation comes from the same source it reads is tautological and catches no drift.
+# amd64 keeps its values verbatim (byte-unchanged). arm64 (#136/#153): Level 3 dispatches NEON
+# then scalar, Level 1 is scalar-only (no NEON L1 backend, #154). arm64 forces ONLY scalar --
+# KEEL_FORCE=neon panics, because selectL1 has no neon rung to honour, so the NEON microkernel
+# is verified from the DEFAULT (unforced) run's kern=neon,scalar marker rather than by forcing.
+# There is no Level-1-only vector backend on arm64, so P5_L1_ONLY is empty.
+case "${KEEL_GOARCH:-amd64}" in
+  arm64)
+    P5_L1_CHAIN="scalar"
+    P5_KERN_CHAIN="neon,scalar"
+    P5_FORCED="scalar"
+    P5_L1_ONLY="" ;;
+  *)
+    P5_L1_CHAIN="avx512,avx2,scalar"
+    P5_KERN_CHAIN="avx512,scalar"
+    P5_FORCED="scalar avx2 avx512"
+    # Backends that are Level 1 only: forcing one must produce that L1 backend and a
+    # *scalar* microkernel, with the library saying so.
+    P5_L1_ONLY="avx2" ;;
+esac
 
 # How far a published README number may sit from this run's measurement before it
 # stops being the same claim (criterion 9). 5% is wider than any CI this project
@@ -462,11 +482,22 @@ echo
 echo "-- parallelism as a correctness property (criteria 5, 6, 7) --"
 info "bitwise identity against the serial nest, no goroutine left running, no state"
 info "carried between calls. The local run is scalar-only, so all of this is audited"
-info "from a host that ran it with the avx512 microkernel live (toolchain-notes T1)."
+# amd64 verbatim (byte-unchanged); arm64 names its own vector backend. This is pre-loop, so the
+# per-host marker is not yet read — the specific backend is confirmed in the verdict below.
+if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+  info "from a host that ran it with the neon microkernel live."
+else
+  info "from a host that ran it with the avx512 microkernel live (toolchain-notes T1)."
+fi
 
-AVX512_GREEN=""
+# VECTOR_GREEN is the host that ran the suite green with a VECTOR microkernel live, and
+# VECTOR_BACKEND the backend it dispatched — read from the run's own marker (#155 unit 2),
+# not hardcoded avx512, so the audit is "a vector backend ran green" on any ISA. Byte-unchanged
+# on amd64: the marker there is avx512, so the verdict text is identical.
+VECTOR_GREEN=""
+VECTOR_BACKEND=""
 if [[ -z "$HOSTS" ]]; then
-  unmeasured "P5 needs an amd64 host with $P5_THREADS cores to execute the AVX-512 paths and none is configured, so they are unmeasured on real silicon"
+  unmeasured "P5 needs an execution host with $P5_THREADS cores to exercise the vector paths and none is configured, so they are unmeasured on real silicon"
 else
   remote_build_test_or_fail . "$BIN" "$LOG" \
     "cross-compiled linux/amd64 test binary (root package: parallel correctness)" \
@@ -483,8 +514,12 @@ else
       sed 's/^/        /' "$LOG" | tail -60
     fi
     active="$(marker sgemm-active "$LOG")"
-    if [[ "$OK" -eq 0 && "$active" == */avx512 ]]; then
-      AVX512_GREEN="$host"
+    # A VECTOR backend ran green = the dispatched microkernel is not scalar (#155 unit 2). On
+    # amd64 that is */avx512 exactly as before; on arm64 it is */neon. The backend word is kept
+    # for the audit line so it names what actually ran.
+    if [[ "$OK" -eq 0 && -n "$active" && "$active" != */scalar ]]; then
+      VECTOR_GREEN="$host"
+      VECTOR_BACKEND="${active##*/}"
       cp "$LOG" "$SWEEPLOG"
     fi
 
@@ -549,10 +584,10 @@ else
       fail "[$host] KEEL_FORCE=nonsense was accepted: an unrecognized force value must fail loudly, or a typo in somebody's harness measures the wrong backend for a year"
     fi
   done < <(hosts_lines)
-  if [[ -n "$AVX512_GREEN" ]]; then
-    pass "the suite ran green with the avx512 microkernel live (audited from $AVX512_GREEN)"
+  if [[ -n "$VECTOR_GREEN" ]]; then
+    pass "the suite ran green with the $VECTOR_BACKEND microkernel live (audited from $VECTOR_GREEN)"
   else
-    unmeasured "no avx512-green suite run to audit, so the parallel markers below are unmeasured (a fleet that ran green without avx512 is a separate verdict, and the per-host lines above carry it)"
+    unmeasured "no vector-green suite run to audit, so the parallel markers below are unmeasured (a fleet that ran green without a vector backend is a separate verdict, and the per-host lines above carry it)"
   fi
 fi
 
@@ -879,6 +914,13 @@ else
     fi
     bench_csv "$BENCHLOG" "$host" >"$BENCHCSV" 2>"$LOG" || true
     [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
+    # GATE_PEAK's backend is DERIVED from this sweep's own active-kernel marker (#155 unit 2),
+    # not hardcoded avx512: keel-bench-kern names the dispatched tile/backend, so the peak and
+    # ceiling rows this host is judged against are the ones for the backend it actually ran.
+    # amd64 reports avx512 (byte-unchanged); arm64 reports neon. An absent marker leaves GATE_PEAK
+    # empty and the WANT_ROWS existence check below skips the host as unmeasured.
+    _pk="$(marker bench-kern "$BENCHLOG" | awk '{print $1}')"; _pk="${_pk##*/}"
+    [[ -n "$_pk" ]] && GATE_PEAK="Peak/$_pk"
     # The raw samples, kept (#110). Printed because a verdict that cannot be
     # recomputed from the numbers it was derived from is a verdict standing on a
     # log line — which is the state every judged run before this one is in, and
@@ -1106,7 +1148,7 @@ else
       # it over-estimates the ceiling, and says so.
       m8="$(bench_gflops "$many" "$BENCHCSV")"
       if [[ -n "$m8" ]]; then
-        info "[$host] $r: $(awk -v a="$m8" -v b="$PEAK1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread avx512 peak ($PEAK1 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count"
+        info "[$host] $r: $(awk -v a="$m8" -v b="$PEAK1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread ${GATE_PEAK#Peak/} peak ($PEAK1 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count"
       fi
 
       # Admission after the reading and before either bar (#104), the order p2 and p3 use:

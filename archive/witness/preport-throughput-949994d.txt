@@ -31,7 +31,7 @@ gate-replay: replay mode, corpus build/witness-corpus
   [33mUNMEASURED[0m  [keel-skx] KEEL_FORCE=avx2: the forced run failed before reporting any dispatch, so what the override selects is unmeasured here rather than wrong
   [33mUNMEASURED[0m  [keel-skx] KEEL_FORCE=avx512: the forced run failed before reporting any dispatch, so what the override selects is unmeasured here rather than wrong
   [32mPASS[0m  [keel-skx] KEEL_FORCE=nonsense refuses to run rather than falling back silently
-  [33mUNMEASURED[0m  no avx512-green suite run to audit, so the parallel markers below are unmeasured (a fleet that ran green without avx512 is a separate verdict, and the per-host lines above carry it)
+  [33mUNMEASURED[0m  no vector-green suite run to audit, so the parallel markers below are unmeasured (a fleet that ran green without a vector backend is a separate verdict, and the per-host lines above carry it)
   [33mUNMEASURED[0m  no avx512 test log to audit, so determinism, no-state and the declared dispatch chain are all unmeasured
 
 -- race detector (a named P5 criterion) --
