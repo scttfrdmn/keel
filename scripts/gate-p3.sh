@@ -824,6 +824,20 @@ else
     if [[ "$ACT_ID" != "$BEST_ID" ]]; then
       info "[$host] dispatched $ACT_ID; fastest measured here is $BEST_ID ($(awk -v r="$BEST_PT" 'BEGIN{printf "%.1f", r*100}')% of peak vs $(awk -v r="$ACT_PT" 'BEGIN{printf "%.1f", r*100}')%) — checked below"
     fi
+    # Ruling 2 (#155): on arm64 this percent-of-peak / issue-fma criterion renders BASELINE per
+    # rule 17 and throughput_verdict is NOT reached — deliberately, because PEAK_FLOOR=0.55 and
+    # the issue/fma frontier (SWEEP_BEST_IPF, the ceiling mixes) are amd64-derived bars, and a
+    # percent-of-peak floor applied to a 4-lane NEON kernel is a category error, not a strict bar
+    # (the same reason gate-p5's 55% is rule-17'd). A bar travels with its derivation set, never
+    # across ISAs. First-sight registers; a reviewed commit types an arm64 floor from N>=2 arm64
+    # archives. The 0.55 comparison lives only inside throughput_verdict, so `continue`-ing before
+    # it is what guarantees no arm64 path reaches it — the false-pass this encoding exists to
+    # prevent. amd64 is byte-unchanged: this branch does not fire when KEEL_GOARCH is unset.
+    if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+      frac="$(awk -v r="$ACT_LO" 'BEGIN{printf "%.1f", r * 100}')"
+      baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline, not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). throughput_verdict is not reached on arm64; a reviewed commit types the arm64 floor from its own archives."
+      continue
+    fi
     # The ceiling set is every mix except the shape under test; see gate-p2.sh
     # criterion 5b and scripts/roofline.sh (INDEPENDENCE).
     CEIL=""
@@ -1087,7 +1101,12 @@ OB_NOTADM=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute): unmeasured, not missed"
-elif [[ -n "$(git status --porcelain)" ]]; then
+elif [[ -z "${KEEL_REPLAY:-}" && -n "$(git status --porcelain)" ]]; then
+  # The dirty-tree guard is a LIVE-run precondition: the OpenBLAS harness ships `git archive HEAD`,
+  # so a dirty tree would measure something other than HEAD. Under replay there is no git archive —
+  # the corpus is fixed input — so the guard is skipped, which also keeps the witness insensitive to
+  # whether an edit under test is committed yet (#155). Byte-unchanged on a real run: KEEL_REPLAY is
+  # unset there, so the condition is exactly the original dirty check.
   fail "the working tree is dirty, so \`git archive HEAD\` would measure something other than what is here; commit first"
 else
   while read -r host; do
