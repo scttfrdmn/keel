@@ -37,6 +37,11 @@ lint:
 	bash scripts/citation-lint.sh
 	bash scripts/baseline-test.sh
 	bash scripts/detach-test.sh
+	# The archive-corpus invariant, moved into the path that runs anyway: a rendering log or
+	# any non-sample file added under archive/*/ as .txt reddens this (and CI). Folded in here
+	# because "remember to run it before an archive/ commit" went 0/4 as a knowledge-form guard
+	# (addr147, D2, scale119, witness) — the catch belongs before the push, structurally.
+	go test ./tools/benchci/
 
 gate-p%:
 	scripts/gate-p$*.sh
