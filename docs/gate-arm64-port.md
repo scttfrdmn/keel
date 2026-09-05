@@ -136,6 +136,13 @@ treatments:
      extension over gate-p3's five direct-ssh points (`ob_preflight`, the `git archive|ssh` ship,
      the harness build ssh, the harness/ratio measure ssh, `ob_coretype_sweep`; 2 are functions, 3
      are inline ssh needing extraction). Filed as a v0.2.0 unit with that inventory as its scoping.
+3b-verified (2026-09-05, item 3): a clean arm64 gate-p3 replay matched its pre-registered shape
+   exactly — spill audit PASS (NEON fit kernels 0 K-loop spills, neonPeak register-only), 5b
+   REPORTED, percent-of-peak BASELINE ("8x8/neon reaches 32.8% of measured NEON peak, RECORDED as
+   candidate baseline"), the 0.55 comparison ABSENT (0 lines), OpenBLAS UNMEASURED (first-sight, no
+   arm64 OpenBLAS host in local replay — the live ratio/sweep is the campaign's Graviton run). All
+   three unit-3 witness arms accounted for: dispatch/local-audit + throughput empirical, OpenBLAS
+   structural (#157 files the empirical follow-up). **Unit 3 is complete.**
 4. **The campaign.** Respawn c7g+c8g, `KEEL_GOARCH=arm64`, two BASELINE passes → landing →
    confirmation + the SVE≈NEON table (`ob_coretype_sweep` is already arm64-aware) + teardown, per
    `docs/graviton-registration.md`.
