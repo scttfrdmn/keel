@@ -50,12 +50,20 @@ _build_corpus() {
 }
 
 # _normalize — scrub the fields that vary run-to-run INDEPENDENTLY of the gate's code, so the
-# diff isolates code. Two only, both proven run-specific by the determinism check and neither
-# touched by the port: the RUN_STAMP timestamp embedded in archive/candidate filenames, and the
-# live disk-headroom reading. NOT normalized: the git short-sha (the post-port replay runs on
-# uncommitted edits, so HEAD is unchanged in both) or anything the port could plausibly move —
-# a planted GATE_PEAK change still survives this scrub (selfcheck proves it).
-_normalize() { sed -E -e 's/[0-9]{8}T[0-9]{6}Z/<TS>/g' -e 's/[0-9]+(\.[0-9]+)? MiB free/<N> MiB free/g'; }
+# diff isolates code. Three, all proven run-specific and none touched by the port: the RUN_STAMP
+# timestamp in archive/candidate filenames, the live disk-headroom reading, and the git short-sha
+# (P5_REV) the gate stamps into those same filenames and its "on this commit (…)" line — scrubbed
+# in the three contexts it appears, so the baseline is stable across commits (a re-render at any
+# HEAD normalizes to <SHA>). NOT normalized: anything the port could move — a planted GATE_PEAK
+# change still survives this scrub (selfcheck proves it fails first).
+_normalize() {
+  sed -E \
+    -e 's/[0-9]{8}T[0-9]{6}Z/<TS>/g' \
+    -e 's/[0-9]+(\.[0-9]+)? MiB free/<N> MiB free/g' \
+    -e 's/(gate-p[0-9]+-)[0-9a-f]{7,40}/\1<SHA>/g' \
+    -e 's/(candidates-)[0-9a-f]{7,40}/\1<SHA>/g' \
+    -e 's/(commit \()[0-9a-f]{7,40}/\1<SHA>/g'
+}
 
 render() {
   _build_corpus
