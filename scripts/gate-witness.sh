@@ -49,10 +49,18 @@ _build_corpus() {
   rm -f "$CORPUS/_misses.log"
 }
 
+# _normalize — scrub the fields that vary run-to-run INDEPENDENTLY of the gate's code, so the
+# diff isolates code. Two only, both proven run-specific by the determinism check and neither
+# touched by the port: the RUN_STAMP timestamp embedded in archive/candidate filenames, and the
+# live disk-headroom reading. NOT normalized: the git short-sha (the post-port replay runs on
+# uncommitted edits, so HEAD is unchanged in both) or anything the port could plausibly move —
+# a planted GATE_PEAK change still survives this scrub (selfcheck proves it).
+_normalize() { sed -E -e 's/[0-9]{8}T[0-9]{6}Z/<TS>/g' -e 's/[0-9]+(\.[0-9]+)? MiB free/<N> MiB free/g'; }
+
 render() {
   _build_corpus
   KEEL_REPLAY=replay KEEL_REPLAY_DIR="$CORPUS" KEEL_REMOTE_HOSTS="$HOST" \
-    bash scripts/gate-p5.sh >"$1" 2>&1 || true
+    bash scripts/gate-p5.sh 2>&1 | _normalize >"$1" || true
   echo "gate-witness: rendered replay to $1 ($(wc -l <"$1") lines)"
 }
 

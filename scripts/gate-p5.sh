@@ -334,10 +334,18 @@ assert_no_strays
 
 # ------------------------------------------------------------------- builds
 echo "-- builds, vet and lint --"
-if GOEXPERIMENT=simd go build ./... 2>&1; then pass "build (GOEXPERIMENT=simd)"; else fail "build (GOEXPERIMENT=simd)"; fi
-if go build ./... 2>&1; then pass "build (stock toolchain, scalar path, no experiment)"; else fail "build (stock toolchain, scalar path, no experiment)"; fi
-if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
-if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/amd64)"; else fail "go vet (GOEXPERIMENT=simd, linux/amd64)"; fi
+# The builds/vet/lint are skipped under replay (#155 witness): they are deterministic — the
+# determinism check proved their rendering identical run to run — and outside the port's scope
+# (they build the Go tree, which the gate scripts do not touch), so replaying them only costs a
+# minute. A fixed line in both replays cancels in the diff. Live runs are unaffected.
+if [[ -n "${KEEL_REPLAY:-}" ]]; then
+  info "[replay] builds/vet skipped: deterministic and outside the witness scope (DESIGN.md rule 12)"
+else
+  if GOEXPERIMENT=simd go build ./... 2>&1; then pass "build (GOEXPERIMENT=simd)"; else fail "build (GOEXPERIMENT=simd)"; fi
+  if go build ./... 2>&1; then pass "build (stock toolchain, scalar path, no experiment)"; else fail "build (stock toolchain, scalar path, no experiment)"; fi
+  if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
+  if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/amd64)"; else fail "go vet (GOEXPERIMENT=simd, linux/amd64)"; fi
+fi
 
 gate_tmpdir
 SWEEPLOG="$BINDIR/sweep-avx512.log"
@@ -347,7 +355,9 @@ SWEEPLOG="$BINDIR/sweep-avx512.log"
 # than clean — the same rule a missing OpenBLAS gets in gate-p3. A check that did
 # not run has no colour, and the operator gets the exact install command instead of
 # a green with a hole in it.
-if ! command -v golangci-lint >/dev/null 2>&1; then
+if [[ -n "${KEEL_REPLAY:-}" ]]; then
+  info "[replay] golangci-lint skipped: deterministic and outside the witness scope"
+elif ! command -v golangci-lint >/dev/null 2>&1; then
   unmeasured "golangci-lint is not installed, so the criterion that names it is unmeasured rather than clean"
   info "  brew install golangci-lint"
 elif GOEXPERIMENT=simd golangci-lint run ./... >"$LOG" 2>&1; then
@@ -374,11 +384,19 @@ echo "-- the scalar path on a stock toolchain (a P5 criterion in its own right) 
 info "the fast paths are additive build tags, so the package must be usable the day"
 info "somebody runs \`go get\` on a toolchain with no experiment enabled at all"
 STOCK_OK=0
-go test -count=1 ./... >"$LOG" 2>&1 || STOCK_OK=$?
-test_verdict "local, stock toolchain" "$LOG" "$STOCK_OK" "every test passes without GOEXPERIMENT=simd"
 LOCAL_OK=0
-GOEXPERIMENT=simd go test -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
-test_verdict "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK" "every test passes"
+if [[ -n "${KEEL_REPLAY:-}" ]]; then
+  # Skipped under replay (#155 witness): these are local go-test runs whose per-package timings
+  # vary run to run (non-determinism that is not the gate's code) and which the port does not
+  # touch — they exercise the scalar path, not the arch selection. Outside the witness scope
+  # (rule 12); a fixed line in both replays cancels in the diff. Live runs are unaffected.
+  info "[replay] local scalar/simd test runs skipped: timing-variable and outside the witness scope"
+else
+  go test -count=1 ./... >"$LOG" 2>&1 || STOCK_OK=$?
+  test_verdict "local, stock toolchain" "$LOG" "$STOCK_OK" "every test passes without GOEXPERIMENT=simd"
+  GOEXPERIMENT=simd go test -count=1 ./... >"$LOG" 2>&1 || LOCAL_OK=$?
+  test_verdict "local $(go env GOHOSTOS)/$(go env GOHOSTARCH)" "$LOG" "$LOCAL_OK" "every test passes"
+fi
 
 resolve_fleet
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"

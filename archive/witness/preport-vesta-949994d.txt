@@ -1,0 +1,113 @@
+gate-replay: replay mode, corpus /Users/scttfrdmn/src/keel/build/witness-corpus-vesta
+== gate-p5: parallelism, dispatch, polish ==
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- builds, vet and lint --
+        [replay] builds/vet skipped: deterministic and outside the witness scope (DESIGN.md rule 12)
+        [replay] golangci-lint skipped: deterministic and outside the witness scope
+  [31mFAIL[0m  the working tree is dirty, so neither the native race build nor the delegated P4 gate can run: both build `git archive HEAD`, which would measure something other than what is here
+          commit first; this gate's own criteria still run below
+
+-- the scalar path on a stock toolchain (a P5 criterion in its own right) --
+        the fast paths are additive build tags, so the package must be usable the day
+        somebody runs `go get` on a toolchain with no experiment enabled at all
+        [replay] local scalar/simd test runs skipped: timing-variable and outside the witness scope
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: <N> MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+
+-- hosts, governors and topology --
+        [vesta.local] AMD Ryzen 9 7950X3D 16-Core Processor | instance=none | virt=metal | 32 cpus | 16 cores | smt=2 | 1 sockets | governor=performance | tmux=yes | Linux 6.8.0-138-generic | L2=1024K L1d=32K L3=98304K | spawn=none
+        [vesta.local] admission class: evidentiary (instance=none, virt=metal, spawn=none) — bare metal (no hypervisor flag) with governor=performance: a whole machine owns its socket more completely than any instance type can demonstrate
+        [vesta.local] smt=2 threads/core, so UNMASKED the criterion's 8 goroutines could span as few as 8/2 physical cores — which is the hazard the mask removes: every benchmark below runs on 8 distinct physical cores, one per cache domain, inside one NUMA node — refused rather than run free, and read back per row for both width and shape (§5 rule 5; the pinning decision #15 asked for)
+  [32mPASS[0m  [vesta.local] 32 CPUs, enough for the 8 the criterion names
+
+-- parallelism as a correctness property (criteria 5, 6, 7) --
+        bitwise identity against the serial nest, no goroutine left running, no state
+        carried between calls. The local run is scalar-only, so all of this is audited
+        from a host that ran it with the avx512 microkernel live (toolchain-notes T1).
+  [32mPASS[0m  [vesta.local] the full test suite passes with the vector backend live
+  [32mPASS[0m  [vesta.local] KEEL_FORCE=scalar takes (l1=scalar, kern=4x32/scalar)
+  [32mPASS[0m  [vesta.local] KEEL_FORCE=avx2 takes effect as a Level-1-only rung (l1=avx2, kern=4x32/scalar — the #40 ceiling, reported honestly)
+  [32mPASS[0m  [vesta.local] KEEL_FORCE=avx512 takes (l1=avx512, kern=4x32/avx512)
+  [32mPASS[0m  [vesta.local] KEEL_FORCE=nonsense refuses to run rather than falling back silently
+  [32mPASS[0m  the suite ran green with the avx512 microkernel live (audited from vesta.local)
+  [32mPASS[0m  Sgemm: bit-identical to the serial nest at threads=1,3,8
+  [32mPASS[0m  Sgemm: no background threads and no state between calls (goroutines-return-to-baseline,repeat-call-bit-identical)
+  [32mPASS[0m  Ssyrk: bit-identical to the serial nest at threads=1,3,8
+  [32mPASS[0m  Ssyrk: no background threads and no state between calls (goroutines-return-to-baseline,repeat-call-bit-identical)
+  [32mPASS[0m  Ssymm: bit-identical to the serial nest at threads=1,3,8
+  [32mPASS[0m  Ssymm: no background threads and no state between calls (goroutines-return-to-baseline,repeat-call-bit-identical)
+  [32mPASS[0m  Strsm: bit-identical to the serial nest at threads=1,3,8
+  [32mPASS[0m  Strsm: no background threads and no state between calls (goroutines-return-to-baseline,repeat-call-bit-identical)
+  [32mPASS[0m  Level-1 chain declared as avx512,avx2,scalar, and this gate forced every element of it above
+  [32mPASS[0m  Level-3 chain declared as avx512,scalar — two rungs by ruling (#40), and the avx2 ceiling asserted per host above
+
+-- race detector (a named P5 criterion) --
+        -race needs cgo and remote_build_test is CGO_ENABLED=0 by design, so the
+        instrumented binary is built NATIVELY on each host from git archive HEAD — the
+        same mechanism gate-p3 uses for its OpenBLAS harness. The dev host's own run is
+        kept as well: it is arm64 and scalar-only, but the worker pool, the shared
+        packed-B panel and the sync.Pool are backend-independent Go, so having two
+        architectures' schedulers look at the same concurrency is worth the minute.
+        [replay] race detector skipped: a native compile over its own ssh, outside the witness scope
+
+-- scaling at 8 cores on 4096^3 (the headline criterion) --
+        -test.count=10 -test.benchtime=1s; one invocation per host with both thread
+        counts inside it, and the floor counts as cleared only net of both intervals
+        judged at >= 44.2% of each host's own measured 8-thread ceiling: Sgemm Ssyrk Ssymm — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, its 8-thread form and this fraction ratified 2026-08-21, #6)
+          DERIVATION of 44.2%: a regression bar set below every healthy observation, from the lowest of SIX admissible judged rows in the founding campaign's take four (keel-zen5 Ssymm, 46.8150% net of BOTH intervals, recomputed from the archives under #116's honest CI bounds) less 2.6 points of margin. Derived from that run and enforced here, so this reading can fail it. What it cannot see is stated inside it (§5 rule 12): no Intel silicon derived it, keel-skx being DERIV=0 and gnr characterization, and the two models it has spread 46.8-75.4%, so one fleet bar is set by the weakest host — per-host convergence is the post-tag option named above. Rule 19 admitted all six: widest share interval 0.3 points against the 2.6-point cap
+          the bar FELL 6.8 points from the suspended 51.0 and 95.0% of the fall is the DENOMINATOR, not the kernels: #115 lifted the ceiling's fork/join out of its own timed region, so the reference rose 1999.5 -> 2291 GFLOP/s (+14.6%) on the host that sets the bar, while that row's rate fell 1081 -> 1073 (-0.74%). One term at a time on the argmin: the new rate over the OLD ceiling would have typed 50.8, the old rate over the NEW ceiling 44.6. The measured share has THREE terms and this is the reference term moving; the era boundary is what keeps it out of the drift budget (§5 rule 17(d))
+          the ceiling's rise is the INSTRUMENT and not the mask, adjudicated by the control host: keel-skx's spread enumeration is degenerate (its L3 is per socket, so the mask returns the same 0..7 the confined form did) and its ceiling rose the MOST, +23.4%, which a mask that did not change cannot cause. So the +14.6% is attributable to #115 (§5 rule 18) rather than to placement, and the two changes that landed together are separable after all
+        judged at >= 6.066x: Strsm — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)
+          and judged PER HOST since 2026-08-30 (#119, §5 rule 17 extended to the ratio criteria): 6.066x binds only the models that derived it (SCALE_DERIVED_FROM, three of them — one MORE than the share bar's two, keel-skx having derived this bar and not that one), and a host outside that set renders BASELINE and registers from its own rows rather than being convicted for a chronology. Its bar is then its own baseline less the same 0.403x — never BASELINE_MARGIN's 2.6, which is points of share and would set a bar looser than the retired 6.0x floor if carried across units. docs/rulings.md rule 17 carries both derivation sets and the era-archive check on the slack
+          DERIVATION of 6.066x: the lowest of THREE judged rows in the founding campaign's take four (keel-zen5 6.469x net of CI — 6.469880 unrounded, recomputed under #116; keel-zen4 6.635x, keel-skx 6.831x) less 0.403x, this class's declared slack in its own units — 7.403x, the lowest of the nine readings that ratified 7.0x, less that 7.0x, so it predates these rows by six days and answers the units question the suspension left open. The bound is quoted as bench_ratio_lo RETURNS it, three decimals rounded down (#143), because that is what the subtraction above is performed on: 6.469 - 0.403 = 6.066 exactly, no rounding of the difference. All three rows were admissible under rule 19: intervals 0.230/0.221/0.040x wide against the 0.403x cap, and the slack is 1.8x the argmin's own interval
+          6.066x IS NOT THE RETIRED 6.0x RETURNING, and it lands within 1.1% of it by coincidence: that constant was a CROSS-HOST quality bar on the whole judged class and was retired for a RANK INVERSION -- it refused Zen 4 at 65.9% of 8x its own core peak and passed Granite Rapids at 34.3%, measuring the wrong quantity by construction. This is a per-routine regression bar on Strsm alone, derived on different silicon under a different placement, and none of the grounds for that retirement is disturbed by the arithmetic landing nearby (#37, #6)
+  [32mPASS[0m  BASELINE-REGISTERED readers pass their controls (75 fixtures; 21 mutants driven 2026-08-21, all killed, and a 22nd found unkillable — an unnamed-era guard whose deletion changed nothing observable, so it was deleted rather than explained. §5 rule 12: the number is what it covers, and mutation is a session act with no standing harness)
+        measurement era: pinned8 — closed, transition archive landed. Baselines from other eras do not govern these readings and are not consulted (#6)
+        [vesta.local] samples archived: build/bench-gate-p5-949994d-vesta.local-<TS>-1.txt
+  [32mPASS[0m  [vesta.local] placement pinned to 8 cores over 2 of the node's 2 cache domains (mask 0,8,1,9,2,10,3,11), confirmed three ways: the harness applied it, Go reports GOMAXPROCS=8 off its own affinity, and the recorded domain list satisfies rule 5's spread invariant — so every row below carries -8 and the numerator and denominator of each share came from the identical mask (§5 rule 5)
+  [32mPASS[0m  [vesta.local] benchci reproduces the pinned benchstat: 42 cell(s) agree with the pinned benchstat on every center, and on every CI after rounding to %.0f%%
+        [vesta.local] ceiling: compute 1254 GFLOP/s +/- 2.5% [1221, 1286] D=1.032 (span 5.19% / interval 5.0259%) measured at 8 threads, against 176.6 at 1 thread — 88.7% of 8x the 1-thread reading. That shortfall is what the retired 6.0x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here
+        [vesta.local] ceiling: stream/dot 57.405 GB/s at 8 threads, 46.575 at 1 — reported. NOT yet in the min(): converting GB/s to a FLOP/s bound needs a declared DRAM traffic count and no benchmark declares one, so the ceiling in force is the compute term alone, which can only UNDERSTATE how close this host is to its true ceiling
+        [vesta.local] ceiling: stream/axpy 54.465 GB/s at 8 threads, 51.345 at 1 — reported. NOT yet in the min(): converting GB/s to a FLOP/s bound needs a declared DRAM traffic count and no benchmark declares one, so the ceiling in force is the compute term alone, which can only UNDERSTATE how close this host is to its true ceiling
+        [vesta.local] Sgemm: 1 thread 157.9 GFLOP/s +/- 0.4% [157.2, 158.8] D=1.333 (span 1.01% / interval 0.7597%), 8 threads 759.9 GFLOP/s +/- 11.8% [597.4, 795] D=1.984 (span 26.00% / interval 13.1070%)
+        [vesta.local] Sgemm: 53.8% of 8x the single-thread avx512 peak (176.5 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [vesta.local] the admission class is unreadable (no instance identity was read from this host), so this criterion is unmeasured here rather than cleared or missed: an identity this run cannot settle must not be the mechanism that excuses a reading from a floor
+        [vesta.local] Ssyrk: 1 thread 141.1 GFLOP/s +/- 0.3% [140.9, 141.5] D=1 (span 0.43% / interval 0.4252%), 8 threads 794.3 GFLOP/s +/- 3.7% [761.6, 830.2] D=1.391 (span 8.64% / interval 6.2067%)
+        [vesta.local] Ssyrk: 56.3% of 8x the single-thread avx512 peak (176.5 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [vesta.local] the admission class is unreadable (no instance identity was read from this host), so this criterion is unmeasured here rather than cleared or missed: an identity this run cannot settle must not be the mechanism that excuses a reading from a floor
+        [vesta.local] Ssymm: 1 thread 140.2 GFLOP/s +/- 0.5% [139.6, 141] D=1.077 (span 1.00% / interval 0.9272%), 8 threads 750 GFLOP/s +/- 1.9% [720.3, 797.9] D=3.116 (span 10.35% / interval 3.3202%)
+        [vesta.local] Ssymm: 53.1% of 8x the single-thread avx512 peak (176.5 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [vesta.local] the admission class is unreadable (no instance identity was read from this host), so this criterion is unmeasured here rather than cleared or missed: an identity this run cannot settle must not be the mechanism that excuses a reading from a floor
+        [vesta.local] Strsm: 1 thread 55.66 GFLOP/s +/- 0.7% [51.39, 55.84] D=9.674 (span 7.99% / interval 0.8264%), 8 threads 334 GFLOP/s +/- 7.3% [303.7, 353] D=1.503 (span 14.76% / interval 9.8204%)
+        [vesta.local] Strsm: 23.7% of 8x the single-thread avx512 peak (176.5 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [vesta.local] the admission class is unreadable (no instance identity was read from this host), so this criterion is unmeasured here rather than cleared or missed: an identity this run cannot settle must not be the mechanism that excuses a reading from a floor
+  [36mBASELINE[0m  [vesta.local] README.md publishes no row for 'AMD Ryzen 9 7950X3D 16-Core Processor', and scripts/judged-runs.tsv records no judged run for this silicon in era pinned8: a published row is born from a judged run, so its absence here is this host's admission date and not an unpublished number (#6). Its rows are created when the README is regenerated as medians over archived runs from this era
+        1 of 1 host(s) rendered BASELINE this run in era pinned8: green-compatible, and spent ONLY once the witness rows at build/witness-candidates-949994d-<TS>.tsv are landed in scripts/judged-runs.tsv by a reviewed commit. Until then the same absence re-renders BASELINE rather than becoming an unmet registration, and this line is the record of it (#6, #114)
+          landing is BOTH-OR-NEITHER: a witness row landed without its baseline row spends BASELINE and renders the unmet-registration FAIL instead. A single run cannot supply the baseline half (§5 rule 16, the emitted row says so in its own estimator column), so a fleet with one archived run in this era lands NEITHER and re-renders BASELINE next time
+  [33mUNMEASURED[0m  no host produced a judgeable set of scaling ratios, so the headline criterion is unmeasured rather than missed (1 of 1 not admitted to the evidentiary class, so no ratio from them is judgeable however high it reads; 0 had every row out-resolved by its own interval; 0 produced no complete set of ratios) — and 1 host(s) rendered BASELINE on one criterion while being judged on another, so they remain inside it and their per-host lines above say which was which (#6)
+
+-- doc.go, and no rate outside the block this gate re-measures (criterion 9) --
+  [32mPASS[0m  doc.go carries a package comment that `go doc` renders
+  [32mPASS[0m  every GFLOP/s figure in README.md sits inside the block this gate re-measures
+
+-- carried from P4 (criterion 10): every absolute bar this ratio stands on --
+        ">= 6.0x single-thread" was a ratio whose denominator this phase is chartered
+        to change: stage 1 makes the serial path faster, which made that bar harder, and a
+        parallel nest that SLOWED the serial path made it easier. This gate's own carried text
+        predicted that hazard before it decided any verdict, and #6's ruling of 2026-08-20
+        removed it — the denominator is now a measured hardware ceiling, which stage 1 cannot
+        move in either direction. The absolute bars are still carried by running the gates that
+        own them: gate-p4 runs gate-p3, which carries P2's kernel audit — three phases of
+        thresholds, not one of them restated here.
+  [33mUNMEASURED[0m  the delegated P4 gate did not run: this gate refused a dirty tree above, and a gate that could not run is unmeasured rather than green
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p5 tally: 23 PASS / 1 FAIL / 6 UNMEASURED / 1 BASELINE / 0 REPORTED
+gate-p5: RED
