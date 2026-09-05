@@ -158,6 +158,21 @@ SGEMM_BENCH_FILTER='(Peak|Sgemm|OpenBLAS)/(avx512|n=2048)'
 # the other class. No Peak and no OpenBLAS, because what is wanted from it is one
 # rate to compare against the dispatched shape's rate — not a ratio.
 SGEMM_SHAPE_FILTER='Sgemm/n=2048'
+
+# arm64 (#155 unit 3b): override the source facts and selection for the NEON kernels. The amd64
+# values above are the gate's verbatim assertion (byte-unchanged when KEEL_GOARCH is unset); this
+# names the arm64 functions the spill-audit tool (internal/spill, unit 3a) now classifies, and the
+# NEON shapes/peak the kernel-bench and percent-of-peak read. NOT overridden here and pending a
+# ruling (docs/gate-arm64-port.md unit 3): SWEEP_BEST_IPF/criterion 5b (needs an arm64 shape
+# frontier, or arch-gating to reported-not-judged) and PEAK_FLOOR's validity for a 4-lane kernel.
+if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+  KERN_FUNCS="Kernel8x8,Kernel4x16"
+  PEAK_FUNCS="neonPeak,scalarPeak"
+  GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128"
+  GATE_PEAK_FUNC="neonPeak"
+  GATE_PEAK="Peak/neon"
+  SGEMM_BENCH_FILTER='(Peak|Sgemm|OpenBLAS)/(neon|n=2048)'
+fi
 OPENBLAS_REMOTE_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 
 # The OpenBLAS kernel families that are AVX2-or-better on x86-64, lowercased.

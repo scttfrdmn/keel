@@ -443,7 +443,7 @@ carry_p2_properties() {
   echo "-- carried from P2 (criterion 4): the K-loop after $2 --"
   info "compile-time property, audited against the linux/amd64 object code the hosts run"
   if GOEXPERIMENT=simd go run ./internal/spill/cmd/spill-audit \
-       -pkg "$KERN_PKG" -func "$KERN_FUNCS" -mode spill -ssa "$SSADIR" >"$AUDITKERN" 2>&1; then
+       -goarch "${KEEL_GOARCH:-amd64}" -pkg "$KERN_PKG" -func "$KERN_FUNCS" -mode spill -ssa "$SSADIR" >"$AUDITKERN" 2>&1; then
     sed 's/^/        /' "$AUDITKERN"
     pass "0 accumulator spills in the steady-state K-loop (P2 property held)"
     pass "0 calls in the steady-state K-loop (P2 property held)"
@@ -453,7 +453,7 @@ carry_p2_properties() {
     fail "$1 broke a P2 kernel property; the audit above says which"
   fi
   if go run ./internal/spill/cmd/spill-audit \
-       -pkg ./internal/vec -func "$PEAK_FUNCS" -mode nomemory >"$AUDITPEAK" 2>&1; then
+       -goarch "${KEEL_GOARCH:-amd64}" -pkg ./internal/vec -func "$PEAK_FUNCS" -mode nomemory >"$AUDITPEAK" 2>&1; then
     pass "every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)"
   else
     sed 's/^/        /' "$AUDITPEAK"
@@ -463,7 +463,7 @@ carry_p2_properties() {
   # expression shows up as provenance even where it is outside the K-loop the criterion covers.
   BCE_PKGS="$KERN_PKG ./internal/kern ./internal/pack ./internal/block"
   # shellcheck disable=SC2086 # BCE_PKGS is a deliberate list of package patterns, not one word
-  if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 \
+  if GOEXPERIMENT=simd GOOS=linux GOARCH="${KEEL_GOARCH:-amd64}" \
        go build -gcflags='-d=ssa/check_bce' $BCE_PKGS 2>"$LOG"; then
     BCE_N="$(grep -c 'Found Is\(Slice\)\?InBounds' "$LOG" || true)"
     info "check_bce: ${BCE_N:-0} bounds check(s) across vec+kern+pack+block, all outside the K-loop (provenance; the criterion is the loop-body audit above)"

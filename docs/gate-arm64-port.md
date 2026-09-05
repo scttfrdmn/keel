@@ -96,11 +96,26 @@ treatments:
      its own register-name and stack-reference tables. **Fixture: the 8×12 tile, a known spiller
      (5 spills, #136's NEON sweep)** — an arm64 audit that cannot see those five spills is not an
      audit, so it is the natural positive control.
-   - **(3b) the gate-p3 script:** `KERN_FUNCS`/`PEAK_FUNCS`/`GATE_PEAK_FUNC` as arch-conditional
-     asserted constants (amd64 verbatim; arm64 `Kernel8x8,Kernel4x16` / `neonPeak,scalarPeak` /
-     `neonPeak`), `GATE_PEAK`/`GATE_KERNELS`/filter/`AVX512_GREEN` per the unit-2 treatments, the
-     BCE `GOARCH`, and the arm64 coretype sweep + OpenBLAS core allowlist (already landed, #137).
-     The remote arm (OpenBLAS ratio, coretype sweep) uses a tracked gate-p3 archive as its corpus.
+   - **(3b) the gate-p3 script — STATUS: (3a) done, (3b) scoped and pending.** The clean part is
+     arch-conditional asserted constants (amd64 verbatim; arm64 `Kernel8x8,Kernel4x16` /
+     `neonPeak,scalarPeak` / `neonPeak` / `Kernel/8x8/neon/kc=128 …` / `Peak/neon`), the filter
+     per unit-2's treatments, threading `-goarch $KEEL_GOARCH` into `gate-lib.sh`'s
+     `carry_p2_properties` (the tool now supports it, 3a) and the BCE `GOARCH`. The arm64 coretype
+     sweep + OpenBLAS allowlist already landed (#137). The remote arm (OpenBLAS ratio, coretype
+     sweep) uses a tracked gate-p3 archive as its corpus.
+     **Sub-gaps discovered while scoping (3b), each of which would FALSE-PASS on arm64 if left —
+     so (3b) done-right must handle all of them, not just swap constants:**
+     - `SWEEP_BEST_IPF` + `reconcile_sweep_best_ipf` (criterion 5b): `SWEEP_BEST_IPF=4.625` is the
+       amd64 zero-spill shape frontier, and `tools/shapegen -frontier` derives it for amd64. There
+       is no arm64 shape frontier, so on arm64 the reconciliation compares the amd64 frontier to
+       the amd64 constant and passes meaninglessly. Either port `shapegen` to an arm64 frontier or
+       arch-gate 5b to reported-not-judged on arm64 (a ruling to make, not assume).
+     - the `PEAK_FLOOR=0.55` percent-of-peak floor is an AVX-512-derived quality bar; whether it is
+       the right floor for a four-lane NEON kernel is the cross-ISA-transfer question already
+       flagged for gate-p5's 55% (docs/graviton-registration.md) — a first-sight arm64 miss is a
+       floor question, not automatically a keel regression.
+     Verify against the gate-p3 witness (byte-unchanged amd64 on the source-fact arm) and fire
+     arm64 locally; the shapegen/5b decision gates a clean arm64 gate-p3.
 4. **The campaign.** Respawn c7g+c8g, `KEEL_GOARCH=arm64`, two BASELINE passes → landing →
    confirmation + the SVE≈NEON table (`ob_coretype_sweep` is already arm64-aware) + teardown, per
    `docs/graviton-registration.md`.
