@@ -79,8 +79,28 @@ treatments:
 2. **gate-p5 selection.** VECTOR_GREEN generalisation + arch-conditional expectations (category 2) +
    marker-derived backend words (category 1) + `GATE_PEAK`. Prove byte-unchanged via Unit 1; fire
    arm64 branches locally.
-3. **gate-p3 selection.** `GATE_PEAK`/`GATE_KERNELS`/filter/`AVX512_GREEN` (categories 1+2) + the
-   spill audit (category 3). Same verification.
+3. **gate-p3 selection + the spill-audit tool.** Two sub-parts, verified against the gate-p3
+   witness (`archive/witness/preport-p3-local-*.log`, the source-fact arm; deterministic +
+   non-vacuous, needs no host):
+   - **(3a) the spill-audit tool arm64 port** (`internal/spill`) — the hardest, source-fact
+     category. The tool hardcodes `GOARCH=amd64` (main.go:161-162,222-223) and its
+     register/instruction classification is amd64-specific (`spill.go:58-59`). **Read the #13
+     NEON-probe comment before designing this** — it records the load-bearing gotcha, the
+     **anchor inversion**: amd64 anchors are 1-byte `XCHGL AX, AX` and bare `NOP` is dropped;
+     **arm64 anchors are real 4-byte `HINT $0`** (`case ANOOP: return SYSHINT(0)`, size 4,
+     `asm7.go`) carrying a source line and MUST be counted, while bare `NOP` must still be
+     dropped — the *opposite* of the amd64 rule for the same mnemonic. Getting it wrong
+     "silently triples every anchor count" (Scott hit it on the probe; same error class as #46).
+     The golden tests (`spill_test.go` pattern) MUST include a NEON listing that fails under the
+     amd64 anchor rule applied naively, so the inversion is pinned, not assumed. Arm64 also needs
+     its own register-name and stack-reference tables. **Fixture: the 8×12 tile, a known spiller
+     (5 spills, #136's NEON sweep)** — an arm64 audit that cannot see those five spills is not an
+     audit, so it is the natural positive control.
+   - **(3b) the gate-p3 script:** `KERN_FUNCS`/`PEAK_FUNCS`/`GATE_PEAK_FUNC` as arch-conditional
+     asserted constants (amd64 verbatim; arm64 `Kernel8x8,Kernel4x16` / `neonPeak,scalarPeak` /
+     `neonPeak`), `GATE_PEAK`/`GATE_KERNELS`/filter/`AVX512_GREEN` per the unit-2 treatments, the
+     BCE `GOARCH`, and the arm64 coretype sweep + OpenBLAS core allowlist (already landed, #137).
+     The remote arm (OpenBLAS ratio, coretype sweep) uses a tracked gate-p3 archive as its corpus.
 4. **The campaign.** Respawn c7g+c8g, `KEEL_GOARCH=arm64`, two BASELINE passes → landing →
    confirmation + the SVE≈NEON table (`ob_coretype_sweep` is already arm64-aware) + teardown, per
    `docs/graviton-registration.md`.
