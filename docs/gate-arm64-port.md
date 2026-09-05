@@ -118,18 +118,24 @@ treatments:
        sentinel + classification block (936-954 and the throughput_verdict, all amd64-bar-scoped)
        to BASELINE on arm64; it is the bounded next step, over gate-p3's most complex criterion.
      Verify against the gate-p3 witness (byte-unchanged amd64) and fire arm64 locally.
-     **STATUS 2026-09-05: (3b) code complete — source facts + both rulings encoded and verified**
-     (5b→REPORTED, percent-of-peak→BASELINE with the 0.55-unreachable assertion, amd64 zero-diff on
-     the dispatch/local-audit and throughput arms). The (3b) edits are byte-unchanged on the amd64
-     OpenBLAS ratio/sweep arm **by construction** (all arch-conditional values default to amd64 when
-     `KEEL_GOARCH` is unset). The one remaining piece: item 2's **witnessed** OpenBLAS corpus needs
-     the record/replay mechanism EXTENDED — gate-p3's ratio/sweep use DIRECT ssh (`ob_preflight`,
-     `git archive|ssh` for the harness, `ob_coretype_sweep`), not `remote_exec`, so `gate-replay.sh`
-     (which wraps `remote_exec`/`remote_probe`) does not capture them (the gate-p5 -race gap's class,
-     but here it is the arm being witnessed, so it cannot be skipped). Extending the witness to those
-     direct-ssh calls is a bounded record/replay build; then the vesta corpus (vesta ready: OpenBLAS
-     + go1.27), determinism, non-vacuity. Deferred to a fresh session — a rushed ratio/sweep witness
-     launders the very changes it proves.
+     **STATUS 2026-09-05: (3b) code complete; OpenBLAS arm WITNESSED STRUCTURALLY (ruling).**
+     Source facts + both rulings encoded and verified (5b→REPORTED, percent-of-peak→BASELINE with
+     the 0.55-unreachable assertion, amd64 zero-diff on the dispatch/local-audit and throughput
+     arms). The third arm — the OpenBLAS ratio/sweep — is witnessed **structurally, not
+     empirically**, by ruling: `git diff 5c1bc32..HEAD -- scripts/gate-p3.sh` shows the section's
+     ONLY (3b) change is the dirty-tree guard at line 1104, `elif [[ -z "${KEEL_REPLAY:-}" && -n
+     "$(git status --porcelain)" ]]`, which is a **no-op on real runs**: `KEEL_REPLAY` unset →
+     `-z KEEL_REPLAY` true → the condition reduces to the original dirty check. The one other diff
+     line, `SGEMM_BENCH_FILTER=…neon…`, is inside the arm64-only override block, off the amd64 path.
+     So the amd64 OpenBLAS rendering is byte-unchanged **by inspection** — a structural proof (the
+     unsafe change cannot reach the amd64 path) beats an empirical corpus that merely matches once,
+     the same principle as the 0.55-unreachable assertion, and re-confirming a no-op with a
+     five-ssh-point record/replay build is apparatus outgrowing what it serves.
+     **This structural proof is valid ONLY for this diff.** A future substantive change to the
+     OpenBLAS section expires the eye-proof and REQUIRES the empirical witness — the record/replay
+     extension over gate-p3's five direct-ssh points (`ob_preflight`, the `git archive|ssh` ship,
+     the harness build ssh, the harness/ratio measure ssh, `ob_coretype_sweep`; 2 are functions, 3
+     are inline ssh needing extraction). Filed as a v0.2.0 unit with that inventory as its scoping.
 4. **The campaign.** Respawn c7g+c8g, `KEEL_GOARCH=arm64`, two BASELINE passes → landing →
    confirmation + the SVE≈NEON table (`ob_coretype_sweep` is already arm64-aware) + teardown, per
    `docs/graviton-registration.md`.
