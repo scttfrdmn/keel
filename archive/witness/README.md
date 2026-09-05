@@ -10,12 +10,12 @@ is checked against. Mechanism: `scripts/gate-replay.sh` (record/replay) + `scrip
 
 ## The two arms (DESIGN.md rule 12 scope)
 
-- **Throughput** — `preport-throughput-949994d.txt` (102 lines). The ceiling/scale/share/
+- **Throughput** — `preport-throughput-949994d.log` (102 lines). The ceiling/scale/share/
   percent-of-peak rendering (the `GATE_PEAK` consumers), replayed from a **tracked** evidentiary
   archive (`archive/pinned8/bench-gate-p5-6ba6566-keel-skx-20260823T004407Z-1.txt`, Intel 8124M)
   with an evidentiary provenance. Reproduce: `scripts/gate-witness.sh render OUT`. Fully
   self-contained — no host needed.
-- **Dispatch + full gate** — `preport-vesta-949994d.txt` (113 lines) from
+- **Dispatch + full gate** — `preport-vesta-949994d.log` (113 lines) from
   `gate-p5-dispatch-corpus-949994d.tar.gz` (a live vesta.local record: the parallel-correctness
   run, the four `KEEL_FORCE` runs, the throughput sweep, and vesta's provenance). This is the
   irreproducible "before" arm — captured at the pre-port revision because the dispatch section's
