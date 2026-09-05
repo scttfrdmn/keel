@@ -44,6 +44,7 @@ func main() {
 		pkg     = flag.String("pkg", "", "package to compile and audit, e.g. ./internal/kern")
 		funcs   = flag.String("func", "", "comma-separated function names (short names, not symbols)")
 		mode    = flag.String("mode", "spill", "spill | nomemory")
+		goarch  = flag.String("goarch", "amd64", "target GOARCH to compile and audit: amd64 | arm64")
 		ssaDir  = flag.String("ssa", "", "if set, also write GOSSAFUNC html per function into this directory")
 		verbose = flag.Bool("v", false, "print the steady-state loop body")
 	)
@@ -57,8 +58,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "spill-audit: unknown -mode %q\n", *mode)
 		os.Exit(2)
 	}
+	if err := spill.SetArch(*goarch); err != nil {
+		fmt.Fprintf(os.Stderr, "spill-audit: %v\n", err)
+		os.Exit(2)
+	}
 
-	listing, err := compile(*pkg, nil)
+	listing, err := compile(*pkg, *goarch, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "spill-audit: %v\n", err)
 		os.Exit(2)
@@ -79,7 +84,7 @@ func main() {
 			failed = true
 		}
 		if *ssaDir != "" {
-			if err := emitSSA(*pkg, name, *ssaDir); err != nil {
+			if err := emitSSA(*pkg, name, *goarch, *ssaDir); err != nil {
 				fmt.Fprintf(os.Stderr, "  %s: ssa.html not archived: %v\n", name, err)
 				failed = true
 			}
@@ -152,14 +157,14 @@ func audit(fns []spill.Func, name, mode string, verbose bool) bool {
 //
 // -o os.DevNull keeps the object out of the build cache's way and makes it
 // obvious that the artifact wanted here is the listing, not a binary.
-func compile(pkg string, extra []string) ([]byte, error) {
+func compile(pkg, goarch string, extra []string) ([]byte, error) {
 	args := append([]string{"build", "-gcflags=-S", "-o", os.DevNull}, extra...)
 	args = append(args, pkg)
 	cmd := exec.Command("go", args...)
 	cmd.Env = append(os.Environ(),
 		"GOEXPERIMENT=simd",
 		"GOOS=linux",
-		"GOARCH=amd64",
+		"GOARCH="+goarch,
 		"CGO_ENABLED=0",
 	)
 	var out, errb bytes.Buffer
@@ -177,7 +182,7 @@ func compile(pkg string, extra []string) ([]byte, error) {
 // cannot: it shows the value's live range and the allocator's decision. The gate
 // requires it to exist for every audited function, so that a red gate always
 // comes with the evidence needed to write docs/spill-report.md.
-func emitSSA(pkg, fn, dir string) error {
+func emitSSA(pkg, fn, goarch, dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -220,7 +225,7 @@ func emitSSA(pkg, fn, dir string) error {
 	cmd.Env = append(os.Environ(),
 		"GOEXPERIMENT=simd",
 		"GOOS=linux",
-		"GOARCH=amd64",
+		"GOARCH="+goarch,
 		"CGO_ENABLED=0",
 		"GOSSAFUNC="+fn,
 		// GOSSAFUNC is read by the compiler but is *not* part of the action ID

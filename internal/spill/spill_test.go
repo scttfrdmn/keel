@@ -4,6 +4,9 @@
 package spill
 
 import (
+	"bytes"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -287,5 +290,170 @@ func TestSteadyLoopIgnoresMorestack(t *testing.T) {
 	if loop.Start != 8 || loop.End != 14 {
 		t.Errorf("steady loop = [%d,%d], want [8,14]: the morestack jump is not a loop",
 			loop.Start, loop.End)
+	}
+}
+
+// -------------------------------------------------------------- arm64 (NEON, #13)
+
+// A hand-written arm64 listing whose every line exercises a rule that DIFFERS from
+// amd64 (#13): the K-loop is closed by BGE (a B-branch, not J); the anchor is a real
+// HINT $0 that must be counted (not XCHGL); bare NOP carries <unknown line number>
+// and is dropped; the arith is VFMLA; the broadcast is VDUP; and the spill is a
+// vector F-register to the pseudo (SP). MOVD.W to (RSP) at the top is the hardware
+// prologue and must NOT count as a spill.
+const arm64Listing = `github.com/x.neonKernel STEXT size=200 args=0x18 locals=0x40 funcid=0x0 align=0x0
+	0x0000 00000 (k.go:5)	MOVD.W	R30, -16(RSP)
+	0x0080 00128 (k.go:10)	VFMLA	V21.S4, V17.S4, V16.S4
+	0x0084 00132 (k.go:10)	VDUP	V25.S[0], V17.S4
+	0x0088 00136 (k.go:10)	HINT	$0
+	0x008c 00140 (k.go:10)	FMOVQ	F0, github.com/x.acc-16(SP)
+	0x0090 00144 (<unknown line number>)	NOP
+	0x0094 00148 (k.go:10)	ADD	$1, R0, R0
+	0x0098 00152 (k.go:10)	CMP	R0, R1
+	0x009c 00156 (k.go:10)	BGE	128
+	0x00a0 00160 (k.go:11)	RET
+`
+
+func TestARM64AuditClassifiesLoopBody(t *testing.T) {
+	if err := SetArch("arm64"); err != nil {
+		t.Fatalf("SetArch: %v", err)
+	}
+	t.Cleanup(func() { SetArch("amd64") })
+
+	fns, err := Parse(strings.NewReader(arm64Listing))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	f, err := Find(fns, "neonKernel")
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	loop, err := f.SteadyLoop()
+	if err != nil {
+		t.Fatalf("SteadyLoop: %v", err)
+	}
+	// The BGE closes the loop at [128,156]; getting this wrong makes every count wrong.
+	if loop.Start != 128 || loop.End != 156 {
+		t.Errorf("steady loop = [%d,%d], want [128,156] (closed by BGE, a B-branch)", loop.Start, loop.End)
+	}
+	r := Audit(f, loop)
+	for _, c := range []struct {
+		what      string
+		got, want int
+	}{
+		{"arith (VFMLA)", r.Arith, 1},
+		{"vector stack refs (FMOVQ F0->(SP))", r.Spills(), 1},
+		{"broadcasts (VDUP)", r.Broadcasts, 1},
+		{"anchor nops (HINT $0)", r.Nops, 1},
+		{"calls", len(r.Calls), 0},
+		{"bounds-check exits", len(r.PanicExits), 0},
+	} {
+		if c.got != c.want {
+			t.Errorf("%s = %d, want %d", c.what, c.got, c.want)
+		}
+	}
+	// The spill is the FMOVQ to the pseudo (SP), not the MOVD.W to (RSP) prologue.
+	if len(r.VecStack) == 1 && r.VecStack[0].Offset != 140 {
+		t.Errorf("spill at offset %d, want 140", r.VecStack[0].Offset)
+	}
+}
+
+// TestARM64InversionIsLoadBearing proves the arm64 rules are not cosmetic: applying
+// the amd64 classification to an arm64 listing gets it WRONG, which is exactly the
+// "silently triples every anchor count" / "audits nothing" failure #13 (and #46's
+// class) warns about. Two distinct inversions, each pinned:
+//
+//   - the anchor: HINT $0 is an anchor on arm64 and nothing on amd64; XCHGL AX,AX is
+//     the reverse. Counting NOP instead of HINT is the tripling.
+//   - the branch: BGE closes the loop on arm64; under amd64's J-only rule it is not a
+//     branch at all, so no loop is found and the audit sees nothing.
+func TestARM64InversionIsLoadBearing(t *testing.T) {
+	t.Cleanup(func() { SetArch("amd64") })
+
+	SetArch("arm64")
+	if !isNop("HINT", "$0") {
+		t.Error("arm64: HINT $0 must be counted as an anchor")
+	}
+	if isNop("XCHGL", "AX, AX") {
+		t.Error("arm64: XCHGL is not an arm64 anchor")
+	}
+	if !active.isBranch("BGE") || !active.isBranch("CBNZ") {
+		t.Error("arm64: BGE/CBNZ must be recognized as branches")
+	}
+	if active.isBranch("BL") {
+		t.Error("arm64: BL is a call, not an offset-branch")
+	}
+
+	SetArch("amd64")
+	if isNop("HINT", "$0") {
+		t.Error("amd64: HINT is not an amd64 anchor (counting it would triple the count on an arm64 listing)")
+	}
+	if !isNop("XCHGL", "AX, AX") {
+		t.Error("amd64: XCHGL AX,AX is the amd64 anchor")
+	}
+	if active.isBranch("BGE") {
+		t.Error("amd64: BGE is not a J-branch; treating it as one would misread arm64 listings")
+	}
+	// The end-to-end consequence: amd64 rules find NO loop in the arm64 listing (BGE
+	// missed), so SteadyLoop fails — the audit would see nothing rather than the spill.
+	fns, err := Parse(strings.NewReader(arm64Listing))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	f, _ := Find(fns, "neonKernel")
+	if _, err := f.SteadyLoop(); err == nil {
+		t.Error("amd64 rules found a loop in an arm64 listing: the branch inversion is not load-bearing?")
+	}
+}
+
+// TestARM64SeesRealSpiller is the positive control the port's whole value rests on:
+// the audit must see the accumulator spills in a REAL NEON kernel, or it audits
+// nothing. Kernel8x12 is #136's known spiller — five accumulators the allocator moved
+// to the stack (docs/neon-sweep.md). Reconciled: the audit reports vector-stack
+// references (stores + reloads) over those five distinct slots. Skipped where the
+// simd toolchain is unavailable (the stock-floor CI job), since the kernel needs it.
+func TestARM64SeesRealSpiller(t *testing.T) {
+	if err := SetArch("arm64"); err != nil {
+		t.Fatalf("SetArch: %v", err)
+	}
+	t.Cleanup(func() { SetArch("amd64") })
+
+	cmd := exec.Command("go", "build", "-gcflags=-S", "-o", os.DevNull,
+		"github.com/scttfrdmn/keel/internal/vec")
+	cmd.Env = append(os.Environ(), "GOEXPERIMENT=simd", "GOOS=linux", "GOARCH=arm64", "CGO_ENABLED=0")
+	var errb bytes.Buffer
+	cmd.Stderr = &errb
+	if err := cmd.Run(); err != nil {
+		t.Skipf("cannot cross-compile internal/vec for arm64 (needs the simd toolchain): %v", err)
+	}
+	fns, err := Parse(&errb)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	f, err := Find(fns, "Kernel8x12")
+	if err != nil {
+		t.Fatalf("Find Kernel8x12: %v", err)
+	}
+	loop, err := f.SteadyLoop()
+	if err != nil {
+		t.Fatalf("SteadyLoop: %v", err)
+	}
+	r := Audit(f, loop)
+	if r.Spills() == 0 {
+		t.Fatal("Kernel8x12 audited 0 spills, but #136 records it as a spiller — the audit sees nothing")
+	}
+	// Distinct accumulator slots, which must reconcile with #136's five.
+	slots := map[string]bool{}
+	for _, in := range r.VecStack {
+		if i := strings.Index(in.Args, ".c"); i >= 0 {
+			slot := in.Args[i:]
+			if j := strings.Index(slot, "-"); j >= 0 {
+				slot = slot[:j]
+			}
+			slots[slot] = true
+		}
+	}
+	if len(slots) != 5 {
+		t.Errorf("Kernel8x12 spilled %d distinct accumulators, want 5 (docs/neon-sweep.md); slots=%v", len(slots), slots)
 	}
 }

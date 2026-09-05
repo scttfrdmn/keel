@@ -54,12 +54,13 @@
 //
 // # Portability
 //
-// The parser is toolchain-format-specific (Go's own listing) and the operand
-// classification is amd64-specific. It has to be: the whole question is what
-// instructions came out. A future arm64 port needs its own register-name and
-// stack-reference rules, and issue #13 records that. The tool itself builds and
-// runs on any host with a stock toolchain — it inspects a cross-compile rather
-// than needing to run the code.
+// The parser is toolchain-format-specific (Go's own listing) but arch-agnostic
+// (offsets and branch targets); the operand classification is per-arch, in the
+// archRules selected by SetArch. amd64 and arm64 (NEON, #155/#13) both ship: the
+// arm64 rules invert amd64's anchor rule (HINT $0 counts, XCHGL does not) and
+// recognize B-family branches, both load-bearing (see arm64Rules and #46). The
+// tool inspects a cross-compile — `-goarch` picks the target — rather than needing
+// to run the code, so either arch is audited from any host with a stock toolchain.
 package spill
 
 import (
@@ -120,11 +121,13 @@ var (
 	stextRE = regexp.MustCompile(`^[^\t]*[\t ]STEXT(?:[\t ]|$)`)
 	// A branch whose operand is a bare instruction offset.
 	targetRE = regexp.MustCompile(`^(\d+)$`)
-	// Memory operands: (SP), 8(SP), sym+8(SP), (AX), (AX)(CX*4), $f32.0(SB).
+	// Memory operands: (SP), 8(SP), sym+8(SP), (AX), (AX)(CX*4), $f32.0(SB), and the
+	// arm64 forms (R4), sym-16(SP). Arch-agnostic: `[A-Z][A-Z0-9]*` covers AX and R4/RSP alike.
 	memRE = regexp.MustCompile(`\((SP|SB|[A-Z][A-Z0-9]*)\)`)
-	// Vector registers, in Go's amd64 assembler names.
-	vecRegRE = regexp.MustCompile(`\b[XYZ][0-9]{1,2}\b`)
-	// Stack-relative references specifically.
+	// Stack-relative references specifically. Arch-agnostic: both amd64 and arm64 spill to the
+	// pseudo frame-relative `(SP)` (arm64's `(RSP)` is the hardware prologue, not a spill), so
+	// this rule is shared — see #13, where the anticipated separate arm64 stack rule turned out
+	// unnecessary once the real listing showed spills as `FMOVQ F0, sym-16(SP)`.
 	stackRE = regexp.MustCompile(`\(SP\)`)
 )
 
@@ -233,76 +236,174 @@ func baseName(name string) string {
 	return name
 }
 
-// isArith reports whether an instruction does the floating-point work this
-// audit is about. Used to pick the steady-state loop: the loop that carries the
-// arithmetic is the one whose spills matter.
-func isArith(op string) bool {
-	switch {
-	case strings.HasPrefix(op, "VFMADD"), strings.HasPrefix(op, "VFMSUB"),
-		strings.HasPrefix(op, "VFNMADD"), strings.HasPrefix(op, "VFNMSUB"):
-		return true
+// archRules is the arch-specific half of the audit: the operand classification
+// (#13). The parser and the loop-finding are arch-agnostic (offsets and branches),
+// but "is this a vector register", "is this a float FMA", "is this an anchor" are
+// answered against one instruction set's assembler names. amd64 is the original
+// tool verbatim; arm64 (NEON) is #13's port, its rules read from real -S output.
+type archRules struct {
+	name        string
+	vecReg      *regexp.Regexp
+	isArith     func(op string) bool
+	isVecMove   func(op string) bool
+	isBroadcast func(op string) bool
+	isNop       func(op, args string) bool
+	// isBranch reports whether op is a branch whose operand is an instruction offset
+	// (used to find loops and panic exits). amd64 branches all start with J; arm64's are
+	// B-conditional / CBZ / TBZ / JMP, and NOT BL (which is a call) — a distinction that,
+	// missed, makes Loops() find only the whole-function morestack branch and report the
+	// prologue's spills as the K-loop's.
+	isBranch func(op string) bool
+}
+
+// active is the classification the package uses. Default amd64 so every existing
+// caller and golden test is byte-identical without touching anything; SetArch
+// selects arm64 for a NEON audit. A package global, not a threaded value, because
+// one spill-audit invocation targets one arch and the tool sets it once at startup.
+var active = amd64Rules()
+
+// SetArch selects the operand classification. "amd64" | "arm64".
+func SetArch(goarch string) error {
+	switch goarch {
+	case "amd64":
+		active = amd64Rules()
+	case "arm64":
+		active = arm64Rules()
+	default:
+		return fmt.Errorf("spill: no operand classification for GOARCH=%q (have amd64, arm64)", goarch)
 	}
-	for _, p := range []string{"MUL", "ADD", "SUB", "DIV"} {
-		if !strings.HasPrefix(strings.TrimPrefix(op, "V"), p) {
-			continue
-		}
-		for _, s := range []string{"PS", "PD", "SS", "SD"} {
-			if strings.HasSuffix(op, s) {
+	return nil
+}
+
+// Arch reports the active classification's name, for the tool's provenance line.
+func Arch() string { return active.name }
+
+func amd64Rules() archRules {
+	return archRules{
+		name: "amd64",
+		// Vector registers, in Go's amd64 assembler names.
+		vecReg: regexp.MustCompile(`\b[XYZ][0-9]{1,2}\b`),
+		isArith: func(op string) bool {
+			switch {
+			case strings.HasPrefix(op, "VFMADD"), strings.HasPrefix(op, "VFMSUB"),
+				strings.HasPrefix(op, "VFNMADD"), strings.HasPrefix(op, "VFNMSUB"):
 				return true
 			}
-		}
+			for _, p := range []string{"MUL", "ADD", "SUB", "DIV"} {
+				if !strings.HasPrefix(strings.TrimPrefix(op, "V"), p) {
+					continue
+				}
+				for _, s := range []string{"PS", "PD", "SS", "SD"} {
+					if strings.HasSuffix(op, s) {
+						return true
+					}
+				}
+			}
+			return false
+		},
+		isVecMove: func(op string) bool {
+			switch op {
+			case "MOVUPS", "MOVAPS", "MOVSS", "MOVSD", "MOVLPS", "MOVHPS":
+				return true
+			}
+			if !strings.HasPrefix(op, "V") {
+				return false
+			}
+			for _, p := range []string{"VMOVUPS", "VMOVAPS", "VMOVDQU", "VMOVDQA", "VMOVSS",
+				"VMOVSD", "VBROADCAST", "VPBROADCAST", "VEXTRACT", "VINSERT"} {
+				if strings.HasPrefix(op, p) {
+					return true
+				}
+			}
+			return false
+		},
+		isBroadcast: func(op string) bool {
+			return strings.HasPrefix(op, "VBROADCAST") || strings.HasPrefix(op, "VPBROADCAST")
+		},
+		// amd64 anchors are 1-byte XCHGL AX,AX (T9); the bare NOP mnemonic is a pseudo-op
+		// the parser already drops, so this case is dead here but kept for symmetry.
+		isNop: func(op, args string) bool {
+			switch op {
+			case "NOP":
+				return true
+			case "XCHGL", "XCHGQ":
+				return strings.ReplaceAll(args, " ", "") == "AX,AX"
+			}
+			return false
+		},
+		isBranch: func(op string) bool { return strings.HasPrefix(op, "J") },
 	}
-	return false
 }
 
-// isVecMove reports whether an instruction is a vector data movement — the
-// class a spill or a register copy belongs to.
-func isVecMove(op string) bool {
-	switch op {
-	case "MOVUPS", "MOVAPS", "MOVSS", "MOVSD", "MOVLPS", "MOVHPS":
-		return true
+// arm64Rules is the NEON classification (#13, docs/neon-probe.md). Every mnemonic
+// below was read from a real `GOARCH=arm64 -S` of internal/vec, not recalled.
+func arm64Rules() archRules {
+	return archRules{
+		name: "arm64",
+		// V and F name the same 128-bit registers (V for the lane views, F for the
+		// FMOVQ/FLDPQ scalar-width moves that carry vector spills), so both count as
+		// vector for the stack-ref test. `.S4`/`.B16` lane suffixes sit in the operand
+		// text after the register token, so \b closes the match before them.
+		vecReg: regexp.MustCompile(`\b[VF][0-9]{1,2}\b`),
+		// NEON float arithmetic. VFMLA is the fused multiply-add that carries the K-loop;
+		// the rest are here so the steady-loop pick (most arith) is not fooled by a
+		// VFADD-heavy reduction elsewhere.
+		isArith: func(op string) bool {
+			switch op {
+			case "VFMLA", "VFMLS", "VFMUL", "VFADD", "VFSUB", "VFDIV":
+				return true
+			}
+			return false
+		},
+		// Vector data movement: register copies (VMOV/VMOVI), the FMOV/FLDP/FSTP family
+		// that moves 128-bit values to/from memory or the stack, and the DUP splat.
+		isVecMove: func(op string) bool {
+			switch op {
+			case "VMOV", "VMOVI", "VMOVS", "VDUP", "VLD1", "VST1",
+				"FMOVQ", "FMOVD", "FMOVS", "FLDPQ", "FSTPQ", "FLDPS", "FSTPS", "FLDPD", "FSTPD":
+				return true
+			}
+			return false
+		},
+		// NEON splats a scalar across lanes with DUP (VDUP in Go's assembler).
+		isBroadcast: func(op string) bool {
+			return op == "VDUP" || op == "DUP"
+		},
+		// THE INVERSION (#13, #46's error class): arm64 anchors are REAL 4-byte HINT $0
+		// (ANOOP -> SYSHINT(0)), carrying a source line, so they reach the audit and MUST
+		// be counted — the opposite of amd64, where the anchor is XCHGL and bare NOP is
+		// dropped. Bare NOP is still dropped here by the shared `pseudo` map (its tell is
+		// the <unknown line number> loc and a doubled offset). Counting NOP here instead of
+		// HINT is exactly what "silently triples every anchor count" — so this matches HINT
+		// alone, never NOP.
+		isNop: func(op, args string) bool {
+			return op == "HINT" && strings.TrimSpace(args) == "$0"
+		},
+		// arm64 offset-branches: JMP (unconditional), the B<cond> family, and the
+		// compare-and-branch / test-and-branch forms. NOT BL/BLR/BR — BL is the call
+		// (which `CALL` also spells), BLR/BR are register-indirect and carry no offset
+		// operand. B alone is unconditional; B.<cond> surfaces as BEQ/BNE/... in the listing.
+		isBranch: func(op string) bool {
+			switch op {
+			case "BL", "BLR", "BR":
+				return false
+			case "JMP", "B",
+				"BEQ", "BNE", "BCS", "BHS", "BCC", "BLO", "BMI", "BPL", "BVS", "BVC",
+				"BHI", "BLS", "BGE", "BLT", "BGT", "BLE", "BAL", "BNV",
+				"CBZ", "CBNZ", "CBZW", "CBNZW", "TBZ", "TBNZ":
+				return true
+			}
+			return false
+		},
 	}
-	if !strings.HasPrefix(op, "V") {
-		return false
-	}
-	for _, p := range []string{"VMOVUPS", "VMOVAPS", "VMOVDQU", "VMOVDQA", "VMOVSS",
-		"VMOVSD", "VBROADCAST", "VPBROADCAST", "VEXTRACT", "VINSERT"} {
-		if strings.HasPrefix(op, p) {
-			return true
-		}
-	}
-	return false
 }
 
-// isBroadcast reports whether an instruction splats a scalar across a vector.
-//
-// Counted apart from register copies because it is not one: a GEMM microkernel's
-// broadcasts are arithmetic setup it cannot avoid — one per row per k-step — while
-// a copy is the register allocator working around VFMADD213PS's destination
-// (docs/toolchain-notes.md T2). Lumping them together, which the first version of
-// this tool did, made the 2x32 tile look like it had 16 allocator copies per pass
-// when it has 8.
-func isBroadcast(op string) bool {
-	return strings.HasPrefix(op, "VBROADCAST") || strings.HasPrefix(op, "VPBROADCAST")
-}
-
-// isNop reports whether an instruction is a statement-position anchor.
-//
-// The compiler emits these as 1-byte `XCHGL AX, AX` rather than as the NOP
-// pseudo-op, so the listing parser cannot drop them and the audit has to name
-// them: one appears per inlined call site whose instructions were re-attributed
-// to a callee's source position (docs/toolchain-notes.md T9). They cost an issue
-// slot each and were 27% of one draft of the microkernel body, which is why they
-// are counted rather than ignored.
-func isNop(op, args string) bool {
-	switch op {
-	case "NOP":
-		return true
-	case "XCHGL", "XCHGQ":
-		return strings.ReplaceAll(args, " ", "") == "AX,AX"
-	}
-	return false
-}
+// isArith / isVecMove / isBroadcast / isNop dispatch to the active arch's rules, so
+// callers and methods are unchanged across the port.
+func isArith(op string) bool     { return active.isArith(op) }
+func isVecMove(op string) bool   { return active.isVecMove(op) }
+func isBroadcast(op string) bool { return active.isBroadcast(op) }
+func isNop(op, args string) bool { return active.isNop(op, args) }
 
 // Loops returns every loop closed by a backward branch, in listing order and
 // deduplicated by extent.
@@ -317,7 +418,7 @@ func (f Func) Loops() []Loop {
 	seen := map[[2]int]bool{}
 	var out []Loop
 	for i, in := range f.Insns {
-		if !strings.HasPrefix(in.Op, "J") {
+		if !active.isBranch(in.Op) {
 			continue
 		}
 		m := targetRE.FindStringSubmatch(strings.TrimSpace(in.Args))
@@ -460,7 +561,7 @@ func Audit(f Func, l Loop) Report {
 			continue
 		}
 		mem := memRE.MatchString(in.Args)
-		vec := vecRegRE.MatchString(in.Args)
+		vec := active.vecReg.MatchString(in.Args)
 		switch {
 		case mem && vec && stackRE.MatchString(in.Args):
 			r.VecStack = append(r.VecStack, in)
@@ -504,7 +605,7 @@ const panicLookahead = 8
 func (f Func) panicExits(l Loop) []Insn {
 	var out []Insn
 	for _, in := range l.Insns {
-		if !strings.HasPrefix(in.Op, "J") {
+		if !active.isBranch(in.Op) {
 			continue
 		}
 		m := targetRE.FindStringSubmatch(strings.TrimSpace(in.Args))
