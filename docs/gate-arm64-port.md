@@ -103,19 +103,21 @@ treatments:
      `carry_p2_properties` (the tool now supports it, 3a) and the BCE `GOARCH`. The arm64 coretype
      sweep + OpenBLAS allowlist already landed (#137). The remote arm (OpenBLAS ratio, coretype
      sweep) uses a tracked gate-p3 archive as its corpus.
-     **Sub-gaps discovered while scoping (3b), each of which would FALSE-PASS on arm64 if left —
-     so (3b) done-right must handle all of them, not just swap constants:**
-     - `SWEEP_BEST_IPF` + `reconcile_sweep_best_ipf` (criterion 5b): `SWEEP_BEST_IPF=4.625` is the
-       amd64 zero-spill shape frontier, and `tools/shapegen -frontier` derives it for amd64. There
-       is no arm64 shape frontier, so on arm64 the reconciliation compares the amd64 frontier to
-       the amd64 constant and passes meaninglessly. Either port `shapegen` to an arm64 frontier or
-       arch-gate 5b to reported-not-judged on arm64 (a ruling to make, not assume).
-     - the `PEAK_FLOOR=0.55` percent-of-peak floor is an AVX-512-derived quality bar; whether it is
-       the right floor for a four-lane NEON kernel is the cross-ISA-transfer question already
-       flagged for gate-p5's 55% (docs/graviton-registration.md) — a first-sight arm64 miss is a
-       floor question, not automatically a keel regression.
-     Verify against the gate-p3 witness (byte-unchanged amd64 on the source-fact arm) and fire
-     arm64 locally; the shapegen/5b decision gates a clean arm64 gate-p3.
+     **Two sub-gaps, RULED (a bar travels with its derivation set, never across ISAs — #155):**
+     - *criterion 5b* (`SWEEP_BEST_IPF`/`reconcile_sweep_best_ipf`): **arch-gates to REPORTED on
+       arm64 — DONE.** `SWEEP_BEST_IPF=4.625` and `shapegen -frontier` are amd64's zero-spill SHAPE
+       frontier; running them against NEON would rank arm64 shapes by a frontier they do not
+       execute (the rank-inversion defect). On arm64 the criterion renders REPORTED with its cause,
+       never judged against a borrowed bar (SPR/GNR precedent). The arm64 shape frontier is a filed
+       **v0.2.0 unit** (a `shapegen` arm64 port; #136's audit table is its seed data).
+     - *`PEAK_FLOOR=0.55`*: **amd64-scoped; arm64 first-sight renders BASELINE per rule 17 —
+       ENCODING PENDING.** An AVX-512-derived percent-of-peak floor on a 4-lane NEON kernel is a
+       category error, not a strict bar; the rule-17 machinery already handles this (first sight
+       registers, per-host floors type from arm64's own archives at N≥2, 17(c) keeps 0.55 on the
+       hosts that derived it) — same treatment gate-p5's 55% received. The encoding arch-gates the
+       sentinel + classification block (936-954 and the throughput_verdict, all amd64-bar-scoped)
+       to BASELINE on arm64; it is the bounded next step, over gate-p3's most complex criterion.
+     Verify against the gate-p3 witness (byte-unchanged amd64) and fire arm64 locally.
 4. **The campaign.** Respawn c7g+c8g, `KEEL_GOARCH=arm64`, two BASELINE passes → landing →
    confirmation + the SVE≈NEON table (`ob_coretype_sweep` is already arm64-aware) + teardown, per
    `docs/graviton-registration.md`.

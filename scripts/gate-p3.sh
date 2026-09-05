@@ -674,7 +674,18 @@ else
 fi
 
 carry_p2_properties P3 "packing and blocking"
-reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG"
+# Criterion 5b arch-gates to REPORTED on arm64 (#155 ruling): SWEEP_BEST_IPF and shapegen's
+# -frontier are the amd64 zero-spill SHAPE frontier, and running them against NEON numbers would
+# rank arm64 shapes by a frontier they do not execute — the rank-inversion defect (#6, #37's class)
+# in pure form. The arm64 shape frontier is its own v0.2.0 unit (a shapegen arm64 port; #136's
+# audit table is its seed data). Until then this renders REPORTED with its cause, never judged
+# against a borrowed bar — the SPR/GNR precedent that a criterion the gate cannot apply honestly
+# reports rather than convicts.
+if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+  reported "criterion 5b (shape-frontier reconciliation): NOT JUDGED on arm64 — SWEEP_BEST_IPF=$SWEEP_BEST_IPF and shapegen -frontier are amd64's zero-spill frontier, and no arm64 frontier exists yet (filed, v0.2.0); running the amd64 one against NEON would be a rank inversion"
+else
+  reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG"
+fi
 
 # ------------------------------------------ the throughput sentinel (P2, #19)
 echo
