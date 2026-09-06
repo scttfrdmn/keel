@@ -9,6 +9,17 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **float64 design doc (`docs/f64-design.md`, `#103`/`#135`) — design only, no kernels.** The map
+  `#135` promised the type axis, written before any kernel/shim/benchmark: the genericize-the-middle
+  boundary (what f64 inherits unchanged — the nest/packing/partition *algorithm* — vs what is new —
+  the `[]float32` seam type, the f64 shim, the kernel family, and the oracle); a falsifiable tile
+  prediction (halve the columns, keep rows+accumulators: AVX-512 `4×16`/`2×16`×4, NEON `4×8`/`8×4`,
+  the sweep decides, Kernel6x32's spill ghost noted); the two-layer oracle plan that resolves `#103`'s
+  blocker — Gonum for cross-implementation agreement (same-precision, so it proves agreement not
+  accumulation-order) plus a `math/big.Float` wider-than-f64 witness for adversarial shapes to recover
+  the property the f32 oracle gets from a wider type; and I1–I7 carried forward (I3 unchanged, I1/I2/
+  I4/I5 re-proved on f64 bits, I6/I7 established fresh). Does not decide whether f64 is built, the type
+  mechanism, or any measured number — all rule-12 open.
 - **arm64 Graviton fleet support, for keel's first judged arm64 verdicts (`#137`).** The AWS
   launcher, the OpenBLAS reference and the evidentiary allowlist all learned arm64:
   `aws-fleet.sh` resolves the AMI per instance-type architecture (read from the provider's
