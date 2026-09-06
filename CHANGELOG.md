@@ -52,6 +52,18 @@ While the major version is 0, minor versions may contain breaking changes.
   the 0.55 comparison unreachable), and 5b is REPORTED (the amd64 zero-spill frontier does not execute
   on NEON). Importing a standard that predates the run is the legitimate amend — nothing was measured
   first; the disclosure block names both changes and the rulings.
+- **keel's first judged arm64 baseline registered (`#137`).** Two clean gate-p5 ladder passes at
+  `029e24f` on the Graviton fleet (`keel-gvt3`/Neoverse-V1, `keel-gvt4`/Neoverse-V2, both evidentiary,
+  #160/#161/#158 all fixed and witnessed) emitted consistent candidate rows; the reviewed landing
+  writes their N=2 medians to `scripts/host-baselines.tsv` (share/{Sgemm,Ssyrk,Ssymm} and scale/Strsm,
+  8 rows) and the witness to `scripts/judged-runs.tsv`, with the four runs archived under
+  `archive/pinned8/`. First-sight per rule 17/#119 (both derivation sets amd64-only), so each host
+  registers its own baseline; rule-19 admissible (share rate CIs ≤0.35%, scale intervals ~0.10× —
+  far under the 2.6-point / 0.403× caps). **The honest headline — keel's first judged arm64 number:**
+  NEON Sgemm at 2048³ is **54.4% (Neoverse-V2) / 31.0% (Neoverse-V1)** of the fair swept-coretype
+  OpenBLAS reference — a sub-60% FAIL, reproduced across both passes and two launches, and the exact
+  gap NEON L1/L2 work (#154) is written to close. percent-of-peak stays BASELINE (its arm64 floor
+  registry is unimplemented; the judged-runs witness records the host).
 - **errcheck hygiene: unchecked `SetArch`/`fmt.Fprintf` return values in test code (`#137`).** The
   gate-p0 golangci-lint (the release gate's stricter config) flagged unchecked error returns on the
   judged fleet run that CI's `make lint` had been missing since #155 — `internal/spill/spill_test.go`

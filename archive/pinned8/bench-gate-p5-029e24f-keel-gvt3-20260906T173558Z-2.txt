@@ -1,0 +1,224 @@
+keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+keel-bench-cpu: unknown (no model name in /proc/cpuinfo)
+keel-bench-cores: 8 logical
+keel-bench-governor: unknown (no cpufreq)
+keel-bench-clock-mhz: unknown (no cpu MHz field)
+keel-bench-platform: linux/arm64
+keel-bench-toolchain: go1.27.1-X:simd
+keel-bench-backend: scalar (available: scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: neon: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: scalar: unavailable (no cpuinfo_max_freq)
+keel-bench-gomaxprocs: 8
+keel-bench-kern: 8x8/neon (available: 8x8/neon 4x16/neon 8x8/scalar 4x16/scalar)
+keel-bench-kern-class: fma insns-per-fma=0.000 (no vector backend in this build (class unused))
+keel-bench-kern-audit: 
+keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+keel-bench-ceiling: name=Ceiling/compute/neon/threads=1 gomaxprocs=1 threads=1 kind=compute instrument=v2 width=neon flops=8388608 iters=65536
+goos: linux
+goarch: arm64
+pkg: github.com/scttfrdmn/keel/bench
+BenchmarkCeiling/compute/neon/threads=1-8         	    5906	    202541 ns/op	        41.42 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5922	    202523 ns/op	        41.42 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5922	    202556 ns/op	        41.41 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5920	    202496 ns/op	        41.43 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5920	    202535 ns/op	        41.42 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5922	    202508 ns/op	        41.42 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5913	    202519 ns/op	        41.42 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5923	    202517 ns/op	        41.42 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5919	    202491 ns/op	        41.43 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=1-8         	    5916	    202517 ns/op	        41.42 GFLOP/s
+keel-bench-ceiling: name=Ceiling/compute/neon/threads=8 gomaxprocs=8 threads=8 kind=compute instrument=v2 width=neon flops=67108864 iters=65536
+BenchmarkCeiling/compute/neon/threads=8-8         	    5905	    202774 ns/op	       331.0 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5905	    202802 ns/op	       330.9 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5905	    202694 ns/op	       331.1 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5904	    202771 ns/op	       331.0 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5907	    202829 ns/op	       330.9 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5910	    202800 ns/op	       330.9 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5901	    202782 ns/op	       330.9 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5898	    202776 ns/op	       331.0 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5907	    202778 ns/op	       330.9 GFLOP/s
+BenchmarkCeiling/compute/neon/threads=8-8         	    5900	    203780 ns/op	       329.3 GFLOP/s
+keel-bench-ceiling: name=Ceiling/compute/scalar/threads=1 gomaxprocs=1 threads=1 kind=compute instrument=v2 width=scalar flops=1310720 iters=65536
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101259 ns/op	        12.94 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101258 ns/op	        12.94 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101268 ns/op	        12.94 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101253 ns/op	        12.95 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101255 ns/op	        12.94 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101263 ns/op	        12.94 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101257 ns/op	        12.94 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101250 ns/op	        12.95 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101262 ns/op	        12.94 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=1-8       	   10000	    101244 ns/op	        12.95 GFLOP/s
+keel-bench-ceiling: name=Ceiling/compute/scalar/threads=8 gomaxprocs=8 threads=8 kind=compute instrument=v2 width=scalar flops=10485760 iters=65536
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101425 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101394 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101405 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101437 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101408 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101427 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101405 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101401 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101402 ns/op	       103.4 GFLOP/s
+BenchmarkCeiling/compute/scalar/threads=8-8       	   10000	    101405 ns/op	       103.4 GFLOP/s
+keel-bench-ceiling: name=Ceiling/stream/dot/threads=1 gomaxprocs=1 threads=1 kind=stream pattern=dot bytes=536870912 elems=67108864 arrays=2 bytes_per_elem=8 per_thread_bytes=268435456 sizing="256 MB floor (4x 32 MB LLC from cache/index3/size is smaller)" rfo="none: read-only"
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45590060 ns/op	        11.78 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45581101 ns/op	        11.78 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45584210 ns/op	        11.78 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45595814 ns/op	        11.77 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45606761 ns/op	        11.77 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45605197 ns/op	        11.77 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45605278 ns/op	        11.77 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45584924 ns/op	        11.78 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45598163 ns/op	        11.77 GB/s
+BenchmarkCeiling/stream/dot/threads=1-8           	      25	  45605496 ns/op	        11.77 GB/s
+keel-bench-ceiling: name=Ceiling/stream/dot/threads=8 gomaxprocs=8 threads=8 kind=stream pattern=dot bytes=4294967296 elems=67108864 arrays=2 bytes_per_elem=8 per_thread_bytes=268435456 sizing="256 MB floor (4x 32 MB LLC from cache/index3/size is smaller)" rfo="none: read-only"
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45747119 ns/op	        93.89 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45726084 ns/op	        93.93 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45726325 ns/op	        93.93 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45713922 ns/op	        93.95 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45712008 ns/op	        93.96 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45749959 ns/op	        93.88 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45709296 ns/op	        93.96 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45719404 ns/op	        93.94 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45723574 ns/op	        93.93 GB/s
+BenchmarkCeiling/stream/dot/threads=8-8           	      25	  45720910 ns/op	        93.94 GB/s
+keel-bench-ceiling: name=Ceiling/stream/axpy/threads=1 gomaxprocs=1 threads=1 kind=stream pattern=axpy bytes=805306368 elems=67108864 arrays=2 bytes_per_elem=12 per_thread_bytes=268435456 sizing="256 MB floor (4x 32 MB LLC from cache/index3/size is smaller)" rfo="up to 16 B/elem with write-allocate, i.e. this figure x1.33"
+BenchmarkCeiling/stream/axpy/threads=1-8          	      42	  28269171 ns/op	        28.49 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      40	  28403113 ns/op	        28.35 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      42	  28258678 ns/op	        28.50 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      42	  28118964 ns/op	        28.64 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      43	  28156017 ns/op	        28.60 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      43	  28278040 ns/op	        28.48 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      42	  28207678 ns/op	        28.55 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      42	  28298918 ns/op	        28.46 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      42	  28434623 ns/op	        28.32 GB/s
+BenchmarkCeiling/stream/axpy/threads=1-8          	      43	  28320159 ns/op	        28.44 GB/s
+keel-bench-ceiling: name=Ceiling/stream/axpy/threads=8 gomaxprocs=8 threads=8 kind=stream pattern=axpy bytes=6442450944 elems=67108864 arrays=2 bytes_per_elem=12 per_thread_bytes=268435456 sizing="256 MB floor (4x 32 MB LLC from cache/index3/size is smaller)" rfo="up to 16 B/elem with write-allocate, i.e. this figure x1.33"
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30880835 ns/op	       208.6 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30841365 ns/op	       208.9 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30841016 ns/op	       208.9 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30853126 ns/op	       208.8 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30868999 ns/op	       208.7 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30843537 ns/op	       208.9 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30817413 ns/op	       209.1 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30831110 ns/op	       209.0 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30838213 ns/op	       208.9 GB/s
+BenchmarkCeiling/stream/axpy/threads=8-8          	      38	  30907617 ns/op	       208.4 GB/s
+BenchmarkPeak/neon-8                              	    5918	    202542 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8                              	    5917	    202541 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8                              	    5920	    202511 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8                              	    5914	    202538 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8                              	    5920	    202567 ns/op	        41.41 GFLOP/s
+BenchmarkPeak/neon-8                              	    5922	    202563 ns/op	        41.41 GFLOP/s
+BenchmarkPeak/neon-8                              	    5919	    202530 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8                              	    5918	    202524 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8                              	    5922	    202519 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8                              	    5919	    202562 ns/op	        41.41 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101255 ns/op	        12.94 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101264 ns/op	        12.94 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101287 ns/op	        12.94 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101257 ns/op	        12.94 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101265 ns/op	        12.94 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101275 ns/op	        12.94 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101292 ns/op	        12.94 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101244 ns/op	        12.95 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101271 ns/op	        12.94 GFLOP/s
+BenchmarkPeak/scalar-8                            	   10000	    101258 ns/op	        12.94 GFLOP/s
+keel-bench-threads: name=Scale/Sgemm/n=4096/threads=1 gomaxprocs=1 workers=1
+keel-bench-flops: name=Scale/Sgemm/n=4096/threads=1 flops=137438953472 formula=2*m*n*k m=4096 n=4096 k=4096
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5626489180 ns/op	        24.43 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5615521388 ns/op	        24.47 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5619090556 ns/op	        24.46 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5613666708 ns/op	        24.48 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5614257227 ns/op	        24.48 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5613095261 ns/op	        24.49 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5610110181 ns/op	        24.50 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5610223808 ns/op	        24.50 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5616242712 ns/op	        24.47 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=1-8           	       1	5613283839 ns/op	        24.48 GFLOP/s
+keel-bench-threads: name=Scale/Sgemm/n=4096/threads=8 gomaxprocs=8 workers=8
+keel-bench-flops: name=Scale/Sgemm/n=4096/threads=8 flops=137438953472 formula=2*m*n*k m=4096 n=4096 k=4096
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 793263137 ns/op	       173.3 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 793068248 ns/op	       173.3 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 793107641 ns/op	       173.3 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 794854698 ns/op	       172.9 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 793143812 ns/op	       173.3 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 793073702 ns/op	       173.3 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 793142417 ns/op	       173.3 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 793181250 ns/op	       173.3 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 793294926 ns/op	       173.3 GFLOP/s
+BenchmarkScale/Sgemm/n=4096/threads=8-8           	       2	 792938178 ns/op	       173.3 GFLOP/s
+keel-bench-threads: name=Scale/Ssyrk/n=4096/threads=1 gomaxprocs=1 workers=1
+keel-bench-flops: name=Scale/Ssyrk/n=4096/threads=1 flops=68736253952 formula=k*n*(n+1) m=4096 n=4096 k=4096
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2827666811 ns/op	        24.31 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2826491691 ns/op	        24.32 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2826868218 ns/op	        24.32 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2828529323 ns/op	        24.30 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2826722034 ns/op	        24.32 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2826725445 ns/op	        24.32 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2828165372 ns/op	        24.30 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2826624445 ns/op	        24.32 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2826088116 ns/op	        24.32 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=1-8           	       1	2826305234 ns/op	        24.32 GFLOP/s
+keel-bench-threads: name=Scale/Ssyrk/n=4096/threads=8 gomaxprocs=8 workers=8
+keel-bench-flops: name=Scale/Ssyrk/n=4096/threads=8 flops=68736253952 formula=k*n*(n+1) m=4096 n=4096 k=4096
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 369265262 ns/op	       186.1 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368188469 ns/op	       186.7 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368184900 ns/op	       186.7 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368226270 ns/op	       186.7 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368196805 ns/op	       186.7 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368255038 ns/op	       186.7 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368357325 ns/op	       186.6 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368000343 ns/op	       186.8 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368209354 ns/op	       186.7 GFLOP/s
+BenchmarkScale/Ssyrk/n=4096/threads=8-8           	       3	 368147290 ns/op	       186.7 GFLOP/s
+keel-bench-threads: name=Scale/Ssymm/n=4096/threads=1 gomaxprocs=1 workers=1
+keel-bench-flops: name=Scale/Ssymm/n=4096/threads=1 flops=137438953472 formula=2*m*n*k m=4096 n=4096 k=4096
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5626395449 ns/op	        24.43 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5631383352 ns/op	        24.41 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5625565066 ns/op	        24.43 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5622720447 ns/op	        24.44 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5624965350 ns/op	        24.43 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5625865018 ns/op	        24.43 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5624910070 ns/op	        24.43 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5622738191 ns/op	        24.44 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5622431456 ns/op	        24.44 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=1-8           	       1	5619698047 ns/op	        24.46 GFLOP/s
+keel-bench-threads: name=Scale/Ssymm/n=4096/threads=8 gomaxprocs=8 workers=8
+keel-bench-flops: name=Scale/Ssymm/n=4096/threads=8 flops=137438953472 formula=2*m*n*k m=4096 n=4096 k=4096
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794468899 ns/op	       173.0 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794593898 ns/op	       173.0 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794674438 ns/op	       173.0 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794727730 ns/op	       172.9 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794427180 ns/op	       173.0 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794678574 ns/op	       172.9 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794535434 ns/op	       173.0 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794346824 ns/op	       173.0 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794526685 ns/op	       173.0 GFLOP/s
+BenchmarkScale/Ssymm/n=4096/threads=8-8           	       2	 794638736 ns/op	       173.0 GFLOP/s
+keel-bench-threads: name=Scale/Strsm/n=4096/threads=1 gomaxprocs=1 workers=1
+keel-bench-flops: name=Scale/Strsm/n=4096/threads=1 flops=68736253952 formula=n*m*(m+1) m=4096 n=4096 k=4096
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3855870728 ns/op	        17.83 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3787014289 ns/op	        18.15 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3774742192 ns/op	        18.21 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3785302715 ns/op	        18.16 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3782699047 ns/op	        18.17 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3770142811 ns/op	        18.23 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3777757951 ns/op	        18.20 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3769015121 ns/op	        18.24 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3761640424 ns/op	        18.27 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=1-8           	       1	3789727560 ns/op	        18.14 GFLOP/s
+keel-bench-threads: name=Scale/Strsm/n=4096/threads=8 gomaxprocs=8 workers=8
+keel-bench-flops: name=Scale/Strsm/n=4096/threads=8 flops=68736253952 formula=n*m*(m+1) m=4096 n=4096 k=4096
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 478798875 ns/op	       143.6 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 477606137 ns/op	       143.9 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 479267710 ns/op	       143.4 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 477251060 ns/op	       144.0 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 477026510 ns/op	       144.1 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 478550975 ns/op	       143.6 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 477050859 ns/op	       144.1 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 478003077 ns/op	       143.8 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 477698668 ns/op	       143.9 GFLOP/s
+BenchmarkScale/Strsm/n=4096/threads=8-8           	       3	 478126280 ns/op	       143.8 GFLOP/s
+PASS
