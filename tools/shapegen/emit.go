@@ -139,6 +139,7 @@ func (s Shape) bNames() []string {
 //   - The remainder loop exists only when U > 1, for correctness on user-supplied
 //     k. At U == 1 the main loop already handles every k-step, and the shipped
 //     Kernel4x32 has no remainder loop for that reason.
+//
 // Emit writes the candidate as a compilable, self-contained file: raw archsimd,
 // no dependency on package vec's shim, so it compiles in isolation in a dot-dir
 // under internal/vec (see audit()). It is parameterized by the active ISA's lane
