@@ -44,8 +44,10 @@ func (f Form) String() string {
 	return "broadcast"
 }
 
-// NR is the tile's column count.
-func (s Shape) NR() int { return s.V * 16 }
+// NR is the tile's column count: V vectors of the active ISA's lane width (16 for
+// AVX-512's Float32x16, 4 for NEON's Float32x4). isa defaults to amd64, so on the
+// unset-arch default this is the original V*16.
+func (s Shape) NR() int { return s.V * isa.Lanes }
 
 // Accs is the number of accumulator registers the shape needs live across the
 // whole call, and therefore the number of independent dependency chains the FMAs
@@ -137,14 +139,40 @@ func (s Shape) bNames() []string {
 //   - The remainder loop exists only when U > 1, for correctness on user-supplied
 //     k. At U == 1 the main loop already handles every k-step, and the shipped
 //     Kernel4x32 has no remainder loop for that reason.
+// Emit writes the candidate as a compilable, self-contained file: raw archsimd,
+// no dependency on package vec's shim, so it compiles in isolation in a dot-dir
+// under internal/vec (see audit()). It is parameterized by the active ISA's lane
+// width — Float32x16 on amd64, Float32x4 on arm64 — through isa.Lanes, so one body
+// serves both. On the default (amd64) it is byte-identical to what shipped before
+// the parameterization; -verify proves that against gemm_amd64.go.
+//
+// The emitted amd64 body matches gemm_amd64.go by text. The arm64 body does NOT
+// match gemm_neon.go by text, and cannot: the tree's NEON kernels call the vec
+// shim (Load128/FMA128/…), which an isolated candidate in its own package cannot
+// name, so this emits the equivalent raw archsimd. The two produce the same object
+// code — the shim wrappers inline away — which is why arm64 -verify binds on the
+// audit report (identical insns/FMAs/spills/…) rather than on the text.
 func (s Shape) Emit() string {
+	if isa.Arch == "arm64" {
+		return s.emitNEON()
+	}
+	return s.emitRawArchsimd()
+}
+
+// emitRawArchsimd is the amd64 emitter: self-contained raw archsimd (Float32x16),
+// which matches gemm_amd64.go by text and compiles in isolation. Parameterized by
+// isa.Lanes, but only ever reached with isa.Arch=="amd64" (lanes 16) now that arm64
+// has its own shim-form emitter; the parameterization is retained so the default
+// path is provably the pre-parameterization output (-verify).
+func (s Shape) emitRawArchsimd() string {
 	var b strings.Builder
 	p := func(format string, a ...any) { fmt.Fprintf(&b, format+"\n", a...) }
+	typ := fmt.Sprintf("archsimd.Float32x%d", isa.Lanes)
 
 	p("// Copyright 2026 Scott Friedman")
 	p("// SPDX-License-Identifier: Apache-2.0")
 	p("")
-	p("//go:build goexperiment.simd && amd64")
+	p("//go:build goexperiment.simd && %s", isa.Arch)
 	p("")
 	p("package vec")
 	p("")
@@ -155,22 +183,23 @@ func (s Shape) Emit() string {
 	p("// Emitted by tools/shapegen. Not a shipped kernel; see KERNEL.md.")
 	p("func %s(kc int, a, b, c []float32, ldc int) {", s.Name())
 
-	// Accumulators. The zero Float32x16 is a zeroed register, so no broadcast is
+	// Accumulators. The zero vector is a zeroed register, so no broadcast is
 	// needed to start them (gemm_amd64.go:81).
 	p("\tvar (")
 	for r := 0; r < s.MR; r++ {
-		p("\t\t%s archsimd.Float32x16", strings.Join(s.accNames(r), ", "))
+		p("\t\t%s %s", strings.Join(s.accNames(r), ", "), typ)
 	}
 	p("\t)")
 
 	bn := s.bNames()
 	if s.Form == Broadcast {
-		p("\tvar %s, av archsimd.Float32x16", strings.Join(bn, ", "))
+		p("\tvar %s, av %s", strings.Join(bn, ", "), typ)
 	} else {
-		p("\tvar %s, aw, av archsimd.Float32x16", strings.Join(bn, ", "))
+		p("\tvar %s, aw, av %s", strings.Join(bn, ", "), typ)
 		// The index vectors are loop-invariant, so they are hoisted here. Each
 		// costs a live register for the whole call, which is the Permute form's
 		// price and the reason its register pressure differs from Broadcast's.
+		// Permute is amd64-only (16-lane); space() never enumerates it on arm64.
 		for i := 0; i < s.MR*s.U && i < 16; i++ {
 			p("\tidx%d := archsimd.BroadcastUint32x16(%d)", i, i)
 		}
@@ -204,12 +233,115 @@ func (s Shape) Emit() string {
 		}
 		p("\t%s c[%d*ldc : %d*ldc+%d]", assign, r, r, s.NR())
 		for j, acc := range s.accNames(r) {
-			lo, hi := j*16, j*16+16
-			p("\tarchsimd.LoadFloat32x16(r[%d:%d]).Add(%s).Store(r[%d:%d])", lo, hi, acc, lo, hi)
+			lo, hi := j*isa.Lanes, j*isa.Lanes+isa.Lanes
+			p("\tarchsimd.LoadFloat32x%d(r[%d:%d]).Add(%s).Store(r[%d:%d])", isa.Lanes, lo, hi, acc, lo, hi)
 		}
 	}
 	p("}")
 	return b.String()
+}
+
+// emitNEON is the arm64 emitter. It reproduces gemm_neon.go's idiom — Float32x4
+// accumulators named c{row}_{col}, the vec shim wrappers Load128/Broadcast128/
+// FMA128/Add128/Store128, and the nested-call write-out — because the shim is what
+// the shipped NEON kernels use, and each bodied wrapper costs an anchor NOP in the
+// loop (golang/go#80830, keel neon-probe). A raw-archsimd emission would audit ~26
+// NOPs lighter than the tree and mint a frontier the shipped kernels do not sit on
+// — the rank inversion #156 exists to avoid. So it emits the shim.
+//
+// It is vec-QUALIFIED (vec.Load128, package shapegencand, importing internal/vec)
+// rather than package-local like gemm_neon.go: audit() compiles one candidate in
+// isolation in its own dir, where a package-local Load128 is undefined and a
+// same-named package-vec Kernel would collide with the real one. The qualified shim
+// inlines to the identical object code, so the audit report matches the tree — which
+// is why arm64 -verify binds on the audit, not the text. NEON has no window-permute,
+// so Broadcast only; space() never enumerates Permute on arm64.
+func (s Shape) emitNEON() string {
+	lanes := isa.Lanes // 4
+	var b strings.Builder
+	p := func(format string, a ...any) { fmt.Fprintf(&b, format+"\n", a...) }
+
+	p("// Copyright 2026 Scott Friedman")
+	p("// SPDX-License-Identifier: Apache-2.0")
+	p("")
+	p("//go:build goexperiment.simd && arm64")
+	p("")
+	p("package shapegencand")
+	p("")
+	p(`import "github.com/scttfrdmn/keel/internal/vec"`)
+	p("")
+	p("// %s is a generated candidate: %s.", s.Name(), s.Label())
+	p("//")
+	p("// Emitted by tools/shapegen. Not a shipped kernel; see KERNEL.md.")
+	p("func %s(kc int, a, b, c []float32, ldc int) {", s.Name())
+
+	for r := 0; r < s.MR; r++ {
+		names := make([]string, s.V)
+		for j := range names {
+			names[j] = fmt.Sprintf("c%d_%d", r, j)
+		}
+		p("\tvar %s vec.F32x4", strings.Join(names, ", "))
+	}
+	bn := make([]string, s.V)
+	for j := range bn {
+		bn[j] = fmt.Sprintf("b%d", j)
+	}
+	p("\tvar %s, av vec.F32x4", strings.Join(bn, ", "))
+
+	p("\tap := a[:kc*%d]", s.MR)
+	p("\tbp := b[:kc*%d]", s.NR())
+
+	p("\tfor len(ap) >= %d && len(bp) >= %d {", s.MR*s.U, s.NR()*s.U)
+	s.emitBodyNEON(p, lanes, s.U)
+	p("\t\tap, bp = ap[%d:], bp[%d:]", s.MR*s.U, s.NR()*s.U)
+	p("\t}")
+
+	if s.U > 1 {
+		// Remainder: kc mod U k-steps, for user-supplied k. All shipped NEON kernels
+		// are U=1 and have no remainder loop, matching gemm_amd64.go's rationale.
+		p("\tfor len(ap) >= %d && len(bp) >= %d {", s.MR, s.NR())
+		s.emitBodyNEON(p, lanes, 1)
+		p("\t\tap, bp = ap[%d:], bp[%d:]", s.MR, s.NR())
+		p("\t}")
+	}
+
+	for r := 0; r < s.MR; r++ {
+		p("\tr%d := c[%d*ldc : %d*ldc+%d]", r, r, r, s.NR())
+		for j := 0; j < s.V; j++ {
+			lo, hi := j*lanes, j*lanes+lanes
+			p("\tvec.Store128(r%d[%d:%d], vec.Add128(vec.Load128(r%d[%d:%d]), c%d_%d))", r, lo, hi, r, lo, hi, r, j)
+		}
+	}
+	p("}")
+	return b.String()
+}
+
+// emitBodyNEON writes u k-steps of the NEON steady state (gemm_neon.go's shape):
+// one shim B load per column, then per row a Broadcast128 of the A scalar and V
+// fused FMA128s into that row's accumulators.
+func (s Shape) emitBodyNEON(p func(string, ...any), lanes, u int) {
+	bn := make([]string, s.V)
+	for j := range bn {
+		bn[j] = fmt.Sprintf("b%d", j)
+	}
+	for k := 0; k < u; k++ {
+		loads := make([]string, s.V)
+		for j := range loads {
+			off := k*s.NR() + j*lanes
+			loads[j] = fmt.Sprintf("vec.Load128(bp[%d:%d])", off, off+lanes)
+		}
+		p("\t\t%s = %s", strings.Join(bn, ", "), strings.Join(loads, ", "))
+		for r := 0; r < s.MR; r++ {
+			p("\t\tav = vec.Broadcast128(ap[%d])", k*s.MR+r)
+			acc := make([]string, s.V)
+			fmas := make([]string, s.V)
+			for j := range acc {
+				acc[j] = fmt.Sprintf("c%d_%d", r, j)
+				fmas[j] = fmt.Sprintf("vec.FMA128(av, %s, c%d_%d)", bn[j], r, j)
+			}
+			p("\t\t%s = %s", strings.Join(acc, ", "), strings.Join(fmas, ", "))
+		}
+	}
 }
 
 // emitBody writes u k-steps of the steady state. label controls the `// k + N`
@@ -225,14 +357,15 @@ func (s Shape) emitBody(p func(string, ...any), u int, label bool) {
 		}
 		loads := make([]string, s.V)
 		for j := range loads {
-			off := k*s.NR() + j*16
-			loads[j] = fmt.Sprintf("archsimd.LoadFloat32x16(bp[%d:%d])", off, off+16)
+			off := k*s.NR() + j*isa.Lanes
+			loads[j] = fmt.Sprintf("archsimd.LoadFloat32x%d(bp[%d:%d])", isa.Lanes, off, off+isa.Lanes)
 		}
 		p("\t\t%s = %s", strings.Join(bn, ", "), strings.Join(loads, ", "))
 
 		if s.Form == Permute && k == 0 {
 			// One 16-lane load per body serves every row of every k-step. Guarded
 			// by PermuteWindowExact, so the loop condition guarantees the read.
+			// Permute is amd64-only, so the 16 here is not lane-parameterized.
 			p("\t\taw = archsimd.LoadFloat32x16(ap[0:16])")
 		}
 		for r := 0; r < s.MR; r++ {
@@ -240,7 +373,7 @@ func (s Shape) emitBody(p func(string, ...any), u int, label bool) {
 			if s.Form == Permute {
 				p("\t\tav = aw.Permute(idx%d)", i)
 			} else {
-				p("\t\tav = archsimd.BroadcastFloat32x16(ap[%d])", i)
+				p("\t\tav = archsimd.BroadcastFloat32x%d(ap[%d])", isa.Lanes, i)
 			}
 			acc := s.accNames(r)
 			fmas := make([]string, s.V)

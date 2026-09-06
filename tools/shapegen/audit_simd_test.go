@@ -69,6 +69,61 @@ func TestShippedShapesAuditIdentically(t *testing.T) {
 	}
 }
 
+// TestNEONShapesAuditIdentically is the arm64 (#156) counterpart: the arm64 emitter
+// must reproduce the five shipped NEON kernels in gemm_neon.go by audit, or the arm64
+// -frontier it derives is measuring a kernel the project does not ship — the mint
+// check #107 requires, ported to NEON. It sets the package ISA to arm64 (which also
+// points the spill audit's classification at NEON) and restores amd64 after, so it
+// does not perturb the amd64 tests. Compiles for linux/arm64 regardless of host, so
+// it runs anywhere the simd toolchain is present, including the amd64 CI simd job.
+//
+// It binds on the audit report, not text: gemm_neon.go names the vec shim
+// package-local, while an isolated candidate must qualify vec.* — same object code,
+// same report, different text (see emit.go emitNEON).
+func TestNEONShapesAuditIdentically(t *testing.T) {
+	if err := setArch("arm64"); err != nil {
+		t.Fatalf("setArch(arm64): %v", err)
+	}
+	t.Cleanup(func() { _ = setArch("amd64") })
+
+	root, err := repoRoot()
+	if err != nil {
+		t.Fatalf("locating the repo root: %v", err)
+	}
+	listing, err := compile("./internal/vec")
+	if err != nil {
+		t.Fatalf("compiling the shipped NEON kernels: %v", err)
+	}
+	fns, err := spill.Parse(bytes.NewReader(listing))
+	if err != nil {
+		t.Fatalf("parsing the listing: %v", err)
+	}
+
+	for _, s := range shippedNEON {
+		t.Run(s.Label(), func(t *testing.T) {
+			f, err := spill.Find(fns, s.Name())
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			loop, err := f.SteadyLoop()
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			want := spill.Audit(f, loop)
+			got, err := audit(root, s, "")
+			if err != nil {
+				t.Fatalf("emitting and auditing the candidate: %v", err)
+			}
+			if d := reportDiff(want, got); d != "" {
+				t.Errorf("the emitted NEON candidate is not the shipped kernel: %s", d)
+			}
+			t.Logf("%s: %d insns / %d FMAs = %.3f insns/FMA, %d spills, %d copies, %d broadcasts, %d nops",
+				s.Label(), got.Insns, got.Arith, float64(got.Insns)/float64(got.Arith),
+				got.Spills(), got.VecCopies, got.Broadcasts, got.Nops)
+		})
+	}
+}
+
 // TestReportDiffNamesEveryDisagreement is the control for the comparison above: a
 // field-by-field diff that returned "" unconditionally would report agreement for
 // any pair of reports.

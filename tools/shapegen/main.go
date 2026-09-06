@@ -54,6 +54,34 @@ import (
 	"github.com/scttfrdmn/keel/internal/spill"
 )
 
+// ISA parameterizes the generator for one instruction set. The two shipping ISAs
+// differ in three ways the tool must track: the vector lane width (AVX-512's
+// Float32x16 is 16 float32, NEON's Float32x4 is 4), the emitted body idiom
+// (emit.go dispatches on Arch), and the GOARCH the audit cross-compiles for. isa is
+// a package var so parseShape/NR/space/objective/compile all read one setting; it
+// DEFAULTS to amd64, so every mode and every test that does not pass -arch behaves
+// exactly as before this field existed — the live amd64 SWEEP_BEST_IPF is unmoved.
+type ISA struct {
+	Arch  string // "amd64" | "arm64"
+	Lanes int    // float32 lanes per vector: 16 | 4
+}
+
+var isa = ISA{Arch: "amd64", Lanes: 16}
+
+// setArch resolves -arch to the ISA config and points the spill audit's
+// classification at the same instruction set (its rules differ per #13/#155).
+func setArch(arch string) error {
+	switch arch {
+	case "amd64":
+		isa = ISA{Arch: "amd64", Lanes: 16}
+	case "arm64":
+		isa = ISA{Arch: "arm64", Lanes: 4}
+	default:
+		return fmt.Errorf("arch %q is not amd64 or arm64", arch)
+	}
+	return spill.SetArch(arch)
+}
+
 // shippedUArch is the microarchitecture the sweep reports against by default.
 //
 // Skylake-X numbers, and named rather than anonymous: 4-wide retire, 2 FMA pipes,
@@ -88,8 +116,13 @@ func main() {
 		frontier = flag.Bool("frontier", false, "print the best emittable zero-spill insns/FMA and nothing else")
 		keep     = flag.String("keep", "", "if set, leave each emitted candidate in this directory")
 		uarch    = flag.String("uarch", "skylake-x:4:2:4", "score against NAME:WIDTH:PORTS:LATENCY")
+		arch     = flag.String("arch", "amd64", "target ISA: amd64 (AVX-512, 16-lane) | arm64 (NEON, 4-lane)")
 	)
 	flag.Parse()
+
+	if err := setArch(*arch); err != nil {
+		die(err)
+	}
 
 	u, err := parseUArch(*uarch)
 	if err != nil {
@@ -133,18 +166,21 @@ func parseShape(spec, form string) (Shape, error) {
 	if n, err := fmt.Sscanf(spec, "%dx%d/%d", &mr, &nr, &u); n != 3 || err != nil {
 		return Shape{}, fmt.Errorf("shape %q is not MRxNR/U", spec)
 	}
-	if nr%16 != 0 || nr == 0 {
-		return Shape{}, fmt.Errorf("NR=%d is not a positive multiple of 16 (a Float32x16 is 16 lanes)", nr)
+	if nr%isa.Lanes != 0 || nr == 0 {
+		return Shape{}, fmt.Errorf("NR=%d is not a positive multiple of %d (a %s vector is %d lanes)", nr, isa.Lanes, isa.Arch, isa.Lanes)
 	}
 	f := Broadcast
 	switch form {
 	case "broadcast":
 	case "permute":
+		if isa.Arch == "arm64" {
+			return Shape{}, fmt.Errorf("permute form is amd64-only: NEON has no window-permute, so arm64 emits broadcast only")
+		}
 		f = Permute
 	default:
 		return Shape{}, fmt.Errorf("unknown form %q", form)
 	}
-	return Shape{MR: mr, V: nr / 16, U: u, Form: f}, nil
+	return Shape{MR: mr, V: nr / isa.Lanes, U: u, Form: f}, nil
 }
 
 // repoRoot locates the module root, which every mode needs: candidates are
@@ -247,7 +283,7 @@ func compile(pkg string) ([]byte, error) {
 	cmd.Env = append(os.Environ(),
 		"GOEXPERIMENT=simd",
 		"GOOS=linux",
-		"GOARCH=amd64",
+		"GOARCH="+isa.Arch,
 		"CGO_ENABLED=0",
 	)
 	var errb bytes.Buffer
@@ -264,6 +300,36 @@ var shipped = []Shape{
 	{MR: 2, V: 2, U: 4, Form: Broadcast},
 	{MR: 4, V: 2, U: 1, Form: Broadcast},
 	{MR: 6, V: 2, U: 4, Form: Broadcast},
+}
+
+// shippedNEON is the five NEON kernels in internal/vec/gemm_neon.go (#136), the
+// arm64 counterpart of shipped: 8×8 and 4×16 fit, 8×12/8×16/4×32 spill, all
+// Broadcast, all U=1. V is NR/4 (4-lane): 8×8→2, 8×12→3, 4×16→4, 8×16→4, 4×32→8.
+// runVerify checks the arm64 emitter against these the same way it checks the amd64
+// emitter against gemm_amd64.go — text and audit — so a wrong NEON idiom cannot mint
+// an arm64 frontier.
+var shippedNEON = []Shape{
+	{MR: 8, V: 2, U: 1, Form: Broadcast}, // Kernel8x8
+	{MR: 8, V: 3, U: 1, Form: Broadcast}, // Kernel8x12
+	{MR: 4, V: 4, U: 1, Form: Broadcast}, // Kernel4x16
+	{MR: 8, V: 4, U: 1, Form: Broadcast}, // Kernel8x16
+	{MR: 4, V: 8, U: 1, Form: Broadcast}, // Kernel4x32
+}
+
+// verifyShapes and verifySource return the shape list and the tree file runVerify
+// checks against, per the active ISA.
+func verifyShapes() []Shape {
+	if isa.Arch == "arm64" {
+		return shippedNEON
+	}
+	return shipped
+}
+
+func verifySource() string {
+	if isa.Arch == "arm64" {
+		return "gemm_neon.go"
+	}
+	return "gemm_amd64.go"
 }
 
 // runVerify is this instrument's mint verification.
@@ -291,7 +357,7 @@ func runVerify() bool {
 	if err != nil {
 		die(err)
 	}
-	shippedSrc, err := os.ReadFile(filepath.Join(root, "internal", "vec", "gemm_amd64.go"))
+	shippedSrc, err := os.ReadFile(filepath.Join(root, "internal", "vec", verifySource()))
 	if err != nil {
 		die(err)
 	}
@@ -307,18 +373,25 @@ func runVerify() bool {
 	}
 
 	ok := true
-	for _, s := range shipped {
+	for _, s := range verifyShapes() {
 		fmt.Printf("%s\n", s.Label())
 
 		got := normalize(funcBody(s.Emit(), s.Name()))
 		want := normalize(funcBody(string(shippedSrc), s.Name()))
 		switch {
 		case want == "":
-			fmt.Printf("  text:  NOT FOUND in internal/vec/gemm_amd64.go — %s is not a shipped kernel\n", s.Name())
+			fmt.Printf("  text:  NOT FOUND in internal/vec/%s — %s is not a shipped kernel\n", verifySource(), s.Name())
 			ok = false
 		case got == want:
 			fmt.Printf("  text:  identical to the shipped body (%d lines, comments and blanks removed)\n",
 				len(strings.Split(want, "\n")))
+		case isa.Arch == "arm64":
+			// Expected and not a defect: gemm_neon.go names the vec shim package-local
+			// (Load128/…), while an isolated candidate must import and qualify it
+			// (vec.Load128, package shapegencand). Same shim, so the same object code
+			// and the same audit — the audit below is what binds on arm64; text is
+			// informational only.
+			fmt.Printf("  text:  differs from the shipped body (tree names the shim package-local, candidate qualifies vec.*; the audit binds)\n")
 		default:
 			fmt.Printf("  text:  DIFFERS from the shipped body\n")
 			printDiff(want, got)
@@ -445,11 +518,21 @@ func printDiff(want, got string) {
 // 1..4 for NR of 16..64, past which one B panel load no longer feeds the rows it
 // costs; U 1,2,4,8 because the unroll interacts with register pressure only
 // through hoisted A scalars, whose count is MR*U.
+// The V ceiling and form set are arch-dependent. amd64 (16-lane) runs V 1..4 for
+// NR 16..64 across Broadcast and Permute. arm64 (4-lane) runs V 1..8 for NR 4..32
+// — the range #136's candidates cover (8×8 V=2, 4×16 V=4, 8×12 V=3, 8×16 V=4,
+// 4×32 V=8) — and Broadcast only, since NEON has no window-permute form.
 func space() []Shape {
+	forms := []Form{Broadcast, Permute}
+	vMax := 4
+	if isa.Arch == "arm64" {
+		forms = []Form{Broadcast}
+		vMax = 8
+	}
 	var out []Shape
-	for _, form := range []Form{Broadcast, Permute} {
+	for _, form := range forms {
 		for mr := 1; mr <= 8; mr++ {
-			for v := 1; v <= 4; v++ {
+			for v := 1; v <= vMax; v++ {
 				for _, u := range []int{1, 2, 4, 8} {
 					s := Shape{MR: mr, V: v, U: u, Form: form}
 					if form == Permute && !s.PermuteWindowExact() {

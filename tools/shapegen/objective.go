@@ -127,12 +127,15 @@ func (s Score) InsnsPerFMA() float64 {
 	return float64(s.Insns) / float64(s.FMAs)
 }
 
-// FlopsPerCycle is the corrected figure of merit. 16 lanes x 2 flops per FMA.
+// FlopsPerCycle is the corrected figure of merit: lanes x 2 flops per FMA, where
+// lanes is the active ISA's vector width (16 for AVX-512's Float32x16, 4 for NEON's
+// Float32x4). isa is the package-level ISA config (amd64 by default), so on the
+// unset-arch default this is the original 32.
 func (s Score) FlopsPerCycle() float64 {
 	if s.Cycles == 0 {
 		return 0
 	}
-	return 32 * float64(s.FMAs) / s.Cycles
+	return float64(2*isa.Lanes) * float64(s.FMAs) / s.Cycles
 }
 
 // Ceiling states a frontier shape's predicted rate against the uarch's FMA peak, and
@@ -147,14 +150,14 @@ func (s Score) FlopsPerCycle() float64 {
 //     far source-level shaping can travel before the binding term changes, which is
 //     the question P2's 55%-of-peak floor turns on.
 func Ceiling(u UArch, s Score, nops int) string {
-	peak := 32 * float64(u.Ports)
+	peak := float64(2*isa.Lanes) * float64(u.Ports)
 	bare := u.score(s.Insns-nops, s.FMAs, s.Accs)
 	return fmt.Sprintf(
-		"ceiling: %.2f flops/cycle is %.0f%% of this uarch's %.0f (%d ports x 32 flops).\n"+
+		"ceiling: %.2f flops/cycle is %.0f%% of this uarch's %.0f (%d ports x %d flops).\n"+
 			"    %d of the %d instructions are anchor NOPs, which Report.Insns counts; without them\n"+
 			"    %.2f cycles, %.2f flops/cycle, %.0f%%, %s-bound.\n"+
 			"    crossover: the chain term takes over below W*L/A = %.2f insns/FMA; this shape is at %.3f.",
-		s.FlopsPerCycle(), 100*s.FlopsPerCycle()/peak, peak, u.Ports,
+		s.FlopsPerCycle(), 100*s.FlopsPerCycle()/peak, peak, u.Ports, 2*isa.Lanes,
 		nops, s.Insns,
 		bare.Cycles, bare.FlopsPerCycle(), 100*bare.FlopsPerCycle()/peak, bare.Bound,
 		float64(u.Width*u.Lat)/float64(s.Accs), s.InsnsPerFMA())

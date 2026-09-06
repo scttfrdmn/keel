@@ -395,8 +395,11 @@ baseline_candidate() {
   printf '%s\n' "$*" >>"$file"
 }
 
-# reconcile_sweep_best_ipf VALUE LOG — check a stated SWEEP_BEST_IPF against a live
-# derivation rather than trusting it (#107, ruled 2026-08-18).
+# reconcile_sweep_best_ipf VALUE LOG [ARCH] — check a stated SWEEP_BEST_IPF against a
+# live derivation rather than trusting it (#107, ruled 2026-08-18). ARCH is optional
+# and defaults to amd64 (no -arch flag, byte-identical to the pre-ARCH callers); pass
+# arm64 to reconcile the NEON frontier (#156), which shapegen derives via its arm64
+# emitter and arm64 spill classification.
 #
 # The constant states "the best insns/FMA any emittable, zero-spill shape reaches",
 # and tools/shapegen re-derives exactly that from a 140-shape audit in ~7s. It was
@@ -411,8 +414,10 @@ baseline_candidate() {
 # divergence between the two copies stays visible where it was and neither copy is
 # trusted on its own.
 reconcile_sweep_best_ipf() {
-  local stated="$1" log="$2" got n shape
-  if ! GOEXPERIMENT=simd go run ./tools/shapegen -frontier >"$log" 2>&1; then
+  # arch defaults to amd64; -arch amd64 is the tool's own default, so it is byte-identical
+  # to the pre-ARCH invocation and avoids an empty-array expansion under set -u (bash 3.2).
+  local stated="$1" log="$2" arch="${3:-amd64}" got n shape
+  if ! GOEXPERIMENT=simd go run ./tools/shapegen -frontier -arch "$arch" >"$log" 2>&1; then
     sed 's/^/        /' "$log" | tail -10
     fail "shapegen -frontier stated no frontier, so SWEEP_BEST_IPF=$stated is unreconciled (#107)"
     return

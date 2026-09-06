@@ -162,9 +162,11 @@ SGEMM_SHAPE_FILTER='Sgemm/n=2048'
 # arm64 (#155 unit 3b): override the source facts and selection for the NEON kernels. The amd64
 # values above are the gate's verbatim assertion (byte-unchanged when KEEL_GOARCH is unset); this
 # names the arm64 functions the spill-audit tool (internal/spill, unit 3a) now classifies, and the
-# NEON shapes/peak the kernel-bench and percent-of-peak read. NOT overridden here and pending a
-# ruling (docs/gate-arm64-port.md unit 3): SWEEP_BEST_IPF/criterion 5b (needs an arm64 shape
-# frontier, or arch-gating to reported-not-judged) and PEAK_FLOOR's validity for a 4-lane kernel.
+# NEON shapes/peak the kernel-bench and percent-of-peak read. SWEEP_BEST_IPF/criterion 5b is now
+# overridden too: #156 ported shapegen's -frontier to arm64 (NEON emitter + arm64 spill
+# classification), so 5b judges against a NEON frontier the arm64 shapes actually execute rather
+# than arch-gating to reported. Still pending (docs/gate-arm64-port.md unit 3): PEAK_FLOOR's
+# validity for a 4-lane kernel.
 if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   KERN_FUNCS="Kernel8x8,Kernel4x16"
   PEAK_FUNCS="neonPeak,scalarPeak"
@@ -172,6 +174,10 @@ if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   GATE_PEAK_FUNC="neonPeak"
   GATE_PEAK="Peak/neon"
   SGEMM_BENCH_FILTER='(Peak|Sgemm|OpenBLAS)/(neon|n=2048)'
+  # The NEON zero-spill shape frontier, best of 107 emittable shapes: 3x24 u=2, shim form (the
+  # anchor NOPs the shipped kernels pay are in the count). Stated here and reconciled live against
+  # shapegen -frontier -arch arm64 on every run (#107's mint check), never trusted. #156.
+  SWEEP_BEST_IPF_ARM64=4.111
 fi
 OPENBLAS_REMOTE_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 
@@ -674,15 +680,14 @@ else
 fi
 
 carry_p2_properties P3 "packing and blocking"
-# Criterion 5b arch-gates to REPORTED on arm64 (#155 ruling): SWEEP_BEST_IPF and shapegen's
-# -frontier are the amd64 zero-spill SHAPE frontier, and running them against NEON numbers would
-# rank arm64 shapes by a frontier they do not execute — the rank-inversion defect (#6, #37's class)
-# in pure form. The arm64 shape frontier is its own v0.2.0 unit (a shapegen arm64 port; #136's
-# audit table is its seed data). Until then this renders REPORTED with its cause, never judged
-# against a borrowed bar — the SPR/GNR precedent that a criterion the gate cannot apply honestly
-# reports rather than convicts.
+# Criterion 5b: reconcile the stated SWEEP_BEST_IPF against a live shapegen -frontier, per ISA.
+# It arch-gated to REPORTED on arm64 through #155 (the amd64 frontier run against NEON numbers is a
+# rank inversion — #6/#37's class). #156 removed that: shapegen's -frontier now has an arm64 NEON
+# emitter and reads the arm64 spill classification, so on arm64 this reconciles the NEON frontier
+# (SWEEP_BEST_IPF_ARM64, shim form) that the NEON shapes actually execute — judged, not reported,
+# and against its own ISA's bar rather than a borrowed one.
 if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
-  reported "criterion 5b (shape-frontier reconciliation): NOT JUDGED on arm64 — SWEEP_BEST_IPF=$SWEEP_BEST_IPF and shapegen -frontier are amd64's zero-spill frontier, and no arm64 frontier exists yet (filed, v0.2.0); running the amd64 one against NEON would be a rank inversion"
+  reconcile_sweep_best_ipf "$SWEEP_BEST_IPF_ARM64" "$LOG" arm64
 else
   reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG"
 fi

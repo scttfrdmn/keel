@@ -20,6 +20,24 @@ While the major version is 0, minor versions may contain breaking changes.
   the property the f32 oracle gets from a wider type; and I1–I7 carried forward (I3 unchanged, I1/I2/
   I4/I5 re-proved on f64 bits, I6/I7 established fresh). Does not decide whether f64 is built, the type
   mechanism, or any measured number — all rule-12 open.
+- **shapegen derives the arm64 (NEON) zero-spill shape frontier, and gate-p3 criterion 5b now judges
+  on arm64 (`#156`).** `tools/shapegen -frontier -arch arm64` ports the shape-frontier derivation to
+  NEON: a lane-parameterized objective (flops/FMA and peak scale with `isa.Lanes`, 16 amd64 / 4
+  arm64), a shape space over NR multiples of 4 (Broadcast only — NEON has no window-permute), a
+  GOARCH=arm64 audit against the arm64 spill classification (`#155`), and a NEON emitter that emits
+  the vec shim (`vec.Load128`/`FMA128`/…) rather than raw archsimd — because the shipped NEON kernels
+  use the shim and each bodied wrapper costs an anchor NOP (golang/go#80830), so a raw-archsimd
+  emission audits ~26 NOPs lighter than the tree and would mint a frontier no shipped shape sits on.
+  `-verify -arch arm64` reproduces all five `gemm_neon.go` kernels by audit (8×8 5.750, 4×16 5.000,
+  and the three spillers), binding on the audit report since the qualified-shim text necessarily
+  differs from the package-local tree. The derived NEON frontier is **4.111 insns/FMA (3×24 u=2, best
+  of 107 emittable zero-spill shapes)** — the shipped U=1 tiles (4×16, 8×8) sit above it, an unrolled
+  shape being leaner. gate-p3's criterion 5b was arch-gated to REPORTED on arm64 (`#155`, the amd64
+  frontier run against NEON is a rank inversion); it now reconciles `SWEEP_BEST_IPF_ARM64=4.111`
+  against the live arm64 `-frontier` (the `#107` mint check, per ISA), so 5b is judged on Graviton
+  against a frontier the NEON shapes actually execute. amd64 is byte-unchanged (`-arch` defaults to
+  amd64; `-frontier` still derives 4.625 / 2×32 u=4; both `-verify` and gate-p2/p3 reconcile as
+  before), proven by the existing amd64 fixed-point tests staying green.
 - **arm64 Graviton fleet support, for keel's first judged arm64 verdicts (`#137`).** The AWS
   launcher, the OpenBLAS reference and the evidentiary allowlist all learned arm64:
   `aws-fleet.sh` resolves the AMI per instance-type architecture (read from the provider's
