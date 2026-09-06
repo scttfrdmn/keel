@@ -54,6 +54,7 @@ const (
 	Scalar = "scalar"
 	AVX2   = "avx2"
 	AVX512 = "avx512"
+	NEON   = "neon"
 )
 
 // Backends returns every backend runnable on this machine, widest first, with

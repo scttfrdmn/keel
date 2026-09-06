@@ -15,11 +15,11 @@ import (
 func isaLadder() []string { return []string{kern.NEON, l1.Scalar} }
 
 // L1Chain reports the advertised Level-1 dispatch chain: the L1 backends compiled
-// into this build. On arm64 that is scalar ONLY — there is no NEON L1 backend yet
-// (#136 shipped the NEON Level-3 microkernels; NEON Level 1 is a separate v0.2.0
-// unit, #154). So keel's arm64 dispatch is a PARTIAL PORT — Level 3 NEON over a
-// scalar Level 1 — and this chain states it: the keel-p5-dispatch marker reads
-// `l1=scalar kern=neon,scalar`, so the mixed state can never read as complete
-// (#153). It is a subsequence of the ladder (scalar is the ladder's lower rung),
-// and L3 being ahead of L1 is a legitimate partial-port state, ruled 2026-09-04.
-func L1Chain() []string { return []string{l1.Scalar} }
+// into this build. With #154 landed the NEON Level-1 backend joins scalar, so the
+// chain is NEON then scalar — unconditionally, like amd64's [avx512, avx2, scalar]
+// (advertised is compile-time; runtime feature detection in l1.Backends() picks
+// among them). The keel-p5-dispatch marker now reads `l1=neon,scalar
+// kern=neon,scalar`: the arm64 port is complete at both levels. Still a subsequence
+// of the ladder [neon, scalar], and the partial-port state #136/#153 documented —
+// L3 NEON over scalar L1 — no longer holds, so the marker no longer advertises it.
+func L1Chain() []string { return []string{l1.NEON, l1.Scalar} }

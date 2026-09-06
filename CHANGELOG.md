@@ -26,6 +26,21 @@ While the major version is 0, minor versions may contain breaking changes.
   `neoversev2`, so the union launders nothing). The ARMV8-vs-Neoverse spread the sweep measures
   is the SVE≈NEON comparison the campaign publishes.
 
+### Added
+- **NEON Level-1 backend (`internal/l1/l1_arm64.go`, `#154`) — the L1 half of the arm64 port.** #136
+  shipped the NEON Level-3 microkernels but left Level-1 (`Sdot`/`Saxpy`/`Sscal`/`Sasum`/`Snrm2`)
+  running scalar, so arm64 dispatch was a partial port (`l1=scalar kern=neon,scalar`). The five vector
+  routines now mirror `l1_amd64.go` over the 128-bit `Float32x4` shim ops that have been differentially
+  tested since #136: four independent accumulator chains, constant-offset sub-slices, the `>`-guard plus
+  exact-fit epilogue that keeps bounds checks eliminated and the reduction tail from collapsing to one
+  dependent chain. NEON-specific: `Abs128` is a single VFABS, so `Asum` needs no hand-hoisted sign mask
+  (unlike `avx512Asum`); the `alpha` broadcast is still hoisted above the loop. Verified two ways on the
+  arm64 dev host: the `l1_test.go` oracle differential passes for the `neon` backend across ragged
+  lengths, and `spill-audit -goarch arm64 -mode spill` reports **0 spills / 0 calls / 0 surviving bounds
+  checks** on all five loops (the broadcast hoisted out, per the codegen read). `Iamax` stays scalar by
+  design (its sequential-NaN semantics have no lane-parallel form). Dispatch now reports
+  `keel-l1-available: neon scalar`, `keel-l1-active: neon`; `L1Chain()` on arm64 becomes `[neon, scalar]`.
+
 ### Changed
 - **arm64 dispatch now ships the faster NEON tile (4×16), witnessed +33% at full Sgemm.** #136 left
   both NEON tiles' `InsnsPerFMA` at 0 (unaudited, characterization-tier), so `kern.Preferred` could
