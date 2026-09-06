@@ -27,6 +27,15 @@ While the major version is 0, minor versions may contain breaking changes.
   is the SVE≈NEON comparison the campaign publishes.
 
 ### Added
+- **Cross-ISA positioning synthesis (`docs/cross-isa-positioning.md`).** Places keel's arm64 (NEON)
+  results beside its amd64 (AVX-512) results on named denominators, from archived measurements (no
+  fresh run). Its load-bearing correction: `share/Sgemm` is single-thread ÷ own 8-thread ceiling — a
+  scaling number, not kernel quality — so a cross-ISA table built on it compares the wrong thing. On
+  the clean axis (percent-of-peak, ÷ the host's own compute ceiling) keel's post-fix NEON kernel
+  (~40%) sits beside Skylake-X (46%), inside the amd64 spread; the raw percent-of-OpenBLAS swings
+  31–54% on the *reference's* per-µarch coverage (V1 ships a strong SVE kernel, V2 ships none), not on
+  keel. Reframes the sub-60% p3 verdict from "keel is behind" to "keel is measured against a reference
+  whose strength varies by silicon." arm64 numbers labeled pre-tile-fix with the known +33% direction.
 - **NEON Level-1 backend (`internal/l1/l1_arm64.go`, `#154`) — the L1 half of the arm64 port.** #136
   shipped the NEON Level-3 microkernels but left Level-1 (`Sdot`/`Saxpy`/`Sscal`/`Sasum`/`Snrm2`)
   running scalar, so arm64 dispatch was a partial port (`l1=scalar kern=neon,scalar`). The five vector
