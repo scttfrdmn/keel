@@ -52,6 +52,25 @@ While the major version is 0, minor versions may contain breaking changes.
   the 0.55 comparison unreachable), and 5b is REPORTED (the amd64 zero-spill frontier does not execute
   on NEON). Importing a standard that predates the run is the legitimate amend — nothing was measured
   first; the disclosure block names both changes and the rulings.
+- **Two arm64 gate gaps the #137 relaunch surfaced, fixed and witnessed against a reproduced
+  governor-absent condition (`#160`, `#161`).** The witness's replay stub hardcoded
+  `governor=performance` (`gate-replay.sh`), so the governor-LESS peak-substitute clock — the arm64
+  Graviton guests' path — was unwitnessable by construction. Widened the witness with a
+  `KEEL_REPLAY_GOV=nocpufreq` mode that forces the no-cpufreq branch and runs the REAL clock against
+  the corpus, reproducing the judged-fleet condition on any lab host (step zero). **#160**: gate-p5's
+  peak-substitute clock (`clock_head`) ran before `GATE_PEAK` was derived (marker-derived at the
+  sweep), so its filter was empty on governor-less hosts → "head peak window did not produce a
+  result". Fixed with an arch-conditional static `GATE_PEAK` default the marker later refines; the
+  marker line is byte-unchanged, and a reader audit (the only pre-sweep readers are `clock_head`,
+  which early-returns on `performance`, and `compute_name`, not called until the sweep) proves it null
+  on the governor-present amd64 fleet — confirmed by a byte-identical amd64 replay and by the clock
+  establishing (peak series head/middle/tail) under the reproduced governor-absent replay. **#161**:
+  the per-routine differential-coverage check demanded the vector backend of every routine, but
+  arm64's NEON is Level-3-only (#136/#154) — Sgemv/Sger (L2) have no neon kernel. Now on arm64 a
+  non-`P4_DERIVED_L3` routine expects scalar alone (byte-unchanged on amd64, where avx512 covers L2;
+  the amd64 check still fires — false-control verified). Both null-changes proven on the amd64
+  carry-chain witness; the witness widening (`archive/witness/p4cc-corpus-3195579.tar.gz` gained a
+  peak_window bootstrap entry) is the standing fix for the coverage blind spot.
 - **The CL 824624 daily watch was scheduled-but-not-firing, and is re-created durable with a
   liveness witness (`#127`).** The watch cron was session-only (`durable:false`), so it fired only
   while one session's REPL was idle-and-running and did not fire autonomously on 2026-09-04/-05 (no

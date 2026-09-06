@@ -416,8 +416,18 @@ else
     if [[ -z "$bk" ]]; then
       unmeasured "$r: no keel-p4-backends marker, so whether it was compared against another backend and not only the oracle cannot be read (§5 rule 2)"
     else
+      # The vector backend covers different routines per arch (#161). amd64's avx512 implements every
+      # routine (L2 + L3), so every routine is expected to exercise it. arm64's NEON is Level-3-ONLY
+      # (#136/#154): only the GEMM-derived L3 routines (P4_DERIVED_L3) have a neon kernel; the L2
+      # routines Sgemv/Sger have none and run scalar. So on arm64 a non-derived routine expects the
+      # scalar backend alone — demanding neon of it is demanding a kernel keel deliberately hasn't
+      # built. Byte-unchanged on amd64 (the branch is arch-gated; p4_expected stays $P4_BACKENDS).
+      p4_expected="$P4_BACKENDS"
+      if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]] && ! set_has "$P4_DERIVED_L3" "$r"; then
+        p4_expected="scalar"
+      fi
       BMISS=""
-      for b in $P4_BACKENDS; do
+      for b in $p4_expected; do
         set_has "$bk" "$b" || BMISS="$BMISS $b"
       done
       if [[ -z "$BMISS" ]]; then

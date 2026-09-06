@@ -119,10 +119,23 @@ fi
 # replays carry no precondition text to differ on. remote_vanished never fires in replay (a
 # miss is a fixed rc 99, handled above).
 # shellcheck disable=SC2034  # GOV_STATE/GOV_SHOWN are read by the sourcing gate, not here
-assert_governor() { GOV_STATE=performance; GOV_SHOWN=performance; return 0; }
-clock_gate() { return 0; }
-clock_head() { return 0; }
-clock_post() { return 0; }
+# THE GOVERNOR-ABSENT WITNESS (#160). By default the clock apparatus is stubbed in both modes
+# (performance + pass-through), which is why the peak-substitute clock — the governor-LESS branch —
+# was unwitnessable by construction: the stub hardcodes the very condition the bug needs absent.
+# KEEL_REPLAY_GOV=nocpufreq forces assert_governor down its no-cpufreq branch and leaves the REAL
+# clock_gate/clock_head/clock_post (from bench.sh) in place, so `clock_head` actually runs
+# `peak_window` under replay (its remote_exec is still corpus-replayed). This reproduces the
+# judged-fleet condition — a governor-less guest — on any lab host, which is step zero for #160.
+if [[ "${KEEL_REPLAY_GOV:-}" == nocpufreq ]]; then
+  assert_governor() { GOV_STATE=nocpufreq; GOV_SHOWN="none (no cpufreq interface — a virtualized guest does not own the knob)"; return 0; }
+  # clock_gate/clock_head/clock_post: NOT stubbed — the real bench.sh implementations run, which is
+  # the whole point (exercise the peak-substitute clock the default stub hides).
+else
+  assert_governor() { GOV_STATE=performance; GOV_SHOWN=performance; return 0; }
+  clock_gate() { return 0; }
+  clock_head() { return 0; }
+  clock_post() { return 0; }
+fi
 remote_vanished() { return 1; }
 
 printf 'gate-replay: %s mode, corpus %s\n' "$KEEL_REPLAY" "$KEEL_REPLAY_DIR" >&2

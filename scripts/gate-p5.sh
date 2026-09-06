@@ -231,11 +231,19 @@ STRSM_AMDAHL_NOTE=1
 
 # Benchmark row names. The thread count is IN THE NAME (criterion 2).
 scale_name() { printf 'Scale/%s/n=%d/threads=%d' "$1" "$P5_SIZE" "$2"; }
-# GATE_PEAK is DERIVED per host from the sweep's active-kernel marker (#155 unit 2), set in the
-# throughput loop before any compute_name/PEAK1 use; empty here because there is no arch to name
-# until a host's own marker names it (amd64 -> Peak/avx512, arm64 -> Peak/neon). No host uses it
-# before the loop sets it.
-GATE_PEAK=""
+# GATE_PEAK is refined per host from the sweep's active-kernel marker (#155 unit 2) in the throughput
+# loop (:929). But the PREAMBLE peak-substitute clock (clock_head, governor-LESS hosts) reads it BEFORE
+# that loop runs — the old comment here claimed "no host uses it before the loop", which was false for
+# a governor-less guest and is exactly #160 (the head peak window came back empty on Graviton because
+# the filter was ""). So seed an arch-conditional static default up front; :929 then refines it to the
+# SAME value (amd64 avx512, arm64 neon), so that line is byte-unchanged. Null on the governor-PRESENT
+# amd64 fleet by the #160 reader audit: the only GATE_PEAK reads before :929 are clock_head (which
+# early-returns on `performance`, never touching it) and compute_name (not executed until the loop).
+case "${KEEL_GOARCH:-amd64}" in
+  amd64) GATE_PEAK="Peak/avx512" ;;
+  arm64) GATE_PEAK="Peak/neon" ;;
+  *)     GATE_PEAK="" ;;
+esac
 # The ceiling's own rows (ruling on #6). compute_name's width tracks GATE_PEAK's so the
 # two peaks can never be read from different kernels; stream_name's patterns are the
 # read-only and read-modify-write halves of the bandwidth bracket.
