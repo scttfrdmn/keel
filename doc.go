@@ -3,14 +3,14 @@
 
 /*
 Package keel is a float32 BLAS subset in pure Go: Levels 1, 2 and a
-GEMM-centered Level 3, with amd64 AVX-512 kernels written against the
-experimental simd/archsimd packages and a scalar path that builds on an ordinary
-toolchain. There is no cgo, no assembly, no code generation and no background
-goroutine — it deploys as a normal Go module and respects GOMAXPROCS.
+GEMM-centered Level 3, with amd64 AVX-512 kernels and arm64 NEON kernels written
+against the experimental simd/archsimd packages and a scalar path that builds on an
+ordinary toolchain. There is no cgo, no assembly, no code generation and no
+background goroutine — it deploys as a normal Go module and respects GOMAXPROCS.
 
 # Two build modes
 
-	GOEXPERIMENT=simd go build ./...   # vector kernels on amd64, Go 1.27+
+	GOEXPERIMENT=simd go build ./...   # vector kernels on amd64/arm64, Go 1.27+
 	go build ./...                     # scalar path, any Go 1.26+ toolchain
 
 Both modes compile the same source and produce the same answers. The vector
@@ -19,16 +19,17 @@ correct and slow. Nothing warns you, so ask:
 
 	fmt.Println(keel.ActiveL1Backend(), keel.ActiveKernBackend())
 
-That prints avx512 twice on an amd64 machine with AVX-512 built under
-GOEXPERIMENT=simd, and scalar twice wherever no vector backend is compiled in or
-detected — a stock-toolchain build, and also any non-amd64 host, which prints
-scalar twice even under GOEXPERIMENT=simd.
+That prints avx512 twice on an amd64 machine with AVX-512, neon twice on an arm64
+machine with NEON — both built under GOEXPERIMENT=simd — and scalar twice wherever
+no vector backend is compiled in or detected, which includes any stock-toolchain
+build.
 
-The two do not always agree, because the chains have a different number of rungs:
-Level 1 dispatches avx512 → avx2 → scalar, while the Level-3 microkernel
-dispatches avx512 → scalar. On AVX2-only silicon it therefore prints "avx2
-scalar" — a vector Level 1 over a scalar SGEMM. See dispatch.go for why the
-middle rung is deliberately absent at Level 3 (issue #40).
+The two do not always agree, because the chains can differ in how many rungs they
+have. On amd64, Level 1 dispatches avx512 → avx2 → scalar while the Level-3
+microkernel dispatches avx512 → scalar, so AVX2-only silicon prints "avx2 scalar" —
+a vector Level 1 over a scalar SGEMM (see dispatch.go and issue #40 for why the
+middle rung is absent at Level 3). On arm64 both levels dispatch neon → scalar, so a
+NEON host prints "neon neon".
 
 # Matrices are row-major
 
@@ -110,13 +111,14 @@ Results are float32, computed in the active backend's summation order. So:
 
 # Choosing a backend
 
-The backend is chosen once, at init, from CPU feature detection: Level 1 tries
-avx512, then avx2, then scalar; Level 3 tries avx512, then scalar.
+The backend is chosen once, at init, from CPU feature detection. On amd64, Level 1
+tries avx512, then avx2, then scalar, and Level 3 tries avx512, then scalar. On
+arm64, both levels try neon, then scalar.
 
-Set KEEL_FORCE to scalar, avx2 or avx512 to pin it. This is a testing knob — it
-is how a machine with AVX-512 runs the suite scalar-only — and naming a backend
-the machine cannot run panics at init rather than quietly downgrading. There is
-no AVX2 microkernel, so KEEL_FORCE=avx2 gives an AVX2 Level 1 and a scalar Level
+Set KEEL_FORCE to scalar, avx2, avx512 or neon to pin it. This is a testing knob —
+it is how a machine with a vector backend runs the suite scalar-only — and naming a
+backend the machine cannot run panics at init rather than quietly downgrading. There
+is no AVX2 microkernel, so KEEL_FORCE=avx2 gives an AVX2 Level 1 and a scalar Level
 3, with [ActiveKernBackend] reporting scalar so that no measurement can believe
 otherwise.
 

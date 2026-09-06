@@ -51,6 +51,17 @@ While the major version is 0, minor versions may contain breaking changes.
   `keel-l1-available: neon scalar`, `keel-l1-active: neon`; `L1Chain()` on arm64 becomes `[neon, scalar]`.
 
 ### Changed
+- **Public docs truth-maintained against the shipped arm64 path.** `doc.go` (the pkg.go.dev front
+  page), `doc-site/limits.md` (the canonical scope statement) and the README scope line all said
+  amd64-only and "no ARM64 vector path — scheduled." NEON ships (Level 1 + Level 3), so: arm64 moved
+  from "roadmapped" to "What keel does"; a new **Upstream-gated** tier holds what keel *cannot build
+  until archsimd exposes it* (SVE, golang/go#79781/#162; and the in-flight broadcast-fold lowering
+  golang/go#81352/#163), distinct from "not yet written"; SVE is stated as may-never rather than
+  roadmapped. `doc.go`'s dispatch prose now covers arm64 (`neon neon`, `KEEL_FORCE=neon`), the
+  requirements table gains the arm64 vector path, and the float64 open question notes the
+  genericize-the-middle seam (#135) now exists. The tiers are structured so the next shipped feature
+  is a one-line move, not a rewrite. Numbers page unchanged (amd64-judged, unaffected); the arm64
+  story links the cross-ISA positioning and experience-report artifacts.
 - **arm64 dispatch now ships the faster NEON tile (4×16), witnessed +33% at full Sgemm.** #136 left
   both NEON tiles' `InsnsPerFMA` at 0 (unaudited, characterization-tier), so `kern.Preferred` could
   not rank them and tie-broke to the first-listed 8×8 by registry order — not by any measurement.

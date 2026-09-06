@@ -101,9 +101,10 @@ experiment (`docs/toolchain-notes.md`).
 ## Scope (v0)
 Level 1 (`Sdot Saxpy Sscal Snrm2 Sasum Isamax`), Level 2 (`Sgemv Sger`),
 Level 3 (`Sgemm` plus derived `Ssyrk Ssymm Strsm`). Row-major, float32,
-amd64 fast paths (AVX-512/AVX2) with a scalar fallback that builds on a
-stock toolchain. Target: ≥70% of single-threaded OpenBLAS SGEMM on AVX-512
-hardware. What is out of scope, split into commitments, scheduled work, one open
+amd64 fast paths (AVX-512/AVX2) and arm64 fast paths (NEON, Level 1 and
+Level 3), with a scalar fallback that builds on a stock toolchain. Target:
+≥70% of single-threaded OpenBLAS SGEMM on AVX-512 hardware. What is out of
+scope, split into commitments, scheduled work, upstream-gated items, one open
 question and parked ideas:
 [Capabilities & limits](https://scttfrdmn.github.io/keel/limits/) — the canonical
 statement. `DESIGN.md` §1–2 carries the design rationale behind it.
