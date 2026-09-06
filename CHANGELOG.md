@@ -27,6 +27,19 @@ While the major version is 0, minor versions may contain breaking changes.
   is the SVE≈NEON comparison the campaign publishes.
 
 ### Changed
+- **arm64 dispatch now ships the faster NEON tile (4×16), witnessed +33% at full Sgemm.** #136 left
+  both NEON tiles' `InsnsPerFMA` at 0 (unaudited, characterization-tier), so `kern.Preferred` could
+  not rank them and tie-broke to the first-listed 8×8 by registry order — not by any measurement.
+  #137's 31%/54%-of-OpenBLAS ratio surfaced the cost. A pre-registered negative-control witness on
+  castor (GB10, `measured` slot, both dispatch markers verified) measured the shipped 8×8 at 45.67
+  GFLOP/s against a 4×16-only build at 60.44 on `BenchmarkSgemm/n=2048` — 4×16 is faster and survives
+  packing and blocking, refuting the "keel is at its NEON ceiling" reading at the dispatch layer. The
+  `spill-audit` tool confirms why: 4×16 is leaner on both axes (5.00 vs 5.75 insns/FMA — half the
+  broadcasts and reg copies per pass — and 0.5 vs 0.625 mem-ops/FMA), so it wins under `ClassFMA` and
+  `ClassIssue` alike. Fix: record the tool's own audited counts (`92.0/16`, `80.0/16`) on the tiles,
+  the same Insns/Arith division amd64 writes; the shipped binary then dispatches `4x16/neon` at 61.0
+  GFLOP/s (+33.6% over 8×8, confirmed on the unmodified registry). On an FMA-bound host the exact
+  MemOpsPerFMA decides, so the ranking cannot drift with a recompile.
 - **The scaling aggregate's buckets now partition the fleet (`#90`, `#119`).** A host noise-limited
   on the scale criterion AND BASELINE on another (vesta, the #119 live exercise) set both `HOST_NOISY`
   and `HOST_BASE`, and the old independent per-flag increments counted it in two buckets — the

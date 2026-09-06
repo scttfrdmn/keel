@@ -9,18 +9,31 @@ import "github.com/scttfrdmn/keel/internal/vec"
 
 // vectorKernels returns the NEON candidate shapes the register model fits
 // (docs/neon-sweep.md, #136): live = MR·(NR/4) + NR/4 + 1 ≤ 32 V-registers.
-// InsnsPerFMA is left 0 (unaudited) on purpose — arm64 is characterization, not
-// judged, so nothing recomputes-and-gates these the way the amd64 spill audit does;
-// the -S audit records the counts in the sweep doc rather than pinning them here,
-// where a wrong hand-typed value would be worse than an honest zero (Preferred
-// treats 0 as unrankable, not as lean).
+//
+// InsnsPerFMA was left 0 (unaudited) through #136 while arm64 was characterization
+// only, so Preferred tie-broke to the first-listed 8x8 by registry order rather
+// than by any measurement. #137's judged ratio (31%/54% of OpenBLAS) surfaced the
+// cost: 8x8 is not the faster tile. The negative-control witness on castor (GB10,
+// one measured slot, both markers verified) measured the shipped 8x8 at 45.67
+// GFLOP/s against a 4x16-only build at 60.44 on the full BenchmarkSgemm/n=2048 —
+// 4x16 is +32% and it survives packing and blocking, not just the isolated kernel.
+//
+// So the counts are now recorded, and they are the spill-audit tool's own — not
+// hand-typed (the hazard the old comment named): `spill-audit -goarch arm64` reads
+// the steady-state K-loop as 92 insns / 16 FMAs for 8x8 and 80 / 16 for 4x16, the
+// same Insns/Arith division the amd64 registry writes. 4x16 is leaner on both axes
+// — 5.00 vs 5.75 insns/FMA (fewer broadcasts and reg copies per pass) and 0.5 vs
+// 0.625 mem-ops/FMA — so Preferred ranks it first under ClassFMA and ClassIssue
+// alike, and on an FMA-bound host (arm64's default class) the exact MemOpsPerFMA
+// decides, so the ranking cannot drift with a recompile even though no arm64 gate
+// recomputes these the way the amd64 spill audit does.
 func vectorKernels() []Kernel {
 	if !vec.HasNEON() {
 		return nil
 	}
 	return []Kernel{
-		{Name: NEON, MR: 8, NR: 8, Unroll: 1, Fn: vec.Kernel8x8},
-		{Name: NEON, MR: 4, NR: 16, Unroll: 1, Fn: vec.Kernel4x16},
+		{Name: NEON, MR: 8, NR: 8, Unroll: 1, Fn: vec.Kernel8x8, InsnsPerFMA: 92.0 / 16},
+		{Name: NEON, MR: 4, NR: 16, Unroll: 1, Fn: vec.Kernel4x16, InsnsPerFMA: 80.0 / 16},
 	}
 }
 

@@ -43,3 +43,13 @@ figure reads *higher* only because its OpenBLAS reference is anomalously low (~3
 against a V1-class reference rate, keel's arm64 NEON Sgemm sits near the V1 figure. The honest
 takeaway is the V1 number — **~31% of a competent OpenBLAS SVE kernel** — and it is the gap NEON
 L1/L2 and an arm64 SVE microkernel (#154 and successors) are written to close.
+
+**Update (2026-09-06): part of that gap was keel's, not the ISA's.** The numbers above were measured
+with keel dispatching the 8×8 NEON tile — which #136 shipped tie-broken by registry order, not by
+measurement (both tiles were `InsnsPerFMA=0`, unrankable). A pre-registered negative-control witness on
+castor (GB10) showed the 4×16 tile is **+33% faster at full `BenchmarkSgemm/n=2048`** (61.0 vs 45.67
+GFLOP/s), and it now ships (see the CHANGELOG and `kern_arm64.go`). So a third of the headroom the 31%
+figure attributed to SVE/L1/L2 was a Go-level dispatch choice keel controlled. The GB10 delta does not
+license rewriting the Graviton numbers — µarch differs and the judged fleet is torn down — but a fleet
+relaunch is expected to move the V1 ratio up proportionally (~31% → ~41%); that re-measurement is the
+confirmation, and the residual gap is what SVE (#79781) still owns.

@@ -21,10 +21,9 @@ func TestPreferredPicksTheMeasuredWinnerPerClass(t *testing.T) {
 	for _, k := range kern.Kernels() {
 		// Only AUDITED kernels are rankable: Preferred/betterFor rank by InsnsPerFMA and
 		// treat 0 (unaudited) as unrankable, so an unaudited kernel is not a candidate for a
-		// "measured winner". This is the test's premise, made explicit. On arm64 the NEON
-		// kernels are unaudited (characterization, not judged — InsnsPerFMA left 0 in
-		// kern_arm64.go), so this skips there exactly as it did before any vector kernel
-		// existed; the amd64 assertion below is unchanged.
+		// "measured winner". This is the test's premise, made explicit. Both shipping ISAs
+		// now audit their tiles (amd64 from KERNEL.md §7, arm64 from the GB10 witness in
+		// kern_arm64.go), so this runs on both; a build with no vector kernels still skips.
 		if k.Name != kern.Scalar && k.InsnsPerFMA > 0 {
 			vec = append(vec, k)
 		}
@@ -32,9 +31,18 @@ func TestPreferredPicksTheMeasuredWinnerPerClass(t *testing.T) {
 	if len(vec) == 0 {
 		t.Skip("no audited vector kernels in this build; nothing to rank")
 	}
+	// The expected winner per class comes from the measurement, not from re-reading the
+	// registry: amd64's split from KERNEL.md §7 (2×32 issue / 4×32 fma), arm64's from the
+	// negative-control witness on castor (GB10), where 4×16 beat 8×8 by +32% at full
+	// Sgemm/n=2048 and audits leaner on both axes (5.00<5.75 insns/FMA, 0.5<0.625 mem-ops),
+	// so it is the winner under both classes. Keyed off the audited backend, since Kernels()
+	// is build-tagged per ISA.
 	want := map[kern.Class]string{
 		kern.ClassIssue: "2x32", // fewest instructions per FMA
 		kern.ClassFMA:   "4x32", // fewest memory ops per FMA
+	}
+	if vec[0].Name == kern.NEON {
+		want = map[kern.Class]string{kern.ClassIssue: "4x16", kern.ClassFMA: "4x16"}
 	}
 	for _, class := range kern.Classes() {
 		k, ok := kern.Preferred(class, vec)
