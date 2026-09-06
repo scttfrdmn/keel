@@ -116,7 +116,7 @@ func BenchmarkKernel(b *testing.B) {
 					// join: the timed run is the execution whose elapsed/n equals
 					// the ns/op the table reports, so a sample's addresses are
 					// identified by arithmetic rather than by position in the stream.
-					fmt.Fprintf(addrTraceOut, "keel-addrtrace name=%s n=%d elapsed_ns=%d a=%p b=%p c=%p\n",
+					_, _ = fmt.Fprintf(addrTraceOut, "keel-addrtrace name=%s n=%d elapsed_ns=%d a=%p b=%p c=%p\n",
 						b.Name(), b.N, b.Elapsed().Nanoseconds(), a, bp, c)
 				}
 				kernelSink = c[0]

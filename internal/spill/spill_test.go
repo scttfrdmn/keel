@@ -318,7 +318,7 @@ func TestARM64AuditClassifiesLoopBody(t *testing.T) {
 	if err := SetArch("arm64"); err != nil {
 		t.Fatalf("SetArch: %v", err)
 	}
-	t.Cleanup(func() { SetArch("amd64") })
+	t.Cleanup(func() { _ = SetArch("amd64") })
 
 	fns, err := Parse(strings.NewReader(arm64Listing))
 	if err != nil {
@@ -368,9 +368,9 @@ func TestARM64AuditClassifiesLoopBody(t *testing.T) {
 //   - the branch: BGE closes the loop on arm64; under amd64's J-only rule it is not a
 //     branch at all, so no loop is found and the audit sees nothing.
 func TestARM64InversionIsLoadBearing(t *testing.T) {
-	t.Cleanup(func() { SetArch("amd64") })
+	t.Cleanup(func() { _ = SetArch("amd64") })
 
-	SetArch("arm64")
+	_ = SetArch("arm64")
 	if !isNop("HINT", "$0") {
 		t.Error("arm64: HINT $0 must be counted as an anchor")
 	}
@@ -384,7 +384,7 @@ func TestARM64InversionIsLoadBearing(t *testing.T) {
 		t.Error("arm64: BL is a call, not an offset-branch")
 	}
 
-	SetArch("amd64")
+	_ = SetArch("amd64")
 	if isNop("HINT", "$0") {
 		t.Error("amd64: HINT is not an amd64 anchor (counting it would triple the count on an arm64 listing)")
 	}
@@ -416,7 +416,7 @@ func TestARM64SeesRealSpiller(t *testing.T) {
 	if err := SetArch("arm64"); err != nil {
 		t.Fatalf("SetArch: %v", err)
 	}
-	t.Cleanup(func() { SetArch("amd64") })
+	t.Cleanup(func() { _ = SetArch("amd64") })
 
 	cmd := exec.Command("go", "build", "-gcflags=-S", "-o", os.DevNull,
 		"github.com/scttfrdmn/keel/internal/vec")

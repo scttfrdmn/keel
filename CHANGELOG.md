@@ -52,6 +52,13 @@ While the major version is 0, minor versions may contain breaking changes.
   the 0.55 comparison unreachable), and 5b is REPORTED (the amd64 zero-spill frontier does not execute
   on NEON). Importing a standard that predates the run is the legitimate amend — nothing was measured
   first; the disclosure block names both changes and the rulings.
+- **errcheck hygiene: unchecked `SetArch`/`fmt.Fprintf` return values in test code (`#137`).** The
+  gate-p0 golangci-lint (the release gate's stricter config) flagged unchecked error returns on the
+  judged fleet run that CI's `make lint` had been missing since #155 — `internal/spill/spill_test.go`
+  (four `SetArch` calls, from the #155 arm64 port) and `bench/kernel_test.go` (`fmt.Fprintf` in the
+  addr-trace helper). Fixed with `_ =`/`_, _ =`; perf-neutral (test-only), gate rendering unchanged.
+  The CI-vs-gate lint-config gap (CI green while the gate's lint reds) is itself worth closing so a
+  lint miss can't reach a billed fleet run again.
 - **Two arm64 gate gaps the #137 relaunch surfaced, fixed and witnessed against a reproduced
   governor-absent condition (`#160`, `#161`).** The witness's replay stub hardcoded
   `governor=performance` (`gate-replay.sh`), so the governor-LESS peak-substitute clock — the arm64
