@@ -37,12 +37,12 @@ Two full-size on-demand Graviton hosts, `truffle`/`spawn` under `AWS_PROFILE=aws
 launch (2026-09-04, commit `64632e8`) surfaced #155 and was torn down. A second launch (2026-09-05,
 `5822b39`) got as far as pass 1 and surfaced **#158** — gate-p4 was never ported to arm64, and
 gate-p5 carries it (p5→p4→p3), so the whole chain went RED (empty peak window, audit against absent
-amd64 symbols); torn down. This campaign **relaunches at the frozen post-#158 revision `f49f52c`**:
+amd64 symbols); torn down. This campaign **relaunches at the frozen post-#160/#161 revision `5f73895`**:
 all three #155 units plus #158 green, gate-p4 now rendering the arm64 tier under a proven carry-chain
 witness (amd64 byte-identical; arm64 audit resolves Kernel8x8/Kernel4x16 zero-spill and neonPeak
 register-only). **Amend-with-disclosure (2026-09-05):** #158 does not move any criterion prediction
 below — it *enables* them, clearing the peak-window cascade so percent-of-peak/scale render and making
-p4 syrk/gemm renderable at all (it was RED-by-cascade before, not judged). The CPU-model key was fixed
+p4 syrk/gemm renderable at all (it was RED-by-cascade before, not judged). #160/#161 (2026-09-06) similarly *enable* — not move — the criteria: the governor-less peak-substitute clock now establishes (scale/ceiling register) and the arm64 L2 differential passes; witnessed end-to-end on a native GB10 corpus, all residual reds being castor-only environment (no OpenBLAS, not evidentiary), which Graviton resolves. The CPU-model key was fixed
 in `c6e465a`. The read-back table below is
 from the first launch and is **re-verified live on relaunch** (same instance families → same keys and
 caches expected; any divergence is disclosed at launch, not assumed). Both class **evidentiary**
