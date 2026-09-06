@@ -284,12 +284,12 @@ jobs:
           # replay a reading from another. The probe selects no test (empty exercised
           # markers by construction) and exists to make TestMain print the dispatch state.
           go test -count=1 -v -run 'ZZZDispatchReadBackOnly' . 2>&1 | tee simd-arm64.log.readback
-      - name: assert NEON dispatched, and the partial-port disclosure holds
+      - name: assert NEON dispatched at both levels (#154 completed the port)
         run: |
           set -euo pipefail
           kern="$(sed -n 's/^keel-sgemm-active: *//p' simd-arm64.log.readback | tail -1)"
           l1="$(sed -n 's/^keel-l1-active: *//p' simd-arm64.log.readback | tail -1)"
-          if [ -z "$kern" ]; then
+          if [ -z "$kern" ] || [ -z "$l1" ]; then
             echo "::error::no dispatch read-back on arm64; a run that cannot say what it dispatched to has not reported its coverage" >&2
             exit 1
           fi
@@ -297,10 +297,14 @@ jobs:
             */neon) : ;;
             *) echo "::error::arm64 dispatched Level 3 to '$kern', not a neon kernel — the NEON path did not run on this arm64 runner, so this leg proves nothing it exists to prove" >&2; exit 1 ;;
           esac
-          # The disclosed partial port (#153/#154): Level 3 is neon, Level 1 is scalar-as-shipped
-          # until the NEON L1 backend lands. CI asserts the disclosure rather than trusting it.
-          if [ "$l1" != "scalar" ]; then
-            echo "::warning::arm64 Level 1 read back '$l1'; scalar is expected until the NEON L1 backend lands (#154). If NEON L1 shipped, update this assertion." >&2
+          # Until #154 this asserted Level 1 == scalar (the disclosed partial port) and merely
+          # warned otherwise. #154 shipped the NEON L1 backend, so Level 1 now dispatches neon and
+          # the assertion is promoted from a warning to a hard check: an arm64 build whose L1 fell
+          # back to scalar would be a silent regression of the very backend #154 added, exactly the
+          # blindness class this job exists to close. Both levels asserted neon now.
+          if [ "$l1" != "neon" ]; then
+            echo "::error::arm64 Level 1 read back '$l1', not neon — the NEON L1 backend (#154) did not dispatch on this arm64 runner; the port regressed to a scalar Level 1" >&2
+            exit 1
           fi
           {
             echo "### GOEXPERIMENT=simd on arm64 — the NEON paths, run in CI (#152)"
@@ -312,8 +316,8 @@ jobs:
             echo '| read-back | value |'
             echo '|---|---|'
             echo "| Level-3 microkernel (asserted \`*/neon\`) | \`$kern\` |"
-            echo "| Level-1 active (scalar until #154) | \`$l1\` |"
+            echo "| Level-1 active (asserted \`neon\`, #154) | \`$l1\` |"
             echo
-            echo "Level 3 NEON over a scalar Level 1 is the disclosed partial port (#153); the L1 NEON"
-            echo "backend is #154's v0.2.0 unit."
+            echo "The arm64 port is complete at both levels: NEON Level 3 (#136) over NEON Level 1 (#154),"
+            echo "marker \`l1=neon,scalar kern=neon,scalar\`. Both backends are asserted-run here."
           } >> "$GITHUB_STEP_SUMMARY"
