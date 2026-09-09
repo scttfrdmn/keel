@@ -75,14 +75,24 @@ nor in any bar's derivation set (`SCALE_DERIVED_FROM`, `CEIL_DERIVED_FROM`, both
 
 ## Pre-registered, per criterion (the instrument's own rows)
 
-Structural — these are near-certain and a deviation is a defect, not a surprise:
+Structural — these are near-certain and a deviation is a defect, not a surprise. **Amended 2026-09-09
+for the rev being certified, `c220834`:** the predictions below were written for the pre-tile-fix,
+pre-L1 rev (#137 era, `5f73895`/`029e24f`) and are corrected to what `c220834` *verifiably dispatches*
+— the tile fix (`972ee47`) and the NEON Level-1 backend (`f1bfaa9`) landed since. This is a rev-matched
+prediction, not a result-matched one: it is a structural fact about the shipping binary, confirmed from
+the dispatch layer without any fleet — `dispatch_ladder_arm64.go:25` reads `L1Chain()=[neon,scalar]`,
+and the rendered markers are `l1=neon,scalar kern=neon,scalar` / `keel-l1-active: neon` /
+`keel-sgemm-active: 4x16/neon`. The prior prediction (`l1=scalar`, with `l1=neon` as a *falsifier*)
+described code that no longer ships; leaving it would make the cert self-falsify on its own marker.
 
-- **Dispatch marker** (`keel-p5-dispatch`): `l1=scalar kern=neon,scalar` on both hosts. `KernChain`
-  derives `[neon, scalar]` from the registered NEON kernels (#136/#153); `L1Chain` is `[scalar]`
-  because there is no NEON Level-1 backend yet (#154). A marker that reads anything else — an `avx*`
-  token, a `kern=scalar` with no `neon`, an `l1=neon` — falsifies the port's advertised shape.
-- **L1 rows**: every Level-1 benchmark dispatches the **scalar** kernel (shipped state, #154). A NEON
-  L1 rate would mean #154 landed unrecorded.
+- **Dispatch marker** (`keel-p5-dispatch`): `l1=neon,scalar kern=neon,scalar` on both hosts, with
+  `keel-sgemm-active: 4x16/neon`. `KernChain` derives `[neon, scalar]` from the registered NEON kernels
+  (#136/#153); `L1Chain` is `[neon, scalar]` because the NEON Level-1 backend now ships (#154, `f1bfaa9`).
+  A marker that reads anything else — an `avx*` token, `l1=scalar` (which would mean #154 regressed), a
+  `kern` tile other than `4x16/neon` (which would mean the audited-`InsnsPerFMA` tile-rank fix `972ee47`
+  regressed), or a `kern=scalar` with no `neon` — falsifies the port's advertised shape.
+- **L1 rows**: every Level-1 benchmark dispatches the **NEON** kernel (shipped state, #154 landed at
+  `f1bfaa9`). A **scalar** L1 rate would now mean #154 regressed (the inverse of the pre-amend prediction).
 - **Conservation**: the scale aggregate's buckets partition the 2-host fleet — the six bucket counts
   sum to exactly 2, residual 0 (`scale_bucket`, the #90/#119 law).
 
@@ -98,9 +108,14 @@ Registered-baseline criteria — **BASELINE on the two ladder passes, judged on 
   the issue/fma frontier are amd64-derived), candidate row emitted. A reviewed landing commit types
   the arm64 percent-of-peak floor from the host's own archives; the confirmation pass judges against
   that own-derived floor, not against 0.55. The #136 sweep showed the shipped tiles are zero-spill and
-  competitive, so the recorded fraction is the finding, not a hurdle. Item-3 local replay rendered
-  `8x8/neon reaches 32.8% of measured NEON peak, RECORDED as candidate baseline` with the 0.55
-  comparison absent — the shape both hosts should reproduce.
+  competitive, so the recorded fraction is the finding, not a hurdle. **Amended 2026-09-09 for
+  `c220834`:** the item-3 local replay rendered `8x8/neon reaches 32.8% of measured NEON peak` — but
+  that was the pre-tile-fix rev; `c220834` dispatches **`4x16/neon`** (the `972ee47` tile-rank fix), so
+  the shape both hosts should reproduce is `4x16/neon`, and the recorded fraction is expected **~40%**
+  of measured NEON peak (32.8% × the +24% kernel-level tile delta measured on GB10; directional, from a
+  characterization host — the Graviton number is what the run RECORDS). This stays BASELINE with the
+  0.55 comparison absent, so the expectation does not gate — it records what it measures — but it is
+  stated rev-matched rather than 8×8-stale.
 
 Reported-not-judged, fleet-wide (not an arm64 property):
 
