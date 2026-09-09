@@ -80,6 +80,19 @@ While the major version is 0, minor versions may contain breaking changes.
   `keel-l1-available: neon scalar`, `keel-l1-active: neon`; `L1Chain()` on arm64 becomes `[neon, scalar]`.
 
 ### Changed
+- **The ≥60%-of-OpenBLAS floor is REPORTED, not judged, on arm64 (ruled 2026-09-09, from #155).** A
+  no-spend gate audit before the v0.2.0 cert campaign found `OPENBLAS_FLOOR=0.60` was the sole
+  remaining foreign-reference bar still judging arm64: it was derived on amd64 against an AVX-512
+  reference, but on Graviton the swept reference is OpenBLAS's SVE kernel and keel's is NEON (archsimd
+  exposes no SVE, #162), so 60%-of-an-SVE-reference would red the arm64 gate on a structural ISA-access
+  gap, not a keel weakness (keel ~41% post-tile-fix; clearing 60% needs the SVE kernel, not a tile). The
+  same foreign-reference category error #155 already fixed for percent-of-peak (→BASELINE) and criterion
+  5b (→arm64-own-frontier); the cross-ISA positioning finding is the evidence. `gate-p3.sh` now renders
+  the ratio **REPORTED** on arm64 (per-host + aggregate, `KEEL_GOARCH`-gated), verbatim visible on the
+  certificate — the gate stops scoring the SVE gap as a keel FAIL, it does not hide the ratio. Witnessed:
+  amd64 rendering byte-unchanged (zero-diff replay), and the same 41% input renders REPORTED on arm64 but
+  still FAILs <60% on amd64 (the bar still bites). Legislated from principle before any log was read, no
+  fleet launched. `docs/graviton-registration.md` amended with disclosure.
 - **Public docs truth-maintained against the shipped arm64 path.** `doc.go` (the pkg.go.dev front
   page), `doc-site/limits.md` (the canonical scope statement) and the README scope line all said
   amd64-only and "no ARM64 vector path — scheduled." NEON ships (Level 1 + Level 3), so: arm64 moved

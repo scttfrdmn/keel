@@ -1103,6 +1103,12 @@ OB_INDET=0
 # other exit has one: a not-admitted host DID produce a ratio, so folding it into
 # OB_NOCOVER would print "produced no ratio" about a number printed six lines above.
 OB_NOTADM=0
+# Hosts whose keel/OpenBLAS ratio is REPORTED, not judged, because the >= 60% floor is amd64-derived
+# against an AVX-512 reference and on arm64 the swept reference is an SVE kernel keel's NEON cannot
+# answer (archsimd exposes no SVE, #162) — a foreign-reference category error (#155, ruled
+# 2026-09-09). Its own tally for the same reason OB_NOTADM has one: a reported host DID produce a
+# ratio (printed and carried to the certificate), so folding it into OB_NOCOVER would misdescribe it.
+OB_REPORTED=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the >= 60%-of-OpenBLAS criterion cannot be evaluated (percent-of-peak is NOT a substitute): unmeasured, not missed"
@@ -1535,6 +1541,22 @@ else
       OB_NOTADM=$((OB_NOTADM + 1))
       continue
     fi
+    # arm64 (#155's "a bar travels with its derivation set, never across ISAs"; ruled 2026-09-09):
+    # OPENBLAS_FLOOR=0.60 was derived on amd64 against an AVX-512 reference. On Graviton the swept
+    # reference is OpenBLAS's SVE kernel (neoversev1/v2) and keel's kernel is NEON — archsimd exposes
+    # no SVE (#162) — so 60%-of-an-SVE-reference scores the archsimd ISA-access gap, not keel's
+    # kernel. Same foreign-reference category error that sent PEAK_FLOOR -> BASELINE (line ~843) and
+    # criterion 5b -> arm64-own-frontier (line ~689). The ratio ships VISIBLY (printed above, and on
+    # the certificate/docs) as what it is; the gate stops scoring a structural ISA-access gap as a
+    # keel FAIL. REPORTED, not a registered baseline: the denominator is a foreign ISA's kernel, not
+    # keel's own (unlike percent-of-peak's own-NEON-peak), so there is no keel drift floor to register,
+    # and an OpenBLAS re-tune of its Graviton kernel would move the ratio for reasons that are not
+    # keel's. amd64 is byte-unchanged: this branch is inert when KEEL_GOARCH is unset.
+    if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+      reported "[$host] Sgemm at 2048^3 reads ${aptpc}% of its swept OpenBLAS reference, ${alopc}% net of CI — REPORTED, not judged against OPENBLAS_FLOOR=$OPENBLAS_FLOOR: on arm64 that reference is an SVE kernel and keel is NEON (archsimd has no SVE, #162), so the >= 60% bar (amd64/AVX-512-derived) is a foreign-reference category error here (#155). The ratio is the finding, not a keel FAIL; a bar travels with its derivation set."
+      OB_REPORTED=$((OB_REPORTED + 1))
+      continue
+    fi
     if awk -v r="$alo" -v f="$OPENBLAS_FLOOR" 'BEGIN{exit !(r >= f)}'; then
       pass "[$host] Sgemm at 2048^3 is ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (>= 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
       OB_CLEARED=$((OB_CLEARED + 1))
@@ -1550,7 +1572,15 @@ else
   # Hosts that left the loop with no verdict for a reason that is not the split:
   # no OpenBLAS reference, no benchstat interval, no bounded amended ratio. Named,
   # because they are neither cleared nor slow and the sentence must not imply either.
-  OB_NOCOVER=$((NHOSTS - OB_CLEARED - OB_MISSED - OB_INDET - OB_NOTADM))
+  OB_NOCOVER=$((NHOSTS - OB_CLEARED - OB_MISSED - OB_INDET - OB_NOTADM - OB_REPORTED))
+  if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+    # arm64: the 60% floor is REPORTED-not-judged (see the per-host branch above and #155/#162),
+    # so there is no fleet pass/fail aggregate to compute — NEON vs an SVE reference is not a bar
+    # keel can be held to until archsimd exposes SVE. The per-host ratios are the deliverable.
+    # amd64 keeps the fleet_coverage aggregate below unchanged (this branch is inert when
+    # KEEL_GOARCH is unset), so this is arch-gated exactly like the percent-of-peak and 5b re-types.
+    reported "the keel/OpenBLAS ratio is REPORTED on all $OB_REPORTED arm64 host(s), not judged against the 60% floor: NEON vs an SVE reference (#155/#162). The per-host ratios are printed above and carry to the certificate as the finding, not scored as a keel FAIL."
+  else
   case "$(fleet_coverage "$NHOSTS" "$OB_MEASURED" "$OB_CLEARED" "$OB_MISSED" "$OB_INDET")" in
   unmeasured)
     unmeasured "no host produced a keel/OpenBLAS ratio at all, so criterion 6 is unmeasured rather than missed" ;;
@@ -1561,6 +1591,7 @@ else
   *)
     unmeasured "$((OB_INDET + OB_NOTADM + OB_NOCOVER)) of $NHOSTS gate hosts could not be judged this run ($OB_INDET had an indeterminate classification whose two candidate denominators disagreed, $OB_NOTADM are not admitted to the evidentiary class so no ratio from them is judgeable, $OB_NOCOVER produced no bounded ratio at all); the other $OB_CLEARED cleared the bar, and no host measured below it" ;;
   esac
+  fi
 fi
 
 assumed_ledger

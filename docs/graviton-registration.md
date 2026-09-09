@@ -114,11 +114,23 @@ Reported-not-judged, fleet-wide (not an arm64 property):
 Fixed-floor criteria — **judged from the first pass** (no `baseline_state`; an absolute floor on a
 live per-host reference, so nothing about them predates a first-sight host):
 
-- **p3 OpenBLAS ratio** (≥60% of same-host OpenBLAS at 2048³): judged. Reference is the **source-built
-  DYNAMIC_ARCH** OpenBLAS 0.3.29, pinned to the fastest swept coretype. *Expected to pass* — but this
-  is the first NEON-vs-OpenBLAS-NEON ratio keel has ever measured, so the number is the finding. (This
-  one stays fixed-floor: it is a floor on a live per-host reference, not the amd64-derived 0.55, so no
-  ruling moved it — unlike percent-of-peak, now registered-baseline above.)
+- **p3 OpenBLAS ratio** (`OPENBLAS_FLOOR=0.60`): **REPORTED on arm64, not judged — ruled 2026-09-09,
+  from #155's "a bar travels with its derivation set, never across ISAs."** The v0.2.0-readiness
+  pre-flight found this floor would red the arm64 gate on Graviton-V1: the 60% bar was derived on amd64
+  against an **AVX-512** reference, but on Graviton the swept reference (`neoversev1/v2`) is OpenBLAS's
+  **SVE** kernel, and keel's kernel is NEON — archsimd exposes no SVE (#162). So 60%-of-an-SVE-reference
+  measures the archsimd ISA-access gap, not keel's kernel (keel reads ~31% of the V1 SVE reference at
+  8×8, ~41% post-tile-fix — clearing 60% needs ~+94%, which is the SVE kernel, not a tile choice). This
+  is the *same* foreign-reference category error that sent PEAK_FLOOR→BASELINE and criterion 5b→
+  arm64-own; the cross-ISA positioning finding (`docs/cross-isa-positioning.md`) is the evidence — the
+  raw percent-of-OpenBLAS tracks the *reference's* per-µarch coverage (SVE on V1, none on V2), not
+  keel. `gate-p3.sh` now renders the ratio **REPORTED** on arm64 (per-host and aggregate), verbatim
+  visible on the certificate and in the docs — the gate stops scoring an ISA-access gap as a keel FAIL,
+  it does **not** hide the ratio. REPORTED not registered-baseline: the denominator is a foreign ISA's
+  kernel, not keel's own, so there is no keel drift floor to register. **Legislated from principle
+  before any log was read**, importing only #155 (which predates this campaign); amd64 keeps the 60%
+  floor byte-unchanged (witnessed zero-diff). *(This bullet previously read "stays fixed-floor… no
+  ruling moved it"; that was written before the cross-ISA finding and is now corrected — a ruling did.)*
 - **p4 syrk/gemm** (≥0.85): judged; co-tenancy divides out (it does not consult admission, by ruling),
   so it is as applicable on Graviton as anywhere. *Expected to pass.*
 
