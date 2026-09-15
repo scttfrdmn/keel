@@ -80,6 +80,20 @@ While the major version is 0, minor versions may contain breaking changes.
   `keel-l1-available: neon scalar`, `keel-l1-active: neon`; `L1Chain()` on arm64 becomes `[neon, scalar]`.
 
 ### Changed
+- **`scripts/provision-openblas.sh` runs clean detached — three attended-assumptions fixed.** It was
+  built to be run *attended* ("Scott runs it, sudo prompts him directly over `ssh -t`"); its first
+  fire-and-forget run (the v0.2.0 cert fleet) hit three pty-hostilities in a row — one wrong assumption
+  wearing three faces — costing ~$101 of blind fleet stalls before the pattern was seen. Pinned on a
+  `$0.20` throwaway with per-line-timestamped `bash -x` (localize, don't guess): (1) `confirm()`'s
+  `[y/N]` read hangs a detached tmux pty (which the "no tty" guard can't detect — a pty *is* present) →
+  every call site already passes `--yes`; (2) Ubuntu 24.04 `needrestart`'s apt post-invoke prompt hangs
+  → all four apt install/remove sites run `sudo env NEEDRESTART_MODE=a DEBIAN_FRONTEND=noninteractive`;
+  (3) the forced `ssh -t` leaves the pty open after apt+needrestart and never returns → `SSH_TTY_OPTS`
+  drops `-t` (adds `BatchMode=yes`) on the `--yes`/NOPASSWD path, covering all five ssh sites, while the
+  attended `-t` path stays for interactive sudo. Witnessed on an amd64 throwaway: provision runs
+  end-to-end, no >60s gap, OpenBLAS linkable + Go installed. The arm64 source-build path shares the same
+  fixes (same needrestart/`-t` mechanism) but is *asserted, not witnessed*, until the arm64 cert leg
+  runs it live — an open witness-item that leg discharges. Real automation-safety fix, not cert-only.
 - **The ≥60%-of-OpenBLAS floor is REPORTED, not judged, on arm64 (ruled 2026-09-09, from #155).** A
   no-spend gate audit before the v0.2.0 cert campaign found `OPENBLAS_FLOOR=0.60` was the sole
   remaining foreign-reference bar still judging arm64: it was derived on amd64 against an AVX-512

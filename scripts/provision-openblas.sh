@@ -68,6 +68,14 @@ bad()  { printf '   \033[31m!!\033[0m %s\n' "$1"; }
 # Gate on the LOCK, not on cloud-init — three guesses at the holder were each refuted by
 # the journal, and this is right without knowing. 300s then EX_TEMPFAIL, so a host that
 # cannot start apt fails by name instead of dying inside it.
+#
+# NEEDRESTART: every apt install/remove below runs under `sudo env NEEDRESTART_MODE=a
+# DEBIAN_FRONTEND=noninteractive`. Ubuntu 24.04's needrestart apt post-invoke hook prompts
+# ("which services to restart?") on a pty — and a detached run HAS a pty (tmux), so it hangs
+# forever instead of failing. That is the ~40-min provision stall that turned a $1 diagnosis
+# into $101 of blind fleet fires (localized 2026-09-14 by per-line timestamps: the gap sat
+# right after "Scanning linux images..."). MODE=a runs needrestart automatically, no prompt;
+# it must ride on the apt process's own env (sudo env), not a shell export sudo would reset.
 APT_WAIT='w=0; while sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
   w=$((w+5)); [ "$w" -le 300 ] || { echo "apt lists lock still held after ${w}s" >&2; exit 75; }
   sleep 5; done;'
@@ -195,7 +203,7 @@ go_new_enough() {
 install_cc() {
   local host="$1" distro="$2" cmd
   case "$distro" in
-    ubuntu|debian|pop|linuxmint)        cmd="$APT_WAIT sudo apt-get update && sudo apt-get install -y build-essential" ;;
+    ubuntu|debian|pop|linuxmint)        cmd="$APT_WAIT sudo apt-get update && sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y build-essential" ;;
     rhel|centos|rocky|almalinux|fedora) cmd="sudo dnf install -y gcc glibc-devel" ;;
     *) bad "unrecognized distro id '$distro'; install a C compiler by hand (cgo needs one)"; return 1 ;;
   esac
@@ -208,7 +216,7 @@ install_cc() {
 install_openblas() {
   local host="$1" distro="$2" cmd
   case "$distro" in
-    ubuntu|debian|pop|linuxmint) cmd="$APT_WAIT sudo apt-get update && sudo apt-get install -y libopenblas-dev" ;;
+    ubuntu|debian|pop|linuxmint) cmd="$APT_WAIT sudo apt-get update && sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y libopenblas-dev" ;;
     rhel|centos|rocky|almalinux) cmd="sudo dnf install -y openblas-devel" ;;
     fedora)                      cmd="sudo dnf install -y openblas-devel" ;;
     *) bad "unrecognized distro id '$distro'; install an OpenBLAS development package by hand"; return 1 ;;
@@ -247,8 +255,8 @@ build_openblas_arm64() {
   note "  arm64 source build, not the distro package: 24.04's 0.3.26 predates the Neoverse V2/SVE2"
   note "  kernels this reference must not read below (openblasCorename's guard, on arm64)"
   confirm "remove any distro openblas, install build deps, clone $OPENBLAS_VERSION, build and 'sudo make install' it?" || return 1
-  cmd="$APT_WAIT sudo apt-get remove -y libopenblas0 libopenblas-dev libopenblas0-pthread 2>/dev/null || true
-    $APT_WAIT sudo apt-get update && sudo apt-get install -y gcc gfortran make git
+  cmd="$APT_WAIT sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get remove -y libopenblas0 libopenblas-dev libopenblas0-pthread 2>/dev/null || true
+    $APT_WAIT sudo apt-get update && sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y gcc gfortran make git
     rm -rf '$OPENBLAS_BUILD_DIR'
     git clone --depth 1 --branch '$OPENBLAS_VERSION' https://github.com/OpenMathLib/OpenBLAS '$OPENBLAS_BUILD_DIR'
     make -C '$OPENBLAS_BUILD_DIR' -j\"\$(nproc)\" DYNAMIC_ARCH=1 TARGET=ARMV8 USE_OPENMP=0 NUM_THREADS=\"\$(nproc)\" FC=gfortran CC=gcc
@@ -464,6 +472,17 @@ main() {
       *) ARGS+=("$a") ;;
     esac
   done
+
+  # --yes/detached: DROP the forced -t. `ssh -t` leaves the pty open after apt+needrestart and the
+  # session never returns — pinned 2026-09-14 by bash -x: install_openblas's `ssh -t` hung 895s after
+  # needrestart's scan completed, while the governor probe's `-n -o BatchMode=yes` ssh (no -t) returned
+  # fine. NOPASSWD sudo (the cloud AMIs' default) needs no tty; BatchMode fails fast instead of hanging
+  # if a prompt ever WOULD appear. The -t path (line 456) stays for attended runs where sudo prompts the
+  # operator over the tty. One change, all five ssh call sites — the last member of the attended-assumption
+  # class (the others: confirm() prompts → --yes; needrestart/debconf → the apt env above).
+  if [[ "$ASSUME_YES" -eq 1 ]]; then
+    SSH_TTY_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new)
+  fi
 
   if [[ "${#ARGS[@]}" -gt 0 ]]; then
     HOSTS="$(printf '%s\n' "${ARGS[@]}")"
