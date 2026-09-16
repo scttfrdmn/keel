@@ -291,14 +291,18 @@ P5_NOSTATE_REQ="goroutines-return-to-baseline repeat-call-bit-identical"
 # These are the gate's INDEPENDENT ASSERTION of the #40 dispatch ruling per arch — arch-
 # conditional CONSTANTS, never derived from KernChain()/L1Chain() (#155 spec, unit 2): a check
 # whose expectation comes from the same source it reads is tautological and catches no drift.
-# amd64 keeps its values verbatim (byte-unchanged). arm64 (#136/#153): Level 3 dispatches NEON
-# then scalar, Level 1 is scalar-only (no NEON L1 backend, #154). arm64 forces ONLY scalar --
-# KEEL_FORCE=neon panics, because selectL1 has no neon rung to honour, so the NEON microkernel
-# is verified from the DEFAULT (unforced) run's kern=neon,scalar marker rather than by forcing.
-# There is no Level-1-only vector backend on arm64, so P5_L1_ONLY is empty.
+# amd64 keeps its values verbatim (byte-unchanged). arm64 (#136/#153): Level 3 dispatches NEON then
+# scalar, and Level 1 ALSO dispatches neon then scalar — a NEON L1 backend now ships
+# (internal/l1/l1_arm64.go registers Name: NEON; L1Chain()=[neon,scalar]), which SUPERSEDES the
+# #154-era "Level 1 is scalar-only, no NEON L1 backend" this branch used to assert (#163, 2026-09-16;
+# that comment predated the backend and is now false). arm64 still forces ONLY scalar (P5_FORCED):
+# the neon L1 rung is confirmed from the DEFAULT (unforced) run's l1=neon dispatch marker — #136's
+# documented approach — rather than by KEEL_FORCE=neon, so the criterion-7 pass line below is
+# arch-aware about how neon is verified. There is no Level-1-only vector backend on arm64, so
+# P5_L1_ONLY is empty.
 case "${KEEL_GOARCH:-amd64}" in
   arm64)
-    P5_L1_CHAIN="scalar"
+    P5_L1_CHAIN="neon,scalar"
     P5_KERN_CHAIN="neon,scalar"
     P5_FORCED="scalar"
     P5_L1_ONLY="" ;;
@@ -670,6 +674,12 @@ else
     gk="$(field kern "$dc")"
     if [[ "$gl1" != "$P5_L1_CHAIN" ]]; then
       fail "the declared Level-1 chain is '${gl1:-none}', not '$P5_L1_CHAIN' (DESIGN.md §4/P5)"
+    elif [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+      # arm64 forces scalar (P5_FORCED) and confirms the neon L1 rung from THIS run's l1=neon
+      # dispatch marker rather than by KEEL_FORCE=neon (#136's documented approach; #163 2026-09-16).
+      # amd64 BYTE-UNCHANGED: this arm cannot fire when KEEL_GOARCH is unset, so the else renders
+      # the original "forced every element" line verbatim (amd64 P5_FORCED covers every L1 rung).
+      pass "Level-1 chain declared as $P5_L1_CHAIN — scalar forced above, and the neon rung confirmed from this run's l1=neon dispatch marker (arm64 verifies neon via the marker, not by KEEL_FORCE)"
     else
       pass "Level-1 chain declared as $P5_L1_CHAIN, and this gate forced every element of it above"
     fi
