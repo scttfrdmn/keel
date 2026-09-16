@@ -311,12 +311,31 @@ case "${KEEL_GOARCH:-amd64}" in
     P5_L1_ONLY="avx2" ;;
 esac
 
-# How far a published README number may sit from this run's measurement before it
-# stops being the same claim (criterion 9). 5% is wider than any CI this project
-# has recorded at 4096 and narrower than any optimistic rounding.
+# The FALLBACK band for criterion 9, applied only when a published rate's REFERENCE interval is
+# DISJOINT from this run's measured interval (see the CI-overlap comparison below, #163 2026-09-15).
+# Both are benchstat estimators — a point and its interval — and consistency is interval OVERLAP;
+# overlapping intervals never reach this band. 5% was once claimed wider than any CI this project
+# records at 4096 — Strsm/8 on EPYC 9R45 falsified that (run interval span 11.7%) and motivated
+# comparing intervals instead of points. Still narrower than any optimistic rounding, so once the
+# intervals miss it stays a "same claim" test.
 README_TOL=0.05
 README_BEGIN='<!-- keel-numbers: begin -->'
 README_END='<!-- keel-numbers: end -->'
+
+# The canonical era-pinned8 SAMPLE archives criterion 9 reads to build a published rate's REFERENCE
+# CI at gate time (#163; provenance documented in #165). A gate-side READ ONLY — the README's
+# numbers are untouched; the reference interval is benchstat over the SAME two judged runs the
+# published medians come from (take-four 6ba6566 + confirm 969c360), so it is like-for-like with
+# the run's own benchstat CI. Pinned, not globbed: the trailing -N differs per host, and the
+# non-c30 6ba6566 take reads 427.1 not 388.9 (a superseded run, #165). arm64 rows get their pair
+# when that cert leg lands; absent archives leave the reference empty and the row falls to the band.
+readme_ref_archives() {  # $1 = CPU model; echoes the two sample-archive paths, or nothing
+  case "$1" in
+    *8124M*) echo archive/pinned8/bench-gate-p5-6ba6566-keel-skx-20260823T004407Z-1.txt archive/pinned8/bench-gate-p5-969c360-keel-skx-20260823T045149Z-1.txt ;;
+    *9R14*)  echo archive/pinned8/bench-gate-p5-6ba6566-keel-zen4-20260823T004407Z-3.txt archive/pinned8/bench-gate-p5-969c360-keel-zen4-20260823T045149Z-3.txt ;;
+    *9R45*)  echo archive/pinned8/bench-gate-p5-6ba6566-keel-zen5-20260823T004407Z-2.txt archive/pinned8/bench-gate-p5-969c360-keel-zen5-20260823T045149Z-2.txt ;;
+  esac
+}
 
 # The delegated gate's full output. build/ is gitignored; the path is printed
 # because CLAUDE.md wants gate output verbatim in the umbrella issue.
@@ -1469,6 +1488,16 @@ else
         unmeasured "[$host] the CPU model is unreadable, so this host's README rows cannot be located: an empty model matches no row, and that is not the README publishing none"
       else
         RMATCH=0; RBADN=""; RDEN1=""; RDENT=""; RDENSKIP=0
+        # This host's REFERENCE-CI corpus: benchci over its canonical era archives (#163/#165),
+        # computed once here so each row below overlaps its reference interval against the run's.
+        # Gate-side read, nothing published; unreadable/absent archives leave REFCSV empty and every
+        # row falls back to the README_TOL band (fail-closed to the prior center-band behaviour).
+        REFCSV=""; read -r -a REF_ARCH <<<"$(readme_ref_archives "$hcpu")"
+        if [[ "${#REF_ARCH[@]}" -gt 0 && -r "${REF_ARCH[0]}" ]]; then
+          REFPOOL="$(mktemp)"; REFCSV="$(mktemp)"
+          if cat "${REF_ARCH[@]}" >"$REFPOOL" 2>/dev/null && go run ./tools/benchci "$REFPOOL" >"$REFCSV" 2>/dev/null; then :; else REFCSV=""; fi
+          rm -f "$REFPOOL"
+        fi
         while IFS= read -r row; do
           [[ -n "$row" ]] || continue
           rcpu="$(awk -F'|' '{gsub(/^ +| +$/, "", $2); print $2}' <<<"$row")"
@@ -1507,13 +1536,30 @@ else
             RBADN="$RBADN ${rben}/threads=${rthr}(no benchmark family here addresses this published name, so criterion 9 cannot re-measure it — #113)"
             continue
           fi
-          mgf="$(bench_gflops "$rname" "$BENCHCSV")"
+          # CI-OVERLAP (criterion 9, #163 2026-09-15). A published rate is a benchstat MEDIAN over
+          # the era's pooled samples — an estimator with an interval — and so is this run's reading.
+          # Two estimators are CONSISTENT iff their confidence intervals OVERLAP. The reference
+          # interval [rlo,rhi] is read HERE from the canonical archives via benchci (README numbers
+          # untouched); the run interval [mlo,mhi] is this run's benchstat CI. The row passes when
+          # they overlap; only when they are DISJOINT (or a run interval is unbounded, or no
+          # reference corpus resolved) does the flat README_TOL band decide — and it still binds, so
+          # a cell whose intervals miss AND whose center is >5% off is a different claim and FAILs.
+          # This corrects a flat center-to-center band that, on a cell whose interval is wider than
+          # the band (Strsm/8 on EPYC 9R45), tested NOISE not drift (#116, the interval-not-point fix).
+          read -r mgf _mci mlo mhi _ _ <<<"$(bench_stat "$rname" "$BENCHCSV" GFLOP/s)" || :
+          rlo=""; rhi=""
+          [[ -n "$REFCSV" ]] && { read -r _ _ rlo rhi _ _ <<<"$(bench_stat "$rname" "$REFCSV" GFLOP/s)" || :; }
           if [[ -z "$mgf" ]]; then
             RBADN="$RBADN ${rben}/threads=${rthr}(published, but this gate measured no such row)"
-          elif ! awk -v a="$rgf" -v b="$mgf" -v t="$README_TOL" 'BEGIN{d=(a-b)/b; if (d<0) d=-d; exit !(d <= t)}'; then
-            RBADN="$RBADN ${rben}/threads=${rthr}(README says $rgf, this run measured $mgf)"
+          elif ! awk -v a="$rgf" -v b="$mgf" -v t="$README_TOL" -v rlo="$rlo" -v rhi="$rhi" -v mlo="$mlo" -v mhi="$mhi" 'BEGIN{
+                 # consistent: reference and run intervals overlap (rhi >= mlo && rlo <= mhi)
+                 if (mlo != "inf" && mhi != "inf" && rlo != "" && rhi != "" && rlo != "inf" && rhi != "inf" && rhi+0 >= mlo+0 && rlo+0 <= mhi+0) exit 0
+                 # disjoint, unbounded, or no reference: the README_TOL band still binds
+                 d=(a-b)/b; if (d<0) d=-d; exit !(d <= t) }'; then
+            RBADN="$RBADN ${rben}/threads=${rthr}(README $rgf ref CI [$rlo, $rhi] disjoint from run $mgf CI [$mlo, $mhi] and past ${README_TOL})"
           fi
         done <<<"$RROWS"
+        [[ -n "$REFCSV" ]] && rm -f "$REFCSV"
         # Arm B decides once per host, because the property is a property of the column. `<=`,
         # not `<`: readme-numbers.sh prints p1 ROUNDED and computes p8 from the UNROUNDED value,
         # so Intel's 192.6 / 1541.2 pair sits exactly ON the 8·hw(p1) endpoint — written `<`
@@ -1563,7 +1609,7 @@ else
           BASELINE_OWING="$BASELINE_OWING $host/README"
           fail "[$host] README.md publishes no row for '$hcpu', and $BASELINE_WITNESS records a judged run for this silicon in era $P5_ERA — so its numbers are unpublished rather than unborn, and BASELINE is spent (#6)"
         elif [[ -z "$RBADN" ]]; then
-          pass "[$host] every README row for this CPU re-measures within 5% ($RMATCH row(s)), and their denominators reduce to the one peak this run measured — ${RDV#ok } GFLOP/s${RDSKIPMSG}"
+          pass "[$host] every README row for this CPU is consistent with this run — its reference CI overlaps this run's, or (where they miss) the rate is within ${README_TOL} of center (criterion 9, CI-overlap #163; $RMATCH row(s)), and their denominators reduce to the one peak this run measured — ${RDV#ok } GFLOP/s${RDSKIPMSG}"
         else
           fail "[$host] README rows disagree with this run:$RBADN"
         fi
