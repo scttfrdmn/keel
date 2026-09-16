@@ -528,6 +528,13 @@ else
     pass "the sweep ran green with the avx512 Sgemm live (target: $AVX512_GREEN)"
   elif [[ "$AVX512_SEEN" -gt 0 ]]; then
     fail "no target ran the Sgemm sweep green with the avx512 backend, though $AVX512_SEEN host(s) exercised it"
+  elif [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+    # #155 (2026-09-16): the avx512 Sgemm sweep is amd64's kernel; arm64 dispatches NEON and its
+    # sweep coverage is criterion 5b's NEON frontier (#156), so this avx512-specific aggregate is
+    # N/A here, not UNMEASURED (which would falsely redden a healthy arm64 run). Same arch-gate the
+    # OpenBLAS floor and 5b already take. amd64 BYTE-UNCHANGED: this arm cannot fire when KEEL_GOARCH
+    # is unset, so the else below renders verbatim as before.
+    info "avx512 Sgemm sweep: N/A on arm64 (NEON is the dispatched kernel; sweep coverage is 5b's NEON frontier, #156) — not unmeasured (#155)"
   else
     unmeasured "no host exercised the avx512 Sgemm at all, so whether the sweep passes with it live is unmeasured rather than short: there was no host to ask"
   fi
@@ -547,7 +554,13 @@ fi
 # --------------------------------------------------- what the sweep covered
 echo
 echo "-- sweep extent (criteria 1 and 2: coverage is enforced, not trusted) --"
-if [[ ! -s "$SWEEPLOG" ]]; then
+if [[ ! -s "$SWEEPLOG" && "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+  # #155 (2026-09-16): criteria 1 and 2 audit the extent of the avx512 sweep; arm64 dispatches NEON
+  # and produces no avx512 sweep, its coverage being 5b's NEON frontier (#156) — N/A, not UNMEASURED.
+  # amd64 BYTE-UNCHANGED: on amd64 the arm64 clause is false, so an empty sweep log still renders the
+  # unmeasured below and a populated one still takes the extent audit.
+  info "avx512 sweep extent (criteria 1 and 2): N/A on arm64 (no avx512 sweep; NEON coverage is 5b, #156) — not unmeasured (#155)"
+elif [[ ! -s "$SWEEPLOG" ]]; then
   unmeasured "no avx512 sweep log to audit, so the sweep's extent is unmeasured rather than short"
 else
   cfg="$(marker sgemm-config "$SWEEPLOG")"
@@ -707,6 +720,13 @@ IPF_4x32="$(audit_ipf_tile 4x32 "$AUDITKERN")"
 IPF_PEAK="$(audit_ipf "$GATE_PEAK_FUNC" "$AUDITPEAK")"
 if [[ -n "$IPF_2x32" && -n "$IPF_4x32" && -n "$IPF_PEAK" ]]; then
   info "audited insns/FMA: 2x32 $(printf '%.3f' "$IPF_2x32"), 4x32 $(printf '%.3f' "$IPF_4x32"), $GATE_PEAK_FUNC $(printf '%.3f' "$IPF_PEAK")"
+elif [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
+  # #155 (2026-09-16): the sentinel audits the amd64 avx512 tiles (2x32, 4x32); arm64's kernel is
+  # 4x16/neon and this audit's consumer — the issue-bound classification that amends the OpenBLAS
+  # denominator — is moot because keel/OpenBLAS is REPORTED-not-judged on arm64 (NEON vs SVE,
+  # #155/#162). N/A here, not UNMEASURED. amd64 BYTE-UNCHANGED: falls through when KEEL_GOARCH unset,
+  # and a genuine amd64 audit failure still reaches the else.
+  info "insns/FMA sentinel: N/A on arm64 (audits amd64 avx512 tiles; its OpenBLAS-denominator consumer is REPORTED-not-judged here, #155/#162) — not unmeasured"
 else
   unmeasured "could not read insns/FMA from the audits, so the sentinel cannot classify its host"
 fi
