@@ -243,11 +243,16 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       ceil8[host, FILENAME] = ce
     }
 
-    # peak, printed once per routine per host, beside the 8-thread percent the gate computes
-    if (match(rest, /% of 8x the single-thread avx512 peak \([0-9.]+ GFLOP\/s\)/)) {
+    # peak, printed once per routine per host, beside the 8-thread percent the gate computes.
+    # Backend is [a-z0-9]+ not the literal avx512 (#163, 2026-09-16): the gate prints the ACTIVE
+    # single-thread peak, which is avx512 on amd64 and neon on arm64 -- hardcoding avx512 made this
+    # generator unable to read the peak on an arm64 run (no measured single-thread peak). Parse fix only.
+    if (match(rest, /% of 8x the single-thread [a-z0-9]+ peak \([0-9.]+ GFLOP\/s\)/)) {
       r = rest; sub(/:.*$/, "", r)
       pc = rest; sub(/^.*: /, "", pc); sub(/%.*$/, "", pc)
       pk = rest; sub(/^.*peak \(/, "", pk); sub(/ GFLOP.*$/, "", pk)
+      bk = rest; sub(/^.*single-thread /, "", bk); sub(/ peak.*$/, "", bk)
+      pkbk[host, FILENAME] = bk  # backend name for the row caption (avx512 on amd64, neon on arm64), #163
       # Four printings of one measurement are ONE witness (DESIGN.md §5 rule 10), so
       # they are used as a consistency check and never as corroboration. Scoped to the file
       # for the same reason as the ceiling above: within a run this must hold, across the
@@ -288,6 +293,16 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     for (kk in frr) { split(kk, K, SUBSEP); if (K[3] == jf) fr1[K[1], K[2]] = frr[kk] }
     for (kk in ptr) { split(kk, K, SUBSEP); if (K[3] == jf) pt1[K[1], K[2]] = ptr[kk] }
     for (kk in cir) { split(kk, K, SUBSEP); if (K[3] == jf) ci1[K[1], K[2]] = cir[kk] }
+    # #163 (2026-09-16): fill verdict + figures for hosts the judged run jf does NOT cover -- a
+    # first-sight arch registered by a SEPARATE run (arm64 gvt3/gvt4, from their 029e24f
+    # registration archive) has rates pooled but no jf verdict, so line 339 below would refuse it.
+    # Its only verdict is BASELINE (recorded, unjudged), so there is exactly ONE to take and this is
+    # NOT averaging two judged verdicts across runs (the bar the jf-only loops above enforce). The
+    # `!in` guard leaves every amd64 (h,r) jf already set untouched -- amd64 is byte-unchanged.
+    for (kk in vd)  { split(kk, K, SUBSEP); if (!((K[1], K[2]) in verdict)) verdict[K[1], K[2]] = vd[kk] }
+    for (kk in frr) { split(kk, K, SUBSEP); if (!((K[1], K[2]) in fr1))     fr1[K[1], K[2]]     = frr[kk] }
+    for (kk in ptr) { split(kk, K, SUBSEP); if (!((K[1], K[2]) in pt1))     pt1[K[1], K[2]]     = ptr[kk] }
+    for (kk in cir) { split(kk, K, SUBSEP); if (!((K[1], K[2]) in ci1))     ci1[K[1], K[2]]     = cir[kk] }
 
     print "| CPU | benchmark | threads | GFLOP/s | denominator |"
     print "| --- | --- | --- | --- | --- |"
@@ -296,6 +311,10 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       p1 = med(peak, h)
       if (p1 == "") { printf "readme-numbers: [%s] has no measured single-thread peak\n", h > "/dev/stderr"; exit 3 }
       p8 = p1 * 8
+      # #163: the microkernel-peak backend named in the row caption, read from this host peak line --
+      # avx512 on amd64 (the default keeps amd64 byte-unchanged), neon on arm64. Constant per host.
+      pkbname = "avx512"
+      for (pq = 1; pq <= nf; pq++) if ((h, flist[pq]) in pkbk) { pkbname = pkbk[h, flist[pq]]; break }
       for (j = 1; j <= n; j++) {
         r = R[j]
         a = med(one, h SUBSEP r); an = MEDN
@@ -322,8 +341,8 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
         # N rides on every row, per the ratified repair (#6): the estimator is part of the
         # number. "median of 2" and a lone draw are different claims and a reader cannot tell
         # them apart from the rate alone -- which is the whole defect that repair addressed.
-        printf "| %s | %s | 1 | %.4g | %.1f%% of %.4g GFLOP/s, the 1-thread avx512 microkernel peak; %s |\n", \
-          model[h], r, a, (a + 0) / p1 * 100, p1, est(an)
+        printf "| %s | %s | 1 | %.4g | %.1f%% of %.4g GFLOP/s, the 1-thread %s microkernel peak; %s |\n", \
+          model[h], r, a, (a + 0) / p1 * 100, p1, pkbname, est(an)
         printf "| %s | %s | 8 | %.4g | %.1f%% of %.1f GFLOP/s, that same peak x 8 cores; %s |\n", \
           model[h], r, b, c8, p8, est(bn8)
 

@@ -57,16 +57,34 @@ model, never by hostname.
 | AMD EPYC 9R14 | Strsm | 1 | 37.64 | 32.2% of 117 GFLOP/s, the 1-thread avx512 microkernel peak; median of N=2 archives |
 | AMD EPYC 9R14 | Strsm | 8 | 257.9 | 27.6% of 936.0 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
 | AMD EPYC 9R14 | Ceiling/compute | 8 | 933.8 | 99.8% of 936.0 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V2 | Sgemm | 1 | 19.84 | 42.4% of 46.82 GFLOP/s, the 1-thread neon microkernel peak; median of N=2 archives |
+| Neoverse-V2 | Sgemm | 8 | 140.8 | 37.6% of 374.6 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V2 | Ssyrk | 1 | 19.76 | 42.2% of 46.82 GFLOP/s, the 1-thread neon microkernel peak; median of N=2 archives |
+| Neoverse-V2 | Ssyrk | 8 | 152 | 40.6% of 374.6 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V2 | Ssymm | 1 | 19.81 | 42.3% of 46.82 GFLOP/s, the 1-thread neon microkernel peak; median of N=2 archives |
+| Neoverse-V2 | Ssymm | 8 | 140.6 | 37.5% of 374.6 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V2 | Strsm | 1 | 16.46 | 35.2% of 46.82 GFLOP/s, the 1-thread neon microkernel peak; median of N=2 archives |
+| Neoverse-V2 | Strsm | 8 | 130.1 | 34.7% of 374.6 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V2 | Ceiling/compute | 8 | 374 | 99.8% of 374.6 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V1 | Sgemm | 1 | 24.48 | 59.1% of 41.42 GFLOP/s, the 1-thread neon microkernel peak; median of N=2 archives |
+| Neoverse-V1 | Sgemm | 8 | 173.3 | 52.3% of 331.4 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V1 | Ssyrk | 1 | 24.32 | 58.7% of 41.42 GFLOP/s, the 1-thread neon microkernel peak; median of N=2 archives |
+| Neoverse-V1 | Ssyrk | 8 | 186.7 | 56.3% of 331.4 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V1 | Ssymm | 1 | 24.44 | 59.0% of 41.42 GFLOP/s, the 1-thread neon microkernel peak; median of N=2 archives |
+| Neoverse-V1 | Ssymm | 8 | 173 | 52.2% of 331.4 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V1 | Strsm | 1 | 18.2 | 43.9% of 41.42 GFLOP/s, the 1-thread neon microkernel peak; median of N=2 archives |
+| Neoverse-V1 | Strsm | 8 | 144.2 | 43.5% of 331.4 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
+| Neoverse-V1 | Ceiling/compute | 8 | 330.9 | 99.9% of 331.4 GFLOP/s, that same peak x 8 cores; median of N=2 archives |
 <!-- keel-numbers: end -->
 
 <!-- keel-caption: begin -->
-All 27 rows are per-row medians over the 2 archived runs of one era — `scripts/gate-p5.sh` at rev `969c360` (the judged run, which dates this page) and `6ba6566`, logs in `archive/pinned8/confirm-969c360.log`, `archive/pinned8/campaign-c30-6ba6566.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `absent` governor on every host. Each cell names its own N. The 1-thread and 8-thread rows for a routine pool the same archives, so their ratio is a ratio of like estimators; rows from different CPUs are not comparable, because the peaks differ. The verdicts below are the judged run's alone — a verdict belongs to the gate that rendered it and two cannot be averaged.
+All 45 rows are per-row medians over the 4 archived runs of one era — `scripts/gate-p5.sh` at rev `969c360` (the judged run, which dates this page) and `6ba6566`, `029e24f`, `029e24f`, logs in `archive/pinned8/confirm-969c360.log`, `archive/pinned8/campaign-c30-6ba6566.log`, `archive/pinned8/gvt-p1-029e24f.log`, `archive/pinned8/gvt-p2-029e24f.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `absent` governor on every host. Each cell names its own N. The 1-thread and 8-thread rows for a routine pool the same archives, so their ratio is a ratio of like estimators; rows from different CPUs are not comparable, because the peaks differ. The verdicts below are the judged run's alone — a verdict belongs to the gate that rendered it and two cannot be averaged.
 
 The 8-thread rows divide by 8x the 1-thread peak, which no host can reach: the clock drops with core count, so that share is a floor on how well the nest did and not a score. The bar below divides by a ceiling measured at 8 threads on the host itself, where the droop is inside the reading.
 
-Measured in the judged run, as a share of each host's own 8-thread ceiling: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz 30.6-31.5%; AMD EPYC 9R45 46.9-48.2%; AMD EPYC 9R14 70.7-74.9%. Those ceilings are 93.7%, 99.8% and 99.8% of 8x each host's own 1-thread peak -- a different factor per host, which is why the retired 6.0x cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).
+Measured in the judged run, as a share of each host's own 8-thread ceiling: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz 30.6-31.5%; AMD EPYC 9R45 46.9-48.2%; AMD EPYC 9R14 70.7-74.9%; Neoverse-V2 37.5-40.6%; Neoverse-V1 52.2-56.3%. Those ceilings are 93.7%, 99.8%, 99.8%, 99.8% and 99.9% of 8x each host's own 1-thread peak -- a different factor per host, which is why the retired 6.0x cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).
 
-9 of the 12 routine-host pairs those 24 routine rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: the judged routines must reach 44.2% of each host's own measured 8-thread ceiling (#6), and Strsm must scale >= 6.066x (#37). A further 3 of those pairs are RECORDED as a candidate baseline in era pinned8 and judged by nothing, so those rows are published as measurements and not as passes (#6). The 6.0x cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.
+9 of the 20 routine-host pairs those 40 routine rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: the judged routines must reach 44.2% of each host's own measured 8-thread ceiling (#6), and Strsm must scale >= 6.066x (#37). A further 11 of those pairs are RECORDED as a candidate baseline in era pinned8 and judged by nothing, so those rows are published as measurements and not as passes (#6). The 6.0x cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.
 <!-- keel-caption: end -->
 
 **The denominator here is keel's own microkernel, not OpenBLAS.** No OpenBLAS
