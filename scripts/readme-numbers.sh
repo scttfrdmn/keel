@@ -198,7 +198,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       ci = ""
       if (match(rest, /[0-9.]+x net of CI/)) { ci = substr(rest, RSTART, RLENGTH); sub(/x net of CI$/, "", ci) }
       vc = vd[host, r, FILENAME] = vclass(line, rest)
-      if (vc == "PASS" || vc == "FAIL") hasjudged[FILENAME] = 1
+      if (vc == "PASS" || vc == "FAIL") { hasjudged[FILENAME] = 1; judgedBy[host, FILENAME] = 1 }
       # Both ratios must parse as numbers. A ratio that came out as prose would be
       # published as prose, and the row it describes is the one a reader checks.
       if (pt !~ /^[0-9]+\.?[0-9]*$/ || ci !~ /^[0-9]+\.?[0-9]*$/)
@@ -220,7 +220,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       pt = ""; if (match(rest, /scaling [0-9.]+x/))              { pt = substr(rest, RSTART + 8, RLENGTH - 9) }
       ci = ""; if (match(rest, /[0-9.]+x net of CI/))            { ci = substr(rest, RSTART, RLENGTH); sub(/x net of CI$/, "", ci) }
       vc = vd[host, r, FILENAME] = vclass(line, rest)
-      if (vc == "PASS" || vc == "FAIL") hasjudged[FILENAME] = 1
+      if (vc == "PASS" || vc == "FAIL") { hasjudged[FILENAME] = 1; judgedBy[host, FILENAME] = 1 }
       if (match(rest, /measured [0-9]+-thread/)) { nt = substr(rest, RSTART + 9, RLENGTH - 16) }
       # Same refusal as above, extended to the two new numbers: a fraction or a
       # ceiling that came out as prose would be published as prose. A BASELINE row
@@ -276,12 +276,45 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # and "the verdicts came from the log you happened to type second" is not provenance.
     # This is the file'"'"'s own rule at the constants: a bar and the rows it judges are not
     # one act.
-    jf = ""; njf = 0
-    for (i = 1; i <= nf; i++) if (flist[i] in hasjudged) { njf++; jf = flist[i] }
-    if (njf > 1) {
-      printf "readme-numbers: %d of the %d logs carry bar verdicts, so the disclosure has no single provenance; pass one judged log plus any number of unjudged archives\n", njf, nf > "/dev/stderr"
-      exit 3
+    # PER HOST, NOT PER PAGE (#166, 2026-09-30). The invariant above is that a verdict belongs
+    # to the gate that rendered it and two cannot be averaged -- which is a property of a HOST,
+    # since every row and every verdict is per CPU model. Requiring one judged log for the whole
+    # page was a stricter reading that a two-ISA table cannot satisfy: a gate-p5 run measures one
+    # GOARCH, so amd64 rows and arm64 rows can only ever come from different judged runs. It held
+    # only while arm64 was first-sight and its rows came from an unjudged BASELINE log; once those
+    # hosts are registered their runs carry verdicts, and there is no unjudged arm64 log left that
+    # is not the superseded pre-#154 reference. So the refusal moves to where the averaging hazard
+    # actually is -- two judged logs covering THE SAME host -- and is strictly stronger there,
+    # while one judged run per host (hence per ISA) is allowed and each names itself in the caption.
+    njf = 0
+    for (i = 1; i <= nf; i++) if (flist[i] in hasjudged) njf++
+    # The first NAMED judged log for a host owns that host'"'"'s verdicts -- by argument order, not by
+    # hash iteration, so it is deterministic and the operator chooses it by where it is typed; the
+    # caption then names it. That answers the original objection, which was not multiplicity but
+    # SILENCE: "whichever file awk read last would own the disclosure" is not provenance, whereas
+    # the first log named, printed in the caption, is.
+    for (i = 1; i <= nf; i++)
+      for (j = 1; j <= nh; j++)
+        if (((order[j], flist[i]) in judgedBy) && !(order[j] in jfh)) jfh[order[j]] = flist[i]
+    # Two judged logs may pool their RATES -- that is what an era median is. What cannot be
+    # reconciled is two DIFFERENT verdicts for one row, so the refusal is material disagreement
+    # rather than mere multiplicity: if a second judged log grades a row differently, the row has
+    # no provenance and this exits instead of picking a side.
+    for (kk in vd) {
+      split(kk, K, SUBSEP)
+      # Only a second JUDGED log competes. A REPORTED or BASELINE reading of the same row is not a
+      # rival verdict but a statement that nothing judged it there -- the pre-bars take-four run
+      # reads REPORTED on rows the confirmation run grades PASS, which is chronology, not conflict.
+      if ((K[1] in jfh) && K[3] != jfh[K[1]] && ((K[1], K[3]) in judgedBy) && ((K[1], K[2], jfh[K[1]]) in vd) && vd[K[1], K[2], jfh[K[1]]] != vd[kk]) {
+        printf "readme-numbers: [%s] %s reads %s in %s but %s in %s; two judged logs disagree about one row, so its verdict has no provenance\n", \
+          K[1], K[2], vd[K[1], K[2], jfh[K[1]]], bn(jfh[K[1]]), vd[kk], bn(K[3]) > "/dev/stderr"
+        exit 3
+      }
     }
+    # The page is still DATED by one run, and that is the judged log covering the first host in
+    # order -- the arch whose rows lead the table. The others are named beside it.
+    jf = ""
+    for (i = 1; i <= nh; i++) if (order[i] in jfh) { jf = jfh[order[i]]; break }
     # No judged log: the verdict classes are still needed (REPORTED/BASELINE both live in
     # the caption), so read them from the last archive, which is the only one there is to
     # read them from. Named here rather than defaulted silently.
@@ -289,16 +322,17 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # The verdict AND the figures that state it. frr/ptr/cir are the numbers the shortfall
     # strings quote, so they belong to the same run as the verdict quoting them -- pooling
     # those would print a median ratio inside a sentence about one run'"'"'s FAIL.
-    for (kk in vd)  { split(kk, K, SUBSEP); if (K[3] == jf) verdict[K[1], K[2]] = vd[kk] }
-    for (kk in frr) { split(kk, K, SUBSEP); if (K[3] == jf) fr1[K[1], K[2]] = frr[kk] }
-    for (kk in ptr) { split(kk, K, SUBSEP); if (K[3] == jf) pt1[K[1], K[2]] = ptr[kk] }
-    for (kk in cir) { split(kk, K, SUBSEP); if (K[3] == jf) ci1[K[1], K[2]] = cir[kk] }
-    # #163 (2026-09-16): fill verdict + figures for hosts the judged run jf does NOT cover -- a
-    # first-sight arch registered by a SEPARATE run (arm64 gvt3/gvt4, from their 029e24f
-    # registration archive) has rates pooled but no jf verdict, so line 339 below would refuse it.
-    # Its only verdict is BASELINE (recorded, unjudged), so there is exactly ONE to take and this is
-    # NOT averaging two judged verdicts across runs (the bar the jf-only loops above enforce). The
-    # `!in` guard leaves every amd64 (h,r) jf already set untouched -- amd64 is byte-unchanged.
+    # Each host takes its verdict and figures from the log that judged THAT host (jfh), so a
+    # two-ISA page carries the verdicts of each ISA from its own judged run rather than borrowing
+    # the verdicts of one arch for the rows of another. A host judged by no log (BASELINE only)
+    # falls through to the second pass below, which takes its single unjudged verdict.
+    for (kk in vd)  { split(kk, K, SUBSEP); if ((K[1] in jfh) && K[3] == jfh[K[1]]) verdict[K[1], K[2]] = vd[kk] }
+    for (kk in frr) { split(kk, K, SUBSEP); if ((K[1] in jfh) && K[3] == jfh[K[1]]) fr1[K[1], K[2]] = frr[kk] }
+    for (kk in ptr) { split(kk, K, SUBSEP); if ((K[1] in jfh) && K[3] == jfh[K[1]]) pt1[K[1], K[2]] = ptr[kk] }
+    for (kk in cir) { split(kk, K, SUBSEP); if ((K[1] in jfh) && K[3] == jfh[K[1]]) ci1[K[1], K[2]] = cir[kk] }
+    # #163 (2026-09-16): a host no log JUDGED -- first-sight silicon whose reading is RECORDED as a
+    # candidate baseline -- has exactly one verdict to take, BASELINE, so taking it is not averaging
+    # two judged verdicts. The `!in` guard leaves every host already sourced above untouched.
     for (kk in vd)  { split(kk, K, SUBSEP); if (!((K[1], K[2]) in verdict)) verdict[K[1], K[2]] = vd[kk] }
     for (kk in frr) { split(kk, K, SUBSEP); if (!((K[1], K[2]) in fr1))     fr1[K[1], K[2]]     = frr[kk] }
     for (kk in ptr) { split(kk, K, SUBSEP); if (!((K[1], K[2]) in pt1))     pt1[K[1], K[2]]     = ptr[kk] }
@@ -442,9 +476,15 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
         nrowall, (jrev == "" ? "unrecorded" : jrev), src, (nsz == "" ? "4096" : nsz), \
         (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host") > "/dev/stderr"
     } else {
-      printf "All %d rows are per-row medians over the %d archived runs of one era — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N. The 1-thread and 8-thread rows for a routine pool the same archives, so their ratio is a ratio of like estimators; rows from different CPUs are not comparable, because the peaks differ. The verdicts below are the judged run'"'"'s alone — a verdict belongs to the gate that rendered it and two cannot be averaged.\n\n", \
+      # The verdict-provenance sentence has two forms because the claim differs (#166). With one
+      # judged run it owns every verdict on the page. With more than one -- which a two-ISA table
+      # forces, since a gate-p5 run measures one GOARCH -- each owns the verdicts for the hosts it
+      # measured, and the generator refuses two covering the same host rather than averaging them.
+      vprov = "The verdicts below are the judged run'"'"'s alone — a verdict belongs to the gate that rendered it and two cannot be averaged."
+      if (njf > 1) vprov = sprintf("A gate-p5 run measures one GOARCH, so no single run can judge this table: the rates pool every archive named above, while each host takes its verdicts from the first of the %d judged runs named for that host. Two judged runs that grade one row differently are refused rather than averaged, because a verdict belongs to the gate that rendered it.", njf)
+      printf "All %d rows are per-row medians over the %d archived runs of one era — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N. The 1-thread and 8-thread rows for a routine pool the same archives, so their ratio is a ratio of like estimators; rows from different CPUs are not comparable, because the peaks differ. %s\n\n", \
         nrowall, nf, (jrev == "" ? "unrecorded" : jrev), others, src, (nsz == "" ? "4096" : nsz), \
-        (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host") > "/dev/stderr"
+        (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host"), vprov > "/dev/stderr"
     }
     # THE COLUMN DENOMINATOR IS NOT THE CRITERION DENOMINATOR, and after #6 that has
     # to be said in the caption rather than inferred from the column. "8x the 1-thread
