@@ -10,7 +10,7 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ### Added
 - **v0.2.0 certificate evidence, both ISAs green under the current gate (`archive/cert-v0.2.0/`).**
-  Two tracked gate-p5 logs with their sha256 in `DIGESTS.txt`: amd64 at `0821366` (72 PASS / 0 FAIL /
+  Two tracked gate-p5 logs with their sha256 in `DIGESTS.sha256`: amd64 at `0821366` (72 PASS / 0 FAIL /
   0 UNMEASURED, skx + zen4 + zen5 full-size on-demand) and arm64 at `49165ca` (53 PASS / 0 FAIL /
   0 UNMEASURED, Neoverse V1 + V2), both at `-test.count=30` in us-east-1, each re-judged under the
   current gate rather than inheriting an older green. The library is byte-identical between those two
