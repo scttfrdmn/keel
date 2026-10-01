@@ -18,6 +18,16 @@ source scripts/remote.sh
 source scripts/bench.sh
 # shellcheck source=scripts/gate-lib.sh
 source scripts/gate-lib.sh
+# roofline.sh for fleet_shortfall, which criterion 7 appends to all three of its verdicts
+# (#159). Without it bash printed `fleet_shortfall: command not found` into every gate-p4 run
+# -- it reached the v0.2.0 arm64 certificate -- and the command substitution yielded empty, so
+# the coverage disclosure the verdict intends was silently absent on a line that read PASS.
+# Sourced rather than moved into gate-lib.sh: roofline-test.sh sources roofline.sh inside its
+# own fixture function, so relocating the definition would break the harness that tests it.
+# roofline.sh defines functions and nothing else, and gate-p2 already sources both files, so
+# this combination is already exercised.
+# shellcheck source=scripts/roofline.sh
+source scripts/roofline.sh
 
 # pass/fail/unmeasured/info come from scripts/remote.sh, which every gate sources
 # above: they were copied into all six gates and only one copy applied

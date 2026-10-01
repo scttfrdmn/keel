@@ -73,12 +73,11 @@ _normalize() {
     -e 's#D=(inf|[0-9]+(\.[0-9]+)?)#D=<D>#g'
     -e 's#[0-9]+\.[0-9]+%#<P>%#g'
     -e 's#(raw|drift of|win of|by) [0-9]+(\.[0-9]+)?#\1 <N>#g'
-    # A pre-existing bug (#159): gate-p4 calls fleet_shortfall (defined in roofline.sh) without
-    # sourcing it, so bash prints `gate-p4.sh: line NNN: fleet_shortfall: command not found`. The
-    # LINE NUMBER is position-dependent — any edit above it shifts it — so it is a run-position
-    # artifact like <TS>/<SHA>, scrubbed so the port's null-change is not masked by its own added
-    # lines. The error itself is pre-existing and identical before/after; #159 fixes the bug.
-    -e 's#(gate-p[0-9]+\.sh: line )[0-9]+(: fleet_shortfall)#\1<N>\2#g'
+    # The `fleet_shortfall: command not found` scrubber that lived here is REMOVED with the fix
+    # it was working around (#159, 2026-10-01): gate-p4 now sources roofline.sh, so the error
+    # cannot be emitted. Keeping the scrubber would be worse than useless — it would normalize a
+    # RECURRENCE of the same bug into invisibility, which is the one thing this witness exists to
+    # prevent. A workaround outliving its defect becomes a mask.
   )
   sed -E \
     -e 's/[0-9]{8}T[0-9]{6}Z/<TS>/g' \
