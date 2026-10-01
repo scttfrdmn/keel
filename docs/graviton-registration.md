@@ -169,3 +169,63 @@ must pin it (the sweep already does), and the SVE≈NEON claim is **refuted** �
 Unconditional at campaign end, reconciled against three lists (`aws-fleet.sh down`; the launcher's own
 inventory; the provider's running-instances for the tags), per the lesson that three of five instances
 once kept billing after a teardown believed complete.
+
+## Reconciliation against the certified runs (2026-10-01, #155)
+
+The pre-registration above is now adjudicated against what the instruments actually
+rendered. Evidence: `archive/cert-v0.2.0/gate-p5-arm64-49165ca.log` (the certified leg)
+and the two independent registration fleets at `ca4b952` (`archive/pinned8/gvt-reg2-p[12]-ca4b952.log`),
+all at `-test.count=30` in us-east-1. Three predictions held; one is refuted, and the
+refutation is the more interesting result the pre-registration said it would be.
+
+**Dispatch marker — CONFIRMED.** Both hosts render `l1=neon,scalar kern=neon,scalar`, and the
+gate's own criterion 7 passes on that, so the `#154` NEON L1 backend and the `972ee47`
+tile-rank fix both ship as the amended prediction said. No `avx*` token, no `l1=scalar`.
+
+**OpenBLAS ratio REPORTED, not judged — CONFIRMED.** Three REPORTED lines (per host plus the
+fleet aggregate), ratios printed rather than hidden: gvt4 66.1%, gvt3 41.3%.
+
+**percent-of-peak — RECORDED, and the prediction missed high.** Predicted `~40%` of measured
+NEON peak for `4x16/neon`; recorded **78.8% on gvt3 (Neoverse-V1)** and **55.3% on gvt4
+(Neoverse-V2)**, reproducible to 0.1 points across the independent fleets. The prediction does
+not gate — it was explicitly BASELINE-recorded with the 0.55 comparison absent — but the miss is
+worth naming precisely, because its basis was `32.8% x 1.24`: a GB10 characterization reading
+scaled by a kernel-level tile delta measured on different silicon. A cross-host extrapolation is
+directional evidence and was labelled as such; what this shows is that it should not be read as
+a point estimate even when it is the only number available. The recorded fractions are the
+finding.
+
+**SVE ≈ NEON — REFUTED, and the two hosts answer oppositely.** `ob_coretype_sweep`, best of 30
+at `-benchtime=1s`, single-thread 2048^3 SGEMM against one DYNAMIC_ARCH OpenBLAS 0.3.29 with the
+family forced at load time:
+
+| `OPENBLAS_CORETYPE` | resolved `corename` | gvt3 / Graviton3 (V1) | gvt4 / Graviton4 (V2) |
+|---|---|---|---|
+| `default` | `neoversev1` | **79.10** | 63.01 |
+| `ARMV8` (NEON) | `armv8` | 63.65 | **71.39** |
+| `NEOVERSEN1` | `neoversen1` | 64.07 | 70.92 |
+| `NEOVERSEV1` (SVE) | `neoversev1` | **79.18** | 63.02 |
+| `NEOVERSEV2` | `neoversev1` | 79.11 | 62.87 |
+
+The pre-registered expectation was that the sweep would be *non-discriminating* across the
+compute-bound families. It discriminates on both hosts, by 13-24%, and in opposite directions:
+
+- On **Graviton3**, the SVE family wins by **+24%** over NEON (79.18 vs 63.65), and the library
+  already chooses it unpinned — "no cross-family winner beyond drift".
+- On **Graviton4**, **NEON wins by +13%** over the family the library chooses (71.39 vs 63.01),
+  so the reference is pinned to `ARMV8`.
+
+Two things explain the inversion and both are findings in their own right. First,
+`OPENBLAS_CORETYPE=NEOVERSEV2` resolves to **`corename=neoversev1`** on Graviton4: 0.3.29 has no
+distinct V2 kernel family, so "SVE on V2" is really V1-tuned SVE kernels running on V2 silicon,
+and those lose to NEON there. Second, this is the mechanism behind the ratio asymmetry reported
+above — gvt3's reference is a 79 GFLOP/s SVE kernel while gvt4's is a 71 GFLOP/s NEON one, so
+keel divides by a materially stronger denominator on Graviton3, which is most of why its ratio
+reads 41.3% against gvt4's 66.1%.
+
+So the claim "the Neoverse SVE kernels do not materially outrun the ARMV8 NEON kernels" is
+**false on Graviton3** and true-but-inverted on Graviton4. For `#162` (the arm64 SVE microkernel)
+this sharpens the case rather than settling it: SVE is worth ~24% on V1, and a V1-tuned SVE
+kernel is worth *less than NEON* on V2 — so the lever is real but micro-architecture-specific,
+and a keel SVE path would need per-uarch tuning rather than one SVE kernel, which is exactly the
+cost the standing task has to price.
