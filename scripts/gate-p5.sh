@@ -369,6 +369,7 @@ P5_REMOTE_SRC="${P5_REMOTE_SRC:-/tmp/keel-p5-src}"
 p5_line() { marker_row "$1" "$2" routine "$3"; }
 
 echo "== gate-p5: parallelism, dispatch, polish =="
+gate_provenance   # what was measured (#68)
 echo
 
 # Armed here rather than at the seam above so the banner sits under the title, and read

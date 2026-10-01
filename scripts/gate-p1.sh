@@ -70,6 +70,7 @@ source scripts/bench.sh
 FAIL=0
 
 echo "== gate-p1: Level 1 + test harness =="
+gate_provenance   # what was measured (#68)
 echo
 
 # ------------------------------------------------------------- tree state (#63)

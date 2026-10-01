@@ -357,6 +357,7 @@ EOF
 }
 
 echo "== gate-p3: packing + blocking -> full Sgemm =="
+gate_provenance   # what was measured (#68)
 echo
 
 if [[ -n "$INSTRUMENT_WIDEN_CI" ]]; then

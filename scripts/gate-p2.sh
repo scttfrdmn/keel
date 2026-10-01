@@ -114,6 +114,7 @@ BENCH_FILTER='Peak|Kernel/.*/.*/kc=128'
 SSADIR="build/ssa"
 
 echo "== gate-p2: microkernel + spill audit (GO/NO-GO) =="
+gate_provenance   # what was measured (#68)
 echo
 
 # ------------------------------------------- the instrument exercise (2026-08-16)

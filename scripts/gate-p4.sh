@@ -201,6 +201,7 @@ lattice_product() {
 }
 
 echo "== gate-p4: Level 2 + derived Level 3 =="
+gate_provenance   # what was measured (#68)
 echo
 
 # ------------------------------------------------------------- tree state (#63)

@@ -95,6 +95,31 @@ marker_all() { sed -n "s/.*keel-$1: *//p" "$2"; }
 # set_has SET VALUE — is VALUE one of SET's comma-separated members.
 set_has() { [[ ",$1," == *",$2,"* ]]; }
 
+# gate_provenance — the one line that says what was measured (#68). Called by every gate
+# right after its banner.
+#
+# A gate log is a measurement record, and until now none of them recorded the revision it
+# measured: the rev survived only in whatever the operator typed into `scripts/detach.sh run
+# <name>`, and the two oldest gate-p4 logs predate even that convention. It has already cost
+# analysis — reconstructing #67 had to drop a comparison because two standalone logs could not
+# say what they ran, and dating them by mtime put them on either side of a commit that moved
+# janus's 1-thread Sgemm by 1.92%. The gate already reads back governor, corename and boost
+# state on the principle that a measurement's conditions are part of the measurement
+# (DESIGN.md §5.5); the revision is the same kind of fact and was the one left assumed.
+#
+# `info`, never a verdict: this must not move any gate's tally. The tree state is recorded
+# beside the rev because a dirty tree means the rev names something other than what ran — the
+# delegated chain already refuses that case, and a log that says `clean` is what makes the
+# refusal checkable after the fact rather than trusted. The toolchain is here because it is
+# the other input no host line reports, and #118 asks whether a compiler change opens a
+# measurement era: a log that cannot say which compiler built it cannot answer that.
+gate_provenance() {
+  local rev state
+  rev="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
+  if [[ -z "$(git status --porcelain 2>/dev/null)" ]]; then state=clean; else state=DIRTY; fi
+  info "rev $rev tree=$state toolchain=$(go version 2>/dev/null | awk '{print $3}' || echo unknown) goexperiment=${GOEXPERIMENT:-none}"
+}
+
 # test_verdict NAME LOG RC PHRASE — the pass/fail/paste-the-tail triple that every
 # gate wraps around a `go test` run. Eight copies, in all six gates, byte-identical
 # but for the phrase: gate-p5 says "every test passes" where p3/p4 say "all tests

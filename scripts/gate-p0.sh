@@ -59,6 +59,7 @@ source scripts/gate-lib.sh
 FAIL=0
 
 echo "== gate-p0: toolchain probe & shim =="
+gate_provenance   # what was measured (#68)
 echo
 
 # ------------------------------------------------------------- tree state (#63)

@@ -85,6 +85,15 @@ _normalize() {
     -e 's/(gate-p[0-9]+-)[0-9a-f]{7,40}/\1<SHA>/g' \
     -e 's/(candidates-)[0-9a-f]{7,40}/\1<SHA>/g' \
     -e 's/(commit \()[0-9a-f]{7,40}/\1<SHA>/g' \
+    # #68's provenance line is scrubbed for the same reason RUN_STAMP and <SHA> are: under
+    # KEEL_REPLAY the measurement comes from a FIXED corpus, so the rev and the working-tree
+    # state describe the operator's position, not the reading. The tree field especially --
+    # gate-p3/p5 deliberately skip their dirty-tree refusal under replay (#155/#158) so the
+    # `after` arm can render an uncommitted edit, which means a null-change witness would
+    # otherwise diff `clean` against `DIRTY` and fail on the one thing it exists to prove.
+    # Unlike the fleet_shortfall scrubber removed with #159, this artifact is permanent: no
+    # fix makes a replay's rev a property of its corpus.
+    -e 's/(rev )[0-9a-f]{40} tree=(clean|DIRTY)/\1<REV> tree=<T>/g' \
     "${extra[@]}"
 }
 
