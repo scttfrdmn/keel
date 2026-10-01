@@ -9,6 +9,16 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **v0.2.0 certificate evidence, both ISAs green under the current gate (`archive/cert-v0.2.0/`).**
+  Two tracked gate-p5 logs with their sha256 in `DIGESTS.txt`: amd64 at `0821366` (72 PASS / 0 FAIL /
+  0 UNMEASURED, skx + zen4 + zen5 full-size on-demand) and arm64 at `49165ca` (53 PASS / 0 FAIL /
+  0 UNMEASURED, Neoverse V1 + V2), both at `-test.count=30` in us-east-1, each re-judged under the
+  current gate rather than inheriting an older green. The library is byte-identical between those two
+  revs, so the amd64 certificate transfers across a disclosed library-neutral delta; the arm64 leg
+  carries three disclosed non-verdicts by ruling — the keel/OpenBLAS ratio REPORTED not judged (NEON
+  against an SVE reference, `#155`/`#162`), the `4x16/neon` percent-of-peak BASELINE-recorded not
+  typed (amd64-derived floor, and `gate-p3` has no consumption path for an arm64 peak baseline yet),
+  and the three avx512-specific gate-p3 criteria N/A on arm64 (`#155`). Not tagged.
 - **float64 design doc (`docs/f64-design.md`, `#103`/`#135`) — design only, no kernels.** The map
   `#135` promised the type axis, written before any kernel/shim/benchmark: the genericize-the-middle
   boundary (what f64 inherits unchanged — the nest/packing/partition *algorithm* — vs what is new —

@@ -1,0 +1,17 @@
+# v0.2.0 certificate evidence — sha256 of the two green gate-p5 logs, one per ISA.
+# Both measured at -test.count=30, on-demand full-size judged instances in us-east-1.
+#
+# The amd64 leg was judged at 0821366 and the arm64 leg at 49165ca. The library is
+# BYTE-IDENTICAL between those two revs -- `git diff --name-only 0821366 49165ca`
+# touches no file under internal/, bench/ or tools/ and no root .go file -- so the
+# amd64 certificate transfers across a disclosed, library-neutral delta (gate scripts,
+# README rows, and tracked archives only).
+#
+# The provision logs are NOT tracked: the arm64 one is 17 MB of OpenBLAS source-build
+# output. Their digests are recorded here so the record is complete and checkable
+# against a re-run, without putting 17 MB of compiler chatter in the repository.
+06efe5b1767806d7024a2ac8b22674a75cc1ff8ee5d48f7a0273bfd68c0a927e  archive/cert-v0.2.0/gate-p5-amd64-0821366.log
+61739227814adbf191a455e8d7be342da1923f88e04d5376c0783886fe21bbb0  archive/cert-v0.2.0/gate-p5-arm64-49165ca.log
+# provision logs (untracked, digest only):
+df068b96f0e248fd7127c8270a5f70298af3001b9afa1a177805a608705bd00c  # cert-amd64-provision-0821366.log
+90694a1eabdb3e3c436d2dffa1c3af9eb77871642faf6a0a3e74bfddc490a4c6  # cert-arm64-final-provision-49165ca.log
