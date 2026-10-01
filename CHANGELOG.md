@@ -8,6 +8,14 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-01
+
+The second tagged release, and the first certified on **both** ISAs: amd64 AVX-512 and
+arm64 NEON, Level 1 and Level 3, each re-judged under the current gate rather than
+inheriting an older green. `archive/cert-v0.2.0/` carries the two green gate-p5 logs and
+their digests; `DIGESTS.sha256` records which rev each leg was measured at and why the
+amd64 certificate transfers to the tagged rev across a library-neutral delta.
+
 ### Added
 - **v0.2.0 certificate evidence, both ISAs green under the current gate (`archive/cert-v0.2.0/`).**
   Two tracked gate-p5 logs with their sha256 in `DIGESTS.sha256`: amd64 at `0821366` (72 PASS / 0 FAIL /
