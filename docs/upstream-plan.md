@@ -700,6 +700,42 @@ was a REVIEWER in the morning's baseline and is absent from the evening's. The d
 now finds the watch by its prompt rather than by an id, because the id changes on every
 re-baseline and a hard-coded one reports a healthy watch as lapsed.
 
+### CL 1's second message, and the baseline it moves (2026-10-01)
+
+Thirty-one days of silence passed the two-week re-eval trigger, and the ruling was to
+prototype rather than ping: the extension to CL 778820 that the Aug-31 reply asked to be
+pointed at. It is built, measured, functionally verified, and now reported on the CL.
+
+What it is: `commuted Op` cannot express a packed FMA's operand choice, because its two
+leading arguments are both multiplicands and swapping them is the identity on the value.
+One companion field fixes that — a permutation, with `Commutative` as the special case
+`{1,0}` — and with it regalloc chooses the form from real liveness and `FMAPrefers231` is
+DELETED. Parity with the predicate on both discriminating shapes (identical instruction and
+register-copy counts), net −9 lines. Verified functionally on a Zen 4 host with
+`avx512f`/`avx512dq` rather than from listings: keel's own differential suite, cross-built
+with the prototype compiler and carrying the permuted form in each test binary, passes with
+every vector result bitwise-identical to its scalar twin. The prototype is local
+(`6834a05dc5`, branch `fma-commuted-perm` in the Go tree); **no patchset was pushed and no
+vote was cast** — the reply offers the branch into Jorropo's series rather than mailing a
+competing CL, since his series is the field's natural home.
+
+Two findings about that series were reported because they cost him time: it no longer
+applies to master (`opGen.go` moved under `ssa/ssaop/` and `regalloc.go` under
+`ssacompile/`, so its 7802-line generated diff lands on paths that no longer exist), and
+the 213 ops are simdgen output, so the pairing needs simdgen to emit it. One finding was
+reported against our own CL: moving the decision into regalloc makes the encoding a
+property of the allocation, so this CL's accumulation codegen test reads 231 once and 213
+once instead of twice — zero register copies either way — and a test asserting the opcode is
+asserting something regalloc now owns.
+
+**The baseline moves to 10 messages, and the 10th is OURS.** 1 patchset (`fcc582225c`), 10
+messages, 2 comments in 1 unresolved thread (both Aug-31), only nonzero label
+`LUCI-TryBot-Result+1`, still no `Code-Review` vote of any sign. The attention set moved to
+Jorropo, Keith Randall and Junyang Shao when the message posted, which is Gerrit returning
+the ball rather than reviewer activity. New activity is now an **11th** message, a 3rd
+comment, a change in the unresolved THREAD count, any vote, or a new patchset — counting
+our own message as a wake would be the watch reporting its own voice back to itself.
+
 ### The daily watch, and its own liveness witness (2026-09-05)
 
 The daily watch was a **session-only** cron (`durable:false`): it fired only while one session's REPL
