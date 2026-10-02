@@ -17,6 +17,11 @@ While the major version is 0, minor versions may contain breaking changes.
   margin in rate units, and `BASELINE_MARGIN` is in percentage points (#119 forbids reusing
   one unit's margin for another), so no constant was typed. Cost, measured: ~5.8 min/host at
   count=10, ~17.5 min/host at the judged count=30 (#56).
+- The L1 rates are now **judged** by CI-disjointness (ruled 2026-10-01): a regression is a
+  reading whose upper bound falls below the registered baseline's lower bound. No margin is
+  typed — a relative one would be a free parameter chosen after seeing the readings, and
+  `BASELINE_MARGIN`'s 2.6 points are the wrong unit for a rate. One-sided on purpose: a reading
+  above its baseline is the library getting faster (#56).
 - gate-p3 judges the arm64 microkernel percent-of-peak against a per-host registered
   baseline (`peak/<shape>` rows in `scripts/host-baselines.tsv`), replacing the
   unconditional BASELINE the arm64 branch rendered. Neoverse-V1 78.8%, Neoverse-V2 55.3%,
@@ -25,6 +30,11 @@ While the major version is 0, minor versions may contain breaking changes.
   unreached on arm64, so PEAK_FLOOR cannot be applied to a 4-lane kernel (#167).
 
 ### Fixed
+- `baseline_spent` takes a criterion's introduction date, so a host registered before a
+  criterion existed renders first-sight instead of owing a row it could not have registered.
+  Without it, adding any registry-governed criterion to a live era resolved `owing` → FAIL on
+  every already-registered host; #167's `peak/*` had the same exposure the moment dispatch moved
+  to a new NEON shape. Fail-closed on an unreadable date (#169).
 - `gate-witness.sh`'s `<SHA>` scrubber matched `gate-p5-<sha>` but not
   `gate-p4-under-p5-<sha>`, so every cross-commit replay diff carried a spurious line for the
   delegated log's filename — noise in the one instrument whose value is being a function of

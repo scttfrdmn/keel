@@ -190,6 +190,10 @@ P5_L1="Sdot Saxpy Sscal Sasum Snrm2 Isamax"
 # Must match bench/bench_test.go's `sizes`. Stated rather than derived, and a mismatch announces
 # itself: a size this gate asks for that the binary does not emit is printed as absent.
 P5_L1_SIZES="256 4096 65536 1048576"
+# This criterion's birthday, passed to baseline_state so a host registered BEFORE the criterion
+# existed renders first-sight instead of owing a row it could not have registered (#169). A date
+# and not a boolean: it must stay true for hosts that register later, and those DO owe a row.
+L1_CRIT_SINCE="2026-10-01"
 # Both classes as one list, because the row loop walks them together and the
 # all-rows-noise-limited test below needs the length. Counted once: a second derivation of
 # "how many rows a host has" is a second thing to keep in step with this line.
@@ -1538,7 +1542,7 @@ else
     # failed to emit them. The unit travels with each printed line for the #119 reason -- a list
     # whose rows are in different units is the one shape a future bar must not be typed against
     # as though it were homogeneous.
-    L1_SEEN=0; L1_ABSENT=""
+    L1_SEEN=0; L1_ABSENT=""; L1_REGRESSED=""; L1_HELD=0; L1_NEW=0; L1_OWING=""; L1_UNRES=""
     for lr in $P5_L1; do
       # `B/s`, not `MB/s`: tools/benchci normalises the unit testing.B reports, so asking for the
       # unit as the benchmark SPELLS it returns nothing. Asking the CSV what units it carries
@@ -1552,22 +1556,86 @@ else
       lline=""
       for ln in $P5_L1_SIZES; do
         lrow="L1$lr/n=$ln"
-        read -r lmed _lci llo _lhi _ _ <<<"$(bench_stat "$lrow" "$BENCHCSV" "$lmetric")" || :
+        read -r lmed _lci llo lhi _ _ <<<"$(bench_stat "$lrow" "$BENCHCSV" "$lmetric")" || :
         if [[ -z "${lmed:-}" || "$lmed" == inf ]]; then L1_ABSENT="$L1_ABSENT $lrow"; continue; fi
         L1_SEEN=$((L1_SEEN + 1))
         # Rounded for the line, never for a comparison: nothing here compares, and when a bar
         # does arrive it must read the unrounded value (#143's rule, stated now so the next
         # editor does not reach for $lline).
         lline="$lline n=$ln $(awk -v v="$lmed" -v s="$lscale" 'BEGIN{printf "%.2f", v/s}')($(awk -v v="$llo" -v s="$lscale" 'BEGIN{printf "%.2f", v/s}'))"
+
+        # ---- THE BAR: CI-DISJOINTNESS (ruled 2026-10-01). A regression is a reading whose
+        # UPPER bound falls below the registered baseline's LOWER bound -- two intervals that do
+        # not overlap, on the wrong side. No margin, because there is no margin to derive: a
+        # relative one would be a constant typed after seeing the readings, and BASELINE_MARGIN's
+        # 2.6 points are the wrong unit for a rate (#119). The standard predates the work; it is
+        # criterion 9's CI-overlap discipline.
+        #
+        # ONE-SIDED ON PURPOSE. Criterion 9 tests overlap in both directions because a published
+        # number drifting either way is stale. This is a REGRESSION bar: a reading above its
+        # baseline is the library getting faster, which is not a defect. Stated because a future
+        # editor reading "CI-overlap" may reach for the symmetric form.
+        #
+        # SINCE is this criterion's birthday (#169). Without it every already-registered host
+        # resolves `owing` -> FAIL for a criterion that did not exist when it registered.
+        lcrit="rate/$lr/n=$ln"
+        lstate="$(baseline_state "$BASELINE_REGISTRY" "$BASELINE_WITNESS" \
+                                 "$hcpu" "$lcrit" "$P5_ERA" "" "$L1_CRIT_SINCE")"
+        case "$lstate" in
+          registered)
+            lbrow="$(baseline_lookup "$BASELINE_REGISTRY" "$hcpu" "$lcrit" "$P5_ERA")"
+            lblo="$(awk -F'\t' '{print $4}' <<<"$lbrow")"
+            # $lhi and $lblo unrounded, never the rendered $lline (#143).
+            # +0 on both: awk would compare these as STRINGS if either failed to look numeric,
+            # and that is precisely how the unset-variable version of this line (it read $lhi
+            # while the read bound $_lhi) returned "" < "55.3" == true and reported a regression
+            # on every registered row instead of erroring. shellcheck SC2154 caught it.
+            if awk -v h="$lhi" -v b="$lblo" 'BEGIN{exit !(h+0 < b+0)}'; then
+              L1_REGRESSED="$L1_REGRESSED $lcrit(whole interval below ${lblo}: hi=$lhi)"
+            else
+              L1_HELD=$((L1_HELD + 1))
+            fi ;;
+          new)
+            L1_NEW=$((L1_NEW + 1))
+            baseline_candidate "$BASELINE_CANDIDATES" \
+              "$hcpu" "$lcrit" "$P5_ERA" "$llo" \
+              "net-of-CI lower bound of this run, $lunit; the bar is a RUN whose upper bound falls below this (#56, CI-disjointness)" \
+              "$BENCH_ARCHIVE" "$(date -u +%Y-%m-%d)" \
+              "first sight of $lcrit: no row and no witness predating this criterion (#169)" ;;
+          owing)
+            L1_OWING="$L1_OWING $lcrit" ;;
+          *)
+            L1_UNRES="$L1_UNRES $lcrit($lstate)" ;;
+        esac
       done
-      [[ -n "$lline" ]] && info "[$host] L1 $lr $lunit, median(net of CI):$lline — reported, not a criterion (#56)"
+      [[ -n "$lline" ]] && info "[$host] L1 $lr $lunit, median(net of CI):$lline"
     done
     # The tally states what it did not see INSIDE the number (§5 rule 12): a count of rows read
     # with no statement of rows missed would read as full coverage of the six shipped routines.
+    L1_WANT=$(( $(printf '%s\n' $P5_L1 | grep -c .) * $(printf '%s\n' $P5_L1_SIZES | grep -c .) ))
     if [[ "$L1_SEEN" -eq 0 ]]; then
-      info "[$host] no L1 rows in this sweep at all, so the six shipped L1 routines are unmeasured here — reported, and not a criterion yet (#56)"
+      unmeasured "[$host] no L1 rows in this sweep at all, so none of the six shipped L1 routines is judged here — unmeasured, not cleared (#56)"
     else
-      info "[$host] L1 coverage: $L1_SEEN of $(( $(printf '%s\n' $P5_L1 | grep -c .) * $(printf '%s\n' $P5_L1_SIZES | grep -c .) )) routine-size rows read${L1_ABSENT:+, absent:$L1_ABSENT}"
+      # ONE verdict for the host's L1 set, not 24. The registry keys are per (routine, size)
+      # because rates differ by more than 2x across sizes, but a verdict per row would put 120
+      # lines in a five-host certificate and bury the one that moved.
+      #
+      # PRECEDENCE, and every term printed inside the number (§5 rule 12): a resolved regression
+      # outranks everything, then an unmet registration, then a state this criterion cannot read,
+      # then first sight. A missing row is named in every branch, because 24-of-24 and 20-of-24
+      # are different claims and only one of them is full coverage.
+      l1cov="$L1_SEEN of $L1_WANT routine-size rows${L1_ABSENT:+, absent:$L1_ABSENT}"
+      if [[ -n "$L1_REGRESSED" ]]; then
+        fail "[$host] L1 regression, whole interval below the registered baseline:$L1_REGRESSED ($l1cov; $L1_HELD held, $L1_NEW first-sight)"
+      elif [[ -n "$L1_OWING" ]]; then
+        fail "[$host] L1 rows with no registered baseline whose witness postdates this criterion, so the absence is an unmet registration:$L1_OWING ($l1cov)"
+      elif [[ -n "$L1_UNRES" ]]; then
+        unmeasured "[$host] L1 rows whose governing bar this run could not resolve:$L1_UNRES ($l1cov) — unmeasured, not cleared"
+      elif [[ "$L1_HELD" -eq 0 ]]; then
+        baseline "[$host] all $L1_NEW measured L1 rows are first sight in era $P5_ERA — RECORDED as candidate baselines, not judged ($l1cov). Candidates: $BASELINE_CANDIDATES"
+      else
+        pass "[$host] every registered L1 row holds its baseline, net of both intervals: $L1_HELD held, $L1_NEW first-sight ($l1cov)"
+      fi
     fi
 
     # ---- the README's published numbers, against this run (criterion 9)

@@ -202,6 +202,19 @@ baseline_spent "$WIT" "$CPU" "$ERA" && ok 'a witness row spends BASELINE' || no 
 #     BASELINE — that is what makes an instrument change render BASELINE fleet-wide once
 #     instead of convicting every host of an unmet registration it could not have met.
 baseline_spent "$WIT" "$CPU" "$OLD" && no "an era's witness spent another era's BASELINE" || ok 'the witness is per era'
+# 18b. PER CRITERION'S BIRTHDAY (#169). The witness row above is dated 2026-08-21. A criterion
+#     introduced AFTER that date cannot have been registered by it, so it must not read as an
+#     unmet obligation: without this, adding any new registry-governed criterion to a live era
+#     resolved `owing` -> FAIL on every already-registered host in the fleet. Four directions,
+#     because three of them are the ways the guard could be wrong rather than absent.
+baseline_spent "$WIT" "$CPU" "$ERA" '2026-10-01' && no 'a witness predating the criterion spent its BASELINE' || ok 'a criterion newer than the witness is not owed'
+baseline_spent "$WIT" "$CPU" "$ERA" '2026-08-01' && ok 'a witness LATER than the criterion still spends it' || no 'the birthday guard excused a genuine obligation'
+baseline_spent "$WIT" "$CPU" "$ERA" '2026-08-21' && ok 'same-day registration spends it (the bound is strict)' || no 'an equal date was treated as older'
+baseline_spent "$WIT" "$CPU" "$ERA" && ok 'omitting the date is byte-identical to the old behaviour' || no 'the optional argument changed the default'
+#     FAIL-CLOSED on a date this cannot read: the loose direction would be a permanent
+#     exemption from registration, and `new` is green-compatible where `owing` is a FAIL.
+printf '%s\t%s\tdeadbee\tnot-a-date\tkeel-skx\tbuild/x.txt\n' 'Malformed-Date-CPU' "$ERA" >>"$WIT"
+baseline_spent "$WIT" 'Malformed-Date-CPU' "$ERA" '2026-10-01' && ok 'a malformed as_of still spends BASELINE (fail-closed)' || no 'an unreadable date bought an exemption'
 # 19. THE RENAME LOOPHOLE, closed by keying on the CPU model rather than the hostname —
 #     the one deviation from the ruling's wording, recorded in judged-runs.tsv. Driven by
 #     MOVING THE HOST COLUMN and showing the answer does not move: the row above was

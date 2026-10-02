@@ -332,12 +332,37 @@ baseline_lookup() {
 # evidence could not cite itself) is gone with it: a witness row is landed by a reviewed
 # commit, so a run cannot mint its own precedent mid-flight. judged-runs.tsv states what
 # the trade costs — reviewed-and-visible in place of automatic-and-invisible.
+#
+# THE OPTIONAL FOURTH ARGUMENT IS A CRITERION'S BIRTHDAY (#169, 2026-10-01). Without it this
+# function answers "was this silicon judged in this era", which is the right question for a host
+# and the WRONG one for a criterion that did not exist yet. Measured, not reasoned: adding any
+# new registry-governed criterion to an existing era resolved `owing` -> FAIL on every
+# already-registered host, because the key is (cpu_model, era) and nothing in it is per-criterion.
+#
+#   baseline_state ... "rate/Sdot/n=65536" pinned8 ""   -> owing   on Neoverse-V2 and keel-skx
+#   baseline_state ... "peak/8x8/neon/kc=128" pinned8 "" -> owing  (a #167 shape change)
+#
+# `owing` means "this host was judged and should have registered a row". A host cannot have
+# registered a row for a criterion that did not exist when it was judged, so convicting it
+# measures the CRITERION's age, not the host's performance -- §5 rule 17's own argument, with the
+# order of the two artifacts reversed. SINCE is the date the criterion was introduced; a witness
+# row older than that does not spend the new criterion's BASELINE.
+#
+# FAIL-CLOSED on a date it cannot read: only a well-formed as_of that is strictly older than
+# SINCE is skipped. A malformed or absent date still spends, because the loose direction here
+# would be a permanent exemption from registration -- the one thing single-shot BASELINE exists
+# to prevent -- and `new` is green-compatible while `owing` is a FAIL.
 baseline_spent() {
-  local tsv="$1" cpu="$2" era="$3"
+  local tsv="$1" cpu="$2" era="$3" since="${4:-}"
   [[ -r "$tsv" && -n "$cpu" && -n "$era" ]] || return 1
-  awk -F'\t' -v c="$cpu" -v e="$era" '
+  awk -F'\t' -v c="$cpu" -v e="$era" -v s="$since" '
     /^#/ || $1 == "cpu_model" { next }
-    NF >= 6 && $1 == c && $2 == e { found = 1; exit }
+    NF >= 6 && $1 == c && $2 == e {
+      # ISO-8601 dates compare chronologically as strings, which is why the format is asserted
+      # rather than parsed. Both operands are non-numeric to awk, so this is a string compare.
+      if (s != "" && $4 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/ && $4 < s) next
+      found = 1; exit
+    }
     END { exit !found }' "$tsv"
 }
 
@@ -364,8 +389,13 @@ baseline_spent() {
 #   registered  a row for this era governs; the caller re-reads it with baseline_lookup
 #   owing       no row, but the witness says this silicon was judged in this era already
 #   new         no row and no witness: genuine newness, BASELINE's only legitimate state
+#   new         no row and no witness that could have carried one for THIS criterion
+#
+# The optional SEVENTH argument is the criterion's introduction date, passed straight to
+# baseline_spent; see its header for why a criterion needs one (#169). Omitted, behaviour is
+# byte-identical to before, which is what keeps the two older criteria unchanged.
 baseline_state() {
-  local reg="$1" wit="$2" cpu="$3" crit="$4" era="$5" derived="$6" d dv=0 row
+  local reg="$1" wit="$2" cpu="$3" crit="$4" era="$5" derived="$6" since="${7:-}" d dv=0 row
   [[ -n "$cpu" ]] || { printf 'nokey\n'; return 0; }
   # Substring, and in this direction: a probe string that gains a suffix must not silently
   # move a host out of the derivation set and into registry governance, changing its bar.
@@ -376,7 +406,7 @@ baseline_state() {
   if [[ "$dv" -eq 1 ]]; then
     if [[ -n "$row" ]]; then printf 'conflict\n'; else printf 'fleet\n'; fi
   elif [[ -n "$row" ]]; then printf 'registered\n'
-  elif baseline_spent "$wit" "$cpu" "$era"; then printf 'owing\n'
+  elif baseline_spent "$wit" "$cpu" "$era" "$since"; then printf 'owing\n'
   else printf 'new\n'
   fi
 }
