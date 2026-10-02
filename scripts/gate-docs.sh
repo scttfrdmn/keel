@@ -108,10 +108,28 @@ stage_build() {
   # Anchors, every page, no exemption. Redundant with mkdocs.yml's
   # `validation.links.anchors: warn` on a normally-configured build, and that is
   # the point: this one reads the log, so it still fails if the setting is lowered.
+  # THE PRECONDITION IS ASSERTED, NOT ASSUMED (#101 item 2). Empty grep output was reported
+  # as "no broken anchors", but empty output is also what a LOWERED setting produces, and this
+  # check exists precisely to be the backstop for that case -- so it failed open on the one
+  # scenario it was written for. The setting is the thing that can be checked, so check it:
+  # if mkdocs.yml does not validate anchors at `warn` or stricter, an absent warning proves
+  # nothing and this is unmeasured rather than clean.
+  #
+  # STATED LIMITATION (§5 rule 12). This closes the lowered-setting hole, not the reworded-
+  # message hole: if mkdocs renames the warning, the grep goes quiet and the log cannot tell
+  # us so. The stronger form is a positive control -- plant a broken anchor, prove the grep
+  # fires -- which needs a second mkdocs build per gate run, so it is named here as the gap
+  # rather than paid for on every run.
+  local anchorcfg
+  anchorcfg="$(awk '/^validation:/{v=1} v&&/^[[:space:]]+links:/{l=1} l&&/^[[:space:]]+anchors:[[:space:]]*/{sub(/.*anchors:[[:space:]]*/,""); print; exit}' mkdocs.yml 2>/dev/null || true)"
+  if [[ "$anchorcfg" != warn && "$anchorcfg" != error ]]; then
+    unmeasured "mkdocs.yml does not validate anchors at warn or error (reads '${anchorcfg:-absent}'), so an absent warning in the log is not evidence of intact anchors"
+    return 0
+  fi
   local anchors
   anchors="$(grep -oE "Doc file '[^']+' contains a link '#[^']+', but there is no such anchor" "$LOG" || true)"
   if [[ -z "$anchors" ]]; then
-    pass "no broken in-page anchors on any page, user or record"
+    pass "no broken in-page anchors on any page, user or record (mkdocs validates anchors at '$anchorcfg', so silence is a reading rather than an absence)"
   else
     fail "broken in-page anchor(s), $(wc -l <<<"$anchors" | tr -d ' ') of them:"
     sed 's/^/        /' <<<"$anchors"
@@ -275,7 +293,13 @@ stage_citations() {
     awk '/^records\(\)/{i=1} i&&/^EOF$/{exit} i&&/^[^ #(].*:.*\.md$/ {sub(/.*:/,""); print "doc-site/records/" $0}' \
       scripts/docs-gen.sh | tr '\n' ' ')"
   want="$(wc -w <<<"$pages" | tr -d ' ')"
-  ungated="$(git check-ignore $pages 2>/dev/null | wc -l | tr -d ' ')"
+  # `|| true` on the git side, not the pipeline's end (#101 item 3). `git check-ignore`
+  # exits 1 when NONE of its paths are ignored, `pipefail` propagates that, and `set -e`
+  # then killed this script HERE -- before the verdict block below. So the fail branch was
+  # unreachable in exactly the case it was written for: one page ungated reported correctly,
+  # all pages ungated died with no verdict at all. `wc -l` always succeeds, so the guard has
+  # to wrap the command that can fail rather than trail the pipeline.
+  ungated="$({ git check-ignore $pages 2>/dev/null || true; } | wc -l | tr -d ' ')"
   if [[ "$ungated" == "$want" ]]; then
     pass "all $want generated pages are gitignored, hence out of citation-lint's reach by design"
   else

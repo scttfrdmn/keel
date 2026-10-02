@@ -48,15 +48,32 @@ check() {
                       "$PF" "$RF" "$CM" "$MM" "$SB" "$SL" "$@")"
   local class cspread mspread roof attain result why cslo cshi attainhi
   read -r class cspread mspread roof attain result why cslo cshi attainhi <<<"$out"
-  if [[ "$class" == "$xclass" && "$result" == "$xresult" ]]; then
+  # THE REASON IS ASSERTED, NOT MERELY DISPLAYED (#101 item 1). This printed `why=` in both
+  # branches and compared neither, so a verdict reached for the WRONG REASON passed -- which
+  # matters most here, because these fixtures are the anti-vacuity proof for the roofline.
+  # Its sibling checkd() has always asserted its `xwhy`.
+  #
+  # Two levels, deliberately. A verdict with no reason at all is always a defect, so an empty
+  # `why` fails unconditionally. An exact reason is opt-in via XWHY= on the call, because the
+  # alternative -- capturing what each of the 27 fixtures currently emits and pinning that --
+  # would derive the expectation from the thing it checks, which pins current behaviour as
+  # correct rather than verifying it. Populating XWHY per fixture has to come from each
+  # fixture's stated intent, and that is follow-on work recorded on #101.
+  local whyok=1 whynote=""
+  if [[ -z "$why" ]]; then
+    whyok=0; whynote=" (empty why: a verdict with no reason)"
+  elif [[ -n "${XWHY:-}" && "$why" != "$XWHY" ]]; then
+    whyok=0; whynote=" (why=$why, expected $XWHY)"
+  fi
+  if [[ "$class" == "$xclass" && "$result" == "$xresult" && "$whyok" -eq 1 ]]; then
     printf '  ok    %-53s %-13s/%-10s cspread=%.3fx [%.3f,%.3f] mspread=%.3fx roof=%5.1f%% attain=%6.1f%%..%.1f%% why=%s\n' \
       "$name" "$class" "$result" "$cspread" "$cslo" "$cshi" "$mspread" \
       "$(awk -v r="$roof" 'BEGIN{print r*100}')" \
       "$(awk -v a="$attain" 'BEGIN{print a*100}')" \
       "$(awk -v a="$attainhi" 'BEGIN{print a*100}')" "$why"
   else
-    printf '  FAIL  %-53s got %s/%s (why=%s), want %s/%s\n' \
-      "$name" "$class" "$result" "$why" "$xclass" "$xresult"
+    printf '  FAIL  %-53s got %s/%s (why=%s), want %s/%s%s\n' \
+      "$name" "$class" "$result" "$why" "$xclass" "$xresult" "$whynote"
     FAILED=1
   fi
 }

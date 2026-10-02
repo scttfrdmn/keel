@@ -582,9 +582,17 @@ assumed_ledger() {
 # check. A dirty tree breaks `git archive HEAD` and so breaks the delegated
 # chain by construction; a stray worktree does not touch HEAD and breaks nothing
 # mechanically. Sharing one flag would attribute a cause this does not have.
+# THREE STATES, NOT TWO (#101 item 5). Both git calls below used to fail OPEN: a failing
+# `rev-parse` returned 0, which the caller reads as "no strays", and a failing
+# `worktree list` yielded empty input so the counter stayed 0 and the function returned
+# success the same way. A broken or absent git therefore CERTIFIED a clean worktree set --
+# the gate's own distinction between FAIL and UNMEASURED exists for exactly this, and this
+# function was collapsing "I looked and found none" into the same answer as "I could not
+# look". Status 2 now means could-not-look, and assert_no_strays renders it unmeasured.
 worktree_strays() {
-  local main path head n=0
-  main="$(git rev-parse --show-toplevel 2>/dev/null)" || return 0
+  local main path head n=0 list
+  main="$(git rev-parse --show-toplevel 2>/dev/null)" || return 2
+  list="$(git worktree list --porcelain 2>/dev/null)" || return 2
   while IFS= read -r line; do
     case "$line" in
       'worktree '*) path="${line#worktree }" ;;
@@ -596,7 +604,7 @@ worktree_strays() {
         fi
         ;;
     esac
-  done < <(git worktree list --porcelain 2>/dev/null)
+  done <<<"$list"
   [[ "$n" -eq 0 ]]
 }
 
@@ -606,13 +614,17 @@ worktree_strays() {
 # it is about, and the gates now call it. No allowlist, no exemption (ruled
 # 2026-08-14).
 assert_no_strays() {
-  local strays
-  if strays="$(worktree_strays)"; then
-    pass "no stray git worktrees (this repo is the only registered checkout)"
-  else
-    fail "a git worktree is registered besides this one, so either a measurement is in flight or its wreckage was left behind -- wait for it or kill it, then re-run"
-    sed 's/^/        /' <<<"$strays"
-  fi
+  local strays rc=0
+  # `|| rc=$?` and not `if strays="$(...)"`: the third state has to be READ, and a bare
+  # assignment from a failing command substitution would be killed by `set -e` before the
+  # case below could tell 2 (could not look) from 1 (found strays).
+  strays="$(worktree_strays)" || rc=$?
+  case "$rc" in
+    0) pass "no stray git worktrees (this repo is the only registered checkout)" ;;
+    2) unmeasured "whether a stray git worktree is registered cannot be read: git did not answer, so this is unknown rather than clean (#101)" ;;
+    *) fail "a git worktree is registered besides this one, so either a measurement is in flight or its wreckage was left behind -- wait for it or kill it, then re-run"
+       sed 's/^/        /' <<<"$strays" ;;
+  esac
 }
 
 # remote_build_test PKG OUT — cross-compile PKG's test binary for linux/amd64.

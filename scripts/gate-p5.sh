@@ -773,8 +773,16 @@ race_verdict() {
     unmeasured "$label the -race run failed without the detector reporting a race, so the criterion is unmeasured: a test that fails under instrumentation says nothing either way about whether keel has a race"
     # head, not tail: on a multi-package failure the `--- FAIL:` lines that name
     # the cause come before the per-package summaries, and a tail dropped them.
-    grep -E '^(---|[[:space:]]+---)|\.go:[0-9]+:' "$log" | sed 's/^/        /' | head -20
-    grep -E '^(FAIL|ok|\?)[[:space:]]' "$log" | sed 's/^/        /' | head -6
+    # `|| true` because these are DIAGNOSTICS, not verdicts (#101 item 4). They are the last
+    # commands in race_verdict's final else branch, and race_verdict is called as a bare
+    # command, so a non-matching grep became the function's return status and `set -e` killed
+    # the gate right here -- after the unmeasured line above was recorded but before the
+    # remaining hosts and the final verdict block. The trigger was a -race run that failed in
+    # a way whose log contains neither pattern, which is precisely the unanticipated-failure
+    # case this branch exists to describe. A diagnostic that finds nothing to print is not a
+    # failure of the gate.
+    grep -E '^(---|[[:space:]]+---)|\.go:[0-9]+:' "$log" | sed 's/^/        /' | head -20 || true
+    grep -E '^(FAIL|ok|\?)[[:space:]]' "$log" | sed 's/^/        /' | head -6 || true
   fi
 }
 RACE_LOCAL=0
