@@ -1600,7 +1600,16 @@ else
     # keel can be held to until archsimd exposes SVE. The per-host ratios are the deliverable.
     # amd64 keeps the fleet_coverage aggregate below unchanged (this branch is inert when
     # KEEL_GOARCH is unset), so this is arch-gated exactly like the percent-of-peak and 5b re-types.
-    reported "the keel/OpenBLAS ratio is REPORTED on all $OB_REPORTED arm64 host(s), not judged against the 60% floor: NEON vs an SVE reference (#155/#162). The per-host ratios are printed above and carry to the certificate as the finding, not scored as a keel FAIL."
+    #
+    # THE SHORTFALL CLAUSE IS OWED HERE TOO (#112). `all $OB_REPORTED host(s)` is a fraction over
+    # its own numerator, true of any subset, so it says nothing about the fleet -- #90's defect, and
+    # this arm is where it survived: the three amd64 arms below state their remainder inline
+    # (OB_NOCOVER, 64a05e1) and gate-p2/p4 append this helper to all six of theirs, but `reported`
+    # arrived later (#155) and inherited neither. An arm64 host whose class withholds judgement
+    # (a lab Mac: instance=none virt=guest -> correctness -> OB_NOTADM above, never reaching
+    # REPORTED) was absent from the only fleet line this arch prints. Byte-unchanged where coverage
+    # is complete -- fleet_shortfall is empty when j >= n -- so the v0.2.0 arm64 wording is intact.
+    reported "the keel/OpenBLAS ratio is REPORTED on all $OB_REPORTED arm64 host(s), not judged against the 60% floor: NEON vs an SVE reference (#155/#162). The per-host ratios are printed above and carry to the certificate as the finding, not scored as a keel FAIL.$(fleet_shortfall "$NHOSTS" "$OB_REPORTED")"
   else
   case "$(fleet_coverage "$NHOSTS" "$OB_MEASURED" "$OB_CLEARED" "$OB_MISSED" "$OB_INDET")" in
   unmeasured)

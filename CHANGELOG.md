@@ -8,6 +8,20 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- gate-p3's arm64 REPORTED aggregate now appends `fleet_shortfall`, so the one fleet line
+  that arch prints states how many of the configured hosts it covers. `all N host(s)` was a
+  fraction over its own numerator (#90's defect), and a host whose admission class withholds
+  judgement was absent from it. Empty where coverage is complete, so the v0.2.0 arm64
+  certificate wording is unchanged (#112).
+
+### Changed
+- `remote_probe` reads machine load into every gate's per-host provenance line as
+  `load1`/`load5`/`load15`/`runnable`. Recorded, not judged: no bar is typed, because the
+  v0.2.0 certificate carries no load samples from the judged fleet to derive one from. The
+  5-minute field is keyed separately because #148's replay scored the 1-minute average 0 of 1
+  on the only contaminated sample in evidence (#81).
+
 ## [0.2.0] - 2026-10-01
 
 The second tagged release, and the first certified on **both** ISAs: amd64 AVX-512 and

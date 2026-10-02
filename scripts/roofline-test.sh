@@ -456,6 +456,14 @@ main() {
   #     Both branches are asserted here so neither can come back quietly.
   checkv "a no-coverage host is not a slow host"             partial    3 2 2 0 0
   checkv "no-coverage plus a genuine miss still FAILS"       fail       3 2 1 1 0
+  # WHAT NO FIXTURE HERE CAN SEE (#112, measured 2026-10-01). The characterization shape --
+  #     every host answered, one measured and left unjudged by its admission class (OB_NOTADM)
+  #     -- is `3 3 2 0 0`. A fixture for it was written, mutation-tested against four
+  #     pass-condition mutants, and deleted: it caught three and NONE uniquely, 26/27/28 having
+  #     each already. `pass` needs nclear == nhosts, so an exempt host holds this at `partial`
+  #     by construction. The reachable bug is a CALL SITE subtracting exempt hosts from the
+  #     denominator it passes -- the tempting way to green a mixed-class fleet, and invisible to
+  #     every fixture below. Stated as outside this suite's reach (§5 rule 12), not guarded.
   # 27. Ruling 2026-08-16's residue: a class that stayed undecidable because its two
   #     candidate denominators disagreed. Post-collapse this is the only way indet is
   #     nonzero, and it is a failure to measure, never a miss.
