@@ -87,6 +87,34 @@ is_external() {
   awk -F'\t' -v f="$1" -v c="$2" '$1 == f && $2 == c { g = 1 } END { exit !g }' <<<"$EXTERNAL"
 }
 
+# A SELF-REFERENCE IS RESOLVED, NOT EXEMPTED (#91). A dotted form inside KERNEL.md or
+# docs/spill-report.md that means THAT file's own subsection was previously declared
+# EXTERNAL with the target written as prose -- which exempted it from DESIGN.md's
+# numbering without checking anything, so a self-reference passed whether or not the
+# subsection it names exists. Three of the declarations were self-references labelled
+# that way, and this is the gap #91 recorded: the loud failure that surfaced it was luck.
+#
+# A declaration whose target field BEGINS with `SELF` now means "resolve against the
+# citing file's own headings", and the lint verifies it. That buys the one thing the lint
+# could not do before: a self-reference that goes stale when its own file is renumbered
+# now goes red, which is exactly the failure this script exists to prevent and previously
+# prevented only for DESIGN.md. The count audit still applies, because a SELF row is an
+# ordinary row of the externals file -- so the exemption cannot silently widen either.
+is_self() {
+  [[ -n "$EXTERNAL" ]] || return 1
+  awk -F'\t' -v f="$1" -v c="$2" '$1 == f && $2 == c && $4 ~ /^SELF/ { g = 1 } END { exit !g }' <<<"$EXTERNAL"
+}
+
+# Both files that need this number their subsections as headings (`### 5.1`, `### 2.1`),
+# which is the form checked. The trailing guard stops a two-part form from matching a
+# longer heading -- 2.1 must not resolve against a 2.10 heading. Written without section
+# signs on purpose: this scanner counts any `§N.M` it sees, including one inside its own
+# comment, so naming the forms here would make the lint red about itself. That is the
+# `citation-lint:quote` case, and avoiding the glyph is cheaper than marking the line.
+self_resolves() {
+  grep -qE "^#{1,6}[[:space:]]+$2\.$3([^0-9]|$)" "$1" 2>/dev/null
+}
+
 # NOTE, learned the hard way: `git ls-files` sees only TRACKED files, so a new file's
 # citations are invisible until it is committed — a green here means "every citation in a
 # tracked file", and `git status` is part of reading it.
@@ -113,7 +141,7 @@ quoted() { # FILE LINE CITE
 
 FAIL=0
 declare -a REPORT=()
-N_SITES=0 N_EXT=0 N_QUOTE=0
+N_SITES=0 N_EXT=0 N_QUOTE=0 N_SELF=0
 EXTHIT=""
 
 while IFS= read -r hit; do
@@ -122,6 +150,19 @@ while IFS= read -r hit; do
   line="${rest%%:*}"; cite="${rest#*:}"
 
   if quoted "$file" "$line" "$cite"; then N_QUOTE=$((N_QUOTE + 1)); continue; fi
+  if is_self "$file" "$cite"; then
+    # Recorded in EXTHIT like any declared site, so STALE/BROAD still audits the count.
+    EXTHIT="$EXTHIT$file"$'\t'"$cite"$'\n'
+    ssec="${cite%%[. ]*}"; ssec="${ssec#§}"; snum="${cite##*[. ]}"
+    if self_resolves "$file" "$ssec" "$snum"; then
+      N_SELF=$((N_SELF + 1))
+      [[ "$MODE" == "--list" ]] && REPORT+=("ok (self)   $file:$line  '$cite' -> $file's own §$ssec.$snum")
+    else
+      REPORT+=("NO SELF SEC $file:$line  '$cite' — declared SELF in $EXT_FILE, but $file has no heading numbered $ssec.$snum; a self-reference that outlived its own renumbering")
+      FAIL=1
+    fi
+    continue
+  fi
   if is_external "$file" "$cite"; then
     N_EXT=$((N_EXT + 1)); EXTHIT="$EXTHIT$file"$'\t'"$cite"$'\n'; continue
   fi
@@ -204,9 +245,9 @@ if [[ "$FAIL" -eq 0 ]]; then
   # only §5 and §7 have top-level numbered items, and every §3/§4 citation is externally
   # declared or a marked mention. A parser that silently stopped early would also print a
   # small number here, so it is printed rather than asserted.
-  printf 'citation-lint: %s sites over %s item(s) in %s section(s) resolve against %s (%s declared external, %s quoted, %s dead marker scope(s))\n' \
+  printf 'citation-lint: %s sites over %s item(s) in %s section(s) resolve against %s (%s declared external, %s self-resolved, %s quoted, %s dead marker scope(s))\n' \
     "$N_SITES" "$(wc -l <<<"$ITEMS" | tr -d ' ')" \
     "$(awk -F'\t' '{print $1}' <<<"$ITEMS" | sort -u | wc -l | tr -d ' ')" \
-    "$DESIGN" "$N_EXT" "$N_QUOTE" "$N_WARN"
+    "$DESIGN" "$N_EXT" "$N_SELF" "$N_QUOTE" "$N_WARN"
 fi
 exit "$FAIL"

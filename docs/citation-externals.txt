@@ -35,9 +35,9 @@ DESIGN.md	§4.3	1	Van Zee & van de Geijn, TOMS 2015 (BLIS) §4.3 — the Strsm r
 CHANGELOG.md	§4.3	2	Van Zee & van de Geijn, TOMS 2015 (BLIS) §4.3 — the Strsm recipe
 internal/block/tri.go	§4.3	1	Van Zee & van de Geijn, TOMS 2015 (BLIS) §4.3 — the Strsm recipe
 KERNEL.md	§5.2	1	docs/spill-report.md §5.2-5.3 — the en dash hides the §5.3 half from the scanner
-docs/spill-report.md	§5.1	1	docs/spill-report.md's own §5.1 — self-reference
-docs/spill-report.md	§5.2	1	docs/spill-report.md's own §5.2 — self-reference
-docs/spill-report.md	§5.3	1	docs/spill-report.md's own §5.3 — self-reference
+docs/spill-report.md	§5.1	1	SELF — this file's own §5.1, resolved against its headings (#91)
+docs/spill-report.md	§5.2	1	SELF — this file's own §5.2, resolved against its headings (#91)
+docs/spill-report.md	§5.3	1	SELF — this file's own §5.3, resolved against its headings (#91)
 CHANGELOG.md	§10.2	1	docs/spill-report.md §10.2 — the shipped shapes' binding terms, not DESIGN.md
 docs/spill-report.md	§10.2	1	docs/spill-report.md's own §10.2 — self-reference
 docs/upstream-plan.md	§11.1	1	docs/spill-report.md §11.1 — the 44 refs decomposed, not DESIGN.md
