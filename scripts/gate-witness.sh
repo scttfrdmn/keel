@@ -97,7 +97,12 @@ _normalize() {
   local args=(
     -e 's/[0-9]{8}T[0-9]{6}Z/<TS>/g'
     -e 's/[0-9]+(\.[0-9]+)? MiB free/<N> MiB free/g'
-    -e 's/(gate-p[0-9]+-)[0-9a-f]{7,40}/\1<SHA>/g'
+    # Two forms, because the sub-gate logs interpose their parent: `gate-p5-<sha>` and
+    # `gate-p4-under-p5-<sha>`. Only the first was scrubbed, so every cross-commit replay diff
+    # carried a spurious one-line change for the delegated log's filename -- noise in the one
+    # instrument whose entire value is that its output is a function of the corpus (found
+    # 2026-10-01 while diffing #56 against #167's baseline).
+    -e 's/(gate-p[0-9]+-(under-p[0-9]+-)?)[0-9a-f]{7,40}/\1<SHA>/g'
     -e 's/(candidates-)[0-9a-f]{7,40}/\1<SHA>/g'
     -e 's/(commit \()[0-9a-f]{7,40}/\1<SHA>/g'
     -e 's/(rev )[0-9a-f]{40} tree=(clean|DIRTY)/\1<REV> tree=<T>/g'

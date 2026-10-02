@@ -9,6 +9,14 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- gate-p5's sweep now measures the six shipped L1 routines (Sdot, Saxpy, Sscal, Sasum,
+  Snrm2, Isamax) and prints each rate per host with its interval, so an L1 regression is
+  visible in the gate that signs the certificate. Previously only `Sdot` had a rate bar
+  anywhere, in gate-p1, which no carry chain reaches — #47 lost up to 40.65% on Saxpy while
+  Sdot gained 10.4%, and no gate could see it. **Reported, not yet judged:** the bar needs a
+  margin in rate units, and `BASELINE_MARGIN` is in percentage points (#119 forbids reusing
+  one unit's margin for another), so no constant was typed. Cost, measured: ~5.8 min/host at
+  count=10, ~17.5 min/host at the judged count=30 (#56).
 - gate-p3 judges the arm64 microkernel percent-of-peak against a per-host registered
   baseline (`peak/<shape>` rows in `scripts/host-baselines.tsv`), replacing the
   unconditional BASELINE the arm64 branch rendered. Neoverse-V1 78.8%, Neoverse-V2 55.3%,
@@ -17,6 +25,10 @@ While the major version is 0, minor versions may contain breaking changes.
   unreached on arm64, so PEAK_FLOOR cannot be applied to a 4-lane kernel (#167).
 
 ### Fixed
+- `gate-witness.sh`'s `<SHA>` scrubber matched `gate-p5-<sha>` but not
+  `gate-p4-under-p5-<sha>`, so every cross-commit replay diff carried a spurious line for the
+  delegated log's filename — noise in the one instrument whose value is being a function of
+  its corpus.
 - `scripts/gate-witness.sh` rendered nothing since `ca07e3f`: comments sat between
   backslash-continued `sed -e` arguments, so the continuation swallowed the comment and the
   next `-e` ran as a command (`-e: command not found`). The scrubbers added for #68 and #81

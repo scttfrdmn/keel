@@ -165,6 +165,31 @@ P5_ERA="$(era_current "$BASELINE_ERAS")"
 # Strsm, whose diagonal solves carry a dependency chain the others do not.
 P5_JUDGED="Sgemm Ssyrk Ssymm"
 P5_MEASURED="Strsm"
+# The L1 routines, measured in THIS gate from 2026-10-01 (#56, ruled by Scott the same day).
+#
+# WHY THEY ARE HERE AND NOT CARRIED FROM gate-p1. gate-p1 owns the only L1 rate bar there has
+# ever been -- GateSdot >= 4x scalar -- and gate-p1 is in NO carry chain, so that bar is never
+# re-checked after P1 closed. #47 then lost up to 40.65% on Saxpy across three hosts while Sdot
+# GAINED 10.4%, so the one L1 routine with a bar is the one the change improved and a green gate
+# would have reported the improvement while shipping the regression. The alternative considered
+# and rejected was having a carrying gate assert a TRACKED green gate-p1 result: that proves a
+# p1 run passed somewhere, not that these kernels are green in this judged run, which is #168's
+# "validate the artifact, not the source" defect exactly. So they are measured in the gate that
+# certifies them.
+#
+# SIX ROUTINES, not the four #56 counts. The shipped L1 surface is Sdot, Saxpy, Sscal, Sasum,
+# Snrm2 and Isamax (go doc ./); the issue says "four of five" and omits Isamax, which would have
+# reproduced the same gap one routine over.
+#
+# COST, MEASURED not estimated (Scott's condition): 24 sub-benchmarks (6 routines x 4 sizes) at
+# 35s per -test.count, so ~5.8 min/host at the default count=10 and ~17.5 min/host at the
+# count=30 the judged runs use -- materially more than the single-digit minutes estimated when
+# this was ruled, and flagged as such. Wall-time here is a function of sub-benchmark count and
+# -benchtime, NOT of host speed, which is why one local timing bounds every host.
+P5_L1="Sdot Saxpy Sscal Sasum Snrm2 Isamax"
+# Must match bench/bench_test.go's `sizes`. Stated rather than derived, and a mismatch announces
+# itself: a size this gate asks for that the binary does not emit is printed as absent.
+P5_L1_SIZES="256 4096 65536 1048576"
 # Both classes as one list, because the row loop walks them together and the
 # all-rows-noise-limited test below needs the length. Counted once: a second derivation of
 # "how many rows a host has" is a second thing to keep in step with this line.
@@ -268,7 +293,10 @@ row_name() {
 # only then does each alternative split on '/'. require_bench declares the exact
 # rows this gate reads, so anything extra beneath these two costs time and nothing
 # else.
-P5_BENCH_FILTER='Scale|Peak|Ceiling'
+# `L1` added 2026-10-01 (#56). It is depth-unconstrained like its three siblings, so it runs
+# every BenchmarkL1*/n=* beneath it -- which is what the rows below read. The split-on-'|'-first
+# rule above is why this is one alternative and not `L1/n=...`.
+P5_BENCH_FILTER='Scale|Peak|Ceiling|L1'
 
 # The thread counts the determinism test must cover; 3 is there because a
 # row-partition off-by-one hides at every power of two (criterion 5).
@@ -1482,6 +1510,65 @@ else
     # ---- retention, printed and not judged (criterion 8, issue #26)
     rk="$(marker bench-retention "$BENCHLOG")"
     [[ -n "$rk" ]] && info "[$host] retention (the blocked nest against its own microkernel): $rk — reported, never judged; #26 is a direction to work in, not a threshold invented after the fact"
+
+    # ---- the L1 routines' rates, printed and NOT YET JUDGED (#56, 2026-10-01)
+    #
+    # WHAT THIS CLOSES AND WHAT IT DOES NOT. #47's regression was invisible to every gate
+    # because no gate measured these routines at all; after this it is visible in the gate that
+    # signs the certificate, per host, with its interval. That is the half of #56 that needed no
+    # ruling. The bar itself is NOT here, and the reason is a unit the ruling did not reach:
+    # BASELINE_MARGIN is 2.6 PERCENTAGE POINTS, which is meaningless against a GFLOP/s rate, and
+    # #119 is explicit that the share and ratio margins are not reused for each other precisely
+    # because their units differ. Typing a third constant here would be a free parameter chosen
+    # after seeing the readings -- the thing this project refuses. So these rows are REPORTED,
+    # and the rows a bar needs start accumulating from this run either way.
+    #
+    # NOT in WANT_ROWS/require_bench on purpose: that gates with `continue`, so a missing L1 row
+    # would skip the host's JUDGED criteria over a reported one. Absence is stated below instead.
+    #
+    # P5_L1_SIZES must match bench/bench_test.go's `sizes`. It is not derived from it, and the
+    # mismatch is self-announcing rather than silent: a size this gate asks for and the binary
+    # does not emit lands in L1_ABSENT and is printed, so the failure mode is a stated gap and
+    # never a quietly shorter sweep.
+    # THE UNIT IS PER ROUTINE, and Isamax is why. It reports MB/s and deliberately no GFLOP/s --
+    # bench/bench_test.go says so at the call site: "Isamax does comparisons, not arithmetic.
+    # Reporting a flop rate for it would be inventing a numerator." Asking for GFLOP/s there
+    # returns empty, so a single-metric loop would have marked all four of its rows absent on
+    # every run forever: a permanent false gap in the tally, indistinguishable from a sweep that
+    # failed to emit them. The unit travels with each printed line for the #119 reason -- a list
+    # whose rows are in different units is the one shape a future bar must not be typed against
+    # as though it were homogeneous.
+    L1_SEEN=0; L1_ABSENT=""
+    for lr in $P5_L1; do
+      # `B/s`, not `MB/s`: tools/benchci normalises the unit testing.B reports, so asking for the
+      # unit as the benchmark SPELLS it returns nothing. Asking the CSV what units it carries
+      # (`grep '^,'`) is how this was settled rather than by reading the benchmark source --
+      # the consumer's spelling is the one that resolves. Scaled to GB/s for the printed line
+      # because a raw B/s reading renders as 3.89815e+09, which no reader compares by eye.
+      case "$lr" in
+        Isamax) lmetric="B/s"; lscale=1000000000; lunit="GB/s" ;;
+        *)      lmetric="GFLOP/s"; lscale=1; lunit="GFLOP/s" ;;
+      esac
+      lline=""
+      for ln in $P5_L1_SIZES; do
+        lrow="L1$lr/n=$ln"
+        read -r lmed _lci llo _lhi _ _ <<<"$(bench_stat "$lrow" "$BENCHCSV" "$lmetric")" || :
+        if [[ -z "${lmed:-}" || "$lmed" == inf ]]; then L1_ABSENT="$L1_ABSENT $lrow"; continue; fi
+        L1_SEEN=$((L1_SEEN + 1))
+        # Rounded for the line, never for a comparison: nothing here compares, and when a bar
+        # does arrive it must read the unrounded value (#143's rule, stated now so the next
+        # editor does not reach for $lline).
+        lline="$lline n=$ln $(awk -v v="$lmed" -v s="$lscale" 'BEGIN{printf "%.2f", v/s}')($(awk -v v="$llo" -v s="$lscale" 'BEGIN{printf "%.2f", v/s}'))"
+      done
+      [[ -n "$lline" ]] && info "[$host] L1 $lr $lunit, median(net of CI):$lline — reported, not a criterion (#56)"
+    done
+    # The tally states what it did not see INSIDE the number (§5 rule 12): a count of rows read
+    # with no statement of rows missed would read as full coverage of the six shipped routines.
+    if [[ "$L1_SEEN" -eq 0 ]]; then
+      info "[$host] no L1 rows in this sweep at all, so the six shipped L1 routines are unmeasured here — reported, and not a criterion yet (#56)"
+    else
+      info "[$host] L1 coverage: $L1_SEEN of $(( $(printf '%s\n' $P5_L1 | grep -c .) * $(printf '%s\n' $P5_L1_SIZES | grep -c .) )) routine-size rows read${L1_ABSENT:+, absent:$L1_ABSENT}"
+    fi
 
     # ---- the README's published numbers, against this run (criterion 9)
     #
