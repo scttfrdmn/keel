@@ -1157,6 +1157,42 @@ remote_probe() {
       case "$typ" in Instruction) continue ;; Data) tag="L${lvl}d" ;; *) tag="L${lvl}" ;; esac
       cache="$cache${cache:+ }$tag=$sz"
     done
+    # MACHINE LOAD, READ BECAUSE IT IS READABLE (#81). Every benchmark criterion in P1-P5 is
+    # measured on a host whose idleness was assumed and never stated, while /proc/loadavg sits
+    # one field away over the same ssh that already reads four other files here. the #73 tier-C
+    # ledger admits `assumed, unverifiable:` only for preconditions with NO read-back path, so
+    # load fails that admission test: unread-but-readable is a missing measurement, not an
+    # honest assumption.
+    #
+    # FOUR SEPARATE KEYED TOKENS, and load5 is the one that matters. The record already
+    # adjudicated the field: the #148 quietness work replayed candidates against the one
+    # contaminated sample in evidence and the 1-MINUTE average scored 0 of 1 -- the 0.99 reading sits
+    # inside the clean 1-minute range, because the co-tenant respawned about once a second so a
+    # 60-second mean had largely forgotten it -- while the 5-minute field separated cleanly at
+    # 2.17 against a clean max of 1.02. runnable is carried too and is NOT a substitute: it read
+    # `1` in 16 of 16 samples including the dirty one. Right instrument, different question.
+    # Keyed individually so a criterion can read `load5` without parsing a list.
+    l1="?"; l5="?"; l15="?"; runq="?"
+    if [ -r /proc/loadavg ]; then
+      read -r l1 l5 l15 runq _ < /proc/loadavg
+    else
+      # darwin prints `{ 1.50 1.60 1.70 }`, so the averages are fields 2-4 and there is no
+      # runnable count. The lab tier is macOS, the judged tier Linux.
+      la="$(sysctl -n vm.loadavg 2>/dev/null)" || la=""
+      # PARAMETER EXPANSION, NOT WORD SPLITTING. The remote login shell on darwin is zsh
+      # (verified: juno reports /bin/zsh), and zsh does not word-split an unquoted expansion,
+      # so `set -- $la` left every positional empty and this reported load1= rather than
+      # load1=? -- an empty field reads as a value that is not there instead of as could-not-
+      # read, which is the exact confusion this measurement exists to remove. awk is also out,
+      # because the probe body is a single-quoted string an embedded awk program would end.
+      # Prefix/suffix removal is POSIX, splits nothing, and works in sh, bash and zsh alike.
+      if [ -n "$la" ]; then
+        t="${la#*\{ }"
+        l1="${t%% *}"; t="${t#* }"
+        l5="${t%% *}"; t="${t#* }"
+        l15="${t%% *}"
+      fi
+    fi
     tmux=no
     command -v tmux >/dev/null 2>&1 && tmux=yes
     virt="?"
@@ -1175,8 +1211,9 @@ remote_probe() {
         [ -n "$inst" ] || inst="?"
       fi
     fi
-    printf "%s | instance=%s | virt=%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | tmux=%s | %s | %s\n" \
-      "$cpu" "$inst" "$virt" "$ncpu" "$cores" "$smt" "$sockets" "$gov" "$tmux" "$(uname -sr)" "${cache:-caches=?}"
+    printf "%s | instance=%s | virt=%s | %s cpus | %s cores | smt=%s | %s sockets | governor=%s | load1=%s load5=%s load15=%s runnable=%s | tmux=%s | %s | %s\n" \
+      "$cpu" "$inst" "$virt" "$ncpu" "$cores" "$smt" "$sockets" "$gov" \
+      "$l1" "$l5" "$l15" "$runq" "$tmux" "$(uname -sr)" "${cache:-caches=?}"
   ' 2>/dev/null || true)"
   # The launcher-side field is spliced in HERE, and only when the host answered.
   # An EMPTY provenance line is the unreachable signal every caller keys on — it is

@@ -94,6 +94,7 @@ _normalize() {
     # Unlike the fleet_shortfall scrubber removed with #159, this artifact is permanent: no
     # fix makes a replay's rev a property of its corpus.
     -e 's/(rev )[0-9a-f]{40} tree=(clean|DIRTY)/\1<REV> tree=<T>/g' \
+    -e 's/load1=[0-9.?]+ load5=[0-9.?]+ load15=[0-9.?]+ runnable=[0-9]+\/[0-9]+|load1=[0-9.?]+ load5=[0-9.?]+ load15=[0-9.?]+ runnable=\?/load1=<L> load5=<L> load15=<L> runnable=<R>/g' \
     "${extra[@]}"
 }
 
