@@ -135,6 +135,54 @@ GATE_PEAK_FUNC="avx512Peak"
 KERN_BENCH_FILTER='Peak|Kernel/.*/.*/kc=128'
 SSADIR="build/ssa"
 
+# ---------------------------------------- the BASELINE registry, for criterion 5b (#167)
+#
+# gate-p3 had no registry context at all: the arm64 percent-of-peak rendered BASELINE and
+# `continue`d, because PEAK_FLOOR=0.55 and the issue/fma frontier are amd64-derived and a
+# percent-of-peak floor applied to a 4-lane NEON kernel is a category error (#155). The exit
+# that branch named was "a reviewed commit types the arm64 floor from its own archives", and
+# the archives are now tracked, so this is the plumbing that lets the row be read.
+#
+# THE SUBSTITUTION GUARD IS gate-p5's, VERBATIM IN BEHAVIOUR AND FOR ITS REASON. Without it a
+# run could be pointed at a substituted registry and still sign a verdict, so the forgery axis
+# fails closed before any host is contacted. The reason it must be restated here rather than
+# inherited is that gate-p3 runs standalone as well as under gate-p4 under gate-p5, so a guard
+# that lived only in the outer gate would be absent on exactly the direct invocation an
+# exercise uses.
+P3_INSTRUMENT_EXERCISE="${KEEL_INSTRUMENT_EXERCISE:-}"
+P3_BASELINE_DIR=scripts
+if [[ -n "${KEEL_INSTRUMENT_BASELINE_DIR:-}" ]]; then
+  if [[ -z "$P3_INSTRUMENT_EXERCISE" ]]; then
+    echo "gate-p3: KEEL_INSTRUMENT_BASELINE_DIR is set and KEEL_INSTRUMENT_EXERCISE is not," >&2
+    echo "gate-p3: so this run would judge the arm64 peak criterion against a substituted" >&2
+    echo "gate-p3: registry and still be able to sign a verdict. Refusing before any host." >&2
+    exit 2
+  fi
+  if [[ ! -d "$KEEL_INSTRUMENT_BASELINE_DIR" ]]; then
+    echo "gate-p3: KEEL_INSTRUMENT_BASELINE_DIR='$KEEL_INSTRUMENT_BASELINE_DIR' is not a" >&2
+    echo "gate-p3: directory. An unreadable substitution reads as an empty registry, which" >&2
+    echo "gate-p3: is a state an exercise drives on purpose, so it is not reachable by accident." >&2
+    exit 2
+  fi
+  P3_BASELINE_DIR="$KEEL_INSTRUMENT_BASELINE_DIR"
+fi
+P3_BASELINE_REGISTRY="$P3_BASELINE_DIR/host-baselines.tsv"
+P3_BASELINE_WITNESS="$P3_BASELINE_DIR/judged-runs.tsv"
+P3_BASELINE_ERAS="$P3_BASELINE_DIR/measurement-eras.tsv"
+P3_ERA="$(era_current "$P3_BASELINE_ERAS")"
+# READ BACK from gate-p5.sh, never retyped (#167). Every other constant in this file is
+# deliberately duplicated from gate-p2 so a P3 red means P3 changed -- but that argument is
+# about a bar this gate OWNS. BASELINE_MARGIN is the registry class's own margin, shared with
+# the criterion gate-p5 judges, and two independent statements of it would let one drift into
+# judging arm64 against a margin the registry's documentation did not describe. Same read-back
+# scripts/exercise-baseline.sh already does, by the same sed.
+P3_BASELINE_MARGIN="$(sed -n 's/^BASELINE_MARGIN=\([0-9.]*\)$/\1/p' scripts/gate-p5.sh | head -1)"
+# PEAK_FLOOR has no declared derivation set the way CEIL_FRACTION has CEIL_DERIVED_FROM: it is
+# a flat amd64 constant, so NO host is in its derivation set and the `conflict`/`fleet` arms of
+# baseline_state are unreachable from here. Passing the empty string says that, and is checked
+# below rather than assumed -- an unreachable arm is stated, not silently trusted (§5 rule 12).
+P3_PEAK_DERIVED_FROM=""
+
 # ------------------------------------------------------------- P3's own bar
 OPENBLAS_FLOOR=0.60
 GATE_SGEMM="Sgemm/n=2048"
@@ -454,6 +502,26 @@ resolve_fleet
 while read -r host; do
   assert_governor "$host" preamble
   admission_readback "$host" "$GOV_PROV"
+  # The registry key for criterion 5b's arm64 branch (#167), cached HERE rather than read where
+  # it is used: criterion 5b sits immediately after that host's benchmark, and the one place this
+  # gate must not add a remote command is inside that loop. Same field and same trailing-space
+  # strip as gate-p5, because the registry is keyed on the exact string.
+  #
+  # $GOV_PROV FIRST, remote_probe AS THE FALLBACK, and the fallback is the load-bearing half --
+  # found by running this under replay, where it read empty. gate-replay.sh:134 STUBS
+  # assert_governor to set GOV_STATE/GOV_SHOWN and nothing else, so GOV_PROV is empty in every
+  # replay while being populated in every real run. Preferring GOV_PROV keeps the real run at zero
+  # extra ssh (assert_governor just probed); falling back to remote_probe costs an ssh only where
+  # GOV_PROV is absent, and under replay remote_probe IS the corpus read, so the fallback costs
+  # nothing in the one mode that needs it. Reading one variable would have made this criterion
+  # permanently unexercisable without a Graviton -- the stub hides the input, the #160 way.
+  # The fallback is suppressed for a host assert_governor found UNREACHABLE, so this cannot add
+  # a second doomed ssh to a host that just failed to answer one. Keyed on GOV_STATE, the
+  # reachability it already established -- not on a replay flag, which would make the production
+  # path and the exercised path different code.
+  hprov="$GOV_PROV"
+  [[ -n "$hprov" || "$GOV_STATE" == unreachable ]] || hprov="$(remote_probe "$host" || true)"
+  cut -d'|' -f1 <<<"$hprov" | sed 's/ *$//' >"$BINDIR/cpu-$host" || :
 done < <(hosts_lines)
 
 AVX512_GREEN=""
@@ -859,9 +927,55 @@ else
     # archives. The 0.55 comparison lives only inside throughput_verdict, so `continue`-ing before
     # it is what guarantees no arm64 path reaches it — the false-pass this encoding exists to
     # prevent. amd64 is byte-unchanged: this branch does not fire when KEEL_GOARCH is unset.
+    #
+    # TYPED 2026-10-01 (#167): the reviewed commit that branch was waiting for. The exit is now
+    # taken -- the arm64 reading is judged against THIS host's registered baseline when one
+    # exists, and still renders BASELINE when none does. What is judged is ACT_LO against
+    # (baseline - margin) and NOTHING else: throughput_verdict stays unreached on arm64, because
+    # it bundles PEAK_FLOOR with the amd64-derived issue/fma frontier and calling it here would
+    # reinstate the exact category error this branch exists to avoid. The `continue` before it is
+    # still what guarantees that, so every arm below continues too.
     if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
       frac="$(awk -v r="$ACT_LO" 'BEGIN{printf "%.1f", r * 100}')"
-      baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline, not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). throughput_verdict is not reached on arm64; a reviewed commit types the arm64 floor from its own archives."
+      # Keyed on the FULL measured configuration, not just the tile. #167 proposed
+      # `peak/4x16-neon`; the key is `peak/<ACT_ID>` because kc is part of what was measured and
+      # the issue's own argument for scoping to the shape applies to it verbatim. Vindicated
+      # while landing this: dispatch moved 8x8 -> 4x16 INSIDE era pinned8 (the 029e24f
+      # registration read 59.6/42.9 on 8x8/neon against 78.8/55.3 on 4x16/neon), so a
+      # shape-blind row would have carried a bar across a different kernel.
+      PCRIT="peak/$ACT_ID"
+      hcpu="$(cat "$BINDIR/cpu-$host" 2>/dev/null || true)"
+      PSTATE="$(baseline_state "$P3_BASELINE_REGISTRY" "$P3_BASELINE_WITNESS" \
+                               "$hcpu" "$PCRIT" "$P3_ERA" "$P3_PEAK_DERIVED_FROM")"
+      # Every input to the bar must be readable before a bar is formed. An empty era or margin
+      # would otherwise silently produce a bar of `-` or a comparison against nothing, and the
+      # fail-closed direction for a missing INSTRUMENT is unmeasured, never a pass (§5 rule 12).
+      if [[ -z "$P3_ERA" || -z "$P3_BASELINE_MARGIN" || -z "$hcpu" ]]; then
+        unmeasured "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI, but this criterion cannot resolve what to judge it against: era='$P3_ERA' margin='$P3_BASELINE_MARGIN' cpu_model='$hcpu' (from $P3_BASELINE_ERAS, gate-p5.sh BASELINE_MARGIN, and this run's probe). A reading whose bar cannot be resolved is unmeasured, not cleared (#167)"
+        continue
+      fi
+      case "$PSTATE" in
+        registered)
+          PROW="$(baseline_lookup "$P3_BASELINE_REGISTRY" "$hcpu" "$PCRIT" "$P3_ERA")"
+          pval="$(awk -F'\t' '{print $4}' <<<"$PROW")"
+          PBAR="$(awk -v b="$pval" -v m="$P3_BASELINE_MARGIN" 'BEGIN{printf "%.1f", b-m}')"
+          PWHY="this host's registered baseline ${pval}% (era $(awk -F'\t' '{print $3}' <<<"$PROW")) less the same ${P3_BASELINE_MARGIN} points of margin the fleet bar uses (estimator: $(awk -F'\t' '{print $5}' <<<"$PROW"); recomputable from $(awk -F'\t' '{print $6}' <<<"$PROW"); registered $(awk -F'\t' '{print $7}' <<<"$PROW"))"
+          # $frac is the RENDERED value; the comparison uses ACT_LO*100, the unrounded one
+          # (#143). Comparing the rendering would let a 0.04-point rounding decide a verdict.
+          if awk -v v="$ACT_LO" -v f="$PBAR" 'BEGIN{exit !(100*v >= f)}'; then
+            pass "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI (>= ${PBAR}%, $PWHY)"
+          else
+            fail "[$host] $ACT_ID reaches only ${frac}% of this host's measured NEON peak, net of CI (< ${PBAR}%, $PWHY)"
+          fi ;;
+        new)
+          baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline, not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). No row for ($hcpu, $PCRIT) in era $P3_ERA and no witness row, so this silicon has not spent its BASELINE at this configuration (#167)" ;;
+        owing)
+          fail "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI, but there is no registered baseline for ($hcpu, $PCRIT) in era $P3_ERA and $P3_BASELINE_WITNESS says this silicon was already judged in that era — the absence is an unmet registration rather than newness, and BASELINE is spent (#6/#167)" ;;
+        conflict)
+          fail "[$host] $PCRIT is claimed by both PEAK_FLOOR's derivation set and $P3_BASELINE_REGISTRY, so two artifacts disagree about which bar governs this host and the gate will not pick one (#167). PEAK_FLOOR declares no derivation set, so reaching this arm means one was added without re-reading this criterion" ;;
+        *)
+          unmeasured "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI, but baseline_state returned '$PSTATE' for ($hcpu, $PCRIT, era $P3_ERA) — a class this criterion does not know how to judge is unmeasured, not cleared (#167)" ;;
+      esac
       continue
     fi
     # The ceiling set is every mix except the shape under test; see gate-p2.sh

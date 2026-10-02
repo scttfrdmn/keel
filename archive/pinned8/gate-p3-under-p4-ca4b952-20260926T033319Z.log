@@ -1,0 +1,118 @@
+== gate-p3: packing + blocking -> full Sgemm ==
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- builds --
+  [32mPASS[0m  make build (GOEXPERIMENT=simd)
+  [32mPASS[0m  make stock (scalar path, no experiment)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd, linux/amd64)
+
+-- Sgemm vs the float64 oracle: size sweep x transpose x alpha x beta --
+        the local run exercises the scalar path only (darwin/arm64 has no archsimd);
+        the sweep's extent is audited below from a host that ran it with avx512 live
+  [32mPASS[0m  [local darwin/arm64] all tests pass
+  [32mPASS[0m  [local, stock toolchain] all tests pass without GOEXPERIMENT=simd
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 24227 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+        [keel-gvt4] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt4] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt4] admission class: evidentiary (instance=c8g.48xlarge, virt=?, spawn=i-08c1dc97a33a806db:c8g.48xlarge:ondemand) — c8g.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c8g.48xlarge on-demand (i-08c1dc97a33a806db)
+        [keel-gvt3] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt3] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt3] admission class: evidentiary (instance=c7g.16xlarge, virt=?, spawn=i-0db6572432e4a9fe7:c7g.16xlarge:ondemand) — c7g.16xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c7g.16xlarge on-demand (i-0db6572432e4a9fe7)
+  [32mPASS[0m  cross-compiled linux/amd64 test binary (root package: Sgemm vs oracle)
+        builder toolchain go1.27.1-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+        [keel-gvt4] Neoverse-V2 | instance=c8g.48xlarge | virt=? | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | tmux=yes | Linux 7.0.0-1013-aws | L2=2048K L1d=64K L3=36864K | spawn=i-08c1dc97a33a806db:c8g.48xlarge:ondemand
+  [32mPASS[0m  [keel-gvt4] Sgemm sweep passes
+        [keel-gvt4] backends exercised: neon scalar
+  [32mPASS[0m  [keel-gvt4] KEEL_FORCE=scalar: the sweep passes with dispatch overridden
+        [keel-gvt3] Neoverse-V1 | instance=c7g.16xlarge | virt=? | 64 cpus | 64 cores | smt=1 | 1 sockets | governor=absent | tmux=yes | Linux 7.0.0-1013-aws | L2=1024K L1d=64K L3=32768K | spawn=i-0db6572432e4a9fe7:c7g.16xlarge:ondemand
+  [32mPASS[0m  [keel-gvt3] Sgemm sweep passes
+        [keel-gvt3] backends exercised: neon scalar
+  [32mPASS[0m  [keel-gvt3] KEEL_FORCE=scalar: the sweep passes with dispatch overridden
+        avx512 Sgemm sweep: N/A on arm64 (NEON is the dispatched kernel; sweep coverage is 5b's NEON frontier, #156) — not unmeasured (#155)
+  [32mPASS[0m  every host that attempted it proved the scalar fallback under KEEL_FORCE=scalar (2/2)
+
+-- sweep extent (criteria 1 and 2: coverage is enforced, not trusted) --
+        avx512 sweep extent (criteria 1 and 2): N/A on arm64 (no avx512 sweep; NEON coverage is 5b, #156) — not unmeasured (#155)
+
+-- carried from P2 (criterion 4): the K-loop after packing and blocking --
+        compile-time property, audited against the linux/amd64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.Kernel8x8: steady-state loop [128,492] 92 insns for 16 arith (5.75 per arith): 0 vector stack refs, 16 reg copies, 8 broadcasts, 32 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.Kernel4x16: steady-state loop [132,448] 80 insns for 16 arith (5.00 per arith): 0 vector stack refs, 8 reg copies, 4 broadcasts, 30 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  0 accumulator spills in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 calls in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 surviving bounds checks in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)
+        check_bce: 237 bounds check(s) across vec+kern+pack+block, all outside the K-loop (provenance; the criterion is the loop-body audit above)
+  [32mPASS[0m  check_bce output recorded as provenance
+  [32mPASS[0m  SWEEP_BEST_IPF=4.111 reconciles against shapegen -frontier: 4.111 from 3x24 u=2 broadcast, best of 107 emittable zero-spill shapes
+
+-- throughput sentinel (criteria 5 and 5b): P2's floor re-run on the dispatched shape --
+  [32mPASS[0m  roofline verdict controls (76 fixtures)
+        insns/FMA sentinel: N/A on arm64 (audits amd64 avx512 tiles; its OpenBLAS-denominator consumer is REPORTED-not-judged here, #155/#162) — not unmeasured
+        sentinel declaration: every fleet host and nothing else ($KEEL_SENTINEL_OUT_OF_FLEET unset)
+        note: .keel-sentinel exists (mtime 2026-08-11T19:50:40Z) and is NOT read — retired as a selection input (#146)
+        judged as sentinels: keel-gvt4 keel-gvt3 
+  [32mPASS[0m  every shipped shape's recorded insns/FMA matches the audited object code (8x8/neon=5.750 4x16/neon=5.000)
+  [36mBASELINE[0m  [keel-gvt4] 4x16/neon/kc=128 reaches 55.3% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline, not judged against PEAK_FLOOR=0.55: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). throughput_verdict is not reached on arm64; a reviewed commit types the arm64 floor from its own archives.
+  [36mBASELINE[0m  [keel-gvt3] 4x16/neon/kc=128 reaches 78.8% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline, not judged against PEAK_FLOOR=0.55: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). throughput_verdict is not reached on arm64; a reviewed commit types the arm64 floor from its own archives.
+
+-- Sgemm at 2048^3: percent of measured peak, and >= 60% of single-thread OpenBLAS --
+        -count=30 -benchtime=1s; the bar counts as cleared only net of both confidence intervals
+        each host is also run once more with KEEL_KERN_CLASS pinned to the other class (criterion 5b), which is where the extra Sgemm time goes
+  [32mPASS[0m  cross-compiled linux/amd64 bench binary (Sgemm + peak)
+        [keel-gvt4] Sgemm 2048^3 34.29 GFLOP/s +/- 0.0% [33.93, 34.32] D=19.5 (span 1.14% / interval 0.0583%), peak 62.97 GFLOP/s +/- 0.3% [62.26, 63.87] D=5.194 (span 2.56% / interval 0.4923%)
+        [keel-gvt4] = 54.5% of measured peak (54.2% net of CI) — reported, not a P3 criterion
+        [keel-gvt4] KEEL_KERN_CLASS=issue selects 4x16/neon too, so both classes agree here and there is nothing to compare
+        [keel-gvt3] Sgemm 2048^3 32.36 GFLOP/s +/- 0.0% [32.31, 32.37] D=inf (span 0.19% / interval 0.0000%), peak 41.43 GFLOP/s +/- 0.0% [41.37, 41.43] D=6 (span 0.14% / interval 0.0241%)
+        [keel-gvt3] = 78.1% of measured peak (78.1% net of CI) — reported, not a P3 criterion
+        [keel-gvt3] KEEL_KERN_CLASS=issue selects 4x16/neon too, so both classes agree here and there is nothing to compare
+        [keel-gvt4] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt4] distro=ubuntu go=go1.27.0 libopenblas=/usr/local/lib/libopenblas.so
+        [keel-gvt4] building the openblas-tagged harness natively from git archive HEAD (ca4b952)
+        [keel-gvt4] coretype sweep, best of 30 at -benchtime=1s:
+          [keel-gvt4] OPENBLAS_CORETYPE=default -> corename=neoversev1, 63.03 GFLOP/s
+          [keel-gvt4] OPENBLAS_CORETYPE=ARMV8 -> corename=armv8, 71.36 GFLOP/s
+          [keel-gvt4] OPENBLAS_CORETYPE=NEOVERSEN1 -> corename=neoversen1, 70.80 GFLOP/s
+          [keel-gvt4] OPENBLAS_CORETYPE=NEOVERSEV1 -> corename=neoversev1, 63.00 GFLOP/s
+          [keel-gvt4] OPENBLAS_CORETYPE=NEOVERSEV2 -> corename=neoversev1, 62.96 GFLOP/s
+        [keel-gvt4] reference pinned to OPENBLAS_CORETYPE=ARMV8 (corename=armv8, 71.36 GFLOP/s), +13.2% against DYNAMIC_ARCH's own choice (corename=neoversev1, 63.03 GFLOP/s): a cross-family win of 8.33 GFLOP/s against this sweep's own measured same-family drift of 0.07
+        [keel-gvt4] openblas: OpenBLAS 0.3.29 DYNAMIC_ARCH NO_AFFINITY armv8 MAX_THREADS=192 corename=armv8 threads=1 procs=192 | gomaxprocs: 1
+        [keel-gvt4] reference kernel family: armv8 (on the AVX2-or-better allowlist, and the sweep's winner as pinned)
+        [keel-gvt4] peak series GFLOP/s: head 61.754999999999995, middle 61.795, tail 61.86 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt4] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.0618% against a 0.5830% floor, middle->tail -0.1031% against a 0.7103% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-gvt4] keel 34.32 GFLOP/s +/- 0.0% [34.05, 34.34] D=inf (span 0.84% / interval 0.0000%) vs OpenBLAS 71.34 GFLOP/s +/- 0.0% [70.17, 71.37] D=120 (span 1.68% / interval 0.0140%), one invocation
+        [keel-gvt4] denominator: openblas 71.34 GFLOP/s (why=fma-bound, class=fma, Sgemm ran 4x16/neon at 5.000 insns/FMA, roofline n/a (why=fma-bound) against a 61.80 GFLOP/s peak)
+        [keel-gvt4] plain OpenBLAS is the denominator (why=fma-bound), so the amended and unmodified ratios are the same number
+  [35mREPORTED[0m  [keel-gvt4] Sgemm at 2048^3 reads 48.1% of its swept OpenBLAS reference, 48.1% net of CI — REPORTED, not judged against OPENBLAS_FLOOR=0.60: on arm64 that reference is an SVE kernel and keel is NEON (archsimd has no SVE, #162), so the >= 60% bar (amd64/AVX-512-derived) is a foreign-reference category error here (#155). The ratio is the finding, not a keel FAIL; a bar travels with its derivation set.
+        [keel-gvt3] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt3] distro=ubuntu go=go1.27.0 libopenblas=/usr/local/lib/libopenblas.so
+        [keel-gvt3] building the openblas-tagged harness natively from git archive HEAD (ca4b952)
+        [keel-gvt3] coretype sweep, best of 30 at -benchtime=1s:
+          [keel-gvt3] OPENBLAS_CORETYPE=default -> corename=neoversev1, 78.84 GFLOP/s
+          [keel-gvt3] OPENBLAS_CORETYPE=ARMV8 -> corename=armv8, 63.65 GFLOP/s
+          [keel-gvt3] OPENBLAS_CORETYPE=NEOVERSEN1 -> corename=neoversen1, 63.76 GFLOP/s
+          [keel-gvt3] OPENBLAS_CORETYPE=NEOVERSEV1 -> corename=neoversev1, 78.93 GFLOP/s
+          [keel-gvt3] OPENBLAS_CORETYPE=NEOVERSEV2 -> corename=neoversev1, 78.93 GFLOP/s
+        [keel-gvt3] no cross-family winner beyond drift: the best family the library did not already choose is neoversen1 (OPENBLAS_CORETYPE=NEOVERSEN1) at 63.76 GFLOP/s against the default's 78.84, a difference of -15.08 GFLOP/s inside a measured same-family drift of 0.09
+        [keel-gvt3] the reference therefore runs UNPINNED, the way the library runs itself (corename=neoversev1, 78.84 GFLOP/s) — the pin is an intervention justified by a measured effect, and there is none here (#35)
+        [keel-gvt3] openblas: OpenBLAS 0.3.29 DYNAMIC_ARCH NO_AFFINITY neoversev1 MAX_THREADS=64 corename=neoversev1 threads=1 procs=64 | gomaxprocs: 1
+        [keel-gvt3] reference kernel family: neoversev1 (on the AVX2-or-better allowlist, unpinned and matching the sweep's unpinned candidate)
+        [keel-gvt3] peak series GFLOP/s: head 41.42, middle 41.43, tail 41.42 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt3] the peak series is bounded in every window and declines in one step but not across both: 1 of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.0121% against a 0.0086% floor, middle->tail +0.0151% against a 0.0091% floor), so the series is a non-monotone excursion and not the monotone decline §5 rule 5 names as throttling -- the resolved step is stated above rather than called a tie (#6, 2026-08-20)
+        [keel-gvt3] keel 32.32 GFLOP/s +/- 0.0% [32.14, 32.32] D=18 (span 0.56% / interval 0.0309%) vs OpenBLAS 78.86 GFLOP/s +/- 0.1% [78.66, 78.9] D=2.182 (span 0.30% / interval 0.1395%), one invocation
+        [keel-gvt3] denominator: openblas 78.86 GFLOP/s (why=fma-bound, class=fma, Sgemm ran 4x16/neon at 5.000 insns/FMA, roofline n/a (why=fma-bound) against a 41.43 GFLOP/s peak)
+        [keel-gvt3] plain OpenBLAS is the denominator (why=fma-bound), so the amended and unmodified ratios are the same number
+  [35mREPORTED[0m  [keel-gvt3] Sgemm at 2048^3 reads 41.0% of its swept OpenBLAS reference, 40.9% net of CI — REPORTED, not judged against OPENBLAS_FLOOR=0.60: on arm64 that reference is an SVE kernel and keel is NEON (archsimd has no SVE, #162), so the >= 60% bar (amd64/AVX-512-derived) is a foreign-reference category error here (#155). The ratio is the finding, not a keel FAIL; a bar travels with its derivation set.
+  [35mREPORTED[0m  the keel/OpenBLAS ratio is REPORTED on all 2 arm64 host(s), not judged against the 60% floor: NEON vs an SVE reference (#155/#162). The per-host ratios are printed above and carry to the certificate as the finding, not scored as a keel FAIL.
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p3 tally: 24 PASS / 0 FAIL / 0 UNMEASURED / 2 BASELINE / 3 REPORTED
+gate-p3: GREEN

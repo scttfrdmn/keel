@@ -79,23 +79,31 @@ _normalize() {
     # RECURRENCE of the same bug into invisibility, which is the one thing this witness exists to
     # prevent. A workaround outliving its defect becomes a mask.
   )
-  sed -E \
-    -e 's/[0-9]{8}T[0-9]{6}Z/<TS>/g' \
-    -e 's/[0-9]+(\.[0-9]+)? MiB free/<N> MiB free/g' \
-    -e 's/(gate-p[0-9]+-)[0-9a-f]{7,40}/\1<SHA>/g' \
-    -e 's/(candidates-)[0-9a-f]{7,40}/\1<SHA>/g' \
-    -e 's/(commit \()[0-9a-f]{7,40}/\1<SHA>/g' \
-    # #68's provenance line is scrubbed for the same reason RUN_STAMP and <SHA> are: under
-    # KEEL_REPLAY the measurement comes from a FIXED corpus, so the rev and the working-tree
-    # state describe the operator's position, not the reading. The tree field especially --
-    # gate-p3/p5 deliberately skip their dirty-tree refusal under replay (#155/#158) so the
-    # `after` arm can render an uncommitted edit, which means a null-change witness would
-    # otherwise diff `clean` against `DIRTY` and fail on the one thing it exists to prove.
-    # Unlike the fleet_shortfall scrubber removed with #159, this artifact is permanent: no
-    # fix makes a replay's rev a property of its corpus.
-    -e 's/(rev )[0-9a-f]{40} tree=(clean|DIRTY)/\1<REV> tree=<T>/g' \
-    -e 's/load1=[0-9.?]+ load5=[0-9.?]+ load15=[0-9.?]+ runnable=[0-9]+\/[0-9]+|load1=[0-9.?]+ load5=[0-9.?]+ load15=[0-9.?]+ runnable=\?/load1=<L> load5=<L> load15=<L> runnable=<R>/g' \
-    "${extra[@]}"
+  # #68's provenance scrubber (the `rev ... tree=` arm) is here for the same reason RUN_STAMP
+  # and <SHA> are: under KEEL_REPLAY the measurement comes from a FIXED corpus, so the rev and
+  # the working-tree state describe the operator's position, not the reading. The tree field
+  # especially -- gate-p3/p5 deliberately skip their dirty-tree refusal under replay (#155/#158)
+  # so the `after` arm can render an uncommitted edit, which means a null-change witness would
+  # otherwise diff `clean` against `DIRTY` and fail on the one thing it exists to prove. Unlike
+  # the fleet_shortfall scrubber removed with #159, this artifact is permanent: no fix makes a
+  # replay's rev a property of its corpus. #81's load scrubber is permanent for the same reason.
+  #
+  # THE ARGS ARE AN ARRAY, NOT A BACKSLASH-CONTINUED LIST, and that is a bug fix not a style
+  # choice (found 2026-10-01 by running this script). The two comments above used to sit BETWEEN
+  # continued `-e` lines, where `\` continues the command, the comment line is swallowed, and the
+  # next `-e` starts a NEW command -- `line 96: -e: command not found`, every render dead since
+  # ca07e3f. An array takes comments between its elements safely, so the explanation and the code
+  # can stay together, which is why the comment moved rather than the scrubber.
+  local args=(
+    -e 's/[0-9]{8}T[0-9]{6}Z/<TS>/g'
+    -e 's/[0-9]+(\.[0-9]+)? MiB free/<N> MiB free/g'
+    -e 's/(gate-p[0-9]+-)[0-9a-f]{7,40}/\1<SHA>/g'
+    -e 's/(candidates-)[0-9a-f]{7,40}/\1<SHA>/g'
+    -e 's/(commit \()[0-9a-f]{7,40}/\1<SHA>/g'
+    -e 's/(rev )[0-9a-f]{40} tree=(clean|DIRTY)/\1<REV> tree=<T>/g'
+    -e 's/load1=[0-9.?]+ load5=[0-9.?]+ load15=[0-9.?]+ runnable=([0-9]+\/[0-9]+|\?)/load1=<L> load5=<L> load15=<L> runnable=<R>/g'
+  )
+  sed -E "${args[@]}" "${extra[@]}"
 }
 
 render() {

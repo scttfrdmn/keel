@@ -878,7 +878,7 @@ fi
 # merely wrong: a comment asserting that another file does something, where nothing checks
 # that it does. Grep the mechanism before crediting it.
 if BTLOG="$(bash scripts/baseline-test.sh 2>&1)"; then
-  pass "BASELINE-REGISTERED readers pass their controls ($(grep -c '^  ok ' <<<"$BTLOG") fixtures; 21 mutants driven 2026-08-21, all killed, and a 22nd found unkillable — an unnamed-era guard whose deletion changed nothing observable, so it was deleted rather than explained. §5 rule 12: the number is what it covers, and mutation is a session act with no standing harness)"
+  pass "BASELINE-REGISTERED readers pass their controls ($(grep -c '^  ok ' <<<"$BTLOG") fixtures; 21 mutants driven 2026-08-21, all killed, and a 22nd found unkillable — an unnamed-era guard whose deletion changed nothing observable, so it was deleted rather than explained. §5 rule 12: the number is what it covers, and mutation is a session act with no standing harness. NOT COVERED by this number: gate-p3's peak/* reader (#167), which is a SIXTH reader added 2026-10-01 and sits outside baseline-test.sh because it needs an arm64 host set — its six paths were driven under KEEL_REPLAY against tracked arm64 archives, recorded on #167, and that exercise has no standing harness either, so this count must not be read as covering it)"
 else
   fail "BASELINE-REGISTERED readers fail their own controls, so no bar this criterion applies is trustworthy (#6)"
   # shellcheck disable=SC2001  # prefixing every line; not a scalar substitution

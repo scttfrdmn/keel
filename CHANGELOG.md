@@ -8,7 +8,20 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- gate-p3 judges the arm64 microkernel percent-of-peak against a per-host registered
+  baseline (`peak/<shape>` rows in `scripts/host-baselines.tsv`), replacing the
+  unconditional BASELINE the arm64 branch rendered. Neoverse-V1 78.8%, Neoverse-V2 55.3%,
+  each the median of N=3 tracked judged runs at the shipped `4x16/neon` shape. `ACT_LO`
+  against (baseline less the 2.6-point margin) and nothing else: `throughput_verdict` stays
+  unreached on arm64, so PEAK_FLOOR cannot be applied to a 4-lane kernel (#167).
+
 ### Fixed
+- `scripts/gate-witness.sh` rendered nothing since `ca07e3f`: comments sat between
+  backslash-continued `sed -e` arguments, so the continuation swallowed the comment and the
+  next `-e` ran as a command (`-e: command not found`). The scrubbers added for #68 and #81
+  had therefore never been exercised; all three load shapes and the rev scrubber are now
+  driven. Args moved into an array, which takes interleaved comments safely.
 - gate-p3's arm64 REPORTED aggregate now appends `fleet_shortfall`, so the one fleet line
   that arch prints states how many of the configured hosts it covers. `all N host(s)` was a
   fraction over its own numerator (#90's defect), and a host whose admission class withholds
