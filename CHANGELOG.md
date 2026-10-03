@@ -35,6 +35,11 @@ While the major version is 0, minor versions may contain breaking changes.
   Without it, adding any registry-governed criterion to a live era resolved `owing` → FAIL on
   every already-registered host; #167's `peak/*` had the same exposure the moment dispatch moved
   to a new NEON shape. Fail-closed on an unreadable date (#169).
+- gate-p3's `peak/*` reader now passes that date, closing the #167 exposure: a NEON shape with
+  no registered row renders first-sight instead of FAILing as an unmet registration. Both
+  Neoverse hosts carry witness rows dated 2026-09-06, so every shape but the two registered
+  ones would have been convicted — and dispatch has already moved once inside era `pinned8`
+  (`8x8` → `4x16`), which is the event that mints such a key (#167/#169).
 - `gate-witness.sh`'s `<SHA>` scrubber matched `gate-p5-<sha>` but not
   `gate-p4-under-p5-<sha>`, so every cross-commit replay diff carried a spurious line for the
   delegated log's filename — noise in the one instrument whose value is being a function of

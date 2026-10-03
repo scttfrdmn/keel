@@ -182,6 +182,18 @@ P3_BASELINE_MARGIN="$(sed -n 's/^BASELINE_MARGIN=\([0-9.]*\)$/\1/p' scripts/gate
 # baseline_state are unreachable from here. Passing the empty string says that, and is checked
 # below rather than assumed -- an unreachable arm is stated, not silently trusted (§5 rule 12).
 P3_PEAK_DERIVED_FROM=""
+# This criterion's introduction date, passed to baseline_state as its seventh argument (#169).
+# 2026-10-01 is when `2f6c165` added the peak/* reader; it is a property of the criterion, so it
+# does not move when this line is edited, and it is NOT today's date.
+#
+# WHAT IT PREVENTS, which is not hypothetical. baseline_spent is keyed (cpu_model, era) with
+# nothing per-criterion, so without this a peak/<shape> key with no registry row resolves `owing`
+# -> FAIL on any host already judged in this era. Both Neoverse hosts have witness rows dated
+# 2026-09-06, so every shape except the two registered ones would have been convicted of an
+# unmet registration it could not have met. Dispatch has ALREADY moved once inside era pinned8
+# (8x8 -> 4x16, the 029e24f registration against this one), which is exactly the event that
+# mints a key with no row, so this is the live path and not a precaution.
+P3_PEAK_CRIT_SINCE="2026-10-01"
 
 # ------------------------------------------------------------- P3's own bar
 OPENBLAS_FLOOR=0.60
@@ -946,7 +958,8 @@ else
       PCRIT="peak/$ACT_ID"
       hcpu="$(cat "$BINDIR/cpu-$host" 2>/dev/null || true)"
       PSTATE="$(baseline_state "$P3_BASELINE_REGISTRY" "$P3_BASELINE_WITNESS" \
-                               "$hcpu" "$PCRIT" "$P3_ERA" "$P3_PEAK_DERIVED_FROM")"
+                               "$hcpu" "$PCRIT" "$P3_ERA" "$P3_PEAK_DERIVED_FROM" \
+                               "$P3_PEAK_CRIT_SINCE")"
       # Every input to the bar must be readable before a bar is formed. An empty era or margin
       # would otherwise silently produce a bar of `-` or a comparison against nothing, and the
       # fail-closed direction for a missing INSTRUMENT is unmeasured, never a pass (§5 rule 12).
@@ -970,7 +983,12 @@ else
         new)
           baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline, not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). No row for ($hcpu, $PCRIT) in era $P3_ERA and no witness row, so this silicon has not spent its BASELINE at this configuration (#167)" ;;
         owing)
-          fail "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI, but there is no registered baseline for ($hcpu, $PCRIT) in era $P3_ERA and $P3_BASELINE_WITNESS says this silicon was already judged in that era — the absence is an unmet registration rather than newness, and BASELINE is spent (#6/#167)" ;;
+          # The wording is keyed to what reaching this arm now MEANS, not to what it meant before
+          # #169. A witness row older than $P3_PEAK_CRIT_SINCE no longer lands here, so the only
+          # way in is a judgement recorded when this criterion already existed -- a genuine unmet
+          # registration. "Already judged in that era" would now describe a set this branch no
+          # longer covers, which is the defect of leaving a message keyed to the old condition.
+          fail "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI, but there is no registered baseline for ($hcpu, $PCRIT) in era $P3_ERA and $P3_BASELINE_WITNESS records a judgement of this silicon dated on or after $P3_PEAK_CRIT_SINCE, when this criterion already existed — the absence is an unmet registration rather than newness, and BASELINE is spent (#6/#167/#169)" ;;
         conflict)
           fail "[$host] $PCRIT is claimed by both PEAK_FLOOR's derivation set and $P3_BASELINE_REGISTRY, so two artifacts disagree about which bar governs this host and the gate will not pick one (#167). PEAK_FLOOR declares no derivation set, so reaching this arm means one was added without re-reading this criterion" ;;
         *)
