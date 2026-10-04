@@ -24,6 +24,20 @@ While the major version is 0, minor versions may contain breaking changes.
   2.25 → 4.42 regression and a one-instruction increase.
 
 ### Added
+- **`bench/accelerate.go` + `_test.go` — the M-series dual reference** (`accelerate` + `cgo` tags,
+  mirroring `openblas.go` so nothing keel ships links a BLAS), completing #175 on Scott's approval.
+  Rows in `docs/hosts.md`, deliberately **not** README's numbers block, since criterion 9
+  re-measures that block per judged host and an M-series row has none (#109's two-tier split).
+  The finding is the pair of ratios: the same single-thread keel build is **3.76% of Accelerate**
+  and **49.3% of this core's measured NEON peak**, and the **13.1×** between them is the width of
+  the misreading a caption prevents — Accelerate reaches 13.1× what this core's NEON pipes can
+  issue, so it is on the AMX/AME coprocessor keel cannot target from Go. Corroborates the existing
+  `vortexm4` reading of ~1410 GFLOP/s at 1505. The thread cap is **witnessed rather than
+  assumed** — Accelerate has no `openblas_get_num_threads()` equivalent, so capped/uncapped is
+  measured in the same run at 0.555 (§5 rule 26). Correctness is checked before any rate is
+  believed, over **two** input sets plus a positive control: `makeMat`'s values are all multiples
+  of 1/8 and exact in float32, so that set alone made the tolerance inert, and an A·Bᵀ control
+  proves the comparison discriminates (#175).
 - **`bench/placement_darwin*.go` — the darwin placement probe** (`darwinplacement` + `cgo` tags, so
   nothing keel ships links it), run because Scott approved publishing M-series rows and that
   removed the ground under #138's untested half. `docs/darwin-placement.md` carries the write-up.
@@ -51,6 +65,15 @@ While the major version is 0, minor versions may contain breaking changes.
   satisfiable there even though its mechanism is not — reachable only through cgo, so a reading in
   the shipped cgo-free bench inherits its class rather than controlling it, and a published
   M-series row must state which (#175).
+
+### Changed
+- `docs/hosts.md`: corrected "keel's *scalar* path is the only thing this host can run", which
+  expired when go1.27 shipped arm64 `archsimd` — the dev host runs real NEON at both levels and
+  keel's single-thread `Sgemm` measures 56.57 GFLOP/s there, not the scalar path's ~6. The
+  historical `~1:200` figure is kept as the reading it was; the live ratio is 1:27. Also attributes
+  that section's previously-unexplained **12× run-to-run** spread to a measured mechanism: the QoS
+  class moves work between clusters and is worth 4.399× on this part, which is the right mechanism
+  without yet accounting for the whole magnitude (#175).
 
 ### Changed
 - **DESIGN.md §4/P2 amended** (2026-10-03, on Scott's directive): the `>=1.5x` measured/formula

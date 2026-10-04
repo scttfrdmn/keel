@@ -535,15 +535,77 @@ time equals wall time to within a few percent, so one thread really is doing the
 work. That one thread reaches roughly ten times what this core's NEON FMA units
 can issue, and adding eleven more threads buys nothing, which together say the
 reference is running on the M4's matrix unit rather than on its vector units
-(config target `vortexm4`). Against that, keel's *scalar* path is the only thing
-this host can run. A ratio of ~1:200 between a matrix coprocessor and a Go scalar
+(config target `vortexm4`). Against that, keel's *scalar* path was the only thing
+this host could run. A ratio of ~1:200 between a matrix coprocessor and a Go scalar
 loop is not evidence about the AVX-512 kernel P3's criterion is actually about.
+
+*(**Corrected 2026-10-03.** The sentence above read "is the only thing this host can
+run" in the present tense, and that expired when go1.27 shipped arm64 `archsimd`:
+this host now runs **real NEON** at both levels, and keel's single-thread `Sgemm`
+measures **56.57 GFLOP/s** here rather than the scalar path's ~6. The `~1:200`
+figure is left as the historical reading it was — the live ratio is 1:27, and the
+section below is where it is stated properly. What does **not** change is the
+conclusion: this host still cannot produce P3's criterion, which is about an
+AVX-512 kernel it has no silicon for.)*
 
 Two of the longer local runs of the *identical* pinned configuration also came in
 at 119 and 712 GFLOP/s — up to 12× run-to-run — which is what a laptop with no
 governor to pin and an aggressive QoS scheduler looks like. DESIGN.md §5 rule 5's
 methodology exists to exclude exactly this, and it is a second, independent reason
 no number from this machine is reportable.
+
+*(**Mechanism identified 2026-10-03**, for the 12× run-to-run above. It was recorded
+as "an aggressive QoS scheduler" by inference; `docs/darwin-placement.md` now measures
+it. The QoS class moves work between this part's two core clusters, and that lever is
+worth **4.399×** on the register-only NEON peak — 114.68 GFLOP/s on a performance core
+against 26.07 on an efficiency core, with a 0.234% control. A 12× spread needs more
+than one cluster hop to explain, so the attribution is to the right mechanism and not
+yet to the whole magnitude.)*
+
+### The M-series dual reference (#175)
+
+**Characterization only, and the two columns are not the same kind of number** — which
+is the entire reason #175 exists. Measured 2026-10-03 on the dev host, Apple M4 Pro
+(8 performance cores / 16 MB L2 + 4 efficiency / 4 MB L2), `n=2048`, `count=5`,
+medians, via the `accelerate` tagged harness. **Placement: inherited** — these
+readings ran at whatever QoS class the invoking shell carried, which is the honest
+state of a cgo-free bench on darwin (`docs/darwin-placement.md`).
+
+| arm | threads | rate | against which denominator |
+|---|---|---|---|
+| **keel `Sgemm`** | 1 | **56.57 GFLOP/s** | **49.3% of this core's 114.68 GFLOP/s measured NEON peak** |
+| keel `Sgemm` | 12 (8P+4E) | 252.9 GFLOP/s | reported only — no 12-thread NEON ceiling is measured here |
+| **Accelerate `cblas_sgemm`** | 1 (`VECLIB_MAXIMUM_THREADS=1`) | **1505 GFLOP/s** | **13.1× that same NEON peak — not on that roofline at all** |
+| Accelerate `cblas_sgemm` | uncapped | 2712 GFLOP/s | reported only |
+
+**Read the two keel ratios against each other, because that is the finding.** The same
+single-thread keel build is **3.76% of Accelerate** and **49.3% of the NEON roofline**.
+Those differ by **13.1×**, and that factor is not a measure of keel: it is the width of
+the misreading a caption prevents. Accelerate's path reaches 13.1× what this core's
+NEON FMA pipes can issue, so it is running on the undocumented AMX/AME matrix
+coprocessor, which keel cannot target from pure Go. Independent corroboration that it
+is the same unit: the OpenBLAS section above measured ~1410 GFLOP/s single-threaded on
+this host and attributed it to `vortexm4`, and 1505 lands beside it.
+
+So 49.3% is keel's performance on the unit it can address — in line with the judged
+fleet's 53.8% (Neoverse-V2) and 78.5% (Neoverse-V1) — and 3.76% is what a reader
+choosing between the two libraries on a Mac would actually experience. Both are true
+and they answer different questions. Publishing the second without its denominator
+would say keel is 27× off NEON code when keel is at half of NEON's ceiling.
+
+**The thread cap is witnessed, not assumed.** Accelerate exposes no
+`openblas_get_num_threads()` equivalent, so DESIGN.md §4/P3's verify-the-thread-count
+requirement cannot be met by read-back. Instead both settings are measured in the same
+run: capped/uncapped is **0.555**, so `VECLIB_MAXIMUM_THREADS` demonstrably arrived
+(§5 rule 26). A null there would have meant either that the cap did nothing or that
+the library was single-threaded anyway, and the harness could not have separated those
+two causes — which is why it says so rather than picking one.
+
+**Why these rows are here and not in README's numbers block.** gate-p5 criterion 9
+re-measures every published row on the host whose CPU the row names, and an M-series
+row has no judged host to be re-measured on. #109's two-tier split is explicit that
+consumer-silicon rows keep their value *marked for what they are* and are never mixed
+into the citable set.
 
 **The throughput sentinel** is the one role P3 assigns to a single host, named in
 `.keel-sentinel` or `$KEEL_SENTINEL_HOST` — same format as `.keel-hosts`, and
