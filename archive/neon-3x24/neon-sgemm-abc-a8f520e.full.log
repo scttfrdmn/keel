@@ -1,0 +1,67 @@
+host: castor  pinned cpu: 19  part=0xd85  cap=1024
+loadavg: 0.05 0.31 0.31 1/833 12934
+keel-bench.arm64 sha256: 3937ec9cf71b6e630d26641d8866021a21928bbc5e6cde45df6d5b1bd7b4d16d
+keel-bench-armB.arm64 sha256: 014cdbdf34f49a77d6148a6c9432e8da6707fd111a7119bcb5854ea95a1e29b4
+keel-bench-armC.arm64 sha256: d9367bd7e3b32f374a75d18871b21a41f5b16348798dbb2b7dc8e14d0befe9a6
+
+########## round=1 arm=A bin=keel-bench.arm64 ##########
+keel-bench-kern: 4x16/neon (available: 8x8/neon 4x16/neon 8x8/scalar 4x16/scalar)
+BenchmarkSgemm/n=2048         	       4	 278719174 ns/op	        61.64 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278505401 ns/op	        61.69 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278500121 ns/op	        61.69 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278256172 ns/op	        61.74 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278298236 ns/op	        61.73 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278407824 ns/op	        61.71 GFLOP/s
+PASS
+
+########## round=1 arm=B bin=keel-bench-armB.arm64 ##########
+keel-bench-kern: 3x24/neon (available: 3x24/neon 3x24/scalar)
+BenchmarkSgemm/n=2048         	       4	 260819168 ns/op	        65.87 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260662398 ns/op	        65.91 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260664930 ns/op	        65.91 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260739103 ns/op	        65.89 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260648210 ns/op	        65.91 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260752499 ns/op	        65.89 GFLOP/s
+PASS
+
+########## round=1 arm=C bin=keel-bench-armC.arm64 ##########
+keel-bench-kern: 3x24/neon (available: 8x8/neon 4x16/neon 3x24/neon 8x8/scalar 4x16/scalar 3x24/scalar)
+BenchmarkSgemm/n=2048         	       4	 261389946 ns/op	        65.73 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261384698 ns/op	        65.73 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261120081 ns/op	        65.79 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261212889 ns/op	        65.77 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261130932 ns/op	        65.79 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261012408 ns/op	        65.82 GFLOP/s
+PASS
+
+########## round=2 arm=A bin=keel-bench.arm64 ##########
+keel-bench-kern: 4x16/neon (available: 8x8/neon 4x16/neon 8x8/scalar 4x16/scalar)
+BenchmarkSgemm/n=2048         	       4	 278447060 ns/op	        61.70 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278307503 ns/op	        61.73 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278356596 ns/op	        61.72 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278560616 ns/op	        61.67 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278511088 ns/op	        61.68 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 278335323 ns/op	        61.72 GFLOP/s
+PASS
+
+########## round=2 arm=B bin=keel-bench-armB.arm64 ##########
+keel-bench-kern: 3x24/neon (available: 3x24/neon 3x24/scalar)
+BenchmarkSgemm/n=2048         	       4	 261040648 ns/op	        65.81 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260708042 ns/op	        65.90 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260741538 ns/op	        65.89 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260651118 ns/op	        65.91 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260528553 ns/op	        65.94 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 260559501 ns/op	        65.93 GFLOP/s
+PASS
+
+########## round=2 arm=C bin=keel-bench-armC.arm64 ##########
+keel-bench-kern: 3x24/neon (available: 8x8/neon 4x16/neon 3x24/neon 8x8/scalar 4x16/scalar 3x24/scalar)
+BenchmarkSgemm/n=2048         	       4	 261252621 ns/op	        65.76 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261144656 ns/op	        65.79 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261041432 ns/op	        65.81 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261128884 ns/op	        65.79 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261019603 ns/op	        65.82 GFLOP/s
+BenchmarkSgemm/n=2048         	       4	 261110072 ns/op	        65.80 GFLOP/s
+PASS
+
+loadavg at end: 0.73 0.47 0.37 1/834 12979
