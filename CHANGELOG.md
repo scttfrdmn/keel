@@ -8,6 +8,18 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- `vec.Kernel3x24` — the NEON zero-spill frontier shape (`3x24 u=2`, 4.111 insns/FMA against the
+  shipped `4x16`'s 5.000), as a **measured-but-not-dispatched** candidate for #136's open shape
+  decision. Body is `shapegen -arch arm64 -emit 3x24/2`'s verbatim output, so the shape measured
+  is the shape the frontier is stated over. The register model predicted it fits (25 live of 32)
+  and `spill-audit -goarch arm64` confirms on the real file: **148 insns / 36 arith = 4.11, 0
+  vector stack refs, 0 calls, 0 bounds-check exits** — the same figure shapegen prints, from the
+  independent instrument. Differentially green against its scalar twin including odd `kc`, which
+  is what exercises the `u=2` remainder pass. It sits in `referenceTiles` so it cannot dispatch:
+  recording its `InsnsPerFMA` would hand it dispatch on arithmetic alone, and #136's own caution
+  is to rank on the sweep's measured rate and treat the audit as a filter (#136).
+
 ### Fixed
 - `kern.MemOpsPerFMA` divided by `vec.Lanes` — the shim's 16-lane *Block* width — where the
   backend's *native* vector width belongs. It counts instructions, and one NEON

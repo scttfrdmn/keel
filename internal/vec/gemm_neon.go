@@ -196,6 +196,87 @@ func Kernel4x16(kc int, a, b, c []float32, ldc int) {
 	Store128(r3[12:16], Add128(Load128(r3[12:16]), c3_3))
 }
 
+// Kernel3x24 computes C += A·B for one 3x24 tile from k-major packed panels,
+// TWO k-steps per pass. 3×6 = 18 accumulators, 6 B-vectors, 1 broadcast:
+// live = 18+6+1 = 25 of 32 V-registers (fits).
+//
+// This is `shapegen -arch arm64 -frontier`'s own winner: the leanest of the 107
+// emittable zero-spill NEON shapes at 4.111 insns/FMA, against the shipped
+// Kernel4x16's 5.000, which gate-p3 already states as SWEEP_BEST_IPF_ARM64 and
+// reconciles live on every run. The unroll is 2 because u=1 reads 4.722 and u=4
+// spills 11 — u=2 is the frontier, not a tuning choice.
+//
+// The body is the emitter's VERBATIM output with the package qualifier stripped,
+// so the shape measured here is the shape the frontier is stated over rather
+// than a hand transcription of it. Hence the two loops: the unrolled pass, then
+// a single-k remainder pass for an odd kc.
+//
+// It is a referenceTile and not a shipped kernel until the GB10 sweep rules, and
+// that staging is deliberate rather than cautious. It would win dispatch the
+// moment an audited InsnsPerFMA were recorded on it — under either divisor, which
+// #170 is why that needs saying: at the native width 3x24 ties 4x16 at exactly
+// 0.5 mem-ops/FMA and takes the InsnsPerFMA tie-break, and under the Block width
+// it won the primary axis outright at 1.0 against 1.25. So registering the count
+// now would ship a shape on a static instruction count, which is the move
+// 972ee47 had to undo in the other direction, and which #136's own caution 2
+// forbids: rank on the sweep's measured rate, and treat the audit as a filter.
+func Kernel3x24(kc int, a, b, c []float32, ldc int) {
+	var c0_0, c0_1, c0_2, c0_3, c0_4, c0_5 F32x4
+	var c1_0, c1_1, c1_2, c1_3, c1_4, c1_5 F32x4
+	var c2_0, c2_1, c2_2, c2_3, c2_4, c2_5 F32x4
+	var b0, b1, b2, b3, b4, b5, av F32x4
+	ap := a[:kc*3]
+	bp := b[:kc*24]
+	for len(ap) >= 6 && len(bp) >= 48 {
+		b0, b1, b2, b3, b4, b5 = Load128(bp[0:4]), Load128(bp[4:8]), Load128(bp[8:12]), Load128(bp[12:16]), Load128(bp[16:20]), Load128(bp[20:24])
+		av = Broadcast128(ap[0])
+		c0_0, c0_1, c0_2, c0_3, c0_4, c0_5 = FMA128(av, b0, c0_0), FMA128(av, b1, c0_1), FMA128(av, b2, c0_2), FMA128(av, b3, c0_3), FMA128(av, b4, c0_4), FMA128(av, b5, c0_5)
+		av = Broadcast128(ap[1])
+		c1_0, c1_1, c1_2, c1_3, c1_4, c1_5 = FMA128(av, b0, c1_0), FMA128(av, b1, c1_1), FMA128(av, b2, c1_2), FMA128(av, b3, c1_3), FMA128(av, b4, c1_4), FMA128(av, b5, c1_5)
+		av = Broadcast128(ap[2])
+		c2_0, c2_1, c2_2, c2_3, c2_4, c2_5 = FMA128(av, b0, c2_0), FMA128(av, b1, c2_1), FMA128(av, b2, c2_2), FMA128(av, b3, c2_3), FMA128(av, b4, c2_4), FMA128(av, b5, c2_5)
+		b0, b1, b2, b3, b4, b5 = Load128(bp[24:28]), Load128(bp[28:32]), Load128(bp[32:36]), Load128(bp[36:40]), Load128(bp[40:44]), Load128(bp[44:48])
+		av = Broadcast128(ap[3])
+		c0_0, c0_1, c0_2, c0_3, c0_4, c0_5 = FMA128(av, b0, c0_0), FMA128(av, b1, c0_1), FMA128(av, b2, c0_2), FMA128(av, b3, c0_3), FMA128(av, b4, c0_4), FMA128(av, b5, c0_5)
+		av = Broadcast128(ap[4])
+		c1_0, c1_1, c1_2, c1_3, c1_4, c1_5 = FMA128(av, b0, c1_0), FMA128(av, b1, c1_1), FMA128(av, b2, c1_2), FMA128(av, b3, c1_3), FMA128(av, b4, c1_4), FMA128(av, b5, c1_5)
+		av = Broadcast128(ap[5])
+		c2_0, c2_1, c2_2, c2_3, c2_4, c2_5 = FMA128(av, b0, c2_0), FMA128(av, b1, c2_1), FMA128(av, b2, c2_2), FMA128(av, b3, c2_3), FMA128(av, b4, c2_4), FMA128(av, b5, c2_5)
+		ap, bp = ap[6:], bp[48:]
+	}
+	for len(ap) >= 3 && len(bp) >= 24 {
+		b0, b1, b2, b3, b4, b5 = Load128(bp[0:4]), Load128(bp[4:8]), Load128(bp[8:12]), Load128(bp[12:16]), Load128(bp[16:20]), Load128(bp[20:24])
+		av = Broadcast128(ap[0])
+		c0_0, c0_1, c0_2, c0_3, c0_4, c0_5 = FMA128(av, b0, c0_0), FMA128(av, b1, c0_1), FMA128(av, b2, c0_2), FMA128(av, b3, c0_3), FMA128(av, b4, c0_4), FMA128(av, b5, c0_5)
+		av = Broadcast128(ap[1])
+		c1_0, c1_1, c1_2, c1_3, c1_4, c1_5 = FMA128(av, b0, c1_0), FMA128(av, b1, c1_1), FMA128(av, b2, c1_2), FMA128(av, b3, c1_3), FMA128(av, b4, c1_4), FMA128(av, b5, c1_5)
+		av = Broadcast128(ap[2])
+		c2_0, c2_1, c2_2, c2_3, c2_4, c2_5 = FMA128(av, b0, c2_0), FMA128(av, b1, c2_1), FMA128(av, b2, c2_2), FMA128(av, b3, c2_3), FMA128(av, b4, c2_4), FMA128(av, b5, c2_5)
+		ap, bp = ap[3:], bp[24:]
+	}
+	r0 := c[0*ldc : 0*ldc+24]
+	Store128(r0[0:4], Add128(Load128(r0[0:4]), c0_0))
+	Store128(r0[4:8], Add128(Load128(r0[4:8]), c0_1))
+	Store128(r0[8:12], Add128(Load128(r0[8:12]), c0_2))
+	Store128(r0[12:16], Add128(Load128(r0[12:16]), c0_3))
+	Store128(r0[16:20], Add128(Load128(r0[16:20]), c0_4))
+	Store128(r0[20:24], Add128(Load128(r0[20:24]), c0_5))
+	r1 := c[1*ldc : 1*ldc+24]
+	Store128(r1[0:4], Add128(Load128(r1[0:4]), c1_0))
+	Store128(r1[4:8], Add128(Load128(r1[4:8]), c1_1))
+	Store128(r1[8:12], Add128(Load128(r1[8:12]), c1_2))
+	Store128(r1[12:16], Add128(Load128(r1[12:16]), c1_3))
+	Store128(r1[16:20], Add128(Load128(r1[16:20]), c1_4))
+	Store128(r1[20:24], Add128(Load128(r1[20:24]), c1_5))
+	r2 := c[2*ldc : 2*ldc+24]
+	Store128(r2[0:4], Add128(Load128(r2[0:4]), c2_0))
+	Store128(r2[4:8], Add128(Load128(r2[4:8]), c2_1))
+	Store128(r2[8:12], Add128(Load128(r2[8:12]), c2_2))
+	Store128(r2[12:16], Add128(Load128(r2[12:16]), c2_3))
+	Store128(r2[16:20], Add128(Load128(r2[16:20]), c2_4))
+	Store128(r2[20:24], Add128(Load128(r2[20:24]), c2_5))
+}
+
 // Kernel8x16 computes C += A·B for one 8x16 tile from k-major packed
 // panels, one k-step per pass. 8×4 = 32 accumulators, 4 B-vectors, 1
 // broadcast: live = 32+4+1 = 37 of 32 V-registers (PREDICTED SPILL).

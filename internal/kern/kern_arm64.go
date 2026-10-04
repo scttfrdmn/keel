@@ -47,6 +47,13 @@ func vectorKernels() []Kernel {
 // nothing ever runs a spilling tile. If the audit refutes a prediction — a shape
 // the model called spilled that does not — it is promoted to vectorKernels then,
 // on the assembly's word, not this file's guess.
+// It also carries a candidate whose prediction is the OPPOSITE — 3x24, which the
+// model says fits — and that is a second use of this list rather than a stretch
+// of its charter. Measured() is what the differential test and the kernel
+// benchmark walk, Kernels() is what dispatch ranks, so a shape placed here is
+// evidence before it is a product. Both of this list's jobs are the same
+// mechanism read in the two directions: a shape is held out of dispatch until
+// the assembly and then the sweep have had their say.
 func referenceTiles() []Kernel {
 	if !vec.HasNEON() {
 		return nil
@@ -59,5 +66,21 @@ func referenceTiles() []Kernel {
 		{Name: NEON, MR: 8, NR: 12, Unroll: 1, Fn: vec.Kernel8x12},
 		{Name: NEON, MR: 8, NR: 16, Unroll: 1, Fn: vec.Kernel8x16},
 		{Name: NEON, MR: 4, NR: 32, Unroll: 1, Fn: vec.Kernel4x32},
+		// 3x24 u=2 is the NEON zero-spill frontier — the leanest of the 107
+		// emittable shapes at 4.111 insns/FMA against the shipped 4x16's 5.000,
+		// which is the figure gate-p3 states as SWEEP_BEST_IPF_ARM64 and
+		// reconciles against shapegen -frontier on every run. #136's question is
+		// whether it ships, and the issue's own caution 2 answers how that is
+		// decided: rank on the sweep's measured rate, treat the audit as a
+		// filter. So it sits here, benchmarked and audited and unable to
+		// dispatch, until the GB10 sweep rules.
+		//
+		// InsnsPerFMA is deliberately absent, and absent is not the same as
+		// unknown here: this shape's count is known (shapegen prints it), and
+		// recording it would hand 3x24 dispatch on arithmetic alone, since it
+		// beats 4x16 on the memory axis or ties it on both divisors (#170). The
+		// field stays empty because its meaning in betterFor is "not yet ranked
+		// by anything measured", which is exactly this shape's status.
+		{Name: NEON, MR: 3, NR: 24, Unroll: 2, Fn: vec.Kernel3x24},
 	}
 }
