@@ -423,6 +423,47 @@ baseline_state() {
 # counted it in two buckets. This is the single classifier: scalar 0/1 flags in, one word out,
 # precedence ordered by what most limits the host's headline verdict. baseline-test.sh drives
 # every flag combination and proves the fleet sum.
+# peak_bucket STATE READING BASELINE MARGIN -> exactly one bucket word, for gate-p3's arm64
+# percent-of-peak criterion (#167). On scale_bucket's precedent below and for its reason: the
+# decision was inline in gate-p3, where the only way to exercise it is to run a gate against an
+# arm64 corpus, so gate-p5's "readers pass their controls" count had to EXCLUDE it by name
+# (#169's sibling gap). A pure function is a thing baseline-test.sh can drive, and gate-p5
+# already runs baseline-test.sh -- which is the difference between a control and an unread one:
+# scripts/exercise-baseline.sh is run by no gate and by no CI job.
+#
+#   holds        a registered baseline, and the reading clears it net of margin
+#   below        a registered baseline, and the reading does not
+#   first-sight  no row and no witness that predates this criterion -> BASELINE, green-compatible
+#   owed         no row, but a witness postdating the criterion -> an unmet registration
+#   conflict     the derivation set and the registry both claim the host
+#   unresolved   any input the caller could not read, and any state this does not know
+#
+# THE BAR IS COMPUTED UNROUNDED HERE, which is a fix and not a move. gate-p3 rendered it with
+# `printf "%.1f"` and then fed that STRING to the comparison, so a baseline of 55.25 against a
+# 2.6 margin compared the reading to 52.7 rather than 52.65 -- a bar 0.05 points stricter than
+# the registry says, because the rendering became the operand (#143). The caller still renders
+# the bar for its message; it no longer judges with the rendering.
+#
+# FAIL-CLOSED on an unreadable number: an empty or non-numeric baseline, margin or reading is
+# `unresolved`, never `holds`. awk would coerce "" to 0 and silently clear every reading.
+peak_bucket() {
+  local state="$1" reading="$2" base="$3" margin="$4"
+  case "$state" in
+    registered)
+      local n='^-?[0-9]+([.][0-9]+)?$'
+      [[ "$reading" =~ $n && "$base" =~ $n && "$margin" =~ $n ]] || { printf 'unresolved\n'; return 0; }
+      if awk -v r="$reading" -v b="$base" -v m="$margin" 'BEGIN{exit !(r+0 >= (b+0)-(m+0))}'; then
+        printf 'holds\n'
+      else
+        printf 'below\n'
+      fi ;;
+    new)      printf 'first-sight\n' ;;
+    owing)    printf 'owed\n' ;;
+    conflict) printf 'conflict\n' ;;
+    *)        printf 'unresolved\n' ;;
+  esac
+}
+
 scale_bucket() {
   local cleared="$1" missed="$2" notadm="$3" noisy="$4" base="$5"
   if   [[ "$missed"  -eq 1 ]]; then printf 'missed\n'

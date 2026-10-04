@@ -30,6 +30,11 @@ While the major version is 0, minor versions may contain breaking changes.
   unreached on arm64, so PEAK_FLOOR cannot be applied to a 4-lane kernel (#167).
 
 ### Fixed
+- gate-p3's arm64 percent-of-peak decision is extracted to `peak_bucket` in `gate-lib.sh`, on
+  `scale_bucket`'s precedent, so `baseline-test.sh` drives it and gate-p5 therefore runs it —
+  closing the coverage gap that claim had disclosed by name. The extraction also fixes a #143
+  violation: the bar was rendered with `printf "%.1f"` and that string was then the comparison
+  operand, so a baseline of 55.051 judged against 52.5 rather than 52.451 (#167).
 - `baseline_spent` takes a criterion's introduction date, so a host registered before a
   criterion existed renders first-sight instead of owing a row it could not have registered.
   Without it, adding any registry-governed criterion to a live era resolved `owing` → FAIL on

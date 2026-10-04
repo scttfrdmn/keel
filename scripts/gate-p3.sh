@@ -967,22 +967,29 @@ else
         unmeasured "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI, but this criterion cannot resolve what to judge it against: era='$P3_ERA' margin='$P3_BASELINE_MARGIN' cpu_model='$hcpu' (from $P3_BASELINE_ERAS, gate-p5.sh BASELINE_MARGIN, and this run's probe). A reading whose bar cannot be resolved is unmeasured, not cleared (#167)"
         continue
       fi
-      case "$PSTATE" in
-        registered)
-          PROW="$(baseline_lookup "$P3_BASELINE_REGISTRY" "$hcpu" "$PCRIT" "$P3_ERA")"
-          pval="$(awk -F'\t' '{print $4}' <<<"$PROW")"
-          PBAR="$(awk -v b="$pval" -v m="$P3_BASELINE_MARGIN" 'BEGIN{printf "%.1f", b-m}')"
-          PWHY="this host's registered baseline ${pval}% (era $(awk -F'\t' '{print $3}' <<<"$PROW")) less the same ${P3_BASELINE_MARGIN} points of margin the fleet bar uses (estimator: $(awk -F'\t' '{print $5}' <<<"$PROW"); recomputable from $(awk -F'\t' '{print $6}' <<<"$PROW"); registered $(awk -F'\t' '{print $7}' <<<"$PROW"))"
-          # $frac is the RENDERED value; the comparison uses ACT_LO*100, the unrounded one
-          # (#143). Comparing the rendering would let a 0.04-point rounding decide a verdict.
-          if awk -v v="$ACT_LO" -v f="$PBAR" 'BEGIN{exit !(100*v >= f)}'; then
-            pass "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI (>= ${PBAR}%, $PWHY)"
-          else
-            fail "[$host] $ACT_ID reaches only ${frac}% of this host's measured NEON peak, net of CI (< ${PBAR}%, $PWHY)"
-          fi ;;
-        new)
+      # THE DECISION IS peak_bucket's, THE SENTENCE IS THIS GATE'S (#167). Split so the decision
+      # is a thing scripts/baseline-test.sh can drive and gate-p5 therefore actually runs -- the
+      # arms below used to be inline, reachable only by running a gate against an arm64 corpus,
+      # which is why gate-p5's controls count had to exclude this reader by name. scale_bucket
+      # set the precedent and the reason is identical. peak_bucket also computes the bar
+      # UNROUNDED; $PBAR below is for the message only.
+      PROW=""; pval=""; PBAR=""; PWHY=""
+      if [[ "$PSTATE" == registered ]]; then
+        PROW="$(baseline_lookup "$P3_BASELINE_REGISTRY" "$hcpu" "$PCRIT" "$P3_ERA")"
+        pval="$(awk -F'\t' '{print $4}' <<<"$PROW")"
+        PBAR="$(awk -v b="$pval" -v m="$P3_BASELINE_MARGIN" 'BEGIN{printf "%.1f", b-m}')"
+        PWHY="this host's registered baseline ${pval}% (era $(awk -F'\t' '{print $3}' <<<"$PROW")) less the same ${P3_BASELINE_MARGIN} points of margin the fleet bar uses (estimator: $(awk -F'\t' '{print $5}' <<<"$PROW"); recomputable from $(awk -F'\t' '{print $6}' <<<"$PROW"); registered $(awk -F'\t' '{print $7}' <<<"$PROW"))"
+      fi
+      # ACT_LO*100, never the rendered $frac (#143).
+      PACT="$(awk -v v="$ACT_LO" 'BEGIN{printf "%.6f", v*100}')"
+      case "$(peak_bucket "$PSTATE" "$PACT" "$pval" "$P3_BASELINE_MARGIN")" in
+        holds)
+          pass "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI (>= ${PBAR}%, $PWHY)" ;;
+        below)
+          fail "[$host] $ACT_ID reaches only ${frac}% of this host's measured NEON peak, net of CI (< ${PBAR}%, $PWHY)" ;;
+        first-sight)
           baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline, not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). No row for ($hcpu, $PCRIT) in era $P3_ERA and no witness row, so this silicon has not spent its BASELINE at this configuration (#167)" ;;
-        owing)
+        owed)
           # The wording is keyed to what reaching this arm now MEANS, not to what it meant before
           # #169. A witness row older than $P3_PEAK_CRIT_SINCE no longer lands here, so the only
           # way in is a judgement recorded when this criterion already existed -- a genuine unmet
@@ -992,7 +999,10 @@ else
         conflict)
           fail "[$host] $PCRIT is claimed by both PEAK_FLOOR's derivation set and $P3_BASELINE_REGISTRY, so two artifacts disagree about which bar governs this host and the gate will not pick one (#167). PEAK_FLOOR declares no derivation set, so reaching this arm means one was added without re-reading this criterion" ;;
         *)
-          unmeasured "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI, but baseline_state returned '$PSTATE' for ($hcpu, $PCRIT, era $P3_ERA) — a class this criterion does not know how to judge is unmeasured, not cleared (#167)" ;;
+          # `unresolved` and anything peak_bucket does not name. $PSTATE is printed, not the
+          # bucket, because the STATE is the diagnostic -- the bucket is this gate's own word for
+          # it and would tell a reader nothing about which input could not be read.
+          unmeasured "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI, but the governing bar does not resolve: baseline_state gave '$PSTATE' for ($hcpu, $PCRIT, era $P3_ERA) with baseline='$pval' margin='$P3_BASELINE_MARGIN' — unmeasured, not cleared (#167)" ;;
       esac
       continue
     fi

@@ -369,6 +369,41 @@ is 'an empty derivation set leaves a host to the registry rather than to the fle
 is 'the tracked registry was still not written' "$(cksum <scripts/host-baselines.tsv)" "$REG_BEFORE"
 is 'the tracked witness index was still not written' "$(cksum <scripts/judged-runs.tsv)" "$WIT_BEFORE"
 
+echo "-- peak_bucket: gate-p3's arm64 percent-of-peak decision (#167) --"
+# WHY THESE EXIST AT ALL. The decision was inline in gate-p3, so the only way to exercise it was
+# to run a gate against an arm64 corpus — and gate-p5's "readers pass their controls" count had
+# to EXCLUDE this reader by name because of it. Extracting it on scale_bucket's precedent is what
+# makes it drivable here, which is the difference between a control and an unread one:
+# scripts/exercise-baseline.sh is run by no gate and no CI job, so an arm added there would have
+# closed nothing.
+is 'a reading above its bar holds'              "$(peak_bucket registered 78.8 78.8 2.6)"  'holds'
+# ON THE BAR, with operands chosen so the bar is EXACT in binary -- 55.3-2.6 is
+# 52.699999999999996, so a `52.7 vs 55.3/2.6` fixture never touches the boundary and a
+# `>=`-to-`>` mutant survives it. Measured, then written: 50.0-2.5 is exactly 47.5.
+is 'a reading exactly ON the bar holds'         "$(peak_bucket registered 47.5 50.0 2.5)"  'holds'
+is 'a reading below the bar is below'           "$(peak_bucket registered 52.6 55.3 2.6)"  'below'
+# THE ROUNDING CASE, and the reason this function computes the bar itself. gate-p3 used to render
+# the bar with printf "%.1f" and feed that STRING to the comparison, so 55.25 - 2.6 = 52.65 was
+# compared as 52.7 — a bar 0.05 points stricter than the registry says. A reading of 52.66 clears
+# the real bar and missed the rendered one, which is #143 arriving through a format string.
+# and these operands are chosen the same way: 55.051-2.6 = 52.451, which %.1f lifts to 52.5,
+# so a reading AT the true bar clears it and misses the rendered one. The first attempt used
+# 55.25-2.6 = 52.649999..., which %.1f rounds DOWN to 52.6 -- a fixture that could not see the
+# bug it was written for, and the mutant proved it before this one replaced it.
+is 'the bar is not rounded before comparing'    "$(peak_bucket registered 52.451 55.051 2.6)" 'holds'
+is 'first sight is not a judgement'             "$(peak_bucket new 78.8 '' 2.6)"           'first-sight'
+is 'an unmet registration is its own bucket'    "$(peak_bucket owing 78.8 '' 2.6)"         'owed'
+is 'two artifacts claiming one host conflict'   "$(peak_bucket conflict 78.8 55.3 2.6)"    'conflict'
+is 'an unkeyable host resolves nothing'         "$(peak_bucket nokey 78.8 '' 2.6)"         'unresolved'
+# FAIL-CLOSED, and each input separately: awk coerces "" to 0, so an empty baseline would make
+# every reading clear a bar of -2.6. Driven per input because one guard covering three inputs is
+# one witness, and the three are read from three different places (registry, gate-p5.sh, this run).
+is 'an empty baseline cannot clear a bar'       "$(peak_bucket registered 78.8 '' 2.6)"    'unresolved'
+is 'an empty margin cannot clear a bar'         "$(peak_bucket registered 78.8 55.3 '')"   'unresolved'
+is 'an empty reading cannot clear a bar'        "$(peak_bucket registered '' 55.3 2.6)"    'unresolved'
+is 'a non-numeric baseline cannot clear a bar'  "$(peak_bucket registered 78.8 'n/a' 2.6)" 'unresolved'
+is 'a state this does not know is unresolved'   "$(peak_bucket wat 78.8 55.3 2.6)"         'unresolved'
+
 echo "-- scale_bucket: the scaling aggregate's buckets must PARTITION the fleet (#90, #119) --"
 # Each host lands in exactly ONE bucket, by strict precedence. The case that minted this:
 # a host noise-limited on scale AND BASELINE on README (vesta, #119 live exercise) set both
