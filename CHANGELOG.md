@@ -92,6 +92,15 @@ While the major version is 0, minor versions may contain breaking changes.
   core type that would have exposed it. Caveats are assembled in one place so the formula body
   stays readable and no caveat is stated twice (#171).
 
+### Added
+- `remote-exec-test.sh` §11 drives **`bench_compare`'s T20 guard**, which was implemented and
+  **unwitnessed** — the state the #50 defect itself was in. benchstat prints two independent
+  one-column tables when two logs' configuration keys differ, which *looks* like a comparison and
+  exits 0; that cost #47's A/B 120 correct medians with not one delta among them. Four controls,
+  one per claim the guard makes: a forked table is refused nonzero, the forking key is **named**,
+  an empty arm is distinguished from a forked table by cause (§5 rule 6), and a genuine comparison
+  is still accepted. Mutation-tested — restoring the defect reds two of the four (#50).
+
 ### Fixed
 - `gate-p5.sh`'s checkptr branch carried a pre-registered prediction — *"predict this still fires
   under `-race` and not under `-d=checkptr`"* — and it is **refuted**: on go1.27.1 it fires under

@@ -1107,6 +1107,65 @@ for k,t in d.items():
 fi
 
 head_ "verdict"
+head_ "-- §11: bench_compare refuses a comparison benchstat silently declined (#50, T20) --"
+# WHY THESE EXIST. benchstat groups results into one table per distinct
+# CONFIGURATION, where a configuration is every `key: value` line in the log. Two
+# logs differing in one key are not compared: it prints two independent
+# one-column tables -- which LOOKS like a comparison -- and exits 0. keel's own
+# provenance preamble is what tripped it, because those markers are key:value
+# lines by construction (§7 rule 7 put them there). The cost was #47's A/B: 20
+# benchmarks x 3 hosts x 2 builds of correct medians with not one delta among
+# them, and a green exit.
+#
+# bench_compare has guarded this since, and until now NOTHING drove the guard --
+# implemented and unwitnessed, which is the state the #50 defect itself was in.
+# Three controls, because the guard makes three distinct claims.
+BC_T="$(mktemp -d)"
+printf 'goos: linux\ngoarch: amd64\nkeel-bench-cpu: A\nBenchmarkX\t10\t100 ns/op\n' >"$BC_T/fork-a"
+printf 'goos: linux\ngoarch: amd64\nkeel-bench-cpu: B\nBenchmarkX\t10\t110 ns/op\n' >"$BC_T/fork-b"
+printf 'goos: linux\ngoarch: amd64\nkeel-bench-cpu: A\nBenchmarkX\t10\t100 ns/op\n' >"$BC_T/empty-a"
+printf 'goos: linux\ngoarch: amd64\nkeel-bench-cpu: A\n'                              >"$BC_T/empty-b"
+: >"$BC_T/ok-a"; : >"$BC_T/ok-b"
+printf 'goos: linux\ngoarch: amd64\nkeel-bench-cpu: A\n' | tee "$BC_T/ok-a" >"$BC_T/ok-b"
+for i in 0 1 2 3 4 5; do
+  printf 'BenchmarkX\t10\t%d ns/op\n' $((100 + i)) >>"$BC_T/ok-a"
+  printf 'BenchmarkX\t10\t%d ns/op\n' $((200 + i)) >>"$BC_T/ok-b"
+done
+
+# Claim 1: a forked table is REFUSED with a nonzero status, where benchstat alone
+# would have exited 0.
+if out="$(bench_compare "$BC_T/fork-a" "$BC_T/fork-b" 2>&1)"; then
+  fail_ "bench_compare returned 0 on a forked table -- the #50 defect is back, and it is invisible"
+else
+  pass_ "a forked table is refused with a nonzero status"
+  # Claim 2: it NAMES the key that forked it. Without this the operator is told
+  # only that something is wrong, on a log whose preamble has a dozen keys.
+  if grep -q 'keel-bench-cpu: <differs>' <<<"$out"; then
+    pass_ "the forking configuration key is named"
+  else
+    fail_ "the forking key was not named; the operator cannot tell which marker split the table"
+  fi
+fi
+
+# Claim 3: the OTHER cause of a missing "vs base" column is reported as itself.
+# Identical configurations plus an arm with no rows is not a forked table, and
+# §5 rule 6 forbids one verdict standing for two causes.
+if out="$(bench_compare "$BC_T/empty-a" "$BC_T/empty-b" 2>&1)"; then
+  fail_ "bench_compare returned 0 when one arm had no benchmark rows at all"
+elif grep -q 'configure' <<<"$out" && grep -q 'no benchmark rows' <<<"$out"; then
+  pass_ "an empty arm is distinguished from a forked table, by cause"
+else
+  fail_ "an empty arm was not distinguished from a forked table (§5 rule 6)"
+fi
+
+# And the healthy case must still pass, or the guard is just a refusal machine.
+if out="$(bench_compare "$BC_T/ok-a" "$BC_T/ok-b" 2>&1)" && grep -q 'vs base' <<<"$out"; then
+  pass_ "a genuine comparison is still accepted (the guard is not refusing everything)"
+else
+  fail_ "bench_compare refused two identically-configured logs with rows in both"
+fi
+rm -rf "$BC_T"
+
 if [[ "$FAILS" -eq 0 ]]; then
   echo "  GREEN -- a finished run reports its own exit code, a killed one reports"
   echo "  vanished, a severed link costs nothing, a missing supervisor is loud,"
@@ -1117,5 +1176,6 @@ if [[ "$FAILS" -eq 0 ]]; then
   echo "  one node -- or not taken, and the shape is recorded rather than trusted."
   exit 0
 fi
+
 echo "  RED -- $FAILS check(s) failed."
 exit 1
