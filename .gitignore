@@ -53,3 +53,9 @@ bench/results/*.local.*
 # and reproduces nothing.
 __pycache__/
 *.pyc
+
+# macOS Finder metadata. Untracked and harmless in itself, but `git status
+# --porcelain` reports it, and gate-p5 refuses to run a judged measurement on a
+# dirty tree -- so one of these aborted an arm64 campaign mid-launch on 2026-10-04
+# while every "tree clean" check that session had filtered it out of the output.
+.DS_Store
