@@ -23,6 +23,16 @@ While the major version is 0, minor versions may contain breaking changes.
   `gate-lib.sh` with nine controls in `baseline-test.sh`, including #145's own documented
   2.25 → 4.42 regression and a one-instruction increase.
 
+### Added
+- `bench` states §5 rule 5's **placement law for darwin** on every reading it governs: darwin has
+  neither instrument (no cpufreq governor, no affinity mask), so a reading there is not a
+  measurement in this project's sense and carries no judged weight. This is rule 12's
+  unfixable-limitation-inside-the-number rather than a debt, and it costs nothing today —
+  **no darwin reading is judged or published anywhere**: zero README rows, no gate reads a darwin
+  host, and §4/P3 scopes the dev host to plumbing verification. It deliberately does **not** claim
+  `THREAD_AFFINITY_POLICY` is inert, which is the belief #138 forbids restating as a finding
+  (#138).
+
 ### Changed
 - **DESIGN.md §4/P2 amended** (2026-10-03, on Scott's directive): the `>=1.5x` measured/formula
   divergence has a **second cause**, so its double-pump reading is complete on amd64 and not off
@@ -41,6 +51,21 @@ While the major version is 0, minor versions may contain breaking changes.
   stays readable and no caveat is stated twice (#171).
 
 ### Fixed
+- `kern.HostClassEvidence` reported **"no vector backend in this build (class unused)"** on
+  arm64-with-simd, on a host running two NEON shapes that `Preferred` actively ranks. The defect
+  was a build tag, not a string: `class_nosimd.go` was tagged as the complement of
+  `class_amd64.go` *alone*. New `class_arm64.go` reports `ClassFMA` — §4's strict default for a
+  host with no front-end fingerprint, which arm64 has none of since the roofline machinery is
+  amd64-derived (#155) — with evidence that says what was and was not examined. **Dispatch does
+  not move**: both classes pick `4x16` on the shipped shapes. `TestHostClassAgreesWithItsEvidence`
+  could not catch this because the class and the string were consistently wrong *together*; the
+  new guard is written against `Kernels()` rather than `GOARCH`, so the next backend inherits it
+  (#172).
+- `gate-p3.sh` printed "the local run exercises the scalar path only (darwin/arm64 has no
+  archsimd)" — true on go1.26, false since go1.27 shipped arm64 archsimd. The dev host runs real
+  NEON (160 neon oracle subtests; `Sgemm` dispatches `4x16/neon`), so the line told a reader the
+  local arm exercised scalar when it exercised the vector path. Now arch-aware; what the dev host
+  actually cannot do is avx512, which is the real reason the sweep's extent is audited remotely.
 - `scripts/detach.sh` now enumerates `LABRUN_` alongside `KEEL_`/`BENCH_` in both the clear and
   the carry. `LABRUN_DIR` sets the queued remote command's working directory (`pueue add -w`), so
   it decides where the measured program is found — a decides-what-is-measured variable by §5 rule

@@ -474,7 +474,18 @@ AUDITPEAK="$BINDIR/audit-peak.log"
 # ------------------------------------------------------- Sgemm vs the oracle
 echo
 echo "-- Sgemm vs the float64 oracle: size sweep x transpose x alpha x beta --"
-info "the local run exercises the scalar path only (darwin/arm64 has no archsimd);"
+# CORRECTED 2026-10-03 (#172's neighbour): this read "the local run exercises the
+# scalar path only (darwin/arm64 has no archsimd)", which was true on go1.26 and has
+# been false since go1.27 shipped arm64 archsimd. The dev host runs REAL NEON --
+# TestKernelsAgainstOracle executes 160 neon subtests there and Sgemm dispatches to
+# 4x16/neon -- so the old line told a reader the local arm exercised scalar when it
+# exercised the vector path. What the dev host cannot do is avx512, which is the
+# actual reason the sweep's extent is audited from a remote host.
+if [[ "$(go env GOARCH)" == arm64 ]]; then
+  info "the local run exercises this host's NEON path (go1.27 ships arm64 archsimd);"
+else
+  info "the local run exercises the scalar path only (no archsimd for this GOARCH);"
+fi
 info "the sweep's extent is audited below from a host that ran it with avx512 live"
 
 LOCAL_OK=0
@@ -1153,6 +1164,22 @@ else
 fi
 
 # ----------------------------------------------- Sgemm at 2048^3 vs OpenBLAS
+#
+# TRIPWIRE (#157). This section's five direct-ssh points -- ob_preflight, the
+# `git archive | ssh tar -x` harness ship, the `ssh go test -c -tags openblas`
+# build, the ratio measure run, and ob_coretype_sweep -- are NOT covered by
+# gate-replay.sh's record/replay, which wraps remote_exec/remote_probe only. The
+# #155 arm64 port therefore witnessed this section's amd64 rendering
+# STRUCTURALLY: a diff showing its only change was a replay guard that is a no-op
+# on real runs.
+#
+# That eye-proof is valid only for that diff. **A substantive change here expires
+# it and makes #157's empirical witness required** -- the issue carries the unit
+# (extract the three inline ssh to functions as a byte-unchanged refactor, wrap
+# all five, record a corpus on vesta, determinism twice-to-zero-diff, non-vacuity
+# planted-and-shown). Stated here rather than only on #157 because the next
+# person to edit this section will be reading this file, not the tracker: an
+# issue nobody is pointed to is a debt with no address.
 echo
 echo "-- Sgemm at 2048^3: percent of measured peak, and >= 60% of single-thread OpenBLAS --"
 info "-count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME; the bar counts as cleared only net of both confidence intervals"

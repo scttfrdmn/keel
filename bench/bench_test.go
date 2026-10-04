@@ -54,6 +54,29 @@ func provenance() {
 		fmt.Println("keel-bench-cores:", runtime.NumCPU(), "logical")
 		fmt.Println("keel-bench-governor:", governor())
 		fmt.Println("keel-bench-clock-mhz:", clockMHz())
+		// #138 part 1, the stated law for a host that has NEITHER of §5 rule 5's
+		// instruments. That rule establishes a stable clock from the `performance`
+		// governor where cpufreq is readable and from BenchmarkPeak's head/middle/tail
+		// series in a virtualized guest, and it pins placement with an affinity mask.
+		// darwin supplies none of the three: no cpufreq, and XNU exposes no
+		// sched_setaffinity equivalent. What it does expose --
+		// THREAD_AFFINITY_POLICY, documented as an L2-sharing *hint* -- is UNTESTED
+		// here and this line does not claim it is inert, which is the belief #138
+		// forbids restating as a finding.
+		//
+		// What it costs, which is the half a bare "unknown" does not say: nothing
+		// today. No darwin reading is judged or published anywhere in this project --
+		// zero README rows, no gate reads a darwin host, and DESIGN.md §4/P3 scopes
+		// the dev host to plumbing verification. So this is §5 rule 12's
+		// unfixable-limitation-inside-the-number rather than a debt: the limitation is
+		// stated on every reading it governs, and the action that would remove it
+		// (test the hint, and only if a darwin row is ever to be published) is named
+		// on #138 rather than filed as owed work.
+		if runtime.GOOS == "darwin" {
+			fmt.Println("keel-bench-placement: NONE -- darwin has neither of §5 rule 5's " +
+				"instruments (no cpufreq governor, no affinity mask), so a reading here is " +
+				"not a measurement in this project's sense and carries no judged weight (#138)")
+		}
 		fmt.Println("keel-bench-platform:", runtime.GOOS+"/"+runtime.GOARCH)
 		// The compiler is part of the instrument and no bench artifact recorded it:
 		// of the 45 under archive/pinned8/ not one names a toolchain, so "1.26.x or

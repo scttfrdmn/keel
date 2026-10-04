@@ -301,3 +301,44 @@ func TestHostClassAgreesWithItsEvidence(t *testing.T) {
 		}
 	}
 }
+
+// TestHostClassEvidenceDoesNotDenyAPresentBackend is #172's regression witness,
+// and it is deliberately arch-INDEPENDENT.
+//
+// The defect was a build tag, not a string: class_nosimd.go was tagged as the
+// complement of class_amd64.go alone, so it also compiled on arm64-with-simd and
+// reported "no vector backend in this build (class unused)" on a host running two
+// NEON shapes that Preferred actively ranks. TestHostClassAgreesWithItsEvidence
+// could not see it — it asserts the class and the string come from the same bits,
+// which they did; both were consistently wrong together.
+//
+// So this asserts the one thing a reader and a future check both rely on: the
+// evidence may not claim the backend is absent when Kernels() contains a vector
+// shape. Written against Kernels() rather than against GOARCH so that the next
+// backend added to this project inherits the guard instead of needing its own
+// case — which is exactly what arm64 did not have.
+func TestHostClassEvidenceDoesNotDenyAPresentBackend(t *testing.T) {
+	var vectorShapes []string
+	for _, k := range kern.Kernels() {
+		if k.Name != kern.Scalar {
+			vectorShapes = append(vectorShapes, k.ID())
+		}
+	}
+	ev := kern.HostClassEvidence()
+	if len(vectorShapes) == 0 {
+		// The honest case for this build: no vector kernel compiled in, so the
+		// evidence SHOULD say the class is unused. Asserted rather than skipped,
+		// so the scalar configuration is covered too.
+		if !strings.Contains(ev, "class unused") {
+			t.Errorf("no vector kernel in this build, but evidence %q does not say the class is unused", ev)
+		}
+		return
+	}
+	for _, deny := range []string{"no vector backend", "class unused"} {
+		if strings.Contains(ev, deny) {
+			t.Errorf("evidence %q contains %q, but this build HAS vector kernels %v "+
+				"that Preferred ranks: a marker that denies the backend it describes is "+
+				"present, plausible and wrong (#172)", ev, deny, vectorShapes)
+		}
+	}
+}
