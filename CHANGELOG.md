@@ -93,6 +93,15 @@ While the major version is 0, minor versions may contain breaking changes.
   stays readable and no caveat is stated twice (#171).
 
 ### Fixed
+- `gate-p5.sh`'s checkptr branch carried a pre-registered prediction — *"predict this still fires
+  under `-race` and not under `-d=checkptr`"* — and it is **refuted**: on go1.27.1 it fires under
+  neither, measured three ways on arm64 including the 1x1 `Sgemv` public-API path T17 demonstrated
+  the fatal on. It failed on its **premise**: it reasoned from `golang/go#42880` ("-race does not
+  obey `go:nocheckptr`") assuming CL 761120 was annotations, when upstream's own thread says the
+  fix replaced the `*[N]T` conversion with an internal load/store taking `*T` — so no annotation
+  existed for `-race` to ignore. Adjudicated at the site with the commands. No gate edit was
+  needed: that branch is a *detector*, not a skip, so it stopped firing on its own when the fatal
+  went away (#42).
 - `kern.HostClassEvidence` reported **"no vector backend in this build (class unused)"** on
   arm64-with-simd, on a host running two NEON shapes that `Preferred` actively ranks. The defect
   was a build tag, not a string: `class_nosimd.go` was tagged as the complement of

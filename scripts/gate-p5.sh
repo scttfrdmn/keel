@@ -799,6 +799,29 @@ race_verdict() {
     #
     # So predict this still fires under -race and not under -d=checkptr, and
     # treat the split as the finding.
+    #
+    # ADJUDICATED 2026-10-03 on go1.27.1, and the prediction is REFUTED: it fires
+    # under NEITHER. Measured three ways on darwin/arm64, which exercises the same
+    # partial-slice path through LoadPart128/StorePart128 --
+    #   GOEXPERIMENT=simd go test -race ./internal/vec/           ok
+    #   GOEXPERIMENT=simd go test -race -run 'TestSgemv|TestSgemm' .   ok
+    #   GOEXPERIMENT=simd go test -gcflags=all=-d=checkptr ./internal/vec/   ok
+    # -- and the second is the very path T17 demonstrated the fatal on, a 1x1 Sgemv
+    # through the public API.
+    #
+    # The prediction failed on its PREMISE, not its logic. It reasoned from
+    # golang/go#42880 ("-race does not obey go:nocheckptr") on the assumption that
+    # CL 761120 was 30 go:nocheckptr annotations. It was not: the fix replaced the
+    # *[N]T conversion with an internal load/store taking *T, so there is no
+    # annotation for -race to ignore and #42880 never applied. Reading the upstream
+    # thread rather than the CL number is what settles that.
+    #
+    # Nothing here changes. This branch is a DETECTOR, not a skip, so when the
+    # fatal stops happening it simply stops firing and the criterion measures
+    # normally -- which is why no gate edit was needed to collect the repair. What
+    # still stands is the first bullet above: -race cannot be cross-compiled, so an
+    # amd64 verdict waits on a host-local go1.27 toolchain. That is a fleet row,
+    # not keel work.
     unmeasured "$label the -race run died on archsimd's checkptr violation before it could measure anything, so the criterion is unmeasured (toolchain-notes T17, #42, upstream golang/go#80856, fixed by CL 761120 in go1.27 — #69's port landed, but this arm needs a host-local go1.27 toolchain because -race cannot be cross-compiled, and then golang/go#42880 says -race ignores go:nocheckptr anyway; the criterion is not amendable)"
     sed -n '/checkptr: converted pointer straddles/,/^testing\.tRunner/p' "$log" | sed 's/^/        /' | head -20
   else
