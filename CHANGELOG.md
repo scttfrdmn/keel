@@ -41,6 +41,15 @@ While the major version is 0, minor versions may contain breaking changes.
   stays readable and no caveat is stated twice (#171).
 
 ### Fixed
+- `scripts/detach.sh` now enumerates `LABRUN_` alongside `KEEL_`/`BENCH_` in both the clear and
+  the carry. `LABRUN_DIR` sets the queued remote command's working directory (`pueue add -w`), so
+  it decides where the measured program is found — a decides-what-is-measured variable by §5 rule
+  21's own test — and it was in neither half, so a stale value captured into the **tmux server**
+  hours earlier outranked a fresh one on the command line. It failed closed only because that
+  directory had since been deleted; had it existed, the run would have submitted against a stale
+  tree holding a binary from another revision. Both directions driven separately per rule 21(b)
+  with a planted stale value: an override survives (`carried: PATH LABRUN_DIR`) and nothing is
+  injected when the caller sets none (#174).
 - `internal/spill`'s arm64 `isArith` was **vector-only**, so every scalar arm64 function counted
   0 arith and insns-per-arith rendered `n/a` — `scalarPeak` read "13 insns for 0 arith". arm64's
   scalar FP mnemonics (`FMADDS`, `FADDS`, …) start with `F`, not `V`; amd64's rule has covered

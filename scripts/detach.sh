@@ -90,8 +90,19 @@ cmd_run() {
   # carried set: the run is then the program that was launched — the one thing this
   # script exists to guarantee — and `build/<name>.cmd` a COMPLETE statement of it, not
   # just of the deltas. PATH is carried because it picks the `go` building the arms.
+  # LABRUN_ joins the namespace (2026-10-03, #174). It is the same defect as the
+  # KEEL_REMOTE_HOSTS one above, one variable over: `LABRUN_DIR` sets the WORKING
+  # DIRECTORY of the queued remote command (`pueue add -w`), so it decides where the
+  # measured program is found, which makes it a decides-what-is-measured variable by
+  # rule 21's own test. It was outside both the clear and the carry, so a stale server
+  # value outranked a fresh one on the command line -- observed: a run launched with
+  # `LABRUN_DIR=/tmp/keel-q2` submitted against `/tmp/keel-3x24` captured hours
+  # earlier. It FAILED CLOSED only because that directory had since been deleted and
+  # pueue could not canonicalize it; had it still existed, the submission would have
+  # succeeded against a stale tree, and a driver written with relative paths would
+  # have run whichever binaries were sitting there and reported them as the new arm.
   local carried=() v
-  for v in PATH GOEXPERIMENT GOMAXPROCS $(compgen -v | grep -E '^(KEEL_|BENCH_)' || true); do
+  for v in PATH GOEXPERIMENT GOMAXPROCS $(compgen -v | grep -E '^(KEEL_|BENCH_|LABRUN_)' || true); do
     [[ -n "${!v+set}" ]] && carried+=("$v")
   done
 
@@ -113,7 +124,7 @@ cmd_run() {
   {
     echo '#!/usr/bin/env bash'
     printf 'cd %q || exit 3\n' "$ROOT"
-    echo 'for v in $(compgen -v | grep -E "^(KEEL_|BENCH_)" || true); do unset "$v"; done'
+    echo 'for v in $(compgen -v | grep -E "^(KEEL_|BENCH_|LABRUN_)" || true); do unset "$v"; done'
     for v in "${carried[@]}"; do printf 'export %s=%q\n' "$v" "${!v}"; done
     # THE FILE CHANNEL, ENUMERATED (2026-08-31, #146(c), ruled). The clear above makes
     # this file a complete statement of one channel, and a total restatement is only as
