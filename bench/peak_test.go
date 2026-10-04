@@ -6,6 +6,7 @@ package bench
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -82,7 +83,7 @@ var peakSink float32
 // drops several hundred MHz under a 512-bit license, which is one of the reasons
 // the formula is a cross-check and the measurement is the number.
 func peakFormulaLines() []string {
-	ghz, src, caveat := maxClockGHz()
+	ghz, src, clockCaveat := maxClockGHz()
 	var out []string
 	for _, k := range vec.PeakKernels() {
 		if ghz == 0 {
@@ -101,9 +102,21 @@ func peakFormulaLines() []string {
 		if !k.Fused {
 			flopsPerOp, note = 1.0, "2 FP ports, unfused: 1 flop/op"
 		}
+		// The "2 ports" term is DESIGN.md §4's, and it is an amd64 observation.
+		// On arm64 it is simply unverified: this project has measured 4 FMA pipes
+		// on a Cortex-X925 (124.20 GFLOP/s at 3.900 GHz) and 2 on a Cortex-A725
+		// (44.79 at 2.808), so the term is right for one core type and 2x low for
+		// the other. Said on every arm64 line and not only on a heterogeneous
+		// host, because a uniform arm64 host does not make the constant any more
+		// verified -- it just removes the second core that would have exposed it
+		// (#171). Not fed back from the measurement: the formula's whole value is
+		// being independent of what it cross-checks, so deriving the port count
+		// would force the divergence to 1.0 and destroy the double-pump signal
+		// §4/P2 keeps it for.
+
 		g := ghz * 2 * float64(k.Lanes) * flopsPerOp
 		out = append(out, fmt.Sprintf("%s: %.1f GFLOP/s (%.2f GHz %s x %s x %d lanes)%s",
-			k.Name, g, ghz, src, note, k.Lanes, caveat))
+			k.Name, g, ghz, src, note, k.Lanes, formulaCaveats(clockCaveat)))
 	}
 	return out
 }
@@ -162,11 +175,34 @@ func maxClockGHz() (ghzOut float64, src, caveat string) {
 		// from DESIGN.md's formula, and it is 2 on the A725 and 4 on the X925 —
 		// so on a host like this a measured/formula divergence has a second
 		// cause besides the double-pumping §4/P2 reads it as (#171).
-		caveat = " -- NON-UNIFORM host: describes " + which + " only, " +
-			"and the 2-FMA-port term is an assumption DESIGN.md's formula makes " +
-			"that does not hold across these core types (#171)"
+		caveat = "NON-UNIFORM host: this clock describes " + which + " only, and the " +
+			"process may run on a core with a different one"
 	}
 	return ghz, src, caveat
+}
+
+// formulaCaveats is the trailing "-- ..." the formula line carries, assembled in
+// one place so the formula body stays readable and no caveat is stated twice.
+//
+// They are independent and both can apply. The port-count one fires on every
+// arm64 line rather than only on a heterogeneous host, because a uniform arm64
+// host does not make the constant verified — it only removes the second core type
+// that would have exposed it (#171).
+func formulaCaveats(clock string) string {
+	var cs []string
+	if runtime.GOARCH == "arm64" {
+		cs = append(cs, "the 2-port term is ASSUMED: DESIGN.md §4's formula is an amd64 "+
+			"observation and arm64 pipe counts vary by core (measured 4 on Cortex-X925, "+
+			"2 on Cortex-A725), so a measured/formula divergence here has a cause "+
+			"besides double-pumping (#171)")
+	}
+	if clock != "" {
+		cs = append(cs, clock)
+	}
+	if len(cs) == 0 {
+		return ""
+	}
+	return " -- " + strings.Join(cs, "; ")
 }
 
 // cpuMaxGHz is one CPU's cpuinfo_max_freq in GHz, or 0.

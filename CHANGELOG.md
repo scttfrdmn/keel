@@ -23,6 +23,23 @@ While the major version is 0, minor versions may contain breaking changes.
   `gate-lib.sh` with nine controls in `baseline-test.sh`, including #145's own documented
   2.25 → 4.42 regression and a one-instruction increase.
 
+### Changed
+- **DESIGN.md §4/P2 amended** (2026-10-03, on Scott's directive): the `>=1.5x` measured/formula
+  divergence has a **second cause**, so its double-pump reading is complete on amd64 and not off
+  it. The formula's `2 FMA ports` term is an amd64 observation and arm64 pipe counts vary by core
+  *within one package* — measured 3.98 on a Cortex-X925 and 1.99 on a Cortex-A725 — so the term is
+  right for the little core and 2x low for the big one, and the old sentence would have had a
+  reader record a double-pumping Arm part that does not exist. Cheap to have been wrong about only
+  because #11 already refused to let the formula be a denominator: no verdict has ever divided by
+  it. Direction per §5 rule 15: the clause can only turn a confident attribution into an ambiguous
+  one. It also states the cross-check's real scope — a virtualized guest has no `cpufreq`, so the
+  formula renders `unavailable` across the whole judged AWS fleet and is in practice a **dev-tier**
+  instrument (#171).
+- `bench`'s formula line now flags the port term as **ASSUMED on every arm64 line**, not only on a
+  heterogeneous host: a uniform arm64 host does not verify the constant, it just removes the second
+  core type that would have exposed it. Caveats are assembled in one place so the formula body
+  stays readable and no caveat is stated twice (#171).
+
 ### Fixed
 - `internal/spill`'s arm64 `isArith` was **vector-only**, so every scalar arm64 function counted
   0 arith and insns-per-arith rendered `n/a` — `scalarPeak` read "13 insns for 0 arith". arm64's
