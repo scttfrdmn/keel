@@ -351,6 +351,110 @@ stage_citations() {
 # shebang sweep of every tracked-or-untracked file, so a name is sufficient but never necessary.
 # The sweep found exactly one such file tree-wide at this rev; the +97 is booked in
 # docs/apparatus-ledger.md as a definition correction, not a spend.
+# ---------------------------------------------------------- 4. derived-artifact sources (#168)
+#
+# THE CLASS THIS CLOSES. A derived artifact committed next to its source can go stale against
+# that source without anything reddening, because every check reads the artifact and not the
+# source. Four instances were already in this tree when #168 named it: DIGESTS-vs-logs,
+# README-rows-vs-archives (criterion 9 is the check that exists BECAUSE of this one),
+# registry-rows-vs-their-source-column, and the per-host provenance guard (#166). This stage is
+# the generalisation: anything generated and committed gets its source re-read.
+#
+# WHY HERE. gate-docs.sh is the one gate CI runs on every push (.github/workflows/docs.yml), and
+# a check nobody runs is the defect, not the fix -- scripts/exercise-baseline.sh has been sitting
+# unrun by any gate or job, which is how #167's control gap survived. Cheap enough to belong on
+# every push: two file reads and a hash per tracked manifest entry.
+#
+# IT WAS ALSO LOAD-BEARING IMMEDIATELY. #167's prerequisite was this bug -- the arm64 peak
+# figures existed only in gitignored build/ logs, so no registry row could cite a tracked source
+# and the rows could not be written until the logs were tracked. Check B below is what would
+# have said so before the hunt.
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
+  else return 2
+  fi
+}
+
+stage_sources() {
+  head_ "4. derived artifacts against their sources (#168)"
+  local n_dig=0 n_src=0 bad=0 m line hex path want got cell p f
+
+  if ! command -v sha256sum >/dev/null 2>&1 && ! command -v shasum >/dev/null 2>&1; then
+    # An absent instrument fails closed: "no hasher, so nothing was compared" must not read as
+    # "every digest matched". Same rule as every other missing-instrument path in this tree.
+    fail "neither sha256sum nor shasum is available, so no manifest could be verified -- this stage did not run rather than passing"
+    return
+  fi
+
+  # ---- A. every tracked DIGESTS manifest attests content that is still there and still matches
+  while IFS= read -r m; do
+    [[ -n "$m" ]] || continue
+    local lines=0
+    while IFS= read -r line; do
+      # A checksum line is 64 hex, whitespace, then a path. A line whose path field begins with
+      # `#` is the format defect #168 found in the v0.2.0 manifest: shasum -c does not treat it
+      # as a comment, so it tried to open a file called `# cert-...` and the manifest exited 1
+      # with both real logs reading OK. Caught here so a recurrence cannot be silent.
+      hex="${line%%[[:space:]]*}"
+      path="${line#*[[:space:]]}"; path="${path#"${path%%[![:space:]]*}"}"
+      if [[ "$path" == \#* ]]; then
+        fail "$m: a checksum line names '$path' -- a '#' in the filename field is not a comment to shasum -c, so this manifest cannot be verified by the command a reader would type (#168)"
+        bad=$((bad + 1)); continue
+      fi
+      lines=$((lines + 1)); n_dig=$((n_dig + 1))
+      if [[ ! -e "$path" ]]; then
+        fail "$m attests $path, which does not exist -- the manifest outlived the artifact it hashes (#168)"
+        bad=$((bad + 1)); continue
+      fi
+      if ! git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+        fail "$m attests $path, which is NOT tracked -- a manifest entry a fresh clone cannot check (#168)"
+        bad=$((bad + 1)); continue
+      fi
+      want="$hex"; got="$(sha256_of "$path")"
+      if [[ "$want" != "$got" ]]; then
+        fail "$m: $path has drifted from its recorded digest (manifest ${want:0:12}..., file ${got:0:12}...) (#168)"
+        bad=$((bad + 1))
+      fi
+    done < <(grep -E '^[0-9a-f]{64}[[:space:]]' "$m" || true)
+    if [[ "$lines" -eq 0 ]]; then
+      # A manifest with no checksum lines attests nothing while looking like evidence.
+      fail "$m has no checksum lines at all, so it attests nothing -- an empty manifest is not a verified one (#168)"
+      bad=$((bad + 1))
+    fi
+  done < <(git ls-files 'archive/*/DIGESTS.sha256' 'archive/*/DIGESTS*' 2>/dev/null | sort -u || true)
+
+  # ---- B. every registry row's source column names a tracked file
+  for f in scripts/host-baselines.tsv scripts/judged-runs.tsv; do
+    [[ -r "$f" ]] || { fail "$f is unreadable, so its rows' sources could not be checked (#168)"; bad=$((bad + 1)); continue; }
+    while IFS= read -r cell; do
+      [[ -n "$cell" ]] || continue
+      # host-baselines.tsv joins the N archives a median was taken over with " + ", so the cell
+      # is a LIST and checking it whole would miss a stale second member.
+      IFS='+' read -ra PARTS <<< "$cell"
+      for p in "${PARTS[@]}"; do
+        p="${p#"${p%%[![:space:]]*}"}"; p="${p%"${p##*[![:space:]]}"}"
+        [[ -n "$p" ]] || continue
+        n_src=$((n_src + 1))
+        if [[ ! -e "$p" ]]; then
+          fail "$f names source $p, which does not exist -- a bar recomputable from nothing (#168)"
+          bad=$((bad + 1))
+        elif ! git ls-files --error-unmatch "$p" >/dev/null 2>&1; then
+          fail "$f names source $p, which is NOT tracked -- #167's prerequisite was exactly this: a row whose evidence lives only in gitignored build/ (#168)"
+          bad=$((bad + 1))
+        fi
+      done
+    done < <(awk -F'\t' '!/^#/ && NF >= 6 && $1 != "cpu_model" { print $6 }' "$f")
+  done
+
+  # The counts are printed even when everything passes, because a stage that says only "ok" is
+  # indistinguishable from one whose globs matched nothing (§5 rule 12).
+  if [[ "$bad" -eq 0 ]]; then
+    pass "$n_dig manifest digest(s) match their tracked files; $n_src registry source path(s) exist and are tracked"
+    info "what this does NOT check: that a source archive still CONTAINS the rows a bar was reduced from. The digest proves the file is unchanged, which is the stronger claim where a manifest exists and the only one available where it does not."
+  fi
+}
+
 shell_files() {
   git ls-files -co --exclude-standard | while read -r f; do
     [ -f "$f" ] || continue
@@ -392,11 +496,13 @@ main() {
   stage_build
   stage_extraction
   stage_citations
+  stage_sources
   stage_ratio
   head_ "verdict"
   if [[ "$FAILS" -eq 0 ]]; then
     echo "  GREEN -- the site builds strictly, the numbers page cannot be hand-written,"
-    echo "  and every DESIGN.md citation on a tracked page resolves."
+    echo "  every DESIGN.md citation on a tracked page resolves, and every committed"
+    echo "  derived artifact still matches the source it was derived from (#168)."
     exit 0
   fi
   echo "  RED -- $FAILS check(s) failed."

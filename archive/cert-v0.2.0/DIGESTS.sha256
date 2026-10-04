@@ -12,6 +12,21 @@
 # against a re-run, without putting 17 MB of compiler chatter in the repository.
 06efe5b1767806d7024a2ac8b22674a75cc1ff8ee5d48f7a0273bfd68c0a927e  archive/cert-v0.2.0/gate-p5-amd64-0821366.log
 61739227814adbf191a455e8d7be342da1923f88e04d5376c0783886fe21bbb0  archive/cert-v0.2.0/gate-p5-arm64-49165ca.log
-# provision logs (untracked, digest only):
-df068b96f0e248fd7127c8270a5f70298af3001b9afa1a177805a608705bd00c  # cert-amd64-provision-0821366.log
-90694a1eabdb3e3c436d2dffa1c3af9eb77871642faf6a0a3e74bfddc490a4c6  # cert-arm64-final-provision-49165ca.log
+# HOW TO VERIFY, and the two things that made the obvious command fail (#168, 2026-10-02):
+#
+#     cd <repo root> && shasum -a 256 -c archive/cert-v0.2.0/DIGESTS.sha256
+#
+# The paths below are repo-relative, so the repo root is the required cwd -- nothing in this
+# file used to say so. And the two provision digests used to be written as checksum LINES with
+# their filename in a `#` position; `shasum -c` does not treat `#` as a comment in the filename
+# field, so it tried to open a file literally named `# cert-...` and the whole manifest exited 1
+# while both tracked logs read OK. The digests were right and the artifact carrying them was not
+# mechanically checkable -- which is exactly the class #168 names. They are plain commented text
+# now, outside the checksum grammar, and the values are byte-for-byte the ones recorded at tag
+# time: nothing about what the certificate attests has changed.
+#
+# provision logs -- NOT tracked (the arm64 one is 17 MB of OpenBLAS build output), digest only:
+#   cert-amd64-provision-0821366.log
+#     df068b96f0e248fd7127c8270a5f70298af3001b9afa1a177805a608705bd00c
+#   cert-arm64-final-provision-49165ca.log
+#     90694a1eabdb3e3c436d2dffa1c3af9eb77871642faf6a0a3e74bfddc490a4c6

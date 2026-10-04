@@ -9,6 +9,22 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- `gate-docs.sh` gains a derived-artifact source check, so every push verifies that committed
+  artifacts still match what they were derived from: each tracked `DIGESTS` manifest is re-hashed
+  against the files it names, and every source path in `host-baselines.tsv` / `judged-runs.tsv`
+  must exist and be tracked. Fails closed on an absent hasher, a manifest with no checksum lines,
+  and a `#` in a filename field. This is the generalisation #168 asked for rather than a fix to
+  the DIGESTS instance alone (#168).
+
+### Fixed
+- `archive/cert-v0.2.0/DIGESTS.sha256` is now verifiable by the command a reader would type.
+  Two provision-log digests were written as checksum lines with their filename in a `#`
+  position; `shasum -c` does not treat that as a comment, so it tried to open a file named
+  `# cert-...` and the manifest exited 1 while both tracked logs read `OK`. The required
+  repo-root cwd is stated too. **All four digest values are byte-for-byte unchanged** — what the
+  v0.2.0 certificate attests is untouched; only the layout carrying it changed (#168).
+
+### Added
 - gate-p5's sweep now measures the six shipped L1 routines (Sdot, Saxpy, Sscal, Sasum,
   Snrm2, Isamax) and prints each rate per host with its interval, so an L1 regression is
   visible in the gate that signs the certificate. Previously only `Sdot` had a rate bar
