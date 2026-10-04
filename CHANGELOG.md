@@ -76,6 +76,21 @@ While the major version is 0, minor versions may contain breaking changes.
   without yet accounting for the whole magnitude (#175).
 
 ### Changed
+- **DESIGN.md §5 rule 1 amended** (2026-10-04, Scott's ruling on #103): at float64 the reference may
+  be **peer-precision, and only with a required double-double arm beside it**. Both halves are the
+  rule — peer-precision alone would ship f64 to a weaker standard than f32. The grounds are a
+  magnitude: today's float64 oracle has `ε₆₄/ε₃₂ = 2⁻²⁹` of keel's error, so the f32 bound
+  *isolates* keel's; at f64 the triangle inequality gives `2C·n·ε₆₄` instead, which is valid but is
+  the sum of two errors and blind to a defect both implementations share. Double-double
+  (`ε_dd/ε₆₄ ≈ 2⁻⁵⁴`) restores the isolating property; its `n ≈ 768` floor is **derived** from
+  `KC=384` rather than chosen, since an arm that never crosses the nest's boundaries cannot exhibit
+  accumulation-order defects. `big.Float` refused on grounds, not price: ~100× would make the 2048³
+  sweep unrunnable, trading a weaker bound at the headline size for no test at all there. Gonum is
+  a second *independent implementation*, not a definition-order oracle, and stays build-tagged and
+  test-only like the OpenBLAS and Accelerate harnesses. Direction per §5 rule 15: the clause only
+  ever adds a requirement, and f32 is untouched (#103).
+
+### Changed
 - **DESIGN.md §4/P2 amended** (2026-10-03, on Scott's directive): the `>=1.5x` measured/formula
   divergence has a **second cause**, so its double-pump reading is complete on amd64 and not off
   it. The formula's `2 FMA ports` term is an amd64 observation and arm64 pipe counts vary by core
