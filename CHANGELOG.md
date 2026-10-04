@@ -8,6 +8,22 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- `kern.MemOpsPerFMA` divided by `vec.Lanes` — the shim's 16-lane *Block* width — where the
+  backend's *native* vector width belongs. It counts instructions, and one NEON
+  `Float32x4.MulAdd` covers 4 columns, so the B-load term read 4x high on every NEON shape:
+  `4x16` returned 1.25 where `kern_arm64.go`'s own registry comment publishes 0.5. The divisor
+  is now keyed on the backend name, and an unrecognized backend returns 0 (unrankable) rather
+  than inheriting some real ISA's width. **No shipped verdict moves** — both divisors rank the
+  shipped `4x16` over `8x8`, and amd64 is byte-identical by construction since `AVX512` resolves
+  to `vec.Lanes`. It was load-bearing anyway: the wrong divisor reweights the B-load term
+  against the A-broadcast term instead of scaling the ratio, which reverses `8x12` against
+  `4x16` (0.458/0.500 correctly, 1.458/1.250 before) on the axis `betterFor` ranks **first** for
+  `ClassFMA`, which is arm64's class. `TestMemOpsPerFMA` could not see it: every `want` was an
+  expression over the same `vec.Lanes` the function divided by, and all three cases were
+  AVX-512 shapes. Rewritten with hand-typed literals over both backends, plus a test pinning
+  the reordered pair (#170).
+
 ### Added
 - `gate-docs.sh` gains a derived-artifact source check, so every push verifies that committed
   artifacts still match what they were derived from: each tracked `DIGESTS` manifest is re-hashed

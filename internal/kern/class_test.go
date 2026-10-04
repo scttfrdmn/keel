@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/scttfrdmn/keel/internal/kern"
-	"github.com/scttfrdmn/keel/internal/vec"
 )
 
 // The selection rule's whole job is to rank the shapes the way KERNEL.md §7
@@ -168,30 +167,93 @@ func TestPreferredOnNothing(t *testing.T) {
 	}
 }
 
-// TestMemOpsPerFMA checks the arithmetic against hand-computed values for the
-// shipped shapes and for a two-vector-wide tile, since 1/MR + Lanes/NR is the
-// identity KERNEL.md §3's 0.75 floor is derived from.
+// TestMemOpsPerFMA checks the arithmetic against values typed by hand, which is
+// the whole point of the rewrite: the previous version computed every `want` as
+// an expression over `vec.Lanes` — the same constant the function divides by —
+// so it asserted the formula against itself and could not fail for any value of
+// the divisor. Its three cases were all AVX-512 shapes, where the Block width
+// and the native vector width coincide, so nothing in it was wrong; it simply
+// could not see the one backend where they differ. Expectations here are
+// decimal literals with the division written in a comment beside them.
+//
+// The divisor is the backend's NATIVE float32 vector width, not `vec.Lanes`.
+// `vec.Lanes` is 16 because a Block is the shim's 16-lane semantic currency on
+// every backend (vec.go); one *vector FMA instruction* covers 16 columns on
+// AVX-512 and 4 on NEON, and this ratio counts instructions.
 func TestMemOpsPerFMA(t *testing.T) {
-	const lanes = float64(vec.Lanes)
 	for _, tc := range []struct {
-		mr, nr int
-		want   float64
+		backend string
+		mr, nr  int
+		want    float64
 	}{
-		{2, 32, 0.5 + lanes/32},
-		{4, 32, 0.25 + lanes/32},
-		{8, 64, 0.125 + lanes/64},
+		// AVX-512: one Float32x16 per 16 columns, so the native width is 16 and
+		// these are the figures KERNEL.md §3's 0.75 floor is derived from. They
+		// are byte-identical to what the pre-fix function returned.
+		{kern.AVX512, 2, 32, 1.0},   // 1/2 + 16/32
+		{kern.AVX512, 4, 32, 0.75},  // 1/4 + 16/32
+		{kern.AVX512, 8, 64, 0.375}, // 1/8 + 16/64
+		// NEON: one Float32x4 per 4 columns. These are the figures
+		// kern_arm64.go's registry comment publishes for the two shipped tiles —
+		// the comment had the physics right while the function returned 2.125 and
+		// 1.25, four times the B-load term.
+		{kern.NEON, 8, 8, 0.625}, // 1/8 + 4/8
+		{kern.NEON, 4, 16, 0.5},  // 1/4 + 4/16
+		// 3x24 ties 4x16 here EXACTLY — and exactly in float64 too, the two
+		// roundings cancelling, so == is the right comparison and not a lucky
+		// epsilon. It is the arm64 zero-spill frontier shape (#136).
+		{kern.NEON, 3, 24, 0.5}, // 1/3 + 4/24
 	} {
-		k := kern.Kernel{MR: tc.mr, NR: tc.nr}
+		k := kern.Kernel{Name: tc.backend, MR: tc.mr, NR: tc.nr}
 		if got := k.MemOpsPerFMA(); got != tc.want {
-			t.Errorf("%dx%d MemOpsPerFMA = %v, want %v", tc.mr, tc.nr, got, tc.want)
+			t.Errorf("%s %dx%d MemOpsPerFMA = %v, want %v", tc.backend, tc.mr, tc.nr, got, tc.want)
 		}
 	}
 	// A degenerate shape reports 0 rather than dividing by zero, which is also
-	// what makes it unrankable.
-	for _, k := range []kern.Kernel{{MR: 0, NR: 32}, {MR: 4, NR: 0}} {
+	// what makes it unrankable. A backend with no native width stated reports 0
+	// for the same reason: unknown must not fall through to a default, because
+	// the default would be some real ISA's width and would rank a shape on it.
+	for _, k := range []kern.Kernel{
+		{Name: kern.AVX512, MR: 0, NR: 32},
+		{Name: kern.AVX512, MR: 4, NR: 0},
+		{Name: kern.Scalar, MR: 4, NR: 32},
+		{Name: "sve2", MR: 4, NR: 32},
+	} {
 		if got := k.MemOpsPerFMA(); got != 0 {
-			t.Errorf("%dx%d MemOpsPerFMA = %v, want 0", k.MR, k.NR, got)
+			t.Errorf("%s %dx%d MemOpsPerFMA = %v, want 0", k.Name, k.MR, k.NR, got)
 		}
+	}
+}
+
+// TestMemOpsPerFMAReordersNEONShapes is the witness that the divisor is
+// load-bearing rather than a cosmetic 4x. The term it scales is the B-load one
+// and not the A-broadcast one, so a wrong divisor REWEIGHTS the two terms
+// instead of scaling the ratio — which can reverse the order of two shapes that
+// differ in both MR and NR, on the axis betterFor ranks FIRST for ClassFMA,
+// which is arm64's class.
+//
+// 8x12 against 4x16 is such a pair: 0.458 vs 0.500 correctly, 1.458 vs 1.250
+// under the Block width. No shipped verdict moved when this was fixed, because
+// the two shipped NEON tiles are 8x8 and 4x16 and both divisors agree that 4x16
+// wins; 8x12 is excluded from dispatch anyway, for spilling 5 accumulators
+// (docs/neon-sweep.md step 3). So this test pins the FUNCTION, not a shipping
+// decision — the reorder is what the defect could have done, demonstrated on
+// the shapes where it does it.
+func TestMemOpsPerFMAReordersNEONShapes(t *testing.T) {
+	// Audited counts are required for betterFor to read the memory axis at all,
+	// so both arms carry one; the values are the audited figures for these two
+	// shapes and the ranking below does not depend on them, since ClassFMA reads
+	// MemOps first and these two differ on it.
+	lean := kern.Kernel{Name: kern.NEON, MR: 8, NR: 12, Unroll: 1, InsnsPerFMA: 5.0}
+	ship := kern.Kernel{Name: kern.NEON, MR: 4, NR: 16, Unroll: 1, InsnsPerFMA: 5.0}
+	if lean.MemOpsPerFMA() >= ship.MemOpsPerFMA() {
+		t.Fatalf("premise broken: 8x12 reads %v mem ops/FMA and 4x16 reads %v; "+
+			"8x12 must be the leaner one on this axis or the reorder is not demonstrated",
+			lean.MemOpsPerFMA(), ship.MemOpsPerFMA())
+	}
+	got, ok := kern.Preferred(kern.ClassFMA, []kern.Kernel{ship, lean})
+	if !ok || got.Tile() != lean.Tile() {
+		t.Errorf("Preferred(fma) = %s, want %s: the memory axis is not being read at the native width",
+			got.Tile(), lean.Tile())
 	}
 }
 

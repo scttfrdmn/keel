@@ -162,24 +162,64 @@ func (k Kernel) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
 // the string the benchmark sub-names and the gate's thresholds are keyed on.
 func (k Kernel) ID() string { return k.Tile() + "/" + k.Name }
 
+// nativeLanes is the number of float32 elements one vector instruction of this
+// kernel's backend operates on — 16 for an AVX-512 Float32x16, 4 for a NEON
+// Float32x4 — and 0 for a backend that has no such width stated.
+//
+// This is NOT vec.Lanes, and the distinction is the whole reason the function
+// exists. vec.Lanes is 16 on every backend because a Block is the shim's 16-lane
+// semantic currency: the AVX2 backend implements a Block as two 8-lane halves
+// and the NEON backend as four 4-lane quarters, so that one Block op means the
+// same thing everywhere and the differential test needs no width bookkeeping
+// (internal/vec, package doc). That makes vec.Lanes a property of the *spec*.
+// MemOpsPerFMA counts *instructions*, so it needs the property of the *ISA*,
+// and the two coincide only on AVX-512 — which is why one constant served for
+// as long as amd64 was the only vector backend.
+//
+// An unrecognized backend returns 0, which makes MemOpsPerFMA return 0 and the
+// shape unrankable. That is deliberate and it is the only safe default: every
+// other candidate value is some real ISA's width, so falling through would rank
+// a shape by arithmetic belonging to hardware it does not run on. A future SVE
+// backend has no compile-time width at all (DESIGN.md §8), so it must arrive
+// here with its own case rather than inherit one.
+func (k Kernel) nativeLanes() int {
+	switch k.Name {
+	case AVX512:
+		return vec.Lanes // 16: the Block width and the native width coincide here
+	case NEON:
+		return 4
+	default:
+		return 0
+	}
+}
+
 // MemOpsPerFMA is how many vector loads and broadcasts the tile issues per FMA.
 // Unlike InsnsPerFMA this is exact arithmetic on the shape, not a measurement:
-// with MR rows and V = NR/Lanes vectors along N, one unrolled pass reads V·u
-// B-panel vectors and MR·u A scalars for MR·V·u FMAs, so the ratio is
+// with MR rows and V = NR/nativeLanes vectors along N, one unrolled pass reads
+// V·u B-panel vectors and MR·u A scalars for MR·V·u FMAs, so the ratio is
 //
-//	1/MR + 1/V = 1/MR + Lanes/NR
+//	1/MR + 1/V = 1/MR + nativeLanes/NR
 //
 // and the unroll cancels out (KERNEL.md §3, where 0.75 is shown to be a hard
 // floor on go1.26.5: anything lower needs 9 accumulators and spills).
 //
 // It describes the vector tile protocol, so it is only meaningful for a vector
 // kernel; Preferred consults it only alongside an audited InsnsPerFMA, which the
-// scalar shapes do not have.
+// scalar shapes do not have. Since #170 a scalar shape also reports 0 here
+// rather than an AVX-512-flavoured number nothing was going to read.
+//
+// The divisor was vec.Lanes until #170, which is correct on AVX-512 and four
+// times too large on NEON. It reweights the B-load term against the A-broadcast
+// term rather than scaling the ratio, so it can reorder two shapes differing in
+// both MR and NR — on the axis betterFor ranks first for ClassFMA, which is
+// arm64's class. No shipped verdict moved (both divisors rank the shipped 4x16
+// over 8x8); TestMemOpsPerFMAReordersNEONShapes carries the pair where it does.
 func (k Kernel) MemOpsPerFMA() float64 {
-	if k.MR <= 0 || k.NR <= 0 {
+	lanes := k.nativeLanes()
+	if k.MR <= 0 || k.NR <= 0 || lanes <= 0 {
 		return 0
 	}
-	return 1/float64(k.MR) + float64(vec.Lanes)/float64(k.NR)
+	return 1/float64(k.MR) + float64(lanes)/float64(k.NR)
 }
 
 // Ref is the scalar reference for k's shape — the kernel the differential test

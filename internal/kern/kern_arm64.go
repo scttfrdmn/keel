@@ -23,7 +23,10 @@ import "github.com/scttfrdmn/keel/internal/vec"
 // the steady-state K-loop as 92 insns / 16 FMAs for 8x8 and 80 / 16 for 4x16, the
 // same Insns/Arith division the amd64 registry writes. 4x16 is leaner on both axes
 // — 5.00 vs 5.75 insns/FMA (fewer broadcasts and reg copies per pass) and 0.5 vs
-// 0.625 mem-ops/FMA — so Preferred ranks it first under ClassFMA and ClassIssue
+// 0.625 mem-ops/FMA (which is what MemOpsPerFMA returns only as of #170: it
+// divided by the 16-lane Block width until then, so these two figures were right
+// here and 4x high in the function that ranks on them — the ordering was not
+// affected) — so Preferred ranks it first under ClassFMA and ClassIssue
 // alike, and on an FMA-bound host (arm64's default class) the exact MemOpsPerFMA
 // decides, so the ranking cannot drift with a recompile even though no arm64 gate
 // recomputes these the way the amd64 spill audit does.
