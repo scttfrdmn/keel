@@ -188,3 +188,74 @@ gated on the amd64 feature detect (`HasAVX512`/etc.), which does not know NEON. 
 line is correct (`8x8/neon`, …) and the kernels demonstrably ran NEON (17–21 GFLOP/s, not scalar's
 ~3), so this is a cosmetic label gap on arm64, not a wrong measurement. Wiring NEON into the
 L1-backend/class detection is dispatch integration beyond this sweep; recorded here, not fixed inline.
+
+## Step 5 — the frontier shape, and two corrections to step 4 (2026-10-03, castor.local)
+
+Step 4 shipped `4×16` as the winner of a six-shape field. It was the winner *of
+that field*: `shapegen -arch arm64 -frontier` names **`3x24 u=2 broadcast` at
+4.111 insns/FMA**, the leanest of 107 emittable zero-spill shapes, and `3x24` was
+never in the registry to be swept. #136 stayed open on that gap. It is now
+measured.
+
+Full evidence, drivers, logs and digests: `archive/neon-3x24/`. Pre-registration
+in that directory was committed at `a8f520e` **before** any rate existed.
+Provenance: one cross-compiled binary (sha256 `3937ec9c…`), pueue `measured`,
+`taskset`-pinned, denominator = **measured** peak (X925 124.20 GFLOP/s), **no
+OpenBLAS reference on this host** so every figure is percent-of-measured-peak.
+
+**`3x24 u=2` wins everywhere, every interval disjoint.** Kernel level on an X925,
+`kc=512`: **68.03 against 63.34 GFLOP/s, +7.40%** (+7.39% net of both CIs), and it
+is the fastest of all six shapes at all four `kc`. At full `Sgemm/n=2048`, three
+interleaved arms on one core: **65.79 against 61.705, +6.62%**, ranges fully
+disjoint, with the decisive arm being the **unmodified** registry — nothing
+hand-restricted — out of which `kern.Preferred` selects `3x24`. n=2048 is the size
+most hostile to `NR=24`, since `4x16` divides both dimensions exactly while `3x24`
+pays an M-fringe (682·3+2) and an N-fringe (85·24+8); that geometry costs **0.78
+points** of the kernel-level gain, not the gain.
+
+### Correction 1 — step 4's rates are **little-core** rates
+
+Step 4 recorded `GOMAXPROCS=1`, `governor=performance` and `cores: 8 logical`, and
+nowhere **which core type** ran. The GB10 is 10× Cortex-X925 + 10× Cortex-A725.
+Step 4's `4x16/kc=512` reads 21.38 GFLOP/s; the same row, same harness, same
+`flops/call`, reads **63.34** on an X925 and **21.37** on an A725 — reproducing
+step 4 to **0.047%** on the little core. The 2.96× gap is core type and nothing
+else. Measured peaks are 124.20 and 44.79 GFLOP/s, a **2.773×** ratio where
+`cpu_capacity` reports 1.426×, because the core types differ in **FMA pipe count**
+(4 vs 2, derived and confirmed to 0.17%) as well as clock. Filed as #171.
+
+### Correction 2 — "a shallow spill is throughput-free" is a little-core result
+
+Step 4 read `8x12` (spills 5) *tying* the winner and concluded the spill penalty is
+nil at 5 and real at 13. On the X925, `8x12` is **53.72** against `4x16`'s
+**63.34** — **15.2% slower**, and *below both deep spillers* (`8x16` 56.26, `4x32`
+55.80), which inverts the nonlinearity step 4 proposed. The tie was not
+re-measured on the little core, so step 4 stands there and is refuted on the big
+one. What survives unchanged is the screen itself: both top places go to zero-spill
+shapes, and the frontier shape is first.
+
+### The mechanism, which the two core types split between them
+
+The pre-registration set a boundary at **+10.81%**, the midpoint of the front-end
+pole (**+21.63%**, the audited instruction ratio 5.000/4.111) and the port pole
+(**~0%**, the two shapes tying *exactly* on `MemOpsPerFMA`: `1/3+4/24 = 1/4+4/16 =
+0.5`, exactly in float64). The prediction was "above". Measured:
+
+| core | FMA pipes | clock | gain | of the +21.63% bound |
+|---|---|---|---|---|
+| Cortex-X925 | 4 | 3.900 GHz | +7.40% | 34.2% |
+| Cortex-A725 | 2 | 2.808 GHz | **+20.78%** | **96.1%** |
+
+So the registered boundary **separates the two core types** instead of failing:
+the little core is issue-bound on this loop and realizes 96% of the
+instruction-count advantage; the big core is not and realizes 34%. The prediction
+is refuted as registered — it named the host the sweep ran on — and its framework
+is what made the split legible. A shape chosen on insns/FMA alone would have been
+right here and for a reason that holds on only one of the two cores.
+
+### What this does not establish
+
+**Nothing on Neoverse**, which is the judged tier. The gain there is bracketed by
+the two cores measured, **[+6.6%, +20.8%]**, with V1/V2's 4-pipe-class FP making
+the low end likelier — inference, not measurement. GB10 is characterization-only
+(`docs/hosts.md`, #109) and no judged host ran this.

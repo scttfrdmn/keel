@@ -20,6 +20,19 @@ While the major version is 0, minor versions may contain breaking changes.
   recording its `InsnsPerFMA` would hand it dispatch on arithmetic alone, and #136's own caution
   is to rank on the sweep's measured rate and treat the audit as a filter (#136).
 
+### Changed
+- `docs/neon-sweep.md` gains step 5: the NEON shape decision #136 left open is **measured**, and it
+  corrects two things step 4 published. `3x24 u=2` — the zero-spill frontier shape, which was never
+  in the registry to be swept — beats the shipped `4x16` at every `kc` and at full `Sgemm/n=2048`,
+  every interval disjoint: **+7.40%** at the kernel level on a Cortex-X925 and **+6.62%** blocked,
+  the decisive arm being the *unmodified* registry out of which `kern.Preferred` selects it. The two
+  corrections: step 4's rates are **little-core** rates (its `4x16` reproduces this host's A725 to
+  0.047%, and the 2.96× gap to the X925 is core type — #171), and its "a shallow spill is
+  throughput-free" finding is refuted on the big core, where `8x12` is 15.2% slower than `4x16` and
+  below *both* deep spillers. **Dispatch is unchanged**: flipping it would move the published arm64
+  README rates by more than criterion 9's 5% band and so obligates a judged re-registration, which
+  is a fleet-spend decision and is put to Scott on #136 rather than taken here (#136).
+
 ### Fixed
 - `kern.MemOpsPerFMA` divided by `vec.Lanes` — the shim's 16-lane *Block* width — where the
   backend's *native* vector width belongs. It counts instructions, and one NEON
