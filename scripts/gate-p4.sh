@@ -101,6 +101,11 @@ P4_BACKENDS="avx512 scalar"
 KERN_PKG="./internal/vec"
 KERN_FUNCS="Kernel2x32,Kernel4x32"
 PEAK_FUNCS="avx512Peak,avx2Peak,scalarPeak"
+# The amd64 peak ceilings (#145), audited on go1.27.1. Needed here and not only in
+# the arm64 branch below: carry_p2_properties runs this criterion on EVERY path, so
+# an amd64 gate-p4 would have hit the same unbound variable that killed the arm64
+# one on 2026-10-04.
+PEAK_IPF_CEILINGS="avx512Peak:2.25 avx2Peak:2.30 scalarPeak:1.15"
 SSADIR="build/ssa"
 
 # ------------------------------------------------------------- P4's own bar
@@ -123,6 +128,11 @@ P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(avx512|n=2048)'
 if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   P4_BACKENDS="neon scalar"
   KERN_FUNCS="Kernel8x8,Kernel4x16"
+  # arm64's audited peak ceilings (#145). Same values gate-p3 declares, and
+  # duplicated rather than shared because each gate states its own source facts;
+  # gate-lib's criterion now renders UNMEASURED if a caller forgets, which is how
+  # this omission was found -- it killed gate-p4 under `set -u` on a judged run.
+  PEAK_IPF_CEILINGS="neonPeak:2.1875 scalarPeak:1.30"
   PEAK_FUNCS="neonPeak,scalarPeak"
   GATE_PEAK="Peak/neon"
   P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(neon|n=2048)'

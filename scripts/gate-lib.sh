@@ -81,6 +81,21 @@ audit_ipf_tile() {
 peak_ipf_criterion() {
   echo
   echo "-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --"
+  # ${1-} and not "$1", deliberately. This is called from carry_p2_properties,
+  # which gate-p3 AND gate-p4 both run, and on 2026-10-04 gate-p4 reached it
+  # without declaring PEAK_IPF_CEILINGS: under `set -u` the expansion KILLED the
+  # gate, which exited 1 with 53 PASS / 0 FAIL and printed no verdict line at all
+  # -- on a judged run with two instances billing. gate-p5 then correctly reported
+  # the carried bars UNMEASURED, so no verdict was forged, but a criterion that
+  # takes the whole gate down when its own input is absent is the wrong failure
+  # mode: §5 rule 6 gives an absent measurement exactly one verdict, `unmeasured`,
+  # and that verdict has to be reachable. Declared-but-empty and never-declared
+  # are reported as one state here on purpose -- both mean this criterion has no
+  # ceilings to judge against, and neither is the host's fault.
+  if [[ -z "${1-}" ]]; then
+    unmeasured "no insns/FMA ceilings were declared for this ISA, so the denominator's instruction count went unchecked (#145). The caller must set PEAK_IPF_CEILINGS"
+    return 0
+  fi
   info "the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that"
   local v name got max
   while read -r v name got max; do

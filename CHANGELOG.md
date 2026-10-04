@@ -92,6 +92,18 @@ While the major version is 0, minor versions may contain breaking changes.
   core type that would have exposed it. Caveats are assembled in one place so the formula body
   stays readable and no caveat is stated twice (#171).
 
+### Fixed
+- `peak_ipf_criterion` killed `gate-p4` under `set -u`: #145's criterion was wired into
+  `carry_p2_properties`, which gate-p3 **and gate-p4** both run, but `PEAK_IPF_CEILINGS` was
+  declared only in gate-p2 and gate-p3. On a judged arm64 run gate-p4 exited 1 with **53 PASS / 0
+  FAIL and no verdict line**, and gate-p5 correctly rendered the carried bars `UNMEASURED` — so no
+  verdict was forged, but the carry chain was dead. Two fixes, class before instance: the criterion
+  now renders `UNMEASURED` on an absent declaration instead of expanding an unset variable (§5 rule
+  6 gives an absent measurement one verdict, and that verdict has to be *reachable*), and gate-p4
+  declares the ceilings for **both** ISAs — the amd64 default would have hit the same wall. Found
+  only by the judged run: the criterion was driven standalone and on gate-p2's path, never through
+  the p5→p4 composition that runs it (#145).
+
 ### Added
 - `remote-exec-test.sh` §11 drives **`bench_compare`'s T20 guard**, which was implemented and
   **unwitnessed** — the state the #50 defect itself was in. benchstat prints two independent
