@@ -1,0 +1,99 @@
+== gate-p3: packing + blocking -> full Sgemm ==
+        rev d757ea956511d9629af2821554e56f9e2f77309e tree=clean toolchain=go1.27.1 goexperiment=none
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- builds --
+  [32mPASS[0m  make build (GOEXPERIMENT=simd)
+  [32mPASS[0m  make stock (scalar path, no experiment)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd, linux/amd64)
+
+-- Sgemm vs the float64 oracle: size sweep x transpose x alpha x beta --
+        the local run exercises this host's NEON path (go1.27 ships arm64 archsimd);
+        the sweep's extent is audited below from a host that ran it with avx512 live
+  [32mPASS[0m  [local darwin/arm64] all tests pass
+  [32mPASS[0m  [local, stock toolchain] all tests pass without GOEXPERIMENT=simd
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 63524 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+        [keel-gvt4] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt4] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt4] admission class: evidentiary (instance=c8g.48xlarge, virt=?, spawn=i-07f416d7715212670:c8g.48xlarge:ondemand) — c8g.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c8g.48xlarge on-demand (i-07f416d7715212670)
+        [keel-gvt3] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt3] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt3] admission class: evidentiary (instance=c7g.16xlarge, virt=?, spawn=i-09477d1c82b0617b3:c7g.16xlarge:ondemand) — c7g.16xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c7g.16xlarge on-demand (i-09477d1c82b0617b3)
+  [32mPASS[0m  cross-compiled linux/amd64 test binary (root package: Sgemm vs oracle)
+        builder toolchain go1.27.1-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+        [keel-gvt4] Neoverse-V2 | instance=c8g.48xlarge | virt=? | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | load1=0.05 load5=0.26 load15=0.52 runnable=1/2043 | tmux=yes | Linux 7.0.0-1013-aws | L2=2048K L1d=64K L3=36864K | spawn=i-07f416d7715212670:c8g.48xlarge:ondemand
+  [32mPASS[0m  [keel-gvt4] Sgemm sweep passes
+        [keel-gvt4] backends exercised: neon scalar
+  [32mPASS[0m  [keel-gvt4] KEEL_FORCE=scalar: the sweep passes with dispatch overridden
+        [keel-gvt3] Neoverse-V1 | instance=c7g.16xlarge | virt=? | 64 cpus | 64 cores | smt=1 | 1 sockets | governor=absent | load1=0.15 load5=0.69 load15=0.82 runnable=1/779 | tmux=yes | Linux 7.0.0-1013-aws | L2=1024K L1d=64K L3=32768K | spawn=i-09477d1c82b0617b3:c7g.16xlarge:ondemand
+  [32mPASS[0m  [keel-gvt3] Sgemm sweep passes
+        [keel-gvt3] backends exercised: neon scalar
+  [32mPASS[0m  [keel-gvt3] KEEL_FORCE=scalar: the sweep passes with dispatch overridden
+        avx512 Sgemm sweep: N/A on arm64 (NEON is the dispatched kernel; sweep coverage is 5b's NEON frontier, #156) — not unmeasured (#155)
+  [32mPASS[0m  every host that attempted it proved the scalar fallback under KEEL_FORCE=scalar (2/2)
+
+-- sweep extent (criteria 1 and 2: coverage is enforced, not trusted) --
+        avx512 sweep extent (criteria 1 and 2): N/A on arm64 (no avx512 sweep; NEON coverage is 5b, #156) — not unmeasured (#155)
+
+-- carried from P2 (criterion 4): the K-loop after packing and blocking --
+        compile-time property, audited against the linux/amd64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.Kernel8x8: steady-state loop [128,492] 92 insns for 16 arith (5.75 per arith): 0 vector stack refs, 16 reg copies, 8 broadcasts, 32 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.Kernel4x16: steady-state loop [132,448] 80 insns for 16 arith (5.00 per arith): 0 vector stack refs, 8 reg copies, 4 broadcasts, 30 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  0 accumulator spills in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 calls in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 surviving bounds checks in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)
+
+-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --
+        the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that
+  [32mPASS[0m  neonPeak audits 2.187500 insns/FMA, at or under its recorded ceiling 2.1875
+  [32mPASS[0m  scalarPeak audits 1.300000 insns/FMA, at or under its recorded ceiling 1.30
+        check_bce: 254 bounds check(s) across vec+kern+pack+block, all outside the K-loop (provenance; the criterion is the loop-body audit above)
+  [32mPASS[0m  check_bce output recorded as provenance
+  [32mPASS[0m  SWEEP_BEST_IPF=4.111 reconciles against shapegen -frontier: 4.111 from 3x24 u=2 broadcast, best of 107 emittable zero-spill shapes
+
+-- throughput sentinel (criteria 5 and 5b): P2's floor re-run on the dispatched shape --
+  [32mPASS[0m  roofline verdict controls (76 fixtures)
+        insns/FMA sentinel: N/A on arm64 (audits amd64 avx512 tiles; its OpenBLAS-denominator consumer is REPORTED-not-judged here, #155/#162) — not unmeasured
+        sentinel declaration: every fleet host and nothing else ($KEEL_SENTINEL_OUT_OF_FLEET unset)
+        note: .keel-sentinel exists (mtime 2026-08-11T19:50:40Z) and is NOT read — retired as a selection input (#146)
+        judged as sentinels: keel-gvt4 keel-gvt3 
+  [32mPASS[0m  every shipped shape's recorded insns/FMA matches the audited object code (8x8/neon=5.750 4x16/neon=5.000)
+  [32mPASS[0m  [keel-gvt4] 4x16/neon/kc=128 reaches 56.6% of this host's measured NEON peak, net of CI (>= 52.7%, this host's registered baseline 55.3% (era pinned8) less the same 2.6 points of margin the fleet bar uses (estimator: median of N=3 archived judged runs in era pinned8 at the shipped 4x16/neon shape: ca4b952 20260926T033319Z (55.3), ca4b952 20260926T052544Z (55.2) and 49165ca 20261001T030533Z (55.3, the v0.2.0 certifying run). Across-run spread 0.1 points. Each value is the criterion-5b net-of-CI attainment as printed, so the bar below is derived from the same statistic it judges. Admissible under §5 rule 19: the microkernel attainment per-run CI is NOT printed by the BASELINE branch (only its net-of-CI bound is), and the adjacent rate CIs in the same invocation are <= 0.04% (Sgemm 2048^3 and peak, benchci), so the interval is far under the 2.6-point cap; recomputable from archive/pinned8/gate-p3-under-p4-ca4b952-20260926T033319Z.log + archive/pinned8/gate-p3-under-p4-ca4b952-20260926T052544Z.log + archive/pinned8/gate-p3-under-p4-49165ca-20261001T030533Z.log; registered 2026-10-01))
+  [32mPASS[0m  [keel-gvt3] 4x16/neon/kc=128 reaches 78.7% of this host's measured NEON peak, net of CI (>= 76.2%, this host's registered baseline 78.8% (era pinned8) less the same 2.6 points of margin the fleet bar uses (estimator: median of N=3 archived judged runs in era pinned8 at the shipped 4x16/neon shape: ca4b952 20260926T033319Z (78.8), ca4b952 20260926T052544Z (78.8) and 49165ca 20261001T030533Z (78.8, the v0.2.0 certifying run). Across-run spread 0.0 points. Each value is the criterion-5b net-of-CI attainment as printed, so the bar below is derived from the same statistic it judges. Admissible under §5 rule 19: the microkernel attainment per-run CI is NOT printed by the BASELINE branch (only its net-of-CI bound is), and the adjacent rate CIs in the same invocation are <= 0.04% (Sgemm 2048^3 and peak, benchci), so the interval is far under the 2.6-point cap; recomputable from archive/pinned8/gate-p3-under-p4-ca4b952-20260926T033319Z.log + archive/pinned8/gate-p3-under-p4-ca4b952-20260926T052544Z.log + archive/pinned8/gate-p3-under-p4-49165ca-20261001T030533Z.log; registered 2026-10-01))
+
+-- Sgemm at 2048^3: percent of measured peak, and >= 60% of single-thread OpenBLAS --
+        -count=10 -benchtime=1s; the bar counts as cleared only net of both confidence intervals
+        each host is also run once more with KEEL_KERN_CLASS pinned to the other class (criterion 5b), which is where the extra Sgemm time goes
+  [32mPASS[0m  cross-compiled linux/amd64 bench binary (Sgemm + peak)
+        [keel-gvt4] Sgemm 2048^3 34.26 GFLOP/s +/- 0.8% [33.99, 34.3] D=1.069 (span 0.90% / interval 0.8465%), peak 61.34 GFLOP/s +/- 0.7% [60.86, 62.2] D=2.062 (span 2.18% / interval 1.0597%)
+        [keel-gvt4] = 55.9% of measured peak (55.0% net of CI) — reported, not a P3 criterion
+        [keel-gvt4] KEEL_KERN_CLASS=issue selects 4x16/neon too, so both classes agree here and there is nothing to compare
+        [keel-gvt3] Sgemm 2048^3 32.37 GFLOP/s +/- 0.0% [32.33, 32.38] D=5 (span 0.15% / interval 0.0309%), peak 41.43 GFLOP/s +/- 0.0% [41.34, 41.43] D=9 (span 0.22% / interval 0.0241%)
+        [keel-gvt3] = 78.1% of measured peak (78.1% net of CI) — reported, not a P3 criterion
+        [keel-gvt3] KEEL_KERN_CLASS=issue selects 4x16/neon too, so both classes agree here and there is nothing to compare
+        [keel-gvt4] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt4] distro=ubuntu go=none libopenblas=none
+  [33mUNMEASURED[0m  [keel-gvt4] no same-host OpenBLAS reference: this host is missing a Go toolchain and libopenblas.so, so its ratio is unmeasured (percent-of-peak is NOT a substitute)
+          [keel-gvt4] sudo apt-get install -y libopenblas-dev
+          [keel-gvt4] plus a go1.26.5+ toolchain from go.dev/dl, on PATH for a non-login ssh
+          [keel-gvt4] scripts/provision-openblas.sh does both, with sudo prompts the gate cannot answer
+        [keel-gvt3] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt3] distro=ubuntu go=none libopenblas=none
+  [33mUNMEASURED[0m  [keel-gvt3] no same-host OpenBLAS reference: this host is missing a Go toolchain and libopenblas.so, so its ratio is unmeasured (percent-of-peak is NOT a substitute)
+          [keel-gvt3] sudo apt-get install -y libopenblas-dev
+          [keel-gvt3] plus a go1.26.5+ toolchain from go.dev/dl, on PATH for a non-login ssh
+          [keel-gvt3] scripts/provision-openblas.sh does both, with sudo prompts the gate cannot answer
+  [35mREPORTED[0m  the keel/OpenBLAS ratio is REPORTED on all 0 arm64 host(s), not judged against the 60% floor: NEON vs an SVE reference (#155/#162). The per-host ratios are printed above and carry to the certificate as the finding, not scored as a keel FAIL. -- but 2 of the 2 configured hosts produced no judgeable reading at all, so this line covers 0 of 2 (the UNMEASURED lines above say which)
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p3 tally: 26 PASS / 0 FAIL / 2 UNMEASURED / 0 BASELINE / 1 REPORTED
+gate-p3: RED

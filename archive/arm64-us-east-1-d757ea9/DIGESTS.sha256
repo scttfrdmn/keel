@@ -1,0 +1,11 @@
+# #136 judged arm64 evidence + the run that produced it, us-east-1, rev d757ea9.
+# RED for one operational reason: provision-openblas.sh was never run, so gate-p3
+# rendered 2 UNMEASURED (no same-host OpenBLAS, no Go toolchain) -> p4 RED -> p5 FAIL.
+# Verify with `shasum -c archive/arm64-us-east-1-d757ea9/DIGESTS.sha256` from the repo root.
+#
+41d2ff7bd14be6b1693cb2b8a0928da57b1eba2146187826614d4ed1e8d4477c  archive/arm64-us-east-1-d757ea9/gate-p3-under-p4-d757ea9-20261004T193403Z.log
+5f14c8800532fa2a9a8ac92fc232e6cb738dfd9abd09b8acb9fe884996c8c4b1  archive/arm64-us-east-1-d757ea9/gate-p4-under-p5-d757ea9-20261004T190429Z.log
+2c09ef494cd54c16e03d17d11f65237750e22070cf07649b7cb4bd112f558fc4  archive/arm64-us-east-1-d757ea9/gate-p5-arm64-d757ea9.log
+bfcd69db137bb8cf3a3c839e8cee979893c5eeb70d855d72b90ce0d4e9d071ec  archive/arm64-us-east-1-d757ea9/bench-gate-p3-d757ea9-20261004T194005Z-1.txt
+fe11faa7b634fc70a4293a4a3cd45af66e1411ec3aab8f0144a2c5e4460c3732  archive/arm64-us-east-1-d757ea9/bench-gate-p3-d757ea9-20261004T194005Z-2.txt
+3ddcfd1d49e536593d075e271563c5684fc7a52cd87197a18bff6ffe9ebd7874  archive/arm64-us-east-1-d757ea9/kernel-evidence.md
