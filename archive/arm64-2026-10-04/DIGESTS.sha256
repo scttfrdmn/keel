@@ -1,0 +1,8 @@
+# Judged arm64 run 2026-10-04 (#176, #136, #145). RED: one defect of mine (gate-p4, fixed in 8c26752)
+# and one unattributed 8-thread scatter (#176). 1-thread reproduces the cert to 0.02% on the ceiling.
+# Verify with `shasum -c archive/arm64-2026-10-04/DIGESTS.sha256` from the repo root.
+#
+9c8f84866f542a8537882ab1e25792618bc7349ea4d73a23b6c48dd93c66c232  archive/arm64-2026-10-04/gate-p4-under-p5-3e86507-20261004T173408Z.log
+70b1c4092086d5f5e99f537cc600e5e9eca6a342c8262b1eeddb552544c435d7  archive/arm64-2026-10-04/gate-p5-arm64-3e86507.log
+55fc9ced1d61e003e76998333d27af7f5663be5e83c2e8dd568797f6c0c7eaa5  archive/arm64-2026-10-04/bench-gate-p5-3e86507-keel-gvt3-20261004T173053Z-2.txt
+de28f4e41c6533aa6c8c1aa3c3773993efad65fd327e8caf9dfeef1c6bb47969  archive/arm64-2026-10-04/bench-gate-p5-3e86507-keel-gvt4-20261004T173053Z-1.txt

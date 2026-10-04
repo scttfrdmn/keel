@@ -1,0 +1,194 @@
+== gate-p5: parallelism, dispatch, polish ==
+        rev 3e86507a3ea261c605cb1aaac707735ff3f704d9 tree=clean toolchain=go1.27.1 goexperiment=none
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- builds, vet and lint --
+  [32mPASS[0m  build (GOEXPERIMENT=simd)
+  [32mPASS[0m  build (stock toolchain, scalar path, no experiment)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd, linux/amd64)
+  [32mPASS[0m  golangci-lint clean (golangci-lint has version 2.14.0 built with go1.27.1 from 114493f on 2026-09-24T10:54:53Z)
+
+-- the scalar path on a stock toolchain (a P5 criterion in its own right) --
+        the fast paths are additive build tags, so the package must be usable the day
+        somebody runs `go get` on a toolchain with no experiment enabled at all
+  [32mPASS[0m  [local, stock toolchain] every test passes without GOEXPERIMENT=simd
+  [32mPASS[0m  [local darwin/arm64] every test passes
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 51523 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+
+-- hosts, governors and topology --
+        [keel-gvt4] Neoverse-V2 | instance=c8g.48xlarge | virt=? | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | load1=0.18 load5=0.28 load15=0.13 runnable=1/2064 | tmux=yes | Linux 7.0.0-1013-aws | L2=2048K L1d=64K L3=36864K | spawn=i-08b8ad903921d7e45:c8g.48xlarge:ondemand
+        [keel-gvt4] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt4] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt4] admission class: evidentiary (instance=c8g.48xlarge, virt=?, spawn=i-08b8ad903921d7e45:c8g.48xlarge:ondemand) — c8g.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c8g.48xlarge on-demand (i-08b8ad903921d7e45)
+        [keel-gvt4] smt=1 threads/core, so UNMASKED the criterion's 8 goroutines could span as few as 8/1 physical cores — which is the hazard the mask removes: every benchmark below runs on 8 distinct physical cores, one per cache domain, inside one NUMA node — refused rather than run free, and read back per row for both width and shape (§5 rule 5; the pinning decision #15 asked for)
+  [32mPASS[0m  [keel-gvt4] 192 CPUs, enough for the 8 the criterion names
+        [keel-gvt3] Neoverse-V1 | instance=c7g.16xlarge | virt=? | 64 cpus | 64 cores | smt=1 | 1 sockets | governor=absent | load1=0.17 load5=0.20 load15=0.10 runnable=1/757 | tmux=yes | Linux 7.0.0-1013-aws | L2=1024K L1d=64K L3=32768K | spawn=i-0cc8c6760cee59f5e:c7g.16xlarge:ondemand
+        [keel-gvt3] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt3] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt3] admission class: evidentiary (instance=c7g.16xlarge, virt=?, spawn=i-0cc8c6760cee59f5e:c7g.16xlarge:ondemand) — c7g.16xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c7g.16xlarge on-demand (i-0cc8c6760cee59f5e)
+        [keel-gvt3] smt=1 threads/core, so UNMASKED the criterion's 8 goroutines could span as few as 8/1 physical cores — which is the hazard the mask removes: every benchmark below runs on 8 distinct physical cores, one per cache domain, inside one NUMA node — refused rather than run free, and read back per row for both width and shape (§5 rule 5; the pinning decision #15 asked for)
+  [32mPASS[0m  [keel-gvt3] 64 CPUs, enough for the 8 the criterion names
+
+-- parallelism as a correctness property (criteria 5, 6, 7) --
+        bitwise identity against the serial nest, no goroutine left running, no state
+        carried between calls. The local run is scalar-only, so all of this is audited
+        from a host that ran it with the neon microkernel live.
+  [32mPASS[0m  cross-compiled linux/amd64 test binary (root package: parallel correctness)
+        builder toolchain go1.27.1-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+  [32mPASS[0m  [keel-gvt4] the full test suite passes with the vector backend live
+  [32mPASS[0m  [keel-gvt4] KEEL_FORCE=scalar takes (l1=scalar, kern=8x8/scalar)
+  [32mPASS[0m  [keel-gvt4] KEEL_FORCE=nonsense refuses to run rather than falling back silently
+  [32mPASS[0m  [keel-gvt3] the full test suite passes with the vector backend live
+  [32mPASS[0m  [keel-gvt3] KEEL_FORCE=scalar takes (l1=scalar, kern=8x8/scalar)
+  [32mPASS[0m  [keel-gvt3] KEEL_FORCE=nonsense refuses to run rather than falling back silently
+  [32mPASS[0m  the suite ran green with the neon microkernel live (audited from keel-gvt3)
+  [32mPASS[0m  Sgemm: bit-identical to the serial nest at threads=1,3,8
+  [32mPASS[0m  Sgemm: no background threads and no state between calls (goroutines-return-to-baseline,repeat-call-bit-identical)
+  [32mPASS[0m  Ssyrk: bit-identical to the serial nest at threads=1,3,8
+  [32mPASS[0m  Ssyrk: no background threads and no state between calls (goroutines-return-to-baseline,repeat-call-bit-identical)
+  [32mPASS[0m  Ssymm: bit-identical to the serial nest at threads=1,3,8
+  [32mPASS[0m  Ssymm: no background threads and no state between calls (goroutines-return-to-baseline,repeat-call-bit-identical)
+  [32mPASS[0m  Strsm: bit-identical to the serial nest at threads=1,3,8
+  [32mPASS[0m  Strsm: no background threads and no state between calls (goroutines-return-to-baseline,repeat-call-bit-identical)
+  [32mPASS[0m  Level-1 chain declared as neon,scalar — scalar forced above, and the neon rung confirmed from this run's l1=neon dispatch marker (arm64 verifies neon via the marker, not by KEEL_FORCE)
+  [32mPASS[0m  Level-3 chain declared as neon,scalar — two rungs by ruling (#40), and the avx2 ceiling asserted per host above
+
+-- race detector (a named P5 criterion) --
+        -race needs cgo and remote_build_test is CGO_ENABLED=0 by design, so the
+        instrumented binary is built NATIVELY on each host from git archive HEAD — the
+        same mechanism gate-p3 uses for its OpenBLAS harness. The dev host's own run is
+        kept as well: it is arm64 and scalar-only, but the worker pool, the shared
+        packed-B panel and the sync.Pool are backend-independent Go, so having two
+        architectures' schedulers look at the same concurrency is worth the minute.
+  [32mPASS[0m  [local darwin/arm64, scalar path] race detector clean
+  [33mUNMEASURED[0m  [keel-gvt4] no Go toolchain, so -race cannot be built natively here and this host's vector path is unmeasured for races
+  [33mUNMEASURED[0m  [keel-gvt3] no Go toolchain, so -race cannot be built natively here and this host's vector path is unmeasured for races
+  [33mUNMEASURED[0m  no host produced a race-detector reading on the vector path, so that criterion is unmeasured rather than clean
+
+-- scaling at 8 cores on 4096^3 (the headline criterion) --
+        -test.count=10 -test.benchtime=1s; one invocation per host with both thread
+        counts inside it, and the floor counts as cleared only net of both intervals
+        judged at >= 44.2% of each host's own measured 8-thread ceiling: Sgemm Ssyrk Ssymm — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, its 8-thread form and this fraction ratified 2026-08-21, #6)
+          DERIVATION of 44.2%: a regression bar set below every healthy observation, from the lowest of SIX admissible judged rows in the founding campaign's take four (keel-zen5 Ssymm, 46.8150% net of BOTH intervals, recomputed from the archives under #116's honest CI bounds) less 2.6 points of margin. Derived from that run and enforced here, so this reading can fail it. What it cannot see is stated inside it (§5 rule 12): no Intel silicon derived it, keel-skx being DERIV=0 and gnr characterization, and the two models it has spread 46.8-75.4%, so one fleet bar is set by the weakest host — per-host convergence is the post-tag option named above. Rule 19 admitted all six: widest share interval 0.3 points against the 2.6-point cap
+          the bar FELL 6.8 points from the suspended 51.0 and 95.0% of the fall is the DENOMINATOR, not the kernels: #115 lifted the ceiling's fork/join out of its own timed region, so the reference rose 1999.5 -> 2291 GFLOP/s (+14.6%) on the host that sets the bar, while that row's rate fell 1081 -> 1073 (-0.74%). One term at a time on the argmin: the new rate over the OLD ceiling would have typed 50.8, the old rate over the NEW ceiling 44.6. The measured share has THREE terms and this is the reference term moving; the era boundary is what keeps it out of the drift budget (§5 rule 17(d))
+          the ceiling's rise is the INSTRUMENT and not the mask, adjudicated by the control host: keel-skx's spread enumeration is degenerate (its L3 is per socket, so the mask returns the same 0..7 the confined form did) and its ceiling rose the MOST, +23.4%, which a mask that did not change cannot cause. So the +14.6% is attributable to #115 (§5 rule 18) rather than to placement, and the two changes that landed together are separable after all
+        judged at >= 6.066x: Strsm — a second class, and a REGRESSION BAR under the B-packing-residue model (ratified 2026-08-16, #37). The work split it prints is not that model: read as Amdahl it implies a ceiling all nine ratifying readings cleared (#89)
+          and judged PER HOST since 2026-08-30 (#119, §5 rule 17 extended to the ratio criteria): 6.066x binds only the models that derived it (SCALE_DERIVED_FROM, three of them — one MORE than the share bar's two, keel-skx having derived this bar and not that one), and a host outside that set renders BASELINE and registers from its own rows rather than being convicted for a chronology. Its bar is then its own baseline less the same 0.403x — never BASELINE_MARGIN's 2.6, which is points of share and would set a bar looser than the retired 6.0x floor if carried across units. docs/rulings.md rule 17 carries both derivation sets and the era-archive check on the slack
+          DERIVATION of 6.066x: the lowest of THREE judged rows in the founding campaign's take four (keel-zen5 6.469x net of CI — 6.469880 unrounded, recomputed under #116; keel-zen4 6.635x, keel-skx 6.831x) less 0.403x, this class's declared slack in its own units — 7.403x, the lowest of the nine readings that ratified 7.0x, less that 7.0x, so it predates these rows by six days and answers the units question the suspension left open. The bound is quoted as bench_ratio_lo RETURNS it, three decimals rounded down (#143), because that is what the subtraction above is performed on: 6.469 - 0.403 = 6.066 exactly, no rounding of the difference. All three rows were admissible under rule 19: intervals 0.230/0.221/0.040x wide against the 0.403x cap, and the slack is 1.8x the argmin's own interval
+          6.066x IS NOT THE RETIRED 6.0x RETURNING, and it lands within 1.1% of it by coincidence: that constant was a CROSS-HOST quality bar on the whole judged class and was retired for a RANK INVERSION -- it refused Zen 4 at 65.9% of 8x its own core peak and passed Granite Rapids at 34.3%, measuring the wrong quantity by construction. This is a per-routine regression bar on Strsm alone, derived on different silicon under a different placement, and none of the grounds for that retirement is disturbed by the arithmetic landing nearby (#37, #6)
+  [32mPASS[0m  BASELINE-REGISTERED readers pass their controls (102 fixtures; 21 mutants driven 2026-08-21, all killed, and a 22nd found unkillable — an unnamed-era guard whose deletion changed nothing observable, so it was deleted rather than explained. §5 rule 12: the number is what it covers, and mutation is a session act with no standing harness. gate-p3's peak/* reader (#167) IS covered as of 2026-10-02: its decision was extracted to peak_bucket on scale_bucket's precedent, so this suite drives it and this gate therefore runs it. What the number still does NOT cover is the RENDERING around that decision — which sentence each bucket prints, and the per-host loop that reaches it — exercised under KEEL_REPLAY against tracked arm64 archives and recorded on #167, with no standing harness)
+        measurement era: pinned8 — closed, transition archive landed. Baselines from other eras do not govern these readings and are not consulted (#6)
+  [32mPASS[0m  cross-compiled linux/amd64 bench binary (Scale + Peak)
+        [keel-gvt4] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt4] samples archived: build/bench-gate-p5-3e86507-keel-gvt4-20261004T173408Z-1.txt
+  [32mPASS[0m  [keel-gvt4] placement pinned to 8 cores over 1 of the node's 1 cache domains (mask 0,1,2,3,4,5,6,7), confirmed three ways: the harness applied it, Go reports GOMAXPROCS=8 off its own affinity, and the recorded domain list satisfies rule 5's spread invariant — so every row below carries -8 and the numerator and denominator of each share came from the identical mask (§5 rule 5)
+  [32mPASS[0m  [keel-gvt4] benchci reproduces the pinned benchstat: 104 cell(s) agree with the pinned benchstat on every center, and on every CI after rounding to %.0f%%
+        [keel-gvt4] peak series GFLOP/s: head 61.269999999999996, middle 60.925, tail 61.235 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt4] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle +0.5620% against a 1.9311% floor, middle->tail -0.5048% against a 1.9777% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-gvt4] ceiling: compute 214.2 GFLOP/s +/- 50.0% [175.3, 333.7] D=1.344 (span 73.95% / interval 55.0420%) measured at 8 threads, against 62.385000000000005 at 1 thread — 42.9% of 8x the 1-thread reading. That shortfall is what the retired 6.0x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here
+        [keel-gvt4] ceiling: stream/dot 137.5 GB/s at 8 threads, 36.769999999999996 at 1 — reported. NOT yet in the min(): converting GB/s to a FLOP/s bound needs a declared DRAM traffic count and no benchmark declares one, so the ceiling in force is the compute term alone, which can only UNDERSTATE how close this host is to its true ceiling
+        [keel-gvt4] ceiling: stream/axpy 123.25 GB/s at 8 threads, 54.205 at 1 — reported. NOT yet in the min(): converting GB/s to a FLOP/s bound needs a declared DRAM traffic count and no benchmark declares one, so the ceiling in force is the compute term alone, which can only UNDERSTATE how close this host is to its true ceiling
+        [keel-gvt4] ceiling: REFUSED as a denominator — 214.2 GFLOP/s is below the 8-thread rate of Ssymm=239.1GF/s=111.6%. Every share row on this host is unmeasured below; the scaling readings still print, and Strsm's floor still applies, because neither divides by this number
+        [keel-gvt4] Sgemm: 1 thread 33.13 GFLOP/s +/- 1.7% [32.9, 33.7] D=1.333 (span 2.41% / interval 1.8110%), 8 threads 131.9 GFLOP/s +/- 41.6% [121.1, 218.3] D=1.528 (span 73.72% / interval 48.2366%)
+        [keel-gvt4] Sgemm: 27.1% of 8x the single-thread neon peak (60.925 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [keel-gvt4] Sgemm: no share of the 8-thread ceiling is computable — the ceiling reading 214.2 GFLOP/s sits BELOW a rate it denominates (Ssymm=239.1GF/s=111.6%), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that Sgemm regressed
+        [keel-gvt4] Ssyrk: 1 thread 33.3 GFLOP/s +/- 0.1% [33.24, 33.34] D=1.429 (span 0.30% / interval 0.2102%), 8 threads 133 GFLOP/s +/- 64.4% [107.1, 219.5] D=1.03 (span 84.51% / interval 82.0301%)
+        [keel-gvt4] Ssyrk: 27.3% of 8x the single-thread neon peak (60.925 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [keel-gvt4] Ssyrk: no share of the 8-thread ceiling is computable — the ceiling reading 214.2 GFLOP/s sits BELOW a rate it denominates (Ssymm=239.1GF/s=111.6%), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that Ssyrk regressed
+        [keel-gvt4] Ssymm: 1 thread 33.66 GFLOP/s +/- 1.8% [32.91, 33.77] D=1.265 (span 2.55% / interval 2.0199%), 8 threads 239.1 GFLOP/s +/- 0.0% [239, 239.2] D=1 (span 0.08% / interval 0.0836%)
+        [keel-gvt4] Ssymm: 49.1% of 8x the single-thread neon peak (60.925 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [keel-gvt4] Ssymm: no share of the 8-thread ceiling is computable — the ceiling reading 214.2 GFLOP/s sits BELOW a rate it denominates (Ssymm=239.1GF/s=111.6%), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that Ssymm regressed
+        [keel-gvt4] Strsm: 1 thread 28.41 GFLOP/s +/- 2.2% [27.62, 28.55] D=1.208 (span 3.27% / interval 2.7098%), 8 threads 220.2 GFLOP/s +/- 1.4% [218.7, 223.5] D=1.143 (span 2.18% / interval 1.9074%)
+        [keel-gvt4] Strsm: 45.2% of 8x the single-thread neon peak (60.925 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [32mPASS[0m  [keel-gvt4] Strsm scales 7.749x, 7.674x net of CI (>= 7.499x, this host's registered baseline 7.902x (era pinned8) less the same 0.403x of margin the fleet bar uses (estimator: median of N=2 archived judged runs in era pinned8 at 029e24f: 20260906T164421Z (7.919x, as printed) and 20260906T173558Z (7.884x, as printed). Both admissible under §5 rule 19: scale intervals ~0.10x/0.11x (point less net-of-CI) against the 0.403x cap; recomputable from archive/pinned8/bench-gate-p5-029e24f-keel-gvt4-20260906T164421Z-1.txt + archive/pinned8/bench-gate-p5-029e24f-keel-gvt4-20260906T173558Z-1.txt; registered 2026-09-06))
+        [keel-gvt4] Strsm work split at this shape: rank_update=0.98413 diag_solve=0.01587. This is a WORK split, not a serial fraction: read as Amdahl s=0.01587 at p=8 it implies a ceiling of 7.2001x, and this run's 7.674x sits +6.58% above it. Nine readings above that ceiling are what falsified the model (#37/#89); the bar above rests on the B-packing residue instead. Reported, judged by nothing
+        [keel-gvt4] L1 Sdot GFLOP/s, median(net of CI): n=256 17.41(17.41) n=4096 21.19(21.19) n=65536 19.85(19.85) n=1048576 14.48(14.28)
+        [keel-gvt4] L1 Saxpy GFLOP/s, median(net of CI): n=256 9.56(9.41) n=4096 10.50(10.45) n=65536 10.71(10.46) n=1048576 10.67(10.45)
+        [keel-gvt4] L1 Sscal GFLOP/s, median(net of CI): n=256 4.91(4.82) n=4096 5.31(5.24) n=65536 5.37(5.35) n=1048576 5.37(5.36)
+        [keel-gvt4] L1 Sasum GFLOP/s, median(net of CI): n=256 10.48(10.46) n=4096 14.00(13.56) n=65536 14.25(14.24) n=1048576 13.23(13.11)
+        [keel-gvt4] L1 Snrm2 GFLOP/s, median(net of CI): n=256 20.12(19.98) n=4096 35.79(35.70) n=65536 36.34(36.13) n=1048576 25.46(20.38)
+        [keel-gvt4] L1 Isamax GB/s, median(net of CI): n=256 2.75(2.75) n=4096 2.69(2.69) n=65536 2.69(2.69) n=1048576 2.69(2.68)
+  [36mBASELINE[0m  [keel-gvt4] all 24 measured L1 rows are first sight in era pinned8 — RECORDED as candidate baselines, not judged (24 of 24 routine-size rows). Candidates: build/baseline-candidates-3e86507-20261004T173408Z.tsv
+  [31mFAIL[0m  [keel-gvt4] README rows disagree with this run: Sgemm/threads=8(README 239.5 ref CI [, ] disjoint from run 131.85000000000002 CI [123.1, 186.7] and past 0.05) Ssyrk/threads=8(README 258.9 ref CI [, ] disjoint from run 133 CI [109.6, 218.7] and past 0.05) Ceiling/compute/threads=8(README 495.8 ref CI [, ] disjoint from run 214.2 CI [203.4, 321.3] and past 0.05)
+        [keel-gvt3] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt3] samples archived: build/bench-gate-p5-3e86507-keel-gvt3-20261004T173408Z-2.txt
+  [32mPASS[0m  [keel-gvt3] placement pinned to 8 cores over 1 of the node's 1 cache domains (mask 0,1,2,3,4,5,6,7), confirmed three ways: the harness applied it, Go reports GOMAXPROCS=8 off its own affinity, and the recorded domain list satisfies rule 5's spread invariant — so every row below carries -8 and the numerator and denominator of each share came from the identical mask (§5 rule 5)
+  [32mPASS[0m  [keel-gvt3] benchci reproduces the pinned benchstat: 104 cell(s) agree with the pinned benchstat on every center, and on every CI after rounding to %.0f%%
+        [keel-gvt3] peak series GFLOP/s: head 41.41, middle 41.39, tail 41.42 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt3] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle +0.0476% against a 0.1534% floor, middle->tail -0.0656% against a 0.1570% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-gvt3] ceiling: compute 219.6 GFLOP/s +/- 8.9% [191.9, 220.9] D=1.401 (span 13.21% / interval 9.4284%) measured at 8 threads, against 41.41 at 1 thread — 66.3% of 8x the 1-thread reading. That shortfall is what the retired 6.0x floor's denominator assumed away; this gate measures it and does not attribute it, since clock droop, core heterogeneity and shared-cache pressure are indistinguishable here
+        [keel-gvt3] ceiling: stream/dot 85.17500000000001 GB/s at 8 threads, 35.84 at 1 — reported. NOT yet in the min(): converting GB/s to a FLOP/s bound needs a declared DRAM traffic count and no benchmark declares one, so the ceiling in force is the compute term alone, which can only UNDERSTATE how close this host is to its true ceiling
+        [keel-gvt3] ceiling: stream/axpy 116.35 GB/s at 8 threads, 51.92 at 1 — reported. NOT yet in the min(): converting GB/s to a FLOP/s bound needs a declared DRAM traffic count and no benchmark declares one, so the ceiling in force is the compute term alone, which can only UNDERSTATE how close this host is to its true ceiling
+        [keel-gvt3] ceiling: REFUSED as a denominator — 219.6 GFLOP/s is below the 8-thread rate of Ssymm=228.75GF/s=104.2%. Every share row on this host is unmeasured below; the scaling readings still print, and Strsm's floor still applies, because neither divides by this number
+        [keel-gvt3] Sgemm: 1 thread 32.3 GFLOP/s +/- 1.6% [31.74, 32.52] D=1.054 (span 2.41% / interval 2.2910%), 8 threads 133.6 GFLOP/s +/- 53.9% [127.5, 206.5] D=1.01 (span 59.11% / interval 58.5110%)
+        [keel-gvt3] Sgemm: 40.4% of 8x the single-thread neon peak (41.39 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [keel-gvt3] Sgemm: no share of the 8-thread ceiling is computable — the ceiling reading 219.6 GFLOP/s sits BELOW a rate it denominates (Ssymm=228.75GF/s=104.2%), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that Sgemm regressed
+        [keel-gvt3] Ssyrk: 1 thread 31.88 GFLOP/s +/- 0.1% [31.82, 31.89] D=2.333 (span 0.22% / interval 0.0941%), 8 threads 108.7 GFLOP/s +/- 18.3% [96.77, 134.5] D=1.497 (span 34.71% / interval 23.1831%)
+        [keel-gvt3] Ssyrk: 32.8% of 8x the single-thread neon peak (41.39 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [keel-gvt3] Ssyrk: no share of the 8-thread ceiling is computable — the ceiling reading 219.6 GFLOP/s sits BELOW a rate it denominates (Ssymm=228.75GF/s=104.2%), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that Ssyrk regressed
+        [keel-gvt3] Ssymm: 1 thread 32.47 GFLOP/s +/- 0.1% [32.43, 32.5] D=1.4 (span 0.22% / interval 0.1540%), 8 threads 228.8 GFLOP/s +/- 0.0% [228.6, 228.8] D=2 (span 0.09% / interval 0.0437%)
+        [keel-gvt3] Ssymm: 69.1% of 8x the single-thread neon peak (41.39 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [33mUNMEASURED[0m  [keel-gvt3] Ssymm: no share of the 8-thread ceiling is computable — the ceiling reading 219.6 GFLOP/s sits BELOW a rate it denominates (Ssymm=228.75GF/s=104.2%), so it is not a ceiling for this run. Refused rather than failed: this says the denominator was mismeasured, not that Ssymm regressed
+        [keel-gvt3] Strsm: 1 thread 26.05 GFLOP/s +/- 0.1% [24.97, 26.07] D=27.5 (span 4.22% / interval 0.1536%), 8 threads 200.6 GFLOP/s +/- 0.6% [198.7, 200.9] D=1.375 (span 1.10% / interval 0.7978%)
+        [keel-gvt3] Strsm: 60.6% of 8x the single-thread neon peak (41.39 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count
+  [32mPASS[0m  [keel-gvt3] Strsm scales 7.699x, 7.644x net of CI (>= 7.518x, this host's registered baseline 7.921x (era pinned8) less the same 0.403x of margin the fleet bar uses (estimator: median of N=2 archived judged runs in era pinned8 at 029e24f: 20260906T164421Z (7.932x, as printed) and 20260906T173558Z (7.910x, as printed). Both admissible under §5 rule 19: scale intervals ~0.10x/0.11x (point less net-of-CI) against the 0.403x cap; recomputable from archive/pinned8/bench-gate-p5-029e24f-keel-gvt3-20260906T164421Z-2.txt + archive/pinned8/bench-gate-p5-029e24f-keel-gvt3-20260906T173558Z-2.txt; registered 2026-09-06))
+        [keel-gvt3] Strsm work split at this shape: rank_update=0.98413 diag_solve=0.01587. This is a WORK split, not a serial fraction: read as Amdahl s=0.01587 at p=8 it implies a ceiling of 7.2001x, and this run's 7.644x sits +6.17% above it. Nine readings above that ceiling are what falsified the model (#37/#89); the bar above rests on the B-packing residue instead. Reported, judged by nothing
+        [keel-gvt3] L1 Sdot GFLOP/s, median(net of CI): n=256 16.38(16.37) n=4096 20.37(20.36) n=65536 16.69(16.56) n=1048576 13.25(11.85)
+        [keel-gvt3] L1 Saxpy GFLOP/s, median(net of CI): n=256 9.53(9.48) n=4096 10.24(10.24) n=65536 10.33(10.33) n=1048576 10.30(10.03)
+        [keel-gvt3] L1 Sscal GFLOP/s, median(net of CI): n=256 4.80(4.80) n=4096 5.12(5.12) n=65536 5.17(5.17) n=1048576 5.17(5.17)
+        [keel-gvt3] L1 Sasum GFLOP/s, median(net of CI): n=256 9.43(9.21) n=4096 13.43(13.43) n=65536 13.70(13.03) n=1048576 12.99(11.85)
+        [keel-gvt3] L1 Snrm2 GFLOP/s, median(net of CI): n=256 20.11(20.09) n=4096 33.55(33.39) n=65536 34.47(34.26) n=1048576 24.88(24.32)
+        [keel-gvt3] L1 Isamax GB/s, median(net of CI): n=256 2.55(2.52) n=4096 2.56(2.55) n=65536 2.58(2.57) n=1048576 2.57(2.54)
+  [36mBASELINE[0m  [keel-gvt3] all 24 measured L1 rows are first sight in era pinned8 — RECORDED as candidate baselines, not judged (24 of 24 routine-size rows). Candidates: build/baseline-candidates-3e86507-20261004T173408Z.tsv
+  [31mFAIL[0m  [keel-gvt3] README rows disagree with this run: Sgemm/threads=8(README 229.3 ref CI [, ] disjoint from run 133.64999999999998 CI [127.5, 205.7] and past 0.05) Ssyrk/threads=8(README 245.4 ref CI [, ] disjoint from run 108.69999999999999 CI [103.4, 128.6] and past 0.05) Ceiling/compute/threads=8(README 331 ref CI [, ] disjoint from run 219.55 CI [200, 220.7] and past 0.05)
+  [33mUNMEASURED[0m  no host produced a judgeable set of scaling ratios, so the headline criterion is unmeasured rather than missed (0 of 2 not admitted to the evidentiary class, so no ratio from them is judgeable however high it reads; 0 had every row out-resolved by its own interval; 2 produced no complete set of ratios)
+
+-- doc.go, and no rate outside the block this gate re-measures (criterion 9) --
+  [32mPASS[0m  doc.go carries a package comment that `go doc` renders
+  [32mPASS[0m  every GFLOP/s figure in README.md sits inside the block this gate re-measures
+
+-- carried from P4 (criterion 10): every absolute bar this ratio stands on --
+        ">= 6.0x single-thread" was a ratio whose denominator this phase is chartered
+        to change: stage 1 makes the serial path faster, which made that bar harder, and a
+        parallel nest that SLOWED the serial path made it easier. This gate's own carried text
+        predicted that hazard before it decided any verdict, and #6's ruling of 2026-08-20
+        removed it — the denominator is now a measured hardware ceiling, which stage 1 cannot
+        move in either direction. The absolute bars are still carried by running the gates that
+        own them: gate-p4 runs gate-p3, which carries P2's kernel audit — three phases of
+        thresholds, not one of them restated here.
+        full output: build/gate-p4-under-p5-3e86507-20261004T173408Z.log (85 lines) — paste it verbatim into the umbrella issue beside this gate's own; it names gate-p3's log in turn
+        53 PASS / 0 FAIL / 0 UNMEASURED / 0 BASELINE / 0 REPORTED, verdict: none printed
+  [33mUNMEASURED[0m  gate-p4 reached no verdict on this commit (exit 1, verdict line: none printed), so the absolute bars this gate's ratio stands on are unverified rather than red
+          PASS  Ssymm: blocked with Sgemm's own parameters (kc=384 mc=144 nc=4096)
+                Strsm lattice: side=L,R uplo=U,L trans=N,T diag=N,U alpha=0,1,-0.75 combos=48
+          PASS  Strsm: every flag in this gate's statement of the lattice was swept
+          PASS  Strsm: combination count matches the enumerated sets (48 = 48 over 5 dimensions)
+          PASS  Strsm: every size this gate requires ran (1..17, 31/32/33, 63/64/65, 500)
+          PASS  Strsm: every size declares its oracle verification mode (exact up to 65, >= 256 seeded exact entries above it)
+          PASS  Strsm: differential across backends (neon,scalar)
+          PASS  Strsm: edge coverage beyond the lattice (unreferenced-triangle,unit-diagonal-ignored,rectangular,multi-block,ldpad,zerodim,argpanic,nonfinite)
+          PASS  Strsm: derived on the same microkernel Sgemm dispatched (4x16/neon), path=keel.Strsm->internal/block.Trsm->block.gemm+unblocked
+          PASS  Strsm: blocked with Sgemm's own parameters (kc=384 mc=144 nc=4096)
+        
+        -- carried from P2 (criterion 4): the K-loop after triangular masking --
+                compile-time property, audited against the linux/amd64 object code the hosts run
+                github.com/scttfrdmn/keel/internal/vec.Kernel8x8: steady-state loop [128,492] 92 insns for 16 arith (5.75 per arith): 0 vector stack refs, 16 reg copies, 8 broadcasts, 32 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+                github.com/scttfrdmn/keel/internal/vec.Kernel4x16: steady-state loop [132,448] 80 insns for 16 arith (5.00 per arith): 0 vector stack refs, 8 reg copies, 4 broadcasts, 30 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+          PASS  0 accumulator spills in the steady-state K-loop (P2 property held)
+          PASS  0 calls in the steady-state K-loop (P2 property held)
+          PASS  0 surviving bounds checks in the steady-state K-loop (P2 property held)
+          PASS  every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)
+        scripts/gate-lib.sh: line 629: PEAK_IPF_CEILINGS: unbound variable
+          the delegated log is build/gate-p4-under-p5-3e86507-20261004T173408Z.log in full, and it names gate-p3's in turn; an exit that is neither 0 nor 1 is the delegate dying, which is a defect to find rather than a threshold to re-run
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p5 tally: 41 PASS / 2 FAIL / 11 UNMEASURED / 2 BASELINE / 0 REPORTED
+gate-p5: RED
