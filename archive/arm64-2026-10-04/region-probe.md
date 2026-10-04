@@ -1,3 +1,7 @@
+# NOTE: .md and not .txt deliberately. `archive/*/*.txt` is a globbed corpus that
+# tools/benchci/archive_test.go sweeps as benchmark SAMPLE logs, re-deriving every
+# interval; a prose file there re-derives 0 readings and reddens CI, which is how
+# this was found. Samples get .txt, summaries get .md.
 # #176 one-variable region discriminator, 2026-10-04.
 # Same instance type (c7g.16xlarge, Neoverse-V1), same binary (sha256 a2ee7e2821c533a634be),
 # same commit, register-only FMA loop with no memory in the timed region.

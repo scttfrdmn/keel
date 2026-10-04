@@ -108,6 +108,12 @@ While the major version is 0, minor versions may contain breaking changes.
   stays readable and no caveat is stated twice (#171).
 
 ### Fixed
+- A prose summary archived as `archive/arm64-2026-10-04/region-probe.txt` reddened CI on four jobs:
+  `archive/*/*.txt` is a globbed corpus that `tools/benchci/archive_test.go` sweeps as benchmark
+  **sample** logs, so a non-sample there re-derives 0 readings and fails. Renamed to `.md` with the
+  convention stated at the file. The glob failing loudly is the **correct** direction for a corpus
+  membership error; what went wrong was mine — I committed archive files having run `gate-docs` but
+  not `go test ./...`.
 - `aws-fleet.sh` **refuses a judged (on-demand) launch outside the baselines' region**. The default
   was already `us-east-1`, which is not what a correctly-invoked run got: the mandated
   `AWS_PROFILE=aws` carries `region = us-west-2`, which wins through `AWS_REGION` — so the
