@@ -457,3 +457,54 @@ func TestARM64SeesRealSpiller(t *testing.T) {
 		t.Errorf("Kernel8x12 spilled %d distinct accumulators, want 5 (docs/neon-sweep.md); slots=%v", len(slots), slots)
 	}
 }
+
+// TestARM64ArithCountsScalarFP is #173's regression witness, and it is written as
+// two controls rather than one assertion.
+//
+// The arm64 isArith rule was vector-only — {VFMLA, VFMLS, VFMUL, VFADD, VFSUB,
+// VFDIV} — so every scalar arm64 function audited as "0 arith", which made
+// insns-per-arith render `n/a` rather than a number. That is the quantity #145's
+// peak-kernel criterion is stated in, so the hole would have been permanent on one
+// of the two shipping ISAs. amd64's rule has covered scalar from the start through
+// its SS/SD suffixes; this was an asymmetry between two arms of one instrument.
+//
+// The NEGATIVE control is the half that earns the base list. Every mnemonic in the
+// second group starts with F and ends in S or D, exactly like the arithmetic ones,
+// so a rule written as a suffix pattern would count moves, absolute values,
+// negations, square roots, compares and conversions as floating-point arithmetic
+// and inflate the denominator of every insns-per-arith figure on arm64.
+func TestARM64ArithCountsScalarFP(t *testing.T) {
+	if err := SetArch("arm64"); err != nil {
+		t.Fatalf("SetArch: %v", err)
+	}
+	t.Cleanup(func() { _ = SetArch("amd64") })
+
+	// Scalar FP arithmetic, single and double. FMADDS is what scalarPeak's K-loop
+	// actually emits, which is how the hole was found.
+	for _, op := range []string{
+		"FMADDS", "FMADDD", "FMSUBS", "FMSUBD", "FNMADDS", "FNMADDD",
+		"FNMSUBS", "FNMSUBD", "FMULS", "FMULD", "FNMULS", "FNMULD",
+		"FADDS", "FADDD", "FSUBS", "FSUBD", "FDIVS", "FDIVD",
+	} {
+		if !isArith(op) {
+			t.Errorf("isArith(%q) = false, want true: scalar arm64 FP arithmetic is uncounted, "+
+				"so insns-per-arith reads n/a on every scalar function", op)
+		}
+	}
+	// The near misses: F-prefixed, S/D-suffixed, and NOT arithmetic.
+	for _, op := range []string{
+		"FMOVS", "FMOVD", "FABSS", "FABSD", "FNEGS", "FNEGD",
+		"FSQRTS", "FSQRTD", "FCMPS", "FCMPD", "FCVTZSS", "FCVTZSD",
+	} {
+		if isArith(op) {
+			t.Errorf("isArith(%q) = true, want false: a suffix-only rule would count this as "+
+				"arithmetic and inflate every insns-per-arith denominator", op)
+		}
+	}
+	// And the vector rule is undisturbed by the scalar addition.
+	for _, op := range []string{"VFMLA", "VFMLS", "VFMUL", "VFADD", "VFSUB", "VFDIV"} {
+		if !isArith(op) {
+			t.Errorf("isArith(%q) = false, want true: the NEON rule regressed", op)
+		}
+	}
+}

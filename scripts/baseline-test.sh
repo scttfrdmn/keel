@@ -425,5 +425,51 @@ is 'the #119 fleet sums to its host count, not over it' "$sum" '2'
 is 'vesta counted noise-limited, exactly once'          "${B[noise-limited]:-0}" '1'
 is 'antares counted baseline-only, exactly once'        "${B[baseline-only]:-0}" '1'
 
+echo
+echo "-- peak_ipf_verdicts: the percent-of-peak DENOMINATOR's instruction count (#145) --"
+
+# A real audit listing, in the exact shape spill-audit emits, so these controls
+# exercise the parse as well as the comparison. The three amd64 figures are the
+# tree's own audited readings at this revision (27/12, 23/10, 23/20); the fourth
+# line is arm64 scalarPeak as it read BEFORE #173, when the audit's arith rule was
+# vector-only and scalar functions counted zero arith.
+IPFTMP="$(mktemp)"
+trap 'rm -f "$IPFTMP"' EXIT
+cat >"$IPFTMP" <<'FIXTURE'
+github.com/scttfrdmn/keel/internal/vec.avx512Peak: steady-state loop [264,355] 27 insns for 12 arith (2.25 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 12 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+github.com/scttfrdmn/keel/internal/vec.avx2Peak: steady-state loop [220,291] 23 insns for 10 arith (2.30 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 10 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+github.com/scttfrdmn/keel/internal/vec.scalarPeak: steady-state loop [136,235] 23 insns for 20 arith (1.15 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+github.com/scttfrdmn/keel/internal/vec.blindPeak: steady-state loop [96,144] 13 insns for 0 arith (n/a per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+FIXTURE
+
+# Exactly at the recorded ceiling holds. This is the live case on every healthy
+# run, so if it did not pass the criterion would red the gate it ships on.
+is 'a reading exactly ON its ceiling passes'   "$(peak_ipf_verdicts 'avx512Peak:2.25' "$IPFTMP")"   'pass avx512Peak 2.250000 2.25'
+is 'a leaner loop passes (strictness, not breach)' "$(peak_ipf_verdicts 'avx512Peak:3.00' "$IPFTMP")" 'pass avx512Peak 2.250000 3.00'
+
+# #145's own documented regression: 2.25 -> 4.42 on avx512Peak with both existing
+# tests green. The ceiling is what turns that into a red.
+is "#145's 4.42 regression is refused"         "$(peak_ipf_verdicts 'avx512Peak:2.25' <(sed 's/27 insns for 12 arith (2.25/53 insns for 12 arith (4.42/' "$IPFTMP"))" 'fail avx512Peak 4.416667 2.25'
+
+# One instruction added to a 12-FMA loop is 0.0833 insns/FMA, which must not slip
+# through: the criterion is a ceiling, not a band.
+is 'one extra instruction is refused'          "$(peak_ipf_verdicts 'avx512Peak:2.25' <(sed 's/27 insns for 12 arith/28 insns for 12 arith/' "$IPFTMP"))" 'fail avx512Peak 2.333333 2.25'
+
+# 2.30 and 1.15 are not exactly representable in binary; both sides parse the same
+# decimal, so equality must hold rather than drift into a false fail.
+is 'a non-dyadic ceiling compares equal'       "$(peak_ipf_verdicts 'avx2Peak:2.30' "$IPFTMP")"     'pass avx2Peak 2.300000 2.30'
+is 'the scalar ceiling compares equal'         "$(peak_ipf_verdicts 'scalarPeak:1.15' "$IPFTMP")"   'pass scalarPeak 1.150000 1.15'
+
+# An unreadable count is UNMEASURED and never a pass -- the state arm64 was in
+# until #173. The caller's unmeasured() sets FAIL, so this blocks green.
+is 'a zero-arith audit is unmeasured, not pass' "$(peak_ipf_verdicts 'blindPeak:2.00' "$IPFTMP")"   'unmeasured blindPeak - 2.00'
+
+# A function absent from the listing is the same absence, reported the same way,
+# rather than passing because nothing contradicted it.
+is 'an absent function is unmeasured'          "$(peak_ipf_verdicts 'ghostPeak:2.00' "$IPFTMP")"    'unmeasured ghostPeak - 2.00'
+
+# Every kernel is judged, not just the first: a multi-entry spec reports per entry.
+is 'all entries are judged'                    "$(peak_ipf_verdicts 'avx512Peak:2.25 blindPeak:2.00' "$IPFTMP" | cut -d' ' -f1 | tr '\n' ',')" 'pass,unmeasured,'
+
 printf '\n%d ok, %d not ok\n' "$OK" "$BAD"
 [[ "$BAD" -eq 0 ]]

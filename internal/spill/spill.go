@@ -256,6 +256,14 @@ type archRules struct {
 	isBranch func(op string) bool
 }
 
+// arm64ScalarFP is the base of each arm64 scalar floating-point arithmetic
+// mnemonic, without its S (single) or D (double) width suffix. See the arm64
+// isArith rule below for why a base list and not a pattern (#173).
+var arm64ScalarFP = map[string]bool{
+	"FMADD": true, "FMSUB": true, "FNMADD": true, "FNMSUB": true,
+	"FMUL": true, "FNMUL": true, "FADD": true, "FSUB": true, "FDIV": true,
+}
+
 // active is the classification the package uses. Default amd64 so every existing
 // caller and golden test is byte-identical without touching anything; SetArch
 // selects arm64 for a NEON audit. A package global, not a threaded value, because
@@ -348,10 +356,30 @@ func arm64Rules() archRules {
 		// NEON float arithmetic. VFMLA is the fused multiply-add that carries the K-loop;
 		// the rest are here so the steady-loop pick (most arith) is not fooled by a
 		// VFADD-heavy reduction elsewhere.
+		//
+		// The scalar half was MISSING until #173, and it mattered: arm64's scalar FP
+		// mnemonics are FMADDS/FADDS/FMULD/… and not one of them starts with V, so a
+		// vector-only list counts *zero* arith in a scalar function. `scalarPeak`
+		// audited as "13 insns for 0 arith (n/a per arith)" — unmeasurable rather than
+		// wrong, which is worse here, because insns-per-arith is the quantity #145 adds
+		// a criterion on and the criterion would have had a permanent hole on one ISA.
+		// It also degrades the steady-loop pick, which is "innermost, then most arith":
+		// with every candidate at 0 arith the tie-break never runs. amd64's rule has
+		// covered scalar from the start via its SS/SD suffixes, so this was an
+		// asymmetry between two arms of one instrument, not a design choice.
+		//
+		// An explicit base list rather than a pattern, because the suffix alone is not
+		// enough: FMOVS, FABSD, FNEGS, FSQRTS, FCMPS and FCVTZS all start with F and
+		// end in S or D, and none of them is arithmetic this count wants.
 		isArith: func(op string) bool {
 			switch op {
 			case "VFMLA", "VFMLS", "VFMUL", "VFADD", "VFSUB", "VFDIV":
 				return true
+			}
+			for _, sfx := range []string{"S", "D"} {
+				if base, ok := strings.CutSuffix(op, sfx); ok && arm64ScalarFP[base] {
+					return true
+				}
 			}
 			return false
 		},

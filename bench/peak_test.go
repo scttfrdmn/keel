@@ -82,7 +82,7 @@ var peakSink float32
 // drops several hundred MHz under a 512-bit license, which is one of the reasons
 // the formula is a cross-check and the measurement is the number.
 func peakFormulaLines() []string {
-	ghz, src := maxClockGHz()
+	ghz, src, caveat := maxClockGHz()
 	var out []string
 	for _, k := range vec.PeakKernels() {
 		if ghz == 0 {
@@ -102,22 +102,158 @@ func peakFormulaLines() []string {
 			flopsPerOp, note = 1.0, "2 FP ports, unfused: 1 flop/op"
 		}
 		g := ghz * 2 * float64(k.Lanes) * flopsPerOp
-		out = append(out, fmt.Sprintf("%s: %.1f GFLOP/s (%.2f GHz %s x %s x %d lanes)",
-			k.Name, g, ghz, src, note, k.Lanes))
+		out = append(out, fmt.Sprintf("%s: %.1f GFLOP/s (%.2f GHz %s x %s x %d lanes)%s",
+			k.Name, g, ghz, src, note, k.Lanes, caveat))
 	}
 	return out
 }
 
-// maxClockGHz reads the kernel's maximum core frequency, returning 0 and a reason
-// when it cannot. Reporting an assumed clock would put a fabricated number in the
-// denominator position of a printed formula, which is exactly the failure mode
-// this file is built to avoid.
-func maxClockGHz() (float64, string) {
-	b, err := os.ReadFile("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq")
-	if err == nil {
-		if khz, err := strconv.ParseFloat(strings.TrimSpace(string(b)), 64); err == nil && khz > 0 {
-			return khz / 1e6, "cpuinfo_max_freq"
+// maxClockGHz reads the maximum core frequency of a CPU this process is actually
+// allowed to run on, returning 0 and a reason when it cannot. Reporting an assumed
+// clock would put a fabricated number in the denominator position of a printed
+// formula, which is exactly the failure mode this file is built to avoid.
+//
+// It read cpu0 unconditionally until #171, and on a heterogeneous host that is
+// wrong in the most misleading way available. The GB10 is 10x Cortex-X925 +
+// 10x Cortex-A725; cpu0 is a little core at 2.808 GHz while a benchmark pinned to
+// cpu19 runs at 3.900. So the formula described a core the measurement never
+// touched — and because it was accurate to +0.25% for the *other* core type
+// (44.9 against that core's measured 44.79) it read as validation, while the core
+// under test measured 124.20. Naming the CPU in the output is half the fix; the
+// other half is that a reader must be able to see the host is not uniform.
+//
+// The affinity mask comes from /proc/self/status's Cpus_allowed_list — a plain
+// file read, so no new dependency. Falling back to cpu0 when that is unreadable is
+// deliberate and is labelled as the fallback it is: on a uniform host it is the
+// right answer, and on a heterogeneous one the label is what stops it being
+// mistaken for a measurement of the core in use.
+func maxClockGHz() (ghzOut float64, src, caveat string) {
+	cpus := allowedCPUs()
+	fellBack := len(cpus) == 0
+	if fellBack {
+		cpus = []int{0}
+	}
+	ghz, which := 0.0, ""
+	uniform := true
+	for _, c := range cpus {
+		g := cpuMaxGHz(c)
+		if g == 0 {
+			continue
+		}
+		if which == "" {
+			ghz, which = g, fmt.Sprintf("cpu%d", c)
+			continue
+		}
+		if g != ghz {
+			uniform = false
 		}
 	}
-	return 0, "no cpuinfo_max_freq"
+	if which == "" {
+		return 0, "no cpuinfo_max_freq", ""
+	}
+	src = which + " cpuinfo_max_freq"
+	if fellBack {
+		src += ", affinity unreadable so this is a fallback and not the core in use"
+	}
+	if !uniform {
+		// A single formula line cannot describe a host whose cores differ, so it
+		// says which core it describes rather than implying it describes the
+		// machine. Note also that the 2-FMA-port term below is an *assumption*
+		// from DESIGN.md's formula, and it is 2 on the A725 and 4 on the X925 —
+		// so on a host like this a measured/formula divergence has a second
+		// cause besides the double-pumping §4/P2 reads it as (#171).
+		caveat = " -- NON-UNIFORM host: describes " + which + " only, " +
+			"and the 2-FMA-port term is an assumption DESIGN.md's formula makes " +
+			"that does not hold across these core types (#171)"
+	}
+	return ghz, src, caveat
+}
+
+// cpuMaxGHz is one CPU's cpuinfo_max_freq in GHz, or 0.
+func cpuMaxGHz(c int) float64 {
+	b, err := os.ReadFile(fmt.Sprintf("/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq", c))
+	if err != nil {
+		return 0
+	}
+	khz, err := strconv.ParseFloat(strings.TrimSpace(string(b)), 64)
+	if err != nil || khz <= 0 {
+		return 0
+	}
+	return khz / 1e6
+}
+
+// allowedCPUs parses /proc/self/status's Cpus_allowed_list ("19", "0-7",
+// "0,8,16-18"). An empty result means the mask could not be read, which the
+// caller labels rather than papers over.
+func allowedCPUs() []int {
+	b, err := os.ReadFile("/proc/self/status")
+	if err != nil {
+		return nil
+	}
+	var list string
+	for _, line := range strings.Split(string(b), "\n") {
+		if rest, ok := strings.CutPrefix(line, "Cpus_allowed_list:"); ok {
+			list = strings.TrimSpace(rest)
+			break
+		}
+	}
+	return parseCPUList(list)
+}
+
+// parseCPUList parses the body of a Cpus_allowed_list line. Separate from the file
+// read so it is testable on a host that has no /proc at all.
+func parseCPUList(list string) []int {
+	if strings.TrimSpace(list) == "" {
+		return nil
+	}
+	var out []int
+	for _, part := range strings.Split(list, ",") {
+		lo, hi, isRange := strings.Cut(part, "-")
+		a, err := strconv.Atoi(strings.TrimSpace(lo))
+		if err != nil {
+			continue
+		}
+		b := a
+		if isRange {
+			if v, err := strconv.Atoi(strings.TrimSpace(hi)); err == nil {
+				b = v
+			}
+		}
+		for c := a; c <= b && c-a < 4096; c++ {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// TestAllowedCPUsParsesAMask covers the three shapes Linux writes into
+// Cpus_allowed_list, plus the two ways it can be absent. It is a pure parser test
+// so it runs on every platform, including the darwin dev host where the /sys and
+// /proc reads around it return nothing at all — which is exactly why the parser is
+// a separate function from the file read (#171).
+func TestAllowedCPUsParsesAMask(t *testing.T) {
+	for _, tc := range []struct {
+		in   string
+		want []int
+	}{
+		{"19", []int{19}},           // one pinned core, the judged shape
+		{"0-3", []int{0, 1, 2, 3}},  // a range, as an unpinned 4-cpu guest reports
+		{"0,8,16", []int{0, 8, 16}}, // the spread mask §5 rule 5 specifies
+		{"0-1,19", []int{0, 1, 19}}, // ranges and singletons mixed
+		{" 2 ", []int{2}},           // surrounding space
+		{"", nil},                   // present but empty
+		{"garbage", nil},            // unparseable, and NOT silently cpu0
+	} {
+		got := parseCPUList(tc.in)
+		if len(got) != len(tc.want) {
+			t.Errorf("parseCPUList(%q) = %v, want %v", tc.in, got, tc.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != tc.want[i] {
+				t.Errorf("parseCPUList(%q) = %v, want %v", tc.in, got, tc.want)
+				break
+			}
+		}
+	}
 }

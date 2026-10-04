@@ -40,6 +40,17 @@ KERN_FUNCS="Kernel2x32,Kernel4x32"
 # criterion 2 above and docs/toolchain-notes.md T10.
 REF_FUNCS="Kernel6x32"
 PEAK_FUNCS="avx512Peak,avx2Peak,scalarPeak"
+# Recorded insns/FMA CEILINGS for the kernels that ARE the percent-of-peak
+# denominator (#145). One-sided on purpose -- see peak_ipf_verdicts in gate-lib.sh
+# for why a fatter loop is the dangerous direction and a leaner one is not.
+# Audited on go1.27.1 at 6855709: avx512Peak 27 insns / 12 arith, avx2Peak 23/10,
+# scalarPeak 23/20 (which is unfused on amd64, hence its lower figure). Each is the
+# reading itself, with no margin added -- a margin here would be a free parameter,
+# and the shipped tiles' counts are checked the same way. A toolchain bump that
+# legitimately moves one of these reds this gate, which is the intended behaviour:
+# it is a published-number event (DESIGN.md §4/P2, docs/spill-report.md), and a
+# human re-types the constant with the new audit as its grounds.
+PEAK_IPF_CEILINGS="avx512Peak:2.25 avx2Peak:2.30 scalarPeak:1.15"
 PEAK_FLOOR=0.55
 # --- the amended throughput floor (DESIGN.md §4/P2, ruling on #19) -----------
 # An FMA-bound host is held to PEAK_FLOOR. An issue-bound host is held to
@@ -349,6 +360,7 @@ else
   sed 's/^/        /' "$LOG"
   fail "a peak kernel's loop touches memory; the P2 denominator is not a ceiling"
 fi
+peak_ipf_criterion "$PEAK_IPF_CEILINGS" "$AUDITPEAK"
 
 # ----------------------------------------- the throughput floor (§4/P2, #19)
 echo

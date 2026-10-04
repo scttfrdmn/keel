@@ -124,6 +124,11 @@ SWEEP_TRANS="NN NT TN TT"
 KERN_PKG="./internal/vec"
 KERN_FUNCS="Kernel2x32,Kernel4x32"
 PEAK_FUNCS="avx512Peak,avx2Peak,scalarPeak"
+# Recorded insns/FMA ceilings for the percent-of-peak denominator (#145); see
+# peak_ipf_verdicts in gate-lib.sh for the one-sided rationale. Audited on go1.27.1
+# at 6855709. The arm64 set is overridden below, because a bar travels with its
+# derivation set and these are amd64 readings of amd64 kernels.
+PEAK_IPF_CEILINGS="avx512Peak:2.25 avx2Peak:2.30 scalarPeak:1.15"
 PEAK_FLOOR=0.55
 ROOF_FLOOR=0.90
 ISSUE_CONVERGE_MAX=1.10
@@ -230,6 +235,13 @@ SGEMM_SHAPE_FILTER='Sgemm/n=2048'
 if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   KERN_FUNCS="Kernel8x8,Kernel4x16"
   PEAK_FUNCS="neonPeak,scalarPeak"
+  # arm64's own audited readings, not the amd64 ones: neonPeak 35 insns / 16 arith,
+  # scalarPeak 13/10. scalarPeak's arm64 figure differs from amd64's 1.15 for a real
+  # reason rather than noise -- arm64 fuses a*b+c (FMADDS) where amd64 does not, so
+  # the two scalar ceilings are not the same quantity. This arm was UNMEASURABLE
+  # until #173: the audit's arith rule was vector-only, so every scalar arm64
+  # function read 0 arith and insns-per-arith rendered `n/a`.
+  PEAK_IPF_CEILINGS="neonPeak:2.1875 scalarPeak:1.30"
   GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128"
   GATE_PEAK_FUNC="neonPeak"
   GATE_PEAK="Peak/neon"

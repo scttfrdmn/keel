@@ -73,6 +73,72 @@ audit_ipf_tile() {
   audit_ipf "Kernel$1" "$2"
 }
 
+# peak_ipf_criterion CEILINGS FILE — peak_ipf_verdicts rendered as gate verdicts.
+#
+# One emitter for both gates, because two copies of a verdict loop is how two
+# aggregates came to disagree about absence before. The pure function above is
+# what baseline-test.sh fixtures; this is the thin shell around it.
+peak_ipf_criterion() {
+  echo
+  echo "-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --"
+  info "the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that"
+  local v name got max
+  while read -r v name got max; do
+    case "$v" in
+      pass) pass "$name audits $got insns/FMA, at or under its recorded ceiling $max" ;;
+      fail) fail "$name audits $got insns/FMA, ABOVE its recorded ceiling $max: a fatter denominator loop silently raises every percent-of-peak figure (#145)" ;;
+      *)    unmeasured "$name reported no insns/arith in the audit, so the denominator's instruction count went unchecked (#145)" ;;
+    esac
+  done < <(peak_ipf_verdicts "$1" "$2")
+}
+
+# peak_ipf_verdicts CEILINGS FILE — #145's criterion, on the instruction count of
+# the kernels that ARE the percent-of-peak denominator.
+#
+# WHY A CRITERION EXISTS HERE AT ALL. internal/vec/peak_test.go already defends
+# that every accumulator chain survives compilation (the T8 guard) and that the
+# flop accounting matches the shape, and `-mode nomemory` defends that the loop
+# is register-only. Nothing defended the instruction COUNT -- and because these
+# kernels are a denominator, inflating their loop body fails nothing: it lowers
+# measured peak GFLOP/s and therefore silently RAISES every percent-of-peak
+# figure computed against it. That is T8's failure mode with the sign flipped.
+# Not hypothetical: an unconditional 231-operand-form rewrite took avx512Peak
+# from 27 insns / 0 copies to 53 / 26, 2.25 -> 4.42 per FMA, with both existing
+# tests correctly green, because the arithmetic and the chain count were
+# untouched (#145).
+#
+# A ONE-SIDED CEILING, not the equality check gate-p3 applies to the shipped
+# tiles, and the deviation from #145's wording is deliberate. The dangerous
+# direction is one-sided: a fatter loop inflates every percentage, while a
+# leaner one lowers measured peak's reciprocal and makes every bar STRICTER. The
+# other direction is also already covered twice over -- a collapsed kernel is
+# what the chain-independence test and BenchmarkPeak's own witness check exist
+# to catch -- so pinning equality here would buy nothing and would red a gate
+# for an improvement.
+#
+# Empty from audit_ipf means the audit reported no insns-per-arith for that
+# function, which is `unmeasured` and never a pass: the caller's unmeasured()
+# sets FAIL, so an unreadable count blocks green exactly as a breach does
+# (DESIGN.md §5 rule 6). That state was reachable on arm64 until #173 -- the
+# audit's arith rule was vector-only, so every scalar function read 0 arith.
+#
+# Prints one line per entry: "<verdict> <name> <audited|-> <ceiling>".
+peak_ipf_verdicts() {
+  local spec name max got
+  for spec in $1; do
+    name="${spec%%:*}"
+    max="${spec##*:}"
+    got="$(audit_ipf "$name" "$2")"
+    if [[ -z "$got" ]]; then
+      echo "unmeasured $name - $max"
+    elif awk -v g="$got" -v m="$max" 'BEGIN { exit !(g > m) }'; then
+      echo "fail $name $got $max"
+    else
+      echo "pass $name $got $max"
+    fi
+  done
+}
+
 # field KEY LINE — the value of a `key=value` token in a marker line.
 field() {
   awk -v k="$1" '{
@@ -560,6 +626,7 @@ carry_p2_properties() {
     sed 's/^/        /' "$AUDITPEAK"
     fail "a peak kernel's loop touches memory; the percent-of-peak denominator is not a ceiling"
   fi
+  peak_ipf_criterion "$PEAK_IPF_CEILINGS" "$AUDITPEAK"
   # Every package a derived routine can live in, so a bounds check introduced by an index
   # expression shows up as provenance even where it is outside the K-loop the criterion covers.
   BCE_PKGS="$KERN_PKG ./internal/kern ./internal/pack ./internal/block"

@@ -9,6 +9,42 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **gate-p2/gate-p3 now judge the percent-of-peak denominator's own instruction count** (#145).
+  `internal/vec/peak_test.go` already defends that every accumulator chain survives compilation
+  and that the flop accounting matches the shape, and `-mode nomemory` defends that the loop is
+  register-only; nothing defended the instruction *count*. Because these kernels are a
+  denominator, inflating their loop body fails nothing — it lowers measured peak and so silently
+  **raises** every percent-of-peak figure. One-sided by design: a recorded ceiling per kernel
+  (amd64 `avx512Peak` 2.25, `avx2Peak` 2.30, `scalarPeak` 1.15; arm64 `neonPeak` 2.1875,
+  `scalarPeak` 1.30), audited at `6855709`, no margin added. A leaner loop passes, because that
+  direction makes every bar stricter and is already covered twice by the chain-independence test
+  and `BenchmarkPeak`'s witness check. An unreadable count is `UNMEASURED`, never a pass. One
+  shared emitter (`peak_ipf_criterion`) and one pure function (`peak_ipf_verdicts`) in
+  `gate-lib.sh` with nine controls in `baseline-test.sh`, including #145's own documented
+  2.25 → 4.42 regression and a one-instruction increase.
+
+### Fixed
+- `internal/spill`'s arm64 `isArith` was **vector-only**, so every scalar arm64 function counted
+  0 arith and insns-per-arith rendered `n/a` — `scalarPeak` read "13 insns for 0 arith". arm64's
+  scalar FP mnemonics (`FMADDS`, `FADDS`, …) start with `F`, not `V`; amd64's rule has covered
+  scalar from the start via its `SS`/`SD` arm, so this was an asymmetry between two arms of one
+  instrument. It would have left #145's new criterion permanently unmeasurable on one of two
+  shipping ISAs. Fixed with an explicit base list rather than a suffix pattern, because `FMOVS`,
+  `FABSD`, `FNEGS`, `FSQRTS`, `FCMPS` and `FCVTZSD` are all `F`-prefixed and `S`/`D`-suffixed and
+  are not arithmetic — a pattern would have inflated every arm64 denominator instead. The shipped
+  NEON kernels are byte-identical (4.11 / 5.00 / 5.75, same loop ranges), which matters because
+  `SWEEP_BEST_IPF_ARM64=4.111` is reconciled against them every run (#173).
+- `bench`'s formula peak cross-check read **`cpu0` unconditionally**, which on a heterogeneous
+  host describes a core the benchmark never ran on. On the GB10 it printed 2.81 GHz / 44.9 GFLOP/s
+  — the A725's parameters, accurate to +0.25% for *that* core — while the benchmark ran on an X925
+  at 3.90 GHz whose measured peak is 124.20. Being right about the other core type, it read as
+  validation. It now reads the clock of a CPU in the process's own affinity mask
+  (`/proc/self/status`, no new dependency), **names that CPU in the line**, and appends an explicit
+  `NON-UNIFORM host` caveat when the allowed set spans different clocks. Witnessed on castor across
+  four masks: pinned to cpu19, pinned to cpu0, unpinned, and pinned across both core types. The
+  remaining 2.0× gap is now cleanly the formula's `2 FMA ports` assumption (the X925 has 4), which
+  the caveat names — so on such a host a measured/formula divergence has a second cause besides
+  the double-pumping DESIGN.md §4/P2 reads it as (#171).
 - `vec.Kernel3x24` — the NEON zero-spill frontier shape (`3x24 u=2`, 4.111 insns/FMA against the
   shipped `4x16`'s 5.000), as a **measured-but-not-dispatched** candidate for #136's open shape
   decision. Body is `shapegen -arch arm64 -emit 3x24/2`'s verbatim output, so the shape measured
