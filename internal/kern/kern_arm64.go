@@ -73,7 +73,32 @@ func referenceTiles() []Kernel {
 		// whether it ships, and the issue's own caution 2 answers how that is
 		// decided: rank on the sweep's measured rate, treat the audit as a
 		// filter. So it sits here, benchmarked and audited and unable to
-		// dispatch, until the GB10 sweep rules.
+		// dispatch.
+		//
+		// THE GB10 SWEEP HAS RULED (2026-10-03, archive/neon-3x24): 3x24 wins at
+		// every kc and at full Sgemm/n=2048 on both GB10 core types, every interval
+		// disjoint, +6.62% blocked on a Cortex-X925. What holds the promotion is
+		// NOT the shape question any more; it is the sequencing. The published
+		// arm64 README rows were measured with 4x16 and gate-p5 criterion 9
+		// re-measures them within README_TOL=0.05, so a ~6.6% rise reds that
+		// criterion BECAUSE the library got faster, and §5 rule 17(c)'s cure is a
+		// dated re-registration from a judged run -- which rule 16 needs N>=2
+		// archived runs for. Promoting here and regenerating later would carry two
+		// regimes at once, published numbers from one shape and shipped code from
+		// another, which is what §4/P5's ordering ruling refused.
+		//
+		// THE GATING CONDITION, stated so nobody has to re-derive it: the next
+		// judged arm64 run already measures `Kernel/3x24/neon/kc=128` beside
+		// `Kernel/4x16/neon/kc=128` on Neoverse-V1 and V2 at no extra cost --
+		// KERN_BENCH_FILTER is a wildcard over shapes and bench/kernel_test.go
+		// walks Measured(), which is verified in archive/pinned8's judged Graviton
+		// sample, where all three non-dispatched referenceTiles were measured. When
+		// that run shows 3x24 ahead net of CI on both parts, the promotion is this
+		// line moving up plus `InsnsPerFMA: 148.0 / 36`, landed in the SAME
+		// campaign that regenerates the README rows and registers
+		// peak/3x24/neon/kc=128. Deliberately NOT added to the gate's KERN_FUNCS
+		// spill list while it is unshipped: that list FAILS the gate on a spill, so
+		// a future toolchain could red a judged run over a shape nobody dispatches.
 		//
 		// InsnsPerFMA is deliberately absent, and absent is not the same as
 		// unknown here: this shape's count is known (shapegen prints it), and

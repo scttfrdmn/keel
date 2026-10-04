@@ -68,6 +68,16 @@ While the major version is 0, minor versions may contain breaking changes.
   below *both* deep spillers. **Dispatch is unchanged**: flipping it would move the published arm64
   README rates by more than criterion 9's 5% band and so obligates a judged re-registration, which
   is a fleet-spend decision and is put to Scott on #136 rather than taken here (#136).
+- **Ruled 2026-10-03 (deferred to CC's judgement): the dispatch flip waits for the judged run that
+  measures it, and the gating condition is written at the registry entry** rather than left as a
+  readiness adjective. The shape question is settled — `3x24` wins on both GB10 core types at every
+  `kc` and at full `Sgemm`. The sequencing is what holds it: flipping now reds criterion 9 because
+  the library got faster, and clearing that needs N>=2 archived judged runs (§5 rule 16 + 17(c)),
+  where flipping *with* the measuring campaign costs nothing extra. Verified from
+  `archive/pinned8`'s judged Graviton sample that `KERN_BENCH_FILTER`'s wildcard already measures
+  every non-dispatched `referenceTile`, so the next judged arm64 run produces
+  `Kernel/3x24/neon/kc=128` beside `4x16` on Neoverse-V1 and V2 for free. Same reasoning §4/P5's
+  ordering ruling gives for not certifying numbers a phase intends to change (#136).
 
 ### Fixed
 - `kern.MemOpsPerFMA` divided by `vec.Lanes` — the shim's 16-lane *Block* width — where the

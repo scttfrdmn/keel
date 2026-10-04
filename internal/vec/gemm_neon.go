@@ -211,7 +211,11 @@ func Kernel4x16(kc int, a, b, c []float32, ldc int) {
 // than a hand transcription of it. Hence the two loops: the unrolled pass, then
 // a single-k remainder pass for an odd kc.
 //
-// It is a referenceTile and not a shipped kernel until the GB10 sweep rules, and
+// It is a referenceTile and not a shipped kernel. The GB10 sweep has since RULED
+// FOR it (archive/neon-3x24: +6.62% at full Sgemm/n=2048, intervals disjoint); what
+// holds the promotion is sequencing rather than the shape question, and the gating
+// condition is written at the registry entry in internal/kern/kern_arm64.go. The
+// staging rationale below is unchanged and is why it was measurable at all, and
 // that staging is deliberate rather than cautious. It would win dispatch the
 // moment an audited InsnsPerFMA were recorded on it — under either divisor, which
 // #170 is why that needs saying: at the native width 3x24 ties 4x16 at exactly
