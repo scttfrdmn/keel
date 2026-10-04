@@ -1,0 +1,16 @@
+# #176 one-variable region discriminator, 2026-10-04.
+# Same instance type (c7g.16xlarge, Neoverse-V1), same binary (sha256 a2ee7e2821c533a634be),
+# same commit, register-only FMA loop with no memory in the timed region.
+# Driver: run-probe.sh in this directory.
+#
+# region      1T (GFLOP/s)   8T (GFLOP/s)   8T/1T     8T spread
+# us-east-1   41.44          331.0          7.987x    0.4%   (329.8-331.1)
+# us-west-2   41.43          209.6          5.059x    23%    (178.6-220.4)
+#
+# README (v0.2.0 cert, us-east-1) Neoverse-V1 Ceiling/compute/8T = 331: probe reproduces to 0.00%.
+# 1-thread is identical in both regions, which is what makes this the host pool and not the code.
+#
+# us-east-1 raw 1T: 41.45 41.46 41.44 41.44 41.46 41.42 41.41 41.43 41.46 41.44
+# us-east-1 raw 8T: 331.1 329.8 331.0 331.1 331.1 331.0 331.0 331.0 331.0 331.0
+# us-west-2 8T (from the judged run's samples, gate-p5-arm64-3e86507):
+#   178.6 182.6 198.3 198.4 205.1 214.0 215.2 220.0 220.2 220.4

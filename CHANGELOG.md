@@ -108,6 +108,16 @@ While the major version is 0, minor versions may contain breaking changes.
   stays readable and no caveat is stated twice (#171).
 
 ### Fixed
+- `aws-fleet.sh` **refuses a judged (on-demand) launch outside the baselines' region**. The default
+  was already `us-east-1`, which is not what a correctly-invoked run got: the mandated
+  `AWS_PROFILE=aws` carries `region = us-west-2`, which wins through `AWS_REGION` — so the
+  2026-10-04 judged arm64 campaign ran against `us-east-1` baselines from a `us-west-2` pool and
+  nothing said so. Not cosmetic: a one-variable probe (#176) on the **same** `c7g.16xlarge`, same
+  binary, same commit, register-only 8-thread FMA loop measured **us-east-1 7.987× (0.4% spread)
+  against us-west-2 5.059× (23%)**, with 1-thread identical in both — so the pool, not the code.
+  §5 rule 21's class: an ambient variable outranking the run's own configuration. The escape
+  *honours* the override rather than clearing it, per `up`'s own `$KEEL_REMOTE_HOSTS` precedent
+  (#176).
 - `peak_ipf_criterion` killed `gate-p4` under `set -u`: #145's criterion was wired into
   `carry_p2_properties`, which gate-p3 **and gate-p4** both run, but `PEAK_IPF_CEILINGS` was
   declared only in gate-p2 and gate-p3. On a judged arm64 run gate-p4 exited 1 with **53 PASS / 0

@@ -38,6 +38,34 @@ cd "$(dirname "$0")/.."
 SPAWN="${KEEL_SPAWN:-spawn}"
 export AWS_PROFILE="${KEEL_SPAWN_PROFILE:-aws}"
 REGION="${AWS_REGION:-us-east-1}"
+
+# JUDGED_REGION -- the region every registered baseline and the v0.2.0 certificate
+# were measured in (archive/cert-v0.2.0/DIGESTS.sha256 states it in as many words:
+# "on-demand full-size judged instances in us-east-1").
+#
+# WHY THIS IS A GUARD AND NOT A DEFAULT. The default above is already us-east-1,
+# and it is not what a correctly-invoked run gets: the mandated profile sets its
+# own region, `[profile aws] region = us-west-2` in ~/.aws/config, and that wins
+# through AWS_REGION. So on 2026-10-04 a judged arm64 campaign ran in us-west-2
+# against baselines measured in us-east-1, and nothing said so.
+#
+# It was not cosmetic. Isolated by a one-variable probe (#176): the SAME
+# c7g.16xlarge type, the same binary, the same commit, a register-only 8-thread
+# FMA loop with no memory in the timed region --
+#
+#   us-east-1   1T 41.44   8T 331.0   7.987x   8T spread 0.4%
+#   us-west-2   1T 41.43   8T 209.6   5.059x   8T spread 23%
+#
+# -- so the us-west-2 pool did not deliver 8 cores of compute to 8 pinned threads
+# while us-east-1 delivered 7.99 of 8 and reproduced the certificate's 331 exactly.
+# 1T is identical in both, which is what makes it the pool and not the code.
+#
+# A region is therefore a decides-what-is-measured input, and this is rule 21's
+# class: an ambient variable outranking the run's own configuration. The escape
+# follows `up`'s own precedent for $KEEL_REMOTE_HOSTS -- it HONOURS the override
+# rather than clearing it, because a flag that silently relocated the fleet would
+# be nothing but a way past the guard.
+JUDGED_REGION="${KEEL_JUDGED_REGION:-us-east-1}"
 TTL="${KEEL_FLEET_TTL:-8h}"
 # Overridable so the block writer can be DRIVEN, which is not a convenience: this is the
 # step that failed once after three instances were already billing, and the only way to
@@ -205,6 +233,23 @@ cmd_up() {
   # SSM/describe calls are read-only and free, so validating them applies to a dry run too.
   # The distro pin (Ubuntu 24.04) and its reason live in ami_for_arch's header.
   say "region $REGION, TTL $TTL, market $MARKET"
+  # Fatal before the first billable call, and only for a JUDGED market: spot is
+  # exploration and may go wherever there is capacity.
+  if [[ "$MARKET" == on-demand && "$REGION" != "$JUDGED_REGION" ]]; then
+    if [[ -n "${KEEL_FLEET_CROSS_REGION:-}" ]]; then
+      say "CROSS-REGION judged launch, acknowledged: $REGION is not $JUDGED_REGION, so these"
+      say "readings are NOT comparable to the registered baselines (#176 measured 5.06x against"
+      say "7.99x for the same instance type across these two regions). \$KEEL_FLEET_CROSS_REGION"
+      say "names that as the intent; the provenance must carry it."
+    else
+      die "refusing a judged (on-demand) launch in '$REGION': every registered baseline and the
+  v0.2.0 certificate were measured in '$JUDGED_REGION', and #176 isolated a 5.06x-vs-7.99x
+  8-thread difference between these two regions on the SAME instance type. Note the likely
+  cause of the mismatch: AWS_REGION is '${AWS_REGION:-<unset>}' and the mandated AWS_PROFILE
+  carries its own region. Set AWS_REGION=$JUDGED_REGION, or set KEEL_FLEET_CROSS_REGION=1 to
+  say that measuring another region IS the intent."
+    fi
+  fi
 
   # Spot is the PRESENCE of a flag, not a value for one, so the arm is an array that is
   # either empty or the whole option.
