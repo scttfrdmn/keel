@@ -224,15 +224,66 @@ else. Measured peaks are 124.20 and 44.79 GFLOP/s, a **2.773×** ratio where
 `cpu_capacity` reports 1.426×, because the core types differ in **FMA pipe count**
 (4 vs 2, derived and confirmed to 0.17%) as well as clock. Filed as #171.
 
-### Correction 2 — "a shallow spill is throughput-free" is a little-core result
+### Correction 2 — "a shallow spill is throughput-free" is CORE-TYPE-DEPENDENT, not wrong
 
-Step 4 read `8x12` (spills 5) *tying* the winner and concluded the spill penalty is
-nil at 5 and real at 13. On the X925, `8x12` is **53.72** against `4x16`'s
-**63.34** — **15.2% slower**, and *below both deep spillers* (`8x16` 56.26, `4x32`
-55.80), which inverts the nonlinearity step 4 proposed. The tie was not
-re-measured on the little core, so step 4 stands there and is refuted on the big
-one. What survives unchanged is the screen itself: both top places go to zero-spill
-shapes, and the frontier shape is first.
+**AMENDED the same day it was written (2026-10-03), on the A725 arm this section
+first left unmeasured.** The original text is kept below the line because what it
+got wrong is instructive: it reported the claim *refuted on the big core and
+untested on the little one*, which was accurate, and then let "refuted" carry the
+weight of a verdict on a claim whose scope had not been established. Running the
+missing arm turned a refutation into a scoping.
+
+**Step 4's claim holds exactly where step 4 measured it.** On a Cortex-A725
+(`taskset -c 0`, `count=10`), `8x12` reads **21.36** against `4x16`'s **21.37** —
+**−0.05%**, intervals `[21.36, 21.37]` and `[21.37, 21.38]`, **not disjoint**. A
+real tie, as reported.
+
+**And step 4's whole table is an A725 table**, now established on all five shapes
+rather than the single row Correction 1 had:
+
+| shape | step 4 (pollux, unpinned, n=20) | castor A725 (pinned, n=10) | delta |
+|---|---|---|---|
+| `4x16` | 21.38 | 21.37 | −0.05% |
+| `8x12` | 21.37 | 21.36 | −0.05% |
+| `4x32` | 20.36 | 20.36 | +0.00% |
+| `8x16` | 19.53 | 19.53 | +0.00% |
+| `8x8` | 17.29 | 17.27 | −0.12% |
+
+Five shapes, two different physical machines, different placement methodologies,
+different revisions, agreeing to **≤0.12%**. Measured peak reproduces to 0.022%
+(44.78 against 44.79).
+
+**So the finding is a fact about core types.** A 5-accumulator spill is
+throughput-free on the 2-pipe A725 and costs **15.2%** on the 4-pipe X925, where
+`8x12` falls *below both deep spillers* (`8x16` 56.26, `4x32` 55.80) and drops
+from 3rd-equal to 5th of six. The mechanism candidate is stated as a candidate:
+more FMA pipes leave less latency slack for 24 independent chains to hide spill
+traffic in. Nothing here isolates it, so it is a lead and not a result.
+
+The full little-core ranking, which is what the single-row arm could not give:
+
+| shape | kc=8 | kc=32 | kc=128 | kc=512 | `-S` | %-of-peak @512 |
+|---|---|---|---|---|---|---|
+| **3x24 u=2** | **19.52** | **24.00** | **25.48** | **25.81** | fit | **57.6%** |
+| 4x16 | 16.87 | 20.12 | 21.01 | 21.37 | fit | 47.7% |
+| 8x12 | 16.34 | 19.93 | 20.97 | 21.36 | spill(5) | 47.7% |
+| 4x32 | 15.99 | 19.13 | 20.09 | 20.36 | spill(13) | 45.5% |
+| 8x16 | 15.11 | 18.23 | 19.22 | 19.53 | spill(13) | 43.6% |
+| 8x8 | 14.51 | 16.53 | 17.03 | 17.27 | fit | 38.6% |
+
+`3x24` wins here too, by **+20.78%** (+20.67% net of CI, disjoint) — reproducing
+the two-row A725 arm in `prediction.md`'s adjudication exactly. What survives
+unchanged from the original text: both top places go to zero-spill shapes and the
+frontier shape is first, on both core types.
+
+---
+
+*Original text, 2026-10-03, superseded by the paragraphs above:* "Step 4 read
+`8x12` (spills 5) *tying* the winner and concluded the spill penalty is nil at 5
+and real at 13. On the X925, `8x12` is **53.72** against `4x16`'s **63.34** —
+**15.2% slower**, and *below both deep spillers*, which inverts the nonlinearity
+step 4 proposed. The tie was not re-measured on the little core, so step 4 stands
+there and is refuted on the big one."
 
 ### The mechanism, which the two core types split between them
 

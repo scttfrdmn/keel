@@ -88,10 +88,16 @@ While the major version is 0, minor versions may contain breaking changes.
   in the registry to be swept — beats the shipped `4x16` at every `kc` and at full `Sgemm/n=2048`,
   every interval disjoint: **+7.40%** at the kernel level on a Cortex-X925 and **+6.62%** blocked,
   the decisive arm being the *unmodified* registry out of which `kern.Preferred` selects it. The two
-  corrections: step 4's rates are **little-core** rates (its `4x16` reproduces this host's A725 to
-  0.047%, and the 2.96× gap to the X925 is core type — #171), and its "a shallow spill is
-  throughput-free" finding is refuted on the big core, where `8x12` is 15.2% slower than `4x16` and
-  below *both* deep spillers. **Dispatch is unchanged**: flipping it would move the published arm64
+  corrections: step 4's rates are **little-core** rates — now established on all five of its shapes,
+  which reproduce on a pinned Cortex-A725 to **≤0.12%** across two machines and two placement
+  methodologies, with the 2.96× gap to the X925 being core type (#171) — and its "a shallow spill
+  is throughput-free" finding is **core-type-dependent rather than wrong**: `8x12` ties `4x16` at
+  −0.05% with overlapping intervals on the 2-pipe A725, exactly as step 4 reported, and costs
+  15.2% on the 4-pipe X925 where it falls below *both* deep spillers. The mechanism candidate —
+  more pipes leaving less latency slack for 24 chains to hide spill traffic in — is stated as a
+  candidate; nothing isolates it. (This CHANGELOG entry and `docs/neon-sweep.md` both said
+  "refuted on the big core … untested on the little one" earlier the same day; running the missing
+  arm turned a refutation into a scoping, and the superseded text is kept at the doc site.) **Dispatch is unchanged**: flipping it would move the published arm64
   README rates by more than criterion 9's 5% band and so obligates a judged re-registration, which
   is a fleet-spend decision and is put to Scott on #136 rather than taken here (#136).
 - **Ruled 2026-10-03 (deferred to CC's judgement): the dispatch flip waits for the judged run that

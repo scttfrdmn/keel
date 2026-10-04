@@ -1,0 +1,367 @@
+host: castor  rev-under-test: 9f040cb
+binary sha256: 9ceb721a5dc3234e961c37522ebf2f0dea1c51f1856c2a1bbcce64dfab9e9039
+pinned cpu: 0  capacity: 718  part: 0xd87  max_khz: 2808000
+governor: performance
+loadavg: 0.01 0.02 0.00 1/829 13713
+Cpus_allowed_list:	0
+
+keel-bench-cpu: unknown (no model name in /proc/cpuinfo)
+keel-bench-cores: 1 logical
+keel-bench-governor: performance
+keel-bench-clock-mhz: unknown (no cpu MHz field)
+keel-bench-platform: linux/arm64
+keel-bench-toolchain: go1.27.1-X:simd
+keel-bench-backend: neon (available: neon scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: neon: 44.9 GFLOP/s (2.81 GHz cpu0 cpuinfo_max_freq x 2 FMA ports x 4 lanes) -- the 2-port term is ASSUMED: DESIGN.md §4's formula is an amd64 observation and arm64 pipe counts vary by core (measured 4 on Cortex-X925, 2 on Cortex-A725), so a measured/formula divergence here has a cause besides double-pumping (#171)
+keel-bench-peak-formula: scalar: 5.6 GFLOP/s (2.81 GHz cpu0 cpuinfo_max_freq x 2 FP ports, unfused: 1 flop/op x 1 lanes) -- the 2-port term is ASSUMED: DESIGN.md §4's formula is an amd64 observation and arm64 pipe counts vary by core (measured 4 on Cortex-X925, 2 on Cortex-A725), so a measured/formula divergence here has a cause besides double-pumping (#171)
+keel-bench-gomaxprocs: 1
+keel-bench-kern: 4x16/neon (available: 8x8/neon 4x16/neon 8x8/scalar 4x16/scalar)
+keel-bench-kern-class: fma insns-per-fma=5.000 (no vector backend in this build (class unused))
+keel-bench-kern-audit: 8x8/neon=5.750 4x16/neon=5.000
+keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+goos: linux
+goarch: arm64
+pkg: github.com/scttfrdmn/keel/bench
+BenchmarkKernel/8x8/neon/kc=8         	16935579	        70.59 ns/op	        14.51 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	16968873	        70.60 ns/op	        14.51 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	16987272	        70.61 ns/op	        14.50 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	17006138	        70.60 ns/op	        14.50 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	17009594	        70.59 ns/op	        14.51 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	16999088	        70.60 ns/op	        14.50 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	17010076	        70.58 ns/op	        14.51 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	16995841	        70.58 ns/op	        14.51 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	17002530	        70.57 ns/op	        14.51 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=8         	16992445	        70.59 ns/op	        14.51 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4845608	       247.8 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4842241	       247.7 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4841113	       247.7 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4845229	       247.7 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4843801	       247.8 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4842740	       247.8 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4843989	       247.7 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4839045	       247.8 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4844335	       247.8 ns/op	        16.53 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=32        	 4843648	       247.7 ns/op	        16.54 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1246878	       962.2 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1246812	       962.3 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1246928	       962.1 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1247323	       962.2 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1246638	       961.8 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1246887	       962.1 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1247467	       962.2 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1247127	       962.3 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1247341	       962.5 ns/op	        17.02 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=128       	 1247019	       961.9 ns/op	        17.03 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  316221	      3796 ns/op	        17.27 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  315980	      3796 ns/op	        17.27 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  315735	      3797 ns/op	        17.26 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  315835	      3796 ns/op	        17.27 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  316138	      3796 ns/op	        17.26 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  315758	      3796 ns/op	        17.27 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  315844	      3796 ns/op	        17.26 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  315999	      3796 ns/op	        17.26 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  316099	      3795 ns/op	        17.27 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/neon/kc=512       	  315627	      3795 ns/op	        17.27 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19766185	        60.71 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19765137	        60.71 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19724607	        60.71 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19759478	        60.70 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19763518	        60.70 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19748649	        60.72 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19767273	        60.71 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19757244	        60.71 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19764616	        60.70 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=8        	19766706	        60.71 ns/op	        16.87 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5893245	       203.5 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5896833	       203.5 ns/op	        20.13 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5895452	       203.5 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5892987	       203.5 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5896620	       203.6 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5894892	       203.5 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5894128	       203.6 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5894512	       203.5 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5894480	       203.5 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=32       	 5896908	       203.5 ns/op	        20.12 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1538905	       779.7 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1538425	       779.8 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1539031	       779.7 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1538664	       779.8 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1538962	       779.6 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1538632	       779.8 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1538942	       779.7 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1539085	       779.9 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1538610	       779.7 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=128      	 1538965	       779.9 ns/op	        21.01 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391258	      3067 ns/op	        21.37 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391099	      3067 ns/op	        21.37 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391101	      3066 ns/op	        21.38 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391064	      3067 ns/op	        21.37 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391035	      3066 ns/op	        21.37 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391128	      3066 ns/op	        21.37 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391027	      3066 ns/op	        21.37 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391261	      3066 ns/op	        21.38 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391203	      3066 ns/op	        21.37 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/neon/kc=512      	  391174	      3066 ns/op	        21.37 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2088013	       574.4 ns/op	         1.783 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2086052	       575.3 ns/op	         1.780 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2085277	       575.1 ns/op	         1.781 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2089522	       575.1 ns/op	         1.781 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2085972	       574.9 ns/op	         1.781 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2085909	       575.3 ns/op	         1.780 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2086408	       575.4 ns/op	         1.780 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2086344	       574.9 ns/op	         1.781 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2085928	       575.1 ns/op	         1.781 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=8       	 2085559	       575.3 ns/op	         1.780 GFLOP/s	      1024 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  602958	      1998 ns/op	         2.050 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  599978	      1999 ns/op	         2.049 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  599982	      1998 ns/op	         2.050 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  599740	      1998 ns/op	         2.050 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  603625	      1978 ns/op	         2.071 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  605605	      1965 ns/op	         2.085 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  605607	      1977 ns/op	         2.071 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  606613	      1978 ns/op	         2.071 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  605392	      1978 ns/op	         2.070 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=32      	  630091	      1978 ns/op	         2.071 GFLOP/s	      4096 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  157731	      7646 ns/op	         2.143 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  155970	      7691 ns/op	         2.130 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  155806	      7691 ns/op	         2.130 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  156003	      7691 ns/op	         2.130 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  155977	      7691 ns/op	         2.130 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  156067	      7691 ns/op	         2.130 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  156409	      7691 ns/op	         2.130 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  155990	      7691 ns/op	         2.130 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  155990	      7691 ns/op	         2.130 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=128     	  155990	      7537 ns/op	         2.174 GFLOP/s	     16384 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39849	     30053 ns/op	         2.181 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39867	     30099 ns/op	         2.177 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39847	     30093 ns/op	         2.178 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39873	     30103 ns/op	         2.177 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39862	     30102 ns/op	         2.177 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39867	     30102 ns/op	         2.177 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39871	     30106 ns/op	         2.177 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39866	     30100 ns/op	         2.177 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39876	     30103 ns/op	         2.177 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x8/scalar/kc=512     	   39877	     30099 ns/op	         2.177 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2793242	       429.7 ns/op	         2.383 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2793512	       429.6 ns/op	         2.383 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2792793	       429.7 ns/op	         2.383 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2793768	       429.6 ns/op	         2.384 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2793102	       429.1 ns/op	         2.386 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2793976	       429.5 ns/op	         2.384 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2793261	       429.7 ns/op	         2.383 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2792388	       429.7 ns/op	         2.383 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2793037	       429.5 ns/op	         2.384 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=8      	 2793025	       429.6 ns/op	         2.384 GFLOP/s	      1024 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  840025	      1450 ns/op	         2.826 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  838531	      1442 ns/op	         2.840 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  827766	      1449 ns/op	         2.826 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  827254	      1450 ns/op	         2.825 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  829057	      1450 ns/op	         2.826 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  828067	      1450 ns/op	         2.825 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  827642	      1450 ns/op	         2.825 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  827449	      1450 ns/op	         2.825 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  825152	      1450 ns/op	         2.825 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=32     	  829916	      1450 ns/op	         2.825 GFLOP/s	      4096 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  217008	      5531 ns/op	         2.962 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  216982	      5532 ns/op	         2.962 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  216949	      5531 ns/op	         2.962 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  211785	      5666 ns/op	         2.892 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  211684	      5667 ns/op	         2.891 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  211706	      5662 ns/op	         2.894 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  216918	      5532 ns/op	         2.962 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  217549	      5532 ns/op	         2.962 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  216988	      5530 ns/op	         2.963 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=128    	  217089	      5531 ns/op	         2.962 GFLOP/s	     16384 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   55377	     21860 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   54901	     21860 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   54898	     21859 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   54902	     21861 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   54912	     21855 ns/op	         2.999 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   54890	     21859 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   54864	     21857 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   54895	     21859 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   55200	     21859 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/4x16/scalar/kc=512    	   54906	     21862 ns/op	         2.998 GFLOP/s	     65536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12766186	        93.99 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12762820	        93.99 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12773228	        93.99 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12769270	        93.98 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12769429	        93.99 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12772171	        94.01 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12773235	        93.97 ns/op	        16.35 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12764737	        93.98 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12769375	        93.99 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=8        	12771804	        93.98 ns/op	        16.34 GFLOP/s	      1536 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3892158	       308.3 ns/op	        19.93 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3893240	       308.3 ns/op	        19.93 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3893343	       308.3 ns/op	        19.93 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3891949	       308.3 ns/op	        19.93 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3892506	       308.3 ns/op	        19.93 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3892911	       308.3 ns/op	        19.93 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3892654	       308.3 ns/op	        19.93 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3891585	       308.4 ns/op	        19.92 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3891144	       308.4 ns/op	        19.92 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=32       	 3891776	       308.4 ns/op	        19.92 GFLOP/s	      6144 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.97 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.96 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.97 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.97 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.97 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.97 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.96 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.97 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.97 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=128      	 1000000	      1172 ns/op	        20.97 GFLOP/s	     24576 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260710	      4602 ns/op	        21.36 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260671	      4601 ns/op	        21.37 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260690	      4602 ns/op	        21.36 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260647	      4602 ns/op	        21.36 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260560	      4603 ns/op	        21.36 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260714	      4602 ns/op	        21.36 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260845	      4602 ns/op	        21.36 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260738	      4601 ns/op	        21.37 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260739	      4601 ns/op	        21.36 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x12/neon/kc=512      	  260289	      4601 ns/op	        21.37 GFLOP/s	     98304 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8847928	       135.6 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8846348	       135.6 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8800652	       135.6 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8852721	       135.6 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8851122	       135.6 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8836538	       135.6 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8848202	       135.6 ns/op	        15.10 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8807779	       135.5 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8840954	       135.6 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=8        	 8850938	       135.5 ns/op	        15.11 GFLOP/s	      2048 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2670238	       449.3 ns/op	        18.23 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2671490	       449.3 ns/op	        18.23 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2673924	       448.7 ns/op	        18.26 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2669568	       449.3 ns/op	        18.23 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2671267	       449.3 ns/op	        18.23 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2670360	       449.3 ns/op	        18.23 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2671227	       449.4 ns/op	        18.23 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2674407	       448.7 ns/op	        18.26 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2669463	       449.2 ns/op	        18.24 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=32       	 2671158	       449.3 ns/op	        18.23 GFLOP/s	      8192 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  704005	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  703962	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  703395	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  703065	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  702424	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  704600	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  703620	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  703261	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  703081	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=128      	  702988	      1705 ns/op	        19.22 GFLOP/s	     32768 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178716	      6713 ns/op	        19.52 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178746	      6712 ns/op	        19.53 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178688	      6713 ns/op	        19.52 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178756	      6713 ns/op	        19.53 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178776	      6712 ns/op	        19.53 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178416	      6713 ns/op	        19.53 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178808	      6712 ns/op	        19.53 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178704	      6713 ns/op	        19.53 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178770	      6714 ns/op	        19.52 GFLOP/s	    131072 flops/call
+BenchmarkKernel/8x16/neon/kc=512      	  178617	      6714 ns/op	        19.52 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9369436	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9371970	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9366103	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9371710	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9371758	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9369934	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9359246	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9368552	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9371425	       128.0 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=8        	 9371410	       128.1 ns/op	        15.99 GFLOP/s	      2048 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2802482	       428.2 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2802068	       428.2 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2802950	       428.1 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2801989	       428.1 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2802926	       428.2 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2803158	       428.1 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2802075	       428.2 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2803305	       428.1 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2802189	       428.1 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=32       	 2803113	       428.2 ns/op	        19.13 GFLOP/s	      8192 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  735715	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  734791	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  735674	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  735016	      1631 ns/op	        20.08 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  735472	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  735622	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  735063	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  735661	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  734851	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=128      	  735711	      1631 ns/op	        20.09 GFLOP/s	     32768 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186001	      6437 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186386	      6437 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186262	      6437 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186330	      6437 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186327	      6438 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186243	      6437 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186312	      6438 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186302	      6436 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186064	      6437 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/4x32/neon/kc=512      	  186262	      6438 ns/op	        20.36 GFLOP/s	    131072 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20331217	        58.96 ns/op	        19.54 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20324968	        59.01 ns/op	        19.52 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20334072	        59.01 ns/op	        19.52 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20318113	        59.01 ns/op	        19.52 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20321653	        59.01 ns/op	        19.52 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20335764	        59.00 ns/op	        19.52 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20321482	        59.01 ns/op	        19.52 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20332573	        59.02 ns/op	        19.52 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20322027	        59.00 ns/op	        19.53 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=8        	20321625	        59.02 ns/op	        19.52 GFLOP/s	      1152 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6250660	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6246205	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6249888	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6251313	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6250712	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6251244	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6250998	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6250971	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6250106	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=32       	 6247111	       192.0 ns/op	        24.00 GFLOP/s	      4608 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1659172	       723.5 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1659136	       723.5 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1659171	       723.4 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1659021	       723.4 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1658472	       723.3 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1658665	       723.4 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1658647	       723.4 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1658788	       723.4 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1658728	       723.4 ns/op	        25.48 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=128      	 1658912	       723.5 ns/op	        25.47 GFLOP/s	     18432 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  419220	      2857 ns/op	        25.80 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  420148	      2856 ns/op	        25.82 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  419803	      2857 ns/op	        25.81 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  419907	      2858 ns/op	        25.80 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  419895	      2856 ns/op	        25.81 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  419744	      2857 ns/op	        25.81 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  419928	      2858 ns/op	        25.80 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  419925	      2856 ns/op	        25.82 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  419854	      2857 ns/op	        25.81 GFLOP/s	     73728 flops/call
+BenchmarkKernel/3x24/neon/kc=512      	  420135	      2858 ns/op	        25.80 GFLOP/s	     73728 flops/call
+BenchmarkPeak/neon                    	    6392	    187310 ns/op	        44.78 GFLOP/s
+BenchmarkPeak/neon                    	    6399	    187317 ns/op	        44.78 GFLOP/s
+BenchmarkPeak/neon                    	    6402	    187308 ns/op	        44.79 GFLOP/s
+BenchmarkPeak/neon                    	    6399	    187320 ns/op	        44.78 GFLOP/s
+BenchmarkPeak/neon                    	    6402	    187310 ns/op	        44.78 GFLOP/s
+BenchmarkPeak/neon                    	    6402	    187309 ns/op	        44.78 GFLOP/s
+BenchmarkPeak/neon                    	    6406	    187301 ns/op	        44.79 GFLOP/s
+BenchmarkPeak/neon                    	    6402	    187308 ns/op	        44.79 GFLOP/s
+BenchmarkPeak/neon                    	    6398	    187286 ns/op	        44.79 GFLOP/s
+BenchmarkPeak/neon                    	    6403	    187338 ns/op	        44.78 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117075 ns/op	        11.20 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117082 ns/op	        11.19 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117066 ns/op	        11.20 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117084 ns/op	        11.19 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117081 ns/op	        11.19 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117088 ns/op	        11.19 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117074 ns/op	        11.20 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117104 ns/op	        11.19 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117075 ns/op	        11.20 GFLOP/s
+BenchmarkPeak/scalar                  	   10000	    117094 ns/op	        11.19 GFLOP/s
+PASS
+loadavg at end: 1.00 0.81 0.42 1/829 13748
