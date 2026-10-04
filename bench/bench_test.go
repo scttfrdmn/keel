@@ -73,9 +73,25 @@ func provenance() {
 		// (test the hint, and only if a darwin row is ever to be published) is named
 		// on #138 rather than filed as owed work.
 		if runtime.GOOS == "darwin" {
-			fmt.Println("keel-bench-placement: NONE -- darwin has neither of §5 rule 5's " +
-				"instruments (no cpufreq governor, no affinity mask), so a reading here is " +
-				"not a measurement in this project's sense and carries no judged weight (#138)")
+			// AMENDED 2026-10-03, hours after it was first written, by the probe that
+			// was supposed to confirm it (#175, bench/placement_darwin_test.go; §5
+			// rule 11 -- the instrument overrules its author, and this is that applied
+			// to my own published claim). The first version read "NONE -- darwin has
+			// neither of rule 5's instruments". The affinity half is now measured
+			// rather than assumed and the clock half was simply wrong.
+			fmt.Println("keel-bench-placement: UNSTATED on darwin, and that is weaker than " +
+				"it sounds in one direction and stronger in another (#138, #175). " +
+				"NO affinity mask: THREAD_AFFINITY_POLICY is refused outright with " +
+				"KERN_NOT_SUPPORTED (46), measured, so it is not a candidate -- a refused " +
+				"call cannot be doing anything. NO governor: darwin has no cpufreq. BUT a " +
+				"core-type lever DOES exist -- the QoS class, measured to separate this M4 " +
+				"Pro's clusters by 4.399x (114.68 vs 26.07 GFLOP/s register-only, 0.234% " +
+				"control) -- so rule 5's placement INTENT is satisfiable here even though its " +
+				"mechanism is not. It is reachable only through cgo, which this cgo-free " +
+				"build is not, so THIS reading ran at whatever class the invoking process " +
+				"carried. Default and USER_INTERACTIVE agree to 0.09%, so the exposure is a " +
+				"demoted parent rather than ordinary variation. A published M-series row " +
+				"states its class or states that it inherited one.")
 		}
 		fmt.Println("keel-bench-platform:", runtime.GOOS+"/"+runtime.GOARCH)
 		// The compiler is part of the instrument and no bench artifact recorded it:

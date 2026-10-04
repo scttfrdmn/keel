@@ -24,6 +24,19 @@ While the major version is 0, minor versions may contain breaking changes.
   2.25 → 4.42 regression and a one-instruction increase.
 
 ### Added
+- **`bench/placement_darwin*.go` — the darwin placement probe** (`darwinplacement` + `cgo` tags, so
+  nothing keel ships links it), run because Scott approved publishing M-series rows and that
+  removed the ground under #138's untested half. `docs/darwin-placement.md` carries the write-up.
+  **QoS *is* a core-type instrument on Apple silicon**: `QOS_CLASS_BACKGROUND` moves the
+  register-only NEON peak by **−77.27%** on an M4 Pro (114.68 → 26.07 GFLOP/s, a **4.399×** cluster
+  separation) against a **0.234%** control, clearing its registered −25% boundary.
+  `USER_INTERACTIVE` is −0.09%, the registered null. And `THREAD_AFFINITY_POLICY` is **refused**,
+  not inert: `thread_policy_set` returns **46 = `KERN_NOT_SUPPORTED`** — which is a stronger and
+  different fact from the belief #138 forbade restating, and needs no multi-thread design, since a
+  call the kernel declines cannot be doing anything. **The probe contaminated itself on its first
+  run and the control caught it**: QoS is per-OS-thread, Go recycles threads, and the
+  `default (repeat)` arm inherited `BACKGROUND` and read −73.6%; fixed with an unpaired
+  `LockOSThread` so the thread dies with the arm (#175).
 - `bench` states §5 rule 5's **placement law for darwin** on every reading it governs: darwin has
   neither instrument (no cpufreq governor, no affinity mask), so a reading there is not a
   measurement in this project's sense and carries no judged weight. This is rule 12's
@@ -31,7 +44,13 @@ While the major version is 0, minor versions may contain breaking changes.
   **no darwin reading is judged or published anywhere**: zero README rows, no gate reads a darwin
   host, and §4/P3 scopes the dev host to plumbing verification. It deliberately does **not** claim
   `THREAD_AFFINITY_POLICY` is inert, which is the belief #138 forbids restating as a finding
-  (#138).
+  (#138). **Amended hours later by the probe above** (§5 rule 11 — the instrument overrules its
+  author, applied to my own published claim): the law read "NONE — neither instrument", and the
+  affinity half is now a measured refusal while the core-type half was simply wrong. darwin has no
+  governor and no mask, but it *does* have a cluster lever, so rule 5's placement **intent** is
+  satisfiable there even though its mechanism is not — reachable only through cgo, so a reading in
+  the shipped cgo-free bench inherits its class rather than controlling it, and a published
+  M-series row must state which (#175).
 
 ### Changed
 - **DESIGN.md §4/P2 amended** (2026-10-03, on Scott's directive): the `>=1.5x` measured/formula
