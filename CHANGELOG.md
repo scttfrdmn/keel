@@ -8,6 +8,21 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **`3x24 u=2` is the shipped arm64 microkernel** (#136). It is the leanest of the 107 emittable
+  zero-spill NEON shapes (4.111 against `4x16`'s 5.000 insns/FMA) and `Preferred` selects it under
+  **both** classes — not by accident: it ties `4x16` on mem-ops/FMA *exactly*
+  (`1/3+4/24 == 1/4+4/16 == 0.5`), so `ClassFMA` ties on its primary axis and falls through to the
+  tie-break `ClassIssue` reads first (#170). **It ships on measured rate, not on that arithmetic**,
+  which is #136's own caution: judged-tier `BenchmarkKernel` at `kc=128` read **+10.2%** and
+  **+8.9%** on the two Neoverse parts with essentially zero-width intervals, characterization
+  brackets it at +7.40% (X925) to +20.78% (A725), and it survives the nest at **+6.62%** on full
+  `Sgemm/n=2048` — the size most hostile to `NR=24`, since `4x16` divides 2048 exactly while
+  `3x24` pays both an M- and an N-fringe. `Kernel3x24` joins `KERN_FUNCS` and `GATE_KERNELS` so the
+  dispatched shape is audited and judged rather than shipped unwatched, and
+  `TestPreferredPicksTheMeasuredWinnerPerClass` carries the new witness citation beside the moved
+  value (#136).
+
 ### Added
 - **A GREEN judged arm64 run** (`archive/arm64-green-25007d8/`, us-east-1, rev `25007d8`):
   `53 PASS / 0 FAIL / 0 UNMEASURED / 2 BASELINE`, with gate-p4 GREEN beneath it. Provisioning and

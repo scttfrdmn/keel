@@ -32,16 +32,30 @@ func TestPreferredPicksTheMeasuredWinnerPerClass(t *testing.T) {
 	}
 	// The expected winner per class comes from the measurement, not from re-reading the
 	// registry: amd64's split from KERNEL.md §7 (2×32 issue / 4×32 fma), arm64's from the
-	// negative-control witness on castor (GB10), where 4×16 beat 8×8 by +32% at full
-	// Sgemm/n=2048 and audits leaner on both axes (5.00<5.75 insns/FMA, 0.5<0.625 mem-ops),
-	// so it is the winner under both classes. Keyed off the audited backend, since Kernels()
-	// is build-tagged per ISA.
+	// judged-tier sweep. Keyed off the audited backend, since Kernels() is build-tagged
+	// per ISA.
+	//
+	// arm64's expectation moved 4x16 -> 3x24 on 2026-10-05 with #136's promotion, and the
+	// citation moves with it rather than the value alone. The witness is
+	// archive/arm64-us-east-1-d757ea9: BenchmarkKernel at kc=128 on the two judged Neoverse
+	// parts read 3x24 38.48 against 4x16 34.91 (+10.2%) and 35.56 against 32.65 (+8.9%),
+	// intervals essentially zero-width. Characterization brackets it — +7.40% on a
+	// Cortex-X925, +20.78% on an A725 (archive/neon-3x24) — and it survives the nest at
+	// +6.62% on full Sgemm/n=2048. Both classes give the same answer, and not by accident:
+	// 3x24 is leaner on insns/FMA (4.111 < 5.000) and TIES 4x16 on mem-ops/FMA
+	// (1/3+4/24 == 1/4+4/16 == 0.5 exactly), so ClassFMA ties on its primary axis and falls
+	// through to the same tie-break ClassIssue reads first (#170).
+	//
+	// The superseded expectation is kept legible because it was correct when written: 4x16
+	// beat 8x8 by +32% at full Sgemm on castor and audits leaner on both axes
+	// (5.00<5.75 insns/FMA, 0.5<0.625 mem-ops). 3x24 was not in the registry to be ranked
+	// then; it is the frontier shape and now it is.
 	want := map[kern.Class]string{
 		kern.ClassIssue: "2x32", // fewest instructions per FMA
 		kern.ClassFMA:   "4x32", // fewest memory ops per FMA
 	}
 	if vec[0].Name == kern.NEON {
-		want = map[kern.Class]string{kern.ClassIssue: "4x16", kern.ClassFMA: "4x16"}
+		want = map[kern.Class]string{kern.ClassIssue: "3x24", kern.ClassFMA: "3x24"}
 	}
 	for _, class := range kern.Classes() {
 		k, ok := kern.Preferred(class, vec)

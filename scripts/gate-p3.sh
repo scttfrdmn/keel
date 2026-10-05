@@ -233,7 +233,10 @@ SGEMM_SHAPE_FILTER='Sgemm/n=2048'
 # than arch-gating to reported. Still pending (docs/gate-arm64-port.md unit 3): PEAK_FLOOR's
 # validity for a 4-lane kernel.
 if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
-  KERN_FUNCS="Kernel8x8,Kernel4x16"
+  # Kernel3x24 joins the audited set with its promotion (#136): it is now the
+  # DISPATCHED shape, so the zero-spill/no-calls/no-BCE criteria must cover it or a
+  # shipped kernel goes unaudited on the host that runs it.
+  KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24"
   PEAK_FUNCS="neonPeak,scalarPeak"
   # arm64's own audited readings, not the amd64 ones: neonPeak 35 insns / 16 arith,
   # scalarPeak 13/10. scalarPeak's arm64 figure differs from amd64's 1.15 for a real
@@ -242,7 +245,10 @@ if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   # until #173: the audit's arith rule was vector-only, so every scalar arm64
   # function read 0 arith and insns-per-arith rendered `n/a`.
   PEAK_IPF_CEILINGS="neonPeak:2.1875 scalarPeak:1.30"
-  GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128"
+  # 3x24 must be in the JUDGED set too, not just the audited one: criterion 5
+  # fails when "Sgemm dispatches to a shape this gate did not benchmark", and the
+  # passed-over shapes become its ceiling set.
+  GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128 Kernel/3x24/neon/kc=128"
   GATE_PEAK_FUNC="neonPeak"
   GATE_PEAK="Peak/neon"
   SGEMM_BENCH_FILTER='(Peak|Sgemm|OpenBLAS)/(neon|n=2048)'

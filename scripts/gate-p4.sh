@@ -127,7 +127,10 @@ P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(avx512|n=2048)'
 # gate-p3.sh's unit-3b block.
 if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   P4_BACKENDS="neon scalar"
-  KERN_FUNCS="Kernel8x8,Kernel4x16"
+  # Kernel3x24 joins the audited set with its promotion (#136): it is now the
+  # DISPATCHED shape, so the zero-spill/no-calls/no-BCE criteria must cover it or a
+  # shipped kernel goes unaudited on the host that runs it.
+  KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24"
   # arm64's audited peak ceilings (#145). Same values gate-p3 declares, and
   # duplicated rather than shared because each gate states its own source facts;
   # gate-lib's criterion now renders UNMEASURED if a caller forgets, which is how

@@ -37,6 +37,27 @@ func vectorKernels() []Kernel {
 	return []Kernel{
 		{Name: NEON, MR: 8, NR: 8, Unroll: 1, Fn: vec.Kernel8x8, InsnsPerFMA: 92.0 / 16},
 		{Name: NEON, MR: 4, NR: 16, Unroll: 1, Fn: vec.Kernel4x16, InsnsPerFMA: 80.0 / 16},
+		// PROMOTED 2026-10-05 (#136), and the count is the spill-audit tool's own:
+		// `spill-audit -goarch arm64` reads Kernel3x24's steady-state loop as 148
+		// insns / 36 arith. It is the leanest of the 107 emittable zero-spill NEON
+		// shapes (`shapegen -arch arm64 -frontier`), and Preferred therefore selects
+		// it over 4x16 under BOTH classes -- 4.111 against 5.000 insns/FMA, and
+		// 1/3+4/24 == 1/4+4/16 == 0.5 mem-ops/FMA exactly, so ClassFMA ties on its
+		// primary axis and falls through to the same answer (#170).
+		//
+		// It ships on MEASURED rate and not on that arithmetic, which is #136's own
+		// caution 2: rank on the sweep, treat the audit as a filter. The judged
+		// evidence, BenchmarkKernel at kc=128 on the two Neoverse parts in us-east-1
+		// (archive/arm64-us-east-1-d757ea9): 38.48 against 4x16's 34.91 (+10.2%) and
+		// 35.56 against 32.65 (+8.9%), intervals essentially zero-width so both are
+		// CI-disjoint by orders of magnitude. Characterization agrees and brackets it:
+		// +7.40% on a Cortex-X925 and +20.78% on an A725 (archive/neon-3x24), with the
+		// judged parts at the low end as 4-pipe-class FP predicts. It also survives
+		// packing and blocking rather than winning only in isolation: +6.62% at full
+		// Sgemm/n=2048 under the unmodified registry, at the size most hostile to
+		// NR=24, since 4x16 divides 2048 exactly while 3x24 pays both an M- and an
+		// N-fringe.
+		{Name: NEON, MR: 3, NR: 24, Unroll: 2, Fn: vec.Kernel3x24, InsnsPerFMA: 148.0 / 36},
 	}
 }
 
@@ -66,46 +87,5 @@ func referenceTiles() []Kernel {
 		{Name: NEON, MR: 8, NR: 12, Unroll: 1, Fn: vec.Kernel8x12},
 		{Name: NEON, MR: 8, NR: 16, Unroll: 1, Fn: vec.Kernel8x16},
 		{Name: NEON, MR: 4, NR: 32, Unroll: 1, Fn: vec.Kernel4x32},
-		// 3x24 u=2 is the NEON zero-spill frontier — the leanest of the 107
-		// emittable shapes at 4.111 insns/FMA against the shipped 4x16's 5.000,
-		// which is the figure gate-p3 states as SWEEP_BEST_IPF_ARM64 and
-		// reconciles against shapegen -frontier on every run. #136's question is
-		// whether it ships, and the issue's own caution 2 answers how that is
-		// decided: rank on the sweep's measured rate, treat the audit as a
-		// filter. So it sits here, benchmarked and audited and unable to
-		// dispatch.
-		//
-		// THE GB10 SWEEP HAS RULED (2026-10-03, archive/neon-3x24): 3x24 wins at
-		// every kc and at full Sgemm/n=2048 on both GB10 core types, every interval
-		// disjoint, +6.62% blocked on a Cortex-X925. What holds the promotion is
-		// NOT the shape question any more; it is the sequencing. The published
-		// arm64 README rows were measured with 4x16 and gate-p5 criterion 9
-		// re-measures them within README_TOL=0.05, so a ~6.6% rise reds that
-		// criterion BECAUSE the library got faster, and §5 rule 17(c)'s cure is a
-		// dated re-registration from a judged run -- which rule 16 needs N>=2
-		// archived runs for. Promoting here and regenerating later would carry two
-		// regimes at once, published numbers from one shape and shipped code from
-		// another, which is what §4/P5's ordering ruling refused.
-		//
-		// THE GATING CONDITION, stated so nobody has to re-derive it: the next
-		// judged arm64 run already measures `Kernel/3x24/neon/kc=128` beside
-		// `Kernel/4x16/neon/kc=128` on Neoverse-V1 and V2 at no extra cost --
-		// KERN_BENCH_FILTER is a wildcard over shapes and bench/kernel_test.go
-		// walks Measured(), which is verified in archive/pinned8's judged Graviton
-		// sample, where all three non-dispatched referenceTiles were measured. When
-		// that run shows 3x24 ahead net of CI on both parts, the promotion is this
-		// line moving up plus `InsnsPerFMA: 148.0 / 36`, landed in the SAME
-		// campaign that regenerates the README rows and registers
-		// peak/3x24/neon/kc=128. Deliberately NOT added to the gate's KERN_FUNCS
-		// spill list while it is unshipped: that list FAILS the gate on a spill, so
-		// a future toolchain could red a judged run over a shape nobody dispatches.
-		//
-		// InsnsPerFMA is deliberately absent, and absent is not the same as
-		// unknown here: this shape's count is known (shapegen prints it), and
-		// recording it would hand 3x24 dispatch on arithmetic alone, since it
-		// beats 4x16 on the memory axis or ties it on both divisors (#170). The
-		// field stays empty because its meaning in betterFor is "not yet ranked
-		// by anything measured", which is exactly this shape's status.
-		{Name: NEON, MR: 3, NR: 24, Unroll: 2, Fn: vec.Kernel3x24},
 	}
 }
