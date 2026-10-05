@@ -1028,6 +1028,16 @@ else
     # empty and the WANT_ROWS existence check below skips the host as unmeasured.
     _pk="$(marker bench-kern "$BENCHLOG" | awk '{print $1}')"; _pk="${_pk##*/}"
     [[ -n "$_pk" ]] && GATE_PEAK="Peak/$_pk"
+    # The FULL dispatched id (tile/backend, e.g. 3x24/neon), for the scale and share
+    # baseline keys below. #167 keyed peak/* this way and gave the reason: "dispatch
+    # moved inside this era: the 029e24f registration read 59.6 (V1) and 42.9 (V2) on
+    # 8x8/neon, so a shape-blind row would have carried a bar across a different
+    # kernel." Its siblings were left bare, and on 2026-10-05 that bit: scale/Strsm's
+    # registered 7.921x/7.902x were measured at 8x8/neon (029e24f, verified from that
+    # run's own marker) and were being applied to 3x24/neon, two dispatch changes
+    # later. Empty when the marker is absent, which the key check below treats as no
+    # key rather than as a bare one.
+    P5_KERN_ID="$(marker bench-kern "$BENCHLOG" | awk '{print $1}')"
     # The raw samples, kept (#110). Printed because a verdict that cannot be
     # recomputed from the numbers it was derived from is a verdict standing on a
     # log line — which is the state every judged run before this one is in, and
@@ -1307,7 +1317,9 @@ else
           # is STRSM_MARGIN and not BASELINE_MARGIN's 2.6 points (different units, and rule
           # 17(c) requires the fleet bar's own constant), and what the era's archives say
           # about whether 0.403x is enough slack for it.
-          SCRIT="scale/$r"; SBAR="$STRSM_FLOOR"
+          # Keyed on the dispatched shape since 2026-10-05 (#167's fix, applied to its
+          # sibling): a ratio measured on one microkernel is not a bar for another.
+          SCRIT="scale/${P5_KERN_ID:+$P5_KERN_ID/}$r"; SBAR="$STRSM_FLOOR"
           SWHY="the fleet bar ratified for this class 2026-08-16 under the B-packing-residue model"
           SSTATE="$(baseline_state "$BASELINE_REGISTRY" "$BASELINE_WITNESS" "$hcpu" "$SCRIT" "$P5_ERA" "$SCALE_DERIVED_FROM")"
           if [[ "$SSTATE" == nokey ]]; then
@@ -1434,7 +1446,11 @@ else
       # convicting every host of a methodology change. The classification itself is
       # baseline_state, shared with the ratio criterion above (#119) — the two differ in
       # their derivation sets, their units and their margin, and in nothing else.
-      BCRIT="share/$r"; BBAR="$CEIL_FRACTION"
+      # Keyed on the dispatched shape too, and this is the half that costs rather than
+      # acquits: these four rows were PASSING, on 8x8-era bars that 3x24 clears easily.
+      # A green for the wrong reason is as untrustworthy as a red for one (§5 rule 6),
+      # so they become first-sight registrations alongside the scale row.
+      BCRIT="share/${P5_KERN_ID:+$P5_KERN_ID/}$r"; BBAR="$CEIL_FRACTION"
       BWHY="the fleet bar, whose derivation is printed in this criterion's preamble"
       BSTATE="$(baseline_state "$BASELINE_REGISTRY" "$BASELINE_WITNESS" "$hcpu" "$BCRIT" "$P5_ERA" "$CEIL_DERIVED_FROM")"
       if [[ "$BSTATE" == nokey ]]; then

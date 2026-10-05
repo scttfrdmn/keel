@@ -1,0 +1,13 @@
+# Draw 2 at the shipped 3x24 shape, us-east-1. Same five FAILs as draw 1 (reproducible).
+# Verify with `shasum -c archive/arm64-3x24-draw2/DIGESTS.sha256` from the repo root.
+#
+f37b2d8e584ea1254e281b369c0ffb780d22700c74cb3066d840086656dee264  archive/arm64-3x24-draw2/gate-p3-under-p4-1add234-20261005T030226Z.log
+e9afb99a8f7760df5781a50096e9507061d3ea88a599da92191f515641096400  archive/arm64-3x24-draw2/gate-p4-under-p5-1add234-20261005T022026Z.log
+80b13bde0e013a2feb610ff76c152125ab1c13e1e87683776b85d4ad36ab0f21  archive/arm64-3x24-draw2/gate-p5-arm64-draw2.log
+9c18998ee081980c559ad9e602733ae57676ef731e56d3ac9e54dc8e78943100  archive/arm64-3x24-draw2/README.md
+69e96b5ca3ec970b36348027079a16e255a0cc60b75ad5514cde93df2b65360f  archive/arm64-3x24-draw2/baseline-candidates-1add234-20261005T022026Z.tsv
+4c7a36c357c51ef5f16b3eeeacf4775054d2d7407a7802ea5d981e86b9cf94d7  archive/arm64-3x24-draw2/bench-gate-p5-1add234-20261005T022026Z-1.txt
+4fc055f697eb1faba7dc57c6696ce751c8ac866b86a7cc59e5d58ea32dce611f  archive/arm64-3x24-draw2/bench-gate-p5-1add234-20261005T022026Z-2.txt
+e70254b89070d0665c1d8737f29b49e6b37f1d16ba2cd64811b320af59496014  archive/arm64-3x24-draw2/bench-gate-p5-1add234-20261005T022026Z-3.txt
+fa37693dbc9bc4db47491f9274c6e278c103255982af2780d33f8bc4d4a08257  archive/arm64-3x24-draw2/bench-gate-p5-1add234-keel-gvt3-20261005T022026Z-2.txt
+953365aadd44a9336ae208bd8c576a25c7c3757871169a89c5b0be22d4e7619a  archive/arm64-3x24-draw2/bench-gate-p5-1add234-keel-gvt4-20261005T022026Z-1.txt

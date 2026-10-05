@@ -8,6 +8,20 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+- **`scale/*` and `share/*` baselines are now keyed on the dispatched shape**, as `peak/*` has been
+  since #167. That issue keyed `peak/*` with the reason spelled out — *"dispatch moved inside this
+  era… so a shape-blind row would have carried a bar across a different kernel"* — and left its two
+  siblings bare. On 2026-10-05 that bit: `scale/Strsm`'s registered 7.921×/7.902× were measured at
+  **`8x8/neon`** (verified from `029e24f`'s own `keel-bench-kern` marker) and were being applied to
+  `3x24/neon`, **two dispatch changes later**. It is the immediate cause of the #136 campaign's red
+  and a *different* defect from #177's wrong-quantity finding. **The half that costs rather than
+  acquits:** four `share/*` rows were *passing* on those same 8x8-era bars, which `3x24` clears
+  easily, and they become first-sight registrations too — a green for the wrong reason being as
+  untrustworthy as a red for one (§5 rule 6). An absent marker falls back to the bare key rather
+  than a malformed one, and scope was verified structurally: `P5_KERN_ID` is set inside the same
+  per-host loop both key sites sit in (#167, #136).
+
 ### Added
 - The judged campaign for #136's promotion (`archive/arm64-3x24-shipped/`, us-east-1, rev
   `4374c4f`): `48 PASS / 5 FAIL / 0 UNMEASURED / 2 BASELINE`, gate-p4 GREEN beneath it, dispatch
