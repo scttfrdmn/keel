@@ -9,8 +9,18 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
-- **`scale/*` and `share/*` baselines are now keyed on the dispatched shape**, as `peak/*` has been
-  since #167. That issue keyed `peak/*` with the reason spelled out — *"dispatch moved inside this
+- **REVERTED the same day: keying `scale/*` and `share/*` on the dispatched shape** orphans the
+  registry mid-era and the witness mechanism correctly refuses it. The judged run predicted 2 FAILs
+  and produced **10**: rule 17(a)'s witness is keyed on **CPU model + era**, not on the criterion
+  key, so re-keying made the registry lookup miss while `judged-runs.tsv` still said this silicon
+  was judged in `pinned8` — turning six rows into `owing` FAILs rather than first sights. That is
+  the mechanism working: a re-key cannot launder a registered obligation into newness. The
+  legitimate path is an **era boundary**, which §5 rule 17(d) prices as "a dated §5 or §7 amendment
+  plus a both-arms transition archive, recorded per era in `scripts/measurement-eras.tsv`" — a
+  contract amendment and a transition campaign, not a key string. The underlying finding stands
+  and is recorded on #177 (#167, #177).
+- ~~**`scale/*` and `share/*` baselines are now keyed on the dispatched shape**, as `peak/*` has been
+  since #167.~~ That issue keyed `peak/*` with the reason spelled out — *"dispatch moved inside this
   era… so a shape-blind row would have carried a bar across a different kernel"* — and left its two
   siblings bare. On 2026-10-05 that bit: `scale/Strsm`'s registered 7.921×/7.902× were measured at
   **`8x8/neon`** (verified from `029e24f`'s own `keel-bench-kern` marker) and were being applied to

@@ -1,0 +1,5 @@
+# The re-keying attempt refused by the witness mechanism, 2026-10-05. Predicted 2 FAILs, got 10.
+# Verify with `shasum -c archive/arm64-register-attempt/DIGESTS.sha256` from the repo root.
+#
+1a7f882ea105228e1113a490840fe7c4c1aa7516cc1348cf8d9debb0f0ca68ad  archive/arm64-register-attempt/gate-p5-arm64-register.log
+f1445db9a7cd8a71f54ea04fe2c4825865b30541d105d0d06d63ff981c6caf2a  archive/arm64-register-attempt/README.md
