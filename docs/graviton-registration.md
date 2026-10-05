@@ -229,3 +229,35 @@ this sharpens the case rather than settling it: SVE is worth ~24% on V1, and a V
 kernel is worth *less than NEON* on V2 — so the lever is real but micro-architecture-specific,
 and a keel SVE path would need per-uarch tuning rather than one SVE kernel, which is exactly the
 cost the standing task has to price.
+
+## Post-hoc: one pre-registered criterion is retired (2026-10-05, #177)
+
+The predictions above are **unamended and stay unamended** — a pre-registration whose
+outcome space is edited after the run is not one, and this file's only legitimate
+amendment was dated before any pass ran. What this note records is that one of the
+criteria two of those predictions name **no longer exists**, so those two can never be
+re-adjudicated against a future run of this gate.
+
+`scale/Strsm` and its `STRSM_FLOOR=6.066×` bar are **retired** by the ruling on `#177`
+(`DESIGN.md` §4/P5): the T8/T1 ratio is the quantity `#6` retired for the whole judged
+class in 2026-08-20, and keeping it for one routine let it redden `#136`'s microkernel
+promotion for improving its own single-thread denominator. `Strsm` is judged as a share
+of each host's own measured 8-thread ceiling with the other three.
+
+So, against this file:
+
+- **`scale/Strsm` — PRE-REGISTERED, RENDERED, and the criterion is now gone.** The
+  prediction *held* on the ladder passes it was written for (BASELINE both hosts,
+  candidate and witness rows emitted). Its "confirmation judges at `own_baseline −
+  0.403×`" clause is void: that confirmation will not happen, the registered 7.902× /
+  7.921× rows sit in a closed era, and the two hosts are judged on `share/Strsm` instead.
+- **`share/Sgemm, share/Ssyrk, share/Ssymm` — the criterion survives and its KEY moved.**
+  Every judged baseline is keyed `<criterion>/<tile>/<backend>/<row>` from era `ceil8`,
+  because a bar measured on `8x8/neon` was being applied to `3x24/neon`. `CEIL_FRACTION`
+  is suspended to empty at that boundary, so these three (and `Strsm` with them) render
+  BASELINE once more and are judged on the run after. The prediction's *mechanism* is
+  intact — outside `CEIL_DERIVED_FROM` → BASELINE → candidate rows → judged next run —
+  and it is the constant and the key that moved.
+- **Nothing else in this file is touched.** The dispatch marker, the OpenBLAS ratio, the
+  percent-of-peak recording and the SVE≈NEON refutation are unaffected: none of them
+  reads the retired criterion.

@@ -761,7 +761,12 @@ From `scripts/gate-p5.sh`, lines 2–241 at `c421486`.
 > dated to `c421486` and a verbatim archive that gets quietly corrected is neither verbatim
 > nor an archive. Read it as the reasoning that was live then, including the reasoning that
 > the ruling overturned — the passage comparing `STRSM_FLOOR` to `SCALE_FLOOR` as "just
-> margin" is exactly the premise the rank inversion falsified.
+> margin" is exactly the premise the rank inversion falsified. **And `STRSM_FLOOR` itself is
+> retired as of 2026-10-05** (ruling on `#177`, `DESIGN.md` §4/P5): the passage quoted below is
+> the whole argument for that constant, and the argument's own words are what killed it — a
+> T8/T1 ratio is the quantity `SCALE_FLOOR`'s retirement was about, so "which is what
+> `SCALE_FLOOR` is too" turned out to be the concession rather than the defence. `Strsm` is
+> judged as a share with the other three routines.
 
 ```text
 Gate P5 — see DESIGN.md §4/P5. Written at the START of phase P5, then made

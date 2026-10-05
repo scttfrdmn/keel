@@ -539,6 +539,18 @@ unexercised, and that is stated rather than implied.
 
 ### The extension to the ratio criteria (#119, ruled 2026-08-29, landed 2026-08-30)
 
+> **VOID as to its SUBJECT, 2026-10-05 (#177), and intact as to its reasoning.** The criterion
+> this section extended rule 17 to — `Strsm`'s T8/T1 floor — is **retired**, so
+> `SCALE_DERIVED_FROM`, `STRSM_FLOOR` and `STRSM_MARGIN` name nothing in the tree and the
+> two-derivation-sets finding below has one list where it had two. What survives untouched is
+> the *argument*: rule 17 binds every criterion that compares a host to a reference, the
+> derivation set travels with the bar and never across bars, and a margin does not convert
+> between units. All three were re-applied, not re-argued, when `Strsm` joined the share class.
+> The retirement's grounds are in `DESIGN.md` §4/P5 and amount to one sentence: the T8/T1 ratio
+> is the quantity #6 retired for the whole judged class in 2026-08-20, and keeping it for one
+> routine let it redden a microkernel for improving its own denominator. Ruling: DESIGN.md
+> §4/P5, 2026-10-05.
+
 The class was built for the *absolute* criteria and the ratio criteria never got it: a scaling
 bar applied to every host that reported, so a host outside the bar's derivation set was judged
 against an artifact that predates its admission — rule 17's entire subject, unenforced one
@@ -784,7 +796,12 @@ Each criterion's own **declared slack** satisfies that, and each has exactly one
 | criterion | bar | slack | dated | width measured as |
 |---|---|---|---|---|
 | share of the 8-thread ceiling | `CEIL_FRACTION` | `BASELINE_MARGIN` = 2.6 points | 2026-08-20 | `100*(share − share net of CI)`, points of share |
-| `Strsm` scaling | `STRSM_FLOOR` | `STRSM_MARGIN` = 0.403x | 2026-08-16 | `point − point net of CI`, in x |
+| ~~`Strsm` scaling~~ | ~~`STRSM_FLOOR`~~ | ~~`STRSM_MARGIN` = 0.403x~~ | 2026-08-16 | **VOID 2026-10-05 (#177): criterion retired** |
+
+**The second row is VOID and struck rather than deleted**, because the paragraphs below derive
+the first row's properties by *comparison* with it — the units argument has no content with one
+row in the table. `Strsm` is judged by the first row now, in its units and under its slack, so
+there is one declared slack where there were two and nothing left to import between them.
 
 Both are the same construction — `bar = reference − slack` — which is why importing them is
 reuse and not invention: 53.6 − 2.6 = 51.0 is the derivation the share bar printed while it

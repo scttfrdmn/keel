@@ -51,17 +51,19 @@ CAP_END='<!-- keel-caption: end -->'
 #
 # 51.0 was TYPED 2026-08-22 from rows measured under the mask's confined first form, and
 # SUSPENDED the same day when the spread amendment changed the instrument its denominator was
-# measured with. STRSM_FLOOR was suspended beside it, made era-scoped by the same ruling.
-# BOTH ARE TYPED AGAIN 2026-08-22 from the founding campaign's take four, recomputed under
-# #116: 44.2 from six admissible rows and 6.066x from three judged hosts. gate-p5.sh carries
-# both derivations and is the authority; restated here in the same commit because the check
-# below reads those lines back verbatim, so this is a second edit and not a second decision.
-# 6.066x is not SCALE_FLOOR_RETIRED coming back — it lands within 1.1% of it by coincidence,
-# and the caption below names the retired one AS retired, which is why the check reads all
-# three. The published shares this caption governs are regenerated separately, as medians
-# over this era's archives (#6): a bar and the rows it judges are not one act.
-CEIL_FRACTION=44.2
-STRSM_FLOOR=6.066
+# measured with; 44.2 replaced it from the founding campaign's take four, recomputed under #116.
+#
+# ONE BAR SINCE 2026-10-05, AND IT IS SUSPENDED (ruled on #177; DESIGN.md §4/P5 is the
+# authority). STRSM_FLOOR is RETIRED, not deferred -- the T8/T1 ratio was the quantity #6
+# retired for the whole judged class in 2026-08-20, kept in service for one routine, and it
+# reddened #136's microkernel promotion for improving its own 1-thread denominator. Strsm is
+# judged as a SHARE with the other three, so this script publishes one bar and not two. 44.2
+# goes with it: era ceil8 re-keys every judged baseline on the dispatched microkernel, so the
+# references the fraction was derived against were measured on another kernel. The empty-bar
+# branches below are live, not dead code -- they have served every deferral since #37 and they
+# serve this one. SCALE_FLOOR_RETIRED stays because the caption NAMES it as retired; the
+# readback reads it for that reason and would catch it being revived as a live comparison.
+CEIL_FRACTION=
 SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'
 
@@ -84,12 +86,12 @@ for l in "${LOGS[@]}"; do [[ -r "$l" ]] || die "cannot read $l"; done
 # is read back too, because the caption names it as retired: if it were deleted from
 # the gate, or worse revived there as a live comparison, this disclosure would be
 # describing the wrong one of two 6.0s.
-for pair in "CEIL_FRACTION=$CEIL_FRACTION" "STRSM_FLOOR=$STRSM_FLOOR" "SCALE_FLOOR_RETIRED=$SCALE_FLOOR_RETIRED"; do
+for pair in "CEIL_FRACTION=$CEIL_FRACTION" "SCALE_FLOOR_RETIRED=$SCALE_FLOOR_RETIRED"; do
   grep -qxF "${pair%%=*}=${pair#*=}" scripts/gate-p5.sh \
     || die "${pair%%=*} here is ${pair#*=} but scripts/gate-p5.sh disagrees; the disclosure would name a bar the gate does not enforce"
 done
 
-BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR" \
+BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
          -v retired="$SCALE_FLOOR_RETIRED" '
   function strip(s) { gsub(/\033\[[0-9;]*m/, "", s); return s }
   function bn(p) { sub(/^.*\//, "", p); return p }
@@ -396,28 +398,21 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
         if (verdict[h, r] == "BASELINE") nb++
         if (verdict[h, r] == "REPORTED") nu++
         if (verdict[h, r] == "FAIL") {
-          # THREE KINDS NOW, because the two classes are judged by different
-          # instruments. The judged class is compared net of CI against its own
-          # measured ceiling, and that comparison yields ONE fraction -- there is no
-          # point-estimate-vs-CI distinction to draw, so a shortfall there is just a
-          # shortfall, named as a share of the ceiling and NOT as that ceiling in
-          # GFLOP/s: this string lands in the caption, which is outside the block
-          # criterion 9 re-measures, so a rate here would be a claim (§7 rule 7).
-          # It was one, latently -- unreachable only because CEIL_FRACTION ships
-          # deferred-empty, so the day a fraction is ratified and any row missed it,
-          # criterion 9 would have gone red for a reason unrelated to the shortfall.
-          if (r != "Strsm") {
-            short[++ns] = sprintf("%s %s at %s%% of its own measured %s-thread ceiling", model[h], r, fr1[h, r], (nt == "" ? "8" : nt))
-          } else {
-            # Strsm keeps the ratio bar and so keeps the distinction, which asks for
-            # different things: a point estimate already under the floor is a
-            # shortfall, while one that clears the floor and fails only net of CI is a
-            # verdict decided by the noise the measurement itself carries, and the
-            # remedy for that is precision (DESIGN.md §4, line 130) rather than a
-            # discussion about the nest.
-            if (pt1[h, r] + 0 >= tf + 0) near[++nn] = sprintf("%s %s (%sx, %sx net of CI)", model[h], r, pt1[h, r], ci1[h, r])
-            else low[++nl] = sprintf("%s %s at %sx (%sx net of CI)", model[h], r, pt1[h, r], ci1[h, r])
-          }
+          # ONE KIND SINCE 2026-10-05 (#177). There were three, because there were two
+          # classes judged by different instruments: a share shortfall for the GEMM-shaped
+          # three, and -- for Strsm on its T8/T1 ratio -- a point-estimate shortfall kept
+          # apart from one that clears the floor and fails only net of CI, since the remedy
+          # for the second is precision rather than a discussion about the nest. That ratio
+          # is retired and Strsm is judged as a share, so the distinction has nothing left to
+          # draw: a share is compared net of CI against one measured ceiling and yields ONE
+          # fraction. The `near`/`low` arrays and their two caption clauses went with it.
+          #
+          # Named as a share of the ceiling and NOT as that ceiling in GFLOP/s: this string
+          # lands in the caption, which is outside the block criterion 9 re-measures, so a
+          # rate here would be a claim (§7 rule 7). It was one, latently -- unreachable only
+          # because CEIL_FRACTION ships deferred-empty, so the day a fraction is ratified and
+          # any row missed it, criterion 9 would have gone red for an unrelated reason.
+          short[++ns] = sprintf("%s %s at %s%% of its own measured %s-thread ceiling", model[h], r, fr1[h, r], (nt == "" ? "8" : nt))
         }
       }
       # THE DENOMINATOR EVERY BAR DIVIDES BY IS NOW A ROW (#113). Caption-only until now, and the
@@ -536,12 +531,12 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     jb = (cf == "" \
       ? sprintf("the judged routines are reported against each host'"'"'s own measured %s-thread ceiling with no fraction in force (#6)", (nt == "" ? "8" : nt)) \
       : sprintf("the judged routines must reach %s%% of each host'"'"'s own measured %s-thread ceiling (#6)", cf, (nt == "" ? "8" : nt)))
-    # The same hole, in the same sentence, for the same reason: the bar for this class has been
-    # deferred once (#37) and suspended once (the 2026-08-22 spread amendment), so ">= x"
-    # with nothing in it is a state this printf could reach and did not handle.
-    tb = (tf == "" \
-      ? "Strsm is reported against its own 1-thread rate with no floor in force (#37)" \
-      : sprintf("Strsm must scale >= %sx (#37)", tf))
+    # The second bar'"'"'s sentence is a RETIREMENT and no longer a hole: Strsm was judged
+    # against its own 1-thread rate from #37 until 2026-10-05, when #177 retired that ratio and
+    # moved the routine into the sentence above. Kept as a named disclosure rather than deleted,
+    # because every published row this caption has ever governed was judged under two bars and a
+    # reader comparing against an older README is owed the reason one of them is gone.
+    tb = sprintf("Strsm'"'"'s own >= x T8/T1 floor is RETIRED (#177, 2026-10-05): it was the same quantity the %sx cross-host floor was retired for, and it reddened a microkernel that improved both of its arms", retired)
     # ONE SPELLING OF EACH UNJUDGED DISCLOSURE, shared by every branch that can reach it.
     # The era is read off the log rather than named here: a generator that hardcodes the
     # era would keep publishing "pinned8" into the era after it.
@@ -551,16 +546,16 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
     # gate lines are prefixed PASS, and that prefix is what made this caption claim they
     # cleared bars derived from them.
     bc = bc (nu == 0 ? "" : sprintf(" A further %d %s measured under no bar at all -- that run predates the bars it would be judged by, which were derived from it -- so %s no verdict.", nu, (nu == 1 ? "pair was" : "pairs were"), (nu == 1 ? "it is REPORTED and carries" : "they are REPORTED and carry")))
-    if (cf == "" && tf == "" && nl + nn + ns > 0) {
+    if (cf == "" && ns > 0) {
       # The log disagrees with this tree about whether a bar exists. The constants readback
       # above compares this script with gate-p5.sh and cannot see this: the rows come from a
       # LOG, and a log written when a bar was in force carries FAIL verdicts no suspended bar
       # could have produced. Refuse rather than publish either sentence -- "none was judged"
       # over evidence of judging is the worse of the two lies available here.
-      printf "readme-numbers: both bars are suspended in this tree, but %s shortfall verdict(s) appear in %s -- that log was judged by bars this tree does not have, so no caption over it can be true\n", nl + nn + ns, FILENAME > "/dev/stderr"
+      printf "readme-numbers: the bar for the judged class is suspended in this tree, but %s shortfall verdict(s) appear in %s -- that log was judged by a bar this tree does not have, so no caption over it can be true\n", ns, FILENAME > "/dev/stderr"
       exit 3
     }
-    if (cf == "" && tf == "") {
+    if (cf == "") {
       # BOTH bars suspended: "clears the bars" would be vacuously true and would read as a
       # pass, which is the one sentence this caption may not print -- a check that could not
       # have come out otherwise is not evidence (DESIGN.md §5 rule 8). No row can fail here,
@@ -574,8 +569,8 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # a BASELINE verdict line can be parsed: those lines carry no scaling clause, so this
       # program refuses the whole log, which is the blocker on regenerating the README as
       # medians over this era (#6). Found 2026-08-22 by driving this branch, not by reading it.
-      printf "NONE of the %d routine-host pairs those %d routine rows form was judged: both bars scripts/gate-p5.sh would enforce are suspended for re-derivation from this era (%s; %s), so every number above is REPORTED and the absence of a shortfall below is not a pass. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
-    } else if (nl + nn + ns == 0 && nr - nb - nu == 0) {
+      printf "NONE of the %d routine-host pairs those %d routine rows form was judged: the one bar scripts/gate-p5.sh would enforce is suspended for re-derivation from this era (%s; %s), so every number above is REPORTED and the absence of a shortfall below is not a pass. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
+    } else if (ns == 0 && nr - nb - nu == 0) {
       # NOTHING WAS JUDGED, yet bars are in force in this tree -- so the branch above cannot
       # fire and the "N of M clear" branches would headline "0 of the 12 pairs clear the bars",
       # which reads as total failure where in truth nothing was tested. A zero numerator over
@@ -583,9 +578,9 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # attribution this commit removes, one branch over. Reachable with the founding run as
       # sole input, which is exactly how it was found.
       printf "NONE of the %d routine-host pairs those %d routine rows form was judged against the bars scripts/gate-p5.sh now enforces (%s; %s), so no number above is a pass and the absence of a shortfall is not one either.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, bc, retired > "/dev/stderr"
-    } else if (nl + nn + ns == 0 && nb == 0 && nu == 0) {
+    } else if (ns == 0 && nb == 0 && nu == 0) {
       printf "Every one of the %d routine-host pairs those %d routine rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
-    } else if (nl + nn + ns == 0) {
+    } else if (ns == 0) {
       # EVERY JUDGED PAIR CLEARED, and some pairs were not judged at all. "Every one of the
       # N pairs clears the bars" over a population containing BASELINE rows is the vacuous
       # pass §5 rule 8 forbids -- it would read as 12 verdicts where the gate rendered 9.
@@ -598,18 +593,10 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v tf="$STRSM_FLOOR"
       # table -- 24 routine rows form 12 pairs however many of them anything judged -- so subtracting
       # the baselines here would make the phrase false while the branch above kept it true,
       # which is one caption reading two denominators out of the same six words.
-      printf "%d of the %d routine-host pairs those %d routine rows form %s not clear the bars scripts/gate-p5.sh enforces (%s; %s; both judged net of confidence intervals).%s ", nl + nn + ns, nr, nrow, (nl + nn + ns == 1 ? "does" : "do"), jb, tb, bc > "/dev/stderr"
+      printf "%d of the %d routine-host pairs those %d routine rows form %s not clear the bar scripts/gate-p5.sh enforces (%s; %s; judged net of confidence intervals).%s ", ns, nr, nrow, (ns == 1 ? "does" : "do"), jb, tb, bc > "/dev/stderr"
       if (ns > 0) {
         s = ""; for (k = 1; k <= ns; k++) s = s (k > 1 ? "; " : "") short[k]
         printf "%d of the judged routines %s short of %s own host'"'"'s ceiling: %s. ", ns, (ns == 1 ? "falls" : "fall"), (ns == 1 ? "its" : "their"), s > "/dev/stderr"
-      }
-      if (nl > 0) {
-        s = ""; for (k = 1; k <= nl; k++) s = s (k > 1 ? "; " : "") low[k]
-        printf "%d %s below it outright: %s. ", nl, (nl == 1 ? "sits" : "sit"), s > "/dev/stderr"
-      }
-      if (nn > 0) {
-        s = ""; for (k = 1; k <= nn; k++) s = s (k > 1 ? "; " : "") near[k]
-        printf "%d %s it on the point estimate and %s only net of CI, which is a verdict decided by the measurement precision rather than by the parallel nest: %s. ", nn, (nn == 1 ? "clears" : "clear"), (nn == 1 ? "misses" : "miss"), s > "/dev/stderr"
       }
       print "These are published shortfalls against bars checked on every gate run, not regressions against an earlier reading." > "/dev/stderr"
     }

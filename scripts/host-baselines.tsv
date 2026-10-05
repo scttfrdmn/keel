@@ -52,12 +52,29 @@
 # registry rather than picking a winner. Per-host convergence for them is a post-tag option,
 # not something smuggled in with this mechanism.
 #
-# AND THE TWO LISTS ARE NOT THE SAME LIST (#119, 2026-08-30). `share/*` rows are excluded for
-# CEIL_DERIVED_FROM's two AMD models; `scale/Strsm` rows are excluded for SCALE_DERIVED_FROM's
-# THREE, which includes the Intel 8124M — the model that has three `share/*` rows below. So the
-# same host is legitimately registry-governed on one criterion and fleet-governed on the other,
-# and adding a `scale/Strsm` row for it "for consistency" would convict it of a conflict on a
-# bar it helped derive. Consistency between the two criteria is the error here, not the goal.
+# THERE WAS A SECOND LIST AND IT IS RETIRED (#119 then #177). From 2026-08-30 `scale/Strsm`
+# rows were excluded for SCALE_DERIVED_FROM's THREE models — one more than CEIL_DERIVED_FROM's
+# two, including the Intel 8124M that has three `share/*` rows below — so the same host was
+# legitimately registry-governed on one criterion and fleet-governed on the other, and adding a
+# `scale/Strsm` row "for consistency" would have convicted it of a conflict on a bar it helped
+# derive. The T8/T1 criterion is retired as of 2026-10-05; there is ONE derivation list again
+# and the hazard is gone rather than guarded. The `scale/Strsm` rows below stay as what they
+# are: closed-era rows no criterion in this tree reads.
+#
+# EVERY JUDGED CRITERION IS KEYED `<criterion>/<tile>/<backend>/<row>` from era `ceil8`
+# (#177, 2026-10-05; #167 did it for `peak/*` on 2026-10-01 and said why). A baseline is a
+# claim about what a KERNEL achieved on a host, so a key with no kernel in it carries that
+# claim across a dispatch change: the EIGHT arm64 rows below — six `share/*` and two
+# `scale/Strsm` — were measured on `8x8/neon`, read off `029e24f`'s own `keel-bench-kern` marker
+# in the archives their source column names, and were being applied to `3x24/neon` two
+# promotions later. The three amd64 rows are `2x32/avx512` from `969c360` and have not moved;
+# a shape-blind key cannot tell those two cases apart, which is why the key and not a one-off
+# correction is the fix. The bare keys are therefore NOT a
+# second spelling still in service — they are the old era's, and the era column is what keeps
+# them out of a current lookup. A re-key WITHOUT an era boundary was attempted on 2026-10-05
+# and correctly refused: the witness in judged-runs.tsv is keyed (cpu_model, era) and not on
+# the criterion, so a re-key alone makes this registry miss while the witness stands and every
+# row resolves `owing`. The era boundary is the door.
 #
 # THE FIRST ROWS LANDED 2026-08-28, and what unblocked them is worth recording, because
 # both of the reasons this file was empty had to be discharged and only one of them was

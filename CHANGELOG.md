@@ -9,6 +9,52 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **`Strsm` joins the share class and every judged baseline is keyed on the dispatched
+  microkernel; era `ceil8` opens for both** (ruled 2026-10-05 on #177, `DESIGN.md` §4/P5). Two
+  defects, one amendment, because an era boundary is the only point at which a criterion's *form*
+  may change without booking the methodology delta as host drift (§5 rule 17(d)). **Defect 1:**
+  `STRSM_FLOOR` was the quantity #6 retired for the whole judged class in 2026-08-20 — *"a fixed
+  T8/T1 ratio does not reward good parallel code: it rewards a bad single-thread baseline"* — kept
+  in service for one routine on the ground that its diagonal solves put it in a different
+  parallelism class. That ground does not survive contact with the share form, which asks what
+  fraction of what a host demonstrably offers eight threads a routine got and makes no claim about
+  parallelism at all; the class argument was an argument against a *fixed cross-host ratio* and was
+  imported to the wrong successor. Falsified in the direction that matters: #136's promotion
+  improved `Strsm` on **both** arms on **both** judged hosts (1T 26.02→27.65 and 28.51→30.29, 8T
+  200.10→205.65 and 221.35→230.00) and the ratio *fell*, 7.690→7.438 and 7.764→7.593, reproduced
+  on a second draw to within 0.018×. `STRSM_FLOOR`, `STRSM_MARGIN` and `SCALE_DERIVED_FROM` are
+  **retired, not re-typed** — one formula, one unit, one margin, and the units question the
+  2026-08-22 typing left open is dissolved rather than answered. **Defect 2:** keys are now
+  `<criterion>/<tile>/<backend>/<row>`, as `peak/*` has been since #167; `scale/Strsm`'s registered
+  7.921×/7.902× were measured at `8x8/neon` and were being applied to `3x24/neon`. **What the
+  amendment costs, first:** a share bar derived from the runs in hand was computed and **refused**
+  under §5 rule 16(c) — it acquits all three reds and convicts nothing — so `CEIL_FRACTION` is
+  suspended to empty and **nine** verdicts change on the run in hand — **recomputed from
+  `archive/arm64-3x24-shipped/gate-p5-arm64-4374c4f.log`, and the correction runs against the
+  amendment**: six `share/*` *passes*, two `scale/Strsm` reds, and the one fleet-aggregate red
+  those two reds alone lowered. The two `README`-criterion reds **stay red** — they are criterion
+  9's and they fail because the code got faster. The earlier "six withdrawn, four passing" counted
+  the aggregate as a `Strsm` row and undercounted the share rows by two. Pre-registered at row
+  granularity by driving `baseline_state` against the shipped artifacts: both `Neoverse` hosts
+  `new` on all four rows → 8 `BASELINE` lines, 8 candidate rows, 2 witness rows; the two Zen
+  models resolve `fleet` and render `REPORTED` instead, so *nothing is judged* by two mechanisms
+  with two sentences rather than by one.
+  The era is **CLOSED on landing**, which is unusual and cost nothing: rule 17(d)'s both-arms
+  transition archive already exists on the same two hosts (`archive/arm64-green-25007d8/` for
+  `4x16`, `archive/arm64-3x24-shipped/` + `archive/arm64-3x24-draw2/` for `3x24`). Controls:
+  `baseline-test.sh` gains the shape-key fixture pair and three structural checks on the shipped
+  gate, each driven red before landing, and the shape-ignoring `baseline_lookup` mutant is killed
+  (what the fixture *cannot* see is stated in it). `readme-numbers.sh` and `exercise-baseline.sh`
+  collapse from two criteria to one, and the whole amendment is a **−60-line** credit to `scripts/` (shell term 18756 → 18696, library unchanged at 10731; `git diff --numstat` and `gate-docs.sh`'s counter agree, and `docs/apparatus-ledger.md` books it); `docs/rulings.md` marks #119's
+  extension VOID **as to its subject and intact as to its reasoning**, and rule 19's table strikes
+  its second row rather than deleting it, since the first row's properties are derived by
+  comparison with it (#177, #167, #136, #6, #37).
+- `readme-numbers.sh` refuses a `NOISE-LIMITED` `REPORTED` row and the refusal is a defect, not a
+  policy: those lines carry `scaling 6.406x / 6.386x` with no `net of CI` suffix, so the
+  four-numbers demand cannot be met and the whole log is rejected. Found while exercising the awk
+  above against `archive/pinned8/campaign-6ba6566.log`; **not fixed here** because it changes the
+  publishing path and wants its own log to verify against. It is one more reason the README's
+  arm64 rows are stale, beside the known one.
 - **REVERTED the same day: keying `scale/*` and `share/*` on the dispatched shape** orphans the
   registry mid-era and the witness mechanism correctly refuses it. The judged run predicted 2 FAILs
   and produced **10**: rule 17(a)'s witness is keyed on **CPU model + era**, not on the criterion
