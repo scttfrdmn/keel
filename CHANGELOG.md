@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **A GREEN judged arm64 run** (`archive/arm64-green-25007d8/`, us-east-1, rev `25007d8`):
+  `53 PASS / 0 FAIL / 0 UNMEASURED / 2 BASELINE`, with gate-p4 GREEN beneath it. Provisioning and
+  the gate were chained in **one** detached campaign so the tree stayed frozen throughout. It
+  settles the longest-standing arm64 gap: **the `-race` criterion is measured on the vector path
+  for the first time**, clean on both hosts — #70's last fleet row and #42's outstanding
+  confirmation. `-race` cannot be cross-compiled, so it was `UNMEASURED` on every prior arm64 run
+  and became measurable only once provisioning installed a host-local Go. Both hosts also carry the
+  same-host OpenBLAS reference §4/P3 requires, with `threads=1` read back from the library rather
+  than assumed. **Not settled by it:** the 48 L1 baseline candidates are draw 1 of N and unlandable
+  (their estimator says "of this run"; rule 17(b)), and `3x24` is not promoted — dispatch was
+  `4x16/neon` throughout, so this certifies the *current* shape (#136, #70, #42).
+
+### Added
 - **gate-p2/gate-p3 now judge the percent-of-peak denominator's own instruction count** (#145).
   `internal/vec/peak_test.go` already defends that every accumulator chain survives compilation
   and that the flop accounting matches the shape, and `-mode nomemory` defends that the loop is

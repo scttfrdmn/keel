@@ -1,0 +1,30 @@
+keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+keel-bench-cpu: unknown (no model name in /proc/cpuinfo)
+keel-bench-cores: 8 logical
+keel-bench-governor: unknown (no cpufreq)
+keel-bench-clock-mhz: unknown (no cpu MHz field)
+keel-bench-platform: linux/arm64
+keel-bench-toolchain: go1.27.1-X:simd
+keel-bench-backend: neon (available: neon scalar)
+keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+keel-bench-peak-formula: neon: unavailable (no cpuinfo_max_freq)
+keel-bench-peak-formula: scalar: unavailable (no cpuinfo_max_freq)
+keel-bench-gomaxprocs: 8
+keel-bench-kern: 4x16/neon (available: 8x8/neon 4x16/neon 8x8/scalar 4x16/scalar)
+keel-bench-kern-class: fma insns-per-fma=5.000 (neon, no arm64 front-end fingerprint (class defaults to fma, §4's strict direction))
+keel-bench-kern-audit: 8x8/neon=5.750 4x16/neon=5.000
+keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+goos: linux
+goarch: arm64
+pkg: github.com/scttfrdmn/keel/bench
+BenchmarkPeak/neon-8         	    5905	    202547 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8         	    5917	    202553 ns/op	        41.41 GFLOP/s
+BenchmarkPeak/neon-8         	    5923	    202558 ns/op	        41.41 GFLOP/s
+BenchmarkPeak/neon-8         	    5920	    202532 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8         	    5920	    202503 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8         	    5922	    202596 ns/op	        41.41 GFLOP/s
+BenchmarkPeak/neon-8         	    5920	    202524 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8         	    5919	    202498 ns/op	        41.43 GFLOP/s
+BenchmarkPeak/neon-8         	    5920	    202510 ns/op	        41.42 GFLOP/s
+BenchmarkPeak/neon-8         	    5944	    202507 ns/op	        41.42 GFLOP/s
+PASS

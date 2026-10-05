@@ -1,0 +1,13 @@
+# Judged arm64 GREEN run, us-east-1, rev 25007d8. Provisioned + gated in one campaign.
+# Verify with `shasum -c archive/arm64-green-25007d8/DIGESTS.sha256` from the repo root.
+#
+3cf3fe209dccb3226bccec5c99ff8d273e7e6dc44ca82d6b6da01e78c72515f7  archive/arm64-green-25007d8/gate-p3-under-p4-25007d8-20261004T234539Z.log
+db611b55c2d5bdfae428ee10d37abb037beca42c34127e1b3a06e241ace4260a  archive/arm64-green-25007d8/gate-p4-under-p5-25007d8-20261004T230638Z.log
+a91e936c375b2bfce5a20d471599b9fadbc1783fc1bceaaa5193b54a175911d3  archive/arm64-green-25007d8/gate-p5-arm64-25007d8.log
+9b7178e16cfa76edee443dcc5d26550a2dfa2c45ccfc1a8989d1d746a97ce71b  archive/arm64-green-25007d8/baseline-candidates-25007d8-20261004T230638Z.tsv
+82510be0f847b83cedeeec6ee83affc82bdbaba2dd56ae6d4512084e150b8e0f  archive/arm64-green-25007d8/README.md
+9f77a11e01093b3cbe46d24847789cdae26e1f331bfae51f20e8d14b47da265e  archive/arm64-green-25007d8/bench-gate-p5-25007d8-20261004T230638Z-1.txt
+46d81b581494b5375c5675a7a87171ab64c1cbe0e1eeda6298b4e392a592f35f  archive/arm64-green-25007d8/bench-gate-p5-25007d8-20261004T230638Z-2.txt
+3a88c976abc412473ae92a427eae098a66101516ebc970508a509d7100544e69  archive/arm64-green-25007d8/bench-gate-p5-25007d8-20261004T230638Z-3.txt
+ab5428a3586c135497ecb7c7dd4e5dc5f0b8f6ac3068d0480faad00b39b6b02b  archive/arm64-green-25007d8/bench-gate-p5-25007d8-keel-gvt3-20261004T230638Z-2.txt
+2bca0030c20777158a7de35e78e8a4f2d97af754d8d38739c56cb168be0155a0  archive/arm64-green-25007d8/bench-gate-p5-25007d8-keel-gvt4-20261004T230638Z-1.txt
