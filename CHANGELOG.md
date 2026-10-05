@@ -45,7 +45,7 @@ While the major version is 0, minor versions may contain breaking changes.
   `baseline-test.sh` gains the shape-key fixture pair and three structural checks on the shipped
   gate, each driven red before landing, and the shape-ignoring `baseline_lookup` mutant is killed
   (what the fixture *cannot* see is stated in it). `readme-numbers.sh` and `exercise-baseline.sh`
-  collapse from two criteria to one, and the whole amendment is a **−60-line** credit to `scripts/` (shell term 18756 → 18696, library unchanged at 10731; `git diff --numstat` and `gate-docs.sh`'s counter agree, and `docs/apparatus-ledger.md` books it); `docs/rulings.md` marks #119's
+  collapse from two criteria to one, and the whole amendment is a **−57-line** credit to `scripts/` (shell term 18756 → 18699, library unchanged at 10731; both readings agree, measured from git objects at the two revs, and `docs/apparatus-ledger.md` books it). **Published as −60 first and corrected**: that figure was read off a staged tree three lines before the last edit landed, and a count with no as-of against a moving tree is the defect rather than the arithmetic.; `docs/rulings.md` marks #119's
   extension VOID **as to its subject and intact as to its reasoning**, and rule 19's table strikes
   its second row rather than deleting it, since the first row's properties are derived by
   comparison with it (#177, #167, #136, #6, #37).
@@ -79,6 +79,28 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- **Era `ceil8`'s founding reading** (`archive/arm64-ceil8-transition/`, us-east-1, rev
+  `119b673`, 1h16m, `$9.98/hr`): `42 PASS / 2 FAIL / 1 UNMEASURED / 10 BASELINE` → RED with
+  `gate-p4` GREEN beneath it, and **the red is the two stale-README rows and nothing else** —
+  the share criterion judged nothing by design, `CEIL_FRACTION` being suspended at this
+  boundary. **The pre-registration held at row granularity**: 8 `BASELINE` share lines, 8
+  candidate rows every one keyed `share/3x24/neon/<row>` at era `ceil8`, 2 witness rows, no
+  `PASS` and no `FAIL` on the criterion, criterion 9 red both hosts, `gate-p3`'s `peak/*`
+  unaffected and `BASELINE`. Stated rather than claimed as a hit: the prediction was **silent**
+  on the headline aggregate, which rendered `UNMEASURED` ("no host it may judge") where the
+  earlier draws rendered a `FAIL` — correct, and unpredicted. **`Strsm` has a share for the
+  first time and it is the fleet argmin** (45.4% on `keel-gvt4`), so rather than type a bar off
+  a quantity measured once (§5 rule 16) it was **recomputed from the two earlier `3x24` draws
+  rather than re-measured** — the rate and the ceiling were both taken then, only the division
+  is new — with the gate's own `bench_csv`/`bench_ratio_lo`, positive-controlled by reading this
+  run's own archive back through the same path and reproducing its printed 45.4 / 61.2 exactly.
+  All eight rows are rule-19 admissible (widest interval **1.40** points against the 2.6 cap),
+  the three `GEMM`-shaped rows reproduce across three draws to **≤0.2 points**, and the argmin
+  is `keel-gvt4 Strsm` **at the same 45.4 under both estimators** — this run's row and the
+  median of three — so the bar does not depend on which one types it. `gate-p3`'s peak readings
+  moved with the kernel as `#136` implies: `3x24/neon/kc=128` at **62.6%** / **85.8%** of
+  measured NEON peak against the registered `4x16` rows' 55.3 / 78.8. `CEIL_FRACTION` is **not
+  typed here**: step 2 is a reviewed commit and its construction has one open question (#177).
 - The judged campaign for #136's promotion (`archive/arm64-3x24-shipped/`, us-east-1, rev
   `4374c4f`): `48 PASS / 5 FAIL / 0 UNMEASURED / 2 BASELINE`, gate-p4 GREEN beneath it, dispatch
   verified `3x24/neon` on both hosts. **The promotion is good on every absolute measure** — shares

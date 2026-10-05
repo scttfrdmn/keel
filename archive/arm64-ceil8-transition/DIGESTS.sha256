@@ -1,0 +1,18 @@
+# Era ceil8 founding reading, us-east-1 2026-10-05, rev 119b673 (#177).
+# 42 PASS / 2 FAIL / 1 UNMEASURED / 10 BASELINE -> RED; the red is the two stale-README
+# rows, and the share criterion judged nothing by design (CEIL_FRACTION suspended).
+# Verify with `shasum -c archive/arm64-ceil8-transition/DIGESTS.sha256` from the repo root.
+#
+981b7041209f5edf65ced98754eb5c7368d851a4a68faafc5bbe848e49dcb63f  archive/arm64-ceil8-transition/baseline-candidates-119b673-20261005T162530Z.tsv
+9413d5dbd4c4ea06186ad12e46cad2ef660a408c8fcad98176f5ba43b8115fd1  archive/arm64-ceil8-transition/bench-gate-p5-119b673-20261005T162530Z-1.txt
+861ffb26111e6a63c56ed10e1658d43aae764a7ed8f7d4b08fc984f4c250609f  archive/arm64-ceil8-transition/bench-gate-p5-119b673-20261005T162530Z-2.txt
+424429f328af7145799fa1927ddeb296c7c45704b620c7842a185aab72a3d710  archive/arm64-ceil8-transition/bench-gate-p5-119b673-20261005T162530Z-3.txt
+84262775481a4db4b5b4ef8958495aeeaa63a5b229a04e46a784dbaa59535729  archive/arm64-ceil8-transition/bench-gate-p5-119b673-keel-gvt3-20261005T162530Z-2.txt
+f6369094ce226f1f6a756565bdf330fe1edd432b72cd6c018ec948127e188b47  archive/arm64-ceil8-transition/bench-gate-p5-119b673-keel-gvt4-20261005T162530Z-1.txt
+ff92850eecda454414e243d92830a8c006163cf37308bea14052f8d45a283b92  archive/arm64-ceil8-transition/ceil8-transition.sh
+c5e7b1808bd89945049e2adcfef9a3e183645d8e7a83c8082fa0e0bb15b40fad  archive/arm64-ceil8-transition/driver-ceil8-transition-119b673.log
+9833c1f46872ccf461c0d5af41a69e5c6c1270f91ed745713e353b5e5cd4eaf7  archive/arm64-ceil8-transition/gate-p3-under-p4-119b673-20261005T170721Z.log
+cdc339382b03287741c150b36d78e3f396b3d784da0c232f3435b7a648cc205f  archive/arm64-ceil8-transition/gate-p4-under-p5-119b673-20261005T162530Z.log
+6952df380336d0f06b26f016451023139dfb25698ee0922950d1aa851328c64a  archive/arm64-ceil8-transition/gate-p5-arm64-ceil8-transition.log
+0f92dfde4ef33830cba51977368c054c6dd5da6d871e9d96276cd5181b760b3d  archive/arm64-ceil8-transition/README.md
+18ff81c759c9c816b6a0d6f2f2ff3305b9b7327b7cbec032b0273612b609aa54  archive/arm64-ceil8-transition/witness-candidates-119b673-20261005T162530Z.tsv
