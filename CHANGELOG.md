@@ -8,6 +8,19 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- The judged campaign for #136's promotion (`archive/arm64-3x24-shipped/`, us-east-1, rev
+  `4374c4f`): `48 PASS / 5 FAIL / 0 UNMEASURED / 2 BASELINE`, gate-p4 GREEN beneath it, dispatch
+  verified `3x24/neon` on both hosts. **The promotion is good on every absolute measure** — shares
+  of each host's own 8-thread ceiling pass with wide margins (`Sgemm` 73.5%/53.4% against bars of
+  49.6/35.0, `Ssyrk` 79.3%/57.5%, `Ssymm` 73.2%/53.2%). The 5 FAILs are 2 causes: criterion 9's
+  README rows are stale **because the code got faster** (1-thread `Sgemm` 32.53→34.44 and
+  33.81→37.36), which was pre-stated; and three rows fail on `Strsm`'s T8/T1 ratio even though its
+  absolute rates improved on **both** arms and **both** hosts (1T +6.3%/+6.2%, 8T +2.8%/+3.9%) —
+  the ratio fell only because 1-thread improved more. That is the rank inversion §4/P5 retired the
+  ≥6× floor for, still live on `STRSM_FLOOR`; filed as **#177**, with no bar touched and the flip
+  not reverted (#136, #177).
+
 ### Changed
 - **`3x24 u=2` is the shipped arm64 microkernel** (#136). It is the leanest of the 107 emittable
   zero-spill NEON shapes (4.111 against `4x16`'s 5.000 insns/FMA) and `Preferred` selects it under
