@@ -178,6 +178,31 @@ While the major version is 0, minor versions may contain breaking changes.
   not reverted (#136, #177).
 
 ### Changed
+- **The L1 criterion's admissibility rule is a SAME-CLAIM BAND, not a width cap, and 47 of the 48
+  held rows are landed** (ruled 2026-10-07 on #178; Scott deferred the choice). Rule 19's form
+  cannot be copied here: the L1 bar is CI-disjointness with **no margin**, so there is no declared
+  slack to import — and a width cap could not be computed anyway. **Measured, not supposed:** the
+  intervals arrive through `tools/benchci` at four significant figures, ~0.05–0.1% at these
+  magnitudes, so they **collapse to zero width**, and a first draft of this ruling built the test
+  on the printed bounds and refused `keel-gvt3 Sasum/n=65536` for a **+0.07%** difference between
+  `13.70[13.70..]` and `13.71[13.71..]` — quantization, not noise. What *is* well-founded at that
+  precision is the cross-draw relative spread, compared against **criterion 9's
+  `README_TOL = 0.05`** — **imported, not minted**: it is declared as the *"same claim"* test, it
+  is in relative-rate units, and it predates these rows (#163, 2026-09-15). **47 admitted, 1
+  refused** (`Neoverse-V1 rate/Sdot/n=65536`, 7.19% spread while its three sibling sizes hold to
+  0.1%). The cap lands in a **gap**, checked: the widest admitted spread is 2.21%, so any band in
+  `(2.21, 7.19)` gives the same partition and the ruling does not turn on the constant's value.
+  The refused row renders `owing` — **one** FAIL line naming one criterion on one host, where
+  before the landing there were two naming 48 — and a third draw settles it, not a wider band.
+  Every state driven through `baseline_state`; every cited source verified tracked.
+- **`gate-p3` still proposes no candidate row, and that is DECLINED rather than deferred
+  silently** (#178). The wording is already corrected to stop claiming otherwise. Emitting a real
+  candidate needs **four** pieces of state that gate-p3 does not have — a rev, a run stamp, a
+  candidates path and a per-host archive path — introduced into a gate that runs inside every
+  judged chain under `set -euo pipefail`, where an unset variable aborts the run. It cannot be
+  exercised on arm64 from the dev host, and shipping an unexercised write path into the proposal
+  mechanism to save a hand-read row on a landing that is era-scoped and far off is the wrong
+  trade. Scope stated on the issue so the next attempt knows it is not a one-liner.
 - **Era `ceil8`'s `peak/*` and witness rows are LANDED; the 48 L1 rows are deliberately HELD**
   (2026-10-07, Scott's instruction after the #178 debt analysis). Four rows in two reviewed
   files, and what each one changes was **driven through `baseline_state`** before landing, not

@@ -819,6 +819,44 @@ As a fraction of its own bar the two margins land 0.7 points apart — 2.6/51.0 
 enough to say so out loud (§5 rule 10): neither number was chosen with the other in view, but
 both were chosen by the same two people six days apart.
 
+### The L1 sibling: a same-claim band, not a width cap (ruled 2026-10-07 on #178)
+
+The L1 `rate/*` criterion has **no rule-19 sibling and is not getting one**, and the reason is a
+property of the instrument rather than a preference. Its bar is **CI-disjointness with no
+margin** — a regression is a run whose upper bound falls below the registered baseline's lower
+bound — so there is no declared slack to import as a cap, which is the construction every row of
+the table above shares.
+
+**And a width cap could not be computed anyway.** The intervals these rows report arrive through
+`tools/benchci` at **four significant figures**, and at 10–20 GFLOP/s that is ~0.05–0.1%, which is
+wider than most of these rows' true intervals. The reported interval therefore **collapses to zero
+width**: the median and the net-of-CI bound print as the same number. Measured, not supposed — a
+first draft of this ruling built the overlap test on the printed bounds and refused
+`keel-gvt3 Sasum/n=65536` for a **+0.07%** difference between `13.70[13.70..]` and
+`13.71[13.71..]`, which is quantization and not noise. A cap on a quantity whose resolution is
+coarser than the thing it measures is an instrument reporting its own rounding.
+
+**What is well-founded at that precision is the cross-draw relative spread**, and the band it is
+compared against is **criterion 9's `README_TOL = 0.05`** — imported, not minted. That constant is
+declared for exactly this question: it is the *"same claim"* test criterion 9 applies when a
+published rate's interval and a run's interval miss each other, it is in relative-rate units, and
+it predates these rows (`#163`, 2026-09-15), which is what the amend-a-criterion rule requires. So:
+
+> **A `rate/*` row may be pooled into a reference only if the draws being pooled are the same
+> claim** — their intervals overlap, or, where the intervals miss, their centres agree within
+> `README_TOL`. This is criterion 9's own two-stage test turned on the pool's inputs instead of on
+> a published row against a run.
+
+Applied to era `ceil8`'s two archives: **47 of 48 rows admitted, one refused** —
+`Neoverse-V1 rate/Sdot/n=65536`, which read 17.53 then 16.27, a **7.19%** spread, while its three
+sibling sizes on the same host hold to 0.1%. **The cap lands in a gap and that is checked rather
+than hoped**: the widest admitted spread is 2.21%, so any band in `(2.21, 7.19)` yields the same
+partition, and the ruling does not turn on the particular value of the constant it imported.
+
+The refused row renders `owing` and is **not** quietly dropped: it is one `FAIL` line naming one
+criterion on one host, which is the debt printed loudly rather than renewed. What settles it is a
+third draw, not a wider band.
+
 ### The class is per row, which is what made it new
 
 Every non-pass class before this one was per host: admission is a property of the silicon,
