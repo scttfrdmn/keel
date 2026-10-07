@@ -37,6 +37,21 @@
 # is discharged. The old scan could not be skipped but could not be read either; this
 # one can be read by anyone with the repo.
 #
+# WHOSE BASELINE IT IS (ruled 2026-10-07 on #178). The question put was "may a criterion that
+# renders BASELINE spend a host's BASELINE for criteria it does not own?" -- and it is malformed,
+# which is the ruling. This file's first line says what a row asserts: which CPU MODELS have been
+# judged in which ERA. There is no criterion column, the key is (cpu_model, era), and the clause
+# below says each host gets exactly ONE BASELINE PER ERA. The BASELINE is the HOST'S. No criterion
+# can spend another's, because there are not several to spend, so nothing was granted to anyone --
+# the defect was that a host-level fact was PROPOSED from inside one criterion's state machine
+# (gate-p5's share arm), which made it contingent on that criterion's state. It is now proposed by
+# witness_once from whichever arm renders BASELINE first, once per host, and gate-p5 FAILS a host
+# that rendered BASELINE without proposing one. What that cost before the fix, measured: the
+# 2026-10-07 confirmation run emitted 48 baseline candidates and ZERO witness rows, because
+# 5e769f7 had moved both Graviton hosts into CEIL_DERIVED_FROM where the share arm never reaches
+# `new` -- so peak/* and the 48 L1 rows would have renewed a first-sight exemption on every run of
+# era ceil8 forever, green-compatible and silent.
+#
 # ERA SCOPING. A row licenses nothing outside its era. When an instrument change opens
 # a new era (scripts/measurement-eras.tsv), no host has a witness in it yet, so every
 # host renders BASELINE once — which is the point: judging a new-era reading against an

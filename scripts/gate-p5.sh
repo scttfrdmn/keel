@@ -267,6 +267,39 @@ read -ra P5_ROWS <<<"$P5_JUDGED"
 # so a missing model now costs an info line and nothing else.
 STRSM_AMDAHL_NOTE=1
 
+# witness_once — propose THIS HOST's witness row for THIS era, at most once per host.
+#
+# THE RULING THAT PUT IT HERE (#178, 2026-10-07). The question asked was "may a criterion that
+# renders BASELINE spend a host's BASELINE for criteria it does not own?" -- and it is malformed,
+# which is the answer. scripts/judged-runs.tsv states what a witness row is in its first line:
+# "which CPU models have been judged in which era", keyed (cpu_model, era), with NO criterion
+# column, and "each host therefore gets exactly ONE BASELINE PER ERA". The BASELINE is the HOST's.
+# No criterion can spend another's, because there are not several to spend. So nothing here grants
+# a criterion a power it lacked; the defect was that a HOST-level fact was proposed from inside
+# ONE criterion's state machine, which made it contingent on that criterion's state.
+#
+# WHAT THAT COST, measured (#178). The witness was proposed at exactly one site: the share
+# criterion's `new` arm. The README arm set HOST_BASE and proposed nothing; the L1 arm proposed
+# baseline rows and no witness. That was harmless only while the share arm always fired for a
+# new host -- and 5e769f7 ended that by moving both Graviton hosts INTO CEIL_DERIVED_FROM, where
+# the share criterion resolves `fleet` and never reaches `new`. The 2026-10-07 confirmation run
+# emitted 48 baseline candidates and ZERO witness candidates; peak/* and the 48 L1 rows would
+# have rendered BASELINE on every run of this era forever, green-compatible and silent, which is
+# the permanent exemption this whole class exists to kill.
+#
+# HOST_BASE is the once-per-host guard and is shared with the aggregate's bucket, so whichever
+# arm reaches this first proposes the one row and the rest are no-ops. gate-p3 proposes no
+# witness of its own and does not need to: it runs inside this gate's chain, reads the same
+# (cpu_model, era) key, and the self-check below guarantees gate-p5 proposed one. What that does
+# NOT cover is gate-p3 run STANDALONE, which is not a judged-certificate path -- stated, not
+# implied (§5 rule 12).
+witness_once() {
+  [[ "$HOST_BASE" -eq 0 ]] || return 0
+  baseline_candidate "$WITNESS_CANDIDATES" \
+    "$hcpu" "$P5_ERA" "$P5_REV" "$(date -u +%Y-%m-%d)" "$host" "$BENCH_ARCHIVE"
+  HOST_BASE=1
+}
+
 # Benchmark row names. The thread count is IN THE NAME (criterion 2).
 scale_name() { printf 'Scale/%s/n=%d/threads=%d' "$1" "$P5_SIZE" "$2"; }
 # GATE_PEAK is refined per host from the sweep's active-kernel marker (#155 unit 2) in the throughput
@@ -1453,10 +1486,8 @@ else
           # land in one reviewed commit or neither does; landing neither leaves the host
           # unregistered and re-renders BASELINE next run, which is the honest state and is
           # printed as a debt below rather than absorbed (judged-runs.tsv states the trade).
-          [[ "$HOST_BASE" -eq 0 ]] && baseline_candidate "$WITNESS_CANDIDATES" \
-            "$hcpu" "$P5_ERA" "$P5_REV" "$(date -u +%Y-%m-%d)" "$host" "$BENCH_ARCHIVE"
+          witness_once
           baseline "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), and this silicon has no registered baseline and no witness row in era $P5_ERA: the fleet bar's reference artifact predates its admission to this era, so the reading is RECORDED as its candidate baseline rather than judged (#6). Candidate rows: $BASELINE_CANDIDATES and $WITNESS_CANDIDATES"
-          HOST_BASE=1
         else
           BASELINE_OWING="$BASELINE_OWING $host/$BCRIT"
           fail "[$host] $r has no registered baseline in $BASELINE_REGISTRY for era $P5_ERA, and $BASELINE_WITNESS says this silicon was already judged in that era — so the absence is an unmet registration rather than newness, and BASELINE is spent (#6). Land the candidate row emitted at $BASELINE_CANDIDATES"
@@ -1605,7 +1636,13 @@ else
               "$hcpu" "$lcrit" "$P5_ERA" "$llo" \
               "net-of-CI lower bound of this run, $lunit; the bar is a RUN whose upper bound falls below this (#56, CI-disjointness)" \
               "$BENCH_ARCHIVE" "$(date -u +%Y-%m-%d)" \
-              "first sight of $lcrit: no row and no witness predating this criterion (#169)" ;;
+              "first sight of $lcrit: no row and no witness predating this criterion (#169)"
+            # THE WITNESS IS THE HOST'"'"'S, NOT A CRITERION'"'"'S (#178, ruled 2026-10-07). This arm
+            # proposed a baseline row and no witness, so a host whose ONLY first sight was here
+            # got its BASELINE back on every run forever. See the once-per-host guard'"'"'s comment
+            # at the share criterion for the whole ruling; the guard is HOST_BASE, shared, so
+            # whichever arm reaches it first proposes the one row and the others do not repeat it.
+            witness_once ;;
           owing)
             L1_OWING="$L1_OWING $lcrit" ;;
           *)
@@ -1782,7 +1819,11 @@ else
           # branch proposes no candidate: there is no registry row to propose, only a
           # README the campaign rewrites wholesale.
           baseline "[$host] README.md publishes no row for '$hcpu', and $BASELINE_WITNESS records no judged run for this silicon in era $P5_ERA: a published row is born from a judged run, so its absence here is this host's admission date and not an unpublished number (#6). Its rows are created when the README is regenerated as medians over archived runs from this era"
-          HOST_BASE=1
+          # No BASELINE row to propose -- the comment above says why -- but the WITNESS is still
+          # owed, because it is a fact about the host and this era and not about a registry row
+          # (#178). This arm set HOST_BASE=1 and proposed nothing, so a host whose only first
+          # sight was the README criterion never spent its BASELINE anywhere.
+          witness_once
         elif [[ "$RMATCH" -eq 0 ]]; then
           BASELINE_OWING="$BASELINE_OWING $host/README"
           fail "[$host] README.md publishes no row for '$hcpu', and $BASELINE_WITNESS records a judged run for this silicon in era $P5_ERA — so its numbers are unpublished rather than unborn, and BASELINE is spent (#6)"
@@ -1791,6 +1832,39 @@ else
         else
           fail "[$host] README rows disagree with this run:$RBADN"
         fi
+      fi
+    fi
+
+    # ---- A HOST THAT RENDERED BASELINE MUST HAVE PROPOSED ITS WITNESS (#178, 2026-10-07)
+    #
+    # The structural guarantee, as a criterion rather than as a convention. Three arms in this
+    # gate render a per-host BASELINE and each must route through witness_once; before the #178
+    # ruling only ONE of them proposed the row, and the day its reachability changed the other
+    # two renewed a first-sight exemption silently on every run. A fourth arm added later would
+    # do the same, and no reader would see it, because BASELINE is green-compatible.
+    #
+    # So the invariant is checked where it can be OBSERVED rather than where it is written: at
+    # the end of the host's block, against the candidates FILE. A grep over call sites would
+    # have to be re-keyed every time the wording moves and could not see an arm that calls
+    # witness_once after something already set HOST_BASE. This reads what was actually emitted.
+    #
+    # THE PREDICATE IS baseline_spent's, NOT A SECOND ONE. A first draft of this check wrote its
+    # own awk, which was the same test on the same six-column schema -- and two spellings of one
+    # predicate is the thing §5 rule 10 objects to, with the added cost that the copy would not
+    # inherit the controls baseline-test.sh already drives over this function. What differs is
+    # only the SUBJECT: baseline_spent is named for the TRACKED witness ("has this host's
+    # BASELINE been spent"), and here it is pointed at the CANDIDATES file, asking "did this run
+    # propose the row". Same question, different file, and said out loud because one name over
+    # two mechanisms is how a reader ends up sure of the wrong one. No SINCE argument: the
+    # question is whether a row exists at all, not whether one postdates a criterion.
+    #
+    # FAIL and not unmeasured: the reading is fine, and what is wrong is the instrument's own
+    # bookkeeping -- the gate would be about to hand this host a BASELINE it never recorded
+    # spending, which is a defect in the certificate and not a property of the silicon.
+    if [[ "$HOST_BASE" -eq 1 && -n "$hcpu" ]]; then
+      if ! baseline_spent "$WITNESS_CANDIDATES" "$hcpu" "$P5_ERA"; then
+        fail "[$host] rendered BASELINE this run but proposed no witness row for ('$hcpu', $P5_ERA) in $WITNESS_CANDIDATES. A BASELINE that records no witness is a first-sight exemption this era can renew forever, which is the failure #178 was filed for — the host is not at fault and nothing about its reading is in doubt (#178)"
+        HOST_MEASURED=0
       fi
     fi
 

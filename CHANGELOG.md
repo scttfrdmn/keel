@@ -9,6 +9,28 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **`#178`: the witness row is a HOST's, not a criterion's, and is now proposed from wherever
+  BASELINE is rendered** (ruled 2026-10-07; Scott deferred the choice). The question — *may a
+  criterion that renders BASELINE spend a host's BASELINE for criteria it does not own?* — is
+  **malformed, and that is the ruling.** `scripts/judged-runs.tsv`'s own first line says a row
+  records *"which CPU models have been judged in which era"*, keyed `(cpu_model, era)` with no
+  criterion column, and that each host gets *exactly one BASELINE per era*. The BASELINE is the
+  **host's**; no criterion can spend another's, because there are not several to spend. Nothing is
+  granted to anyone — the defect was that a host-level fact was *proposed* from inside one
+  criterion's state machine. **The gap was wider than filed**: of the three arms that render a
+  per-host BASELINE, only the share arm ever proposed a witness; the README arm set the guard and
+  proposed nothing, and the L1 arm proposed baseline rows and no witness. Harmless only while the
+  share arm always fired for a new host — which `5e769f7` ended. All three now route through
+  `witness_once`, which is **the single writer of `HOST_BASE`**, so the invariant holds for any
+  number of arms rather than for the three that exist. Plus a **runtime self-check**: a host that
+  rendered BASELINE and proposed no witness row is a `FAIL`, observed against the emitted
+  candidates file rather than grepped over call sites — which is the half that catches an arm
+  calling `witness_once` after something already set the guard. Its predicate is
+  `baseline_spent`'s, not a second copy: a first draft wrote its own `awk`, the same test on the
+  same six-column schema, and two spellings of one predicate is what §5 rule 10 objects to; only
+  the *subject* differs (the candidates file, not the tracked witness) and the call site says so,
+  since one name over two mechanisms is how a reader ends up sure of the wrong one.
+  `baseline-test.sh` gains three controls, each **driven red** before landing; now **108 ok**.
 - **`Strsm` joins the share class and every judged baseline is keyed on the dispatched
   microkernel; era `ceil8` opens for both** (ruled 2026-10-05 on #177, `DESIGN.md` §4/P5). Two
   defects, one amendment, because an era boundary is the only point at which a criterion's *form*

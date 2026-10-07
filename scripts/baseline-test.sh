@@ -376,6 +376,22 @@ is 'the shipped share derivation set names no amd64 model' \
    "$(/usr/bin/sed -n 's/^CEIL_DERIVED_FROM="\(.*\)"$/\1/p' scripts/gate-p5.sh | /usr/bin/grep -cE 'EPYC|Xeon|AMD|Intel')" '0'
 is 'and it does name both Graviton models the bar was derived on' \
    "$(/usr/bin/sed -n 's/^CEIL_DERIVED_FROM="\(.*\)"$/\1/p' scripts/gate-p5.sh | /usr/bin/grep -cE '^Neoverse-V1\|Neoverse-V2$')" '1'
+# 36c. #178's STRUCTURAL GUARANTEE: witness_once is the ONLY writer of HOST_BASE, so a host
+#      that rendered BASELINE cannot have failed to propose its witness row. Asserted this way
+#      rather than as a count of BASELINE-rendering arms, deliberately: the arm count is a
+#      maintenance trap that reddens when a fourth arm is added CORRECTLY, whereas single-writer
+#      holds for any number of arms and is exactly the property the invariant rests on. Comment
+#      lines are excluded, because one of them quotes the old code it replaced.
+is 'witness_once is the single writer of HOST_BASE (#178)' \
+   "$(/usr/bin/grep -c '^[^#]*HOST_BASE=1' scripts/gate-p5.sh)" '1'
+is 'and that one assignment is inside witness_once' \
+   "$(/usr/bin/awk '/^witness_once\(\) \{/,/^\}/' scripts/gate-p5.sh | /usr/bin/grep -c '^[^#]*HOST_BASE=1')" '1'
+# 36d. And the runtime self-check that observes the EMITTED file is still wired. It is the half
+#      of #178 that catches an arm which calls witness_once after something already set the
+#      guard -- a thing no grep over call sites can see. Keyed to the function it calls, not to
+#      its message, so rewording the sentence does not silently disarm it.
+is 'the gate self-checks that a BASELINE host proposed its witness (#178)' \
+   "$(/usr/bin/grep -c 'baseline_spent "\$WITNESS_CANDIDATES"' scripts/gate-p5.sh)" '1'
 # 37. Newness against an unmet obligation, the distinction the witness exists for, driven on a
 #     host outside the derivation set. $CEILD is this FILE'S set (the two AMD models that
 #     derived 44.2), deliberately not the shipped one: these arms test the classifier, and
