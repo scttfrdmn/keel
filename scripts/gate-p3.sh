@@ -1017,7 +1017,15 @@ else
         below)
           fail "[$host] $ACT_ID reaches only ${frac}% of this host's measured NEON peak, net of CI (< ${PBAR}%, $PWHY)" ;;
         first-sight)
-          baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline, not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). No row for ($hcpu, $PCRIT) in era $P3_ERA and no witness row, so this silicon has not spent its BASELINE at this configuration (#167)" ;;
+          # "RECORDED" was FALSE and is corrected (2026-10-07, #178). This gate has ZERO
+          # baseline_candidate calls -- it writes no candidate row to any file -- so the word
+          # claimed an artifact that did not exist, and the two peak/* rows in both eras were in
+          # fact read off this very log line by hand. That is the shortcut rule 17(b) forbids an
+          # INSTRUMENT from taking, and a verdict line asserting otherwise is how it stays
+          # invisible. The wording now says what happens; emitting a real candidate row is the
+          # fix and is recorded on #178, not done here, because it cannot be exercised without
+          # an arm64 gate-p3 run.
+          baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — this is its CANDIDATE BASELINE and this gate PROPOSES NO ROW FOR IT (#178: gate-p3 writes no candidates file, so landing a row means reading this printed value, as both eras' rows were), not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). No row for ($hcpu, $PCRIT) in era $P3_ERA and no witness row, so this silicon has not spent its BASELINE at this configuration (#167)" ;;
         owed)
           # The wording is keyed to what reaching this arm now MEANS, not to what it meant before
           # #169. A witness row older than $P3_PEAK_CRIT_SINCE no longer lands here, so the only

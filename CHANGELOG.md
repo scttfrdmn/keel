@@ -178,6 +178,36 @@ While the major version is 0, minor versions may contain breaking changes.
   not reverted (#136, #177).
 
 ### Changed
+- **Era `ceil8`'s `peak/*` and witness rows are LANDED; the 48 L1 rows are deliberately HELD**
+  (2026-10-07, Scott's instruction after the #178 debt analysis). Four rows in two reviewed
+  files, and what each one changes was **driven through `baseline_state`** before landing, not
+  predicted:
+  - `peak/3x24/neon/kc=128` → **85.8** (`Neoverse-V1`) and **62.7** (`Neoverse-V2`), median of
+    N=2 over era `ceil8`'s two archives, spreads **0.0** and **0.2** points. Both resolve
+    `registered`, so `gate-p3` judges arm64 percent-of-peak at **83.2** and **60.1** from the
+    next run on — the first time that criterion is judged on either host in this era.
+  - Two witness rows, the gate's **own proposal** from the transition run, with the source column
+    repointed from gitignored `build/` to the archive so `gate-docs`' tracked-source check can
+    see it (37 registry source paths, up from 31).
+  - **The 48 L1 `rate/*` rows are held and the consequence is stated rather than discovered:**
+    with a witness landed they resolve `owing`, so the next judged run carries **two new FAIL
+    lines** (one per host, naming all 48 as an unmet registration) where it previously carried
+    two `BASELINE`. That is the debt made loud instead of quietly renewed, which is what the
+    class is for — and it is held because `Neoverse-V1` `rate/Sdot/n=65536` moved **−7.2%**
+    between the era's two draws (17.57 → 16.30, every sibling size steady to 0.1%) while the L1
+    criterion's bar is CI-disjointness with **no margin and no width-admissibility rule**. Rule 19
+    has no L1 sibling, so nothing would stop that row from becoming a bar that reddens on weather.
+  - **Expected next-run shift, pre-registered:** `gate-p5` 51 PASS / **4** FAIL / 0 UNMEASURED /
+    **0** BASELINE (the two L1 BASELINEs become the two `owing` FAILs); `gate-p3`'s two `peak/*`
+    BASELINEs become PASS. `share/*` is untouched — those hosts are `fleet`, and the witness does
+    not reach a criterion that has a fleet bar.
+- **`gate-p3` said "RECORDED as its candidate baseline" and recorded nothing** (corrected
+  2026-10-07, #178). That gate has **zero** `baseline_candidate` calls — it writes no candidates
+  file at all — so the word asserted an artifact that did not exist, and both eras' `peak/*` rows
+  were in fact read off that very log line by hand. A verdict line claiming otherwise is how the
+  shortcut stays invisible. The wording now says what happens and names the issue; emitting a real
+  candidate row is the fix and is recorded on #178 rather than done here, because it cannot be
+  exercised without an arm64 `gate-p3` run.
 - **`CEIL_FRACTION = 42.8` and `CEIL_DERIVED_FROM` changes ISA to `Neoverse-V1|Neoverse-V2`**
   (typed 2026-10-06 on #177, step 2 of §5 rule 17(d)'s three; Scott deferred the construction
   choice). The lowest of **eight** admissible judged rows in era `ceil8`'s founding run —

@@ -69,3 +69,5 @@ cpu_model	era	rev	as_of	host	archive
 Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	pinned8	969c360	2026-08-23	keel-skx	archive/pinned8/bench-gate-p5-969c360-keel-skx-20260823T045149Z-1.txt
 Neoverse-V2	pinned8	029e24f	2026-09-06	keel-gvt4	archive/pinned8/bench-gate-p5-029e24f-keel-gvt4-20260906T173558Z-1.txt
 Neoverse-V1	pinned8	029e24f	2026-09-06	keel-gvt3	archive/pinned8/bench-gate-p5-029e24f-keel-gvt3-20260906T173558Z-2.txt
+Neoverse-V2	ceil8	119b673	2026-10-05	keel-gvt4	archive/arm64-ceil8-transition/bench-gate-p5-119b673-keel-gvt4-20261005T162530Z-1.txt
+Neoverse-V1	ceil8	119b673	2026-10-05	keel-gvt3	archive/arm64-ceil8-transition/bench-gate-p5-119b673-keel-gvt3-20261005T162530Z-2.txt
