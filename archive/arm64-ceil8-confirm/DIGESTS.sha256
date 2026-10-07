@@ -1,0 +1,17 @@
+# Era ceil8 confirmation run, us-east-1 2026-10-07, rev 5e769f7 (#177 step 3).
+# 51 PASS / 2 FAIL / 0 UNMEASURED / 2 BASELINE -> RED, matching the pre-registration exactly.
+# All eight share rows clear CEIL_FRACTION=42.8. The two reds are criterion 9 (stale README).
+# Verify with `shasum -c archive/arm64-ceil8-confirm/DIGESTS.sha256` from the repo root.
+#
+bcbefdabc67f2bc025b61bdcfdbc8d04cf6342a0fa43ef233c4b6f5ec71f2e6f  archive/arm64-ceil8-confirm/baseline-candidates-5e769f7-20261007T164442Z.tsv
+57ed55dc837d0f260e889f3a1cf9d14b51b206f8f90fc80c241b0f6d29441009  archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-20261007T164442Z-1.txt
+8393ce970b264d54ba4ca621e68bda42a7aae0b5ffca26e6f2712ed7d44eff1a  archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-20261007T164442Z-2.txt
+874721ed21895591d20501e27c035b05c1083696d00548d2a2a78eb281d90888  archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-20261007T164442Z-3.txt
+689105b637575759015adc57ed26a7c45ee03449c1ceab18467d5225f8ab2524  archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-keel-gvt3-20261007T164442Z-2.txt
+b51ad185d819517a157f6ca78b7b6ae1a83480ce5e7aacf0b73d165ed96e6dc9  archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-keel-gvt4-20261007T164442Z-1.txt
+228dd0f885578f00e8504497217b55178ca852c4b7442e963cdfee8700171bd6  archive/arm64-ceil8-confirm/ceil8-confirm.sh
+3d4e4fafff6255e6da374a1ed24a79d2d5721d27638e8fdcfbfacfb537108e41  archive/arm64-ceil8-confirm/driver-ceil8-confirm-5e769f7.log
+7abae1c70ba92610b12ef96465a6c741a38ec3eeac8f06daaf16864c8f9364d4  archive/arm64-ceil8-confirm/gate-p3-under-p4-5e769f7-20261007T172654Z.log
+3433f0a5d8496e639d806719638889df76600f3fa312aeb3d2585738e62c0726  archive/arm64-ceil8-confirm/gate-p4-under-p5-5e769f7-20261007T164442Z.log
+ea135a8727d5546f8ff55e557c880c67e2a2bd01210b9e34ed3510602989dd71  archive/arm64-ceil8-confirm/gate-p5-arm64-ceil8-confirm.log
+d8e1b9692a62f17ffdec37d2fb9fff8cf9a618240d8f872013ff1365bb2edcc2  archive/arm64-ceil8-confirm/README.md

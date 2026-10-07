@@ -79,6 +79,48 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- `#178`: **the witness row is proposed at exactly one site, and a host inside
+  `CEIL_DERIVED_FROM` never reaches it.** `scripts/gate-p5.sh:1456` sits in the *share*
+  criterion's `new` arm; `5e769f7` moved both Graviton hosts into the derivation set, so they
+  resolve `fleet` there and no witness row for `(Neoverse-*, ceil8)` is ever proposed. Measured:
+  the confirmation run emitted 48 baseline candidates and **zero** witness candidates. With
+  `baseline_spent` permanently missing, `gate-p3`'s `peak/*` and the 48 L1 `rate/*` rows resolve
+  `new` → `BASELINE` on every run forever — green-compatible and silent, which is the permanent
+  exemption the BASELINE-REGISTERED class was built to kill, arriving through the class's own
+  machinery. Nothing is falsely passing (neither criterion has a bar typed); what is broken is
+  the path by which either would *become* judged, and it is latent for any host that joins a
+  derivation set. **Filed rather than fixed**: the repair needs a ruling on whether a criterion
+  rendering BASELINE may spend a host's BASELINE for criteria it does not own, and the debt it
+  exposes is 50 rows — for which the era now has two archives, so a median-of-2 is available
+  (`peak/*` reproduces to ≤0.2 points: 62.6 / 85.8 then 62.8 / 85.8). Introduced by yesterday's
+  typing commit, recorded as such.
+- **Era `ceil8`'s confirmation run — #177's step 3, and the bar holds**
+  (`archive/arm64-ceil8-confirm/`, us-east-1, rev `5e769f7`, 1h16m, `$9.98/hr`):
+  **`51 PASS / 2 FAIL / 0 UNMEASURED / 2 BASELINE / 0 REPORTED` → RED, matching the
+  pre-registration down to every count**, with `gate-p4` GREEN beneath. The share criterion
+  judged for the first time this era and **all eight rows clear `CEIL_FRACTION = 42.8`**; the two
+  reds are criterion 9's stale README rows, which the driver said in advance this run could not
+  fix and that a green would mean something unexpected had happened.
+  - **The pre-registered band was violated and the violation is the finding.** `keel-gvt4`
+    `Strsm` was predicted at ~45.4 ±0.5 from three draws and came in at **44.5** — below all
+    three. Decomposed with the gate's own instrument, **the level did not move**: point share
+    46.50 is the most central of four draws (46.40–46.80) and the 8-thread rate 229.20 sits
+    inside the prior range. The whole 0.9-point fall is the **interval widening**, 1.40 → 2.00
+    points. So the band was declared on the wrong quantity — a CI-deducted share constrains
+    `point − width`, two terms, and cannot say which moved; it should have been stated on the
+    point and the width separately.
+  - **The pre-registered image confound is live and NOT separated.** The driver recorded, before
+    any reading existed, that `spawn` resolved a different Ubuntu AMI; read back
+    **`Linux 7.0.0-1014-aws`** against `7.0.0-1013-aws`. `keel-gvt4`'s width doubled and its
+    ceiling fell 0.21%; `keel-gvt3`, the control, saw the same kernel change and did **not**
+    widen. A 192-core two-socket box gaining jitter where a 64-core single-socket one does not is
+    a plausible kernel effect, and one draw cannot distinguish it from one noisy draw. Candidate
+    cause, attributed to nothing; a second run on the same AMI would separate it.
+  - **42.8 cannot be reddened by noise, measured on all eight rows.** Rule 19's width check sits
+    *ahead* of bar selection, and on every row the width that would carry it below 42.8 exceeds
+    the 2.6-point admissibility cap — 3.70 for the tightest. A widening interval can cost
+    **coverage** and never produce a false red; only a falling point estimate can fail this
+    criterion. The live risk is `keel-gvt4` `Strsm` going *unjudged* at 2.00 of 2.6, not failing.
 - **Era `ceil8`'s founding reading** (`archive/arm64-ceil8-transition/`, us-east-1, rev
   `119b673`, 1h16m, `$9.98/hr`): `42 PASS / 2 FAIL / 1 UNMEASURED / 10 BASELINE` → RED with
   `gate-p4` GREEN beneath it, and **the red is the two stale-README rows and nothing else** —
