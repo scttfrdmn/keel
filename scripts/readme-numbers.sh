@@ -53,17 +53,31 @@ CAP_END='<!-- keel-caption: end -->'
 # SUSPENDED the same day when the spread amendment changed the instrument its denominator was
 # measured with; 44.2 replaced it from the founding campaign's take four, recomputed under #116.
 #
-# ONE BAR SINCE 2026-10-05, AND IT IS SUSPENDED (ruled on #177; DESIGN.md §4/P5 is the
-# authority). STRSM_FLOOR is RETIRED, not deferred -- the T8/T1 ratio was the quantity #6
-# retired for the whole judged class in 2026-08-20, kept in service for one routine, and it
-# reddened #136's microkernel promotion for improving its own 1-thread denominator. Strsm is
-# judged as a SHARE with the other three, so this script publishes one bar and not two. 44.2
-# goes with it: era ceil8 re-keys every judged baseline on the dispatched microkernel, so the
-# references the fraction was derived against were measured on another kernel. The empty-bar
-# branches below are live, not dead code -- they have served every deferral since #37 and they
-# serve this one. SCALE_FLOOR_RETIRED stays because the caption NAMES it as retired; the
-# readback reads it for that reason and would catch it being revived as a live comparison.
-CEIL_FRACTION=
+# ONE BAR SINCE 2026-10-05 (ruled on #177; DESIGN.md §4/P5 is the authority). STRSM_FLOOR is
+# RETIRED, not deferred -- the T8/T1 ratio was the quantity #6 retired for the whole judged
+# class in 2026-08-20, kept in service for one routine, and it reddened #136's microkernel
+# promotion for improving its own 1-thread denominator. Strsm is judged as a SHARE with the
+# other three, so this script publishes one bar and not two.
+#
+# 44.2 went with it and 42.8 REPLACES IT, typed 2026-10-06 from era ceil8's founding run: the
+# lowest of eight admissible rows (keel-gvt4 Strsm, 45.4% net of both intervals) less the 2.6
+# points of margin, which is how 44.2, 51.0 and 57.8 were each set. gate-p5.sh prints the whole
+# derivation, the refused stricter alternative and the confirmation run's pre-registered
+# sensitivities, and is the authority; restated here only because the check below reads that
+# line back verbatim, so this is a second edit and not a second decision.
+#
+# THE BAR IS NOW arm64-ONLY, which this caption must not blur. Its derivation set is the two
+# Graviton models (#155 ruling 2: a bar travels with its derivation set, never across ISAs), so
+# every amd64 host is registry-governed and renders BASELINE once in era ceil8. A caption over
+# an amd64 log that says "the judged routines must reach 42.8%" would be naming a bar that does
+# not govern a single row in it -- the per-host branches below are what keep that honest, and a
+# future amd64 README block is published from its own hosts' registered rows.
+#
+# The empty-bar branches below stay live, not dead code: they have served every deferral since
+# #37 and they will serve the next era boundary. SCALE_FLOOR_RETIRED stays because the caption
+# NAMES it as retired; the readback reads it for that reason and would catch it being revived
+# as a live comparison.
+CEIL_FRACTION=42.8
 SCALE_FLOOR_RETIRED=6.0
 ROUTINES='Sgemm Ssyrk Ssymm Strsm'
 

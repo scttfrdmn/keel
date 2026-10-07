@@ -55,17 +55,28 @@ P5_THREADS=8
 #
 # Retained only as the value the disclosure names as retired, never as a comparison:
 SCALE_FLOOR_RETIRED=6.0
-# SUSPENDED TO EMPTY 2026-10-05 at era ceil8's boundary, retiring the 44.2 typed 2026-08-22
-# (ruled on #177; DESIGN.md §4/P5 carries the whole of it and is the authority). TWO changes
+# SUSPENDED TO EMPTY 2026-10-05 at era ceil8's boundary, retiring the 44.2 typed 2026-08-22,
+# and TYPED AGAIN 2026-10-06 from that boundary run's own rows (ruled on #177; DESIGN.md §4/P5
+# carries the whole of it and is the authority). The suspension was required because two changes
 # landed together and an era boundary is the only place they may: Strsm JOINED this class from
 # the retired ratio criterion, and every judged baseline gained the DISPATCHED SHAPE in its key.
-# Either one alone makes the 44.2 era's references unusable here -- not wrong, measured by
-# another instrument on another kernel -- so this run REPORTS and a reviewed commit types the
-# value from its rows. 44.2 is NOT re-inheritable, and that is this amendment's own cost: the
-# four share rows that were PASSING on 8x8-era bars are withdrawn along with the three reds,
-# because a green for the wrong reason is as untrustworthy as a red for one (§5 rule 6).
+# Either one alone makes the 44.2 era's references unusable -- not wrong, measured by another
+# instrument on another kernel -- so the transition run REPORTED and this is the reviewed commit
+# that types the value. That cost six passing verdicts and three reds; §5 rule 16(c)'s price for
+# an amendment that also retires reds, paid rather than argued around.
 # readme-numbers.sh reads this line back verbatim, so both files change together.
-CEIL_FRACTION=
+#
+# THE ARGMIN IS keel-gvt4's Strsm AND IT IS THE NOISIEST OF THE EIGHT ROWS -- stated at the
+# constant because it is the one thing a reader should distrust about it. Strsm had never had a
+# share before this amendment, so it arrived as the fleet's lowest row with N=1. It was NOT
+# typed from that draw: the share was RECOMPUTED from the two earlier 3x24 draws rather than
+# re-measured, since both runs took the 8-thread rate and the ceiling and only the division is
+# new (archive/arm64-ceil8-transition/README.md carries the table and the positive control --
+# reading the transition run's own archive back through the same path reproduces its printed
+# 45.4 and 61.2 exactly). Three draws: 45.8 / 45.0 / 45.4, median 45.4, which is also this run's
+# row -- so the bar does not depend on which estimator types it, and that coincidence is the
+# reason this value is landable at all.
+CEIL_FRACTION=42.8
 # The CPU models whose judged rows DERIVED CEIL_FRACTION. Named because the
 # BASELINE-REGISTERED class below turns on whether a criterion's reference artifact
 # predates the host's admission, and for these it does not — they ARE the artifact.
@@ -74,7 +85,26 @@ CEIL_FRACTION=
 # NARROWED to two models with 51.0: Xeon 6975P-C derived 57.8 and derived nothing here,
 # gnr having dropped to characterization, which DESIGN.md §4/P5 rules is "never mixed into
 # the citable set". Leaving it would put a future Intel host on a bar two Zen models set.
-CEIL_DERIVED_FROM="AMD EPYC 9R14|AMD EPYC 9R45"
+#
+# REPLACED WHOLE 2026-10-06, and this is NOT a narrowing like the one above -- it is the set
+# changing ISA, because the bar did. 42.8 is derived from eight NEON rows on two Graviton parts,
+# and #155 ruling 2 (which gate-p3 already enforces for peak/*) holds that a bar travels with
+# its derivation set and never across ISAs. Leaving the two Zen models here would hand AVX-512
+# silicon a threshold no AVX-512 row set -- the same category error in the other direction.
+#
+# WHAT IT COSTS, since the amd64 fleet is the one that loses a fleet bar: keel-skx and both Zen
+# models become REGISTRY-governed with no ceil8 row, so each renders BASELINE once on its next
+# judged run and registers from its own rows. They would do that anyway -- era ceil8 opened and
+# no amd64 run has happened in it -- so this changes which SENTENCE they get, not whether they
+# are judged. The direction is per-host convergence, which this comment has called a post-tag
+# option since 2026-08-21; it arrives for amd64 by consequence rather than by decision.
+#
+# AND IT IS WHY THE TRANSITION RUN'S EIGHT CANDIDATE ROWS ARE DELIBERATELY NOT LANDED. A host
+# inside this set WITH a registry row for the same criterion and era resolves `conflict` -> FAIL
+# (two artifacts claiming one host, reported rather than resolved by precedence). Landing those
+# rows would therefore convict both Neoverse hosts on every share row. They stay in
+# archive/arm64-ceil8-transition/ as the proposal they are.
+CEIL_DERIVED_FROM="Neoverse-V1|Neoverse-V2"
 # The margin between a registered baseline and the bar it sets; the registry it is
 # subtracted from is named below, once the exercise seam has decided which one that is.
 #
@@ -879,10 +909,11 @@ echo "-- scaling at $P5_THREADS cores on ${P5_SIZE}^3 (the headline criterion) -
 info "-test.count=$KEEL_BENCH_COUNT -test.benchtime=$KEEL_BENCH_TIME; one invocation per host with both thread"
 info "counts inside it, and the floor counts as cleared only net of both intervals"
 if [[ -n "$CEIL_FRACTION" ]]; then
-  info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class (ruled 2026-08-12; denominator ruled 2026-08-20, its 8-thread form and this fraction ratified 2026-08-21, #6)"
-  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest of SIX admissible judged rows in the founding campaign's take four (keel-zen5 Ssymm, 46.8150% net of BOTH intervals, recomputed from the archives under #116's honest CI bounds) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. What it cannot see is stated inside it (§5 rule 12): no Intel silicon derived it, keel-skx being DERIV=0 and gnr characterization, and the two models it has spread 46.8-75.4%, so one fleet bar is set by the weakest host — per-host convergence is the post-tag option named above. Rule 19 admitted all six: widest share interval 0.3 points against the ${BASELINE_MARGIN}-point cap"
-  info "  the bar FELL 6.8 points from the suspended 51.0 and 95.0% of the fall is the DENOMINATOR, not the kernels: #115 lifted the ceiling's fork/join out of its own timed region, so the reference rose 1999.5 -> 2291 GFLOP/s (+14.6%) on the host that sets the bar, while that row's rate fell 1081 -> 1073 (-0.74%). One term at a time on the argmin: the new rate over the OLD ceiling would have typed 50.8, the old rate over the NEW ceiling 44.6. The measured share has THREE terms and this is the reference term moving; the era boundary is what keeps it out of the drift budget (§5 rule 17(d))"
-  info "  the ceiling's rise is the INSTRUMENT and not the mask, adjudicated by the control host: keel-skx's spread enumeration is degenerate (its L3 is per socket, so the mask returns the same 0..7 the confined form did) and its ceiling rose the MOST, +23.4%, which a mask that did not change cannot cause. So the +14.6% is attributable to #115 (§5 rule 18) rather than to placement, and the two changes that landed together are separable after all"
+  info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class since 2026-10-05, Strsm having joined it (ruled 2026-08-12 for the other three; denominator ruled 2026-08-20; this fraction typed 2026-10-06 on #177)"
+  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest of EIGHT admissible judged rows in era $P5_ERA's founding run (keel-gvt4 Strsm, 45.4% net of BOTH intervals) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. Construction is the PRECEDENT one -- the lowest row of the typing run less the margin, which is how 44.2, 51.0 and 57.8 were each set. The stricter alternative was computed and refused: 45.0 (the lowest of the argmin's three draws) less ${BASELINE_MARGIN} types 42.4, and choosing it would have changed what \"the lowest row\" ranges over AFTER seeing that one of the eight rows is noisier than the other seven, which is a threshold shaped by the data it judges (Scott deferred the choice 2026-10-06; §5 rule 15's direction rule is satisfied by stating that the refused option was the stricter one)"
+  info "  THE ARGMIN IS THE NOISIEST ROW OF THE EIGHT, and that is the disclosure this bar most needs. Strsm had no share at all before #177, so it arrived as the fleet's lowest row with ONE draw. It was not typed from that draw: its share was RECOMPUTED from the two earlier 3x24 draws, which both took the 8-thread rate and the ceiling, so only the division is new -- 45.8 / 45.0 / 45.4, median 45.4, which is ALSO this run's row. The recomputation is positive-controlled by running the transition run's own archive back through the same path and reproducing its printed 45.4 and 61.2 exactly (archive/arm64-ceil8-transition/). Rule 19 admitted all eight: widest share interval 1.40 points against the ${BASELINE_MARGIN}-point cap, and that widest one is the argmin's -- the three GEMM-shaped rows reproduce to <= 0.2 points across the same three draws"
+  info "  WHAT THE SET CANNOT SEE, stated inside it (§5 rule 12): NO amd64 silicon derived this bar and no Intel or AMD row is in it, so it is a two-host, one-ISA, one-microkernel (3x24/neon) derivation. The eight rows span 45.4-79.3%, so one fleet bar is set by the weakest host AND its weakest routine, and keel-gvt3 clears it by 18.4 to 36.5 points — per-host convergence is the option named at CEIL_DERIVED_FROM. The bar therefore binds the two Graviton models ONLY; every amd64 host is registry-governed and renders BASELINE once in this era, which is what #155 ruling 2 requires of a bar that would otherwise travel across ISAs"
+  info "  PRE-REGISTERED FOR THE CONFIRMATION RUN, so it can fail. keel-gvt4 Strsm is tightest at EXACTLY the margin (45.4 against 42.8), so a >5.73% fall in its 8-thread rate flips it with no change to the nest, as would a >6.07% rise in that host's measured ceiling. The two sensitivities differ because a share is a RATIO and quoting one for the other is #110's units error in miniature. Nothing else is close: the second-tightest row is keel-gvt4 Ssymm at 53.0, needing a 19.2% fall, and keel-gvt3 Strsm at 61.2 needs 30.1%"
 else
   info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). This branch has now fired FOUR times, every one of them for the same reason in a different dress -- a bar whose reference artifact was produced by an instrument the judging run does not use: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor; at the pinned8 boundary, where 57.8 could not be inherited; at the 2026-08-22 spread amendment, which retired 51.0 because its rows' eight cores were confined to one cache domain; and now at era $P5_ERA's boundary (2026-10-05, #177), which retires 44.2 because Strsm JOINED this class and every judged baseline gained the dispatched microkernel in its key -- all eight arm64 references were measured on 8x8/neon, two promotions behind what this run dispatches"
 fi

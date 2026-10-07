@@ -366,8 +366,24 @@ is 'the retired ratio criterion is gone from the shipped gate, not emptied' \
    "$(/usr/bin/grep -c '^SCALE_DERIVED_FROM=\|^STRSM_FLOOR=\|^STRSM_MARGIN=\|^P5_MEASURED=' scripts/gate-p5.sh)" '0'
 is 'and Strsm is in the judged class it was moved into' \
    "$(/usr/bin/grep -c '^P5_JUDGED=.*Strsm' scripts/gate-p5.sh)" '1'
-# 37. Newness against an unmet obligation, the distinction the witness exists for, driven
-#     on a host outside the derivation set -- which every arm64 host will be.
+# 36b. THE DERIVATION SET IS SINGLE-ISA, which is the fact #155 ruling 2 now rests on here: 42.8
+#      was typed from eight NEON rows, so an amd64 model left in CEIL_DERIVED_FROM would hand
+#      AVX-512 silicon a threshold no AVX-512 row set. Asserted as "names no amd64 model" rather
+#      than as the arm64 string, so it keeps meaning the same thing when a third Graviton part
+#      joins -- and it reads the VALUE, not the constant's name, because the hazard is a model
+#      slipping back in beside the two that belong.
+is 'the shipped share derivation set names no amd64 model' \
+   "$(/usr/bin/sed -n 's/^CEIL_DERIVED_FROM="\(.*\)"$/\1/p' scripts/gate-p5.sh | /usr/bin/grep -cE 'EPYC|Xeon|AMD|Intel')" '0'
+is 'and it does name both Graviton models the bar was derived on' \
+   "$(/usr/bin/sed -n 's/^CEIL_DERIVED_FROM="\(.*\)"$/\1/p' scripts/gate-p5.sh | /usr/bin/grep -cE '^Neoverse-V1\|Neoverse-V2$')" '1'
+# 37. Newness against an unmet obligation, the distinction the witness exists for, driven on a
+#     host outside the derivation set. $CEILD is this FILE'S set (the two AMD models that
+#     derived 44.2), deliberately not the shipped one: these arms test the classifier, and
+#     pinning them to whatever CEIL_DERIVED_FROM happens to say would make them change meaning
+#     every time a bar is re-typed. The comment here used to add "which every arm64 host will
+#     be" -- true of the shipped set until 2026-10-06 and false after it, since 42.8's
+#     derivation set IS the two Graviton models and the amd64 fleet is the registry-governed
+#     one now. Case 36b is where the shipped value is checked.
 is 'a model with no row and no witness is new' \
    "$(baseline_state "$REG" "$WIT" "$ARM" share/3x24/neon/Strsm "$ERA" "$CEILD")" 'new'
 is 'a witnessed model with no row for this criterion is owing' \

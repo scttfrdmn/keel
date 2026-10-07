@@ -114,6 +114,34 @@ While the major version is 0, minor versions may contain breaking changes.
   not reverted (#136, #177).
 
 ### Changed
+- **`CEIL_FRACTION = 42.8` and `CEIL_DERIVED_FROM` changes ISA to `Neoverse-V1|Neoverse-V2`**
+  (typed 2026-10-06 on #177, step 2 of §5 rule 17(d)'s three; Scott deferred the construction
+  choice). The lowest of **eight** admissible judged rows in era `ceil8`'s founding run —
+  `keel-gvt4` `Strsm` at **45.4%** net of both intervals — less `BASELINE_MARGIN`'s 2.6 points,
+  which is the construction 44.2, 51.0 and 57.8 were each set by. **The argmin is the noisiest
+  of the eight and that is the headline disclosure:** `Strsm` had no share before this
+  amendment, so it arrived with N=1, and rather than type a bar off a draw (§5 rule 16) its
+  share was **recomputed from the two earlier `3x24` draws** — 45.8 / 45.0 / 45.4, median 45.4,
+  *which is also the typing run's own row*, so the bar does not depend on which estimator sets
+  it. **The stricter alternative was computed and refused and the refusal is on the record**
+  (§5 rule 15): 42.4 = 45.0 − 2.6 would put the bar a full margin below every reading, but
+  adopting it changes what "the lowest row" ranges over *after* seeing which row is noisiest —
+  a threshold shaped by the data it judges. 0.4 points apart, so a verdict can only differ for
+  a reading in `[42.4, 42.8)`. **The derivation set changes ISA rather than narrowing:** 42.8 is
+  eight NEON rows on two Graviton parts, and #155's ruling (already enforced for `peak/*`) holds
+  a bar travels with its derivation set and never across ISAs, so leaving the Zen models would
+  hand AVX-512 silicon a threshold no AVX-512 row set. Cost, stated: `keel-skx` and both Zen
+  models become registry-governed and render `BASELINE` once on their next judged run — which
+  the era boundary made true anyway, so it changes their *sentence*, not whether they are judged.
+  **The eight candidate rows are deliberately not landed**: a host inside the derivation set
+  that also has a registry row resolves `conflict` → FAIL, so landing them would convict both
+  Graviton hosts on every share row — demonstrated on a scratch registry, not inferred. Every
+  state was driven through `baseline_state` against the shipped artifacts. `baseline-test.sh`
+  gains two controls (the set names no amd64 model; it names both Graviton models), both driven
+  red before landing; now **105 ok**. Pre-registered so the confirmation run can fail:
+  `keel-gvt4` `Strsm` sits at exactly the margin, flipping on a **>5.73%** rate fall or a
+  **>6.07%** ceiling rise — different because a share is a ratio — with the next-tightest row
+  needing 19.2%.
 - **`3x24 u=2` is the shipped arm64 microkernel** (#136). It is the leanest of the 107 emittable
   zero-spill NEON shapes (4.111 against `4x16`'s 5.000 insns/FMA) and `Preferred` selects it under
   **both** classes — not by accident: it ties `4x16` on mem-ops/FMA *exactly*
