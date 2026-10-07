@@ -146,6 +146,11 @@ fi
 # Run-stamped too, for the reason the same assignment in gate-p5.sh now records: the
 # revision stamp left two runs at one rev colliding, which is #78 past its own fix.
 P3LOG="build/gate-p3-under-p4-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)-$RUN_STAMP.log"
+# EXPORTED so gate-p3 can name its own durable artifact in a candidate row's source column
+# (#178). It is the only party that knows this path: gate-p3 writes to stdout and this gate
+# chooses the file. Without it gate-p3's proposal would cite a temp path or invent one, and a
+# reviewer would have to chase the evidence a "fully formed candidate row" is meant to hand them.
+export KEEL_P3_LOG="$P3LOG"
 
 # p4_line NAME FILE ROUTINE — the keel-NAME line belonging to one routine. The P4
 # markers are emitted once per routine, so `marker`'s last-wins reading would

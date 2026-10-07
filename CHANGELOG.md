@@ -101,6 +101,42 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- **The project's first arm64 `KEEL_REPLAY` corpus**
+  (`archive/witness/p3-arm64-corpus-0b6b649.tar.gz`, 432K, with its driver beside it). Both
+  existing corpora are `avx512`, so **no arm64 gate path could be exercised anywhere** without a
+  live arm64 host — which is why `#167` recorded its arm64 rendering as having "no standing
+  harness", and why `#178`'s candidate-row emission could not be shipped without putting its
+  first exercise on a `$10/hr` measurement run. Recorded on one `c6g.2xlarge` in **16 minutes
+  for $0.07**, and it buys a `$0` exercise path for that fix and every future arm64 gate edit.
+  **Graviton2 on purpose, and the alternative would have exercised nothing:** the arm that needs
+  driving is `gate-p3`'s `peak/*` **first-sight** branch, which fires only for a `cpu_model` with
+  no registered row — and Graviton3/4 are `Neoverse-V1`/`V2`, *both* of which now carry a
+  `peak/3x24/neon/kc=128` row at era `ceil8`, so either would have rendered `registered`.
+  `Neoverse-N1` is unregistered, driven through `baseline_state` → `new` → `first-sight` **before**
+  the launch. **Nothing in it is a result** — a partial-size shared guest classifies
+  `correctness`, the run itself rendered that criterion `UNMEASURED`, and landing an
+  `Neoverse-N1` row would destroy the corpus's only purpose. Determinism measured: two replays
+  are **74 lines byte-identical** modulo one `disk headroom` line, a varying local fact the gate
+  reports rather than gate rendering.
+
+### Fixed
+- **`gate-p3` now PROPOSES a candidate row, so §5 rule 17(b) is true of it** (#178). It printed
+  *"RECORDED as its candidate baseline"* with **zero** `baseline_candidate` calls, so both eras'
+  `peak/*` rows were hand-read — the shortcut rule 17(b) forbids an *instrument* from taking. The
+  four pieces of state it lacked are added with the `:-` idiom throughout, because this gate runs
+  inside `gate-p4` inside `gate-p5` under `set -euo pipefail`, where an unset variable does not
+  produce a bad row — **it aborts a judged chain and costs the whole run**. The hard one was the
+  source column: a registry row's source must be a *durable* artifact and this gate structurally
+  does not know where its evidence will live, so `gate-p4` — which names the delegated log —
+  now exports `KEEL_P3_LOG`, and a standalone run says so in the row rather than inventing a path
+  a reviewer would have to chase. The proposal carries `$PACT`, the **unrounded** operand
+  `peak_bucket` compares, not the 1-decimal rendering (#143). **Exercised under replay at $0, with
+  three controls driven:** a *negative* control (a registered host emits nothing and renders
+  `PASS (>= 46.9%)` instead), the delegated-path control (`KEEL_P3_LOG` reaches the source
+  column), and **non-vacuity** (a planted dropped argument yields 7 fields, so the 8-field check
+  can fail). `baseline-test.sh` gains four standing controls — now **112 ok** — each driven red;
+  one of them was initially reported inert because the mutation loop's own pattern never applied,
+  which is why it was re-driven directly.
 - `#178`: **the witness row is proposed at exactly one site, and a host inside
   `CEIL_DERIVED_FROM` never reaches it.** `scripts/gate-p5.sh:1456` sits in the *share*
   criterion's `new` arm; `5e769f7` moved both Graviton hosts into the derivation set, so they

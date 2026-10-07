@@ -392,6 +392,25 @@ is 'and that one assignment is inside witness_once' \
 #      its message, so rewording the sentence does not silently disarm it.
 is 'the gate self-checks that a BASELINE host proposed its witness (#178)' \
    "$(/usr/bin/grep -c 'baseline_spent "\$WITNESS_CANDIDATES"' scripts/gate-p5.sh)" '1'
+# 36e. #178's SECOND half: gate-p3 now PROPOSES a candidate row. It printed "RECORDED as its
+#      candidate baseline" with zero baseline_candidate calls until 2026-10-07, so both eras'
+#      peak/* rows were hand-read -- the shortcut §5 rule 17(b) forbids an instrument from
+#      taking. Three facts, each about THIS tree, because the emission itself is exercised under
+#      KEEL_REPLAY against archive/witness/p3-arm64-corpus-0b6b649.tar.gz and that is a session
+#      act with no standing harness; what a standing control CAN hold is that the call and the
+#      state it needs did not quietly disappear.
+is 'gate-p3 proposes exactly one candidate row (#178)' \
+   "$(/usr/bin/grep -c 'baseline_candidate "\$P3_BASELINE_CANDIDATES"' scripts/gate-p3.sh)" '1'
+is 'and it declares the candidates path that call writes to' \
+   "$(/usr/bin/grep -c '^P3_BASELINE_CANDIDATES=' scripts/gate-p3.sh)" '1'
+# 36f. The source column needs a path only gate-p4 knows (it names the delegated log), so the
+#      export is load-bearing: without it gate-p3 cites a temp path or invents one, and a
+#      "fully formed candidate row" stops handing a reviewer the evidence. Checked at BOTH ends,
+#      because either half alone is silent -- an export nobody reads, or a read nobody exports.
+is 'gate-p4 exports the delegated log path (#178)' \
+   "$(/usr/bin/grep -c '^export KEEL_P3_LOG=' scripts/gate-p4.sh)" '1'
+is 'and gate-p3 reads it with a fallback, so set -u cannot abort a judged chain' \
+   "$(/usr/bin/grep -c '^P3_SELF_LOG="\${KEEL_P3_LOG:-' scripts/gate-p3.sh)" '1'
 # 37. Newness against an unmet obligation, the distinction the witness exists for, driven on a
 #     host outside the derivation set. $CEILD is this FILE'S set (the two AMD models that
 #     derived 44.2), deliberately not the shipped one: these arms test the classifier, and

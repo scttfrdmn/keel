@@ -175,6 +175,27 @@ P3_BASELINE_REGISTRY="$P3_BASELINE_DIR/host-baselines.tsv"
 P3_BASELINE_WITNESS="$P3_BASELINE_DIR/judged-runs.tsv"
 P3_BASELINE_ERAS="$P3_BASELINE_DIR/measurement-eras.tsv"
 P3_ERA="$(era_current "$P3_BASELINE_ERAS")"
+# ---- THE FOUR PIECES OF STATE THIS GATE LACKED, so it can PROPOSE a candidate row (#178)
+#
+# Until 2026-10-07 this gate printed "RECORDED as its candidate baseline" and wrote no row
+# anywhere -- zero baseline_candidate calls -- so both eras' peak/* rows were in fact read off
+# that log line by hand. That is the shortcut §5 rule 17(b) forbids an INSTRUMENT from taking.
+# Fixing the wording was the honest half; this is the other.
+#
+# Every one uses the `:-` idiom deliberately. This gate runs under `set -euo pipefail` INSIDE
+# gate-p4 inside gate-p5, so an unset variable here does not produce a bad row -- it aborts a
+# judged chain and costs the whole run. None of these may be able to fail.
+P3_REV="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+# bench.sh:126's idiom, not a second convention: RUN_STAMP when the caller set one, a fresh UTC
+# stamp otherwise, so two standalone runs at one rev cannot pile into one candidates file.
+P3_RUN_STAMP="${RUN_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
+P3_BASELINE_CANDIDATES="build/p3-baseline-candidates-$P3_REV-$P3_RUN_STAMP.tsv"
+# THE SOURCE COLUMN IS THE HARD ONE, and it is why this was never implemented: a registry row's
+# source must be a DURABLE artifact, and this gate structurally does not know where its evidence
+# will live. gate-p4 names the delegated log (gate-p4.sh:148, `gate-p3-under-p4-<rev>-<stamp>`)
+# and exports it as KEEL_P3_LOG; a STANDALONE gate-p3 has no such file, and says so in the row
+# rather than inventing a path a reviewer would then have to chase.
+P3_SELF_LOG="${KEEL_P3_LOG:-(standalone gate-p3 run: no delegated log; the landing commit must name the archived artifact)}"
 # READ BACK from gate-p5.sh, never retyped (#167). Every other constant in this file is
 # deliberately duplicated from gate-p2 so a P3 red means P3 changed -- but that argument is
 # about a bar this gate OWNS. BASELINE_MARGIN is the registry class's own margin, shared with
@@ -1025,7 +1046,16 @@ else
           # invisible. The wording now says what happens; emitting a real candidate row is the
           # fix and is recorded on #178, not done here, because it cannot be exercised without
           # an arm64 gate-p3 run.
-          baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — this is its CANDIDATE BASELINE and this gate PROPOSES NO ROW FOR IT (#178: gate-p3 writes no candidates file, so landing a row means reading this printed value, as both eras' rows were), not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). No row for ($hcpu, $PCRIT) in era $P3_ERA and no witness row, so this silicon has not spent its BASELINE at this configuration (#167)" ;;
+          # $PACT and not $frac: PACT is ACT_LO*100 unrounded, which is the operand peak_bucket
+          # compares a registered baseline against, so the proposal carries the statistic the
+          # bar will judge rather than its 1-decimal rendering (#143 -- the rendering becoming
+          # the operand is a bug this project has already paid for once).
+          baseline_candidate "$P3_BASELINE_CANDIDATES" \
+            "$hcpu" "$PCRIT" "$P3_ERA" "$PACT" \
+            "SINGLE DRAW from gate-p3 at $P3_REV -- NOT landable as-is (§5 rule 16): re-reduce as a median over N archived runs before committing. Value is the net-of-CI attainment in points of this host's measured NEON peak, unrounded, the operand peak_bucket compares" \
+            "$P3_SELF_LOG" "$(date -u +%Y-%m-%d)" \
+            "first sight of $PCRIT in era $P3_ERA: no row and no witness postdating this criterion (#167, #169). PEAK_FLOOR is amd64-derived and 0.55 against a 4-lane NEON kernel is a category error, so this host is registry-governed here (#155)"
+          baseline "[$host] $ACT_ID reaches ${frac}% of this host's measured NEON peak, net of CI — RECORDED as its candidate baseline in $P3_BASELINE_CANDIDATES (#178; landing it is a reviewed commit act, §5 rule 17(b)), not judged against PEAK_FLOOR=$PEAK_FLOOR: that floor and the issue/fma frontier are amd64-derived, so this 4-lane kernel is first-sight and registers per rule 17 (#155). No row for ($hcpu, $PCRIT) in era $P3_ERA and no witness row, so this silicon has not spent its BASELINE at this configuration (#167)" ;;
         owed)
           # The wording is keyed to what reaching this arm now MEANS, not to what it meant before
           # #169. A witness row older than $P3_PEAK_CRIT_SINCE no longer lands here, so the only

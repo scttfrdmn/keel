@@ -57,3 +57,43 @@ not Go code).
    not move).
 3. Re-render each arm; `diff` against the baseline. **Zero diff = byte-unchanged on amd64**, stated
    in the commit. A non-zero diff is the port touching amd64 rendering — stop and localize it.
+
+## `p3-arm64-corpus-0b6b649.tar.gz` — the first arm64 replay corpus (2026-10-07, #178/#167)
+
+Recorded by `p3-arm64-corpus-record.sh` (archived beside it here, since a driver is evidence) on **one `c6g.2xlarge`** (Graviton2 / **Neoverse-N1**),
+us-east-1, on-demand, 16 minutes, **$0.07**. Unpack to `build/witness-corpus-arm64` and drive:
+
+```
+KEEL_REPLAY=replay KEEL_REPLAY_DIR=build/witness-corpus-arm64 \
+KEEL_REMOTE_HOSTS=keel-gvt2 KEEL_GOARCH=arm64 bash scripts/gate-p3.sh
+```
+
+**Why it exists.** Both corpora above are `avx512`, so no arm64 gate path could be exercised
+anywhere without a live arm64 host — which is why `#167` recorded its arm64 rendering as having
+"no standing harness", and why `gate-p3`'s candidate-row emission (`#178`) could not be shipped
+without putting its first exercise on a `$10/hr` measurement run.
+
+**Why Graviton2 and not a judged part.** The criterion this corpus exists to drive is
+`gate-p3`'s arm64 `peak/*` **first-sight** arm, which fires only for a `cpu_model` with no
+registered row. Graviton3/4 are `Neoverse-V1`/`V2` and **both carry a
+`peak/3x24/neon/kc=128` row at era `ceil8`**, so either would render `registered` and exercise
+nothing. `Neoverse-N1` is unregistered — driven through `baseline_state` → `new` →
+`peak_bucket` → `first-sight` *before* the launch.
+
+**Nothing in it is a result.** A `c6g.2xlarge` is a partial-size shared guest that `remote.sh`
+classifies `correctness`; the run reported `the admission class is unreadable` and rendered that
+criterion `UNMEASURED`. **No row from this corpus may ever be landed**, and landing an
+`Neoverse-N1` row would also destroy the corpus's only purpose by moving the arm it drives from
+`first-sight` to `registered`. A corpus needs *fixed* input, not good input.
+
+**Determinism, measured:** two replays render **74 lines byte-identical**, modulo one
+`disk headroom: <N> MiB free` line, which is a varying local fact the gate reports and not gate
+rendering. Live `gate-p3` tallied `16 PASS / 0 FAIL / 1 UNMEASURED / 1 BASELINE / 1 REPORTED`;
+replay tallies `14 PASS` for the two criteria replay cannot serve (`git archive HEAD`, native
+compiles — `gate-replay.sh`'s own documented scope), with the `BASELINE`/`UNMEASURED`/`REPORTED`
+counts identical and the first-sight arm reached either way.
+
+**Scope it does NOT cover** (§5 rule 12): the dispatch/forced sections have no recorded host
+calls for the arm64 path beyond what this one host produced; the `-race` leg is replay-skipped;
+and every number in it is a Graviton2 number, so it witnesses *rendering and control flow*,
+never performance.
