@@ -9,6 +9,34 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **The upstream watch read Gerrit only, and a reviewer question sat five weeks on GitHub**
+  (found and fixed 2026-10-08). `golang/go#80829` — the issue CL 824624 is keyed to — carried
+  Junyang Shao's *"Is the `.BCST` optimization a next step?"* from **2026-08-31**, plus an
+  assignment to us, while the heartbeat reported "healthy wait, no ping" every two days and was
+  correct every time **about the surface it read**. Gerrit and GitHub are two surfaces for one
+  conversation and the reviewer picks. The timing hid it: we posted on the CL 3h37m after their
+  issue comment, so the CL showed our own fresh reply. And `gopherbot` cross-posts make the
+  newest issue comment look like bot noise — the one issue where a human spoke last looked
+  identical from outside. **Answered** with the measured case keel had the whole time (#20,
+  `docs/spill-report.md` §5.2–5.3: 74 insns/16 FMAs → 50 with 231+`.BCST`), after a figure-by-
+  figure check against source that caught three prose errors in the draft, one of them a real
+  citation fault — `golang/go#81352` is the *emulated broadcast*, not lane-indexed `FMLA`, and
+  `docs/neon-probe.md` explicitly forbids reporting the latter as "x86 `.BCST` on arm64".
+  **The cron now reads the issue surface** for the seven golang/go issues keel participates in,
+  with a per-issue baseline, a wake condition of *"last comment by a human who is neither us nor
+  a bot"* rather than a comment count, a clause that **resolves** a bot-named CL instead of
+  skipping it, and `#73787` excluded **by name with its reason** (226 comments, we have zero, so
+  "last comment not ours" is permanently true and carries no signal).
+- **A sweep of all 18 referenced golang/go issues and all 12 CLs found no other unanswered
+  question** — on both CLs where keel participates it spoke last, and no reviewer has spoken
+  after it on any of the twelve. The same blind spot had hidden two other things, neither a
+  missed reply: **CL 825185 + CL 825186 merged 2026-09-01** fixing `golang/go#80835` (keel #144),
+  which measurement — not date arithmetic — places in **go1.28** rather than keel's go1.27.1
+  (both commits `diverged` from that tag), so #144 becomes "fixed upstream, awaiting a toolchain
+  that carries it" with a go1.28 re-measurement trigger; and Go's **`-randlayout int`** linker
+  flag, surfaced on `golang/go#8717`, which is a candidate discriminator for #147's bimodality
+  and #150's unexplained between-arm level term — recorded on #61 with the caveat that using it
+  in a *judged* run is a methodology change needing an era boundary.
 - **`#178`: the witness row is a HOST's, not a criterion's, and is now proposed from wherever
   BASELINE is rendered** (ruled 2026-10-07; Scott deferred the choice). The question — *may a
   criterion that renders BASELINE spend a host's BASELINE for criteria it does not own?* — is
