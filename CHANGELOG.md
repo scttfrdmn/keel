@@ -24,7 +24,7 @@ While the major version is 0, minor versions may contain breaking changes.
   code. go1.28 will ship both CLs *and* these 36 moves.
   - **The witness gated the spend and the `measured` slot was never used.** With no counterfactual
     available the A/B route to a cost figure is **moot, not blocked**; `docs/spill-report.md`
-    §11.5's "#80835 is unmeasured on keel" stands unchanged. Cost would need counters (janus has
+    section 11.5's "#80835 is unmeasured on keel" stands unchanged. Cost would need counters (janus has
     the PMU exposed but no `perf`, and whether Skylake-X exposes an AVX↔SSE transition-assist
     event at all is unresolved) or a hand-patched binary.
   - **How the wrong claim was made:** gopherbot's cross-posts said "two CLs merged, both fixing
