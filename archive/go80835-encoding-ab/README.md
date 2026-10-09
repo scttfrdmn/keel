@@ -71,7 +71,13 @@ the only reason the census above was run instead of the table being published.
 ## Files
 
 - `driver-vzup-80835-e4b6c6e.log` — the full run: preflight, ship, both builds, the witness, the refusal
-- `measurements.txt` — every hash and count in the table above, as produced on the host
+- `measurements.md` — every hash and count in the table above, as produced on the host. The
+  extension is `.md` and not `.txt` **because `archive/*/*.txt` is a test corpus glob**:
+  `tools/benchci`'s `archivedLogs` sweeps it and `TestArchivedIntervalsNeverEscapeTheirSamples`
+  correctly refuses a member that re-derives 0 readings. This is the SECOND time that glob has
+  been tripped by a non-benchmark `.txt` in one day (`region-probe.txt`, hours earlier), which is
+  recorded in `CHANGELOG.md` as evidence that the membership test wants fixing at the glob rather
+  than by renaming files a third time.
 - `vzup-drive.sh`, `vzup-phase.sh.AS-RUN` — the local driver and the remote phase script as run
 
 Verify with `shasum -c archive/go80835-encoding-ab/DIGESTS.sha256` from the repo root.

@@ -9,6 +9,28 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **`archive/*/*.txt` is a test-corpus glob, and a non-benchmark `.txt` tripped it for the SECOND
+  time in one day.** `433e9e5` added `archive/go80835-encoding-ab/measurements.txt`;
+  `tools/benchci`'s `archivedLogs` globs that pattern and
+  `TestArchivedIntervalsNeverEscapeTheirSamples` correctly refused a member re-deriving 0
+  readings — *"a parse that greened on unread input"*. Renamed to `.md`, exactly as
+  `region-probe.txt` was hours earlier. **The assertion is right and the membership test is
+  wrong**, and two incidents in one session is the evidence for saying so: the glob fails in both
+  directions, loudly on a non-member and silently on a corpus file that does not match. The fix
+  belongs at `archivedLogs` — require a positive `Benchmark` marker for membership, which is safe
+  precisely because `archivedFilesAsOf20260830` and `archivedRowsAsOf20260830` already redden on
+  over-exclusion. Not done here: main was red while this was found, and mixing a selection-logic
+  change into the smallest-correct-fix commit is the wrong order.
+- **`433e9e5` was committed and pushed with citation-lint RED**, and CI went red on it for two
+  separate reasons (`docs` on the citation, `ci` on the corpus glob). The citation itself was
+  trivial — a section-11.5 reference written in DESIGN.md's own notation actually named
+  `spill-report`'s numbering, and the linter correctly reads that notation as a DESIGN.md
+  citation. (Quoting the offending glyph here would re-trip the lint, which is a real
+  limitation of a textual citation checker and the reason this sentence spells it out.) — but the process failure is the one worth recording: **I ran the checks,
+  saw the RED in their output, and committed anyway**, because the greps printed the result
+  without gating the commit. `;` where there should have been `&&`, one command after applying
+  that same rule correctly to the archive README. Both follow-up commits are gated on their
+  checks passing.
 - **RETRACTED the same day: CL 825185 + CL 825186 do NOT fix keel's legacy-SSE encodings**
   (`archive/go80835-encoding-ab/`, janus, 2026-10-09). The entry below claimed #144 was "fixed
   upstream, awaiting a toolchain that carries it" with a go1.28 re-measurement trigger. **Measured
