@@ -9,6 +9,40 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **RETRACTED the same day: CL 825185 + CL 825186 do NOT fix keel's legacy-SSE encodings**
+  (`archive/go80835-encoding-ab/`, janus, 2026-10-09). The entry below claimed #144 was "fixed
+  upstream, awaiting a toolchain that carries it" with a go1.28 re-measurement trigger. **Measured
+  and false.** The counterfactual was upstream's own fix: both CLs are CPU-feature propagation
+  changes and they are *consecutive* — `0b2fd4aa9c08` is exactly one commit ahead of
+  `fbea197d3279` and that commit *is* the second CL — so the base was pinned to the later one and
+  both reverted from it, isolating the pair with nothing in between. Two toolchains, one source
+  tree, one bare-metal Skylake-X host, keel's own build line, `VERSION` identical in both arms.
+  Result: **normalized disassembly byte-identical** (`428d3575…` both, 396,471 lines, differing
+  only in `objdump`'s filename header), **36** legacy `movups` in the three kernels in *both*
+  arms, **6416** across the whole binary in both — while the two `compile` binaries hash
+  differently, so the toolchains really do differ and the treatment simply does not reach this
+  code. go1.28 will ship both CLs *and* these 36 moves.
+  - **The witness gated the spend and the `measured` slot was never used.** With no counterfactual
+    available the A/B route to a cost figure is **moot, not blocked**; `docs/spill-report.md`
+    §11.5's "#80835 is unmeasured on keel" stands unchanged. Cost would need counters (janus has
+    the PMU exposed but no `perf`, and whether Skylake-X exposes an AVX↔SSE transition-assist
+    event at all is unresolved) or a hand-patched binary.
+  - **How the wrong claim was made:** gopherbot's cross-posts said "two CLs merged, both fixing
+    `golang/go#80835`", and I checked only whether the commits were *in* keel's toolchain —
+    a correct answer to a question I had not established was the right one. I never checked
+    whether they touch *keel's* manifestation. An issue can have several sub-cases, and "fixes
+    #80835" in a commit message is the author's scope, not mine.
+  - **The archived instrument carries its own defect, stated not corrected:** the witness script's
+    VEX-move regex cannot match `vmovdqu64` (the trailing digits break the word boundary), so its
+    informational column read `0` for kernels holding 177 of them. It did not affect the verdict —
+    the gate compares the *legacy* counts and `\b(movups|movaps)\b` is correct, since `v` is a
+    word character — and it was caught only because a zero VEX count is impossible for an AVX-512
+    body. The archived copy is `AS-RUN`, because an archive of a corrected script misrepresents
+    the run.
+  - **It strengthens the contribution to the upstream thread rather than weakening it:** mauri870
+    feared the `VZEROUPPER` case would be "lost when those CLs land". The measurement shows keel's
+    *interior* legacy-SSE case also survives them, so `golang/go#80835` has at least two distinct
+    sub-cases the merged work does not cover.
 - **The upstream watch read Gerrit only, and a reviewer question sat five weeks on GitHub**
   (found and fixed 2026-10-08). `golang/go#80829` — the issue CL 824624 is keyed to — carried
   Junyang Shao's *"Is the `.BCST` optimization a next step?"* from **2026-08-31**, plus an

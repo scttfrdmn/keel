@@ -1,0 +1,48 @@
+
+########## preflight  (21:29:25Z) ##########
+   keel HEAD=e4b6c6e (expected e4b6c6e)
+   tree clean
+
+########## ship keel source + the phase script  (21:29:25Z) ##########
+   shipped keel e4b6c6e and the phase script
+
+########## co-tenant census on janus.local before anything  (21:29:26Z) ##########
+ 14:29:26 up 16:47,  0 users,  load average: 0.38, 0.17, 0.06
+  active pueue tasks: 0
+
+########## PHASE 1 (build group): two toolchains + the treatment-arrival witness  (21:29:26Z) ##########
+submitted janus.local:build task 26 (keel/e4b6c6e)
+  fbea197d32 cmd/compile: don't let no-code SIMD values imply CPU features
+  0b2fd4aa9c cmd/compile: give critical-edge split blocks the CPU features of th
+
+== keel source  (21:29:27Z) ==
+  keel at e4b6c6e
+
+== toolchain 'fixed'  (21:29:27Z) ==
+  at base 0b2fd4aa9c08, both CLs present
+  go version go1.28-devel-keel80835 linux/amd64
+  built /home/scttfrdmn/vzup/kern-fixed.test (4980345 bytes)
+
+== toolchain 'legacy'  (21:30:15Z) ==
+  reverted 0b2fd4aa9c08 and fbea197d3279; diff vs base is  4 files changed, 1 insertion(+), 136 deletions(-)
+  go version go1.28-devel-keel80835 linux/amd64
+  built /home/scttfrdmn/vzup/kern-legacy.test (4980345 bytes)
+
+== TREATMENT-ARRIVAL WITNESS (gates the timing)  (21:31:03Z) ==
+  arm      legacy movups/aps      VEX vmov*
+  fixed                36              0
+  legacy               36              0
+  !! NULL TREATMENT: both arms carry 36 legacy moves in Kernel6x32|Kernel2x32|Kernel4x32.
+     The revert did not change the encoding, so a timing delta would measure
+     something else. Refusing to proceed to the timing phase.
+┌─────────────────────────────────────┐
+│ Task 26:    failed with exit code 3 │
+└─────────────────────────────────────┘
+Command: ./vzup-phase.sh build          
+   Path: /home/scttfrdmn/vzup           
+  Label: keel/e4b6c6e                   
+  Start: Fri, 9 Oct 2026 14:29:26 -0700 
+    End: Fri, 9 Oct 2026 14:31:04 -0700 
+
+output:
+task 26: Failed (exit 3)

@@ -1,0 +1,10 @@
+# golang/go#80835 encoding A/B on janus, 2026-10-09, keel e4b6c6e.
+# CL 825185 + CL 825186 change NOTHING in keel compiled output: normalized disassembly
+# byte-identical across arms, 36 legacy movups in both. Retracts keel #144 status change.
+# Verify with `shasum -c archive/go80835-encoding-ab/DIGESTS.sha256` from the repo root.
+#
+d96da4ddbc0a4b9b9e15eadfd7bfc775431821625d38a04b530ad0c4228899e3  archive/go80835-encoding-ab/driver-vzup-80835-e4b6c6e.log
+aba494a7739243fc254a848e8f5d42850d981260020c92e0b6900b20cd68f9f4  archive/go80835-encoding-ab/measurements.txt
+dbc11ee5b47ddecc8a23b865805e767eb3c171ac2ae28b9da7b964090b402e1b  archive/go80835-encoding-ab/README.md
+7fc17b61e8eb28a437be360f5e4d49957503526cd5e05e29f3d6b438cc52d2df  archive/go80835-encoding-ab/vzup-drive.sh
+bc68cc71796ef57e506adcb9653a70c2e19be378f1d6af711811dd2c4eb7de22  archive/go80835-encoding-ab/vzup-phase.sh.AS-RUN

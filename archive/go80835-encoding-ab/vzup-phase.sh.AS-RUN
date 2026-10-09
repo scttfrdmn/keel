@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Does the legacy-SSE encoding inside an all-EVEX loop cost time? (golang/go#80835, keel #144)
+#
+# THE COUNTERFACTUAL IS UPSTREAM'S OWN FIX, which is what makes this measurable at all. CL 825185
+# (fbea197d3279) and CL 825186 (0b2fd4aa9c08) are both CPU-FEATURE propagation changes: a block
+# that does not know it has AVX emits legacy-SSE. They are CONSECUTIVE -- 0b2fd4aa9c08 is exactly
+# one commit ahead of fbea197d3279 and that commit is the second CL -- so pinning the base to the
+# later one and reverting both isolates them with NOTHING else in between. Two toolchains, one
+# source tree, one host.
+#
+# WHAT THIS IS NOT. A tip-minus-two-CLs toolchain is one nobody ships, so this measures THE
+# ENCODING'S COST, which is the question asked on the issue. It is NOT go1.27.1 vs go1.28 as
+# shipped -- that is keel #144's separate re-measurement, and conflating them would be the
+# methodology error.
+#
+# THE WITNESS GATES THE TIMING. If the two arms' disassembly does not differ in legacy-SSE moves,
+# the treatment did not arrive and any timing delta is something else (§5 rule 26). Phase `build`
+# prints the counts and exits nonzero when they match, so phase `time` never runs on a null
+# treatment.
+set -euo pipefail
+
+BASE=0b2fd4aa9c08      # CL 825186, the later of the two
+CL_A=fbea197d3279      # CL 825185
+CL_B=0b2fd4aa9c08      # CL 825186
+W="$HOME/vzup"
+GOREPO="$W/go"
+KEEL="$W/keel"
+SYMS='Kernel6x32|Kernel2x32|Kernel4x32'
+PINCPU=${PINCPU:-4}
+
+say() { printf '\n== %s  (%s) ==\n' "$*" "$(date -u +%H:%M:%SZ)"; }
+
+build_toolchain() {   # ARM
+  local arm="$1" root="$W/go-$1"
+  say "toolchain '$arm'"
+  git -C "$GOREPO" checkout -q --detach "$BASE"
+  git -C "$GOREPO" clean -qxdf
+  git -C "$GOREPO" reset -q --hard "$BASE"
+  if [ "$arm" = legacy ]; then
+    # Reverse order: the later commit first, so each revert applies to the tree it was made on.
+    git -C "$GOREPO" revert --no-commit "$CL_B"
+    git -C "$GOREPO" revert --no-commit "$CL_A"
+    echo "  reverted $CL_B and $CL_A; diff vs base is $(git -C "$GOREPO" diff --cached --stat | tail -1)"
+  else
+    echo "  at base $BASE, both CLs present"
+  fi
+  [ -d "$root" ] && chmod -R u+w "$root" && find "$root" -mindepth 1 -delete
+  mkdir -p "$root"
+  ( cd "$GOREPO" && tar cf - --exclude=.git . ) | ( cd "$root" && tar xf - )
+  # cmd/dist derives the version from git, and the copy above has no .git, so without this it
+  # dies with "not a Git or jj repo; must put a VERSION file in $GOROOT". The string is
+  # IDENTICAL for both arms on purpose: the two toolchains must differ by the two reverts and
+  # nothing else, and the version string is embedded in every binary the toolchain produces.
+  # Which arm is which is recorded by the GOROOT path and the staged diff printed above, not by
+  # smuggling a label into the thing under test.
+  printf 'go1.28-devel-keel80835\n' > "$root/VERSION"
+  ( cd "$root/src" && GOROOT_BOOTSTRAP=/usr/local/go ./make.bash >"$W/make-$arm.log" 2>&1 ) \
+    || { echo "  !! make.bash FAILED, tail:"; tail -20 "$W/make-$arm.log"; return 1; }
+  "$root/bin/go" version | sed 's/^/  /'
+}
+
+build_keel() {        # ARM
+  local arm="$1" root="$W/go-$1"
+  GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+    "$root/bin/go" test -c -trimpath -o "$W/kern-$arm.test" ./bench
+  echo "  built $W/kern-$arm.test ($(stat -c %s "$W/kern-$arm.test") bytes)"
+}
+
+# legacy_moves BIN -> count of NON-VEX movups/movaps inside the kernel symbols.
+# `\bmovups\b` cannot match `vmovups`: v is a word character, so the leading \b fails there.
+legacy_moves() {
+  objdump -d --no-show-raw-insn "$1" 2>/dev/null \
+    | awk -v syms="$SYMS" '
+        /^[0-9a-f]+ </ { inf = ($0 ~ syms) }
+        inf { print }' \
+    | grep -cE '\b(movups|movaps)\b' || true
+}
+vex_moves() {
+  objdump -d --no-show-raw-insn "$1" 2>/dev/null \
+    | awk -v syms="$SYMS" '
+        /^[0-9a-f]+ </ { inf = ($0 ~ syms) }
+        inf { print }' \
+    | grep -cE '\bv(movups|movaps|movdqu)\b' || true
+}
+
+case "${1:?usage: vzup-phase.sh build|time}" in
+
+build)
+  mkdir -p "$W"
+  if [ ! -d "$GOREPO/.git" ]; then
+    say "clone go (once)"
+    git clone -q https://go.googlesource.com/go "$GOREPO"
+  fi
+  git -C "$GOREPO" fetch -q origin master
+  git -C "$GOREPO" cat-file -e "$BASE^{commit}" || { echo "!! base $BASE not fetched"; exit 2; }
+  for c in "$CL_A" "$CL_B"; do
+    echo "  $(git -C "$GOREPO" log --oneline -1 "$c" | cut -c1-78)"
+  done
+
+  say "keel source"
+  mkdir -p "$KEEL"
+  ( cd "$KEEL" && tar xf "$W/keel-src.tar" )
+  echo "  keel at $(cat "$KEEL/.keel-rev" 2>/dev/null || echo '?')"
+
+  for arm in fixed legacy; do
+    build_toolchain "$arm"
+    ( cd "$KEEL" && build_keel "$arm" )
+  done
+
+  say "TREATMENT-ARRIVAL WITNESS (gates the timing)"
+  LF=$(legacy_moves "$W/kern-fixed.test");  VF=$(vex_moves "$W/kern-fixed.test")
+  LL=$(legacy_moves "$W/kern-legacy.test"); VL=$(vex_moves "$W/kern-legacy.test")
+  printf '  %-8s %14s %14s\n' arm 'legacy movups/aps' 'VEX vmov*'
+  printf '  %-8s %14s %14s\n' fixed  "$LF" "$VF"
+  printf '  %-8s %14s %14s\n' legacy "$LL" "$VL"
+  if [ "$LF" = "$LL" ]; then
+    echo "  !! NULL TREATMENT: both arms carry $LF legacy moves in $SYMS."
+    echo "     The revert did not change the encoding, so a timing delta would measure"
+    echo "     something else. Refusing to proceed to the timing phase."
+    exit 3
+  fi
+  echo "  OK treatment arrived: legacy moves $LL (legacy arm) vs $LF (fixed arm)"
+  ;;
+
+time)
+  say "timing both arms, pinned to cpu $PINCPU, GOMAXPROCS=1"
+  for arm in fixed legacy; do
+    echo "--- arm $arm"
+    taskset -c "$PINCPU" env GOMAXPROCS=1 "$W/kern-$arm.test" \
+      -test.bench='Kernel/(6x32|2x32|4x32)/avx512/kc=128' \
+      -test.benchtime=1s -test.count="${COUNT:-10}" -test.run='^$' 2>&1 \
+      | tee "$W/bench-$arm.txt" | grep -E '^Benchmark|^ *keel-bench-kern' | head -40
+  done
+  say "done; raw output in $W/bench-fixed.txt and $W/bench-legacy.txt"
+  ;;
+esac
