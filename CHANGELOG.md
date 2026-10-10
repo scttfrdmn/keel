@@ -155,12 +155,20 @@ While the major version is 0, minor versions may contain breaking changes.
   extension VOID **as to its subject and intact as to its reasoning**, and rule 19's table strikes
   its second row rather than deleting it, since the first row's properties are derived by
   comparison with it (#177, #167, #136, #6, #37).
-- `readme-numbers.sh` refuses a `NOISE-LIMITED` `REPORTED` row and the refusal is a defect, not a
-  policy: those lines carry `scaling 6.406x / 6.386x` with no `net of CI` suffix, so the
-  four-numbers demand cannot be met and the whole log is rejected. Found while exercising the awk
-  above against `archive/pinned8/campaign-6ba6566.log`; **not fixed here** because it changes the
-  publishing path and wants its own log to verify against. It is one more reason the README's
-  arm64 rows are stale, beside the known one.
+- ~~`readme-numbers.sh` refuses a `NOISE-LIMITED` `REPORTED` row, found while exercising the awk
+  above against `archive/pinned8/campaign-6ba6566.log`.~~ **NOT A NEW FINDING, and corrected
+  2026-10-09: #165 recorded it on 2026-09-15**, three weeks earlier, as a "latent #114-class parse
+  bug", with a better-specified fix than mine — *anchor on the `scaling X / Y` slash* rather than
+  on the absent `net of CI` suffix. The defect is real and the attribution was wrong.
+  - **And the log I fed the generator is one #165 explicitly forbids.** That issue names the
+    canonical era-`pinned8` pair as `campaign-c30-6ba6566.log` + `confirm-969c360.log` and says the
+    non-c30 `campaign-6ba6566.log` "is a superseded take (zen5 Strsm/8 = 427.1, does not reproduce
+    the README) and **must not be fed to the generator**". Both canonical files are tracked and
+    present; I reached for the wrong one and then recorded the consequence as a discovery.
+  - **The rule that would have caught it is already written down** — `CLAUDE.md`'s
+    search-before-filing rule, and the standing note *search the tracker before asking, not just
+    before filing*. A rediscovery published as a discovery costs more than the duplicate: it
+    attributes someone's prior work to today and sends the next reader to the wrong record.
 - **REVERTED the same day: keying `scale/*` and `share/*` on the dispatched shape** orphans the
   registry mid-era and the witness mechanism correctly refuses it. The judged run predicted 2 FAILs
   and produced **10**: rule 17(a)'s witness is keyed on **CPU model + era**, not on the criterion
