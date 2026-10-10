@@ -193,6 +193,32 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- **`scripts/readme-archives.tsv`: the README's sample provenance, pinned per row** (#165's
+  manifest half). `readme-numbers.sh` takes gate logs and reduces the sample files those logs
+  name — but the names it prints are `build/…` paths, gitignored, so on a fresh clone the stated
+  provenance resolves to nothing and a reader must guess which archived copy was meant. **The
+  guess has a wrong answer available:** era `pinned8` archived **two** sample sets per host at rev
+  `6ba6566` — `20260823T004407Z` (canonical, from `campaign-c30-6ba6566.log`) and
+  `20260822T231901Z` (superseded, from `campaign-6ba6566.log`, whose zen5 `Strsm/8` reads 427.1
+  and does not reproduce the published block) — differing only in a timestamp. That trap was
+  walked into on 2026-10-09. 13 rows, every path verified tracked.
+  - **Superseded takes are listed, not omitted**: an absent file cannot warn anyone, a row marked
+    `superseded` can. Cross-checked once: no `host-baselines.tsv` row's provenance rests on one.
+  - Four controls in `baseline-test.sh` (now **116 ok**), each driven red. **One was initially
+    untested and I had the wrong mutation:** deleting both `Neoverse-V1`/`ceil8` rows left
+    "no (cpu, era) left with only superseded takes" GREEN, because a key with *no* rows is in
+    neither tally — it counts keys that have rows but none canonical, which cannot see a key that
+    vanished. Re-driven correctly (flip canonical→superseded, key present) *and* a distinct-key
+    count added to close the quiet direction.
+- **Regenerating the README is blocked on an editorial decision, not on work** (#165). The
+  generator runs clean on era `ceil8`'s two logs — my earlier "it refuses `REPORTED` rows" came
+  from feeding it the forbidden superseded log. But the block spans **5 hosts** and `ceil8` has
+  archives for **arm64 only**: no amd64 judged run has happened in it, and the era row is *not*
+  ISA-scoped, so amd64 hosts are unmeasured in it rather than belonging to a different era. The
+  generator's designed response is correct — a host with no archive in the era **leaves the
+  table**, stated in the caption — which would publish 18 arm64 rows and drop all three amd64
+  hosts that v0.2.0 certified. That is a publishing choice with a dollar alternative (an amd64
+  `ceil8` campaign), so it is surfaced rather than taken.
 - **The `golang/go#80835` reply, sent 2026-10-09** and archived as posted
   (`archive/go80835-encoding-ab/upstream-reply-as-sent.md`,
   [issuecomment-6093983338](https://github.com/golang/go/issues/80835#issuecomment-6093983338)).

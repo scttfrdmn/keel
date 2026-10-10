@@ -1,0 +1,43 @@
+# Copyright 2026 Scott Friedman
+# SPDX-License-Identifier: Apache-2.0
+#
+# readme-archives.tsv — which SAMPLE ARCHIVES each published README cell is reduced from.
+# Tab-separated, tracked. Added 2026-10-09 for #165, whose words are "pin the canonical sample
+# archives per row in a manifest to close the log<->sample provenance ambiguity".
+#
+# WHY IT EXISTS, and it is not hypothetical. scripts/readme-numbers.sh takes GATE LOGS and
+# reduces the SAMPLE FILES those logs name. The names it prints are "build/..." paths, which are
+# gitignored, so on any fresh clone the stated provenance resolves to nothing and a reader must
+# guess which archived copy a log meant. The guess has a wrong answer available: era pinned8
+# archived TWO sample sets per host at rev 6ba6566 -- 20260823T004407Z (the canonical take, from
+# campaign-c30-6ba6566.log) and 20260822T231901Z (a SUPERSEDED take, from campaign-6ba6566.log,
+# whose zen5 Strsm/8 reads 427.1 and does not reproduce the published block). They differ only in
+# a timestamp. On 2026-10-09 that trap was walked into: the superseded log was fed to the
+# generator and the resulting parse failure was recorded as a new finding, when #165 had recorded
+# both the failure and the forbidden-log warning three weeks earlier.
+#
+# SUPERSEDED TAKES ARE LISTED, NOT OMITTED. An absent file cannot warn anyone; a row marked
+# superseded can. Anything reducing these cells must read the status column, not just glob the
+# directory.
+#
+# columns, tab-separated:
+#   1 cpu_model   the exact string gate-p5 greps, matching host-baselines.tsv and the README block
+#   2 era         measurement-eras.tsv id; a cell pools only archives from its own era
+#   3 rev         the keel rev the run was taken at
+#   4 gate_log    the archived gate-p5 log, the artifact that NAMES the sample file
+#   5 sample      the archived sample file, the artifact benchci actually reduces
+#   6 status      canonical | superseded
+cpu_model	era	rev	gate_log	sample	status
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	pinned8	6ba6566	archive/pinned8/campaign-c30-6ba6566.log	archive/pinned8/bench-gate-p5-6ba6566-keel-skx-20260823T004407Z-1.txt	canonical
+AMD EPYC 9R14	pinned8	6ba6566	archive/pinned8/campaign-c30-6ba6566.log	archive/pinned8/bench-gate-p5-6ba6566-keel-zen4-20260823T004407Z-3.txt	canonical
+AMD EPYC 9R45	pinned8	6ba6566	archive/pinned8/campaign-c30-6ba6566.log	archive/pinned8/bench-gate-p5-6ba6566-keel-zen5-20260823T004407Z-2.txt	canonical
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	pinned8	969c360	archive/pinned8/confirm-969c360.log	archive/pinned8/bench-gate-p5-969c360-keel-skx-20260823T045149Z-1.txt	canonical
+AMD EPYC 9R14	pinned8	969c360	archive/pinned8/confirm-969c360.log	archive/pinned8/bench-gate-p5-969c360-keel-zen4-20260823T045149Z-3.txt	canonical
+AMD EPYC 9R45	pinned8	969c360	archive/pinned8/confirm-969c360.log	archive/pinned8/bench-gate-p5-969c360-keel-zen5-20260823T045149Z-2.txt	canonical
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	pinned8	6ba6566	archive/pinned8/campaign-6ba6566.log	archive/pinned8/bench-gate-p5-6ba6566-keel-skx-20260822T231901Z-1.txt	superseded
+AMD EPYC 9R14	pinned8	6ba6566	archive/pinned8/campaign-6ba6566.log	archive/pinned8/bench-gate-p5-6ba6566-keel-zen4-20260822T231901Z-3.txt	superseded
+AMD EPYC 9R45	pinned8	6ba6566	archive/pinned8/campaign-6ba6566.log	archive/pinned8/bench-gate-p5-6ba6566-keel-zen5-20260822T231901Z-2.txt	superseded
+Neoverse-V1	ceil8	119b673	archive/arm64-ceil8-transition/gate-p5-arm64-ceil8-transition.log	archive/arm64-ceil8-transition/bench-gate-p5-119b673-keel-gvt3-20261005T162530Z-2.txt	canonical
+Neoverse-V2	ceil8	119b673	archive/arm64-ceil8-transition/gate-p5-arm64-ceil8-transition.log	archive/arm64-ceil8-transition/bench-gate-p5-119b673-keel-gvt4-20261005T162530Z-1.txt	canonical
+Neoverse-V1	ceil8	5e769f7	archive/arm64-ceil8-confirm/gate-p5-arm64-ceil8-confirm.log	archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-keel-gvt3-20261007T164442Z-2.txt	canonical
+Neoverse-V2	ceil8	5e769f7	archive/arm64-ceil8-confirm/gate-p5-arm64-ceil8-confirm.log	archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-keel-gvt4-20261007T164442Z-1.txt	canonical

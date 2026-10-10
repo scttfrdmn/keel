@@ -411,6 +411,35 @@ is 'gate-p4 exports the delegated log path (#178)' \
    "$(/usr/bin/grep -c '^export KEEL_P3_LOG=' scripts/gate-p4.sh)" '1'
 is 'and gate-p3 reads it with a fallback, so set -u cannot abort a judged chain' \
    "$(/usr/bin/grep -c '^P3_SELF_LOG="\${KEEL_P3_LOG:-' scripts/gate-p3.sh)" '1'
+echo "-- readme-archives.tsv: the README's sample provenance (#165) --"
+# 36g. THE MANIFEST ROTS SILENTLY OR NOT AT ALL. Its whole purpose is that a reader can resolve a
+#      published cell to the file it was reduced from, so a path that stops existing or stops
+#      being tracked turns the manifest into decoration. gate-docs already checks host-baselines'
+#      source paths; this is the same check for the artifact added by #165, driven here because
+#      gate-p5 runs this file and nothing runs a docs-only sweep on every push.
+MAN=scripts/readme-archives.tsv
+is 'every manifest path exists and is tracked' \
+   "$(awk -F'\t' '!/^#/ && $1!="cpu_model" && NF>=5 {print $4"\n"$5}' "$MAN" | sort -u \
+      | while read -r f; do git ls-files --error-unmatch "$f" >/dev/null 2>&1 || echo BAD; done | grep -c BAD)" '0'
+# 36h. A (cpu, era) whose only rows are `superseded` would publish nothing while looking
+#      provisioned. Asserted as a count of offending keys so the message names the real failure
+#      rather than the first one found.
+is 'no (cpu, era) is left with only superseded takes' \
+   "$(awk -F'\t' '!/^#/ && $1!="cpu_model" && NF>=6 { k=$1"|"$2; n[k]++; if ($6=="canonical") c[k]++ }
+                  END { bad=0; for (k in n) if (!(k in c)) bad++; print bad }' "$MAN")" '0'
+# 36h-bis. AND THE KEY ITSELF MUST NOT VANISH. 36h counts keys that HAVE rows but none canonical,
+#      which cannot see a (cpu, era) that disappeared from the manifest altogether -- the quiet
+#      direction. Found by driving 36h with the wrong mutation: deleting both Neoverse-V1/ceil8
+#      rows left 36h GREEN, because a key with no rows is in neither tally. A count of distinct
+#      canonical keys closes it, and 5 is the published fleet: 3 amd64 at pinned8 plus 2 arm64 at
+#      ceil8. It moves when a host is added or an era regenerates, which is a reviewed act.
+is 'the manifest still covers all 5 published (cpu, era) keys' \
+   "$(awk -F'\t' '!/^#/ && $1!="cpu_model" && NF>=6 && $6=="canonical" {print $1"|"$2}' "$MAN" | sort -u | grep -c .)" '5'
+# 36i. And the superseded takes must stay NAMED. Dropping those rows would restore exactly the
+#      ambiguity the manifest closes -- era pinned8 archived two sample sets per host at 6ba6566
+#      differing only in a timestamp, and the wrong one was reached for on 2026-10-09.
+is 'the superseded pinned8 take is still listed rather than deleted' \
+   "$(awk -F'\t' '!/^#/ && $2=="pinned8" && $6=="superseded"' "$MAN" | grep -c .)" '3'
 # 37. Newness against an unmet obligation, the distinction the witness exists for, driven on a
 #     host outside the derivation set. $CEILD is this FILE'S set (the two AMD models that
 #     derived 44.2), deliberately not the shipped one: these arms test the classifier, and
