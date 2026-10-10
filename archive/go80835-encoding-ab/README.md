@@ -68,6 +68,21 @@ pattern cannot match `vmovups`. The broken regex produced a misleading informati
 nothing else. It was caught because a zero VEX count is impossible for an AVX-512 body, which is
 the only reason the census above was run instead of the table being published.
 
+## The upstream reply this evidence backs
+
+`upstream-reply-as-sent.md` is the comment posted to `golang/go#80835` on 2026-10-09
+([issuecomment-6093983338](https://github.com/golang/go/issues/80835#issuecomment-6093983338)),
+archived as sent. Every figure in it was checked against `measurements.md` before posting.
+
+**One scope fact the reply carries and this archive must not lose:** all 36 non-VEX moves are in
+`Kernel6x32` alone — `Kernel2x32` and `Kernel4x32` carry **zero**, measured per symbol. That
+matters because `Kernel6x32` is keel's `ReferenceTile`: benchmarked and `-S`-audited, but held out
+of dispatch because it spills by design. So this is a real instance of the encoding in a shape no
+user's code path reaches, and the reply says so rather than letting the count imply otherwise.
+It also explains an apparent coincidence — `docs/spill-report.md` section 11.3's "36 of
+`Kernel6x32`'s 44 vector stack refs" and this run's 36-across-three-kernels are the **same 36**,
+not two findings that happen to agree.
+
 ## Files
 
 - `driver-vzup-80835-e4b6c6e.log` — the full run: preflight, ship, both builds, the witness, the refusal
@@ -79,5 +94,6 @@ the only reason the census above was run instead of the table being published.
   recorded in `CHANGELOG.md` as evidence that the membership test wants fixing at the glob rather
   than by renaming files a third time.
 - `vzup-drive.sh`, `vzup-phase.sh.AS-RUN` — the local driver and the remote phase script as run
+- `upstream-reply-as-sent.md` — the `golang/go#80835` comment, archived as posted
 
 Verify with `shasum -c archive/go80835-encoding-ab/DIGESTS.sha256` from the repo root.

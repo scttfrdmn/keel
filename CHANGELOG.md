@@ -185,6 +185,26 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- **The `golang/go#80835` reply, sent 2026-10-09** and archived as posted
+  (`archive/go80835-encoding-ab/upstream-reply-as-sent.md`,
+  [issuecomment-6093983338](https://github.com/golang/go/issues/80835#issuecomment-6093983338)).
+  It answers mauri870's "track this here or in a separate issue?" with *separate*, and carries the
+  A/B as the reason: their `VZEROUPPER` case is a **boundary** problem and keel's is an
+  **interior** one, so their fix would be complete for their repro and touch nothing in keel's —
+  and the two CLs already merged here change keel's encodings **not at all**, which is precisely
+  the "it gets lost when those land" worry they raised, one shape over.
+  - **A scope fact found by checking a suspicious coincidence, and it belongs in the record
+    because it limits the claim:** all 36 non-VEX moves are in `Kernel6x32` *alone* —
+    `Kernel2x32` and `Kernel4x32` measure **zero**, per symbol. `Kernel6x32` is `ReferenceTile`:
+    benchmarked and `-S`-audited but **held out of dispatch** because it spills by design. So this
+    is a real instance of the encoding in a shape no user's code path reaches, and the reply says
+    so rather than letting the raw count imply otherwise. It also dissolves the apparent
+    coincidence that `docs/spill-report.md` section 11.3's "36 of `Kernel6x32`'s 44 vector stack
+    refs" and this run's 36-across-three-kernels are the same number: they are the **same 36**.
+  - Every figure in the reply was checked against `measurements.md` before posting — nine hashes
+    and counts, plus the two published spread figures (65x Emerald Rapids, the reporter's; 1.9x
+    Skylake-X, keel's). The reply states plainly that there is **no timing** and that the A/B is
+    why there still cannot be one: with no encoding delta there is no counterfactual to time.
 - **The project's first arm64 `KEEL_REPLAY` corpus**
   (`archive/witness/p3-arm64-corpus-0b6b649.tar.gz`, 432K, with its driver beside it). Both
   existing corpora are `avx512`, so **no arm64 gate path could be exercised anywhere** without a
