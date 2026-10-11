@@ -9,6 +9,46 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **CONFIRMED on AVX-512: the diagonal-solve fix is worth −39.3% on `Strsm`, and the vector-width
+  split in its efficiency WAS the scalar solve** (#37, 2026-10-11). Measured on `janus.local`
+  (i9-9960X Skylake-X, bare metal, `governor=performance`, load1=0.04) — the same microarchitecture
+  as the AWS `keel-skx` host whose published row reads Strsm/Sgemm = 0.358. Base `79d629a` against
+  `d62848a`, `-count=10`, via the new `scripts/ab-bench.sh trsm` preset.
+
+  | row | base | new | delta |
+  |---|---|---|---|
+  | `Strsm/n=4096/threads=1` | 2.544 s | 1.545 s | **−39.26%** (p=0.000, n=10) |
+  | `Strsm/n=4096/threads=8` | 369.2 ms | 224.4 ms | **−39.23%** (p=0.000, n=10) |
+
+  `Strsm` single-thread goes **27.02 → 44.48 GFLOP/s (+64.6%)**.
+  - **All six controls landed inside janus's 0.99% between-binary layout floor**, so the run is
+    valid rather than voided (`Sgemm/1` ~ p=0.529, `Sgemm/8` −0.59%, `Ssymm/1` ~ p=0.315,
+    `Ssymm/8` +0.20%, `Ssyrk/1` −0.30%, `Ssyrk/8` ~ p=0.190), and the harness recovered its own
+    planted +10.00% delta. That floor check was not a formality: the arm64 run of this same change
+    moved untouched code 8.4% through a `block.gemm.func1` alignment shift (#61).
+  - **The mechanism is confirmed quantitatively, not just the direction.** The Strsm/Sgemm
+    efficiency ratio moves **0.364 → 0.596**: the 0.364 sits exactly inside the published AVX-512
+    cluster (0.336, 0.356, 0.358) and 0.596 is about halfway to the NEON cluster (0.804, 0.813).
+    Solving `1−f+f/s = 0.6074` puts the diagonal solve at **~65% of `Strsm`'s time** beforehand if
+    it sped up 2.5x — the share the cross-host model predicted. Pre-registered threshold was >15%
+    against a model range of −30% to −50%; measured −39.26%.
+  - **A pre-registered prediction that was WRONG, recorded because it refines the model.** The
+    8-thread row was expected to improve *less*, on the reasoning that the diagonal solve is a
+    serial dependency Amdahl would blunt. Both widths improved by the **same 39.2%**, so at this
+    shape the solve parallelizes about as well as the rank update and was not the serial term.
+  - **Dev tier, so nothing here is published.** The README's figures come from virtualized AWS;
+    this was run free on lab bare metal precisely because the *mechanism* question did not need
+    judged spend. Archived with digests under `archive/trsm-amd64-37/`, pre-registration included.
+  - **CONSEQUENCE: the published `Strsm` rows are now stale on all five hosts, and criterion 9 will
+    RED on them.** The README was regenerated at era `ceil8`, which predates `090eb32`. A 39%
+    improvement is 8x `README_TOL` and disjoint from any run interval, so the next judged run fails
+    criterion 9 on every `Strsm` row until the block is regenerated from a post-fix judged run.
+    That is the criterion working — it is built to catch exactly this — and it converts the amd64
+    judged run from "nice for a citable number" into the thing that restores a green gate.
+  - First real test of the content-based archive corpus landed earlier today: the two new arm logs
+    are `.log` files and were absorbed automatically (**204 → 206 files, 6440 → 6472 readings, 0
+    escaping**). Under the extension glob they would have been silently invisible.
+
 - **`MB` is measured and deliberately NOT changed: no value beats 64 in all four cells, and the two
   sides pull in opposite directions** (#37, 2026-10-11). `var MB = 64` had never been tuned, which
   #37 recorded as a debt. Swept 7 values x 2 sides x n in {2048, 4096}. Per-cell optima, median vs

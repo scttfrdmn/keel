@@ -1,0 +1,129 @@
+== tree state (must be clean: both arms are builds of named revs) ==
+d62848a
+== host census before ==
+x86_64
+0.04 0.01 0.00
+                                                                                                                                                                                                                                                                                                                                                        16:04:35     16:04:47   
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ 24   Success      burroughs/9de4505   sh -c cd\ /home/scttfrdmn/burroughs-xcheck\ \&\&\ LAB_CONCURRENT=0\ \'./scripts/ab.sh\'\ \'--pkg\'\ \'./internal/interp/globalbench\'\ \'--base\'\ \'main\'\ \'--head\'\ \'HEAD\'\                                                                                            /home/scttfrdmn/burroughs-xcheck   2026-09-19   2026-09-19 
+                                                                                                                                                                                                                                                                                                                                                        13:02:54     13:05:48   
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+== trsm -- issue #37, scalar vs vectorized diagonal solve. Not a gate. ==
+
+base: 79d629a (79d629a)
+new:  d62848a (working tree)
+        planted-delta control: +10.00% recovered from a pair named the way this run names
+        its arms (base-79d629a.txt vs new-d62848a.txt) — the comparison is live.
+Preparing worktree (detached HEAD 79d629a)
+built two linux/amd64 bench binaries (static)
+        base binary: sha256=f7adab1ad49056d9… bytes=5080422 flags=[-buildmode=exe -compiler=gc -trimpath=true]
+        new binary: sha256=4624eb396287cba2… bytes=5086503 flags=[-buildmode=exe -compiler=gc -trimpath=true]
+methodology: -count=10 -benchtime=1s, GOMAXPROCS=1, filter=Scale
+        benchstat compares the two logs, ignoring keel-bench-clock-mhz,keel-bench-flops — configuration
+        keys that describe the run rather than the build, and which forked the table
+        into two delta-free halves when they were not ignored (#50, T20).
+        Strsm is the TREATMENT; Sgemm, Ssyrk and Ssymm are CONTROLS with no diagonal
+        solve and byte-identical code in both arms. Read the controls first: one above
+        its host's between-binary layout floor voids every Strsm delta below it.
+        n=4096, threads 1 and 8, from bench/scale_test.go -- the same rows the README
+        publishes and criterion 9 judges, so a confirmed delta is a delta in a
+        published number rather than in a private fixture.
+
+-- janus.local --
+        Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | instance=none | virt=metal | 32 cpus | 16 cores | smt=2 | 1 sockets | governor=performance | load1=0.04 load5=0.01 load15=0.00 runnable=1/552 | tmux=yes | Linux 5.14.0-611.34.1.el9_7.x86_64 | L2=1024K L1d=32K L3=22528K | spawn=none
+        keel-pin: mask=0,1,2,3,4,5,6,7 width=8 doms=0,0,0,0,0,0,0,0 nodedoms=1
+        keel-bench-cpu: Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz
+        keel-bench-cores: 8 logical
+        keel-bench-governor: performance
+        keel-bench-platform: linux/amd64
+        keel-bench-toolchain: go1.27.2-X:simd
+        keel-bench-backend: avx512 (available: avx512 avx2 scalar)
+        keel-bench-peak-method: measured on this host by BenchmarkPeak (register-only FMA saturation); the formula below is a cross-check, not the denominator (issue #11)
+        keel-bench-peak-formula: scalar: 8.8 GFLOP/s (4.40 GHz cpu0 cpuinfo_max_freq x 2 FP ports, unfused: 1 flop/op x 1 lanes) -- NON-UNIFORM host: this clock describes cpu0 only, and the process may run on a core with a different one
+        keel-bench-gomaxprocs: 1
+        keel-bench-kern: 2x32/avx512 (available: 4x32/avx512 2x32/avx512 4x32/scalar 2x32/scalar)
+        keel-bench-kern-class: issue insns-per-fma=4.625 (avx512 without vbmi2+vpopcntdq (Skylake-X / Cascade Lake / Cooper Lake generation))
+        keel-bench-kern-audit: 4x32/avx512=6.250 2x32/avx512=4.625
+        keel-bench-openblas: not available (no cgo reference harness built; rebuild with -tags openblas on a host that has OpenBLAS)
+        keel-bench-threads: name=Scale/Sgemm/n=4096/threads=1 gomaxprocs=1 workers=1
+        goos: linux
+        goarch: amd64
+        pkg: github.com/scttfrdmn/keel/bench
+        cpu: Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                      sec/op                                      │                            sec/op                              vs base          │
+        Scale/Sgemm/n=4096/threads=1                                                                         1.851 ± 3%                                                      1.841 ± 1%  ~ (p=0.529 n=10)
+        
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                     GFLOP/s                                      │                            GFLOP/s                             vs base          │
+        Scale/Sgemm/n=4096/threads=1                                                                         74.27 ± 3%                                                      74.64 ± 1%  ~ (p=0.529 n=10)
+        
+        keel-bench-threads: name=Scale/Sgemm/n=4096/threads=8 gomaxprocs=8 workers=8
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                      sec/op                                      │                          sec/op                           vs base               │
+        Scale/Sgemm/n=4096/threads=8                                                                        279.5m ± 0%                                                277.8m ± 0%  -0.59% (p=0.000 n=10)
+        
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                     GFLOP/s                                      │                         GFLOP/s                           vs base               │
+        Scale/Sgemm/n=4096/threads=8                                                                         491.9 ± 0%                                                 494.8 ± 0%  +0.59% (p=0.000 n=10)
+        
+        keel-bench-threads: name=Scale/Ssymm/n=4096/threads=1 gomaxprocs=1 workers=1
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                      sec/op                                      │                            sec/op                              vs base          │
+        Scale/Ssymm/n=4096/threads=1                                                                         1.893 ± 4%                                                      1.891 ± 0%  ~ (p=0.315 n=10)
+        
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                     GFLOP/s                                      │                            GFLOP/s                             vs base          │
+        Scale/Ssymm/n=4096/threads=1                                                                         72.60 ± 4%                                                      72.69 ± 0%  ~ (p=0.325 n=10)
+        
+        keel-bench-threads: name=Scale/Ssymm/n=4096/threads=8 gomaxprocs=8 workers=8
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                      sec/op                                      │                          sec/op                           vs base               │
+        Scale/Ssymm/n=4096/threads=8                                                                        281.4m ± 0%                                                281.9m ± 0%  +0.20% (p=0.005 n=10)
+        
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                     GFLOP/s                                      │                         GFLOP/s                           vs base               │
+        Scale/Ssymm/n=4096/threads=8                                                                         488.5 ± 0%                                                 487.6 ± 0%  -0.19% (p=0.004 n=10)
+        
+        keel-bench-threads: name=Scale/Ssyrk/n=4096/threads=1 gomaxprocs=1 workers=1
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                      sec/op                                      │                          sec/op                           vs base               │
+        Scale/Ssyrk/n=4096/threads=1                                                                        994.8m ± 0%                                                991.8m ± 0%  -0.30% (p=0.000 n=10)
+        
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                     GFLOP/s                                      │                         GFLOP/s                           vs base               │
+        Scale/Ssyrk/n=4096/threads=1                                                                         69.09 ± 0%                                                 69.31 ± 0%  +0.31% (p=0.000 n=10)
+        
+        keel-bench-threads: name=Scale/Ssyrk/n=4096/threads=8 gomaxprocs=8 workers=8
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                      sec/op                                      │                            sec/op                              vs base          │
+        Scale/Ssyrk/n=4096/threads=8                                                                        139.3m ± 1%                                                     138.9m ± 1%  ~ (p=0.190 n=10)
+        
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                     GFLOP/s                                      │                            GFLOP/s                             vs base          │
+        Scale/Ssyrk/n=4096/threads=8                                                                         493.4 ± 1%                                                      494.8 ± 1%  ~ (p=0.197 n=10)
+        
+        keel-bench-threads: name=Scale/Strsm/n=4096/threads=1 gomaxprocs=1 workers=1
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                      sec/op                                      │                         sec/op                           vs base                │
+        Scale/Strsm/n=4096/threads=1                                                                         2.544 ± 1%                                                1.545 ± 0%  -39.26% (p=0.000 n=10)
+        
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                     GFLOP/s                                      │                         GFLOP/s                          vs base                │
+        Scale/Strsm/n=4096/threads=1                                                                         27.02 ± 1%                                                44.48 ± 0%  +64.64% (p=0.000 n=10)
+        
+        keel-bench-threads: name=Scale/Strsm/n=4096/threads=8 gomaxprocs=8 workers=8
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                      sec/op                                      │                         sec/op                           vs base                │
+        Scale/Strsm/n=4096/threads=8                                                                        369.2m ± 0%                                               224.4m ± 1%  -39.23% (p=0.000 n=10)
+        
+                                     │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/base-79d629a.txt │ /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.fdtiDT9eUk/new-d62848a.txt │
+                                     │                                     GFLOP/s                                      │                         GFLOP/s                          vs base                │
+        Scale/Strsm/n=4096/threads=8                                                                         186.2 ± 0%                                                306.4 ± 1%  +64.55% (p=0.000 n=10)
+
+done. Controls first, then Strsm. Not a criterion, and not a published number until a judged host runs it.
+== ab-bench exited 0 ==
+== host census after ==
+3.95 2.61 1.19
+== DONE ==

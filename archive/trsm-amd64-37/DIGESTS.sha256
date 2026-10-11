@@ -1,0 +1,10 @@
+# #37's amd64 verification, janus.local (i9-9960X Skylake-X, bare metal), 2026-10-11.
+# Base 79d629a vs d62848a, -count=10. Strsm -39.26% at threads=1 and -39.23% at threads=8
+# (p=0.000, n=10); all six controls inside janus's 0.99% between-binary layout floor.
+# DEV TIER: not a published number. prereg.md was written before any arm ran.
+# Verify with `shasum -c archive/trsm-amd64-37/DIGESTS.sha256` from the repo root.
+5264061231f5e509f354f23ed5921afc6553f7f5c878086b75bb1b475261f46c  archive/trsm-amd64-37/driver-trsm-amd64-37-d62848a.log
+53c609eca138bbe9f3a308fd6f1a70bc2c1c90e0ebb4b86bb02f91f7aa7753a8  archive/trsm-amd64-37/prereg.md
+52b210590431dc0409790e10a3803beb78a69c0a7c2c41e5969e1e2fc5baef2b  archive/trsm-amd64-37/README.md
+88e7c92dde579675ba8dec417144ad587798ecee2b74d3955c9630d58236db9d  archive/trsm-amd64-37/trsm-janus.local-base-79d629a.log
+e9bc22621c573224986c687e679cea1e70324e0d5bdce68d41748ef0e61347ee  archive/trsm-amd64-37/trsm-janus.local-new-d62848a.log
