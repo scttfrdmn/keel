@@ -154,14 +154,32 @@ one recent session filed five gate issues against one library defect. The gates
 are not the problem — they produced the mission number and caught a ratio
 measured under `powersave` — the *marginal* line is.
 
-- **A session may not add net lines to `scripts/` unless it also lands a
-  routine, a kernel, or a library fix.** Process work is paid for out of the same
-  budget as the work it serves, not out of a separate one.
+- **A session may not add net lines of shell unless it also lands a routine, a
+  kernel, a library fix, or a fix to the project's published evidence.** Process
+  work is paid for out of the same budget as the work it serves, not out of a
+  separate one.
+- **The published-evidence credit requires a measured witness, or it is not
+  claimable** (added 2026-10-11). Name the wrong published claim and the count of
+  rows it affected, in a form a later reader can re-derive: *"4 of 40 published
+  points fell outside their own CI"* qualifies, *"this hardened the numbers"* does
+  not. It is a credit because the README's numbers are a v0 deliverable this file
+  regulates tightly elsewhere — "never a number without its denominator" — so a
+  fix to them is shipped substance, not scaffolding. Record each claim in
+  `docs/rulings.md`; an unrecorded credit is how a cap erodes into a habit. Added
+  because `#165`'s +224 arrived as an apparent breach and needed a one-off ruling,
+  and every later fix to published output would have arrived the same way.
+- **The unit is the shell term `gate-docs.sh` reports, not the `scripts/`
+  directory** (corrected 2026-10-11). `scripts/` also holds this phase's TSV data
+  — `readme-archives.tsv`, `host-baselines.tsv` — so a `git diff -- scripts/`
+  books registry rows as apparatus: it read **+151** against the counter's **+90**
+  over one five-commit span, and 12 of that gap was a commit whose entire content
+  is baseline rows and which costs the ratio nothing. Measure with the instrument
+  that defines the term.
 - Enforced by review, not by a check: `gate-docs.sh` prints
   `shell N / library M / ratio R` on every push, as a *report*. It cannot fail,
   deliberately — a red ratio would reward paying down shell instead of shipping.
-- The cap is on `scripts/`, so a fix whose honest form is a comment is still
-  allowed; it just spends budget. Prefer deleting a line to explaining one.
+- The cap counts shell by content, so a fix whose honest form is a comment is
+  still allowed; it just spends budget. Prefer deleting a line to explaining one.
 
 ## Honesty over momentum
 When something surprises you — a lowering, a spill, a flaky benchmark — the

@@ -2228,9 +2228,15 @@ important" is not a witness. If a later session claims this precedent without on
 has silently become the rule, which is the failure mode `an-exemption-for-one-arm-is-owed-to-its-siblings`
 names.
 
-**AND A GAP IN THE CAP'S TEXT, which is Scott's to close, not mine.** The rule credits only "a
-routine, a kernel, or a library fix" — it has no category for a fix to the project's published
-evidence, even though that evidence is a v0 deliverable and `CLAUDE.md` elsewhere regulates it
-tightly. Every such fix will therefore keep arriving as an apparent breach needing a ruling. The
-honest amendment is to name published-evidence correctness as a fourth credit, with the
-measured-witness requirement above attached so it cannot be claimed for ordinary instrument work.
+**THE GAP IN THE CAP'S TEXT IS NOW CLOSED, so this ruling is the last of its kind.** The rule
+credited only "a routine, a kernel, or a library fix" — no category for a fix to the project's
+published evidence, even though that evidence is a v0 deliverable `CLAUDE.md` regulates tightly
+elsewhere. Every such fix would have kept arriving as an apparent breach needing a one-off
+ruling, which is how a cap erodes: not by being overruled, but by accumulating exceptions nobody
+indexed. Scott's call, delegated and taken 2026-10-11: `CLAUDE.md` now names published-evidence
+correctness as a **fourth credit**, with the measured-witness requirement above attached to it so
+it cannot be claimed for ordinary instrument work, and with each claim required to be recorded
+here. The same edit corrected the cap's **unit** — it said `scripts/` while the instrument that
+enforces it counts shell by content, which is the +151-vs-+90 error booked in the ledger row.
+A future session reads the amended rule and needs none of the reasoning above; it is kept
+because the narrowing clause is only legible beside the case that motivated it.
