@@ -1,0 +1,12 @@
+# Strsm refresh, judged amd64 run 1 of 2, rev 628c38a, era ceil8, 2026-10-11.
+# 68 PASS / 4 FAIL / 0 UNMEASURED / 3 BASELINE -> RED, as pre-registered except the
+# fourth FAIL (an errcheck finding of mine, not a measurement).
+# Verify with `shasum -c archive/strsm-refresh-amd64-r1/DIGESTS.sha256` from the repo root.
+d8ae6e923cce70ce5fb41a10b441b0ba23277a2fd8d2a5242a7110fcc6c8f178  archive/strsm-refresh-amd64-r1/baseline-candidates-628c38a-20261011T204552Z.tsv
+76cca8084cdd7d009d6dd9beb40be43a9b8cbc4e7f40641e12652dae1090ed63  archive/strsm-refresh-amd64-r1/bench-gate-p5-628c38a-keel-skx-20261011T204552Z-3.txt
+655b3bd0bf3c04b80d516ac4d9ad641bbb3fc802c9d605058434ea7ff612a880  archive/strsm-refresh-amd64-r1/bench-gate-p5-628c38a-keel-zen4-20261011T204552Z-2.txt
+5efcd1977c2943dc290d134bea57a4789484c62be1fc1f7ed0cafb7e29d7791a  archive/strsm-refresh-amd64-r1/bench-gate-p5-628c38a-keel-zen5-20261011T204552Z-1.txt
+a93f90d216359a1c396b06b7b28a81e97d693346c67654be5b18e64f9e8fb4dc  archive/strsm-refresh-amd64-r1/gate-p5-amd64-strsm-r1-628c38a.log
+c35a44a8716927d1b8ae8c4a51b1d278a0644fb3ae45635ae657f78af23f0cc7  archive/strsm-refresh-amd64-r1/prereg.md
+869274dd24f841dc6b3021c9dc8fd3537c7626f94b3c94a354a05f60c48cf359  archive/strsm-refresh-amd64-r1/README.md
+01b5d489935cce841a4e259404efc82d8f8517add6629848e11d9316f86425e0  archive/strsm-refresh-amd64-r1/witness-candidates-628c38a-20261011T204552Z.tsv
