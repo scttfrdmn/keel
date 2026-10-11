@@ -183,6 +183,11 @@ fi
 BASELINE_REGISTRY="$BASELINE_DIR/host-baselines.tsv"
 BASELINE_WITNESS="$BASELINE_DIR/judged-runs.tsv"
 BASELINE_ERAS="$BASELINE_DIR/measurement-eras.tsv"
+# The README's sample provenance (#165). NOT under $BASELINE_DIR: the instrument-exercise seam
+# substitutes the three baseline artifacts to drive the BASELINE-REGISTERED class, and this file
+# feeds criterion 9's reference interval instead -- a different criterion, not part of that
+# exercise, so putting it behind the same knob would widen the seam for no gain.
+README_ARCHIVES=scripts/readme-archives.tsv
 P5_REV="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 # RUN-STAMPED, not merely rev-stamped, because baseline_candidate APPENDS. Two runs at one
 # rev piled into one file with nothing in it to tell a clean run's rows from a contaminated
@@ -407,12 +412,31 @@ README_END='<!-- keel-numbers: end -->'
 # the run's own benchstat CI. Pinned, not globbed: the trailing -N differs per host, and the
 # non-c30 6ba6566 take reads 427.1 not 388.9 (a superseded run, #165). arm64 rows get their pair
 # when that cert leg lands; absent archives leave the reference empty and the row falls to the band.
-readme_ref_archives() {  # $1 = CPU model; echoes the two sample-archive paths, or nothing
-  case "$1" in
-    *8124M*) echo archive/pinned8/bench-gate-p5-6ba6566-keel-skx-20260823T004407Z-1.txt archive/pinned8/bench-gate-p5-969c360-keel-skx-20260823T045149Z-1.txt ;;
-    *9R14*)  echo archive/pinned8/bench-gate-p5-6ba6566-keel-zen4-20260823T004407Z-3.txt archive/pinned8/bench-gate-p5-969c360-keel-zen4-20260823T045149Z-3.txt ;;
-    *9R45*)  echo archive/pinned8/bench-gate-p5-6ba6566-keel-zen5-20260823T004407Z-2.txt archive/pinned8/bench-gate-p5-969c360-keel-zen5-20260823T045149Z-2.txt ;;
-  esac
+readme_ref_archives() {  # $1 = CPU model; echoes this host's canonical sample archives, or nothing
+  # READ FROM THE MANIFEST since 2026-10-11 (#165). This was a hardcoded `case` with three amd64
+  # arms naming era pinned8's archives, and it was wrong in two ways that both failed QUIETLY:
+  #
+  #   1. NO arm64 ARM AT ALL. Neoverse-V1/V2 matched nothing, so REFCSV stayed empty and every
+  #      arm64 row fell back to the README_TOL centre band. That is visible in the judged logs as
+  #      `ref CI [, ]` -- an empty reference interval printed beside a real run interval. The
+  #      fallback is fail-closed and the verdicts were not wrong, but criterion 9 was comparing a
+  #      point to an interval on arm64 while claiming to overlap two estimators.
+  #   2. IT NAMED THE WRONG ERA once the README was regenerated from ceil8, so even the amd64
+  #      arms would have pooled pinned8 samples against a ceil8-published reference.
+  #
+  # The manifest closes both: it is keyed (cpu_model, era) and carries a `status` column, so a
+  # SUPERSEDED take can never be pooled -- era pinned8 archived two sample sets per host at
+  # 6ba6566 differing only in a timestamp, and the wrong one was reached for by hand on
+  # 2026-10-09. A hardcoded list cannot express that distinction; a status column can.
+  #
+  # KEYED ON $P5_ERA, deliberately fail-closed. If a run happens in an era the README does not
+  # publish, this returns nothing and the row falls back to the band -- which is the honest
+  # behaviour, because a reference from another era must not be pooled against this run.
+  local cpu="$1"
+  [[ -n "$cpu" && -r "$README_ARCHIVES" && -n "$P5_ERA" ]] || return 0
+  awk -F'\t' -v c="$cpu" -v e="$P5_ERA" '
+    /^#/ || $1 == "cpu_model" { next }
+    NF >= 6 && $1 == c && $2 == e && $6 == "canonical" { printf "%s ", $5 }' "$README_ARCHIVES"
 }
 
 # The delegated gate's full output. build/ is gitignored; the path is printed

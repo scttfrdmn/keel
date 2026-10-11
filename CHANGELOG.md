@@ -9,6 +9,27 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **Criterion 9's reference interval was a hardcoded list with no arm64 arm at all, and it failed
+  silently** (#165, fixed 2026-10-11). `readme_ref_archives` was a `case` with three amd64 arms
+  naming era `pinned8`'s sample archives. Two faults, both quiet:
+  **(1)** `Neoverse-V1`/`V2` matched nothing, so `REFCSV` stayed empty and **every arm64 row fell
+  back to the `README_TOL` centre band** while the criterion's own pass message claimed to
+  overlap two estimators. It is visible in every judged arm64 log as `ref CI [, ]` — an empty
+  reference interval printed beside a real run interval — and I read past it for days, including
+  while quoting that exact line as evidence for the stale rows.
+  **(2)** Once the README was regenerated from `ceil8`, the amd64 arms named the **wrong era**, so
+  they would have pooled `pinned8` samples against a `ceil8`-published reference.
+  Now read from `scripts/readme-archives.tsv`, keyed `(cpu_model, era)` and honouring the
+  `status` column, so a **superseded** take can never be pooled — a distinction a hardcoded list
+  cannot express. Keyed on `$P5_ERA` and fail-closed: a run in an era the README does not publish
+  resolves nothing and falls back to the band, which is honest rather than wrong.
+  - Verified end to end, not just the lookup: all five published hosts resolve exactly two
+    canonical archives, and pooling them through `benchci` yields a real interval where arm64 had
+    none — `Neoverse-V1` `Sgemm`/1 median **34.44, CI [34.43, 34.45]`**; `9R45` **173.3,
+    [173.1, 173.6]**. Four controls, driven red. **120 ok.**
+  - **This is the substance of #165's "overlap two like estimators", and it matters more than the
+    half I was asked for.** Publishing the CI *in the block* changes what a reader sees; this
+    changes what the gate compares. The published-digits half remains open on #165.
 - **`archive/*/*.txt` is a test-corpus glob, and a non-benchmark `.txt` tripped it for the SECOND
   time in one day.** `433e9e5` added `archive/go80835-encoding-ab/measurements.txt`;
   `tools/benchci`'s `archivedLogs` globs that pattern and

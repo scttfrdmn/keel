@@ -447,6 +447,25 @@ is 'every host the README publishes has a canonical row in the published era' \
 #      differing only in a timestamp, and the wrong one was reached for on 2026-10-09.
 is 'the superseded pinned8 take is still listed rather than deleted' \
    "$(awk -F'\t' '!/^#/ && $2=="pinned8" && $6=="superseded"' "$MAN" | grep -c .)" '3'
+# 36j. #165's REFERENCE INTERVAL is manifest-driven, and all five published hosts resolve. It was
+#      a hardcoded `case` with three amd64 arms naming era pinned8 -- so Neoverse matched nothing,
+#      REFCSV stayed empty, and every arm64 row fell back to the README_TOL centre band while
+#      criterion 9's own message claimed to overlap two estimators. Visible in the judged logs as
+#      `ref CI [, ]`. Asserted as a COUNT OF HOSTS THAT RESOLVE rather than by calling the gate's
+#      function, because this file does not source gate-p5; the predicate is the manifest query
+#      and that is what is checked.
+is 'all five published hosts resolve a reference-interval corpus' \
+   "$(awk -F'\t' -v e=ceil8 '!/^#/ && $1!="cpu_model" && NF>=6 && $2==e && $6=="canonical" {print $1}' \
+      scripts/readme-archives.tsv | sort -u | grep -c .)" '5'
+is 'and each resolves exactly two canonical archives' \
+   "$(awk -F'\t' -v e=ceil8 '!/^#/ && $1!="cpu_model" && NF>=6 && $2==e && $6=="canonical" {n[$1]++}
+       END {bad=0; for (k in n) if (n[k]!=2) bad++; print bad}' scripts/readme-archives.tsv)" '0'
+# 36k. And the gate reads the manifest rather than a list. Keyed to the awk field test, not to the
+#      comment above it, so rewording does not disarm it.
+is 'gate-p5 sources the reference corpus from the manifest (#165)' \
+   "$(/usr/bin/grep -c '^README_ARCHIVES=scripts/readme-archives.tsv' scripts/gate-p5.sh)" '1'
+is 'and no hardcoded pinned8 archive list survives in readme_ref_archives' \
+   "$(/usr/bin/awk '/^readme_ref_archives\(\)/,/^}/' scripts/gate-p5.sh | /usr/bin/grep -c 'archive/pinned8/bench-gate-p5')" '0'
 # 37. Newness against an unmet obligation, the distinction the witness exists for, driven on a
 #     host outside the derivation set. $CEILD is this FILE'S set (the two AMD models that
 #     derived 44.2), deliberately not the shipped one: these arms test the classifier, and
