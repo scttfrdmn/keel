@@ -220,6 +220,18 @@ func Symm(kn kern.Kernel, left, lower bool, m, n int, alpha float32, a []float32
 // work against the rank update's blocked work, and that balance is a measurement.
 var MB = 64
 
+// Axpy is the unit-stride y += alpha*x that the diagonal solves need, threaded in
+// rather than reached for. This follows kern.Kernel exactly: the root dispatcher
+// owns backend selection (dispatch.go holds activeL1 beside activeKern), so
+// internal/block needs neither a mutable global nor an internal/l1 import, and a
+// test can hand in whichever backend it means to exercise.
+//
+// It must NOT short-circuit alpha == 0 — see Trsm's doc comment on 0*Inf — and no
+// l1 backend does. A nil Axpy is a wiring bug and panics rather than falling back
+// to the scalar loop: a silent fallback would let a benchmark measure the scalar
+// path while its name claimed the vector one (#37).
+type Axpy func(alpha float32, x, y []float32)
+
 // Trsm solves op(A)·X = alpha·B (left) or X·op(A) = alpha·B (right) for X,
 // overwriting B, where A is triangular and stored in the triangle named by lower.
 // A is m×m in the left case and n×n in the right one. unit means A's stored
@@ -254,9 +266,12 @@ var MB = 64
 // alpha == 0 sets B to zero and returns without reading A at all, matching
 // reference STRSM. A is otherwise required to be nonsingular in its referenced
 // triangle; keel does not check that, and neither does reference BLAS.
-func Trsm(kn kern.Kernel, left, lower, trans, unit bool, m, n int, alpha float32,
+func Trsm(kn kern.Kernel, ax Axpy, left, lower, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
 
+	if ax == nil {
+		panic("block.Trsm: nil Axpy (a registration bug, not a fallback)")
+	}
 	if m == 0 || n == 0 {
 		return
 	}
@@ -274,12 +289,12 @@ func Trsm(kn kern.Kernel, left, lower, trans, unit bool, m, n int, alpha float32
 	lowerEff := lower != trans
 	if left {
 		strips(n, func(j0, jn int) {
-			trsmLeft(kn, lowerEff, trans, unit, m, jn, alpha, a, lda, b[j0:], ldb)
+			trsmLeft(kn, ax, lowerEff, trans, unit, m, jn, alpha, a, lda, b[j0:], ldb)
 		})
 		return
 	}
 	strips(m, func(i0, im int) {
-		trsmRight(kn, lowerEff, trans, unit, im, n, alpha, a, lda, b[i0*ldb:], ldb)
+		trsmRight(kn, ax, lowerEff, trans, unit, im, n, alpha, a, lda, b[i0*ldb:], ldb)
 	})
 }
 
@@ -371,7 +386,7 @@ func TrsmWork(left bool, m, n int) (rankUpdate, diagSolve float64) {
 
 // trsmLeft solves op(A)·X = alpha·B, forward over row blocks when op(A) is lower
 // triangular and backward when it is upper.
-func trsmLeft(kn kern.Kernel, lowerEff, trans, unit bool, m, n int, alpha float32,
+func trsmLeft(kn kern.Kernel, ax Axpy, lowerEff, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
 
 	nb := (m + MB - 1) / MB
@@ -407,14 +422,14 @@ func trsmLeft(kn kern.Kernel, lowerEff, trans, unit bool, m, n int, alpha float3
 			gemm(kn, trans, false, mb, n, kk, -1, asl, lda, b[p0*ldb:], ldb,
 				alpha, b[i0*ldb:], ldb, triMask{}, symOperand{}, noSplit)
 		}
-		solveLeft(lowerEff, trans, unit, mb, n, a[i0*lda+i0:], lda, b[i0*ldb:], ldb)
+		solveLeft(ax, lowerEff, trans, unit, mb, n, a[i0*lda+i0:], lda, b[i0*ldb:], ldb)
 	}
 }
 
 // trsmRight solves X·op(A) = alpha·B. The direction is the mirror of the left
 // case: column block j of X depends on the blocks before it when op(A) is upper
 // and on the blocks after it when op(A) is lower.
-func trsmRight(kn kern.Kernel, lowerEff, trans, unit bool, m, n int, alpha float32,
+func trsmRight(kn kern.Kernel, ax Axpy, lowerEff, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
 
 	nblk := (n + MB - 1) / MB
@@ -452,7 +467,7 @@ func trsmRight(kn kern.Kernel, lowerEff, trans, unit bool, m, n int, alpha float
 // The row-at-a-time shape is deliberate: B's rows are contiguous, so the inner
 // loop is a unit-stride axpy over n and the substitution's serial dependency is
 // paid once per row of the block rather than once per element.
-func solveLeft(lowerEff, trans, unit bool, d, n int, a []float32, lda int, b []float32, ldb int) {
+func solveLeft(ax Axpy, lowerEff, trans, unit bool, d, n int, a []float32, lda int, b []float32, ldb int) {
 	for step := 0; step < d; step++ {
 		i := step
 		if !lowerEff {
@@ -468,10 +483,21 @@ func solveLeft(lowerEff, trans, unit bool, d, n int, a []float32, lda int, b []f
 			if trans {
 				aip = a[p*lda+i]
 			}
-			src := b[p*ldb : p*ldb+n]
-			for j, v := range src {
-				row[j] -= aip * v
-			}
+			// THE SUBSTITUTION (#37). This loop is length n, not length d: it
+			// runs the full width of B for every (i, p) pair in the diagonal
+			// block, so it is the routine's long unit-stride inner loop and Go
+			// does not vectorize it. Measured share of Trsm's time before this
+			// change, on the shipped NEON kernel at n=2048/MB=64: 22.2% of the
+			// left side and 49.3% of the right, against 1.587% of the flops.
+			//
+			// NOT bit-identical to the scalar loop it replaces, and that is
+			// permitted here where it would not be in solveRight: a vector axpy
+			// reassociates nothing but may fuse the multiply-subtract, which
+			// l1's documented contract already covers (results are held to
+			// oracle.Tolerance, not to bit-equality). solveRight's interchange
+			// claimed bit-identity because it was a pure reordering; this is a
+			// different kernel and claims only the tolerance.
+			ax(-aip, b[p*ldb:p*ldb+n], row)
 		}
 		if !unit {
 			// Divide, do not scale by a reciprocal: see Trsm's doc comment. The

@@ -8,6 +8,39 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **`Strsm`'s left-side diagonal solve is vectorized: 1.90x on the solve, +11.1% on the whole
+  routine** (#37, 2026-10-11, measured). `solveLeft`'s inner loop runs the full width of **n**, not
+  the width of the diagonal block — it is the routine's long unit-stride loop, Go does not
+  vectorize it, and it was plain scalar Go. It now goes through an `l1` `Axpy` threaded into
+  `block.Trsm` the same way `kern.Kernel` already is, so the root dispatcher keeps owning backend
+  selection and `internal/block` gains neither a global nor an `internal/l1` import.
+  Measured on the dev host (Apple M4 Pro, NEON, shipped `3x24`, n=2048, MB=64, N=6, benchstat):
+  solve-only **−47.4%** (p=0.002), full `Trsm` **−10.0% sec/op / +11.1% GFLOP/s** (p=0.002).
+  - **`side=R` is a built-in null arm and stayed null** — `solveRight` is untouched, and it moved
+    `~` on both rows (p=0.937 full, p=0.065 solve-only). The treatment reached the arm it was
+    supposed to and no other.
+  - **#37 budgeted "a few percent" for the diagonal solves from loop structure; it was 22.2% of
+    `Trsm`'s time on the left side and 49.3% on the right**, against 3.17% of the flops at this
+    shape. That estimate-never-measured is the thing the issue said it owed first.
+  - **A cross-host mechanism, from numbers already published, that this predicts will pay far more
+    on amd64.** `Strsm`/`Sgemm` efficiency is 0.804 and 0.813 on the two NEON hosts and 0.336,
+    0.356, 0.358 on the three AVX-512 hosts — three agreeing at 0.35 and two at 0.81, split exactly
+    on vector width, which is the signature of a scalar serial term. Inverting Amdahl against the
+    gate's own work split puts ~65% of `Strsm`'s time on the AVX-512 hosts in 1.6% of its work.
+    **Stated as a prediction, not a result:** it assumes the diagonal solve is the only relevant
+    difference between the two routines, and it is unverified until a judged amd64 run.
+  - Not bit-identical to the scalar loop, deliberately, and permitted here where it is not in
+    `solveRight`: a vector axpy may fuse the multiply-subtract, which `l1`'s documented contract
+    already covers (held to `oracle.Tolerance`, not bit-equality). `solveRight`'s interchange could
+    claim bit-identity because it was a pure reordering; this is a different kernel. The full
+    sixteen-corner flag lattice passes unchanged, and so does the stock-toolchain scalar path.
+  - **The residual is now the other length-n loop**: the scalar divide, untouched because BLAS
+    forbids the reciprocal-multiply shortcut. The scalar diagonal loop ran 8.7x slower than the
+    rank update and now runs 4.6x; perfect 4-lane vectorization would reach ~2.2, so roughly half
+    the remaining gap is that divide. A vector divide is legal (same per-lane rounding) but needs a
+    new `internal/vec` op with its scalar twin and differential test.
+
 ### Fixed
 - **The archived-corpus membership test was an extension glob, and its silent direction hid 604
   readings** (fixed 2026-10-11). `TestArchivedIntervalsNeverEscapeTheirSamples` drew its corpus

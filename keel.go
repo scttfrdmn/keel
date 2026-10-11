@@ -678,5 +678,5 @@ func Strsm(s Side, ul Uplo, tA Transpose, d Diag, m, n int, alpha float32, a []f
 	}
 	checkMatrix("Strsm", "a", da, da, a, lda)
 	checkMatrix("Strsm", "b", m, n, b, ldb)
-	block.Trsm(activeKern, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
+	block.Trsm(activeKern, activeL1.Axpy, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
 }

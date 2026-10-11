@@ -13,6 +13,7 @@ import (
 
 	"github.com/scttfrdmn/keel/internal/block"
 	"github.com/scttfrdmn/keel/internal/kern"
+	"github.com/scttfrdmn/keel/internal/l1"
 	"github.com/scttfrdmn/keel/internal/oracle"
 )
 
@@ -75,7 +76,7 @@ func l3Runners() []l3runner {
 				block.Symm(kn, left, lower, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
 			},
 			trsm: func(left, lower, trans, unit bool, m, n int, alpha float32, a []float32, lda int, b []float32, ldb int) {
-				block.Trsm(kn, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
+				block.Trsm(kn, l1.Backends()[0].Axpy, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
 			},
 		})
 	}
