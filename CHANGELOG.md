@@ -214,6 +214,28 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- **Every published cell now carries its median AND its CI from one pooled estimator** (#165,
+  landed 2026-10-11). `scripts/readme-pooled.sh` (new) pools each host's canonical `ceil8` archives
+  through `benchci` and emits `cpu_model, benchmark, median, lo, hi, N`; `readme-numbers.sh` reads
+  it for the rate, the peak the percent divides by, and the `Ceiling/compute` row, so a cell's point
+  and its interval are the same statistic over the same corpus criterion 9 compares against.
+  **45 rows, 5 hosts, and all 45 points now lie inside their own printed CI** — previously 5 rows
+  printed no interval at all and 4 of the other 40 published a point outside the pooled bracket.
+  Rendered shift bounded at **1.144%**; a cell the manifest does not cover **aborts** the
+  generation rather than falling back to a log-derived median.
+  - **`est()`, `an`, `bn8`, `cn`, `c8` and `p8` were dead stores afterwards and are deleted**, so no
+    published figure is log-derived any more; `med()` survives only as the presence predicate that
+    drops a host absent from the logs. The control on that prune is that the generated block is
+    **byte-identical** across it, which a prune of a live store could not be. A comment asserting
+    `an`/`bn8` "still feed the caption N" was false when written and went with them.
+  - Two prose claims the re-basing falsified: the caption said *"per-row medians"*, and the share
+    sentence said *"Measured in the judged run"* while its figures derive from the table — which
+    was already loose before this change, since the table was a median over N=2 archives.
+  - **Five controls, each driven red** (eight mutations: a point moved outside its CI, an interval
+    stripped, a bracket inverted, N forced to 1, an empty manifest, both fail-closed guards
+    removed, a dead store revived). The first probe reported all seven green because it grepped
+    `^not ok` while the harness prints `  NOT OK` — seven simultaneous greens indicting the probe,
+    not the assertions; re-run with a positive control on the probe itself. **125 ok.**
 - **Re-basing the published cells to a pooled benchstat estimator is MEASURED and safe, and
   #165's stated bound is slightly wrong** (2026-10-11). Before changing the generator I tested
   that issue's own premise — *"re-basing shifts every published median <1.1% (max 1.093%)"* —
@@ -221,6 +243,10 @@ While the major version is 0, minor versions may contain breaking changes.
   (`skx Sgemm`/8, 445.7 → 440.65), so the bound is exceeded, slightly: the 1.093% figure came
   from the `pinned8` spike and does not carry to this era. Second-worst −0.799%; everything else
   is under 0.4%. **So re-basing is safe to do** — it is a rigour change, not a numbers change.
+  - **Corrected the same day: the bound owed is 1.144%, not 1.133%.** 1.133% is the estimator's
+    shift; cells print at `%.4g`, so 440.65 renders 440.6 and the shift a reader can check against
+    the old table is larger. Quantization adds at most half a last digit (0.011pp here) — but it
+    adds it to the only bound that is externally verifiable, so that is the published one.
   - **And 4 of 40 published points fall OUTSIDE their own pooled CI**, which is the concrete
     reason the two halves of #165 cannot be split: bolting a pooled interval onto a
     median-of-run-medians would publish a point outside the interval printed beside it. The

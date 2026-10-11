@@ -105,13 +105,50 @@ for pair in "CEIL_FRACTION=$CEIL_FRACTION" "SCALE_FLOOR_RETIRED=$SCALE_FLOOR_RET
     || die "${pair%%=*} here is ${pair#*=} but scripts/gate-p5.sh disagrees; the disclosure would name a bar the gate does not enforce"
 done
 
+# ---- ONE POOLED ESTIMATOR PER CELL (#165, landed 2026-10-11; narrative in CHANGELOG.md)
+#
+# The rate, the peak it divides by and the ceiling row all come from a SINGLE benchstat estimator
+# over the canonical sample archives, median AND CI, over the SAME corpus criterion 9 pools on its
+# reference side (gate-p5.sh readme_ref_archives) -- so published and compared are one number.
+# Both halves had to move together: on 4 of 40 rows the old median-of-per-run-medians fell outside
+# the pooled bracket (9R14 Sgemm/1 published 107.2 against [106.9, 107.1]), so bolting a CI onto it
+# would have printed a point outside its own interval.
+#
+# THE BOUND IS 1.144%, THE RENDERED ONE, not the estimator's 1.133% (skx Sgemm/8, 445.7 -> 440.65
+# renders 440.6 at %.4g). Quantization adds at most half a last digit, but it adds it to the only
+# bound a reader can check, so that is the claim. A cell the manifest does not cover ABORTS rather
+# than falling back to the log-derived median, because a table mixing two estimators is the defect.
+POOLED="$(mktemp)"
+if ! bash scripts/readme-pooled.sh > "$POOLED" 2>/dev/null || [[ ! -s "$POOLED" ]]; then
+  die "could not build the pooled estimator table from scripts/readme-archives.tsv; refusing to publish a log-derived table"
+fi
+
 BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
-         -v retired="$SCALE_FLOOR_RETIRED" '
+         -v retired="$SCALE_FLOOR_RETIRED" -v pooled="$POOLED" '
   function strip(s) { gsub(/\033\[[0-9;]*m/, "", s); return s }
+  BEGIN { loadpooled() }
   function bn(p) { sub(/^.*\//, "", p); return p }
-  # The estimator, named in the cell beside the rate it produced. N=1 says "one draw" in
-  # words rather than "median of 1", which is true but reads as a pooled figure.
-  function est(k) { return (k == 1 ? "one draw (N=1)" : sprintf("median of N=%d archives", k)) }
+  # The pooled estimator, loaded once, keyed (cpu, benchmark name as benchci prints it).
+  function loadpooled(   L, F) {
+    while ((getline L < pooled) > 0) {
+      split(L, F, "\t")
+      if (F[1] == "" || F[2] == "") continue
+      PM[F[1], F[2]] = F[3]; PLO[F[1], F[2]] = F[4]; PHI[F[1], F[2]] = F[5]; PN[F[1], F[2]] = F[6]
+    }
+    close(pooled)
+  }
+  # pget: the pooled median for one row on one host, or abort. Fail-closed by construction --
+  # there is no branch here that can return a log-derived number.
+  function pget(h, nm) {
+    if (!((h, nm) in PM)) {
+      printf "readme-numbers: cpu_model [%s] has no pooled estimator for %s; scripts/readme-archives.tsv does not cover this cell\n", h, nm > "/dev/stderr"
+      exit 4
+    }
+    return PM[h, nm]
+  }
+  function pest(h, nm) {
+    return sprintf("pooled benchstat over N=%d archives, CI [%s, %s]", PN[h, nm], PLO[h, nm], PHI[h, nm])
+  }
 
   # Rule-16 median over the era'"'"'s archives, pooled over the FILE LIST rather than over a
   # draw counter: the array is keyed (..., FILENAME) throughout, so the pool is exactly the
@@ -369,17 +406,18 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
     print "| --- | --- | --- | --- | --- |"
     for (i = 1; i <= nh; i++) {
       h = order[i]
+      # med() survives the #165 re-basing as a PRESENCE PREDICATE only: no published figure is
+      # log-derived any more, but "this host contributed no peak / no 1+8 pair to these logs" is
+      # still what drops a host, and that question is about the logs rather than the archives.
       p1 = med(peak, h)
       if (p1 == "") { printf "readme-numbers: [%s] has no measured single-thread peak\n", h > "/dev/stderr"; exit 3 }
-      p8 = p1 * 8
       # #163: the microkernel-peak backend named in the row caption, read from this host peak line --
       # avx512 on amd64 (the default keeps amd64 byte-unchanged), neon on arm64. Constant per host.
       pkbname = "avx512"
       for (pq = 1; pq <= nf; pq++) if ((h, flist[pq]) in pkbk) { pkbname = pkbk[h, flist[pq]]; break }
       for (j = 1; j <= n; j++) {
         r = R[j]
-        a = med(one, h SUBSEP r); an = MEDN
-        b = med(eight, h SUBSEP r); bn8 = MEDN
+        a = med(one, h SUBSEP r); b = med(eight, h SUBSEP r)
         # A thin block is not a table with one row fewer; it is a published table
         # that silently dropped a host. Same refusal the docs-gen.sh extractions make.
         if (a == "" || b == "") { printf "readme-numbers: [%s] %s has no 1-thread/8-thread pair in these logs\n", h, r > "/dev/stderr"; exit 3 }
@@ -398,14 +436,21 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
           d = fc8 - (gpc[h, r, f] + 0); if (d < 0) d = -d
           if (d > 0.15) { printf "readme-numbers: [%s] %s 8-thread share computes to %.1f%% in %s but that run printed %s%%\n", h, r, fc8, bn(f), gpc[h, r, f] > "/dev/stderr"; exit 3 }
         }
-        c8 = (b + 0) / p8 * 100
         # N rides on every row, per the ratified repair (#6): the estimator is part of the
         # number. "median of 2" and a lone draw are different claims and a reader cannot tell
         # them apart from the rate alone -- which is the whole defect that repair addressed.
+        # RE-BASED to the pooled estimator (#165): the rate AND the peak it divides by both come
+        # from one benchstat over this host canonical archives, so the printed share is not a
+        # hybrid of two estimators. pest() names the corpus and carries the interval, and N now
+        # comes from the pool rather than a draw counter -- so est(), an, bn8, cn, c8 and p8 were
+        # deleted as dead stores rather than left looking live. Control on that deletion: the
+        # generated block is byte-identical across it, which a prune of a live store would not be.
+        pn1 = "Scale/" r "/n=4096/threads=1"; pn8 = "Scale/" r "/n=4096/threads=8"
+        pa = pget(model[h], pn1); pb = pget(model[h], pn8); pp1 = pget(model[h], "Peak/" pkbname); pp8 = pp1 * 8
         printf "| %s | %s | 1 | %.4g | %.1f%% of %.4g GFLOP/s, the 1-thread %s microkernel peak; %s |\n", \
-          model[h], r, a, (a + 0) / p1 * 100, p1, pkbname, est(an)
+          model[h], r, pa, (pa + 0) / pp1 * 100, pp1, pkbname, pest(model[h], pn1)
         printf "| %s | %s | 8 | %.4g | %.1f%% of %.1f GFLOP/s, that same peak x 8 cores; %s |\n", \
-          model[h], r, b, c8, p8, est(bn8)
+          model[h], r, pb, (pb + 0) / pp8 * 100, pp8, pest(model[h], pn8)
 
         # A row with no verdict is not a passing row. Fail closed: the caption would
         # otherwise be silent about exactly the row the gate could not judge.
@@ -443,10 +488,12 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # THE DENOMINATOR EVERY BAR DIVIDES BY IS NOW A ROW (#113). Caption-only until now, and the
       # caption is outside the region criterion 9 re-measures -- the defect 0bbf964 was reverted
       # for. Emitted after this host'"'"'s routines, so "that same peak" has a referent above it.
-      hce = med(ceil8, h); cn = MEDN
+      hce = med(ceil8, h)
       if (hce == "") { printf "readme-numbers: [%s] has no measured 8-thread ceiling in these logs, so the denominator its shares divide by cannot be published as a re-measured row (#113)\n", h > "/dev/stderr"; exit 3 }
+      pnc = "Ceiling/compute/" pkbname "/threads=8"
+      phc = pget(model[h], pnc); pcp1 = pget(model[h], "Peak/" pkbname); pcp8 = pcp1 * 8
       printf "| %s | Ceiling/compute | 8 | %.4g | %.1f%% of %.1f GFLOP/s, that same peak x 8 cores; %s |\n", \
-        model[h], hce, (hce + 0) / p8 * 100, p8, est(cn)
+        model[h], phc, (phc + 0) / pcp8 * 100, pcp8, pest(model[h], pnc)
     }
     # The caption, derived from the same parse that produced the rows above it.
     printf "\n%s\n", "CAPTION:" > "/dev/stderr"
@@ -502,7 +549,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # measured, and the generator refuses two covering the same host rather than averaging them.
       vprov = "The verdicts below are the judged run'"'"'s alone — a verdict belongs to the gate that rendered it and two cannot be averaged."
       if (njf > 1) vprov = sprintf("A gate-p5 run measures one GOARCH, so no single run can judge this table: the rates pool every archive named above, while each host takes its verdicts from the first of the %d judged runs named for that host. Two judged runs that grade one row differently are refused rather than averaged, because a verdict belongs to the gate that rendered it.", njf)
-      printf "All %d rows are per-row medians over the %d archived runs of one era — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N. The 1-thread and 8-thread rows for a routine pool the same archives, so their ratio is a ratio of like estimators; rows from different CPUs are not comparable, because the peaks differ. %s\n\n", \
+      printf "All %d rows are one pooled `benchstat` estimator per cell, not a median of per-run medians: every sample a host contributed across the %d archived runs of one era is pooled into a single population, and the median and 95%% CI printed beside it are both read off that one population — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N, counting archives. Because the point and the interval come from the same estimator, every published value lies inside its own CI; the percent-of-peak denominator is pooled the same way, so the 1-thread and 8-thread rows for a routine are a ratio of like estimators. Rows from different CPUs are not comparable, because the peaks differ. %s\n\n", \
         nrowall, nf, (jrev == "" ? "unrecorded" : jrev), others, src, (nsz == "" ? "4096" : nsz), \
         (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host"), vprov > "/dev/stderr"
     }
@@ -548,7 +595,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
         # "In the judged run", not "this run": these shares are the readings the bar compared
         # against, so they come from one archive while the table above pools every archive.
         # Under pooling "this run" has no referent, and the shares would read as medians.
-        printf "Measured in the judged run, as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings'"'"' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).\n\n", (nt == "" ? "8" : nt), cl, gp, retired > "/dev/stderr"
+        printf "Derived from the table above, so pooled over the era'"'"'s archives rather than read off the judged run alone, as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings'"'"' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).\n\n", (nt == "" ? "8" : nt), cl, gp, retired > "/dev/stderr"
     }
     # The bars in words, not as a ">= %s" with a hole in it. Either may be deferred to
     # its own measurement and both have been, at different times and for the same

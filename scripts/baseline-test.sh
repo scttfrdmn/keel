@@ -466,6 +466,43 @@ is 'gate-p5 sources the reference corpus from the manifest (#165)' \
    "$(/usr/bin/grep -c '^README_ARCHIVES=scripts/readme-archives.tsv' scripts/gate-p5.sh)" '1'
 is 'and no hardcoded pinned8 archive list survives in readme_ref_archives' \
    "$(/usr/bin/awk '/^readme_ref_archives\(\)/,/^}/' scripts/gate-p5.sh | /usr/bin/grep -c 'archive/pinned8/bench-gate-p5')" '0'
+# 36l. THE PUBLISHED ARTIFACT, not the generator: every rate row carries an interval and its point
+#      lies inside it. This is the property #165 existed for, and it is asserted on README.md
+#      because that is what a reader checks -- a generator that is correct and a block that was
+#      last written by an older generator are the same defect to them. RED before 2026-10-11: the
+#      point was a median of per-run medians and the interval was absent, so 5 rows printed no CI
+#      at all and 4 of the other 40 published a point outside the pooled bracket.
+is 'every published rate row carries a CI and its point lies inside it (#165)' \
+   "$(/usr/bin/awk -F'|' '/^\|/ {
+        for (i = 2; i <= 6; i++) gsub(/^ +| +$/, "", $i)
+        if ($2 == "CPU" || $2 ~ /^-+$/) next
+        if (match($6, /CI \[[0-9.]+, [0-9.]+\]/) == 0) { noci++; next }
+        t = substr($6, RSTART + 4, RLENGTH - 4); gsub(/\[|\]/, "", t); split(t, b, ", ")
+        if ($5 + 0 < b[1] + 0 || $5 + 0 > b[2] + 0) out++ }
+      END {printf "%d outside, %d uninterval", out+0, noci+0}' README.md)" '0 outside, 0 uninterval'
+# 36m. And the estimator feeding it is self-consistent at the source. Not a row count: a new
+#      archive legitimately changes that, and a census that reds on honest growth gets weakened
+#      the first time it fires. The invariants are that the bracket contains its own median and
+#      that nothing published as `pooled` is in fact a single draw.
+is 'the pooled estimator brackets its own median, and no row is a lone draw' \
+   "$(bash scripts/readme-pooled.sh | /usr/bin/awk -F'\t' '
+        {n++; if ($3+0 < $4+0 || $3+0 > $5+0) bad++; if ($6+0 < 2) few++}
+        END {printf "%s, %d unbracketed, %d singletons", (n > 0 ? "rows" : "EMPTY"), bad+0, few+0}')" \
+   'rows, 0 unbracketed, 0 singletons'
+# 36n. The two fail-closed guards, keyed to their mechanism rather than their wording. Without
+#      these the generator would publish a log-derived table when the manifest went unreadable --
+#      i.e. would silently revert the re-basing while the caption still claimed a pooled estimator.
+is 'an unbuildable pooled table aborts the generation' \
+   "$(/usr/bin/awk '/^POOLED=/,/^fi$/' scripts/readme-numbers.sh | /usr/bin/grep -c 'die ')" '1'
+is 'and a cell the manifest does not cover aborts rather than defaulting' \
+   "$(/usr/bin/awk '/^  function pget\(/,/^  }/' scripts/readme-numbers.sh | /usr/bin/grep -c 'exit 4')" '1'
+# 36o. No published figure may be log-derived any more. med() is retained as a presence predicate
+#      (does this host appear in these logs at all), so the test is that its result reaches no
+#      printf -- the dead stores est()/an/bn8/cn/c8/p8 were deleted for exactly this reason, and
+#      a future edit that re-wires one into a row is what this catches.
+is 'the deleted log-derived stores stay deleted' \
+   "$(/usr/bin/sed 's/#.*$//' scripts/readme-numbers.sh \
+      | /usr/bin/grep -cE '(^|[^A-Za-z0-9_])(est\(|an = MEDN|bn8|cn = MEDN|c8 =|p8 =)')" '0'
 # 37. Newness against an unmet obligation, the distinction the witness exists for, driven on a
 #     host outside the derivation set. $CEILD is this FILE'S set (the two AMD models that
 #     derived 44.2), deliberately not the shipped one: these arms test the classifier, and
