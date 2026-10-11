@@ -7,10 +7,17 @@ package main
 // with a stated coverage limit: "no persisted CSV anywhere in the tree carries the
 // seven columns the range needs", so rule 20's whole coverage was six hand-written
 // fixtures in scripts/remote-exec-test.sh. That limit was
-// about persisted CSVs and not about persisted DATA: every archive/*/*.txt is a
-// raw benchmark log, so `summarize` re-derives the seven columns from all of them.
+// about persisted CSVs and not about persisted DATA: the archive is full of raw
+// benchmark logs, so `summarize` re-derives the seven columns from all of them.
 // This file is where that re-derivation is driven by CI rather than by memory,
 // which is what #133 asked for.
+//
+// This paragraph used to say "every archive/*/*.txt is a raw benchmark log" and
+// name the glob as the corpus. Both halves were false — a `.txt` in an archive
+// directory need not be a log, and 10 files of real readings were named `.log` —
+// which is the defect `benchmarkLogsUnder` below was written to fix. The sentence
+// is corrected rather than deleted because it is the claim the fix falsified, and
+// a reader comparing against an older checkout is owed that.
 //
 // It lives in Go, not in scripts/remote-exec-test.sh, for one reason worth saying
 // out loud: CI runs `go test ./...` and does not run remote-exec-test.sh, so a
@@ -20,35 +27,168 @@ package main
 // apart.
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
 	"golang.org/x/perf/benchmath"
 )
 
-// As of 2026-08-30 the tracked corpus is 80 files and 1420 bounded-or-unbounded
-// readings, 0 of them unbounded. These are floors, not pins: an era added later
-// raises them and must not fail, while an archive that goes missing takes the
-// coverage claim in rule 20 with it and must.
+// Floors, not pins: an era added later raises them and must not fail, while an
+// archive that goes missing takes the coverage claim in rule 20 with it and must.
+// RE-DATED 2026-10-11 along with the membership fix below — they had stood at 80
+// and 1420 since 2026-08-30 against a corpus of 204 files, so losing 124 of them
+// would not have failed. A floor two and a half times below its subject is not a
+// floor.
 const (
-	archivedFilesAsOf20260830 = 80
-	archivedRowsAsOf20260830  = 1420
+	archivedFilesAsOf20261011 = 204
+	archivedRowsAsOf20261011  = 6440
 )
 
-func archivedLogs(t *testing.T) []string {
-	t.Helper()
-	logs, err := filepath.Glob(filepath.Join("..", "..", "archive", "*", "*.txt"))
+// benchmarkLine matches a line of Go benchmark output: the name, the iteration
+// count, then a unit column. Anchored, so prose that merely says "Benchmark"
+// does not qualify — every archived gate log contains that word in its caption.
+var benchmarkLine = regexp.MustCompile(`^Benchmark\S+\s+\d+\s`)
+
+// benchmarkLogsUnder returns every file under root that CARRIES benchmark output.
+//
+// MEMBERSHIP IS BY CONTENT, NOT BY EXTENSION (#165-adjacent, fixed 2026-10-11).
+// This was `archive/*/*.txt`, which was wrong in both directions — and the two
+// directions are not the same defect (`a-corpus-glob-fails-in-both-directions`):
+//
+//   - LOUD: a non-benchmark `.txt` dropped into an archive directory matched, then
+//     re-derived 0 readings and reddened the suite. It happened twice —
+//     `region-probe.txt` and `measurements.txt` — and BOTH times the file was
+//     renamed to `.md` to appease the glob. That is bending the evidence to fit
+//     the instrument; the membership test was the thing that was wrong.
+//   - SILENT, and the reason this got fixed rather than renamed a third time: 10
+//     archived files carrying real readings were OUTSIDE the corpus entirely —
+//     four `neon-3x24` sweep logs and six `pinned8` janus drift arms, all named
+//     `.log`. The janus six are from the campaign where within-run bimodality was
+//     found (#147), i.e. the likeliest place in the tree for an interval to
+//     misbehave was the place this assertion could not see.
+//
+// The glob also only ever looked one directory deep, so an archive with any
+// internal structure was invisible. A walk has no such edge.
+func benchmarkLogsUnder(root string) ([]string, error) {
+	var out []string
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || strings.HasSuffix(path, ".gz") {
+			return nil // compressed archives are evidence, not a parse target
+		}
+		ok, err := carriesBenchmarkOutput(path)
+		if err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		if ok {
+			out = append(out, path)
+		}
+		return nil
+	})
+	sort.Strings(out)
+	return out, err
+}
+
+// carriesBenchmarkOutput scans a file for the first benchmark line and stops
+// there. Whole-file scan rather than a prefix read: a driver log can carry its
+// readings thousands of lines in, and a prefix would reintroduce the silent
+// direction this fix exists to close.
+func carriesBenchmarkOutput(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	// Archived gate logs carry single prose lines well past the 64KiB default.
+	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+	for sc.Scan() {
+		if benchmarkLine.Match(sc.Bytes()) {
+			return true, nil
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return false, err
+	}
+	return false, nil
+}
+
+// The membership predicate's own control, on a fixture rather than on the real
+// corpus — a predicate exercised only against input it already accepts cannot
+// distinguish "included" from "not looked at". Both directions of the old glob's
+// defect are arms here, plus the two edges that made it wrong structurally.
+func TestBenchmarkLogMembershipIsByContent(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, body string) {
+		full := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const readings = "goos: linux\nBenchmarkSgemm/n=4096-8   \t     123\t   9876543 ns/op\nPASS\n"
+
+	// INCLUDED: readings in a `.log`, which is exactly the 10 files the glob could
+	// not see, and readings nested two deep, which its single `*/` could not reach.
+	write("era/readings.log", readings)
+	write("era/deep/nested/readings.txt", readings)
+	// EXCLUDED: a prose note carrying no readings. region-probe.txt and
+	// measurements.txt were this shape and were renamed to .md to appease the glob.
+	write("era/notes.txt", "a probe of the region, by hand. No readings here.\n")
+	// EXCLUDED, and distinct from the above on purpose: prose that CONTAINS the
+	// word Benchmark unanchored. Every archived gate log does, so an unanchored
+	// match would pull ~160 prose logs into a corpus that then re-derives 0
+	// readings from each -- trading the silent direction for the loud one.
+	write("era/gate.log", "   [keel-skx] Benchmark coverage for this host is stated below\n")
+	// EXCLUDED, and this arm exists because its absence let a mutation through:
+	// a line that STARTS with Benchmark but carries no iteration count. Without it
+	// the anchor was exercised and the `\s+\d+\s` was not, so deleting the
+	// iteration-count requirement left every arm green. Found by driving the
+	// mutation, not by reading the fixture.
+	write("era/handnote.log", "BenchmarkSgemm/n=4096 was re-run by hand; see the issue\n")
+	// EXCLUDED: compressed evidence is not a parse target.
+	write("era/squashed.txt.gz", readings)
+
+	got, err := benchmarkLogsUnder(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(logs) < archivedFilesAsOf20260830 {
+	want := []string{
+		filepath.Join(root, "era", "deep", "nested", "readings.txt"),
+		filepath.Join(root, "era", "readings.log"),
+	}
+	if len(got) != len(want) {
+		t.Fatalf("membership = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("membership[%d] = %s, want %s", i, got[i], want[i])
+		}
+	}
+}
+
+func archivedLogs(t *testing.T) []string {
+	t.Helper()
+	logs, err := benchmarkLogsUnder(filepath.Join("..", "..", "archive"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) < archivedFilesAsOf20261011 {
 		t.Fatalf("found %d archived log(s), want >= %d: rule 20's coverage paragraph "+
-			"claims this corpus exercises the archived path", len(logs), archivedFilesAsOf20260830)
+			"claims this corpus exercises the archived path", len(logs), archivedFilesAsOf20261011)
 	}
 	return logs
 }
@@ -139,8 +279,8 @@ func TestArchivedIntervalsNeverEscapeTheirSamples(t *testing.T) {
 			}
 		}
 	}
-	if rows < archivedRowsAsOf20260830 {
-		t.Errorf("re-derived %d reading(s) from %d file(s), want >= %d", rows, len(logs), archivedRowsAsOf20260830)
+	if rows < archivedRowsAsOf20261011 {
+		t.Errorf("re-derived %d reading(s) from %d file(s), want >= %d", rows, len(logs), archivedRowsAsOf20261011)
 	}
 	// Reported, not asserted: #132 asked how much held-out data exists, and the
 	// answer moves as eras are added.

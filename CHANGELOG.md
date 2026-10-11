@@ -9,6 +9,38 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Fixed
+- **The archived-corpus membership test was an extension glob, and its silent direction hid 604
+  readings** (fixed 2026-10-11). `TestArchivedIntervalsNeverEscapeTheirSamples` drew its corpus
+  from `archive/*/*.txt`, which was wrong in both directions — and they are not one defect:
+  **(1) LOUD** — a non-benchmark `.txt` in an archive directory matched, re-derived 0 readings, and
+  reddened the suite. It happened twice (`region-probe.txt`, `measurements.txt`) and **both times
+  the file was renamed to `.md` to appease the glob**, which is bending the evidence to fit the
+  instrument. The membership test was the thing that was wrong.
+  **(2) SILENT**, and why this got fixed instead of renamed a third time — **10 archived files
+  carrying real readings were outside the corpus entirely**, all named `.log`: four `neon-3x24`
+  sweep logs and the six `pinned8` janus drift arms. The janus six are from the campaign where
+  within-run bimodality was found (#147), so the likeliest place in the tree for an interval to
+  misbehave was the place this assertion could not see. The glob also only looked one directory
+  deep.
+  Membership is now **by content** — a walk, including any file carrying an anchored Go benchmark
+  line. Corpus: **80 → 204 files, 1420 → 6440 readings** (the two floors were as-of 2026-08-30 and
+  had stood while the corpus nearly tripled, so losing 124 files would not have failed; a floor two
+  and a half times below its subject is not a floor).
+  - **The result is a strengthened claim, not a new defect:** the 604 recovered readings are all
+    bounded and **0 escape their samples**, so rule 20's D ≥ 1 coverage now spans the janus
+    bimodality campaign and still holds.
+  - Six controls on the predicate, each driven red (unanchored regex, iteration count not required,
+    `.gz` no longer skipped, extension filter reintroduced, prefix-only scan, floor above the
+    corpus), plus the floor's positive control — lowering the floor stays green *by definition*,
+    which is why the raise arm is what proves it is read at all.
+  - **Two instrument failures worth recording.** My fixture initially had no line *starting* with
+    `Benchmark` yet carrying no reading, so the predicate's iteration-count requirement went
+    unexercised and that mutation survived; found by driving it, not by reading the fixture. And my
+    ad-hoc probe harness then reported that same arm green *after* the fixture was fixed — the
+    second probe this session to misreport, so the verdict was confirmed by reading full test
+    output instead of grepping for it.
+  - Zero shell: the apparatus **cap is not engaged**. Disclosed anyway, since `tools/` is in the
+    ratio's numerator: `tools/` 2725 → 2865, apparatus 24495 → 24625, shell unchanged at 19136.
 - **Criterion 9's reference interval was a hardcoded list with no arm64 arm at all, and it failed
   silently** (#165, fixed 2026-10-11). `readme_ref_archives` was a `case` with three amd64 arms
   naming era `pinned8`'s sample archives. Two faults, both quiet:
