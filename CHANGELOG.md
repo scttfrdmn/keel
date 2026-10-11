@@ -193,6 +193,32 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- **The 12 amd64 `share/*` baselines land for era `ceil8`; the 72 L1 rows and the 3 witness rows
+  are HELD** (#165). Median-of-2 over the era's **two count=30** archives, every row passing the
+  #178 same-claim band — widest spread **2.56%**. All three hosts flip `new` → **`registered`**,
+  so the share criterion judges amd64 for the first time this era and the headline aggregate will
+  have hosts to judge: **a green amd64 run becomes possible**, with no new reds, because L1
+  rendering BASELINE is green-compatible. Bars: `9R14` 71.55/70.15/72.80/24.50, `9R45`
+  45.15/43.75/44.50/13.40, `skx` 29.35/29.10/29.55/9.20.
+  - **A diagnosis of mine, refuted by the run bought to confirm it.** The era's first amd64 run
+    was count=10, and the c10/c30 pair failed the band on **9 of 72** L1 rows (up to **+66.6%** on
+    `9R45 rate/Isamax/n=4096`). I attributed that to the count difference and spent **$87** on a
+    second count=30 run to get a like-instrument pair. The two count=30 archives **still diverge
+    on 5 of 72** — `skx Sasum/n=256` +27.2%, `skx Snrm2/n=256` +23.1%, `9R45 Isamax/n=4096`
+    +22.0%, and two more — the *same* `Isamax` n=256/4096 and n=256-reduction family, against a
+    median spread of 0.23%. **So the instability is a property of those rows, not of the sample
+    count.** The correct test was available before spending: the arm64 `ceil8` pair is two
+    count=10 archives and would have shown the same pattern for free.
+  - **Why the witness rows are held, and it is not caution.** `judged-runs.tsv` records *which
+    CPU models have been judged in which era*. These three amd64 runs judged **nothing** — every
+    criterion rendered BASELINE — so a witness now would record a judgment that did not happen,
+    *and* would convert the 5 unlandable L1 rows into a **permanent** `owing` red for a reason
+    that is not a regression. The next amd64 run judges these hosts against the bars above; the
+    witness is both true and dischargeable then. It does not reintroduce #178, whose fix makes
+    the gate propose the witness every run and print the debt.
+  - The count=10 archive is **not** marked superseded, and that is a per-quantity distinction
+    rather than a per-archive one: its 4096³ rates agree with count=30 to ≤2.4%, which is why the
+    README legitimately pools it, while its L1 small sizes are not poolable for bar-setting.
 - **`scripts/readme-archives.tsv`: the README's sample provenance, pinned per row** (#165's
   manifest half). `readme-numbers.sh` takes gate logs and reduces the sample files those logs
   name — but the names it prints are `build/…` paths, gitignored, so on a fresh clone the stated
