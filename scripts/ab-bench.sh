@@ -4,7 +4,8 @@
 #
 # ab-bench.sh PRESET [BASE_REF] — the A/B measurements that are not gates.
 #
-# One caller for every scripts/ab.sh use: l1 (#47), edge (#22), drift (#141). The
+# One caller for every scripts/ab.sh use: l1 (#47), edge (#22), drift (#141),
+# trsm (#37). The
 # three differ only in the strings ab.sh already takes as parameters, so the table
 # below is the entire difference and nothing else here asks which preset it is
 # serving — #131's rule, applied to the callers this time. One file per preset was
@@ -16,7 +17,7 @@
 # benchmarks against two builds. Read scripts/ab.sh for the mechanism, and for why
 # a driver does no work at its top level (#51).
 #
-# usage: scripts/ab-bench.sh {l1|edge|drift} [BASE_REF]
+# usage: scripts/ab-bench.sh {l1|edge|drift|trsm} [BASE_REF]
 set -euo pipefail
 
 # ab_preset NAME — the four strings ab.sh takes, plus this caller's default base
@@ -99,6 +100,41 @@ measuring a candidate against it."
       "this run, and each log's keel-bench-toolchain: line names it. Not a criterion."
     )
     ;;
+  trsm)
+    # #37: solveLeft's two length-n inner loops went from scalar Go to an l1 Axpy
+    # and an l1 ScalDiv. On 4-lane NEON that was -47.4% on the diagonal solve and
+    # +11.1% on the routine, with the divide half neutral. THE PREDICTION THIS
+    # MEASURES is that the same change is worth substantially more at 16 lanes:
+    # Strsm/Sgemm single-thread efficiency is 0.804/0.813 on the two NEON hosts
+    # against 0.336/0.356/0.358 on the three AVX-512 hosts -- three agreeing at 0.35
+    # and two at 0.81, split exactly on vector width, which is the signature of a
+    # scalar serial term. Inverting Amdahl against the gate's own printed work split
+    # puts ~65% of Strsm's time on AVX-512 inside 1.6% of its work.
+    #
+    # THE FILTER IS `Scale`, NOT `Scale/Strsm`, AND THAT IS THE DESIGN. Strsm is the
+    # only routine with a diagonal solve, so Sgemm, Ssyrk and Ssymm are three
+    # independent controls whose code is byte-identical in both arms. They also
+    # measure this binary pair's layout floor, which is not optional here: the arm64
+    # run of this same change moved untouched code 8.4% when block.gemm.func1
+    # shifted 16->32 mod 64 (#61). A control above its host's floor voids the run,
+    # by #22's ruling.
+    #
+    # bench/scale_test.go's Strsm is keel.Left, the side solveLeft serves, so the
+    # measured path is the changed one rather than merely adjacent to it.
+    AB_BASE="79d629a"
+    AB_TITLE="== trsm -- issue #37, scalar vs vectorized diagonal solve. Not a gate. =="
+    AB_FILTER="${KEEL_TRSM_AB_FILTER:-Scale}"
+    AB_TAG="trsm"
+    AB_NOTES=(
+      "Strsm is the TREATMENT; Sgemm, Ssyrk and Ssymm are CONTROLS with no diagonal"
+      "solve and byte-identical code in both arms. Read the controls first: one above"
+      "its host's between-binary layout floor voids every Strsm delta below it."
+      "n=4096, threads 1 and 8, from bench/scale_test.go -- the same rows the README"
+      "publishes and criterion 9 judges, so a confirmed delta is a delta in a"
+      "published number rather than in a private fixture."
+    )
+    AB_DONE=("done. Controls first, then Strsm. Not a criterion, and not a published number until a judged host runs it.")
+    ;;
   drift)
     # #141's decisive branch: the same build measured twice on one host. BASE_REF
     # defaults to HEAD, so both arms are one source and the only difference between
@@ -133,7 +169,7 @@ measuring a candidate against it."
       { echo "ab-bench drift: the tree must be clean — both arms are one build." >&2; exit 2; }
     ;;
   *)
-    echo "usage: scripts/ab-bench.sh {l1|edge|drift} [BASE_REF]" >&2
+    echo "usage: scripts/ab-bench.sh {l1|edge|drift|trsm} [BASE_REF]" >&2
     exit 2
     ;;
   esac
