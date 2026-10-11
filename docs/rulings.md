@@ -2190,3 +2190,47 @@ Two general facts follow, and the first is a **cost** of this rule rather than a
   which is enough to refuse but not enough to *name* the cause; naming it took a hand diff and a
   rebuild. A run whose log recorded the builder toolchain but had no digest bound to a registration
   would have printed the change and proceeded.
+
+## The apparatus cap and a defect in the published evidence (ruled 2026-10-11)
+
+Scott delegated this one: *"your call on … whether the +224 apparatus-line spend needs an
+exemption."* **Ruling: no exemption, because the cap was never engaged — and this is keyed narrowly
+enough that it does not become a standing hatch.**
+
+`CLAUDE.md`'s cap reads: a session may not add net lines to `scripts/` unless it also lands a
+routine, a kernel or a library fix. Taken literally, the `#165` span (+224 shell, `9a5e2f5` through
+`955d55e`) breaches it — `internal/` was untouched throughout. But §5 rule 22 says a criterion is
+applied by the mechanism it names, and `docs/apparatus-ledger.md`'s own ruling states that
+mechanism: *proportion between apparatus and shipped substance.* So the question is whether these
+lines are apparatus, and for 177 of the 224 they are not:
+
+- `d0496df` **+43** — criterion 9's reference interval was a hardcoded list with no arm64 arm, so
+  every arm64 row fell back to a centre band while the criterion's own pass message claimed to
+  overlap two estimators. The gate was *printing a false statement about its own method.*
+- `955d55e` **+134** — 5 published rows carried no interval at all and 4 of the other 40 published
+  a point **outside** its own bracket. `CLAUDE.md`'s own code rules say a benchmark number ships
+  with its denominator and never without; a point outside its interval fails that on the artifact a
+  reader actually consumes.
+
+Neither is scaffolding. Both are **disclosure amendments**, and `be6cca9` already ruled that case
+in Scott's words — *"a ruled disclosure amendment doesn't wait on the cap it corrects."* The
+remaining **47** (`9a5e2f5` +29, `838a223` +18 — the sample-provenance manifest and the
+regeneration) are the enabling mechanism for those two and are not severable from them: a pooled
+estimator presupposes a pinned corpus, and the ambiguity the manifest closes had already produced
+one wrong reading on 2026-10-09. The second term this ledger demands is present — a defect class
+removed (two estimators inside one table; a criterion silently falling back) plus six dead stores
+deleted, with the generated block byte-identical across that prune.
+
+**WHAT BINDS THIS SO IT STAYS NARROW.** The exemption is keyed to a defect in *published* output
+carrying a **measured witness** — here the 4-of-40 count and the `ref CI [, ]` line in every judged
+arm64 log. A span whose shell growth has no such witness gets no exemption, and "this work felt
+important" is not a witness. If a later session claims this precedent without one, the precedent
+has silently become the rule, which is the failure mode `an-exemption-for-one-arm-is-owed-to-its-siblings`
+names.
+
+**AND A GAP IN THE CAP'S TEXT, which is Scott's to close, not mine.** The rule credits only "a
+routine, a kernel, or a library fix" — it has no category for a fix to the project's published
+evidence, even though that evidence is a v0 deliverable and `CLAUDE.md` elsewhere regulates it
+tightly. Every such fix will therefore keep arriving as an apparent breach needing a ruling. The
+honest amendment is to name published-evidence correctness as a fourth credit, with the
+measured-witness requirement above attached so it cannot be claimed for ordinary instrument work.
