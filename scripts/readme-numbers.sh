@@ -235,6 +235,17 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       ce = ""; if (match(rest, /ceiling \([0-9.]+ GFLOP\/s\)/))  { ce = substr(rest, RSTART, RLENGTH); sub(/^ceiling \(/, "", ce); sub(/ GFLOP\/s\)$/, "", ce) }
       pt = ""; if (match(rest, /scaling [0-9.]+x/))              { pt = substr(rest, RSTART + 8, RLENGTH - 9) }
       ci = ""; if (match(rest, /[0-9.]+x net of CI/))            { ci = substr(rest, RSTART, RLENGTH); sub(/x net of CI$/, "", ci) }
+      # ANCHOR ON THE SLASH when the `net of CI` suffix is absent (#165 finding 1, fixed
+      # 2026-10-10 on the run that it blocked). A NOISE-LIMITED REPORTED row prints
+      # `scaling 6.967x / 6.077x —` and stops: rule 19 out-resolved it before bar selection, so
+      # there is no bar to be "net of" and the suffix is correctly missing. The `net of CI`
+      # pattern then yields nothing, `want` demands four numbers, and the generator refuses the
+      # WHOLE log — so a single noise-limited row anywhere in a campaign made the shipping
+      # baseline unregenerable. Both numbers are present in the slash form in every verdict
+      # shape, which is why that is the anchor rather than a second special case.
+      if (ci == "" && match(rest, /scaling [0-9.]+x \/ [0-9.]+x/)) {
+        ci = substr(rest, RSTART, RLENGTH); sub(/^scaling [0-9.]+x \/ /, "", ci); sub(/x$/, "", ci)
+      }
       vc = vd[host, r, FILENAME] = vclass(line, rest)
       if (vc == "PASS" || vc == "FAIL") { hasjudged[FILENAME] = 1; judgedBy[host, FILENAME] = 1 }
       if (match(rest, /measured [0-9]+-thread/)) { nt = substr(rest, RSTART + 9, RLENGTH - 16) }

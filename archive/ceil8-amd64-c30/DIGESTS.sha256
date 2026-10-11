@@ -1,0 +1,11 @@
+# Era ceil8 amd64 campaign, us-east-1, keel 9a5e2f5.
+# Verify with `shasum -c archive/ceil8-amd64-c30/DIGESTS.sha256` from the repo root.
+#
+f905648338fe13f2f8cc9a236f34eb57f76cf1132eec586f8c597b1b3831a9d5  archive/ceil8-amd64-c30/baseline-candidates-9a5e2f5-20261010T205700Z.tsv
+82c8352fc1b0695cd4b550cd1e60fc15706c3e71d18f4724de1972eee73fbe77  archive/ceil8-amd64-c30/bench-gate-p5-9a5e2f5-keel-skx-20261010T205700Z-3.txt
+6b454e03c18a6c2f3c73885a805d6df9e6aad09ae7a82992fe394ff2bb8294c9  archive/ceil8-amd64-c30/bench-gate-p5-9a5e2f5-keel-zen4-20261010T205700Z-2.txt
+aacd23d445d06021214fdfe59731db9acd84bf0b708b00a402b1edbad52e284c  archive/ceil8-amd64-c30/bench-gate-p5-9a5e2f5-keel-zen5-20261010T205700Z-1.txt
+7a2dd6ea8aa685f245ec582ea7879d68057de14e71e8d80f180f30827c5dc0fa  archive/ceil8-amd64-c30/ceil8-amd64-rerun.sh
+20bd0e9e8571bd7c60d637a83f4460b22267d25124f6f1a7595ad10a15e0bdf8  archive/ceil8-amd64-c30/driver.log
+c9ac10661e963994b6fd56fa7d71aacb2b4bd7209a3871a4de7e5404cd20ebbc  archive/ceil8-amd64-c30/gate-p5-amd64-ceil8-c30.log
+550b925e904e120933226a04563ca1e4eefc8c0ff53565f3284614bb3d947978  archive/ceil8-amd64-c30/witness-candidates-9a5e2f5-20261010T205700Z.tsv

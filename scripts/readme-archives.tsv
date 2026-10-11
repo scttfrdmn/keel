@@ -41,3 +41,9 @@ Neoverse-V1	ceil8	119b673	archive/arm64-ceil8-transition/gate-p5-arm64-ceil8-tra
 Neoverse-V2	ceil8	119b673	archive/arm64-ceil8-transition/gate-p5-arm64-ceil8-transition.log	archive/arm64-ceil8-transition/bench-gate-p5-119b673-keel-gvt4-20261005T162530Z-1.txt	canonical
 Neoverse-V1	ceil8	5e769f7	archive/arm64-ceil8-confirm/gate-p5-arm64-ceil8-confirm.log	archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-keel-gvt3-20261007T164442Z-2.txt	canonical
 Neoverse-V2	ceil8	5e769f7	archive/arm64-ceil8-confirm/gate-p5-arm64-ceil8-confirm.log	archive/arm64-ceil8-confirm/bench-gate-p5-5e769f7-keel-gvt4-20261007T164442Z-1.txt	canonical
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	ceil8	9a5e2f5	archive/ceil8-amd64-transition/gate-p5-amd64-ceil8-c10.log	archive/ceil8-amd64-transition/bench-gate-p5-9a5e2f5-keel-skx-20261010T060424Z-3.txt	canonical
+AMD EPYC 9R14	ceil8	9a5e2f5	archive/ceil8-amd64-transition/gate-p5-amd64-ceil8-c10.log	archive/ceil8-amd64-transition/bench-gate-p5-9a5e2f5-keel-zen4-20261010T060424Z-2.txt	canonical
+AMD EPYC 9R45	ceil8	9a5e2f5	archive/ceil8-amd64-transition/gate-p5-amd64-ceil8-c10.log	archive/ceil8-amd64-transition/bench-gate-p5-9a5e2f5-keel-zen5-20261010T060424Z-1.txt	canonical
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	ceil8	9a5e2f5	archive/ceil8-amd64-c30/gate-p5-amd64-ceil8-c30.log	archive/ceil8-amd64-c30/bench-gate-p5-9a5e2f5-keel-skx-20261010T205700Z-3.txt	canonical
+AMD EPYC 9R14	ceil8	9a5e2f5	archive/ceil8-amd64-c30/gate-p5-amd64-ceil8-c30.log	archive/ceil8-amd64-c30/bench-gate-p5-9a5e2f5-keel-zen4-20261010T205700Z-2.txt	canonical
+AMD EPYC 9R45	ceil8	9a5e2f5	archive/ceil8-amd64-c30/gate-p5-amd64-ceil8-c30.log	archive/ceil8-amd64-c30/bench-gate-p5-9a5e2f5-keel-zen5-20261010T205700Z-1.txt	canonical

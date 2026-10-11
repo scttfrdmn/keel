@@ -433,8 +433,15 @@ is 'no (cpu, era) is left with only superseded takes' \
 #      rows left 36h GREEN, because a key with no rows is in neither tally. A count of distinct
 #      canonical keys closes it, and 5 is the published fleet: 3 amd64 at pinned8 plus 2 arm64 at
 #      ceil8. It moves when a host is added or an era regenerates, which is a reviewed act.
-is 'the manifest still covers all 5 published (cpu, era) keys' \
-   "$(awk -F'\t' '!/^#/ && $1!="cpu_model" && NF>=6 && $6=="canonical" {print $1"|"$2}' "$MAN" | sort -u | grep -c .)" '5'
+#
+#      RE-KEYED TO THE PUBLISHED ERA, 2026-10-10. It first asserted a bare count of distinct
+#      canonical keys, which was 5 while ceil8 held arm64 only. The amd64 ceil8 campaign took it
+#      to 8 -- five published keys plus three HISTORICAL pinned8 amd64 keys -- so a total would
+#      conflate "what the README publishes" with "what the manifest remembers", and would drift
+#      upward on every era boundary forever. The published era is the invariant worth holding:
+#      all five hosts in the block must have a canonical row in the era the caption names.
+is 'every host the README publishes has a canonical row in the published era' \
+   "$(awk -F'\t' '!/^#/ && $1!="cpu_model" && NF>=6 && $6=="canonical" && $2=="ceil8" {print $1}' "$MAN" | sort -u | grep -c .)" '5'
 # 36i. And the superseded takes must stay NAMED. Dropping those rows would restore exactly the
 #      ambiguity the manifest closes -- era pinned8 archived two sample sets per host at 6ba6566
 #      differing only in a timestamp, and the wrong one was reached for on 2026-10-09.

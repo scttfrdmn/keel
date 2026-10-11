@@ -352,6 +352,28 @@ While the major version is 0, minor versions may contain breaking changes.
   not reverted (#136, #177).
 
 ### Changed
+- **The README is regenerated whole at era `ceil8` — all 45 rows, 5 hosts, N=2 everywhere**
+  (#165). The two stale arm64 rows that had been reddening criterion 9 move to their measured
+  values: `Neoverse-V2` `Sgemm`/1 **33.81 → 37.33** and `Neoverse-V1` **32.53 → 34.45**, matching
+  the confirmation run's 37.315 / 34.445. Every cell now reads `median of N=2 archives` — uniform
+  N, which is what #165 asked for, where before the arm64 cells were pooled over one era and the
+  amd64 cells over another. `scripts/readme-archives.tsv` gains the six amd64 `ceil8` rows so
+  every published cell resolves to a tracked sample file.
+  - **`readme-numbers.sh`'s parse defect is FIXED, with #165's own prescription** — anchor on the
+    `scaling X / Y` slash. It is the same defect I misattributed to myself yesterday, and this
+    time it arrived on a *canonical* log and blocked the regeneration outright: a NOISE-LIMITED
+    `REPORTED` row prints `scaling 6.967x / 6.077x —` and stops, because rule 19 out-resolved it
+    before bar selection so there is no bar to be "net of". The `net of CI` pattern yielded
+    nothing, `want` demanded four numbers, and the generator refused the **whole log** — so one
+    noise-limited row anywhere in a campaign made the shipping baseline unregenerable. Both
+    numbers are present in the slash form in every verdict shape, which is why that is the anchor
+    rather than a second special case.
+  - **The manifest control was re-keyed to the published era.** It first asserted a bare count of
+    distinct canonical keys — 5, while `ceil8` held arm64 only. The amd64 campaign took that to 8
+    (five published plus three historical `pinned8` amd64 keys), so a total would conflate "what
+    the README publishes" with "what the manifest remembers" and would drift upward at every era
+    boundary. It now asserts that all five published hosts have a canonical row **in the era the
+    caption names**. Driven red by dropping one. **116 ok.**
 - **The L1 criterion's admissibility rule is a SAME-CLAIM BAND, not a width cap, and 47 of the 48
   held rows are landed** (ruled 2026-10-07 on #178; Scott deferred the choice). Rule 19's form
   cannot be copied here: the L1 bar is CI-disjointness with **no margin**, so there is no declared

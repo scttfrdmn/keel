@@ -1,0 +1,4 @@
+# candidate rows proposed by gate-p5; landing them is a reviewed commit act (#6)
+AMD EPYC 9R45	ceil8	9a5e2f5	2026-10-10	keel-zen5	build/bench-gate-p5-9a5e2f5-keel-zen5-20261010T205700Z-1.txt
+AMD EPYC 9R14	ceil8	9a5e2f5	2026-10-10	keel-zen4	build/bench-gate-p5-9a5e2f5-keel-zen4-20261010T205700Z-2.txt
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	ceil8	9a5e2f5	2026-10-10	keel-skx	build/bench-gate-p5-9a5e2f5-keel-skx-20261010T205700Z-3.txt
