@@ -193,6 +193,23 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- **`#179`: L1 small-size rows are not reproducible enough to be references, and the criterion
+  has no state for that.** Filed after searching four candidate issues rather than assuming it was
+  new — `#60` is memory-resident sizes and a *treatment* A/B, `#15` is one host/one routine,
+  `#147` is *within*-run bimodality, `#14` is closed and about `benchtime`. Measured across era
+  `ceil8`'s three amd64 archives: the count=10/count=30 pair fails the #178 same-claim band on
+  **9 of 72** rows (to +66.6%), and a true **null A/B** — same binary, count=30 both, no
+  treatment — still fails on **5 of 72** (to +27.2%), the same `Isamax` n=256/4096 and n=256
+  reduction family, against a median spread of **0.23%**. The consequence needing a ruling: the
+  L1 bar is CI-disjointness with no margin and no rule-19 sibling, so a refused row stays
+  unlanded, and once a witness lands it resolves `owing` → **FAIL** — a permanent red for
+  something that is not a regression. That is why `d59f8b2` holds the 3 amd64 witness rows; the
+  issue lists four candidate states and picks none.
+- **`#60` gets the repeat run it asked for**, from the same pair. Its own rows are **stable** under
+  a null A/B — `Sdot/n=65536` spreads 0.88–1.13%, `Sdot/n=1048576` 0.04–2.54%, widest at those
+  sizes for any routine 3.60% — so its **4–9.5% treatment deltas clear the noise floor** and the
+  anomaly survives in the direction of being real. The sign disagreement across hosts, which is
+  the interesting part, is untouched.
 - **The 12 amd64 `share/*` baselines land for era `ceil8`; the 72 L1 rows and the 3 witness rows
   are HELD** (#165). Median-of-2 over the era's **two count=30** archives, every row passing the
   #178 same-claim band — widest spread **2.56%**. All three hosts flip `new` → **`registered`**,
