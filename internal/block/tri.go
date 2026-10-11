@@ -218,6 +218,23 @@ func Symm(kn kern.Kernel, left, lower bool, m, n int, alpha float32, a []float32
 // much of B is solved against one diagonal block of A before the next rank update.
 // A var for the same reason KC/MC/NC are — it trades the unblocked solve's scalar
 // work against the rank update's blocked work, and that balance is a measurement.
+//
+// MEASURED 2026-10-11 (#37) AND DELIBERATELY NOT CHANGED. The sweep — 7 values x
+// 2 sides x n in {2048, 4096}, pass-major with the MB order reshuffled every pass
+// and per-pass load recorded — found NO value better than 64 in all four cells,
+// so the pre-registered rule left the global alone. The per-cell optima, median
+// vs 64, pass-2 excluded as contaminated:
+//
+//	n=2048 side=L: MB=96  -2.6%      n=2048 side=R: MB=48  -14.7%
+//	n=4096 side=L: MB=256 -5.6%      n=4096 side=R: MB=48   -6.5%
+//
+// THE TWO SIDES PULL IN OPPOSITE DIRECTIONS and that is the finding, not the
+// winner: side=R wants 48 at both n while side=L pays +6.8% there and wants 96
+// then 256. MB=48 is the best single compromise (mean -3.7%, better in 3 of 4
+// cells) and still fails the dominance test, which is why it did not land. A
+// correct fix is a per-side block size — trsmLeft and trsmRight are already
+// separate functions — but the values for it need the judged fleet, since this is
+// one 4-lane NEON core and MB is shared by every backend.
 var MB = 64
 
 // Axpy is the unit-stride y += alpha*x that the diagonal solves need, threaded in
@@ -263,9 +280,21 @@ type ScalDiv func(alpha float32, x []float32)
 // here. All of the flops except the diagonal blocks' O(m·MB·n) go through the
 // audited kernel.
 //
-// The unblocked solves are scalar, and at MB = 64 they are a few percent of the
-// work; issue #37 carries the measurement and the option of an L1-backed inner
-// loop. What they must not do is get clever: they divide rather than multiply by a
+// "The unblocked solves are scalar, and at MB = 64 they are a few percent of the
+// work" is what this said until 2026-10-11, estimated from the loop structure and
+// never measured. BOTH HALVES WERE WRONG. solveLeft is no longer scalar (#37: its
+// length-n axpy and its divide both vectorized), and the solves were never a few
+// percent of the TIME: at MB = 64 they are 12.0% of Trsm on the left and 53.2% on
+// the right at n=2048 (7.2% / 38.4% at n=4096), against ~3% of the flops. The
+// confusion was work for time, which is the whole reason #37 asked for a
+// measurement first.
+//
+// WHAT THE MEASUREMENT NOW POINTS AT: solveRight costs 7.5-7.7x solveLeft at
+// IDENTICAL flop counts on identical partitions. Its vectorizable axis is the
+// short one — the left side's inner loop runs the full width of n, the right
+// side's runs at most d and is a reduction — so it is the dominant remaining cost
+// in Strsm and a bigger lever than MB. That needs a blocking change, not another
+// op. What these solves must not do is get clever: they divide rather than multiply by a
 // reciprocal (a reciprocal changes the answer in the last bit and disagrees with
 // the oracle for no gain), and they do not skip a zero multiplier (BLAS requires
 // 0·Inf to propagate NaN, and a "fast path" for a zero in A would silently return

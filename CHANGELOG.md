@@ -9,6 +9,39 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **`MB` is measured and deliberately NOT changed: no value beats 64 in all four cells, and the two
+  sides pull in opposite directions** (#37, 2026-10-11). `var MB = 64` had never been tuned, which
+  #37 recorded as a debt. Swept 7 values x 2 sides x n in {2048, 4096}. Per-cell optima, median vs
+  64, with the contaminated pass excluded:
+  `n=2048 L: MB=96 −2.6%` · `n=2048 R: MB=48 −14.7%` · `n=4096 L: MB=256 −5.6%` · `n=4096 R: MB=48 −6.5%`.
+  **MB=48 is the best single compromise** (mean −3.7%, better in 3 of 4 cells) and still fails the
+  pre-registered dominance test — it costs **+6.8%** on `side=L` at n=4096 — so the global stayed
+  put. A global constant is one choice and must win everywhere it applies.
+  - **The finding is the spread, not the winner.** `side=R` wants 48 at both sizes while `side=L`
+    pays for it and wants 96 then 256. The right fix is a per-side block size — `trsmLeft` and
+    `trsmRight` are already separate functions — but the values need the judged fleet: this is one
+    4-lane NEON core and `MB` is shared by every backend.
+  - **And it points at the next lever, which is bigger than `MB`.** `solveRight` costs **7.5–7.7x**
+    `solveLeft` at *identical* flop counts on identical partitions, because its vectorizable axis is
+    the short one: the left side's inner loop runs the full width of `n`, the right side's runs at
+    most `d` and is a reduction. At MB=64 the diagonal solves are **53.2%** of `Trsm` on the right
+    against 12.0% on the left (38.4% / 7.2% at n=4096). Closing that needs a blocking change, not
+    another op.
+  - **Two in-source claims were measured false and are corrected rather than deleted.** `tri.go`
+    said the unblocked solves "are scalar, and at MB = 64 they are a few percent of the work" —
+    estimated from loop structure, never measured. `solveLeft` is no longer scalar, and the solves
+    were never a few percent of the *time*: the sentence compared work against time, which is
+    exactly why #37 asked for a measurement before a decision.
+  - **A first sweep was discarded, not analyzed**, for two independent reasons either of which would
+    have produced a confident wrong answer. `-count=6` is **benchmark-major**, so all six samples of
+    one `MB` sit in one contiguous window and host drift maps straight onto `MB` — with an ascending
+    grid, large `MB` would have been penalized systematically. And macOS fired `mediaanalysisd`
+    (103%) and `duetexpertd` (96%) mid-run, taking load from 3.81 to **39.60**. Re-run **pass-major**
+    with the `MB` order **reshuffled every pass**, 8 passes, a load gate before each, and the load
+    **recorded beside every sample** so a bad pass could be excluded afterwards rather than silently
+    averaged in. Pass 2 ran at load 12.5–18.5 and was excluded; **every conclusion above holds with
+    it included**, which is why the exclusion is reported rather than relied on.
+
 - **`Strsm`'s diagonal divide is vectorized too, and it is NEUTRAL on 4-lane NEON — the apparent
   7% regression is `#61`'s alignment effect in code I did not touch** (#37, 2026-10-11). The second
   length-`n` loop in `solveLeft` (`row[j] /= dv`) now goes through a new `l1.ScalDiv`. Unlike the
