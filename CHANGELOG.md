@@ -214,6 +214,20 @@ While the major version is 0, minor versions may contain breaking changes.
   per-host loop both key sites sit in (#167, #136).
 
 ### Added
+- **Re-basing the published cells to a pooled benchstat estimator is MEASURED and safe, and
+  #165's stated bound is slightly wrong** (2026-10-11). Before changing the generator I tested
+  that issue's own premise — *"re-basing shifts every published median <1.1% (max 1.093%)"* —
+  against era `ceil8`'s manifest-pooled archives for all 40 rate rows. **Max shift 1.133%**
+  (`skx Sgemm`/8, 445.7 → 440.65), so the bound is exceeded, slightly: the 1.093% figure came
+  from the `pinned8` spike and does not carry to this era. Second-worst −0.799%; everything else
+  is under 0.4%. **So re-basing is safe to do** — it is a rigour change, not a numbers change.
+  - **And 4 of 40 published points fall OUTSIDE their own pooled CI**, which is the concrete
+    reason the two halves of #165 cannot be split: bolting a pooled interval onto a
+    median-of-run-medians would publish a point outside the interval printed beside it. The
+    median and the CI have to be re-based together, from one estimator, which is what #165 says
+    and what this measurement now licenses.
+  - The per-cell table the generator change would publish is kept at `build/rebase-ceil8.tsv`
+    (gitignored; regenerable from the manifest in one pass).
 - **`#179`: L1 small-size rows are not reproducible enough to be references, and the criterion
   has no state for that.** Filed after searching four candidate issues rather than assuming it was
   new — `#60` is memory-resident sizes and a *treatment* A/B, `#15` is one host/one routine,
