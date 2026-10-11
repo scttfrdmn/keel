@@ -99,6 +99,23 @@ func ScalarMul(x, y Block) Block {
 	return r
 }
 
+// ScalarDiv returns x/y lanewise. Plain Go division, so IEEE 754 on a zero
+// divisor comes for free and the vector twins are held to EQUALITY rather than
+// to a tolerance: VDIVPS and VFDIV are per-lane IEEE divides, so unlike a
+// reduction or an FMA there is no reassociation and no fusion for them to
+// differ by. No new test asserts that -- TestDiffBinary already holds every
+// backend bit-equal to this spec via sameBlock over every ordered pair of
+// blockPool, whose edgeValues carry 0, -0, +/-Inf, NaN and denormals, so the
+// zero-divisor claim above is exercised rather than merely stated. Writing a
+// second test for it would have added a name, not a check.
+func ScalarDiv(x, y Block) Block {
+	var r Block
+	for i := range r {
+		r[i] = x[i] / y[i]
+	}
+	return r
+}
+
 // ScalarMulAdd returns x*y+z lanewise with a *single* rounding — true fused
 // multiply-add semantics, matching VFMADD*PS.
 //

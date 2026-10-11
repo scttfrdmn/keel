@@ -34,6 +34,7 @@ type backend struct {
 	Add       func(x, y Block) Block
 	Sub       func(x, y Block) Block
 	Mul       func(x, y Block) Block
+	Div       func(x, y Block) Block
 	MulAdd    func(x, y, z Block) Block
 	Max       func(x, y Block) Block
 	Min       func(x, y Block) Block
@@ -55,6 +56,7 @@ var backends = []backend{{
 	Add:       ScalarAdd,
 	Sub:       ScalarSub,
 	Mul:       ScalarMul,
+	Div:       ScalarDiv,
 	MulAdd:    ScalarMulAdd,
 	Max:       ScalarMax,
 	Min:       ScalarMin,
@@ -236,6 +238,7 @@ func TestDiffBinary(t *testing.T) {
 		{"Add", func(b backend) func(x, y Block) Block { return b.Add }},
 		{"Sub", func(b backend) func(x, y Block) Block { return b.Sub }},
 		{"Mul", func(b backend) func(x, y Block) Block { return b.Mul }},
+		{"Div", func(b backend) func(x, y Block) Block { return b.Div }},
 		{"Max", func(b backend) func(x, y Block) Block { return b.Max }},
 		{"Min", func(b backend) func(x, y Block) Block { return b.Min }},
 	}

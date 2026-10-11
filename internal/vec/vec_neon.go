@@ -63,6 +63,12 @@ func Sub128(x, y F32x4) F32x4 { return x.Sub(y) }
 // Mul128 returns x*y lanewise.
 func Mul128(x, y F32x4) F32x4 { return x.Mul(y) }
 
+// Div128 returns x/y lanewise. Asm: VFDIV (NEON). Division by zero follows
+// IEEE 754 and does not panic, which is what Strsm needs: a zero on the
+// diagonal of a singular A must produce Inf/NaN, not a trap and not a
+// short-circuit (#37, and block.Trsm's note on reciprocals).
+func Div128(x, y F32x4) F32x4 { return x.Div(y) }
+
 // FMA128 returns x*y+z lanewise with a single rounding — VFMLA, true fused
 // multiply-add, matching ScalarMulAdd's math.FMA semantics.
 func FMA128(x, y, z F32x4) F32x4 { return x.MulAdd(y, z) }
@@ -190,6 +196,7 @@ func neonBinop(x, y Block, op func(a, b F32x4) F32x4) Block {
 func NEONAdd(x, y Block) Block { return neonBinop(x, y, Add128) }
 func NEONSub(x, y Block) Block { return neonBinop(x, y, Sub128) }
 func NEONMul(x, y Block) Block { return neonBinop(x, y, Mul128) }
+func NEONDiv(x, y Block) Block { return neonBinop(x, y, Div128) }
 func NEONMax(x, y Block) Block { return neonBinop(x, y, Max128) }
 func NEONMin(x, y Block) Block { return neonBinop(x, y, Min128) }
 

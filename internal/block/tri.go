@@ -232,6 +232,14 @@ var MB = 64
 // path while its name claimed the vector one (#37).
 type Axpy func(alpha float32, x, y []float32)
 
+// ScalDiv is the unit-stride x /= alpha the diagonal solves need for the
+// division by the diagonal element. Threaded in beside Axpy, and separate from
+// it because the two ops are separate in l1 for a numerics reason: this one must
+// DIVIDE, not scale by a reciprocal (see Trsm's doc comment, and
+// l1.TestScalDivIsNotAReciprocalMultiply, which drives that distinction on a
+// witness it re-derives each run).
+type ScalDiv func(alpha float32, x []float32)
+
 // Trsm solves op(A)·X = alpha·B (left) or X·op(A) = alpha·B (right) for X,
 // overwriting B, where A is triangular and stored in the triangle named by lower.
 // A is m×m in the left case and n×n in the right one. unit means A's stored
@@ -266,11 +274,11 @@ type Axpy func(alpha float32, x, y []float32)
 // alpha == 0 sets B to zero and returns without reading A at all, matching
 // reference STRSM. A is otherwise required to be nonsingular in its referenced
 // triangle; keel does not check that, and neither does reference BLAS.
-func Trsm(kn kern.Kernel, ax Axpy, left, lower, trans, unit bool, m, n int, alpha float32,
+func Trsm(kn kern.Kernel, ax Axpy, sd ScalDiv, left, lower, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
 
-	if ax == nil {
-		panic("block.Trsm: nil Axpy (a registration bug, not a fallback)")
+	if ax == nil || sd == nil {
+		panic("block.Trsm: nil Axpy or ScalDiv (a registration bug, not a fallback)")
 	}
 	if m == 0 || n == 0 {
 		return
@@ -289,12 +297,12 @@ func Trsm(kn kern.Kernel, ax Axpy, left, lower, trans, unit bool, m, n int, alph
 	lowerEff := lower != trans
 	if left {
 		strips(n, func(j0, jn int) {
-			trsmLeft(kn, ax, lowerEff, trans, unit, m, jn, alpha, a, lda, b[j0:], ldb)
+			trsmLeft(kn, ax, sd, lowerEff, trans, unit, m, jn, alpha, a, lda, b[j0:], ldb)
 		})
 		return
 	}
 	strips(m, func(i0, im int) {
-		trsmRight(kn, ax, lowerEff, trans, unit, im, n, alpha, a, lda, b[i0*ldb:], ldb)
+		trsmRight(kn, ax, sd, lowerEff, trans, unit, im, n, alpha, a, lda, b[i0*ldb:], ldb)
 	})
 }
 
@@ -386,7 +394,7 @@ func TrsmWork(left bool, m, n int) (rankUpdate, diagSolve float64) {
 
 // trsmLeft solves op(A)·X = alpha·B, forward over row blocks when op(A) is lower
 // triangular and backward when it is upper.
-func trsmLeft(kn kern.Kernel, ax Axpy, lowerEff, trans, unit bool, m, n int, alpha float32,
+func trsmLeft(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
 
 	nb := (m + MB - 1) / MB
@@ -422,14 +430,14 @@ func trsmLeft(kn kern.Kernel, ax Axpy, lowerEff, trans, unit bool, m, n int, alp
 			gemm(kn, trans, false, mb, n, kk, -1, asl, lda, b[p0*ldb:], ldb,
 				alpha, b[i0*ldb:], ldb, triMask{}, symOperand{}, noSplit)
 		}
-		solveLeft(ax, lowerEff, trans, unit, mb, n, a[i0*lda+i0:], lda, b[i0*ldb:], ldb)
+		solveLeft(ax, sd, lowerEff, trans, unit, mb, n, a[i0*lda+i0:], lda, b[i0*ldb:], ldb)
 	}
 }
 
 // trsmRight solves X·op(A) = alpha·B. The direction is the mirror of the left
 // case: column block j of X depends on the blocks before it when op(A) is upper
 // and on the blocks after it when op(A) is lower.
-func trsmRight(kn kern.Kernel, ax Axpy, lowerEff, trans, unit bool, m, n int, alpha float32,
+func trsmRight(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
 
 	nblk := (n + MB - 1) / MB
@@ -467,7 +475,7 @@ func trsmRight(kn kern.Kernel, ax Axpy, lowerEff, trans, unit bool, m, n int, al
 // The row-at-a-time shape is deliberate: B's rows are contiguous, so the inner
 // loop is a unit-stride axpy over n and the substitution's serial dependency is
 // paid once per row of the block rather than once per element.
-func solveLeft(ax Axpy, lowerEff, trans, unit bool, d, n int, a []float32, lda int, b []float32, ldb int) {
+func solveLeft(ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, d, n int, a []float32, lda int, b []float32, ldb int) {
 	for step := 0; step < d; step++ {
 		i := step
 		if !lowerEff {
@@ -502,10 +510,15 @@ func solveLeft(ax Axpy, lowerEff, trans, unit bool, d, n int, a []float32, lda i
 		if !unit {
 			// Divide, do not scale by a reciprocal: see Trsm's doc comment. The
 			// diagonal is a[i][i] whether or not op transposes.
-			dv := a[i*lda+i]
-			for j := range row {
-				row[j] /= dv
-			}
+			//
+			// VECTORIZED (#37, 2026-10-11) and this one IS bit-identical to the
+			// scalar loop it replaces, unlike the axpy above: VDIVPS and VFDIV
+			// are per-lane IEEE divides, so there is nothing to reassociate and
+			// nothing to fuse. l1's ScalDiv is held to plain Go division with no
+			// tolerance for exactly that reason, which is why vectorizing a
+			// divide does not re-open the reciprocal question this comment has
+			// guarded since P4.
+			sd(a[i*lda+i], row)
 		}
 	}
 }

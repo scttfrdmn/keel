@@ -393,7 +393,7 @@ func BenchmarkTrsmMB(b *testing.B) {
 							b.StopTimer()
 							copy(bm, b0)
 							b.StartTimer()
-							Trsm(kn, l1.Backends()[0].Axpy, side.left, true, false, false, m, n, 1, a, dim, bm, dim)
+							Trsm(kn, l1.Backends()[0].Axpy, l1.Backends()[0].ScalDiv, side.left, true, false, false, m, n, 1, a, dim, bm, dim)
 						}
 						trsmMetrics(b, total, solve)
 					})
@@ -458,7 +458,7 @@ func trsmSolvesOnly(left bool, m, n int, a []float32, lda int, bmat []float32, l
 	if left {
 		strips(n, func(j0, jn int) {
 			for _, i0 := range trsmSolveOrder(true, lowerEff, m) {
-				solveLeft(l1.Backends()[0].Axpy, lowerEff, false, false, min(MB, m-i0), jn,
+				solveLeft(l1.Backends()[0].Axpy, l1.Backends()[0].ScalDiv, lowerEff, false, false, min(MB, m-i0), jn,
 					a[i0*lda+i0:], lda, bmat[j0+i0*ldb:], ldb)
 			}
 		})

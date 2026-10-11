@@ -42,6 +42,11 @@ type Kernels struct {
 	Axpy func(alpha float32, x, y []float32)
 	// Scal computes x *= alpha elementwise.
 	Scal func(alpha float32, x []float32)
+	// ScalDiv computes x /= alpha elementwise. Deliberately NOT Scal(1/alpha):
+	// reference BLAS divides, a reciprocal changes the last bit, and Trsm's
+	// diagonal is where that shows up (#37). It is a separate op rather than a
+	// flag for the same reason -- a mode flag means nothing was lifted.
+	ScalDiv func(alpha float32, x []float32)
 	// Asum returns the sum of magnitudes.
 	Asum func(x []float32) float32
 	// SumSq returns the sum of squares, used by Snrm2. It may overflow to +Inf
@@ -65,7 +70,42 @@ const (
 // subtly wrong, and a dispatch table that depends on it is a bug waiting for
 // someone to rename a file.
 func Backends() []Kernels {
-	return append(vectorBackends(), ScalarKernels)
+	bs := append(vectorBackends(), ScalarKernels)
+	for _, b := range bs {
+		if miss := b.missing(); miss != "" {
+			// Kernels has said "a nil op is a registration bug, not a fallback"
+			// since P1, and until 2026-10-11 nothing enforced it -- adding the
+			// ScalDiv field left both amd64 backends nil, the tree BUILT, and the
+			// defect would have surfaced as a nil-deref inside Strsm on an
+			// AVX-512 host and nowhere else. A documented invariant with no
+			// checker is a comment.
+			panic("l1: backend " + b.Name + " registered with nil " + miss)
+		}
+	}
+	return bs
+}
+
+// missing names the first unset mandatory op, or "" when the set is complete.
+// Named fields rather than reflection so that adding a field to Kernels without
+// adding it here is a compile-time hole a reader can see, not a silent pass.
+func (k Kernels) missing() string {
+	switch {
+	case k.Dot == nil:
+		return "Dot"
+	case k.Axpy == nil:
+		return "Axpy"
+	case k.Scal == nil:
+		return "Scal"
+	case k.ScalDiv == nil:
+		return "ScalDiv"
+	case k.Asum == nil:
+		return "Asum"
+	case k.SumSq == nil:
+		return "SumSq"
+	case k.Name == "":
+		return "Name"
+	}
+	return ""
 }
 
 // Names returns Backends()' names, for the coverage markers the gate parses.
@@ -81,12 +121,13 @@ func Names() []string {
 // ScalarKernels is the always-available backend and the reference the others
 // are held against.
 var ScalarKernels = Kernels{
-	Name:  Scalar,
-	Dot:   scalarDot,
-	Axpy:  scalarAxpy,
-	Scal:  scalarScal,
-	Asum:  scalarAsum,
-	SumSq: scalarSumSq,
+	Name:    Scalar,
+	Dot:     scalarDot,
+	Axpy:    scalarAxpy,
+	Scal:    scalarScal,
+	ScalDiv: scalarScalDiv,
+	Asum:    scalarAsum,
+	SumSq:   scalarSumSq,
 }
 
 // The scalar reductions below use four independent accumulators.
@@ -127,6 +168,12 @@ func scalarAxpy(alpha float32, x, y []float32) {
 func scalarScal(alpha float32, x []float32) {
 	for i := range x {
 		x[i] *= alpha
+	}
+}
+
+func scalarScalDiv(alpha float32, x []float32) {
+	for i := range x {
+		x[i] /= alpha
 	}
 }
 

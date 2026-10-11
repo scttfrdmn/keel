@@ -49,6 +49,9 @@ func Sub256(x, y F32x8) F32x8 { return x.Sub(y) }
 // Mul256 returns x*y lanewise.
 func Mul256(x, y F32x8) F32x8 { return x.Mul(y) }
 
+// Div256 returns x/y lanewise. Asm: VDIVPS (AVX). See Div128.
+func Div256(x, y F32x8) F32x8 { return x.Div(y) }
+
 // FMA256 returns x*y+z lanewise as one fused operation. Requires the FMA3
 // CPU feature, which is why HasAVX2 checks FMA() as well as AVX2():
 // archsimd documents Float32x8.MulAdd as "CPU Feature: FMA", separate from
@@ -148,6 +151,7 @@ func AVX2Zero() Block               { return blockOf256(Zero256(), Zero256()) }
 func AVX2Add(x, y Block) Block { return zip256(x, y, Add256) }
 func AVX2Sub(x, y Block) Block { return zip256(x, y, Sub256) }
 func AVX2Mul(x, y Block) Block { return zip256(x, y, Mul256) }
+func AVX2Div(x, y Block) Block { return zip256(x, y, Div256) }
 func AVX2Max(x, y Block) Block { return zip256(x, y, Max256) }
 func AVX2Min(x, y Block) Block { return zip256(x, y, Min256) }
 

@@ -224,6 +224,26 @@ func avx512Scal(alpha float32, x []float32) {
 	}
 }
 
+// avx512ScalDiv is avx512Scal with VDIVPS in place of VMULPS -- same loop
+// shape, same tail, same hand-hoisted broadcast, and the only difference is
+// the op. It must stay a divide: see l1.Kernels.ScalDiv.
+func avx512ScalDiv(alpha float32, x []float32) {
+	va := vec.Broadcast512(alpha)
+	for len(x) > lanes512 {
+		xs := x[0:16]
+		vec.Store512(xs, vec.Div512(vec.Load512(xs), va))
+		x = x[lanes512:]
+	}
+	if len(x) == lanes512 {
+		xs := x[0:16]
+		vec.Store512(xs, vec.Div512(vec.Load512(xs), va))
+		return
+	}
+	if len(x) > 0 {
+		vec.StorePart512(x, vec.Div512(vec.LoadPart512(x), va))
+	}
+}
+
 func avx512Asum(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero512(), vec.Zero512(), vec.Zero512(), vec.Zero512()
 	// The sign mask is loop-invariant and the compiler will not lift it: LICM
@@ -357,6 +377,24 @@ func avx2Scal(alpha float32, x []float32) {
 	}
 }
 
+// avx2ScalDiv: see avx512ScalDiv.
+func avx2ScalDiv(alpha float32, x []float32) {
+	va := vec.Broadcast256(alpha)
+	for len(x) > lanes256 {
+		xs := x[0:8]
+		vec.Store256(xs, vec.Div256(vec.Load256(xs), va))
+		x = x[lanes256:]
+	}
+	if len(x) == lanes256 {
+		xs := x[0:8]
+		vec.Store256(xs, vec.Div256(vec.Load256(xs), va))
+		return
+	}
+	if len(x) > 0 {
+		vec.StorePart256(x, vec.Div256(vec.LoadPart256(x), va))
+	}
+}
+
 func avx2Asum(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero256(), vec.Zero256(), vec.Zero256(), vec.Zero256()
 	m := vec.AbsMask256() // hoisted by hand; see avx512Asum
@@ -430,13 +468,13 @@ func vectorBackends() []Kernels {
 	if vec.HasAVX512() {
 		out = append(out, Kernels{
 			Name: AVX512, Dot: avx512Dot, Axpy: avx512Axpy,
-			Scal: avx512Scal, Asum: avx512Asum, SumSq: avx512SumSq,
+			Scal: avx512Scal, ScalDiv: avx512ScalDiv, Asum: avx512Asum, SumSq: avx512SumSq,
 		})
 	}
 	if vec.HasAVX2() {
 		out = append(out, Kernels{
 			Name: AVX2, Dot: avx2Dot, Axpy: avx2Axpy,
-			Scal: avx2Scal, Asum: avx2Asum, SumSq: avx2SumSq,
+			Scal: avx2Scal, ScalDiv: avx2ScalDiv, Asum: avx2Asum, SumSq: avx2SumSq,
 		})
 	}
 	return out

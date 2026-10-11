@@ -118,6 +118,27 @@ func neonScal(alpha float32, x []float32) {
 	}
 }
 
+// neonScalDiv is neonScal with VFDIV in place of VFMUL. The divisor is
+// broadcast once above the loop, exactly as neonScal hoists its multiplier --
+// so this is the same loop shape and the same tail handling, and the ONLY
+// difference is the op. It must stay a divide: see l1.Kernels.ScalDiv.
+func neonScalDiv(alpha float32, x []float32) {
+	va := vec.Broadcast128(alpha) // hand-hoisted; see neonAxpy
+	for len(x) > lanes128 {
+		xs := x[0:4]
+		vec.Store128(xs, vec.Div128(vec.Load128(xs), va))
+		x = x[lanes128:]
+	}
+	if len(x) == lanes128 {
+		xs := x[0:4]
+		vec.Store128(xs, vec.Div128(vec.Load128(xs), va))
+		return
+	}
+	if len(x) > 0 {
+		vec.StorePart128(x, vec.Div128(vec.LoadPart128(x), va))
+	}
+}
+
 func neonAsum(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero128(), vec.Zero128(), vec.Zero128(), vec.Zero128()
 	// No hoisted mask: vec.Abs128 is a single VFABS, so unlike avx512Asum there is
@@ -192,6 +213,6 @@ func vectorBackends() []Kernels {
 	}
 	return []Kernels{{
 		Name: NEON, Dot: neonDot, Axpy: neonAxpy,
-		Scal: neonScal, Asum: neonAsum, SumSq: neonSumSq,
+		Scal: neonScal, ScalDiv: neonScalDiv, Asum: neonAsum, SumSq: neonSumSq,
 	}}
 }

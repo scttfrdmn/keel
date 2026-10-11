@@ -253,7 +253,7 @@ func TestTrsmSolveReplay(t *testing.T) {
 						}
 						a := blockDiagTri(d, mb)
 						want, got := seq(s.m*s.n, 7), seq(s.m*s.n, 7)
-						Trsm(kn, l1.Backends()[0].Axpy, side.left, true, false, false, s.m, s.n, 1, a, d, want, s.n)
+						Trsm(kn, l1.Backends()[0].Axpy, l1.Backends()[0].ScalDiv, side.left, true, false, false, s.m, s.n, 1, a, d, want, s.n)
 						trsmSolvesOnly(side.left, s.m, s.n, a, d, got, s.n)
 						for i := range want {
 							if want[i] != got[i] {

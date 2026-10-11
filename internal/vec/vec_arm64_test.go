@@ -24,6 +24,7 @@ func init() {
 			Add:       NEONAdd,
 			Sub:       NEONSub,
 			Mul:       NEONMul,
+			Div:       NEONDiv,
 			MulAdd:    NEONMulAdd,
 			Max:       NEONMax,
 			Min:       NEONMin,

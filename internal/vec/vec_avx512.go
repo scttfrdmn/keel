@@ -64,6 +64,10 @@ func Sub512(x, y F32x16) F32x16 { return x.Sub(y) }
 // Mul512 returns x*y lanewise.
 func Mul512(x, y F32x16) F32x16 { return x.Mul(y) }
 
+// Div512 returns x/y lanewise. Asm: VDIVPS (AVX512). See Div128 on why the
+// IEEE behaviour on a zero divisor is load-bearing rather than incidental.
+func Div512(x, y F32x16) F32x16 { return x.Div(y) }
+
 // FMA512 returns x*y+z lanewise as one fused operation.
 //
 // This is the most load-bearing wrapper in keel: the whole performance thesis
@@ -187,6 +191,7 @@ func AVX512Zero() Block                    { return blockOf512(Zero512()) }
 func AVX512Add(x, y Block) Block           { return blockOf512(Add512(load512(x), load512(y))) }
 func AVX512Sub(x, y Block) Block           { return blockOf512(Sub512(load512(x), load512(y))) }
 func AVX512Mul(x, y Block) Block           { return blockOf512(Mul512(load512(x), load512(y))) }
+func AVX512Div(x, y Block) Block           { return blockOf512(Div512(load512(x), load512(y))) }
 func AVX512Max(x, y Block) Block           { return blockOf512(Max512(load512(x), load512(y))) }
 func AVX512Min(x, y Block) Block           { return blockOf512(Min512(load512(x), load512(y))) }
 func AVX512Abs(x Block) Block              { return blockOf512(Abs512(load512(x))) }

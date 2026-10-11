@@ -9,6 +9,52 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **`Strsm`'s diagonal divide is vectorized too, and it is NEUTRAL on 4-lane NEON — the apparent
+  7% regression is `#61`'s alignment effect in code I did not touch** (#37, 2026-10-11). The second
+  length-`n` loop in `solveLeft` (`row[j] /= dv`) now goes through a new `l1.ScalDiv`. Unlike the
+  axpy this one **is bit-identical** to the scalar loop: `VDIVPS` and `VFDIV` are per-lane IEEE
+  divides, so there is nothing to reassociate and nothing to fuse, and `ScalDiv` is held to plain
+  Go division with **no tolerance**.
+  - **Decision pre-registered before the result**, written after discarding a contaminated first
+    reading and keyed to the `side=L` solve-only delta. The rule is quoted verbatim in this
+    commit's message rather than cited as a path, because the draft lived under gitignored
+    `build/` and a citation a reader cannot follow is worse than none. It came back
+    `~` (p=0.394, median −0.9%), i.e. neutral, so the call site stays on the stated grounds: it
+    cannot cost accuracy, and the cross-host model puts the lever ~2.3x larger on the 16-lane
+    AVX-512 hosts, which this host cannot speak to.
+  - **The `full` arm read +7.25% (p=0.026), and it is not a treatment effect.** Decomposing medians:
+    the diagonal solve — the only code that differs — moved **−0.9%**, while the rank update, whose
+    source is *byte-identical* in both binaries, moved **+8.4%**. `nm` on the two binaries says why:
+    of the hot symbols, exactly one changed alignment — `block.gemm.func1`, a closure in the
+    rank-update path, from **16 to 32 mod 64**. That is `#61` (function-entry alignment, uncontrolled
+    in keel), and it is a **second witness** for it on **arm64**, where `#61`'s evidence was Zen 5.
+    One witness, so stated as the leading hypothesis with its direct evidence, not as proof;
+    i-cache pressure from the larger binary and residual host drift are not excluded.
+  - **A measurement I discarded rather than published.** The first A/B of this change read +24% on
+    the solve and +28% overall. Its own shape refuted it — +1.0ms inside the diagonal solve against
+    +8.8ms overall, from a change touching nothing else — and the host was at load average **19.78**
+    with my own `go test ./...` processes at 170/109/62% CPU. Re-run as two sha256-distinct
+    `-trimpath` binaries, alternated with the order swapped each round, gated on load1 < 4.0.
+  - **`l1.Kernels` has said "a nil op is a registration bug, not a fallback" since P1 and nothing
+    enforced it.** Adding the `ScalDiv` field left **both amd64 backends nil and the tree built
+    clean**; it would have surfaced as a nil-deref inside `Strsm` on an AVX-512 host and nowhere
+    else, because no other caller uses the op. `Backends()` now panics on an incomplete set via a
+    `missing()` predicate with named fields (not reflection, so a future field added to `Kernels`
+    without a case here is a hole a reader can see). Both are tested separately — the predicate
+    against each field in turn, and the live registrations on their own, because a correct predicate
+    nobody wired reads the same as no predicate.
+  - New shim ops, names copied from `$(go env GOROOT)/src/simd/archsimd/ops_{arm64,amd64}.go` and
+    not from memory: `Div128` (`VFDIV`), `Div256`/`Div512` (`VDIVPS`), with `ScalarDiv` as the twin.
+    `TestDiffBinary` holds every backend **bit-equal** to the scalar spec over every ordered pair of
+    `blockPool`, whose edge values carry 0, −0, ±Inf, NaN and denormals — so "division by zero
+    follows IEEE 754" is exercised rather than quoted. A comment here first promised a *new* test
+    for that; the existing one already asserted it, so the comment was corrected instead of adding
+    a name that was not a check.
+  - `TestScalDivIsNotAReciprocalMultiply` re-derives its own witness each run rather than hardcoding
+    one: 5/49 = 0.10204082 but 5x(1/49) = 0.10204081, so a backend that quietly scaled by a
+    reciprocal is caught by a last-bit difference every tolerance-based check would pass. Five
+    mutations driven red, including a tail that scales by a reciprocal while the body divides.
+
 - **`Strsm`'s left-side diagonal solve is vectorized: 1.90x on the solve, +11.1% on the whole
   routine** (#37, 2026-10-11, measured). `solveLeft`'s inner loop runs the full width of **n**, not
   the width of the diagonal block — it is the routine's long unit-stride loop, Go does not
