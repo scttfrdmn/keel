@@ -1,0 +1,11 @@
+# Strsm refresh, judged arm64 run 2 of 2, rev 5948dda, era ceil8, 2026-10-12.
+# 51 PASS / 4 FAIL / 0 UNMEASURED / 0 BASELINE -> RED. Completes N=2 on arm64.
+# Strsm/threads=8 reproduces to 0.25% across the pair (vs 7.83% on amd64).
+# L1 discriminator: overlap 9 of 14 -> INCONCLUSIVE by its pre-registered bands.
+# VOID log is a transient OpenBLAS clone EOF, kept as apparatus evidence.
+# Verify with `shasum -c archive/strsm-refresh-arm64-r2/DIGESTS.sha256` from the repo root.
+29b4040d184ebeee88ead9cdea1c351342376ecc347a74bee2f0bf69bad4536b  archive/strsm-refresh-arm64-r2/bench-gate-p5-5948dda-keel-gvt3-20261012T173742Z-2.txt
+5628530dfbfcc8cdf720e873b69a9411ca30ff67a9aa9126e402f09bec02b974  archive/strsm-refresh-arm64-r2/bench-gate-p5-5948dda-keel-gvt4-20261012T173742Z-1.txt
+1a0065f92af49166d84398293d24b3d84cbb140e1a83ead28086496f329b9627  archive/strsm-refresh-arm64-r2/gate-p5-arm64-strsm-r2-5948dda.log
+a8daea1579c5a358db41dc096bde437cdc01bdd627ec6b53a3e7867894f7fc07  archive/strsm-refresh-arm64-r2/README.md
+4d0b18090df6b6edb12b720d32bdf5972a6ccb7bc3c9d54b703a8df603a18fc2  archive/strsm-refresh-arm64-r2/VOID-openblas-clone-eof-6f53c4a.log
