@@ -257,8 +257,13 @@ build_openblas_arm64() {
   confirm "remove any distro openblas, install build deps, clone $OPENBLAS_VERSION, build and 'sudo make install' it?" || return 1
   cmd="$APT_WAIT sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get remove -y libopenblas0 libopenblas-dev libopenblas0-pthread 2>/dev/null || true
     $APT_WAIT sudo apt-get update && sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y gcc gfortran make git
-    rm -rf '$OPENBLAS_BUILD_DIR'
-    git clone --depth 1 --branch '$OPENBLAS_VERSION' https://github.com/OpenMathLib/OpenBLAS '$OPENBLAS_BUILD_DIR'
+    for a in 1 2 3; do
+      rm -rf '$OPENBLAS_BUILD_DIR'
+      git clone --depth 1 --branch '$OPENBLAS_VERSION' https://github.com/OpenMathLib/OpenBLAS '$OPENBLAS_BUILD_DIR' && break
+      echo \"openblas clone attempt \$a of 3 failed; retrying\" >&2
+      sleep \$((a * 10))
+    done
+    test -d '$OPENBLAS_BUILD_DIR/.git'
     make -C '$OPENBLAS_BUILD_DIR' -j\"\$(nproc)\" DYNAMIC_ARCH=1 TARGET=ARMV8 USE_OPENMP=0 NUM_THREADS=\"\$(nproc)\" FC=gfortran CC=gcc
     sudo make -C '$OPENBLAS_BUILD_DIR' PREFIX=/usr/local NO_STATIC=1 install
     sudo ldconfig
