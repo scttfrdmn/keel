@@ -1,0 +1,12 @@
+# Strsm refresh, judged arm64 run 1 of 2, rev 3745b72, era ceil8, 2026-10-12.
+# 51 PASS / 4 FAIL / 0 UNMEASURED / 0 BASELINE -> RED. Strsm +5.4%/+5.5% at threads=8;
+# threads=1 inside the band -- the pre-registered +2%..+8% confirmed.
+# 14 of 48 L1 rows regressed (-0.0045% to -2.78%), NOT predicted; see README.md.
+# TWO voided attempts archived alongside: wrong GOARCH, and a dirty tree I caused.
+# Verify with `shasum -c archive/strsm-refresh-arm64-r1/DIGESTS.sha256` from the repo root.
+5e8f5c90fd985823b7ca9fa3951dcf70b02ed32f13bfff3f57ec075dec1e4d89  archive/strsm-refresh-arm64-r1/bench-gate-p5-3745b72-keel-gvt3-20261012T005051Z-2.txt
+ef37553ad8b6b866848d052bb5d340ed101da61e72d1a5dab171e34bd881ab35  archive/strsm-refresh-arm64-r1/bench-gate-p5-3745b72-keel-gvt4-20261012T005051Z-1.txt
+64a4fb9b843df004584295ce2ca05e58fbf9774144e08babb485d12d31189b51  archive/strsm-refresh-arm64-r1/gate-p5-arm64-strsm-r1-3745b72.log
+f1afa37128b47d438d649e1921d92d9659f97b026eb80e96fcd36db3fb8305b0  archive/strsm-refresh-arm64-r1/README.md
+53150446e5e4dbd5811a6642c220eb8a47698b996e5ee38d7bcd4c630989594c  archive/strsm-refresh-arm64-r1/VOID-dirty-tree-3745b72.log
+d181ba30d635e1bcb802c3f84428ef3ddf1a7f08eaa24d839e330df93077046a  archive/strsm-refresh-arm64-r1/VOID-wrong-goarch-3745b72.log
