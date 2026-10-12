@@ -1,0 +1,12 @@
+# Strsm refresh, judged amd64 run 2 of 2, rev 852ad55, era ceil8, 2026-10-11.
+# 69 PASS / 3 FAIL / 0 UNMEASURED / 3 BASELINE -> RED, exactly as pre-registered.
+# Pairs with archive/strsm-refresh-amd64-r1 for N=2; max between-run drift 7.83%.
+# Verify with `shasum -c archive/strsm-refresh-amd64-r2/DIGESTS.sha256` from the repo root.
+638e1b115e08aec397f49b2cb8f30f27322aa0555a988bd1ee456acc58035897  archive/strsm-refresh-amd64-r2/baseline-candidates-852ad55-20261011T223139Z.tsv
+7186e192d2f17dccb65d592c04af0dfa4c36ee65ebecb8c10a5c0679e92db405  archive/strsm-refresh-amd64-r2/bench-gate-p5-852ad55-keel-skx-20261011T223139Z-3.txt
+ee6897499d576a9efe2cefb3c7f7d97426a02219bbc6fc84f7a55e040d923734  archive/strsm-refresh-amd64-r2/bench-gate-p5-852ad55-keel-zen4-20261011T223139Z-2.txt
+2c46ab672897f45f55aeda9542e04f753b483f0e32cac512201ace83779f3072  archive/strsm-refresh-amd64-r2/bench-gate-p5-852ad55-keel-zen5-20261011T223139Z-1.txt
+21b419e45bc760cae8b32ac2ac82dc37a50a2a92b1d46a718adeff16a19ddf30  archive/strsm-refresh-amd64-r2/driver-frozen.sh
+5c8119bcf933504267c3affc499b666c2d07e4ce03ad98c26265d5e9c53115ae  archive/strsm-refresh-amd64-r2/gate-p5-amd64-strsm-r2-852ad55.log
+7ceaf946a159e693082546867ea346cbeb4801f60f3d2c03f868fbff2e7acb37  archive/strsm-refresh-amd64-r2/README.md
+a6079df431f48ecbd47022425e72e6ee5007494d56ea1bb3ddb4257eb8e28c91  archive/strsm-refresh-amd64-r2/witness-candidates-852ad55-20261011T223139Z.tsv
