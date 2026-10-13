@@ -9,6 +9,36 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The published block is regenerated from the judged refresh: `Strsm` is up to +108% and
+  criterion 9's stale rows are closed** (#37/#165, 2026-10-12). All 45 rows re-derived from the
+  four judged runs at N=2 per host, one code state, era `ceil8`. The 10 pre-fix `ceil8` manifest
+  rows are marked **superseded** rather than deleted, so a reader can still resolve what the old
+  numbers came from.
+
+  | host | `Strsm` thr=1 | thr=8 |
+  |---|---|---|
+  | AMD EPYC 9R45 | 58.16 → **121.2** (+108.4%) | 388.2 → 824.5 (+112.4%) |
+  | AMD EPYC 9R14 | 38.09 → **73.84** (+93.9%) | 260.6 → 466.7 (+79.1%) |
+  | Intel Xeon 8124M | 23.78 → **37.78** (+58.9%) | 164.6 → 254.8 (+54.8%) |
+  | Neoverse-V1 | 27.66 → **28.95** (+4.7%) | 206.8 → 217.8 (+5.3%) |
+  | Neoverse-V2 | 30.40 → **31.79** (+4.6%) | 230.1 → 243.0 (+5.6%) |
+
+  - **The 30 control rows moved at most 1.79%.** `Sgemm`, `Ssyrk` and `Ssymm` have no diagonal
+    solve, and across a complete re-measurement on fresh instances weeks later the worst row is
+    `skx Sgemm`/8 at 1.79%. That is what isolates the `Strsm` change from the re-measurement.
+  - **Criterion 9's reds are closed by construction**: every published row was 4.6%–108.4% away
+    from a fresh reading and is now 0.0% away, against a `README_TOL` of 5%. All 45 points lie
+    inside their own printed CI.
+  - **The arm64 figures land inside the band pre-registered before the run** (+2% to +8%):
+    Neoverse-V1 28.95 against a predicted 28.2–29.9, Neoverse-V2 31.79 against 31.0–32.8. The
+    cross-host model therefore predicted a 108% gain and a 4.6% gain from one quantity — the
+    diagonal solve's time share, ~65% at 16 lanes and 7.2% at 4.
+  - **A comparison I got wrong first and caught:** my initial old-vs-new table was `paste`d by
+    POSITION, and the two blocks order hosts differently, so Neoverse-V2's old value was paired
+    against 9R45's new one — printing a nonsensical +298.7%. Redone as a `join` on
+    (host, routine, threads), with all 45 rows accounted for.
+
+### Changed
 - **CONFIRMED on AVX-512: the diagonal-solve fix is worth −39.3% on `Strsm`, and the vector-width
   split in its efficiency WAS the scalar solve** (#37, 2026-10-11). Measured on `janus.local`
   (i9-9960X Skylake-X, bare metal, `governor=performance`, load1=0.04) — the same microarchitecture
