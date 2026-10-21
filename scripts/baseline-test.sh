@@ -517,6 +517,24 @@ is 'a reported-tier row is skipped before baseline_state is consulted (#179)' \
    "$(/usr/bin/awk '/for ln in \$P5_L1_SIZES/,/baseline_state/' scripts/gate-p5.sh | /usr/bin/grep -c '\$P5_L1_JUDGED " == \*" \$ln "\* \]\] || continue')" '1'
 is 'and the reported rows are rendered as REPORTED, not dropped silently (#179)' \
    "$(/usr/bin/grep -c 'reported "\[\$host\] L1 rows below the judged tier' scripts/gate-p5.sh)" '1'
+# 36r. l1_bucket, the L1 regression decision (#179/#180, ruled 2026-10-21). Real archived values,
+#      not invented ones: zen5 Sdot refresh-r2 (hi 30.20, lo 29.96) against the 30.59 its own
+#      founding pair yields -- the row the zero-margin bar failed on its own founding data.
+is 'l1_bucket: a reading above its baseline is held' \
+   "$(l1_bucket 31.38 31.23 30.59 0.05)" 'held'
+is 'l1_bucket: disjoint but inside the same-claim band is drift, not a regression' \
+   "$(l1_bucket 30.20 29.96 30.59 0.05)" 'drift'
+is 'l1_bucket: a planted 10% drop on that row is a regression' \
+   "$(l1_bucket 27.18 26.96 30.59 0.05)" 'regressed'
+is 'l1_bucket: exactly at the band edge is drift (the band is inclusive)' \
+   "$(l1_bucket 28.9 28.5 30.0 0.05)" 'drift'
+is 'l1_bucket: e-notation is read, so Isamax in B/s is judged rather than unresolved' \
+   "$(l1_bucket 8.809e+08 8.665e+08 8.667e+08 0.05)" 'held'
+is 'l1_bucket: an unreadable input is unresolved, never held' \
+   "$(l1_bucket '' 1 2 0.05)" 'unresolved'
+# And the gate consults it rather than an inline comparison that could drift away from this.
+is 'gate-p5 routes the registered L1 arm through l1_bucket' \
+   "$(/usr/bin/grep -c 'case "$(l1_bucket "$lhi" "$llo" "$lblo" "$README_TOL")" in' scripts/gate-p5.sh)" '1'
 # 37. Newness against an unmet obligation, the distinction the witness exists for, driven on a
 #     host outside the derivation set. $CEILD is this FILE'S set (the two AMD models that
 #     derived 44.2), deliberately not the shipped one: these arms test the classifier, and

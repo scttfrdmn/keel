@@ -9,6 +9,25 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The L1 bar now takes criterion 9's whole rule, so a shift inside the same-claim band is
+  `drift`, printed every run, rather than a regression** (#179/#180, 2026-10-21). A regression now
+  needs the run's interval disjoint below the baseline AND its lower bound >5% below. The old
+  zero-margin bar failed 4 rows of arm64's own founding run against the baselines founded on it.
+  No baseline lowered; the #180 rows keep pre-change values and print as drift. Decision factored
+  into `l1_bucket` (gate-lib.sh), seven controls each driven red; ruling and its sensitivity cost
+  (a 10% plant caught 207/224, a 5% plant 77/224) in `docs/rulings.md`.
+  - **amd64 unblocked:** 18 n=1048576 baselines and the 3 held witness rows landed from the refresh
+    pair, so all five hosts resolve every judged L1 row as `registered`. Rerun over every archived
+    judged run: all current-code runs pass on all five hosts.
+  - **A hidden red found and cleared:** Neoverse-V1 `rate/Sdot/n=65536` had been `owing` (FAIL)
+    all along, masked because regression outranks owing. `owing` has no exit in the gate (owing rows
+    propose no candidate), so it was landed by commit from the post-change pair (1.40% spread).
+    Its pre-change 16.27 draw would regress against it, which is disclosed in the row.
+  - **A claim of mine corrected:** "arm64's founding pair is <=2.21% on all 47 rows" measured only
+    registered rows; the 48th was the owing one at 7.74%. Across all 48 rows and both same-code
+    pairs it is the only arm64 excursion over the band.
+  - **Unexplained:** arm64 `Sscal` reads ~1.7x its registered baseline at every size on both
+    Graviton hosts, with `neonScal` unchanged. Recorded, not chased.
 - **The amd64 L1 criterion now judges only n=1048576; the smaller tiers are REPORTED** (#179,
   2026-10-21). Two same-code amd64 null pairs spread n=256 rows up to 62.6% between runs (6/18 over
   the 5% same-claim band) and n=1048576 rows at most 4.2% (0/18). A per-row exclusion list was

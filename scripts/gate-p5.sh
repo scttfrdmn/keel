@@ -1608,7 +1608,7 @@ else
     # failed to emit them. The unit travels with each printed line for the #119 reason -- a list
     # whose rows are in different units is the one shape a future bar must not be typed against
     # as though it were homogeneous.
-    L1_SEEN=0; L1_ABSENT=""; L1_REGRESSED=""; L1_HELD=0; L1_NEW=0; L1_OWING=""; L1_UNRES=""; L1_RPT=""
+    L1_SEEN=0; L1_ABSENT=""; L1_REGRESSED=""; L1_HELD=0; L1_NEW=0; L1_OWING=""; L1_UNRES=""; L1_RPT=""; L1_DRIFT=""
     for lr in $P5_L1; do
       # `B/s`, not `MB/s`: tools/benchci normalises the unit testing.B reports, so asking for the
       # unit as the benchmark SPELLS it returns nothing. Asking the CSV what units it carries
@@ -1634,12 +1634,14 @@ else
         # editor does not reach for $lline).
         lline="$lline n=$ln $(awk -v v="$lmed" -v s="$lscale" 'BEGIN{printf "%.2f", v/s}')($(awk -v v="$llo" -v s="$lscale" 'BEGIN{printf "%.2f", v/s}'))"
 
-        # ---- THE BAR: CI-DISJOINTNESS (ruled 2026-10-01). A regression is a reading whose
-        # UPPER bound falls below the registered baseline's LOWER bound -- two intervals that do
-        # not overlap, on the wrong side. No margin, because there is no margin to derive: a
-        # relative one would be a constant typed after seeing the readings, and BASELINE_MARGIN's
-        # 2.6 points are the wrong unit for a rate (#119). The standard predates the work; it is
-        # criterion 9's CI-overlap discipline.
+        # ---- THE BAR: criterion 9's rule, BOTH halves (ruled 2026-10-01; completed 2026-10-21,
+        # #179/#180). A regression needs the intervals disjoint on the wrong side (run UPPER bound
+        # below the registered LOWER bound) AND this run's lower bound more than README_TOL below
+        # the baseline -- the same-claim band the row was admitted under (#178). Until 2026-10-21
+        # it took only the first half while claiming criterion 9's discipline, and that version
+        # failed 4 rows of arm64's own founding run against the baselines founded on it: within-run
+        # intervals are narrower than between-run drift. A shift inside the band is still PRINTED.
+        # BASELINE_MARGIN's 2.6 points remain the wrong unit for a rate (#119).
         #
         # ONE-SIDED ON PURPOSE. Criterion 9 tests overlap in both directions because a published
         # number drifting either way is stale. This is a REGRESSION bar: a reading above its
@@ -1661,11 +1663,15 @@ else
             # and that is precisely how the unset-variable version of this line (it read $lhi
             # while the read bound $_lhi) returned "" < "55.3" == true and reported a regression
             # on every registered row instead of erroring. shellcheck SC2154 caught it.
-            if awk -v h="$lhi" -v b="$lblo" 'BEGIN{exit !(h+0 < b+0)}'; then
-              L1_REGRESSED="$L1_REGRESSED $lcrit(whole interval below ${lblo}: hi=$lhi)"
-            else
-              L1_HELD=$((L1_HELD + 1))
-            fi ;;
+            # #179/#180 (ruled 2026-10-21): criterion 9's WHOLE rule, one-sided, on the
+            # statistic the row was admitted on. See l1_bucket in gate-lib.sh.
+            case "$(l1_bucket "$lhi" "$llo" "$lblo" "$README_TOL")" in
+              held)      L1_HELD=$((L1_HELD + 1)) ;;
+              drift)     L1_HELD=$((L1_HELD + 1))
+                         L1_DRIFT="$L1_DRIFT $lcrit(hi=$lhi below $lblo, lo=$llo within ${README_TOL})" ;;
+              regressed) L1_REGRESSED="$L1_REGRESSED $lcrit(hi=$lhi below $lblo, lo=$llo past ${README_TOL})" ;;
+              *)         L1_UNRES="$L1_UNRES $lcrit(unreadable: hi=$lhi lo=$llo base=$lblo)" ;;
+            esac ;;
           new)
             L1_NEW=$((L1_NEW + 1))
             baseline_candidate "$BASELINE_CANDIDATES" \
@@ -1712,7 +1718,7 @@ else
       elif [[ "$L1_HELD" -eq 0 ]]; then
         baseline "[$host] all $L1_NEW measured L1 rows are first sight in era $P5_ERA — RECORDED as candidate baselines, not judged ($l1cov). Candidates: $BASELINE_CANDIDATES"
       else
-        pass "[$host] every registered L1 row holds its baseline, net of both intervals: $L1_HELD held, $L1_NEW first-sight ($l1cov)"
+        pass "[$host] every registered L1 row holds its baseline: $L1_HELD held, $L1_NEW first-sight ($l1cov)${L1_DRIFT:+; disjoint but inside the same-claim band, printed so no shift is absorbed silently:$L1_DRIFT}"
       fi
     fi
 

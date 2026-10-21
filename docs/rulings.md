@@ -2274,3 +2274,41 @@ would fail against their own founding run** (zen4 Sasum, zen5 Sdot, zen5 Saxpy).
 CI-disjointness with no margin, and within-run intervals are narrower than between-run drift: zen4
 Sasum's interval is 24.50–24.51 while zen5 Sdot drifts 4.24% between runs. #180 is the same
 mechanism on arm64. That is a question about the bar, not the tier, and it is not ruled here.
+
+## The L1 bar takes criterion 9's whole rule, on the admission statistic (#179/#180, ruled 2026-10-21)
+
+Delegated by Scott ("I defer to your judgement for what is right for the project and its
+integrity"). **Ruling: an L1 row regresses only when the run's interval is disjoint below the
+baseline AND the run's net-of-CI lower bound is more than README_TOL (5%) below it.** A disjoint
+shift inside the band is `drift`: judged as holding, and printed by name on every run.
+
+**Why this is a correction and not a loosening.** Three things, each checkable:
+1. **The standard predates everything it is applied to.** README_TOL is criterion 9's band
+   (#163, 2026-09-15); the L1 criterion was born 2026-10-01; every failing reading is later.
+2. **The bar already claimed it.** Its source comment said it adopted "criterion 9's CI-overlap
+   discipline", but criterion 9 passes on overlap OR a centre within 5%, and the bar took only the
+   first half.
+3. **It contradicted its own admission rule.** Rows are admitted when two runs' lower bounds sit
+   within 5% (#178), and the bar then called the lower of two such runs a regression. **The
+   zero-margin bar failed 4 rows of arm64's own founding run (`119b673`) against the baselines that
+   run founded**, which went unseen only because that run was first-sight.
+
+**What it costs, stated so it is not discovered later.** arm64 rows reproduce to a median of
+~0.1%, so the old bar could resolve a sub-5% regression there and this one does not flag it. A
+planted uniform drop over every archived judged reading is caught on **207 of 224** cases at 10%,
+**77** at 5% and **4** at 3%. The 17 misses at 10% are rows running far ABOVE their baselines
+(16 are arm64 Sscal, 64–82% faster than registered, cause unexplained; see below), which a one-sided
+bar correctly leaves alone. **No baseline was lowered**: the #180 rows keep their pre-change
+values, and their 0.3–2.8% shift now prints as drift every run instead of failing or vanishing.
+
+**Tested before landing (§5 rule 11), not after.** Rerun over every archived judged run against
+the committed registry: 0 unresolved, 0 rows without a baseline, every current-code run passing on
+all five hosts, and exactly 1 regression: the pre-change 16.27 excursion of `Neoverse-V1
+rate/Sdot/n=65536`, predicted in that row's grounds before the rerun.
+
+**Two things this surfaced.** `owing` has no exit inside the gate: an owing row never calls
+`baseline_candidate`, so the row that would clear it can only be landed by a commit straight from
+the archive. That is how the one owing arm64 row was landed, with its value recomputed by the
+gate's own estimator. And arm64 `Sscal` reads ~1.7x its registered baseline at every size on both
+Graviton hosts, with `neonScal` byte-identical between the revisions. Unexplained, recorded, not
+chased.

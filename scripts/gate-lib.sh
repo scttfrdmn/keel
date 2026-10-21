@@ -545,6 +545,22 @@ peak_bucket() {
   esac
 }
 
+# l1_bucket HI LO BASE TOL — the L1 regression decision (#179/#180, ruled 2026-10-21).
+# BASE is a registered net-of-CI LOWER bound and LO is this run's, so the comparison is between
+# like statistics, exactly as the rows were admitted (two draws are the same claim when their
+# lower bounds are within TOL, #178). `regressed` needs BOTH halves of criterion 9's rule,
+# one-sided: the intervals are disjoint (HI < BASE) AND the lower bound falls more than TOL below.
+# `drift` is disjoint but inside the same-claim band, and it is printed, never absorbed silently.
+# Unresolvable input is `unresolved`, never a pass. Accepts e-notation (Isamax is in B/s).
+l1_bucket() {
+  local hi="$1" lo="$2" base="$3" tol="$4"
+  local n='^[0-9]+([.][0-9]+)?([eE][+-]?[0-9]+)?$'
+  [[ "$hi" =~ $n && "$lo" =~ $n && "$base" =~ $n && "$tol" =~ $n ]] || { printf 'unresolved\n'; return 0; }
+  awk -v h="$hi" -v l="$lo" -v b="$base" -v t="$tol" 'BEGIN{
+    if (h+0 >= b+0) { print "held"; exit }
+    if (l+0 < (b+0) * (1 - t)) print "regressed"; else print "drift" }'
+}
+
 scale_bucket() {
   local cleared="$1" missed="$2" notadm="$3" noisy="$4" base="$5"
   if   [[ "$missed"  -eq 1 ]]; then printf 'missed\n'
