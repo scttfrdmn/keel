@@ -9,6 +9,17 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The amd64 L1 criterion now judges only n=1048576; the smaller tiers are REPORTED** (#179,
+  2026-10-21). Two same-code amd64 null pairs spread n=256 rows up to 62.6% between runs (6/18 over
+  the 5% same-claim band) and n=1048576 rows at most 4.2% (0/18). A per-row exclusion list was
+  tested first and refused: built from one pair, it missed 3-4 of the other pair's unstable rows.
+  arm64 is unchanged (all four sizes judged; founding spread <=2.21% on every row). Ruled as rule
+  19's between-run sibling in `docs/rulings.md`; four controls, each driven red.
+  - **Nothing was landed, and that is a finding.** Recomputed exactly from the archived samples, 3
+    of the 18 candidate n=1048576 baselines would fail against their OWN founding run: the L1 bar
+    is CI-disjointness with no margin, and within-run intervals are narrower than between-run drift.
+    So amd64 stays BASELINE (witness rows held) until the bar question is ruled; #180 is the same
+    mechanism on arm64.
 - **The published block is regenerated from the judged refresh: `Strsm` is up to +108% and
   criterion 9's stale rows are closed** (#37/#165, 2026-10-12). All 45 rows re-derived from the
   four judged runs at N=2 per host, one code state, era `ceil8`. The 10 pre-fix `ceil8` manifest

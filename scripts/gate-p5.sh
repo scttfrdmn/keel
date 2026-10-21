@@ -384,14 +384,21 @@ case "${KEEL_GOARCH:-amd64}" in
     P5_L1_CHAIN="neon,scalar"
     P5_KERN_CHAIN="neon,scalar"
     P5_FORCED="scalar"
-    P5_L1_ONLY="" ;;
+    P5_L1_ONLY=""
+    P5_L1_JUDGED="$P5_L1_SIZES" ;;
   *)
     P5_L1_CHAIN="avx512,avx2,scalar"
     P5_KERN_CHAIN="avx512,scalar"
     P5_FORCED="scalar avx2 avx512"
     # Backends that are Level 1 only: forcing one must produce that L1 backend and a
     # *scalar* microkernel, with the library saying so.
-    P5_L1_ONLY="avx2" ;;
+    P5_L1_ONLY="avx2"
+    # #179, ruled 2026-10-21: amd64 JUDGES only n=1048576 and REPORTS the smaller tiers. Two
+    # same-code null pairs (c30/c30b, refresh r1/r2) put the worst between-run spread at 62.6%
+    # (n=256, 6/18 rows over README_TOL), 70.7% (n=4096), 7.1% (n=65536) and 4.2% (n=1048576,
+    # 0/18). A per-row list was tested and refused: built from one pair, it missed 3-4 of the
+    # other pair's unstable rows. arm64 keeps all four (founding pair <=2.21% on all 47 rows).
+    P5_L1_JUDGED="1048576" ;;
 esac
 
 # The FALLBACK band for criterion 9, applied only when a published rate's REFERENCE interval is
@@ -1601,7 +1608,7 @@ else
     # failed to emit them. The unit travels with each printed line for the #119 reason -- a list
     # whose rows are in different units is the one shape a future bar must not be typed against
     # as though it were homogeneous.
-    L1_SEEN=0; L1_ABSENT=""; L1_REGRESSED=""; L1_HELD=0; L1_NEW=0; L1_OWING=""; L1_UNRES=""
+    L1_SEEN=0; L1_ABSENT=""; L1_REGRESSED=""; L1_HELD=0; L1_NEW=0; L1_OWING=""; L1_UNRES=""; L1_RPT=""
     for lr in $P5_L1; do
       # `B/s`, not `MB/s`: tools/benchci normalises the unit testing.B reports, so asking for the
       # unit as the benchmark SPELLS it returns nothing. Asking the CSV what units it carries
@@ -1618,6 +1625,10 @@ else
         read -r lmed _lci llo lhi _ _ <<<"$(bench_stat "$lrow" "$BENCHCSV" "$lmetric")" || :
         if [[ -z "${lmed:-}" || "$lmed" == inf ]]; then L1_ABSENT="$L1_ABSENT $lrow"; continue; fi
         L1_SEEN=$((L1_SEEN + 1))
+        # #179: below the judged tier, a reading is printed and never compared or proposed --
+        # rule 19's refusal applied to between-run spread (docs/rulings.md). Not `new`: a
+        # proposed row for an unjudged tier would be landed and then read by nothing.
+        [[ " $P5_L1_JUDGED " == *" $ln "* ]] || L1_RPT="$L1_RPT $lrow"
         # Rounded for the line, never for a comparison: nothing here compares, and when a bar
         # does arrive it must read the unrounded value (#143's rule, stated now so the next
         # editor does not reach for $lline).
@@ -1637,6 +1648,7 @@ else
         #
         # SINCE is this criterion's birthday (#169). Without it every already-registered host
         # resolves `owing` -> FAIL for a criterion that did not exist when it registered.
+        [[ " $P5_L1_JUDGED " == *" $ln "* ]] || continue
         lcrit="rate/$lr/n=$ln"
         lstate="$(baseline_state "$BASELINE_REGISTRY" "$BASELINE_WITNESS" \
                                  "$hcpu" "$lcrit" "$P5_ERA" "" "$L1_CRIT_SINCE")"
@@ -1689,7 +1701,8 @@ else
       # outranks everything, then an unmet registration, then a state this criterion cannot read,
       # then first sight. A missing row is named in every branch, because 24-of-24 and 20-of-24
       # are different claims and only one of them is full coverage.
-      l1cov="$L1_SEEN of $L1_WANT routine-size rows${L1_ABSENT:+, absent:$L1_ABSENT}"
+      l1cov="$L1_SEEN of $L1_WANT routine-size rows${L1_ABSENT:+, absent:$L1_ABSENT}${L1_RPT:+; $(wc -w <<<"$L1_RPT" | tr -d ' ') reported, not judged}"
+      [[ -n "$L1_RPT" ]] && reported "[$host] L1 rows below the judged tier ($P5_L1_JUDGED) are printed above and not compared: on this ISA two same-code null pairs spread them up to 70.7% between runs, where n=1048576 stayed under 4.2% (#179):$L1_RPT"
       if [[ -n "$L1_REGRESSED" ]]; then
         fail "[$host] L1 regression, whole interval below the registered baseline:$L1_REGRESSED ($l1cov; $L1_HELD held, $L1_NEW first-sight)"
       elif [[ -n "$L1_OWING" ]]; then

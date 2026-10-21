@@ -285,7 +285,8 @@ warn()       { printf '  \033[33mWARN\033[0m  %s%s\n'        "$VERDICT_STAMP" "$
 # invisible to a reader scanning the verdict column.
 baseline()   { printf '  \033[36mBASELINE\033[0m  %s%s\n'    "$VERDICT_STAMP" "$1"; N_BASELINE=$((N_BASELINE + 1)); }
 # reported() — a criterion declining to judge a reading whose own interval is too wide to
-# adjudicate it (docs/rulings.md rule 19, 2026-08-22). The second green-compatible non-pass.
+# adjudicate it (docs/rulings.md rule 19, 2026-08-22), or whose class spreads too far BETWEEN
+# runs to be a reference (rule 19's sibling, #179). The second green-compatible non-pass.
 # Distinct from unmeasured(), which says no reading was obtained: here a reading WAS obtained
 # and is printed, and what is refused is only the comparison. Callers must name the width in
 # the message — a class whose whole content is "too wide" that does not say how wide leaves

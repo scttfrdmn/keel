@@ -2240,3 +2240,37 @@ here. The same edit corrected the cap's **unit** — it said `scripts/` while th
 enforces it counts shell by content, which is the +151-vs-+90 error booked in the ledger row.
 A future session reads the amended rule and needs none of the reasoning above; it is kept
 because the narrowing clause is only legible beside the case that motivated it.
+
+## Rule 19's sibling — a class that spreads too far between runs is reported, not judged (#179, ruled 2026-10-21)
+
+Rule 19 refuses to judge a reading whose *own* interval is too wide to adjudicate. This is the
+same refusal for spread *between* runs, which no within-run interval can see (#141). It is minted
+as a sibling rather than read into rule 19, so rule 19's existing citations keep their meaning.
+
+**The evidence, measured before the ruling.** Two same-code amd64 null pairs in era `ceil8`
+(c30/c30b, and refresh r1/r2, whose measured binaries share a dependency-closure hash). Worst
+between-run spread of the gate's own net-of-CI lower bound, 18 rows per tier:
+
+| tier | over README_TOL (5%) | worst |
+|---|---|---|
+| n=256 | 6/18 | 62.6% |
+| n=4096 | 2/18 | 70.7% |
+| n=65536 | 1/18 | 7.1% |
+| n=1048576 | 0/18 | 4.2% |
+
+**The scope is a class, because a per-row list was tested and refused.** Built from one null
+pair and applied to the other, a declared list missed 3 of 5 and 4 of 6 over-band rows: the
+unstable *rows* change between runs while the unstable *tier* does not. The threshold is
+README_TOL, the project's same-claim band, which predates every row involved (#163, 2026-09-15).
+
+**The ruling.** On amd64 the L1 criterion judges n=1048576 and REPORTS n=256, 4096 and 65536;
+their readings are printed and compared with nothing. arm64 judges all four sizes, because its
+founding pair spreads at most 2.21% on all 47 rows. A reported row proposes no candidate, since a
+row for a tier nothing judges would be landed and then read by nothing.
+
+**What this does not settle, found while landing it.** The 18 n=1048576 rows were NOT landed, and
+the 3 amd64 witness rows stay held. Recomputed exactly from the archived samples, **3 of the 18
+would fail against their own founding run** (zen4 Sasum, zen5 Sdot, zen5 Saxpy). The L1 bar is
+CI-disjointness with no margin, and within-run intervals are narrower than between-run drift: zen4
+Sasum's interval is 24.50–24.51 while zen5 Sdot drifts 4.24% between runs. #180 is the same
+mechanism on arm64. That is a question about the bar, not the tier, and it is not ruled here.
