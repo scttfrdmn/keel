@@ -9,6 +9,16 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The first green L1 result, on both architectures** (#179/#180 confirmation, 2026-10-21). Two
+  judged runs at the same rev `dc519af`: **arm64 55 PASS / 0 FAIL → GREEN**, **amd64 73 PASS / 0 FAIL
+  / 5 REPORTED → GREEN**. L1 holds on all five hosts; criterion 9 passes on all five, confirming the
+  regenerated README; neither named risk fired. Shifts inside the band print as `drift`: 12 on
+  arm64 (deepest 2.9%), 3 on amd64 (all under 0.4%).
+  - **Pre-registered and missed: REPORTED came in at 5, not 3.** The extra two are Strsm's share
+    criterion on zen4/zen5, refused as noise-limited under rule 19 (interval cost 2.70/3.20 points
+    against a 2.6-point margin). The Strsm fix roughly doubled that share, which widens its interval
+    in points; both refresh runs kept it under 2.6. Rule 19 refuses regardless of distance: zen5's
+    worst case clears its bar by ~20 points. Recorded, not changed.
 - **The L1 bar now takes criterion 9's whole rule, so a shift inside the same-claim band is
   `drift`, printed every run, rather than a regression** (#179/#180, 2026-10-21). A regression now
   needs the run's interval disjoint below the baseline AND its lower bound >5% below. The old

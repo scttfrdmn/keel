@@ -1,0 +1,7 @@
+# The first green L1 result, arm64, rev dc519af, era ceil8, 2026-10-21. GREEN.
+# Verify with `shasum -c archive/l1-green-arm64/DIGESTS.sha256` from the repo root.
+c843c7e636914d8165daeeb033e9ea8360283f6e215ecc9e8d664eba454b94b5  archive/l1-green-arm64/bench-gate-p5-dc519af-keel-gvt3-20261021T143548Z-2.txt
+6eddc3572feda709ce9544da8cace3aa739166fc1edec2e5a1891bc150ed570e  archive/l1-green-arm64/bench-gate-p5-dc519af-keel-gvt4-20261021T143548Z-1.txt
+6360679693c16e010e4b4aef200c4faf47d3a02875549fe080abd2b5ce5c487e  archive/l1-green-arm64/gate-p5-arm64-l1-green-dc519af.log
+58f501946f82d41d828cedcdab96cee26802e4555a57a42fecd234bf0137fbd5  archive/l1-green-arm64/prereg.md
+b85e48dce0a83ffc9216f9bedb218e1d7d8bdd6b3d962b0ba2d898aed411ae19  archive/l1-green-arm64/README.md
