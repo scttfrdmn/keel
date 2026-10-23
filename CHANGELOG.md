@@ -8,6 +8,31 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **`keel/gonumblas`: keel as a drop-in float32 BLAS for Gonum.** `blas32.Use(gonumblas.Implementation{})`
+  routes Gonum's `blas32` through keel. The 12 routines keel implements run in keel, and the rest of
+  `blas.Float32` falls through to Gonum's pure-Go code, so the whole interface works today. The
+  core `keel` package stays dependency-free.
+  - **Differential tests against Gonum, with the float64 oracle as arbiter**, over every flag,
+    shape (empty included), stride (negative included) and alpha/beta edge, comparing whole output
+    buffers. NaN poison sits in padding, unreferenced triangles, unit diagonals and C at beta=0, so
+    an illegal read or write is a mismatch. Panic parity is checked on 20 invalid inputs, and
+    `blas32.Use` is exercised end to end.
+  - **Routing is tested, not assumed.** An adapter that sent everything to Gonum would pass every
+    agreement test. `TestRoutesToKeel` finds inputs where keel and Gonum differ bitwise and requires
+    the adapter to match keel there. Routing four overrides to Gonum turns it red. Sscal, Isamax,
+    Saxpy and Sger can't be separated by value on arm64 (exact, or one FMA in both), which is stated
+    in the test rather than claimed.
+  - **Two edge cases where keel deliberately differs from reference BLAS; the adapter follows
+    Gonum.** A negative stride on Sscal/Sasum/Snrm2/Isamax is a no-op/0/0/-1 there, where keel
+    panics. Sgemv with an empty dimension leaves y untouched, where keel returns beta*y. keel's own
+    API keeps its documented behaviour.
+  - **Found a Gonum bug:** `[DS]syrk` with Lower+Trans and beta=0 scales C instead of overwriting it,
+    so NaN or Inf already in C survives. BLAS says C is not read at beta=0. It's the same class as
+    gonum/gonum#1293 (fixed for `[DS]symm` in 2020), whose fix PR noted "there may be other cases".
+    keel is correct here; the test holds keel to the oracle for that case.
+- README status corrected to v0.2.0 (it still said v0.1.0).
+
 ### Changed
 - **The first green L1 result, on both architectures** (#179/#180 confirmation, 2026-10-21). Two
   judged runs at the same rev `dc519af`: **arm64 55 PASS / 0 FAIL → GREEN**, **amd64 73 PASS / 0 FAIL

@@ -7,10 +7,9 @@ A pure-Go float32 BLAS subset built on Go's experimental SIMD support
 and parallelize on the caller's `GOMAXPROCS` — no cgo, no background
 threads, deploys as a normal Go module.
 
-**Status: v0.1.0.** Levels 1–3 are implemented and gated, and all six phase
-gates P0–P5 are green — certified by a `gate-p5` run on a three-host AWS fleet,
-with the certified rev and the seam between it and the tag named in the
-[release notes](../../releases/tag/v0.1.0). Major is still 0, so a minor bump may
+**Status: v0.2.0.** Levels 1–3 are implemented and gated on amd64 and arm64, and
+all six phase gates P0–P5 are green, certified by judged `gate-p5` runs on AWS, with
+the certified rev named in the [release notes](../../releases/tag/v0.2.0). Major is still 0, so a minor bump may
 break the API. What keel does not do — and which parts of that are scheduled,
 open or parked — is stated once, in
 [Capabilities & limits](https://scttfrdmn.github.io/keel/limits/).
@@ -126,6 +125,28 @@ scope, split into commitments, scheduled work, upstream-gated items, one open
 question and parked ideas:
 [Capabilities & limits](https://scttfrdmn.github.io/keel/limits/) — the canonical
 statement. `DESIGN.md` §1–2 carries the design rationale behind it.
+
+## Using keel from Gonum
+
+keel is a drop-in float32 BLAS for [Gonum](https://www.gonum.org/). One line at
+start-up routes every `blas32` call through it:
+
+```go
+import (
+	"gonum.org/v1/gonum/blas/blas32"
+	"github.com/scttfrdmn/keel/gonumblas"
+)
+
+func init() { blas32.Use(gonumblas.Implementation{}) }
+```
+
+The twelve routines keel implements run in keel. Every other `blas.Float32` routine
+falls through to Gonum's own pure-Go implementation, so the whole interface works.
+Where keel and reference BLAS differ on an edge case (a negative stride on `Sscal`,
+an empty `Sgemv`), the adapter follows Gonum. Results agree with Gonum within keel's
+tolerance model rather than bit-for-bit, because keel's kernels sum in a different
+order and fuse multiply-adds. The core `keel` package does not depend on Gonum; only
+`keel/gonumblas` does.
 
 ## Building
 ```

@@ -4,6 +4,8 @@ go 1.26
 
 tool golang.org/x/perf/cmd/benchstat
 
-require golang.org/x/perf v0.0.0-20260709024250-82a0b07e230d
-
-require github.com/aclements/go-moremath v0.0.0-20210112150236-f10218a38794 // indirect
+require (
+	github.com/aclements/go-moremath v0.0.0-20210112150236-f10218a38794
+	golang.org/x/perf v0.0.0-20260709024250-82a0b07e230d
+	gonum.org/v1/gonum v0.17.0
+)
