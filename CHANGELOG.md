@@ -35,7 +35,8 @@ While the major version is 0, minor versions may contain breaking changes.
     `Sger`) scales a negative stride's start offset by the element size twice. `INC_X` is already in
     bytes when `LEAQ (X_PTR)(TMP2*SIZE)` multiplies by 4 again, so the start pointer lands past the
     end of the vector, an **out-of-bounds read**, and the results are wrong by up to 3.79 against
-    the oracle. arm64 uses Gonum's pure-Go `Ger`, which is correct. keel users are unaffected (the
+    the oracle. arm64 uses Gonum's pure-Go `Ger`, which is correct. **Already known upstream:**
+    gonum/gonum#2105, open since 2026-09-08, whose fix PR #2107 was closed unmerged. keel users are unaffected (the
     adapter's Sger runs keel, within 2.2e-7 of the oracle on the same x86-64 host). The test now
     holds keel to the oracle on every stride and compares against Gonum only for positive strides.
 - README status corrected to v0.2.0 (it still said v0.1.0).

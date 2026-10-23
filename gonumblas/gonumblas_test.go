@@ -303,7 +303,9 @@ func TestSgemvSgerAgreeWithGonum(t *testing.T) {
 				// size twice (INC_X is already in bytes when LEAQ multiplies by SIZE
 				// again), so with incX or incY < 0 it starts past the end of the
 				// vector and reads out of bounds. Its pure-Go path, used on every other
-				// architecture, is correct. So gonum is compared only where it is right.
+				// architecture, is correct. Known upstream: gonum/gonum#2105 (open since
+				// 2026-09-08; its fix PR #2107 was closed unmerged). So gonum is compared
+				// only where it is right.
 				for i := 0; i < m; i++ {
 					for j := 0; j < n; j++ {
 						e := i*n + j
