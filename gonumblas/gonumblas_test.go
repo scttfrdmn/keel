@@ -297,7 +297,24 @@ func TestSgemvSgerAgreeWithGonum(t *testing.T) {
 				ak, ag := append([]float32(nil), a...), append([]float32(nil), a...)
 				keelImpl.Sger(m, n, -0.75, x, inc, y, inc, ak, lda)
 				gonumImpl.Sger(m, n, -0.75, x, inc, y, inc, ag, lda)
-				_, s := oracle.Ger(m, n, -0.75, x, inc, y, inc, a, lda)
+				want, s := oracle.Ger(m, n, -0.75, x, inc, y, inc, a, lda)
+				// keel is held to the oracle on every stride. gonum's amd64 assembly
+				// for f32.Ger scales a negative stride's start offset by the element
+				// size twice (INC_X is already in bytes when LEAQ multiplies by SIZE
+				// again), so with incX or incY < 0 it starts past the end of the
+				// vector and reads out of bounds. Its pure-Go path, used on every other
+				// architecture, is correct. So gonum is compared only where it is right.
+				for i := 0; i < m; i++ {
+					for j := 0; j < n; j++ {
+						e := i*n + j
+						if !sameElem(ak[i*lda+j], float32(want[e]), 1, s[e]/2) {
+							t.Errorf("Sger m=%d n=%d inc=%d: [%d,%d] keel %v, oracle %v", m, n, inc, i, j, ak[i*lda+j], want[e])
+						}
+					}
+				}
+				if inc < 0 {
+					continue
+				}
 				compareStorage(t, fmt.Sprintf("Sger m=%d n=%d inc=%d", m, n, inc), ak, ag, 1, func(i int) (float64, bool) {
 					if row, col := i/lda, i%lda; row < m && col < n {
 						return s[row*n+col], true

@@ -31,6 +31,13 @@ While the major version is 0, minor versions may contain breaking changes.
     so NaN or Inf already in C survives. BLAS says C is not read at beta=0. It's the same class as
     gonum/gonum#1293 (fixed for `[DS]symm` in 2020), whose fix PR noted "there may be other cases".
     keel is correct here; the test holds keel to the oracle for that case.
+  - **And a second, worse one, found by CI on x86-64:** Gonum's amd64 assembly for `f32.Ger` (so
+    `Sger`) scales a negative stride's start offset by the element size twice. `INC_X` is already in
+    bytes when `LEAQ (X_PTR)(TMP2*SIZE)` multiplies by 4 again, so the start pointer lands past the
+    end of the vector, an **out-of-bounds read**, and the results are wrong by up to 3.79 against
+    the oracle. arm64 uses Gonum's pure-Go `Ger`, which is correct. keel users are unaffected (the
+    adapter's Sger runs keel, within 2.2e-7 of the oracle on the same x86-64 host). The test now
+    holds keel to the oracle on every stride and compares against Gonum only for positive strides.
 - README status corrected to v0.2.0 (it still said v0.1.0).
 
 ### Changed
