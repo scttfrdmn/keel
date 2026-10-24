@@ -281,3 +281,97 @@ func trsmRight(lowerEff, trans, unit bool, m, n int, a []float32, lda int, out, 
 		}
 	}
 }
+
+// Syr2k returns the float64 reference for C = alpha·(A·Bᵀ + B·Aᵀ) + beta·C (trans
+// false, A and B n×k) or C = alpha·(Aᵀ·B + Bᵀ·A) + beta·C (trans true, A and B
+// k×n), and the per-element error scale, both indexed by row-major element (i*n+j).
+// As with Syrk, entries outside the referenced triangle are left at zero and not
+// computed. The reduction length is 2k.
+func Syr2k(lower, trans bool, n, k int, alpha float32, a []float32, lda int,
+	b []float32, ldb int, beta float32, c []float32, ldc int) (out, scale []float64) {
+
+	out = make([]float64, n*n)
+	scale = make([]float64, n*n)
+	al, be := float64(alpha), float64(beta)
+	at := func(m []float32, ld, r, p int) float64 { // op(M)[r, p]
+		if trans {
+			return float64(m[p*ld+r])
+		}
+		return float64(m[r*ld+p])
+	}
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			if !InTriangle(lower, i, j) {
+				continue
+			}
+			var val, sc float64
+			if alpha != 0 {
+				for p := 0; p < k; p++ {
+					t1 := (al * at(a, lda, i, p)) * at(b, ldb, j, p)
+					t2 := (al * at(b, ldb, i, p)) * at(a, lda, j, p)
+					val += t1 + t2
+					sc += math.Abs(t1) + math.Abs(t2)
+				}
+			}
+			if beta != 0 {
+				cv := be * float64(c[i*ldc+j])
+				val += cv
+				sc += math.Abs(cv)
+			}
+			out[i*n+j], scale[i*n+j] = val, sc
+		}
+	}
+	return out, scale
+}
+
+// Trmm returns the float64 reference for B = alpha·op(A)·B (left, A m×m) or
+// B = alpha·B·op(A) (right, A n×n), A triangular in the triangle named by lower,
+// and the per-element error scale, both indexed by row-major element (i*n+j). The
+// unreferenced triangle is never read, and with unit neither is the diagonal.
+func Trmm(left, lower, trans, unit bool, m, n int, alpha float32, a []float32, lda int,
+	b []float32, ldb int) (out, scale []float64) {
+
+	out = make([]float64, m*n)
+	scale = make([]float64, m*n)
+	if alpha == 0 {
+		return out, scale
+	}
+	al := float64(alpha)
+	// opA returns op(A)[r, c]: zero outside the triangle op(A) occupies, 1 on a
+	// unit diagonal, and only ever a stored element otherwise.
+	opA := func(r, c int) float64 {
+		if trans {
+			r, c = c, r
+		}
+		if r == c {
+			if unit {
+				return 1
+			}
+			return float64(a[r*lda+c])
+		}
+		if (lower && c > r) || (!lower && c < r) {
+			return 0
+		}
+		return float64(a[r*lda+c])
+	}
+	for i := 0; i < m; i++ {
+		for j := 0; j < n; j++ {
+			var val, sc float64
+			if left {
+				for p := 0; p < m; p++ {
+					t := al * opA(i, p) * float64(b[p*ldb+j])
+					val += t
+					sc += math.Abs(t)
+				}
+			} else {
+				for p := 0; p < n; p++ {
+					t := al * float64(b[i*ldb+p]) * opA(p, j)
+					val += t
+					sc += math.Abs(t)
+				}
+			}
+			out[i*n+j], scale[i*n+j] = val, sc
+		}
+	}
+	return out, scale
+}

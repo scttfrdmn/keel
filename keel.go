@@ -680,3 +680,51 @@ func Strsm(s Side, ul Uplo, tA Transpose, d Diag, m, n int, alpha float32, a []f
 	checkMatrix("Strsm", "b", m, n, b, ldb)
 	block.Trsm(activeKern, activeL1.Axpy, activeL1.ScalDiv, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
 }
+
+// Strmm computes B = alpha·op(A)·B (Left) or B = alpha·B·op(A) (Right) and
+// overwrites B with it. A is triangular, stored in the triangle ul names, m×m for
+// Left and n×n for Right; B is m×n.
+//
+// A's other triangle is never read, and with d == Unit neither is its diagonal,
+// which is taken to be 1; both may hold anything. alpha == 0 sets B to zero
+// without reading A, as reference STRMM does.
+//
+// It runs on Sgemm's blocked nest and microkernel (see internal/block.Trmm).
+func Strmm(s Side, ul Uplo, tA Transpose, d Diag, m, n int, alpha float32, a []float32, lda int, b []float32, ldb int) {
+	left := checkSide("Strmm", "s", s)
+	lower := checkUplo("Strmm", "ul", ul)
+	trans := checkTranspose("Strmm", "tA", tA)
+	unit := checkDiag("Strmm", "d", d)
+	if m < 0 || n < 0 {
+		panic("keel: Strmm: negative dimension")
+	}
+	da := n
+	if left {
+		da = m
+	}
+	checkMatrix("Strmm", "a", da, da, a, lda)
+	checkMatrix("Strmm", "b", m, n, b, ldb)
+	block.Trmm(activeKern, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
+}
+
+// Ssyr2k computes C = alpha·(A·Bᵀ + B·Aᵀ) + beta·C (t == NoTrans, A and B n×k) or
+// C = alpha·(Aᵀ·B + Bᵀ·A) + beta·C (t == Trans, A and B k×n), for C n×n
+// symmetric. Only the triangle ul names is read or written; the other may hold
+// anything. beta == 0 does not read C.
+//
+// It runs on Sgemm's blocked nest and microkernel (see internal/block.Syr2k).
+func Ssyr2k(ul Uplo, t Transpose, n, k int, alpha float32, a []float32, lda int, b []float32, ldb int, beta float32, c []float32, ldc int) {
+	lower := checkUplo("Ssyr2k", "ul", ul)
+	trans := checkTranspose("Ssyr2k", "t", t)
+	if n < 0 || k < 0 {
+		panic("keel: Ssyr2k: negative dimension")
+	}
+	ra, ca := n, k
+	if trans {
+		ra, ca = k, n
+	}
+	checkMatrix("Ssyr2k", "a", ra, ca, a, lda)
+	checkMatrix("Ssyr2k", "b", ra, ca, b, ldb)
+	checkMatrix("Ssyr2k", "c", n, n, c, ldc)
+	block.Syr2k(activeKern, lower, trans, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+}

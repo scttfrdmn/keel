@@ -11,8 +11,8 @@
 //	func init() { blas32.Use(gonumblas.Implementation{}) }
 //
 // Implementation satisfies gonum's blas.Float32. The routines keel implements
-// (Sdot, Saxpy, Sscal, Snrm2, Sasum, Isamax, Sgemv, Sger, Sgemm, Ssyrk, Ssymm,
-// Strsm) run in keel; every other routine falls through to gonum's own pure-Go
+// (Sdot, Saxpy, Sscal, Snrm2, Sasum, Isamax, Sgemv, Sger, Sgemm, Ssyrk, Ssyr2k,
+// Ssymm, Strsm, Strmm) run in keel; every other routine falls through to gonum's own pure-Go
 // implementation, which is embedded. Both libraries use row-major storage with
 // explicit leading dimensions, so arguments pass through unchanged.
 //
@@ -191,4 +191,26 @@ func (g Implementation) Strsm(s blas.Side, ul blas.Uplo, tA blas.Transpose, d bl
 		return
 	}
 	keel.Strsm(sd, u, t, dg, m, n, alpha, a, lda, b, ldb)
+}
+
+func (g Implementation) Strmm(s blas.Side, ul blas.Uplo, tA blas.Transpose, d blas.Diag, m, n int, alpha float32, a []float32, lda int, b []float32, ldb int) {
+	sd, okS := side(s)
+	u, okU := uplo(ul)
+	t, okT := trans(tA)
+	dg, okD := diag(d)
+	if !okS || !okU || !okT || !okD {
+		g.Implementation.Strmm(s, ul, tA, d, m, n, alpha, a, lda, b, ldb)
+		return
+	}
+	keel.Strmm(sd, u, t, dg, m, n, alpha, a, lda, b, ldb)
+}
+
+func (g Implementation) Ssyr2k(ul blas.Uplo, tA blas.Transpose, n, k int, alpha float32, a []float32, lda int, b []float32, ldb int, beta float32, c []float32, ldc int) {
+	u, okU := uplo(ul)
+	t, okT := trans(tA)
+	if !okU || !okT {
+		g.Implementation.Ssyr2k(ul, tA, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+		return
+	}
+	keel.Ssyr2k(u, t, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
 }

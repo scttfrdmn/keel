@@ -9,6 +9,22 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`Strmm` and `Ssyr2k`, native.** Both run on Sgemm's blocked nest and audited microkernel, so no
+  new kernel. `Ssyr2k` is Syrk's masked nest run twice, A·Bᵀ with beta and then B·Aᵀ with beta 1.
+  `Strmm` is Trsm's block partition run forward, in the block order that consumes each block of B
+  before overwriting it. The diagonal block multiplies a dense copy of the triangle, so A's other
+  triangle and a unit diagonal are never read. Both are served through `keel/gonumblas`, which now
+  covers 14 of Gonum's 35 float32 routines in keel.
+  - Tested against new float64 references (`oracle.Trmm`, `oracle.Syr2k`) over every flag, sizes
+    either side of the 64-row block, padded leading dimensions, and NaN in every region the
+    routines must not read. Six planted bugs (wrong block order on either side, reading the other
+    triangle, reading a unit diagonal, reapplying beta, dropping the B·Aᵀ term) each turn the tests
+    red. Differential and routing tests against Gonum are extended to both. Green on arm64 and on
+    x86-64 (janus), stock and SIMD.
+- **Reported the Gonum `Dsyrk` beta=0 bug upstream as gonum/gonum#2129**, after confirming it on
+  Gonum master.
+
+### Added
 - **`keel/gonumblas`: keel as a drop-in float32 BLAS for Gonum.** `blas32.Use(gonumblas.Implementation{})`
   routes Gonum's `blas32` through keel. The 12 routines keel implements run in keel, and the rest of
   `blas.Float32` falls through to Gonum's pure-Go code, so the whole interface works today. The

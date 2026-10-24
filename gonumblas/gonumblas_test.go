@@ -618,3 +618,114 @@ func TestRoutesToKeel(t *testing.T) {
 		}
 	}
 }
+
+func TestStrmmSsyr2kAgreeWithGonum(t *testing.T) {
+	r := rand.New(rand.NewSource(8))
+	sizes := []int{0, 1, 5, 65}
+	for _, sd := range []blas.Side{blas.Left, blas.Right} {
+		for _, ul := range []blas.Uplo{blas.Upper, blas.Lower} {
+			for _, ta := range transT {
+				for _, dg := range []blas.Diag{blas.NonUnit, blas.Unit} {
+					for _, m := range sizes {
+						for _, n := range sizes {
+							na := n
+							if sd == blas.Left {
+								na = m
+							}
+							a, lda := padded(r, na, na, 1)
+							triangle(a, na, lda, ul == blas.Lower, dg == blas.Unit)
+							for _, alpha := range alphas {
+								b, ldb := padded(r, m, n, 2)
+								bk, bg := append([]float32(nil), b...), append([]float32(nil), b...)
+								keelImpl.Strmm(sd, ul, ta, dg, m, n, alpha, a, lda, bk, ldb)
+								gonumImpl.Strmm(sd, ul, ta, dg, m, n, alpha, a, lda, bg, ldb)
+								_, s := oracle.Trmm(sd == blas.Left, ul == blas.Lower, ta != blas.NoTrans, dg == blas.Unit, m, n, alpha, a, lda, b, ldb)
+								compareStorage(t, fmt.Sprintf("Strmm %c%c%c%c m=%d n=%d a=%v", sd, ul, ta, dg, m, n, alpha),
+									bk, bg, max(na, 1), func(i int) (float64, bool) {
+										if row, col := i/ldb, i%ldb; row < m && col < n {
+											return s[row*n+col], true
+										}
+										return 0, false
+									})
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	for _, ul := range []blas.Uplo{blas.Upper, blas.Lower} {
+		lower := ul == blas.Lower
+		for _, ta := range transT {
+			for _, n := range sizes {
+				for _, k := range []int{0, 1, 7, 70} {
+					ar, ac := n, k
+					if ta != blas.NoTrans {
+						ar, ac = k, n
+					}
+					a, lda := padded(r, ar, ac, 1)
+					b, ldb := padded(r, ar, ac, 2)
+					for _, alpha := range alphas {
+						for _, beta := range betas {
+							c, ldc := padded(r, n, n, 2)
+							betaZeroPoison(c, beta)
+							triangle(c, n, ldc, lower, false)
+							ck, cg := append([]float32(nil), c...), append([]float32(nil), c...)
+							keelImpl.Ssyr2k(ul, ta, n, k, alpha, a, lda, b, ldb, beta, ck, ldc)
+							gonumImpl.Ssyr2k(ul, ta, n, k, alpha, a, lda, b, ldb, beta, cg, ldc)
+							ref := append([]float32(nil), c...)
+							if beta == 0 {
+								ref = make([]float32, len(c))
+							}
+							_, s := oracle.Syr2k(lower, ta != blas.NoTrans, n, k, alpha, a, lda, b, ldb, beta, ref, ldc)
+							compareStorage(t, fmt.Sprintf("Ssyr2k %c%c n=%d k=%d a=%v b=%v", ul, ta, n, k, alpha, beta),
+								ck, cg, max(2*k, 1), func(i int) (float64, bool) {
+									row, col := i/ldc, i%ldc
+									if row < n && col < n && oracle.InTriangle(lower, row, col) {
+										return s[row*n+col], true
+									}
+									return 0, false
+								})
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// Routing for the two newest overrides, kept with them rather than folded into the
+// shared probe table so a reader adding a routine sees the whole pattern in one
+// place. Sizes are past keel's 64-row block, where keel's arithmetic order departs
+// from gonum's.
+func TestStrmmSsyr2kRouteToKeel(t *testing.T) {
+	r := rand.New(rand.NewSource(9))
+	bits := func(v []float32) string { return fmt.Sprintf("%x", v) }
+	a, _ := padded(r, 130, 130, 0)
+	b0, _ := padded(r, 130, 9, 0)
+	tr := func(f func(b []float32)) []float32 { b := append([]float32(nil), b0...); f(b); return b }
+	ad := tr(func(b []float32) {
+		keelImpl.Strmm(blas.Left, blas.Lower, blas.NoTrans, blas.NonUnit, 130, 9, 1.5, a, 130, b, 9)
+	})
+	gd := tr(func(b []float32) {
+		gonumImpl.Strmm(blas.Left, blas.Lower, blas.NoTrans, blas.NonUnit, 130, 9, 1.5, a, 130, b, 9)
+	})
+	kd := tr(func(b []float32) { keelStrmm130(a, b) })
+	if bits(kd) == bits(gd) {
+		t.Errorf("Strmm: keel and gonum are bit-identical on this probe, so it cannot tell which one ran")
+	} else if bits(ad) != bits(kd) {
+		t.Errorf("Strmm: the adapter's result is not keel's bit for bit, so the call did not reach keel")
+	}
+	x, _ := padded(r, 70, 70, 0)
+	y, _ := padded(r, 70, 70, 0)
+	c0, _ := padded(r, 70, 70, 0)
+	sy := func(f func(c []float32)) []float32 { c := append([]float32(nil), c0...); f(c); return c }
+	ad = sy(func(c []float32) { keelImpl.Ssyr2k(blas.Upper, blas.NoTrans, 70, 70, 1.5, x, 70, y, 70, 0.5, c, 70) })
+	gd = sy(func(c []float32) { gonumImpl.Ssyr2k(blas.Upper, blas.NoTrans, 70, 70, 1.5, x, 70, y, 70, 0.5, c, 70) })
+	kd = sy(func(c []float32) { keelSsyr2k70(x, y, c) })
+	if bits(kd) == bits(gd) {
+		t.Errorf("Ssyr2k: keel and gonum are bit-identical on this probe, so it cannot tell which one ran")
+	} else if bits(ad) != bits(kd) {
+		t.Errorf("Ssyr2k: the adapter's result is not keel's bit for bit, so the call did not reach keel")
+	}
+}

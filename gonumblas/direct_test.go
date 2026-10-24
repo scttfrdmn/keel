@@ -22,3 +22,11 @@ func keelSsymm(a, b, c []float32) {
 func keelStrsm130(a, c []float32) {
 	keel.Strsm(keel.Left, keel.Lower, keel.NoTrans, keel.NonUnit, 130, 7, 1.5, a, 130, c, 7)
 }
+
+func keelStrmm130(a, b []float32) {
+	keel.Strmm(keel.Left, keel.Lower, keel.NoTrans, keel.NonUnit, 130, 9, 1.5, a, 130, b, 9)
+}
+
+func keelSsyr2k70(a, b, c []float32) {
+	keel.Ssyr2k(keel.Upper, keel.NoTrans, 70, 70, 1.5, a, 70, b, 70, 0.5, c, 70)
+}
