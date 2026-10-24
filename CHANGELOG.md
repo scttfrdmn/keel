@@ -8,6 +8,17 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **Right-side `Strsm` is about twice as fast** (#181). Its diagonal-block solve now runs as the left
+  solve on a transposed copy of B's column window (X·op(A) = B is op(A)ᵀ·Xᵀ = Bᵀ), so the inner loop is
+  the vectorized unit-stride axpy the left side uses instead of a length-≤64 reduction. Solve-only time
+  at n=2048 (MB=64, one thread, dev tier, unjudged): 171 → 21 ms on M4 Pro, 251 → 23 ms on janus. Full
+  side=R `Strsm`: 355 → 194 ms and 561 → 272 ms. The transpose buffer's row stride is padded by 16
+  floats, because at a power-of-two m the d rows it writes per row of B alias in cache. Unpadded, the
+  M4 solve took 36 ms. Left-side `Strsm`, and so every published README row, is unchanged.
+  - The solve is no longer bit-identical to the strided original. It's held to `oracle.Tolerance`, as
+    `solveLeft` is. The previous form stays as a benchmark arm.
+
 ### Added
 - **Native `Sdsdot` and the nine banded and packed Level-2 routines** (`Sgbmv`, `Stbmv`, `Stbsv`,
   `Ssbmv`, `Stpmv`, `Stpsv`, `Sspmv`, `Sspr`, `Sspr2`) (#185). keel now implements every routine in

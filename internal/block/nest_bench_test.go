@@ -465,9 +465,10 @@ func trsmSolvesOnly(left bool, m, n int, a []float32, lda int, bmat []float32, l
 		return
 	}
 	strips(m, func(i0, im int) {
+		t := make([]float32, tStride(im)*min(MB, n)) // as trsmRight allocates it
 		for _, j0 := range trsmSolveOrder(false, lowerEff, n) {
-			solveRight(lowerEff, false, false, im, min(MB, n-j0),
-				a[j0*lda+j0:], lda, bmat[i0*ldb+j0:], ldb)
+			solveRight(l1.Backends()[0].Axpy, l1.Backends()[0].ScalDiv, lowerEff, false, false, im, min(MB, n-j0),
+				a[j0*lda+j0:], lda, bmat[i0*ldb+j0:], ldb, t)
 		}
 	})
 }

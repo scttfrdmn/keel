@@ -4,9 +4,13 @@
 package block
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"testing"
+
+	"github.com/scttfrdmn/keel/internal/l1"
+	"github.com/scttfrdmn/keel/internal/oracle"
 )
 
 // The three range predicates against the element-wise definition they are derived
@@ -185,31 +189,55 @@ func solveRightStrided(lowerEff, trans, unit bool, m, d int, a []float32, lda in
 	}
 }
 
-// TestSolveRightInterchangeIsBitIdentical is the whole warrant for #37's first arm
-// being an optimisation rather than a numerical change.
-//
-// Rows of X are independent, so moving the row loop from innermost to outermost
-// cannot reassociate anything: for a fixed row, the j order, the p order and the
-// division are unchanged. That predicts *bit* equality, not equality within a
-// tolerance, so this test compares raw bits and no oracle.Tolerance appears in it.
-// Comparing with == would silently pass on two NaNs of different payloads and fail
-// on nothing this test can produce; math.Float32bits says what is meant.
-//
-// The shapes exercise both triangles, both transpose flags and both diagonal
-// conventions — the four (lowerEff, trans) pairs are the ones that pick between the
-// contiguous-run and stride-lda operands, and the interchange touched that split.
-// ldb > d and lda > d on purpose: with ldb == d the strided nest's inner loop is
-// accidentally contiguous, so a padded window is the only shape that distinguishes
-// the two implementations at all.
-func TestSolveRightInterchangeIsBitIdentical(t *testing.T) {
-	shapes := []struct{ m, d int }{
-		{1, 1},    // one element: the degenerate case both loops have to survive
-		{1, 7},    // one row, so the interchange has no outer loop to speak of
-		{9, 1},    // one column: every p range is empty and only the divide runs
-		{5, 4},    // fewer rows than columns
-		{64, 64},  // the shipped MB
-		{130, 33}, // neither dimension a multiple of anything, m > any tile
+// solveRightRows is solveRight as it stood from #37 until #181: rows outermost and
+// a length-≤d reduction innermost, bit-identical to solveRightStrided. Kept as a
+// benchmark arm, so the transpose form is measured against the code it replaced in
+// one binary and one process.
+func solveRightRows(lowerEff, trans, unit bool, m, d int, a []float32, lda int, b []float32, ldb int) {
+	for i := 0; i < m; i++ {
+		row := b[i*ldb : i*ldb+d]
+		for step := 0; step < d; step++ {
+			j := step
+			if lowerEff {
+				j = d - 1 - step
+			}
+			plo, phi := 0, j
+			if lowerEff {
+				plo, phi = j+1, d
+			}
+			s := row[j]
+			// op(A)[p, j] is a[j][p] transposed and a[p][j] not, so the operand is
+			// a contiguous run of one row of A in the first case and a column of
+			// stride lda in the second. Split here, once per solved element, rather
+			// than testing trans per element as the strided nest could afford to.
+			if trans {
+				arow := a[j*lda : j*lda+d]
+				for p := plo; p < phi; p++ {
+					s -= row[p] * arow[p]
+				}
+			} else {
+				for p := plo; p < phi; p++ {
+					s -= row[p] * a[p*lda+j]
+				}
+			}
+			if !unit {
+				// Divide, do not scale by a reciprocal: see Trsm's doc comment.
+				s /= a[j*lda+j]
+			}
+			row[j] = s
+		}
 	}
+}
+
+// TestSolveRightMatchesOracle holds the transpose-to-left solveRight (#181) to the
+// float64 reference. It is no longer bit-identical to the forms before it: the axpy
+// on the transpose may fuse and runs a different p order, so the comparison is
+// through oracle.Tolerance, as solveLeft's is. The shapes are the ones the
+// bit-identity test used; ldb > d and lda > d, so a write outside the column
+// window, or a read of A's padding, shows (the padding is NaN).
+func TestSolveRightMatchesOracle(t *testing.T) {
+	shapes := []struct{ m, d int }{{1, 1}, {1, 7}, {9, 1}, {5, 4}, {64, 64}, {130, 33}}
+	ax, sd := l1.Backends()[0].Axpy, l1.Backends()[0].ScalDiv
 	for _, sh := range shapes {
 		for _, lowerEff := range []bool{false, true} {
 			for _, trans := range []bool{false, true} {
@@ -218,27 +246,33 @@ func TestSolveRightInterchangeIsBitIdentical(t *testing.T) {
 					rng := rand.New(rand.NewSource(int64(sh.m*1000 + sh.d)))
 					a := make([]float32, sh.d*lda+lda)
 					for i := range a {
-						a[i] = rng.Float32()*2 - 1
+						a[i] = float32(math.NaN())
 					}
-					// A diagonal bounded away from zero: this test is about which
-					// loop order ran, and a near-singular block would let ordinary
-					// ill-conditioning masquerade as a difference between them.
-					for j := 0; j < sh.d; j++ {
-						a[j*lda+j] = 1 + rng.Float32()
+					for i := 0; i < sh.d; i++ {
+						for j := 0; j < sh.d; j++ {
+							a[i*lda+j] = rng.Float32()*2 - 1
+						}
+						a[i*lda+i] = 1 + rng.Float32() // bounded away from zero
 					}
 					b0 := make([]float32, sh.m*ldb+ldb)
 					for i := range b0 {
 						b0[i] = rng.Float32()*2 - 1
 					}
 					got := append([]float32(nil), b0...)
-					want := append([]float32(nil), b0...)
-					solveRight(lowerEff, trans, unit, sh.m, sh.d, a, lda, got, ldb)
-					solveRightStrided(lowerEff, trans, unit, sh.m, sh.d, a, lda, want, ldb)
-					for i := range want {
-						if math.Float32bits(got[i]) != math.Float32bits(want[i]) {
-							t.Fatalf("m=%d d=%d lowerEff=%v trans=%v unit=%v: b[%d] = %v (bits %#x), strided nest gives %v (bits %#x)",
-								sh.m, sh.d, lowerEff, trans, unit, i,
-								got[i], math.Float32bits(got[i]), want[i], math.Float32bits(want[i]))
+					solveRight(ax, sd, lowerEff, trans, unit, sh.m, sh.d, a, lda, got, ldb, make([]float32, tStride(sh.m)*sh.d))
+					want, scale := oracle.Trsm(false, lowerEff != trans, trans, unit, sh.m, sh.d, 1, a, lda, b0, ldb)
+					what := fmt.Sprintf("m=%d d=%d lowerEff=%v trans=%v unit=%v", sh.m, sh.d, lowerEff, trans, unit)
+					for i := range got {
+						r, c := i/ldb, i%ldb
+						if r >= sh.m || c >= sh.d {
+							if math.Float32bits(got[i]) != math.Float32bits(b0[i]) {
+								t.Fatalf("%s: wrote b[%d], outside the column window", what, i)
+							}
+							continue
+						}
+						w, sc := want[r*sh.d+c], scale[r*sh.d+c]
+						if d := math.Abs(float64(got[i]) - w); !(d <= oracle.Tolerance(sh.d, sc)) {
+							t.Fatalf("%s: b[%d,%d] = %v, want %v (|diff| %.3g > tolerance %.3g)", what, r, c, got[i], w, d, oracle.Tolerance(sh.d, sc))
 						}
 					}
 				}
@@ -275,12 +309,16 @@ func BenchmarkSolveRightInterchange(b *testing.B) {
 	a := benchTri(n)
 	b0 := benchMat(m, n)
 	bm := make([]float32, len(b0))
+	tbuf := make([]float32, tStride(m)*d)
 	flops := float64(m) * float64(d) * float64(d+1)
 	arms := []struct {
 		name string
 		fn   func(lowerEff, trans, unit bool, m, d int, a []float32, lda int, b []float32, ldb int)
 	}{
-		{"interchanged", solveRight},
+		{"transposed", func(lowerEff, trans, unit bool, m, d int, a []float32, lda int, b []float32, ldb int) {
+			solveRight(l1.Backends()[0].Axpy, l1.Backends()[0].ScalDiv, lowerEff, trans, unit, m, d, a, lda, b, ldb, tbuf)
+		}},
+		{"interchanged", solveRightRows},
 		{"strided", solveRightStrided},
 	}
 	for _, arm := range arms {

@@ -228,6 +228,7 @@ func Symm(kn kern.Kernel, left, lower bool, m, n int, alpha float32, a []float32
 //	n=2048 side=L: MB=96  -2.6%      n=2048 side=R: MB=48  -14.7%
 //	n=4096 side=L: MB=256 -5.6%      n=4096 side=R: MB=48   -6.5%
 //
+// (These are from before #181 changed solveRight, so the side=R column is stale.)
 // THE TWO SIDES PULL IN OPPOSITE DIRECTIONS and that is the finding, not the
 // winner: side=R wants 48 at both n while side=L pays +6.8% there and wants 96
 // then 256. MB=48 is the best single compromise (mean -3.7%, better in 3 of 4
@@ -289,12 +290,14 @@ type ScalDiv func(alpha float32, x []float32)
 // confusion was work for time, which is the whole reason #37 asked for a
 // measurement first.
 //
-// WHAT THE MEASUREMENT NOW POINTS AT: solveRight costs 7.5-7.7x solveLeft at
-// IDENTICAL flop counts on identical partitions. Its vectorizable axis is the
-// short one — the left side's inner loop runs the full width of n, the right
-// side's runs at most d and is a reduction — so it is the dominant remaining cost
-// in Strsm and a bigger lever than MB. That needs a blocking change, not another
-// op. What these solves must not do is get clever: they divide rather than multiply by a
+// solveRight USED TO cost 7.5-7.7x solveLeft at identical flop counts, because its
+// vectorizable axis was the short one. Since #181 it is solveLeft on a transposed
+// copy of the column window, and the solve-only gap is ~1.2x on the M4 Pro dev host
+// (21 ms against 18 ms; was 171) and ~2.2x on janus's AVX-512 (23 ms against 10;
+// was 251), n=2048, MB=64, one thread, unjudged. The side=R MB optimum at MB's
+// declaration was measured on the old form and is stale.
+//
+// What these solves must not do is get clever: they divide rather than multiply by a
 // reciprocal (a reciprocal changes the answer in the last bit and disagrees with
 // the oracle for no gain), and they do not skip a zero multiplier (BLAS requires
 // 0·Inf to propagate NaN, and a "fast path" for a zero in A would silently return
@@ -470,6 +473,7 @@ func trsmRight(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, 
 	a []float32, lda int, b []float32, ldb int) {
 
 	nblk := (n + MB - 1) / MB
+	t := make([]float32, tStride(m)*min(MB, n)) // solveRight's transpose of one column window
 	for step := 0; step < nblk; step++ {
 		bj := step
 		if lowerEff {
@@ -494,7 +498,7 @@ func trsmRight(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, 
 			gemm(kn, false, trans, m, nb, kk, -1, b[p0:], ldb, bsl, lda,
 				alpha, b[j0:], ldb, triMask{}, symOperand{}, noSplit)
 		}
-		solveRight(lowerEff, trans, unit, m, nb, a[j0*lda+j0:], lda, b[j0:], ldb)
+		solveRight(ax, sd, lowerEff, trans, unit, m, nb, a[j0*lda+j0:], lda, b[j0:], ldb, t)
 	}
 }
 
@@ -554,70 +558,44 @@ func solveLeft(ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, d, n int, a []fl
 
 // solveRight solves X·op(A) = B in place for one d×d diagonal block, over all m
 // rows of B. a points at the diagonal block's first element, b at its column
-// window of B.
+// window of B, and t is scratch of at least d·m elements.
 //
-// # The row is the outer loop, and that is issue #37's first arm
+// # It is the left solve on the transpose (#181)
 //
-// The dependency runs along columns, so the *substitution* has to walk columns in
-// solve order. Which loop is innermost is a separate choice, and until this change
-// the innermost loop was over m with stride ldb: every scalar operation touched a
-// different cache line of B, and B's live window got re-walked once per (j, p)
-// pair. That is what "per-element, not per-block" means in #37's measurement, and
-// the sweep at e8662ba carries its own control — solveLeft and solveRight do
-// *identical* flop counts on identical MB partitions and differed by 7.6–12.4×
-// (recomputed from build/trsm-mb-e8662ba.log: at MB = 64 on vesta, 0.224 against
-// 2.20 GFLOP/s). Same scalar arithmetic, same block shapes; the one structural
-// difference was that solveLeft's inner loop was already unit-stride. A rate that
-// sat at 0.213–0.232 GFLOP/s across a 16× change in MB was never going to be
-// explained by the block, because nothing about it varied with the block.
+// X·op(A) = B is op(A)ᵀ·Xᵀ = Bᵀ, so the block's window of B is transposed into t
+// (d rows of length m), solveLeft runs on it with op(A)ᵀ — trans and the effective
+// triangle both flip, the diagonal is the same — and the result is transposed back.
+// The point is the inner loop. In X·op(A) = B the dependency runs along a row of
+// length d ≤ MB, so the only loop available there is a short reduction, strided by
+// lda when op(A) is not transposed. On the transpose the dependency runs down t's
+// rows and the inner loop is solveLeft's unit-stride axpy over m, the same vector
+// code the left side already uses. The two copies are O(m·d) against the solve's
+// O(m·d²).
 //
-// So rows move to the outside. Rows of X are independent — row i of B involves no
-// other row — so this is a pure loop interchange and *not* a change of algorithm:
-// for any fixed row the j order, the p order and the division all stay exactly as
-// they were, which makes the output bit-identical to the strided nest rather than
-// merely equal within a tolerance. TestSolveRightInterchangeIsBitIdentical holds
-// that against the previous implementation directly; no epsilon is involved and
-// none should appear here (DESIGN.md §5, and Trsm's own note on reciprocals).
-//
-// What it buys: one row's d floats are contiguous (≤ 256 bytes at MB = 64) and the
-// d×d block of A is ≤ 16 KB of live data that every row re-reads, so both operands
-// are L1-resident for the whole call instead of B streaming past once per (j, p).
-//
-// The accumulator is a float32 local, so the d²/2 stores to B become one store per
-// solved element. It must stay float32: Go rounds every float32 operation to
-// float32, which is what keeps the accumulation bit-identical to the in-place form.
-func solveRight(lowerEff, trans, unit bool, m, d int, a []float32, lda int, b []float32, ldb int) {
+// The previous form, a row-outermost substitution (#37), is kept in tri_test.go as
+// solveRightRows, with the strided original it was bit-identical to. This form is
+// not bit-identical to either: the axpy may fuse its multiply-subtract and runs the
+// p order per row of t rather than per element, so it is held to oracle.Tolerance,
+// as solveLeft is. It still divides rather than multiplying by a reciprocal, and
+// skips no zero multiplier, because solveLeft does neither.
+// tStride is the row stride of solveRight's transpose buffer: m, padded by 16
+// floats so that the d rows it writes per row of B do not map to the same cache
+// sets when m is a power of two.
+func tStride(m int) int { return m + 16 }
+
+func solveRight(ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m, d int, a []float32, lda int, b []float32, ldb int, t []float32) {
+	ldt := tStride(m)
+	t = t[:d*ldt]
+	for i := 0; i < m; i++ {
+		for j, v := range b[i*ldb : i*ldb+d] {
+			t[j*ldt+i] = v
+		}
+	}
+	solveLeft(ax, sd, !lowerEff, !trans, unit, d, m, a, lda, t, ldt)
 	for i := 0; i < m; i++ {
 		row := b[i*ldb : i*ldb+d]
-		for step := 0; step < d; step++ {
-			j := step
-			if lowerEff {
-				j = d - 1 - step
-			}
-			plo, phi := 0, j
-			if lowerEff {
-				plo, phi = j+1, d
-			}
-			s := row[j]
-			// op(A)[p, j] is a[j][p] transposed and a[p][j] not, so the operand is
-			// a contiguous run of one row of A in the first case and a column of
-			// stride lda in the second. Split here, once per solved element, rather
-			// than testing trans per element as the strided nest could afford to.
-			if trans {
-				arow := a[j*lda : j*lda+d]
-				for p := plo; p < phi; p++ {
-					s -= row[p] * arow[p]
-				}
-			} else {
-				for p := plo; p < phi; p++ {
-					s -= row[p] * a[p*lda+j]
-				}
-			}
-			if !unit {
-				// Divide, do not scale by a reciprocal: see Trsm's doc comment.
-				s /= a[j*lda+j]
-			}
-			row[j] = s
+		for j := range row {
+			row[j] = t[j*ldt+i]
 		}
 	}
 }
