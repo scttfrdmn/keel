@@ -30,3 +30,13 @@ func keelStrmm130(a, b []float32) {
 func keelSsyr2k70(a, b, c []float32) {
 	keel.Ssyr2k(keel.Upper, keel.NoTrans, 70, 70, 1.5, a, 70, b, 70, 0.5, c, 70)
 }
+
+func keelStrmv(n int, a, x []float32) {
+	keel.Strmv(keel.Upper, keel.NoTrans, keel.NonUnit, n, a, n, x, 1)
+}
+func keelStrsv(n int, a, x []float32) {
+	keel.Strsv(keel.Lower, keel.NoTrans, keel.NonUnit, n, a, n, x, 1)
+}
+func keelSsymv(n int, a, x, y []float32) {
+	keel.Ssymv(keel.Upper, n, 1.5, a, n, x, 1, 0.5, y, 1)
+}

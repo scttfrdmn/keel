@@ -9,6 +9,22 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Native `Strmv`, `Strsv`, `Ssymv`, `Ssyr` and `Ssyr2`** (#183). Each loops over A's rows, which
+  are contiguous in row-major storage, through the active Level-1 backend's `Dot` and `Axpy`, so
+  they get the vector code without new kernels. Strided vectors are gathered once per call, as in
+  `Sgemv`/`Sger`. Conventions match those two: negative strides allowed, `alpha == 0` doesn't read
+  the vectors, no zero-scale row skipping. The other triangle and a unit diagonal are never read.
+  `keel/gonumblas` now serves 19 of Gonum's 35 float32 routines in keel.
+  - Tested against the Level-3 float64 references with a single column (Strmv is Strmm with
+    B = x, and so on), over every flag, sizes 0–70, strides 1/2/−1/−3, and NaN in every region the
+    routines must not read. Nine planted bugs each turn the lattice red. A tenth, `Strsv` using a
+    reciprocal instead of dividing, can't be seen by a tolerance test, so an exact witness
+    (5/49 vs 5·(1/49)) pins it. A mutant that stayed green exposed a redundant copy in `Strmv`,
+    since removed. Differential and routing tests against Gonum cover all five; Ssyr and Ssyr2 are
+    one fused multiply-add per element in both libraries, so the routing test can't tell them apart
+    by value; it says so rather than claiming them. Green on arm64 and x86-64, stock and SIMD.
+
+### Added
 - **`Strmm` and `Ssyr2k`, native.** Both run on Sgemm's blocked nest and audited microkernel, so no
   new kernel. `Ssyr2k` is Syrk's masked nest run twice, A·Bᵀ with beta and then B·Aᵀ with beta 1.
   `Strmm` is Trsm's block partition run forward, in the block order that consumes each block of B

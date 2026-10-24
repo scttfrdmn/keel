@@ -729,3 +729,166 @@ func TestStrmmSsyr2kRouteToKeel(t *testing.T) {
 		t.Errorf("Ssyr2k: the adapter's result is not keel's bit for bit, so the call did not reach keel")
 	}
 }
+
+// strideScale maps a storage index of an n-element vector at stride inc to the
+// oracle scale of the element there, or reports false for a gap.
+func strideScale(n, inc int, s []float64) func(int) (float64, bool) {
+	start := oracle.Index(n, inc)
+	return func(i int) (float64, bool) {
+		if n == 0 || (i-start)%inc != 0 {
+			return 0, false
+		}
+		j := (i - start) / inc
+		if j < 0 || j >= n {
+			return 0, false
+		}
+		return s[j], true
+	}
+}
+
+// vecOf reads a strided vector into element order for the oracle.
+func vecOf(v []float32, n, inc int) []float32 {
+	out := make([]float32, n)
+	start := oracle.Index(n, inc)
+	for j := 0; j < n; j++ {
+		out[j] = v[start+j*inc]
+	}
+	return out
+}
+
+func TestLevel2SymTriAgreeWithGonum(t *testing.T) {
+	r := rand.New(rand.NewSource(10))
+	for _, ul := range []blas.Uplo{blas.Upper, blas.Lower} {
+		lower := ul == blas.Lower
+		for _, n := range []int{0, 1, 5, 33} {
+			for _, inc := range []int{1, -2} {
+				for _, ta := range transT {
+					for _, dg := range []blas.Diag{blas.NonUnit, blas.Unit} {
+						a, lda := padded(r, n, n, 1)
+						for i := 0; i < n; i++ {
+							a[i*lda+i] = 4 + float32(r.Float64())
+						}
+						triangle(a, n, lda, lower, dg == blas.Unit)
+						x := randVec(r, storage(n, inc))
+						xv := vecOf(x, n, inc)
+						what := fmt.Sprintf("%c%c%c n=%d inc=%d", ul, ta, dg, n, inc)
+
+						xk, xg := append([]float32(nil), x...), append([]float32(nil), x...)
+						keelImpl.Strmv(ul, ta, dg, n, a, lda, xk, inc)
+						gonumImpl.Strmv(ul, ta, dg, n, a, lda, xg, inc)
+						_, s := oracle.Trmm(true, lower, ta != blas.NoTrans, dg == blas.Unit, n, 1, 1, a, lda, xv, 1)
+						compareStorage(t, "Strmv "+what, xk, xg, max(n, 1), strideScale(n, inc, s))
+
+						xk, xg = append([]float32(nil), x...), append([]float32(nil), x...)
+						keelImpl.Strsv(ul, ta, dg, n, a, lda, xk, inc)
+						gonumImpl.Strsv(ul, ta, dg, n, a, lda, xg, inc)
+						_, s = oracle.Trsm(true, lower, ta != blas.NoTrans, dg == blas.Unit, n, 1, 1, a, lda, xv, 1)
+						compareStorage(t, "Strsv "+what, xk, xg, max(n, 1), strideScale(n, inc, s))
+					}
+				}
+				a, lda := padded(r, n, n, 1)
+				triangle(a, n, lda, lower, false)
+				x := randVec(r, storage(n, inc))
+				xv := vecOf(x, n, inc)
+				for _, alpha := range alphas {
+					for _, beta := range betas {
+						y := randVec(r, storage(n, inc))
+						betaZeroPoison(y, beta)
+						yk, yg := append([]float32(nil), y...), append([]float32(nil), y...)
+						keelImpl.Ssymv(ul, n, alpha, a, lda, x, inc, beta, yk, inc)
+						gonumImpl.Ssymv(ul, n, alpha, a, lda, x, inc, beta, yg, inc)
+						yv := vecOf(y, n, inc)
+						if beta == 0 {
+							yv = make([]float32, n)
+						}
+						_, s := oracle.Symm(true, lower, n, 1, alpha, a, lda, xv, 1, beta, yv, 1)
+						compareStorage(t, fmt.Sprintf("Ssymv %c n=%d inc=%d a=%v b=%v", ul, n, inc, alpha, beta), yk, yg, n+1, strideScale(n, inc, s))
+					}
+					y := randVec(r, storage(n, inc))
+					yv := vecOf(y, n, inc)
+					c, ldc := padded(r, n, n, 2)
+					triangle(c, n, ldc, lower, false)
+					ck, cg := append([]float32(nil), c...), append([]float32(nil), c...)
+					keelImpl.Ssyr(ul, n, alpha, x, inc, ck, ldc)
+					gonumImpl.Ssyr(ul, n, alpha, x, inc, cg, ldc)
+					_, s := oracle.Syrk(lower, false, n, 1, alpha, xv, 1, 1, c, ldc)
+					tri := func(s []float64) func(int) (float64, bool) {
+						return func(i int) (float64, bool) {
+							row, col := i/ldc, i%ldc
+							if row < n && col < n && oracle.InTriangle(lower, row, col) {
+								return s[row*n+col], true
+							}
+							return 0, false
+						}
+					}
+					compareStorage(t, fmt.Sprintf("Ssyr %c n=%d inc=%d a=%v", ul, n, inc, alpha), ck, cg, 2, tri(s))
+					ck, cg = append([]float32(nil), c...), append([]float32(nil), c...)
+					keelImpl.Ssyr2(ul, n, alpha, x, inc, y, inc, ck, ldc)
+					gonumImpl.Ssyr2(ul, n, alpha, x, inc, y, inc, cg, ldc)
+					_, s = oracle.Syr2k(lower, false, n, 1, alpha, xv, 1, yv, 1, 1, c, ldc)
+					compareStorage(t, fmt.Sprintf("Ssyr2 %c n=%d inc=%d a=%v", ul, n, inc, alpha), ck, cg, 3, tri(s))
+				}
+			}
+		}
+	}
+}
+
+// Routing for the Level-2 overrides. Strmv, Strsv and Ssymv run dot products, whose
+// summation order differs from gonum's, so they are distinguishable by value.
+// Ssyr and Ssyr2 are per-element fused multiply-adds in both libraries on arm64,
+// like Saxpy and Sger, so no input separates them by value and this test does not
+// claim them.
+func TestLevel2SymTriRouteToKeel(t *testing.T) {
+	r := rand.New(rand.NewSource(12))
+	const n = 300
+	a, _ := padded(r, n, n, 0)
+	for i := 0; i < n; i++ {
+		a[i*n+i] = 4
+	}
+	x0 := randVec(r, n)
+	for i := range x0 {
+		x0[i] *= float32(math.Exp(4 * r.NormFloat64())) // wide magnitudes, so order shows
+	}
+	y0 := randVec(r, n)
+	bits := func(v []float32) string { return fmt.Sprintf("%x", v) }
+	vec := func(src []float32, f func(v []float32)) []float32 {
+		v := append([]float32(nil), src...)
+		f(v)
+		return v
+	}
+	cases := []struct {
+		name         string
+		adapter, gon func() []float32
+		direct       func() []float32
+	}{
+		{"Strmv", func() []float32 {
+			return vec(x0, func(v []float32) { keelImpl.Strmv(blas.Upper, blas.NoTrans, blas.NonUnit, n, a, n, v, 1) })
+		},
+			func() []float32 {
+				return vec(x0, func(v []float32) { gonumImpl.Strmv(blas.Upper, blas.NoTrans, blas.NonUnit, n, a, n, v, 1) })
+			},
+			func() []float32 { return vec(x0, func(v []float32) { keelStrmv(n, a, v) }) }},
+		{"Strsv", func() []float32 {
+			return vec(x0, func(v []float32) { keelImpl.Strsv(blas.Lower, blas.NoTrans, blas.NonUnit, n, a, n, v, 1) })
+		},
+			func() []float32 {
+				return vec(x0, func(v []float32) { gonumImpl.Strsv(blas.Lower, blas.NoTrans, blas.NonUnit, n, a, n, v, 1) })
+			},
+			func() []float32 { return vec(x0, func(v []float32) { keelStrsv(n, a, v) }) }},
+		{"Ssymv", func() []float32 {
+			return vec(y0, func(v []float32) { keelImpl.Ssymv(blas.Upper, n, 1.5, a, n, x0, 1, 0.5, v, 1) })
+		},
+			func() []float32 {
+				return vec(y0, func(v []float32) { gonumImpl.Ssymv(blas.Upper, n, 1.5, a, n, x0, 1, 0.5, v, 1) })
+			},
+			func() []float32 { return vec(y0, func(v []float32) { keelSsymv(n, a, x0, v) }) }},
+	}
+	for _, c := range cases {
+		ad, gd, kd := c.adapter(), c.gon(), c.direct()
+		if bits(kd) == bits(gd) {
+			t.Errorf("%s: keel and gonum are bit-identical on this probe, so it cannot tell which one ran", c.name)
+		} else if bits(ad) != bits(kd) {
+			t.Errorf("%s: the adapter's result is not keel's bit for bit, so the call did not reach keel", c.name)
+		}
+	}
+}

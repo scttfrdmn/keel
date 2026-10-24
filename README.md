@@ -116,7 +116,8 @@ SGEMM-centered BLAS subset built on them — and a field report on the
 experiment (`docs/toolchain-notes.md`).
 
 ## Scope (v0)
-Level 1 (`Sdot Saxpy Sscal Snrm2 Sasum Isamax`), Level 2 (`Sgemv Sger`),
+Level 1 (`Sdot Saxpy Sscal Snrm2 Sasum Isamax`), Level 2 (`Sgemv Sger Strmv Strsv
+Ssymv Ssyr Ssyr2`),
 Level 3 (`Sgemm` plus derived `Ssyrk Ssyr2k Ssymm Strsm Strmm`). Row-major, float32,
 amd64 fast paths (AVX-512/AVX2) and arm64 fast paths (NEON, Level 1 and
 Level 3), with a scalar fallback that builds on a stock toolchain. Target:
@@ -140,7 +141,7 @@ import (
 func init() { blas32.Use(gonumblas.Implementation{}) }
 ```
 
-The fourteen routines keel implements run in keel. Every other `blas.Float32` routine
+The nineteen routines keel implements run in keel. Every other `blas.Float32` routine
 falls through to Gonum's own pure-Go implementation, so the whole interface works.
 Where keel and reference BLAS differ on an edge case (a negative stride on `Sscal`,
 an empty `Sgemv`), the adapter follows Gonum. Results agree with Gonum within keel's

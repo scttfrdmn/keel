@@ -11,8 +11,8 @@
 //	func init() { blas32.Use(gonumblas.Implementation{}) }
 //
 // Implementation satisfies gonum's blas.Float32. The routines keel implements
-// (Sdot, Saxpy, Sscal, Snrm2, Sasum, Isamax, Sgemv, Sger, Sgemm, Ssyrk, Ssyr2k,
-// Ssymm, Strsm, Strmm) run in keel; every other routine falls through to gonum's own pure-Go
+// (Sdot, Saxpy, Sscal, Snrm2, Sasum, Isamax, Sgemv, Sger, Strmv, Strsv, Ssymv,
+// Ssyr, Ssyr2, Sgemm, Ssyrk, Ssyr2k, Ssymm, Strsm, Strmm) run in keel; every other routine falls through to gonum's own pure-Go
 // implementation, which is embedded. Both libraries use row-major storage with
 // explicit leading dimensions, so arguments pass through unchanged.
 //
@@ -213,4 +213,53 @@ func (g Implementation) Ssyr2k(ul blas.Uplo, tA blas.Transpose, n, k int, alpha 
 		return
 	}
 	keel.Ssyr2k(u, t, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+}
+
+func (g Implementation) Strmv(ul blas.Uplo, tA blas.Transpose, d blas.Diag, n int, a []float32, lda int, x []float32, incX int) {
+	u, okU := uplo(ul)
+	t, okT := trans(tA)
+	dg, okD := diag(d)
+	if !okU || !okT || !okD {
+		g.Implementation.Strmv(ul, tA, d, n, a, lda, x, incX)
+		return
+	}
+	keel.Strmv(u, t, dg, n, a, lda, x, incX)
+}
+
+func (g Implementation) Strsv(ul blas.Uplo, tA blas.Transpose, d blas.Diag, n int, a []float32, lda int, x []float32, incX int) {
+	u, okU := uplo(ul)
+	t, okT := trans(tA)
+	dg, okD := diag(d)
+	if !okU || !okT || !okD {
+		g.Implementation.Strsv(ul, tA, d, n, a, lda, x, incX)
+		return
+	}
+	keel.Strsv(u, t, dg, n, a, lda, x, incX)
+}
+
+func (g Implementation) Ssymv(ul blas.Uplo, n int, alpha float32, a []float32, lda int, x []float32, incX int, beta float32, y []float32, incY int) {
+	u, ok := uplo(ul)
+	if !ok {
+		g.Implementation.Ssymv(ul, n, alpha, a, lda, x, incX, beta, y, incY)
+		return
+	}
+	keel.Ssymv(u, n, alpha, a, lda, x, incX, beta, y, incY)
+}
+
+func (g Implementation) Ssyr(ul blas.Uplo, n int, alpha float32, x []float32, incX int, a []float32, lda int) {
+	u, ok := uplo(ul)
+	if !ok {
+		g.Implementation.Ssyr(ul, n, alpha, x, incX, a, lda)
+		return
+	}
+	keel.Ssyr(u, n, alpha, x, incX, a, lda)
+}
+
+func (g Implementation) Ssyr2(ul blas.Uplo, n int, alpha float32, x []float32, incX int, y []float32, incY int, a []float32, lda int) {
+	u, ok := uplo(ul)
+	if !ok {
+		g.Implementation.Ssyr2(ul, n, alpha, x, incX, y, incY, a, lda)
+		return
+	}
+	keel.Ssyr2(u, n, alpha, x, incX, y, incY, a, lda)
 }
