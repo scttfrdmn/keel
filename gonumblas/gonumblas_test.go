@@ -892,3 +892,87 @@ func TestLevel2SymTriRouteToKeel(t *testing.T) {
 		}
 	}
 }
+
+// TestCopySwapRotationsAreBitIdenticalToGonum. Scopy, Sswap, Srotm, Srotg and
+// Srotmg write their arithmetic exactly as gonum does, so the bar is bit equality,
+// not a tolerance; Srot is held to the tolerance model, for the reason given at it. That same equality is why they cannot be routing-tested by
+// value: their routing rests on the one-line pass-throughs in gonumblas.go.
+func TestCopySwapRotationsAreBitIdenticalToGonum(t *testing.T) {
+	r := rand.New(rand.NewSource(13))
+	bits := func(v []float32) string { return fmt.Sprintf("%x", v) }
+	params := []blas.SrotmParams{
+		{Flag: blas.Identity, H: [4]float32{9, 9, 9, 9}},
+		{Flag: blas.Rescaling, H: [4]float32{1.5, -0.25, 0.75, 2}},
+		{Flag: blas.OffDiagonal, H: [4]float32{9, -0.25, 0.75, 9}},
+		{Flag: blas.Diagonal, H: [4]float32{1.5, 9, 9, 2}},
+		{Flag: 7, H: [4]float32{1, 2, 3, 4}}, // unknown: gonum's behaviour, via the adapter
+	}
+	for _, n := range []int{0, 1, 7, 257} {
+		for _, ix := range []int{1, 2, -1, -3} {
+			for _, iy := range []int{1, -2} {
+				x, y := randVec(r, storage(n, ix)), randVec(r, storage(n, iy))
+				what := fmt.Sprintf("n=%d incX=%d incY=%d", n, ix, iy)
+				run := func(name string, f func(b blas.Float32Level1, x, y []float32)) {
+					t.Helper()
+					xk, yk := append([]float32(nil), x...), append([]float32(nil), y...)
+					xg, yg := append([]float32(nil), x...), append([]float32(nil), y...)
+					pk := panics(func() { f(keelImpl, xk, yk) })
+					pg := panics(func() { f(gonumImpl, xg, yg) })
+					if pk != pg {
+						t.Errorf("%s %s: keel panics=%v, gonum panics=%v", name, what, pk, pg)
+					} else if bits(xk) != bits(xg) || bits(yk) != bits(yg) {
+						t.Errorf("%s %s: not bit-identical to gonum", name, what)
+					}
+				}
+				run("Scopy", func(b blas.Float32Level1, x, y []float32) { b.Scopy(n, x, ix, y, iy) })
+				run("Sswap", func(b blas.Float32Level1, x, y []float32) { b.Sswap(n, x, ix, y, iy) })
+				// Srot: within tolerance, not bits. gonum leaves c*vx+s*vy unrounded, and
+				// which product the compiler fuses depends on the loop, so gonum's own
+				// unit and strided paths can disagree in the last bit.
+				{
+					xk, yk := append([]float32(nil), x...), append([]float32(nil), y...)
+					xg, yg := append([]float32(nil), x...), append([]float32(nil), y...)
+					keelImpl.Srot(n, xk, ix, yk, iy, 0.6, -0.8)
+					gonumImpl.Srot(n, xg, ix, yg, iy, 0.6, -0.8)
+					for i := range xk {
+						if !sameElem(xk[i], xg[i], 2, math.Abs(float64(0.6*x[i]))+math.Abs(float64(0.8*y[min(i, len(y)-1)]))+1) {
+							t.Errorf("Srot %s: x storage[%d] keel %v, gonum %v", what, i, xk[i], xg[i])
+							break
+						}
+					}
+					for i := range yk {
+						if !sameElem(yk[i], yg[i], 2, math.Abs(float64(0.6*y[i]))+math.Abs(float64(0.8*x[min(i, len(x)-1)]))+1) {
+							t.Errorf("Srot %s: y storage[%d] keel %v, gonum %v", what, i, yk[i], yg[i])
+							break
+						}
+					}
+				}
+				for _, p := range params {
+					run(fmt.Sprintf("Srotm flag=%d", p.Flag), func(b blas.Float32Level1, x, y []float32) { b.Srotm(n, x, ix, y, iy, p) })
+				}
+			}
+		}
+	}
+	vals := []float32{0, 1, -1, 3, -4, 0.5, 1e-30, -1e30, 3e38, -3e38, 1e-40, 2.5}
+	for _, a := range vals {
+		for _, b := range vals {
+			c1, s1, r1, z1 := keelImpl.Srotg(a, b)
+			c2, s2, r2, z2 := gonumImpl.Srotg(a, b)
+			if bits([]float32{c1, s1, r1, z1}) != bits([]float32{c2, s2, r2, z2}) {
+				t.Errorf("Srotg(%v, %v): keel %v %v %v %v, gonum %v %v %v %v", a, b, c1, s1, r1, z1, c2, s2, r2, z2)
+			}
+		}
+	}
+	type in struct{ d1, d2, x1, y1 float32 }
+	cases := []in{{1, 1, 3, 4}, {-1, 1, 1, 1}, {0, 2, 1, 1}, {1, 0, 2, 3}, {1e-10, 1, 1, 1}, {1e10, 1e-10, 1, 1}, {1, 1e9, 1, 1}, {1, 1, 1, 3}}
+	for i := 0; i < 300; i++ {
+		cases = append(cases, in{float32(r.ExpFloat64()), float32(r.ExpFloat64() * math.Exp(10*r.NormFloat64())), float32(r.NormFloat64()), float32(r.NormFloat64())})
+	}
+	for _, c := range cases {
+		pk, ak, bk, ck := keelImpl.Srotmg(c.d1, c.d2, c.x1, c.y1)
+		pg, ag, bg, cg := gonumImpl.Srotmg(c.d1, c.d2, c.x1, c.y1)
+		if pk != pg || bits([]float32{ak, bk, ck}) != bits([]float32{ag, bg, cg}) {
+			t.Errorf("Srotmg%v: keel %v %v %v %v, gonum %v %v %v %v", c, pk, ak, bk, ck, pg, ag, bg, cg)
+		}
+	}
+}

@@ -11,8 +11,9 @@
 //	func init() { blas32.Use(gonumblas.Implementation{}) }
 //
 // Implementation satisfies gonum's blas.Float32. The routines keel implements
-// (Sdot, Saxpy, Sscal, Snrm2, Sasum, Isamax, Sgemv, Sger, Strmv, Strsv, Ssymv,
-// Ssyr, Ssyr2, Sgemm, Ssyrk, Ssyr2k, Ssymm, Strsm, Strmm) run in keel; every other routine falls through to gonum's own pure-Go
+// (Sdot, Saxpy, Sscal, Snrm2, Sasum, Isamax, Scopy, Sswap, Srot, Srotg, Srotm,
+// Srotmg, Sgemv, Sger, Strmv, Strsv, Ssymv, Ssyr, Ssyr2, Sgemm, Ssyrk, Ssyr2k,
+// Ssymm, Strsm, Strmm) run in keel; every other routine falls through to gonum's own pure-Go
 // implementation, which is embedded. Both libraries use row-major storage with
 // explicit leading dimensions, so arguments pass through unchanged.
 //
@@ -262,4 +263,46 @@ func (g Implementation) Ssyr2(ul blas.Uplo, n int, alpha float32, x []float32, i
 		return
 	}
 	keel.Ssyr2(u, n, alpha, x, incX, y, incY, a, lda)
+}
+
+func (Implementation) Scopy(n int, x []float32, incX int, y []float32, incY int) {
+	keel.Scopy(n, x, incX, y, incY)
+}
+
+func (Implementation) Sswap(n int, x []float32, incX int, y []float32, incY int) {
+	keel.Sswap(n, x, incX, y, incY)
+}
+
+func (Implementation) Srot(n int, x []float32, incX int, y []float32, incY int, c, s float32) {
+	keel.Srot(n, x, incX, y, incY, c, s)
+}
+
+func (Implementation) Srotg(a, b float32) (c, s, r, z float32) {
+	return keel.Srotg(a, b)
+}
+
+// toParam and fromParam convert between gonum's SrotmParams and reference BLAS's
+// SPARAM array, which keel uses. The H order is the same (h11, h21, h12, h22), and
+// so are the flag values (-2, -1, 0, 1).
+func toParam(p blas.SrotmParams) [5]float32 {
+	return [5]float32{float32(p.Flag), p.H[0], p.H[1], p.H[2], p.H[3]}
+}
+
+func fromParam(q [5]float32) blas.SrotmParams {
+	return blas.SrotmParams{Flag: blas.Flag(q[0]), H: [4]float32{q[1], q[2], q[3], q[4]}}
+}
+
+func (g Implementation) Srotm(n int, x []float32, incX int, y []float32, incY int, p blas.SrotmParams) {
+	switch p.Flag {
+	case blas.Identity, blas.Rescaling, blas.OffDiagonal, blas.Diagonal:
+		keel.Srotm(n, x, incX, y, incY, toParam(p))
+	default:
+		// keel panics on an unknown flag; gonum's own behaviour is what a drop-in owes.
+		g.Implementation.Srotm(n, x, incX, y, incY, p)
+	}
+}
+
+func (Implementation) Srotmg(d1, d2, x1, y1 float32) (p blas.SrotmParams, rd1, rd2, rx1 float32) {
+	q, rd1, rd2, rx1 := keel.Srotmg(d1, d2, x1, y1)
+	return fromParam(q), rd1, rd2, rx1
 }

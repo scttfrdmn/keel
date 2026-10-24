@@ -9,6 +9,30 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Native `Scopy`, `Sswap`, `Srot`, `Srotg`, `Srotm` and `Srotmg`** (#184). Plain loops, because
+  these are memory-bound (one load and store per element). `Srotg` uses Anderson's safe scaling
+  (TOMS 978), as reference BLAS and Gonum do. `Srotmg` is Hopkins (1997) with gamma = 4096.
+  `Srotm`/`Srotmg` take and return reference BLAS's `SPARAM` layout (`[flag, h11, h21, h12, h22]`,
+  with new `RotmIdentity`/`RotmRescaling`/`RotmOffDiagonal`/`RotmDiagonal` flags). `keel/gonumblas`
+  now serves 25 of Gonum's 35 float32 routines in keel; only `Sdsdot` remains at Level 1.
+  - **Every product is rounded before it's added, so the rotations are bit-identical on every
+    architecture**: one hash over Srot/Srotm/Srotg/Srotmg outputs matched on arm64 and x86-64,
+    stock and SIMD. Scopy, Sswap, Srotm, Srotg and Srotmg are also bit-identical to Gonum. Srot is
+    not. Gonum leaves `c*vx+s*vy` unrounded, and which product Go fuses on arm64 depends on the
+    loop, so Gonum's own unit-stride and strided paths disagree in the last bit. keel's Srot is
+    checked against Gonum within the tolerance model instead.
+  - Tested against float64 references (copy, swap, the rotated pairs) and, for Srotg/Srotmg, the
+    defining properties: zeroing b (in the weighted sense for Srotmg), c²+s² = 1, the reference sign
+    convention, the flag choice, and the error states. Twelve planted bugs. Two first survived
+    because valid alternative rotations exist (negating c, s and r; the other Srotmg branch), and
+    convention tests now pin both. One more is an equivalent mutant, documented.
+  - Three test assertions of mine were wrong and were fixed, not the code: r legitimately
+    overflows when √(a²+b²) exceeds float32 (and a doc sentence said it couldn't, now corrected);
+    a subnormal r carries only a few bits; and Srotmg zeroes the weighted second component, not
+    the raw one.
+- Priority labels (`priority:high`, `priority:medium`, `priority:low`) for issues.
+
+### Added
 - **Native `Strmv`, `Strsv`, `Ssymv`, `Ssyr` and `Ssyr2`** (#183). Each loops over A's rows, which
   are contiguous in row-major storage, through the active Level-1 backend's `Dot` and `Axpy`, so
   they get the vector code without new kernels. Strided vectors are gathered once per call, as in
