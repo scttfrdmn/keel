@@ -129,7 +129,7 @@ that pins the order itself. Each row names the check, or names the gap.
 | I2 | **The parallel B-pack equals the serial pack, byte for byte, whatever order the ranges run.** Packing copies and scales rather than reduces, so disjoint ranges need no ordering. | `pack.go:159-161` | **`TestBPanelsPartIsTheSerialPack`** (`pack_test.go:422`). |
 | I3 | **`GOMAXPROCS=1` uses no goroutine, atomic, or scheduling** — the exact serial nest every published number was taken on. | `block.go:94`, `par.go` | **`TestRunSerialUsesNoGoroutine`** (`par_test.go:119`). |
 | I4 | **k-major packed layout with `alpha` folded into A** (`a[p*MR+i]`, `b[p*NR+j]`; `alpha·A` not `alpha·C`, so it survives `beta≠0`). | `pack.go:4-29` | GEMM oracle differential (`gemm_test.go`) over `alpha,beta` combinations; the kernel↔scalar-tile diff (`kern_test.go`). |
-| I5 | **Trsm's block interchange is bit-identical** to the un-interchanged solve (the derived-L3 reduction order). | `tri.go` | **`TestSolveRightInterchangeIsBitIdentical`** (`tri_test.go:204`). |
+| I5 | **VOID since `4d38e95` (#181).** Was: Trsm's block interchange is bit-identical to the un-interchanged solve. `solveRight` is now `solveLeft` on a transpose, held to `oracle.Tolerance`. | `tri.go` | `TestSolveRightMatchesOracle` (tolerance); the bit-identity test is retired. |
 | I6 | **Every shim op equals its scalar twin** — the shim is the executable spec. | `internal/vec` | differential tests (`vec_diff_test.go`). |
 | I7 | **The microkernel spill frontier** — ≤8 accumulators, no calls in the K-loop, `InsnsPerFMA` matching the audit. | `kern`, `internal/spill` | the spill audit (gate criterion 4) + the `InsnsPerFMA` recompute-and-compare. |
 
