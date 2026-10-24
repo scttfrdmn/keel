@@ -19,7 +19,8 @@ While the major version is 0, minor versions may contain breaking changes.
   SIMD.
   - **Gonum's `Sdsdot` departs from reference SDSDOT**: it rounds the float64 dot to float32 before
     adding alpha (two roundings), and for `n = 0` it returns 0, not alpha, against its own doc. keel
-    rounds once and returns alpha, and the adapter keeps keel's answer.
+    rounds once and returns alpha, and the adapter keeps keel's answer. Reported upstream as
+    gonum/gonum#2130.
   - The Capabilities & limits page still said there was no `Strmv`, `Strmm` or `Ssyr2k`, which had
     been false since #183. It's now corrected.
 - **Native `Scopy`, `Sswap`, `Srot`, `Srotg`, `Srotm` and `Srotmg`** (#184). Plain loops, because

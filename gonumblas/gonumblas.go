@@ -38,7 +38,7 @@
 // Where gonum is wrong rather than different, the adapter keeps keel's answer:
 // Ssyrk with Lower, Trans and beta == 0 (gonum/gonum#2129), Sger with negative
 // strides on amd64 (gonum/gonum#2105), and Sdsdot, which gonum rounds twice and
-// which returns 0 rather than alpha for n == 0.
+// which returns 0 rather than alpha for n == 0 (gonum/gonum#2130).
 //
 // Results agree with gonum within keel's numerical tolerance model
 // (internal/oracle), not bit-for-bit: keel's vector kernels sum in a different

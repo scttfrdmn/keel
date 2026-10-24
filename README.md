@@ -147,7 +147,8 @@ case of the interface's contract (a negative stride on `Sscal`, an empty `Sgemv`
 adapter hands that call to Gonum, so code written against Gonum keeps its behaviour.
 Where Gonum is wrong, the adapter keeps keel's answer: `Ssyrk` at `beta = 0`
 ([gonum#2129](https://github.com/gonum/gonum/issues/2129)), and `Sdsdot`, which Gonum
-rounds twice and which returns 0 rather than `alpha` when `n = 0`. Results agree with Gonum within keel's
+rounds twice and which returns 0 rather than `alpha` when `n = 0`
+([gonum#2130](https://github.com/gonum/gonum/issues/2130)). Results agree with Gonum within keel's
 tolerance model rather than bit-for-bit, because keel's kernels sum in a different
 order and fuse multiply-adds. The core `keel` package does not depend on Gonum; only
 `keel/gonumblas` does.

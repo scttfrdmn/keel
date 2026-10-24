@@ -339,7 +339,8 @@ func Sgbmv(tA Transpose, m, n, kL, kU int, alpha float32, a []float32, lda int, 
 // float64 and rounded to float32 once at the end, as reference SDSDOT specifies.
 // Elements are summed in BLAS element order, so the result is the same on every
 // architecture. gonum's differs twice: it rounds the dot product to float32 before
-// adding alpha, a second rounding, and for n == 0 it returns 0 rather than alpha.
+// adding alpha, a second rounding, and for n == 0 it returns 0 rather than alpha
+// (gonum/gonum#2130).
 func Sdsdot(n int, alpha float32, x []float32, incX int, y []float32, incY int) float32 {
 	checkVector("Sdsdot", "x", n, x, incX)
 	checkVector("Sdsdot", "y", n, y, incY)
