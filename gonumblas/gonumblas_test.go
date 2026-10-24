@@ -976,3 +976,218 @@ func TestCopySwapRotationsAreBitIdenticalToGonum(t *testing.T) {
 		}
 	}
 }
+
+// maxAbs over the finite entries of v.
+func maxAbs(v []float32) float64 {
+	m := 0.0
+	for _, e := range v {
+		if f := math.Abs(float64(e)); !math.IsNaN(f) && f > m {
+			m = f
+		}
+	}
+	return m
+}
+
+// TestBandPackedAgreeWithGonum is the independent check of the storage layouts:
+// keel's packing in its own tests and its indexing in l2band.go could share one
+// misreading, and gonum, whose documentation defines these row-major layouts, is
+// the second reader. Unused band slots are NaN, so a library that reads one shows.
+// The tolerance scale is an upper bound on every element's true error scale,
+// n·max|A|·max|x| + |beta|·max|y|, taken through oracle.Tolerance.
+func TestBandPackedAgreeWithGonum(t *testing.T) {
+	r := rand.New(rand.NewSource(14))
+	cmp := func(what string, k, g []float32, red int, scale float64) {
+		t.Helper()
+		compareStorage(t, what, k, g, red, func(int) (float64, bool) { return scale, true })
+	}
+	for _, ul := range []blas.Uplo{blas.Upper, blas.Lower} {
+		lower := ul == blas.Lower
+		for _, n := range []int{0, 1, 5, 17} {
+			for _, inc := range []int{1, -2} {
+				x := randVec(r, storage(n, inc))
+				for _, kb := range []int{0, 1, 4, 20} {
+					lda := kb + 2
+					band := make([]float32, max(n*lda, 1))
+					for i := range band {
+						band[i] = nan32
+					}
+					for i := 0; i < n; i++ {
+						lo, hi := 0, min(kb, n-1-i)
+						if lower {
+							lo, hi = max(0, kb-i), kb
+						}
+						for p := lo; p <= hi; p++ {
+							band[i*lda+p] = float32(r.NormFloat64())
+						}
+						dp := 0
+						if lower {
+							dp = kb
+						}
+						band[i*lda+dp] = 4 + float32(r.Float64()) // the diagonal, well conditioned
+					}
+					sc := float64(max(n, 1)) * maxAbs(band) * maxAbs(x)
+					for _, ta := range transT {
+						for _, dg := range []blas.Diag{blas.NonUnit, blas.Unit} {
+							what := fmt.Sprintf("%c%c%c n=%d k=%d inc=%d", ul, ta, dg, n, kb, inc)
+							xk, xg := append([]float32(nil), x...), append([]float32(nil), x...)
+							keelImpl.Stbmv(ul, ta, dg, n, kb, band, lda, xk, inc)
+							gonumImpl.Stbmv(ul, ta, dg, n, kb, band, lda, xg, inc)
+							cmp("Stbmv "+what, xk, xg, max(n, 1), sc)
+							xk, xg = append([]float32(nil), x...), append([]float32(nil), x...)
+							keelImpl.Stbsv(ul, ta, dg, n, kb, band, lda, xk, inc)
+							gonumImpl.Stbsv(ul, ta, dg, n, kb, band, lda, xg, inc)
+							cmp("Stbsv "+what, xk, xg, max(n, 1), maxAbs(xg)*sc+1)
+						}
+					}
+					for _, beta := range betas {
+						y := randVec(r, storage(n, inc))
+						betaZeroPoison(y, beta)
+						yk, yg := append([]float32(nil), y...), append([]float32(nil), y...)
+						keelImpl.Ssbmv(ul, n, kb, -0.75, band, lda, x, inc, beta, yk, inc)
+						gonumImpl.Ssbmv(ul, n, kb, -0.75, band, lda, x, inc, beta, yg, inc)
+						cmp(fmt.Sprintf("Ssbmv %c n=%d k=%d inc=%d b=%v", ul, n, kb, inc, beta), yk, yg, n+1, 2*sc+math.Abs(float64(beta))*maxAbs(y))
+					}
+				}
+				ap := randVec(r, n*(n+1)/2)
+				for i := 0; i < n; i++ { // diagonals, well conditioned
+					d := i * (i + 3) / 2 // lower: row i starts at i(i+1)/2 and its diagonal is last
+					if !lower {
+						d = i*n - i*(i-1)/2
+					}
+					ap[d] = 4 + float32(r.Float64())
+				}
+				sc := float64(max(n, 1)) * maxAbs(ap) * maxAbs(x)
+				for _, ta := range transT {
+					for _, dg := range []blas.Diag{blas.NonUnit, blas.Unit} {
+						what := fmt.Sprintf("%c%c%c n=%d inc=%d", ul, ta, dg, n, inc)
+						xk, xg := append([]float32(nil), x...), append([]float32(nil), x...)
+						keelImpl.Stpmv(ul, ta, dg, n, ap, xk, inc)
+						gonumImpl.Stpmv(ul, ta, dg, n, ap, xg, inc)
+						cmp("Stpmv "+what, xk, xg, max(n, 1), sc)
+						xk, xg = append([]float32(nil), x...), append([]float32(nil), x...)
+						keelImpl.Stpsv(ul, ta, dg, n, ap, xk, inc)
+						gonumImpl.Stpsv(ul, ta, dg, n, ap, xg, inc)
+						cmp("Stpsv "+what, xk, xg, max(n, 1), maxAbs(xg)*sc+1)
+					}
+				}
+				y := randVec(r, storage(n, inc))
+				for _, beta := range betas {
+					yb := append([]float32(nil), y...)
+					betaZeroPoison(yb, beta)
+					yk, yg := append([]float32(nil), yb...), append([]float32(nil), yb...)
+					keelImpl.Sspmv(ul, n, 1.5, ap, x, inc, beta, yk, inc)
+					gonumImpl.Sspmv(ul, n, 1.5, ap, x, inc, beta, yg, inc)
+					cmp(fmt.Sprintf("Sspmv %c n=%d inc=%d b=%v", ul, n, inc, beta), yk, yg, n+1, 2*sc+math.Abs(float64(beta))*maxAbs(y))
+				}
+				ak, ag := append([]float32(nil), ap...), append([]float32(nil), ap...)
+				keelImpl.Sspr(ul, n, -0.75, x, inc, ak)
+				gonumImpl.Sspr(ul, n, -0.75, x, inc, ag)
+				cmp(fmt.Sprintf("Sspr %c n=%d inc=%d", ul, n, inc), ak, ag, 2, maxAbs(ap)+maxAbs(x)*maxAbs(x))
+				ak, ag = append([]float32(nil), ap...), append([]float32(nil), ap...)
+				keelImpl.Sspr2(ul, n, -0.75, x, inc, y, inc, ak)
+				gonumImpl.Sspr2(ul, n, -0.75, x, inc, y, inc, ag)
+				cmp(fmt.Sprintf("Sspr2 %c n=%d inc=%d", ul, n, inc), ak, ag, 3, maxAbs(ap)+2*maxAbs(x)*maxAbs(y))
+			}
+		}
+	}
+	for _, ta := range transT {
+		for _, m := range []int{0, 1, 5, 17} {
+			for _, n := range []int{0, 1, 5, 17} {
+				for _, kl := range []int{0, 2, 7} {
+					for _, ku := range []int{0, 1, 4} {
+						lda := kl + ku + 2
+						band := make([]float32, max(m*lda, 1))
+						for i := range band {
+							band[i] = nan32
+						}
+						for i := 0; i < min(m, n+kl); i++ {
+							for c := 0; c < kl+ku+1; c++ {
+								if j := i - kl + c; j >= 0 && j < n {
+									band[i*lda+c] = float32(r.NormFloat64())
+								}
+							}
+						}
+						rows, inner := m, n
+						if ta != blas.NoTrans {
+							rows, inner = n, m
+						}
+						x := randVec(r, storage(inner, -2))
+						for _, beta := range betas {
+							y := randVec(r, storage(rows, -2))
+							betaZeroPoison(y, beta)
+							yk, yg := append([]float32(nil), y...), append([]float32(nil), y...)
+							keelImpl.Sgbmv(ta, m, n, kl, ku, 1.5, band, lda, x, -2, beta, yk, -2)
+							gonumImpl.Sgbmv(ta, m, n, kl, ku, 1.5, band, lda, x, -2, beta, yg, -2)
+							sc := 1.5*float64(max(inner, 1))*maxAbs(band)*maxAbs(x) + math.Abs(float64(beta))*maxAbs(y)
+							cmp(fmt.Sprintf("Sgbmv %c m=%d n=%d kl=%d ku=%d b=%v", ta, m, n, kl, ku, beta), yk, yg, max(inner, 1), sc)
+						}
+					}
+				}
+			}
+		}
+	}
+	// Sdsdot is judged against reference SDSDOT, alpha plus the float64 sum rounded
+	// once, not against gonum, which rounds twice and returns 0 for n == 0. n = 0 and
+	// a sum whose double rounding misses are both witnesses that keel's version ran.
+	for _, n := range []int{0, 1, 300} {
+		x, y := randVec(r, storage(n, -3)), randVec(r, storage(n, 2))
+		want := 1.5
+		for i := 0; i < n; i++ {
+			want += float64(x[(n-1-i)*3]) * float64(y[i*2])
+		}
+		if got := keelImpl.Sdsdot(n, 1.5, x, -3, y, 2); got != float32(want) {
+			t.Errorf("Sdsdot n=%d: %v, want reference SDSDOT's %v (gonum gives %v)", n, got, float32(want), gonumImpl.Sdsdot(n, 1.5, x, -3, y, 2))
+		}
+	}
+	if keelImpl.Sdsdot(0, 1.5, nil, 1, nil, 1) == gonumImpl.Sdsdot(0, 1.5, nil, 1, nil, 1) {
+		t.Error("Sdsdot n=0: adapter agrees with gonum's 0, so it did not reach keel or gonum was fixed")
+	}
+}
+
+// Routing for the banded and packed routines that run dot products, whose order
+// differs from gonum's. Sspr, Sspr2 (one fused multiply-add per element in both
+// libraries) and Sdsdot (bit-identical by construction) cannot be separated by
+// value, so they are not claimed.
+func TestBandPackedRouteToKeel(t *testing.T) {
+	r := rand.New(rand.NewSource(15))
+	const n, k = 400, 60
+	band, _ := padded(r, n, k+1, 0)
+	for i := 0; i < n; i++ {
+		band[i*(k+1)] = 4
+	}
+	ap := randVec(r, n*(n+1)/2)
+	for i := 0; i < n; i++ {
+		ap[i*n-i*(i-1)/2] = 4
+	}
+	x0 := randVec(r, n)
+	for i := range x0 {
+		x0[i] *= float32(math.Exp(4 * r.NormFloat64()))
+	}
+	bits := func(v []float32) string { return fmt.Sprintf("%x", v) }
+	run := func(f func(v []float32)) []float32 { v := append([]float32(nil), x0...); f(v); return v }
+	cases := []struct {
+		name            string
+		adapter, gon, k func(v []float32)
+	}{
+		{"Stbmv", func(v []float32) { keelImpl.Stbmv(blas.Upper, blas.NoTrans, blas.NonUnit, n, k, band, k+1, v, 1) },
+			func(v []float32) { gonumImpl.Stbmv(blas.Upper, blas.NoTrans, blas.NonUnit, n, k, band, k+1, v, 1) },
+			func(v []float32) { keelStbmv(n, k, band, v) }},
+		{"Stpmv", func(v []float32) { keelImpl.Stpmv(blas.Upper, blas.NoTrans, blas.NonUnit, n, ap, v, 1) },
+			func(v []float32) { gonumImpl.Stpmv(blas.Upper, blas.NoTrans, blas.NonUnit, n, ap, v, 1) },
+			func(v []float32) { keelStpmv(n, ap, v) }},
+		{"Sspmv", func(v []float32) { keelImpl.Sspmv(blas.Upper, n, 1.5, ap, x0, 1, 0.5, v, 1) },
+			func(v []float32) { gonumImpl.Sspmv(blas.Upper, n, 1.5, ap, x0, 1, 0.5, v, 1) },
+			func(v []float32) { keelSspmv(n, ap, x0, v) }},
+		{"Ssbmv", func(v []float32) { keelImpl.Ssbmv(blas.Upper, n, k, 1.5, band, k+1, x0, 1, 0.5, v, 1) },
+			func(v []float32) { gonumImpl.Ssbmv(blas.Upper, n, k, 1.5, band, k+1, x0, 1, 0.5, v, 1) },
+			func(v []float32) { keelSsbmv(n, k, band, x0, v) }},
+	}
+	for _, c := range cases {
+		ad, gd, kd := run(c.adapter), run(c.gon), run(c.k)
+		if bits(kd) == bits(gd) {
+			t.Errorf("%s: keel and gonum are bit-identical on this probe, so it cannot tell which one ran", c.name)
+		} else if bits(ad) != bits(kd) {
+			t.Errorf("%s: the adapter's result is not keel's bit for bit, so the call did not reach keel", c.name)
+		}
+	}
+}

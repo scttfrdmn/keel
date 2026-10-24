@@ -40,3 +40,16 @@ func keelStrsv(n int, a, x []float32) {
 func keelSsymv(n int, a, x, y []float32) {
 	keel.Ssymv(keel.Upper, n, 1.5, a, n, x, 1, 0.5, y, 1)
 }
+
+func keelStbmv(n, k int, a, x []float32) {
+	keel.Stbmv(keel.Upper, keel.NoTrans, keel.NonUnit, n, k, a, k+1, x, 1)
+}
+func keelStpmv(n int, ap, x []float32) {
+	keel.Stpmv(keel.Upper, keel.NoTrans, keel.NonUnit, n, ap, x, 1)
+}
+func keelSspmv(n int, ap, x, y []float32) {
+	keel.Sspmv(keel.Upper, n, 1.5, ap, x, 1, 0.5, y, 1)
+}
+func keelSsbmv(n, k int, a, x, y []float32) {
+	keel.Ssbmv(keel.Upper, n, k, 1.5, a, k+1, x, 1, 0.5, y, 1)
+}

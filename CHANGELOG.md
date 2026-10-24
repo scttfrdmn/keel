@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Native `Sdsdot` and the nine banded and packed Level-2 routines** (`Sgbmv`, `Stbmv`, `Stbsv`,
+  `Ssbmv`, `Stpmv`, `Stpsv`, `Sspmv`, `Sspr`, `Sspr2`) (#185). keel now implements every routine in
+  Gonum's `blas.Float32`, and `keel/gonumblas` serves all 35 in keel. The layouts are Gonum's
+  row-major ones. Each stored row is contiguous, so one row-segment accessor per format feeds the
+  same Dot/Axpy row loops as the dense Level-2 routines. Tested against dense float64 references with
+  NaN in every slot a routine must not read, and separately against Gonum as an independent reader of
+  the layouts. Planted index mutants go red in both. Passes on arm64 and on x86-64 (janus), stock and
+  SIMD.
+  - **Gonum's `Sdsdot` departs from reference SDSDOT**: it rounds the float64 dot to float32 before
+    adding alpha (two roundings), and for `n = 0` it returns 0, not alpha, against its own doc. keel
+    rounds once and returns alpha, and the adapter keeps keel's answer.
+  - The Capabilities & limits page still said there was no `Strmv`, `Strmm` or `Ssyr2k`, which had
+    been false since #183. It's now corrected.
 - **Native `Scopy`, `Sswap`, `Srot`, `Srotg`, `Srotm` and `Srotmg`** (#184). Plain loops, because
   these are memory-bound (one load and store per element). `Srotg` uses Anderson's safe scaling
   (TOMS 978), as reference BLAS and Gonum do. `Srotmg` is Hopkins (1997) with gamma = 4096.

@@ -34,10 +34,13 @@ version that reversed it would be a different library.
   cannot reproduce, because `VMAXPS` resolves NaN by operand position rather than
   by sequence. Matching the convention is worth more than the speed of a routine
   with no arithmetic in it.
-- **Not the whole of BLAS.** Level 2 is `Sgemv` and `Sger`; there is no `Strmv`,
-  `Ssymv`, `Ssyr` or `Ssyr2`. Level 3 is `Sgemm` and three routines derived from
-  it; there is no `Strmm` or `Ssyr2k`. "Subset" is in the first sentence of the
-  design document, and `Sgemm` is where the effort concentrates on purpose.
+- **The whole float32 real BLAS, but not all of it vectorised.** keel implements
+  every routine in Gonum's `blas.Float32` interface: all of Level 1 (including
+  `Sdsdot` and the rotations), all of Level 2 (dense, banded and packed), and Level
+  3 as `Sgemm` plus `Ssyrk`, `Ssyr2k`, `Ssymm`, `Strsm` and `Strmm` derived from it.
+  `Sgemm` is where the effort concentrates on purpose. The Level-2 routines are row
+  loops over the Level-1 `Dot` and `Axpy` kernels, and the copies and rotations are
+  plain loops, because they are memory-bound.
 - **No error returns.** Invalid arguments panic. There is nothing to check a
   status code against, because in Go there is no XERBLA to consult afterwards and
   a silently-returning no-op looks like success.

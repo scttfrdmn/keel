@@ -116,8 +116,9 @@ SGEMM-centered BLAS subset built on them — and a field report on the
 experiment (`docs/toolchain-notes.md`).
 
 ## Scope (v0)
-Level 1 (`Sdot Saxpy Sscal Snrm2 Sasum Isamax Scopy Sswap Srot Srotg Srotm Srotmg`), Level 2 (`Sgemv Sger Strmv Strsv
-Ssymv Ssyr Ssyr2`),
+Level 1 (`Sdot Sdsdot Saxpy Sscal Snrm2 Sasum Isamax Scopy Sswap Srot Srotg Srotm Srotmg`),
+Level 2 (`Sgemv Sger Strmv Strsv Ssymv Ssyr Ssyr2`, banded `Sgbmv Stbmv Stbsv Ssbmv`,
+packed `Stpmv Stpsv Sspmv Sspr Sspr2`),
 Level 3 (`Sgemm` plus derived `Ssyrk Ssyr2k Ssymm Strsm Strmm`). Row-major, float32,
 amd64 fast paths (AVX-512/AVX2) and arm64 fast paths (NEON, Level 1 and
 Level 3), with a scalar fallback that builds on a stock toolchain. Target:
@@ -141,10 +142,12 @@ import (
 func init() { blas32.Use(gonumblas.Implementation{}) }
 ```
 
-The twenty-five routines keel implements run in keel. Every other `blas.Float32` routine
-falls through to Gonum's own pure-Go implementation, so the whole interface works.
-Where keel and reference BLAS differ on an edge case (a negative stride on `Sscal`,
-an empty `Sgemv`), the adapter follows Gonum. Results agree with Gonum within keel's
+All 35 `blas.Float32` routines run in keel. Where keel and Gonum differ on an edge
+case of the interface's contract (a negative stride on `Sscal`, an empty `Sgemv`), the
+adapter hands that call to Gonum, so code written against Gonum keeps its behaviour.
+Where Gonum is wrong, the adapter keeps keel's answer: `Ssyrk` at `beta = 0`
+([gonum#2129](https://github.com/gonum/gonum/issues/2129)), and `Sdsdot`, which Gonum
+rounds twice and which returns 0 rather than `alpha` when `n = 0`. Results agree with Gonum within keel's
 tolerance model rather than bit-for-bit, because keel's kernels sum in a different
 order and fuse multiply-adds. The core `keel` package does not depend on Gonum; only
 `keel/gonumblas` does.

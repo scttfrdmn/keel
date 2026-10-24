@@ -10,21 +10,23 @@
 //
 //	func init() { blas32.Use(gonumblas.Implementation{}) }
 //
-// Implementation satisfies gonum's blas.Float32. The routines keel implements
-// (Sdot, Saxpy, Sscal, Snrm2, Sasum, Isamax, Scopy, Sswap, Srot, Srotg, Srotm,
-// Srotmg, Sgemv, Sger, Strmv, Strsv, Ssymv, Ssyr, Ssyr2, Sgemm, Ssyrk, Ssyr2k,
-// Ssymm, Strsm, Strmm) run in keel; every other routine falls through to gonum's own pure-Go
-// implementation, which is embedded. Both libraries use row-major storage with
-// explicit leading dimensions, so arguments pass through unchanged.
+// Implementation satisfies gonum's blas.Float32, and every one of its 35 routines
+// runs in keel. gonum's own implementation is still embedded, for the five
+// translations below and for any routine a future gonum adds. Both libraries use
+// row-major storage with explicit leading dimensions, so arguments pass through
+// unchanged; that includes gonum's row-major band and packed layouts, which keel
+// adopts as-is.
 //
-// Four deliberate translations, all matching gonum's semantics:
+// Five deliberate translations, all matching gonum's semantics:
 //
 //   - blas.ConjTrans is accepted and treated as blas.Trans, since the data is real.
 //     keel itself rejects ConjTrans.
 //   - A negative stride on Sscal, Sasum, Snrm2 or Isamax is passed to gonum, which
 //     follows reference BLAS: no-op, 0, 0 and -1. keel itself panics there.
-//   - Sgemv with m == 0 or n == 0 leaves y untouched, as reference BLAS does.
+//   - Sgemv and Sgbmv with m == 0 or n == 0 leave y untouched, as reference BLAS does.
 //     keel itself returns y = beta*y there, deliberately (see keel.Sgemv).
+//   - Srotm with a flag outside the four defined ones gets gonum's behaviour, where
+//     keel itself panics.
 //   - An enum value neither library accepts (blas.All as an Uplo, an unknown
 //     Transpose) is passed to gonum, so the caller gets gonum's panic, exactly
 //     as with blas32.Use(gonum.Implementation{}).
@@ -32,6 +34,11 @@
 // Other invalid arguments (a short slice, a bad leading dimension) panic in keel
 // with keel's messages. The panicking inputs are the same set gonum panics on;
 // TestPanicsWhereGonumPanics holds that.
+//
+// Where gonum is wrong rather than different, the adapter keeps keel's answer:
+// Ssyrk with Lower, Trans and beta == 0 (gonum/gonum#2129), Sger with negative
+// strides on amd64 (gonum/gonum#2105), and Sdsdot, which gonum rounds twice and
+// which returns 0 rather than alpha for n == 0.
 //
 // Results agree with gonum within keel's numerical tolerance model
 // (internal/oracle), not bit-for-bit: keel's vector kernels sum in a different
@@ -305,4 +312,99 @@ func (g Implementation) Srotm(n int, x []float32, incX int, y []float32, incY in
 func (Implementation) Srotmg(d1, d2, x1, y1 float32) (p blas.SrotmParams, rd1, rd2, rx1 float32) {
 	q, rd1, rd2, rx1 := keel.Srotmg(d1, d2, x1, y1)
 	return fromParam(q), rd1, rd2, rx1
+}
+
+func (Implementation) Sdsdot(n int, alpha float32, x []float32, incX int, y []float32, incY int) float32 {
+	return keel.Sdsdot(n, alpha, x, incX, y, incY)
+}
+
+func (g Implementation) Sgbmv(tA blas.Transpose, m, n, kL, kU int, alpha float32, a []float32, lda int, x []float32, incX int, beta float32, y []float32, incY int) {
+	t, ok := trans(tA)
+	// As Sgemv: keel returns y = beta*y for an empty reduction, reference BLAS and
+	// gonum leave y untouched, and these shapes carry no arithmetic to lose.
+	if !ok || m == 0 || n == 0 {
+		g.Implementation.Sgbmv(tA, m, n, kL, kU, alpha, a, lda, x, incX, beta, y, incY)
+		return
+	}
+	keel.Sgbmv(t, m, n, kL, kU, alpha, a, lda, x, incX, beta, y, incY)
+}
+
+func (g Implementation) Stbmv(ul blas.Uplo, tA blas.Transpose, d blas.Diag, n, k int, a []float32, lda int, x []float32, incX int) {
+	u, okU := uplo(ul)
+	t, okT := trans(tA)
+	dg, okD := diag(d)
+	if !okU || !okT || !okD {
+		g.Implementation.Stbmv(ul, tA, d, n, k, a, lda, x, incX)
+		return
+	}
+	keel.Stbmv(u, t, dg, n, k, a, lda, x, incX)
+}
+
+func (g Implementation) Stbsv(ul blas.Uplo, tA blas.Transpose, d blas.Diag, n, k int, a []float32, lda int, x []float32, incX int) {
+	u, okU := uplo(ul)
+	t, okT := trans(tA)
+	dg, okD := diag(d)
+	if !okU || !okT || !okD {
+		g.Implementation.Stbsv(ul, tA, d, n, k, a, lda, x, incX)
+		return
+	}
+	keel.Stbsv(u, t, dg, n, k, a, lda, x, incX)
+}
+
+func (g Implementation) Ssbmv(ul blas.Uplo, n, k int, alpha float32, a []float32, lda int, x []float32, incX int, beta float32, y []float32, incY int) {
+	u, ok := uplo(ul)
+	if !ok {
+		g.Implementation.Ssbmv(ul, n, k, alpha, a, lda, x, incX, beta, y, incY)
+		return
+	}
+	keel.Ssbmv(u, n, k, alpha, a, lda, x, incX, beta, y, incY)
+}
+
+func (g Implementation) Stpmv(ul blas.Uplo, tA blas.Transpose, d blas.Diag, n int, ap []float32, x []float32, incX int) {
+	u, okU := uplo(ul)
+	t, okT := trans(tA)
+	dg, okD := diag(d)
+	if !okU || !okT || !okD {
+		g.Implementation.Stpmv(ul, tA, d, n, ap, x, incX)
+		return
+	}
+	keel.Stpmv(u, t, dg, n, ap, x, incX)
+}
+
+func (g Implementation) Stpsv(ul blas.Uplo, tA blas.Transpose, d blas.Diag, n int, ap []float32, x []float32, incX int) {
+	u, okU := uplo(ul)
+	t, okT := trans(tA)
+	dg, okD := diag(d)
+	if !okU || !okT || !okD {
+		g.Implementation.Stpsv(ul, tA, d, n, ap, x, incX)
+		return
+	}
+	keel.Stpsv(u, t, dg, n, ap, x, incX)
+}
+
+func (g Implementation) Sspmv(ul blas.Uplo, n int, alpha float32, ap []float32, x []float32, incX int, beta float32, y []float32, incY int) {
+	u, ok := uplo(ul)
+	if !ok {
+		g.Implementation.Sspmv(ul, n, alpha, ap, x, incX, beta, y, incY)
+		return
+	}
+	keel.Sspmv(u, n, alpha, ap, x, incX, beta, y, incY)
+}
+
+func (g Implementation) Sspr(ul blas.Uplo, n int, alpha float32, x []float32, incX int, ap []float32) {
+	u, ok := uplo(ul)
+	if !ok {
+		g.Implementation.Sspr(ul, n, alpha, x, incX, ap)
+		return
+	}
+	keel.Sspr(u, n, alpha, x, incX, ap)
+}
+
+func (g Implementation) Sspr2(ul blas.Uplo, n int, alpha float32, x []float32, incX int, y []float32, incY int, ap []float32) {
+	u, ok := uplo(ul)
+	if !ok {
+		g.Implementation.Sspr2(ul, n, alpha, x, incX, y, incY, ap)
+		return
+	}
+	keel.Sspr2(u, n, alpha, x, incX, y, incY, ap)
 }
