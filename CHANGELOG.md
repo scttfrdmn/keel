@@ -30,7 +30,8 @@ While the major version is 0, minor versions may contain breaking changes.
   - **Found a Gonum bug:** `[DS]syrk` with Lower+Trans and beta=0 scales C instead of overwriting it,
     so NaN or Inf already in C survives. BLAS says C is not read at beta=0. It's the same class as
     gonum/gonum#1293 (fixed for `[DS]symm` in 2020), whose fix PR noted "there may be other cases".
-    keel is correct here; the test holds keel to the oracle for that case.
+    keel is correct here; the test holds keel to the oracle for that case. **Reported as
+    gonum/gonum#2129** after confirming it on Gonum master (`25c9c1d`); `Dsyr2k` is correct.
   - **And a second, worse one, found by CI on x86-64:** Gonum's amd64 assembly for `f32.Ger` (so
     `Sger`) scales a negative stride's start offset by the element size twice. `INC_X` is already in
     bytes when `LEAQ (X_PTR)(TMP2*SIZE)` multiplies by 4 again, so the start pointer lands past the

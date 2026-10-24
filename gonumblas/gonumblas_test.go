@@ -369,7 +369,8 @@ func TestSsyrkSsymmAgreeWithGonum(t *testing.T) {
 							// case, so NaN or Inf already in C survives where BLAS says C is
 							// not read. Same class as gonum/gonum#1293 (fixed for [DS]symm in
 							// 2020); [DS]syrk was not covered. Here keel is held to the
-							// oracle instead of to gonum's answer.
+							// oracle instead of to gonum's answer. Reported upstream as
+							// gonum/gonum#2129 (Dsyrk; Ssyrk is generated from it).
 							if lower && ta != blas.NoTrans && beta == 0 {
 								want, sc := oracle.Syrk(lower, true, n, k, alpha, a, lda, beta, ref, ldc)
 								for i := 0; i < n; i++ {
