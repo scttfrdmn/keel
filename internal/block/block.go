@@ -107,6 +107,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/scttfrdmn/keel/internal/elem"
 	"github.com/scttfrdmn/keel/internal/kern"
 	"github.com/scttfrdmn/keel/internal/pack"
 	"github.com/scttfrdmn/keel/internal/par"
@@ -127,12 +128,45 @@ var (
 	NC = 4096
 )
 
+// nest is the loop nest's configuration for one element type T: the blocking
+// parameters and the packed-A pool, which are the only things in this package
+// that are a property of the element type rather than of the algorithm.
+//
+// # Why the element type's facts arrive as a value
+//
+// The nest is generic over T (internal/elem), and everything below is written once.
+// But KC/MC/NC and MB are cache measurements, and a float64 element is twice the
+// bytes, so a float64 nest carries values of its own (docs/f64-design.md §2: "moves
+// KC/MC/NC"). Go offers three ways for generic code to reach a per-type value: a
+// switch on T, a method on a constraint, or a value passed in. The switch is the
+// refusal docs/generic-middle.md registers for this package — a middle that must
+// be told its element type to behave correctly. A constraint method needs a named
+// element type to hang it on, which would make every float32 call site in the tree
+// convert. So it is a value: each routine is a method of *nest[T], and the receiver
+// is the per-type configuration, chosen once by whoever instantiates the nest.
+//
+// The fields are pointers to the package vars rather than copies, so that what the
+// tests and the P5 sweeps do — assign KC or MB and call — still moves the float32
+// nest. f32 is the only nest this package builds; a float64 one is a test's today.
+type nest[T elem.Float] struct {
+	kc, mc, nc, mb *int
+	// pool is per type because a pooled *apBuf[float32] is not a *apBuf[float64]:
+	// one pool shared between them would miss on every alternation.
+	pool *sync.Pool
+}
+
+// f32 is the float32 nest: the package vars, and the pool every published number
+// was measured with.
+var f32 = &nest[float32]{kc: &KC, mc: &MC, nc: &NC, mb: &MB, pool: &apPool}
+
 // Params reports the blocking parameters actually in force for kn: the vars
 // above, clamped to whole tiles. It exists so the test suite can print them in
 // the gate's provenance marker instead of restating the constants and hoping
 // they match.
-func Params(kn kern.Kernel) (kc, mc, nc int) {
-	return KC, wholeTiles(MC, kn.MR), wholeTiles(NC, kn.NR)
+func Params(kn kern.Kernel) (kc, mc, nc int) { return f32.params(kn) }
+
+func (nt *nest[T]) params(kn kern.KernelOf[T]) (kc, mc, nc int) {
+	return *nt.kc, wholeTiles(*nt.mc, kn.MR), wholeTiles(*nt.nc, kn.NR)
 }
 
 // plan is the blocking parameters clamped to one problem's shape: the vars above
@@ -143,8 +177,8 @@ func Params(kn kern.Kernel) (kc, mc, nc int) {
 // decomposition (nest_bench_test.go, issue #26) has to walk the *same* blocks the
 // real nest walks — a decomposition whose parts were measured over a different
 // block structure than the whole would not be a decomposition of anything.
-func plan(kn kern.Kernel, m, n, k int) (kc, mc, nc int) {
-	kc, mc, nc = Params(kn)
+func (nt *nest[T]) plan(kn kern.KernelOf[T], m, n, k int) (kc, mc, nc int) {
+	kc, mc, nc = nt.params(kn)
 	if kc > k {
 		kc = k
 	}
@@ -185,7 +219,7 @@ const (
 // apBuf is one worker's packed-A panel. A struct rather than a bare []float32
 // because sync.Pool stores an interface value, and putting a slice in one
 // allocates the header every time — the thing the pool exists to avoid.
-type apBuf struct{ v []float32 }
+type apBuf[T elem.Float] struct{ v []T }
 
 // apPool holds packed-A panels between parallel regions. This is the sync.Pool
 // DESIGN.md §4/P5 names, and it is the only thing in this package that survives a
@@ -204,15 +238,15 @@ var apPool sync.Pool
 // grown: the sizes come from the blocking parameters, so the pool converges on
 // one size after the first call and a mixed workload pays an allocation instead
 // of every caller paying an indirection.
-func apGet(n int) *apBuf {
-	if b, ok := apPool.Get().(*apBuf); ok && cap(b.v) >= n {
+func (nt *nest[T]) apGet(n int) *apBuf[T] {
+	if b, ok := nt.pool.Get().(*apBuf[T]); ok && cap(b.v) >= n {
 		b.v = b.v[:n]
 		return b
 	}
-	return &apBuf{v: make([]float32, n)}
+	return &apBuf[T]{v: make([]T, n)}
 }
 
-func apPut(b *apBuf) { apPool.Put(b) }
+func (nt *nest[T]) apPut(b *apBuf[T]) { nt.pool.Put(b) }
 
 // workersLast records how many workers the most recently completed Level-3 call
 // distributed work to. See WorkersLastCall for what it is for and what it is not.
@@ -277,7 +311,7 @@ func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 	b []float32, ldb int, beta float32, c []float32, ldc int) {
 
 	beginCall()
-	gemm(kn, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, triMask{}, symOperand{}, splitIC)
+	f32.gemm(kn, transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, triMask{}, symOperand{}, splitIC)
 }
 
 // gemm is Gemm with a triangular mask on the C update: every write to C, beta
@@ -289,8 +323,8 @@ func Gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 // sym says one of the two operands stores only a triangle of a symmetric matrix,
 // which the pack reflects; see symOperand. sp says whether the ic loop may be
 // distributed over the worker pool; see split.
-func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []float32, lda int,
-	b []float32, ldb int, beta float32, c []float32, ldc int, tri triMask, sym symOperand, sp split) {
+func (nt *nest[T]) gemm(kn kern.KernelOf[T], transA, transB bool, m, n, k int, alpha T, a []T, lda int,
+	b []T, ldb int, beta T, c []T, ldc int, tri triMask, sym symOperand, sp split) {
 
 	if kn.MR < 1 || kn.MR > kern.MaxMR || kn.NR < 1 || kn.NR > kern.MaxNR {
 		panic(fmt.Sprintf("block: kernel tile %dx%d outside %dx%d", kn.MR, kn.NR, kern.MaxMR, kern.MaxNR))
@@ -307,10 +341,10 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 	}
 
 	mr, nr := kn.MR, kn.NR
-	kc, mc, nc := plan(kn, m, n, k)
+	kc, mc, nc := nt.plan(kn, m, n, k)
 
 	alen := pack.ALen(mr, mc, kc)
-	bp := make([]float32, pack.BLen(nr, nc, kc))
+	bp := make([]T, pack.BLen(nr, nc, kc))
 	nic := (m + mc - 1) / mc
 
 	for jc := 0; jc < n; jc += nc {
@@ -334,8 +368,8 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 				// accumulating fringe tiles into one buffer would corrupt each
 				// other's C — and is allocated rather than pooled because it is
 				// mr*nr floats against a region of O(mc·nc·kc) flops.
-				ab := apGet(alen)
-				tile := make([]float32, mr*nr)
+				ab := nt.apGet(alen)
+				tile := make([]T, mr*nr)
 				for u := claim(); u >= 0; u = claim() {
 					ic := icOrder(u, nic, tri) * mc
 					im := min(mc, m-ic)
@@ -355,7 +389,7 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 					}
 					macro(kn, ab.v, bp, ic, jc, im, jn, kk, cb, ldc, tile, tri)
 				}
-				apPut(ab)
+				nt.apPut(ab)
 			}
 			if sp == noSplit {
 				// Every ic block, in this goroutine, and no accounting: Trsm owns
@@ -409,7 +443,7 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 //
 // The worker count is recorded, because this region is as real as the ic one and
 // WorkersLastCall promises the widest region of the call.
-func packB(bp []float32, nr int, b []float32, ldb int, transB, sym, lower bool, pc, kk, jc, jn int, sp split) {
+func packB[T elem.Float](bp []T, nr int, b []T, ldb int, transB, sym, lower bool, pc, kk, jc, jn int, sp split) {
 	npan := pack.NPanels(nr, jn)
 	body := func(claim func() int) {
 		for u := claim(); u >= 0; u = claim() {
@@ -461,7 +495,7 @@ func icOrder(u, nic int, tri triMask) int {
 //
 // i0 and j0 are the block's position in the whole C matrix, needed only by the
 // mask: c is already offset to (i0, j0), and every index below is local.
-func macro(kn kern.Kernel, ap, bp []float32, i0, j0, mc, nc, kk int, c []float32, ldc int, tile []float32, tri triMask) {
+func macro[T elem.Float](kn kern.KernelOf[T], ap, bp []T, i0, j0, mc, nc, kk int, c []T, ldc int, tile []T, tri triMask) {
 	mr, nr := kn.MR, kn.NR
 	for jr := 0; jr < nc; jr += nr {
 		bpanel := bp[(jr/nr)*nr*kk:][:nr*kk]
@@ -522,7 +556,7 @@ func macro(kn kern.Kernel, ap, bp []float32, i0, j0, mc, nc, kk int, c []float32
 //
 // i0 and j0 place the block in the whole matrix, as in macro. With tri.on false
 // every row range is the full row and this is the unmasked pass verbatim.
-func scaleTri(beta float32, i0, j0, m, n int, c []float32, ldc int, tri triMask) {
+func scaleTri[T elem.Float](beta T, i0, j0, m, n int, c []T, ldc int, tri triMask) {
 	switch beta {
 	case 1:
 		return

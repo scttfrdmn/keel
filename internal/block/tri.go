@@ -4,6 +4,9 @@
 package block
 
 import (
+	"unsafe"
+
+	"github.com/scttfrdmn/keel/internal/elem"
 	"github.com/scttfrdmn/keel/internal/kern"
 	"github.com/scttfrdmn/keel/internal/par"
 )
@@ -150,6 +153,13 @@ func (t triMask) rowRange(gi, j0, n int) (lo, hi int) {
 // diagonal, so it is O(MR·NR/n) of the work.
 func Syrk(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float32, lda int,
 	beta float32, c []float32, ldc int) {
+	f32.syrk(kn, lower, trans, n, k, alpha, a, lda, beta, c, ldc)
+}
+
+// syrk is Syrk over the nest's element type, and so are the lower-case twins of the
+// other public routines here and in trmm.go; see nest.
+func (nt *nest[T]) syrk(kn kern.KernelOf[T], lower, trans bool, n, k int, alpha T, a []T, lda int,
+	beta T, c []T, ldc int) {
 
 	// op(A) is n×k either way, so the second operand is its transpose: A·Aᵀ takes
 	// transB true, Aᵀ·A takes transA true and transB false.
@@ -159,7 +169,7 @@ func Syrk(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float3
 	// parallelism class, and this routine is the same nest with a mask. The mask
 	// is what makes the blocks unequal, and icOrder is where that is dealt with.
 	beginCall()
-	gemm(kn, trans, !trans, n, n, k, alpha, a, lda, a, lda, beta, c, ldc,
+	nt.gemm(kn, trans, !trans, n, n, k, alpha, a, lda, a, lda, beta, c, ldc,
 		triMask{on: true, lower: lower}, symOperand{}, splitIC)
 }
 
@@ -195,6 +205,11 @@ func Syrk(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float3
 // multiply it by zero would produce NaN on a legal call.
 func Symm(kn kern.Kernel, left, lower bool, m, n int, alpha float32, a []float32, lda int,
 	b []float32, ldb int, beta float32, c []float32, ldc int) {
+	f32.symm(kn, left, lower, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
+}
+
+func (nt *nest[T]) symm(kn kern.KernelOf[T], left, lower bool, m, n int, alpha T, a []T, lda int,
+	b []T, ldb int, beta T, c []T, ldc int) {
 
 	if m == 0 || n == 0 {
 		return
@@ -207,11 +222,11 @@ func Symm(kn kern.Kernel, left, lower bool, m, n int, alpha float32, a []float32
 	sym := symOperand{lower: lower}
 	if left {
 		sym.a = true
-		gemm(kn, false, false, m, n, m, alpha, a, lda, b, ldb, beta, c, ldc, triMask{}, sym, splitIC)
+		nt.gemm(kn, false, false, m, n, m, alpha, a, lda, b, ldb, beta, c, ldc, triMask{}, sym, splitIC)
 		return
 	}
 	sym.b = true
-	gemm(kn, false, false, m, n, n, alpha, b, ldb, a, lda, beta, c, ldc, triMask{}, sym, splitIC)
+	nt.gemm(kn, false, false, m, n, n, alpha, b, ldb, a, lda, beta, c, ldc, triMask{}, sym, splitIC)
 }
 
 // MB is the row (left) or column (right) block size of Trsm's outer loop: how
@@ -255,7 +270,7 @@ var MB = 64
 // l1 backend does. A nil Axpy is a wiring bug and panics rather than falling back
 // to the scalar loop: a silent fallback would let a benchmark measure the scalar
 // path while its name claimed the vector one (#37).
-type Axpy func(alpha float32, x, y []float32)
+type Axpy[T elem.Float] func(alpha T, x, y []T)
 
 // ScalDiv is the unit-stride x /= alpha the diagonal solves need for the
 // division by the diagonal element. Threaded in beside Axpy, and separate from
@@ -263,7 +278,7 @@ type Axpy func(alpha float32, x, y []float32)
 // DIVIDE, not scale by a reciprocal (see Trsm's doc comment, and
 // l1.TestScalDivIsNotAReciprocalMultiply, which drives that distinction on a
 // witness it re-derives each run).
-type ScalDiv func(alpha float32, x []float32)
+type ScalDiv[T elem.Float] func(alpha T, x []T)
 
 // Trsm solves op(A)·X = alpha·B (left) or X·op(A) = alpha·B (right) for X,
 // overwriting B, where A is triangular and stored in the triangle named by lower.
@@ -332,8 +347,13 @@ type ScalDiv func(alpha float32, x []float32)
 // alpha == 0 sets B to zero and returns without reading A at all, matching
 // reference STRSM. A is otherwise required to be nonsingular in its referenced
 // triangle; keel does not check that, and neither does reference BLAS.
-func Trsm(kn kern.Kernel, ax Axpy, sd ScalDiv, left, lower, trans, unit bool, m, n int, alpha float32,
+func Trsm(kn kern.Kernel, ax Axpy[float32], sd ScalDiv[float32], left, lower, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
+	f32.trsm(kn, ax, sd, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
+}
+
+func (nt *nest[T]) trsm(kn kern.KernelOf[T], ax Axpy[T], sd ScalDiv[T], left, lower, trans, unit bool, m, n int, alpha T,
+	a []T, lda int, b []T, ldb int) {
 
 	if ax == nil || sd == nil {
 		panic("block.Trsm: nil Axpy or ScalDiv (a registration bug, not a fallback)")
@@ -355,12 +375,12 @@ func Trsm(kn kern.Kernel, ax Axpy, sd ScalDiv, left, lower, trans, unit bool, m,
 	lowerEff := lower != trans
 	if left {
 		strips(n, func(j0, jn int) {
-			trsmLeft(kn, ax, sd, lowerEff, trans, unit, m, jn, alpha, a, lda, b[j0:], ldb)
+			nt.trsmLeft(kn, ax, sd, lowerEff, trans, unit, m, jn, alpha, a, lda, b[j0:], ldb)
 		})
 		return
 	}
 	strips(m, func(i0, im int) {
-		trsmRight(kn, ax, sd, lowerEff, trans, unit, im, n, alpha, a, lda, b[i0*ldb:], ldb)
+		nt.trsmRight(kn, ax, sd, lowerEff, trans, unit, im, n, alpha, a, lda, b[i0*ldb:], ldb)
 	})
 }
 
@@ -452,9 +472,10 @@ func TrsmWork(left bool, m, n int) (rankUpdate, diagSolve float64) {
 
 // trsmLeft solves op(A)·X = alpha·B, forward over row blocks when op(A) is lower
 // triangular and backward when it is upper.
-func trsmLeft(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m, n int, alpha float32,
-	a []float32, lda int, b []float32, ldb int) {
+func (nt *nest[T]) trsmLeft(kn kern.KernelOf[T], ax Axpy[T], sd ScalDiv[T], lowerEff, trans, unit bool, m, n int, alpha T,
+	a []T, lda int, b []T, ldb int) {
 
+	MB := *nt.mb // this nest's block size; the package var MB is float32's
 	nb := (m + MB - 1) / MB
 	for step := 0; step < nb; step++ {
 		bi := step
@@ -485,7 +506,7 @@ func trsmLeft(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m
 			// noSplit: this whole solve is already one worker's strip of B (see
 			// strips), and the rank update's mb rows are fewer than one MC block
 			// anyway, so the ic loop has nothing to hand out.
-			gemm(kn, trans, false, mb, n, kk, -1, asl, lda, b[p0*ldb:], ldb,
+			nt.gemm(kn, trans, false, mb, n, kk, -1, asl, lda, b[p0*ldb:], ldb,
 				alpha, b[i0*ldb:], ldb, triMask{}, symOperand{}, noSplit)
 		}
 		solveLeft(ax, sd, lowerEff, trans, unit, mb, n, a[i0*lda+i0:], lda, b[i0*ldb:], ldb)
@@ -495,11 +516,12 @@ func trsmLeft(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m
 // trsmRight solves X·op(A) = alpha·B. The direction is the mirror of the left
 // case: column block j of X depends on the blocks before it when op(A) is upper
 // and on the blocks after it when op(A) is lower.
-func trsmRight(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m, n int, alpha float32,
-	a []float32, lda int, b []float32, ldb int) {
+func (nt *nest[T]) trsmRight(kn kern.KernelOf[T], ax Axpy[T], sd ScalDiv[T], lowerEff, trans, unit bool, m, n int, alpha T,
+	a []T, lda int, b []T, ldb int) {
 
+	MB := *nt.mb // this nest's block size; the package var MB is float32's
 	nblk := (n + MB - 1) / MB
-	t := make([]float32, tStride(m)*min(MB, n)) // solveRight's transpose of one column window
+	t := make([]T, tStride[T](m)*min(MB, n)) // solveRight's transpose of one column window
 	for step := 0; step < nblk; step++ {
 		bj := step
 		if lowerEff {
@@ -521,7 +543,7 @@ func trsmRight(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, 
 				bsl = a[j0*lda+p0:]
 			}
 			// noSplit, for the reason trsmLeft's rank update gives.
-			gemm(kn, false, trans, m, nb, kk, -1, b[p0:], ldb, bsl, lda,
+			nt.gemm(kn, false, trans, m, nb, kk, -1, b[p0:], ldb, bsl, lda,
 				alpha, b[j0:], ldb, triMask{}, symOperand{}, noSplit)
 		}
 		solveRight(ax, sd, lowerEff, trans, unit, m, nb, a[j0*lda+j0:], lda, b[j0:], ldb, t)
@@ -534,7 +556,7 @@ func trsmRight(kn kern.Kernel, ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, 
 // The row-at-a-time shape is deliberate: B's rows are contiguous, so the inner
 // loop is a unit-stride axpy over n and the substitution's serial dependency is
 // paid once per row of the block rather than once per element.
-func solveLeft(ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, d, n int, a []float32, lda int, b []float32, ldb int) {
+func solveLeft[T elem.Float](ax Axpy[T], sd ScalDiv[T], lowerEff, trans, unit bool, d, n int, a []T, lda int, b []T, ldb int) {
 	for step := 0; step < d; step++ {
 		i := step
 		if !lowerEff {
@@ -604,13 +626,15 @@ func solveLeft(ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, d, n int, a []fl
 // p order per row of t rather than per element, so it is held to oracle.Tolerance,
 // as solveLeft is. It still divides rather than multiplying by a reciprocal, and
 // skips no zero multiplier, because solveLeft does neither.
-// tStride is the row stride of solveRight's transpose buffer: m, padded by 16
-// floats so that the d rows it writes per row of B do not map to the same cache
-// sets when m is a power of two.
-func tStride(m int) int { return m + 16 }
+// tStride is the row stride of solveRight's transpose buffer: m, padded by one
+// 64-byte cache line (16 float32s, 8 float64s) so that the d rows it writes per row
+// of B do not map to the same cache sets when m is a power of two. The pad is a
+// byte quantity — it is the set index the stride has to move — so it is stated in
+// bytes and the element count derived; at float32 that is the +16 it always was.
+func tStride[T elem.Float](m int) int { return m + 64/int(unsafe.Sizeof(T(0))) }
 
-func solveRight(ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m, d int, a []float32, lda int, b []float32, ldb int, t []float32) {
-	ldt := tStride(m)
+func solveRight[T elem.Float](ax Axpy[T], sd ScalDiv[T], lowerEff, trans, unit bool, m, d int, a []T, lda int, b []T, ldb int, t []T) {
+	ldt := tStride[T](m)
 	t = t[:d*ldt]
 	for i := 0; i < m; i++ {
 		for j, v := range b[i*ldb : i*ldb+d] {

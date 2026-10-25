@@ -3,7 +3,10 @@
 
 package block
 
-import "github.com/scttfrdmn/keel/internal/kern"
+import (
+	"github.com/scttfrdmn/keel/internal/elem"
+	"github.com/scttfrdmn/keel/internal/kern"
+)
 
 // Syr2k computes C = alpha·(A·Bᵀ + B·Aᵀ) + beta·C (trans false, A and B n×k) or
 // C = alpha·(Aᵀ·B + Bᵀ·A) + beta·C (trans true, A and B k×n), writing only the
@@ -21,11 +24,16 @@ import "github.com/scttfrdmn/keel/internal/kern"
 // and the second pass is then alpha 0, beta 1: a no-op.
 func Syr2k(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float32, lda int,
 	b []float32, ldb int, beta float32, c []float32, ldc int) {
+	f32.syr2k(kn, lower, trans, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+}
+
+func (nt *nest[T]) syr2k(kn kern.KernelOf[T], lower, trans bool, n, k int, alpha T, a []T, lda int,
+	b []T, ldb int, beta T, c []T, ldc int) {
 
 	beginCall()
 	mask := triMask{on: true, lower: lower}
-	gemm(kn, trans, !trans, n, n, k, alpha, a, lda, b, ldb, beta, c, ldc, mask, symOperand{}, splitIC)
-	gemm(kn, trans, !trans, n, n, k, alpha, b, ldb, a, lda, 1, c, ldc, mask, symOperand{}, splitIC)
+	nt.gemm(kn, trans, !trans, n, n, k, alpha, a, lda, b, ldb, beta, c, ldc, mask, symOperand{}, splitIC)
+	nt.gemm(kn, trans, !trans, n, n, k, alpha, b, ldb, a, lda, 1, c, ldc, mask, symOperand{}, splitIC)
 }
 
 // Trmm computes B = alpha·op(A)·B (left, A m×m) or B = alpha·B·op(A) (right, A
@@ -54,6 +62,11 @@ func Syr2k(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float
 // alpha == 0 sets B to zero without reading A, matching reference STRMM.
 func Trmm(kn kern.Kernel, left, lower, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
+	f32.trmm(kn, left, lower, trans, unit, m, n, alpha, a, lda, b, ldb)
+}
+
+func (nt *nest[T]) trmm(kn kern.KernelOf[T], left, lower, trans, unit bool, m, n int, alpha T,
+	a []T, lda int, b []T, ldb int) {
 
 	if m == 0 || n == 0 {
 		return
@@ -71,17 +84,17 @@ func Trmm(kn kern.Kernel, left, lower, trans, unit bool, m, n int, alpha float32
 	// The triangle op(A) occupies: transposing a lower triangle makes it upper.
 	lowerEff := lower != trans
 	if left {
-		trmmLeft(kn, lower, lowerEff, trans, unit, m, n, alpha, a, lda, b, ldb)
+		nt.trmmLeft(kn, lower, lowerEff, trans, unit, m, n, alpha, a, lda, b, ldb)
 	} else {
-		trmmRight(kn, lower, lowerEff, trans, unit, m, n, alpha, a, lda, b, ldb)
+		nt.trmmRight(kn, lower, lowerEff, trans, unit, m, n, alpha, a, lda, b, ldb)
 	}
 }
 
 // diagBlock copies A's d×d diagonal block at (o, o) into a dense d×d square: the
 // stored triangle named by lower, zeros elsewhere, and 1 on the diagonal for unit.
 // Nothing outside the stored triangle, and no diagonal element under unit, is read.
-func diagBlock(lower, unit bool, d int, a []float32, lda, o int) []float32 {
-	t := make([]float32, d*d)
+func diagBlock[T elem.Float](lower, unit bool, d int, a []T, lda, o int) []T {
+	t := make([]T, d*d)
 	for r := 0; r < d; r++ {
 		row := a[(o+r)*lda+o:]
 		lo, hi := r+1, d // strictly upper part of row r
@@ -100,11 +113,12 @@ func diagBlock(lower, unit bool, d int, a []float32, lda, o int) []float32 {
 	return t
 }
 
-func trmmLeft(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alpha float32,
-	a []float32, lda int, b []float32, ldb int) {
+func (nt *nest[T]) trmmLeft(kn kern.KernelOf[T], lower, lowerEff, trans, unit bool, m, n int, alpha T,
+	a []T, lda int, b []T, ldb int) {
 
+	MB := *nt.mb // this nest's block size; the package var MB is float32's
 	nb := (m + MB - 1) / MB
-	tmp := make([]float32, min(MB, m)*n)
+	tmp := make([]T, min(MB, m)*n)
 	for step := 0; step < nb; step++ {
 		// lower op(A): row block i reads rows above it, so go bottom-up.
 		bi := nb - 1 - step
@@ -119,7 +133,7 @@ func trmmLeft(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alpha
 			copy(tmp[r*n:r*n+n], b[(i0+r)*ldb:(i0+r)*ldb+n])
 		}
 		d := diagBlock(lower, unit, mb, a, lda, i0)
-		gemm(kn, trans, false, mb, n, mb, alpha, d, mb, tmp, n, 0, b[i0*ldb:], ldb,
+		nt.gemm(kn, trans, false, mb, n, mb, alpha, d, mb, tmp, n, 0, b[i0*ldb:], ldb,
 			triMask{}, symOperand{}, splitIC)
 
 		// Off-diagonal: the rows of B op(A) couples this block to, still original.
@@ -136,17 +150,18 @@ func trmmLeft(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alpha
 		if trans {
 			asl = a[p0*lda+i0:]
 		}
-		gemm(kn, trans, false, mb, n, kk, alpha, asl, lda, b[p0*ldb:], ldb, 1, b[i0*ldb:], ldb,
+		nt.gemm(kn, trans, false, mb, n, kk, alpha, asl, lda, b[p0*ldb:], ldb, 1, b[i0*ldb:], ldb,
 			triMask{}, symOperand{}, splitIC)
 	}
 }
 
-func trmmRight(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alpha float32,
-	a []float32, lda int, b []float32, ldb int) {
+func (nt *nest[T]) trmmRight(kn kern.KernelOf[T], lower, lowerEff, trans, unit bool, m, n int, alpha T,
+	a []T, lda int, b []T, ldb int) {
 
+	MB := *nt.mb // this nest's block size; the package var MB is float32's
 	nblk := (n + MB - 1) / MB
 	w := min(MB, n)
-	tmp := make([]float32, m*w)
+	tmp := make([]T, m*w)
 	for step := 0; step < nblk; step++ {
 		// Column j of B·op(A) reads columns p with op(A)[p, j] != 0: p >= j when op(A)
 		// is lower, p <= j when upper. Lower goes left to right, upper right to left.
@@ -161,7 +176,7 @@ func trmmRight(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alph
 			copy(tmp[r*w:r*w+nbk], b[r*ldb+j0:r*ldb+j0+nbk])
 		}
 		d := diagBlock(lower, unit, nbk, a, lda, j0)
-		gemm(kn, false, trans, m, nbk, nbk, alpha, tmp, w, d, nbk, 0, b[j0:], ldb,
+		nt.gemm(kn, false, trans, m, nbk, nbk, alpha, tmp, w, d, nbk, 0, b[j0:], ldb,
 			triMask{}, symOperand{}, splitIC)
 
 		p0, kk := j0+nbk, n-(j0+nbk)
@@ -176,7 +191,7 @@ func trmmRight(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alph
 		if trans {
 			bsl = a[j0*lda+p0:]
 		}
-		gemm(kn, false, trans, m, nbk, kk, alpha, b[p0:], ldb, bsl, lda, 1, b[j0:], ldb,
+		nt.gemm(kn, false, trans, m, nbk, kk, alpha, b[p0:], ldb, bsl, lda, 1, b[j0:], ldb,
 			triMask{}, symOperand{}, splitIC)
 	}
 }
