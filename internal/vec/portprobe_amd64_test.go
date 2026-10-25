@@ -50,6 +50,7 @@ package vec
 
 import (
 	"fmt"
+	"math/rand"
 	"simd/archsimd"
 	"testing"
 	"unsafe"
@@ -1047,22 +1048,37 @@ func BenchmarkPortProbe(b *testing.B) {
 		fn   func(int, []float32, []float32, []float32, int)
 	}{{"kernel/2x32", 2, Kernel2x32}, {"kernel/4x32", 4, Kernel4x32}} {
 		const kc, ldc = 128, 48
-		a := alignedF32(kc * k.mr)
-		bp := alignedF32(kc * 32)
-		c := alignedF32(4 * ldc)
-		for i := range a {
-			a[i] = 1e-3
-		}
-		for i := range bp {
-			bp[i] = 1e-3
-		}
-		b.Run(fmt.Sprintf("%s/kc=%d", k.name, kc), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				k.fn(kc, a, bp, c, ldc)
+		// Two panel recipes, so a difference from bench.BenchmarkKernel can be
+		// attributed: "const" is aligned and constant-valued; "bench" copies
+		// bench/kernel_test.go's kernelPanels (plain make, rng seed 1, [-1,1)).
+		for _, recipe := range []string{"const", "bench"} {
+			var a, bp, c []float32
+			if recipe == "const" {
+				a, bp, c = alignedF32(kc*k.mr), alignedF32(kc*32), alignedF32(4*ldc)
+				for i := range a {
+					a[i] = 1e-3
+				}
+				for i := range bp {
+					bp[i] = 1e-3
+				}
+			} else {
+				rng := rand.New(rand.NewSource(1))
+				a, bp, c = make([]float32, kc*k.mr), make([]float32, kc*32), make([]float32, k.mr*ldc)
+				for i := range a {
+					a[i] = rng.Float32()*2 - 1
+				}
+				for i := range bp {
+					bp[i] = rng.Float32()*2 - 1
+				}
 			}
-			probeSink = c[0]
-			gf(b, float64(2*k.mr*32*kc))
-		})
+			b.Run(fmt.Sprintf("%s/%s/kc=%d", k.name, recipe, kc), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					k.fn(kc, a, bp, c, ldc)
+				}
+				probeSink = c[0]
+				gf(b, float64(2*k.mr*32*kc))
+			})
+		}
 	}
 }
 
