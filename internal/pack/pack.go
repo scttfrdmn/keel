@@ -90,12 +90,7 @@
 // measurement; this comment is the record of the decision, not an omission.
 package pack
 
-import (
-	"fmt"
-	"unsafe"
-
-	"github.com/scttfrdmn/keel/internal/elem"
-)
+import "fmt"
 
 // ALen returns the number of floats APanels writes for a rows×kc block of A
 // blocked by mr — the ragged last panel included, since it is padded rather
@@ -122,7 +117,7 @@ func panelsLen(blk, count, kc int) int {
 // the packed result is identical.
 //
 // dst must hold at least ALen(mr, rows, kc) floats.
-func APanels[T elem.Float](dst []T, mr int, alpha T, a []T, lda int, trans bool, i0, rows, p0, kc int) {
+func APanels(dst []float32, mr int, alpha float32, a []float32, lda int, trans bool, i0, rows, p0, kc int) {
 	// A's rows are the blocked axis. Untransposed, A is m×k: the depth index is
 	// the contiguous one, so packing transposes. Transposed, A is k×m and the
 	// blocked axis is contiguous, so it copies.
@@ -138,7 +133,7 @@ func APanels[T elem.Float](dst []T, mr int, alpha T, a []T, lda int, trans bool,
 // passed below is the untransposed one because it is the loop order whose stored
 // run is contiguous — one row of A per packed slot — not because the source is
 // assumed to be anything.
-func ASymPanels[T elem.Float](dst []T, mr int, alpha T, a []T, lda int, lower bool, i0, rows, p0, kc int) {
+func ASymPanels(dst []float32, mr int, alpha float32, a []float32, lda int, lower bool, i0, rows, p0, kc int) {
 	panels(dst, mr, alpha, a, lda, true, symSrc{on: true, lower: lower}, i0, rows, p0, kc, 0, NPanels(mr, rows))
 }
 
@@ -148,7 +143,7 @@ func ASymPanels[T elem.Float](dst []T, mr int, alpha T, a []T, lda int, lower bo
 // trans says b holds Bᵀ — an n×k matrix with row stride ldb.
 //
 // dst must hold at least BLen(nr, cols, kc) floats.
-func BPanels[T elem.Float](dst []T, nr int, b []T, ldb int, trans bool, p0, kc, j0, cols int) {
+func BPanels(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0, cols int) {
 	// The mirror image of APanels: B's columns are the blocked axis, and
 	// untransposed B is k×n, so the blocked axis is the contiguous one.
 	panels(dst, nr, 1, b, ldb, trans, symSrc{}, j0, cols, p0, kc, 0, NPanels(nr, cols))
@@ -175,7 +170,7 @@ func BPanels[T elem.Float](dst []T, nr int, b []T, ldb int, trans bool, p0, kc, 
 //
 // A from >= to is legal and packs nothing, so a partition may hand a worker an empty
 // range without the caller special-casing it.
-func BPanelsPart[T elem.Float](dst []T, nr int, b []T, ldb int, trans bool, p0, kc, j0, cols, from, to int) {
+func BPanelsPart(dst []float32, nr int, b []float32, ldb int, trans bool, p0, kc, j0, cols, from, to int) {
 	panels(dst, nr, 1, b, ldb, trans, symSrc{}, j0, cols, p0, kc, from, to)
 }
 
@@ -185,7 +180,7 @@ func BPanelsPart[T elem.Float](dst []T, nr int, b []T, ldb int, trans bool, p0, 
 // There is no serial BSymPanels beside it because internal/block packs every B
 // block through the range form, so a second entry point would be reached only from
 // tests. A full pack is from = 0, to = NPanels(nr, cols).
-func BSymPanelsPart[T elem.Float](dst []T, nr int, b []T, ldb int, lower bool, p0, kc, j0, cols, from, to int) {
+func BSymPanelsPart(dst []float32, nr int, b []float32, ldb int, lower bool, p0, kc, j0, cols, from, to int) {
 	panels(dst, nr, 1, b, ldb, false, symSrc{on: true, lower: lower}, j0, cols, p0, kc, from, to)
 }
 
@@ -207,7 +202,7 @@ func NPanels(blk, count int) int {
 // expression: the whole point of packing is that the K-loop reads memory in
 // order, and a shared nest would have made the contiguous case load-strided for
 // the sake of sharing four lines.
-// memmoveFloor is the run length, in elements of T, at or above which the
+// memmoveFloor is the run length, in float32 elements, at or above which the
 // contiguous branch uses copy() instead of an assignment loop (issue #21).
 //
 // copy() on a slice of statically-unknown length is a runtime.memmove call —
@@ -220,22 +215,10 @@ func NPanels(blk, count int) int {
 // run reaches 64 bytes, and removing the source stride entirely changes nothing
 // (1.0–1.1×), which is what ruled out locality as the explanation.
 //
-// 64 bytes is that flattening point — 16 float32s, the constant this was before the
-// nest went generic. It is a measured threshold and not a natural constant: it has
-// no relation to a vector width, and a host whose memmove has a cheaper entry path
-// would want it lower.
-//
-// The threshold is stated in BYTES and the element count derived, because what it
-// measures is memmove's per-call entry cost against the bytes one call moves, so a
-// float64 run reaches it at 8 elements. That is the float32 measurement carried
-// over, not a float64 one: it holds if memmove's cost is a function of bytes alone,
-// which nothing has measured at float64. unsafe.Sizeof of a type parameter is not a
-// Go constant, but each instantiation is stenciled for its own shape and the
-// compiler folds it, so at float32 the test below is `blk >= 16` in the object
-// code, exactly as before (#135's F2 objdump comparison).
-const memmoveFloorBytes = 64
-
-func memmoveFloor[T elem.Float]() int { return memmoveFloorBytes / int(unsafe.Sizeof(T(0))) }
+// 16 elements is that 64-byte flattening point. It is a measured threshold and not
+// a natural constant: it has no relation to a vector width, and a host whose
+// memmove has a cheaper entry path would want it lower.
+const memmoveFloor = 16
 
 // symSrc says the source stores only one triangle of a symmetric matrix. The zero
 // value is an ordinary matrix, which is what APanels, BPanels and BPanelsPart pass.
@@ -246,7 +229,7 @@ type symSrc struct {
 
 // from and to bound the panel indices this call writes; a serial full pack passes
 // (0, nb). The bound check is against the whole block either way — see BPanelsPart.
-func panels[T elem.Float](dst []T, blk int, alpha T, src []T, ld int, depthContig bool, sym symSrc, b0, count, p0, kc, from, to int) {
+func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthContig bool, sym symSrc, b0, count, p0, kc, from, to int) {
 	need := panelsLen(blk, count, kc)
 	if len(dst) < need {
 		panic(fmt.Sprintf("pack: dst has %d floats, need %d", len(dst), need))
@@ -282,7 +265,7 @@ func panels[T elem.Float](dst []T, blk int, alpha T, src []T, ld int, depthConti
 				for x, v := range row {
 					out[x] = alpha * v
 				}
-			case blk >= memmoveFloor[T]():
+			case blk >= memmoveFloor:
 				copy(out, row)
 			default:
 				// Deliberately not copy(): see memmoveFloor. A plain assignment
@@ -328,8 +311,8 @@ func panels[T elem.Float](dst []T, blk int, alpha T, src []T, ld int, depthConti
 // (1.1-2.2 Gelem/s), so the strided write is not by itself the cost. That the
 // groups win by amortizing the per-element index and bounds check over a row
 // slice is a reading of the two loops, not a measurement.
-func depthPanel[T elem.Float](panel []T, blk int, alpha T, src []T, ld, base, valid, p0, kc int) {
-	row := func(x int) []T { return src[(base+x)*ld+p0:][:kc] }
+func depthPanel(panel []float32, blk int, alpha float32, src []float32, ld, base, valid, p0, kc int) {
+	row := func(x int) []float32 { return src[(base+x)*ld+p0:][:kc] }
 	x := 0
 	for ; x+4 <= valid; x += 4 {
 		r0, r1, r2, r3 := row(x), row(x+1), row(x+2), row(x+3)
@@ -384,7 +367,7 @@ func depthPanel[T elem.Float](panel []T, blk int, alpha T, src []T, ld, base, va
 // scattered elements, which is what keeps this the same cost as an ordinary pack:
 // storedRun splits at the diagonal, so at most one end of each run is strided and
 // no element is tested individually.
-func symPanel[T elem.Float](panel []T, blk int, alpha T, src []T, ld int, depthContig, lower bool,
+func symPanel(panel []float32, blk int, alpha float32, src []float32, ld int, depthContig, lower bool,
 	base, valid, p0, kc int) {
 
 	if depthContig {

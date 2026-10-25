@@ -259,7 +259,7 @@ func TestSolveRightMatchesOracle(t *testing.T) {
 						b0[i] = rng.Float32()*2 - 1
 					}
 					got := append([]float32(nil), b0...)
-					solveRight(ax, sd, lowerEff, trans, unit, sh.m, sh.d, a, lda, got, ldb, make([]float32, tStride[float32](sh.m)*sh.d))
+					solveRight(ax, sd, lowerEff, trans, unit, sh.m, sh.d, a, lda, got, ldb, make([]float32, tStride(sh.m)*sh.d))
 					want, scale := oracle.Trsm(false, lowerEff != trans, trans, unit, sh.m, sh.d, 1, a, lda, b0, ldb)
 					what := fmt.Sprintf("m=%d d=%d lowerEff=%v trans=%v unit=%v", sh.m, sh.d, lowerEff, trans, unit)
 					for i := range got {
@@ -309,7 +309,7 @@ func BenchmarkSolveRightInterchange(b *testing.B) {
 	a := benchTri(n)
 	b0 := benchMat(m, n)
 	bm := make([]float32, len(b0))
-	tbuf := make([]float32, tStride[float32](m)*d)
+	tbuf := make([]float32, tStride(m)*d)
 	flops := float64(m) * float64(d) * float64(d+1)
 	arms := []struct {
 		name string

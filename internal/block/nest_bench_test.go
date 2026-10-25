@@ -122,7 +122,7 @@ func BenchmarkNest(b *testing.B) {
 		for _, n := range []int{1024, 2048} {
 			m, k := n, n
 			flops := 2 * float64(m) * float64(n) * float64(k)
-			kc, mc, nc := f32.plan(kn, m, n, k)
+			kc, mc, nc := plan(kn, m, n, k)
 			b.Run(fmt.Sprintf("%s/n=%d", kn.ID(), n), func(b *testing.B) {
 				// One marker per (shape, size) so a reader of the raw benchmark
 				// output can see the block structure the parts were measured over
@@ -512,7 +512,7 @@ func trsmSolvesOnly(left bool, m, n int, a []float32, lda int, bmat []float32, l
 		return
 	}
 	strips(m, func(i0, im int) {
-		t := make([]float32, tStride[float32](im)*min(MB, n)) // as trsmRight allocates it
+		t := make([]float32, tStride(im)*min(MB, n)) // as trsmRight allocates it
 		for _, j0 := range trsmSolveOrder(false, lowerEff, n) {
 			solveRight(l1.Backends()[0].Axpy, l1.Backends()[0].ScalDiv, lowerEff, false, false, im, min(MB, n-j0),
 				a[j0*lda+j0:], lda, bmat[i0*ldb+j0:], ldb, t)
@@ -528,7 +528,7 @@ func trsmSolvesOnly(left bool, m, n int, a []float32, lda int, bmat []float32, l
 func trsmRankPacksOnly(kn kern.Kernel, left, doA, doB bool, m, n int, a []float32, lda int, bmat []float32, ldb int) {
 	const lowerEff = true
 	rank := func(gm, gn, kk int, as []float32, las int, bs []float32, lbs int) {
-		kc, mc, nc := f32.plan(kn, gm, gn, kk)
+		kc, mc, nc := plan(kn, gm, gn, kk)
 		ap := make([]float32, pack.ALen(kn.MR, mc, kc))
 		bp := make([]float32, pack.BLen(kn.NR, nc, kc))
 		for _, blk := range nestBlocks(kn, gm, gn, kk) {
@@ -573,7 +573,7 @@ func trsmRankNoPack(kn kern.Kernel, left bool, m, n int, a []float32, lda int, b
 	const lowerEff = true
 	tile := make([]float32, kn.MR*kn.NR)
 	rank := func(gm, gn, kk int, as []float32, las int, bs []float32, lbs int, c []float32) {
-		kc, mc, nc := f32.plan(kn, gm, gn, kk)
+		kc, mc, nc := plan(kn, gm, gn, kk)
 		ap := make([]float32, pack.ALen(kn.MR, mc, kc))
 		bp := make([]float32, pack.BLen(kn.NR, nc, kc))
 		pack.APanels(ap, kn.MR, -1, as, las, false, 0, min(mc, gm), 0, kc)
@@ -673,7 +673,7 @@ func trsmPackCount(kn kern.Kernel, left bool, m, n int) (aelem, belem float64, b
 					belem += float64(blk.jn) * float64(blk.kk)
 				}
 			}
-			kc, _, nc := f32.plan(kn, gm, gn, solved)
+			kc, _, nc := plan(kn, gm, gn, solved)
 			bpBytes += pack.BLen(kn.NR, nc, kc) * 4
 		}
 		solved += bl
@@ -753,7 +753,7 @@ func BenchmarkPackDirections(b *testing.B) {
 					belem += float64(blk.jn) * float64(blk.kk)
 				}
 			}
-			kc, mc, nc := f32.plan(kn, m, n, k)
+			kc, mc, nc := plan(kn, m, n, k)
 			ap := make([]float32, pack.ALen(kn.MR, mc, kc))
 			bp := make([]float32, pack.BLen(kn.NR, nc, kc))
 			src := benchMat(n, n) // square, so one source serves every flag combination
@@ -1005,7 +1005,7 @@ func BenchmarkFeed(b *testing.B) {
 			KC = kc
 			// plan() clamps to the problem, so what this point actually ran at is
 			// read back from it rather than assumed to be the loop variable.
-			pkc, pmc, pnc := f32.plan(kn, m, n, k)
+			pkc, pmc, pnc := plan(kn, m, n, k)
 			calls := 0
 			for _, cnt := range callsPerDepth(kn, m, n, k) {
 				calls += cnt
@@ -1283,7 +1283,7 @@ type nestBlock struct {
 // The triangular mask is deliberately absent: the mask's skips are P4's subject and
 // #26 is about the plain GEMM path every routine's bulk work goes through.
 func nestBlocks(kn kern.Kernel, m, n, k int) []nestBlock {
-	kc, mc, nc := f32.plan(kn, m, n, k)
+	kc, mc, nc := plan(kn, m, n, k)
 	var out []nestBlock
 	for jc := 0; jc < n; jc += nc {
 		jn := min(nc, n-jc)

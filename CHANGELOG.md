@@ -25,6 +25,14 @@ While the major version is 0, minor versions may contain breaking changes.
     release still contains `gonumblas`, which makes the import ambiguous. It carries a development
     `replace => ../` until the next keel release, which it will then require.
 
+- **float64 will not come from making the middle generic: Go type parameters were built and refused
+  (`#135` F2).** The float32 output stayed bit-identical (on the M4 Pro and janus AVX-512), and
+  orion's `measured` A/B was flat (M4 Pro, 6 interleaved passes, one thread, dev tier: 0 of 57 rows
+  with disjoint ranges). But the float32 code was not instruction-identical: gcshape stenciling
+  passes a dictionary in the first argument register, and 15 of 18 hot-path functions differ in
+  body on arm64, 18 of 18 on amd64. The library is unchanged, and the spike is commit `79249cb`.
+  Recorded in `docs/generic-middle.md` §Refusal register; code generation is the fallback.
+
 ### Added
 - **The float64 oracle: `Tolerance64`, definition-order float64 references, and a double-double arm**
   (`internal/oracle`, DESIGN.md §5 rule 1's float64 amendment). `Tolerance64` is `Tolerance` with

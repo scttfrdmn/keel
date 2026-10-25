@@ -101,7 +101,9 @@ kernel:
 1. **Go type parameters** — `Gemm[T float32 | float64](kn Kernel[T], …)`. Cleanest source. Risk:
    `archsimd` is not generic over element type, so `Fn`'s body cannot be — the type parameter stops
    at the seam and the kernel table is per-`T` regardless; and generic codegen under
-   `GOEXPERIMENT=simd` is itself unmeasured.
+   `GOEXPERIMENT=simd` is itself unmeasured. **Measured and refused (`#135` F2, 2026-10-25):** the
+   float32 instantiation's object code is not the shipped object code (the dictionary register),
+   though its output and its speed were unchanged. See `generic-middle.md` §Refusal register.
 2. **Code generation** — one templated nest per type. No generics risk, two copies that cannot
    silently share a bug. Cost: a generator in `scripts/`, which the apparatus budget counts.
 3. **Two hand-maintained copies** — rejected on its face (the divergence `#135` exists to prevent).

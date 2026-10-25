@@ -82,9 +82,8 @@ package kern
 
 import (
 	"fmt"
-	"unsafe"
 
-	"github.com/scttfrdmn/keel/internal/elem"
+	"github.com/scttfrdmn/keel/internal/vec"
 )
 
 // Tile bounds. They exist to size the scalar reference's accumulator buffer and
@@ -94,8 +93,7 @@ const (
 	// MaxMR is the largest number of rows any kernel in this package computes.
 	MaxMR = 8
 	// MaxNR is the largest number of columns any kernel in this package
-	// computes. Four 16-lane float32 vectors. An element count and not a byte one:
-	// it sizes ScalarTile's buffer in elements of T at every instantiation.
+	// computes. Four 16-lane vectors.
 	MaxNR = 64
 )
 
@@ -113,24 +111,19 @@ const (
 // the package: the tests have to pack panels for whatever shape they are handed,
 // and the benchmark has to compare shapes against each other.
 //
-// # The element type is a parameter; Kernel is its float32 instantiation
-//
-// KernelOf is generic over the element type because it is the seam the generic
-// middle (internal/block, internal/pack) is parameterized by, and the middle's T is
-// inferred from the kernel it is handed. The type parameter stops here, at Fn's
-// signature: a body is per-type regardless, since archsimd is not generic over the
-// element. Kernel is an alias rather than a rename so that every float32 site in
-// the tree — every shipped kernel, the dispatcher, the gates' tests — is spelled as
-// it was.
-type Kernel = KernelOf[float32]
-
-// KernelOf is one backend's microkernel for one tile shape over elements of type
-// T. See Kernel.
-type KernelOf[T elem.Float] struct {
+// Fn's element type is float32 and is deliberately NOT a type parameter. A
+// Kernel[T] with the middle generic over T was built and refused (#135 F2,
+// docs/generic-middle.md §Refusal register): float32 output stayed bit-identical
+// and the orion A/B was flat, but go1.27's gcshape stenciling passes every
+// non-inlined generic function a dictionary in the first integer argument
+// register, so the float32 instantiation of the hot paths is not the object code
+// that was measured — 15 of 18 functions differ in body on arm64, 18 of 18 on
+// amd64. A float64 nest gets its own copy of the middle, not a parameter here.
+type Kernel struct {
 	Name   string // backend: Scalar or AVX512
 	MR, NR int    // tile shape
 	Unroll int    // k-steps per pass of the steady-state loop
-	Fn     func(kc int, a, b, c []T, ldc int)
+	Fn     func(kc int, a, b, c []float32, ldc int)
 
 	// There is deliberately no add-back field here, and the absence is a
 	// measurement result rather than an omission. Issue #22's candidate C
@@ -172,23 +165,15 @@ const (
 )
 
 // Tile is the shape as it appears in benchmark and gate names, e.g. "4x32".
-func (k KernelOf[T]) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
+func (k Kernel) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
 
 // ID names one kernel uniquely: shape then backend, e.g. "4x32/avx512". This is
 // the string the benchmark sub-names and the gate's thresholds are keyed on.
-func (k KernelOf[T]) ID() string { return k.Tile() + "/" + k.Name }
+func (k Kernel) ID() string { return k.Tile() + "/" + k.Name }
 
-// nativeLanes is the number of T elements one vector instruction of this
+// nativeLanes is the number of float32 elements one vector instruction of this
 // kernel's backend operates on — 16 for an AVX-512 Float32x16, 4 for a NEON
-// Float32x4, half those at float64 — and 0 for a backend that has no such width
-// stated.
-//
-// The ISA fact is the register width in bytes, so that is what each case states
-// and the lane count is derived from the element size: a float64 kernel on the
-// same register holds half the lanes, and a per-type table here would be a second
-// place for that arithmetic to be wrong. It was `return vec.Lanes` (16) for
-// AVX-512 and a literal 4 for NEON; at float32 both derivations return exactly
-// those, which TestMemOpsPerFMA* pins.
+// Float32x4 — and 0 for a backend that has no such width stated.
 //
 // This is NOT vec.Lanes, and the distinction is the whole reason the function
 // exists. vec.Lanes is 16 on every backend because a Block is the shim's 16-lane
@@ -206,17 +191,15 @@ func (k KernelOf[T]) ID() string { return k.Tile() + "/" + k.Name }
 // a shape by arithmetic belonging to hardware it does not run on. A future SVE
 // backend has no compile-time width at all (DESIGN.md §8), so it must arrive
 // here with its own case rather than inherit one.
-func (k KernelOf[T]) nativeLanes() int {
-	var regBytes int
+func (k Kernel) nativeLanes() int {
 	switch k.Name {
 	case AVX512:
-		regBytes = 64 // a ZMM register; 16 float32s, where the Block width and the native width coincide
+		return vec.Lanes // 16: the Block width and the native width coincide here
 	case NEON:
-		regBytes = 16 // a V register
+		return 4
 	default:
 		return 0
 	}
-	return regBytes / int(unsafe.Sizeof(T(0)))
 }
 
 // MemOpsPerFMA is how many vector loads and broadcasts the tile issues per FMA.
@@ -240,7 +223,7 @@ func (k KernelOf[T]) nativeLanes() int {
 // both MR and NR — on the axis betterFor ranks first for ClassFMA, which is
 // arm64's class. No shipped verdict moved (both divisors rank the shipped 4x16
 // over 8x8); TestMemOpsPerFMAReordersNEONShapes carries the pair where it does.
-func (k KernelOf[T]) MemOpsPerFMA() float64 {
+func (k Kernel) MemOpsPerFMA() float64 {
 	lanes := k.nativeLanes()
 	if k.MR <= 0 || k.NR <= 0 || lanes <= 0 {
 		return 0
@@ -252,7 +235,7 @@ func (k KernelOf[T]) MemOpsPerFMA() float64 {
 // holds k to. Every vector kernel has one, and it is derived from the shape
 // rather than written per shape, so a new tile cannot arrive without its
 // reference.
-func (k KernelOf[T]) Ref() KernelOf[T] { return ScalarKernelOf[T](k.MR, k.NR) }
+func (k Kernel) Ref() Kernel { return ScalarKernel(k.MR, k.NR) }
 
 // Kernels returns every microkernel runnable on this machine: the vector shapes
 // widest-tile-first, then the scalar reference for each shape they use, so that
@@ -302,17 +285,13 @@ func Backends() []string {
 // arithmetic in the same order as the vector kernels, with no vector type in
 // sight. It builds on a stock toolchain on every GOARCH, and the differential
 // test holds every vector kernel of that shape to it.
-func ScalarKernel(mr, nr int) Kernel { return ScalarKernelOf[float32](mr, nr) }
-
-// ScalarKernelOf is ScalarKernel over elements of type T: the reference every
-// instantiation of the nest can run, whether or not a vector kernel exists for T.
-func ScalarKernelOf[T elem.Float](mr, nr int) KernelOf[T] {
-	return KernelOf[T]{
+func ScalarKernel(mr, nr int) Kernel {
+	return Kernel{
 		Name:   Scalar,
 		MR:     mr,
 		NR:     nr,
 		Unroll: 1,
-		Fn: func(kc int, a, b, c []T, ldc int) {
+		Fn: func(kc int, a, b, c []float32, ldc int) {
 			ScalarTile(mr, nr, kc, a, b, c, ldc)
 		},
 	}
@@ -335,11 +314,11 @@ func ScalarKernelOf[T elem.Float](mr, nr int) KernelOf[T] {
 //
 // It panics on a shape it cannot hold. A reference that silently truncated would
 // make the differential test pass by agreeing with nothing.
-func ScalarTile[T elem.Float](mr, nr, kc int, a, b, c []T, ldc int) {
+func ScalarTile(mr, nr, kc int, a, b, c []float32, ldc int) {
 	if mr < 1 || mr > MaxMR || nr < 1 || nr > MaxNR {
 		panic(fmt.Sprintf("kern: tile %dx%d outside %dx%d", mr, nr, MaxMR, MaxNR))
 	}
-	var buf [MaxMR * MaxNR]T
+	var buf [MaxMR * MaxNR]float32
 	acc := buf[: mr*nr : mr*nr]
 	for p := 0; p < kc; p++ {
 		ap := a[p*mr : p*mr+mr]

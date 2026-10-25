@@ -77,7 +77,7 @@ func TestNestBlocksDriveTheSameGemm(t *testing.T) {
 func nestFromBlocks(kn kern.Kernel, m, n, k int, alpha float32, a []float32, lda int,
 	b []float32, ldb int, beta float32, c []float32, ldc int) {
 
-	kc, mc, nc := f32.plan(kn, m, n, k)
+	kc, mc, nc := plan(kn, m, n, k)
 	ap := make([]float32, pack.ALen(kn.MR, mc, kc))
 	bp := make([]float32, pack.BLen(kn.NR, nc, kc))
 	tile := make([]float32, kn.MR*kn.NR)
@@ -150,7 +150,7 @@ func TestTrsmMBCounts(t *testing.T) {
 			if !side.left {
 				gm, gn = d, mb
 			}
-			if _, _, nc := f32.plan(kn, gm, gn, d-mb); nc < gn {
+			if _, _, nc := plan(kn, gm, gn, d-mb); nc < gn {
 				t.Fatalf("nc = %d < gn = %d: the rank update has more than one column "+
 					"block at this shape, so the closed form below does not apply", nc, gn)
 			}

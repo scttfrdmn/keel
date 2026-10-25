@@ -167,6 +167,25 @@ Recorded here and at each site, naming why the cases are lookalikes rather than 
 - **Any `switch isa` or `switch type` inside `block`/`pack`/`par` is the refusal trigger.** If the
   middle would need to be told which ISA or element type it serves to behave correctly, the two
   cases were lookalikes at that point: keep them apart, and record it at the site.
+- **The element type is not a Go type parameter (#135 F2, refused 2026-10-25).** Built in full as
+  `79249cb` and reverted: `pack`/`block` generic over `float32 | float64`, `kern.KernelOf[T]` behind a
+  `Kernel` alias, per-type blocking on a `*nest[T]` receiver, and a float64 test of all six Level-3
+  routines on the scalar kernel, which passed. Of the three acceptance criteria, two passed:
+  float32 output bit-identical (a sha256 over every L3 routine's output, old against new, on the
+  M4 Pro and janus's AVX-512), and orion's `measured` A/B was flat (M4 Pro, 6 interleaved passes, one
+  thread, dev tier: 0 of 57 rows with disjoint ranges; geomean of medians `BenchmarkNest` −0.09%,
+  `BenchmarkTrsmMB` +0.07%, `BenchmarkPackDirections` −0.79%). The third failed:
+  **object-code identity**. go1.27's gcshape stenciling passes every non-inlined generic function a
+  dictionary in the first integer argument register, so every argument moves one register over, the
+  frame grows 8–16 bytes, and the allocator spills differently. Of 18 hot-path functions, 15 differ
+  in body on arm64 and 18 of 18 on amd64; on arm64 `depthPanel`, `symPanel` and `scaleTri` differ
+  only in the morestack trampoline. Dictionary loads appear at generic call sites (sub-dictionaries)
+  and for `make([]T)` / `*apBuf[T]` type descriptors; there are no new indirect calls. The hunks
+  read by hand (arm64 `panels`/`macro`, amd64 `depthPanel`/`macro`) sit outside the per-element
+  loops; the other functions' hunks were counted, not read. It is a property of the compiler's
+  generics implementation, not of this source, so no reshaping removes it: the published numbers
+  describe object code a type parameter would replace. The mechanism falls back to **code
+  generation** (`#103`): the float32 source stays canonical and a float64 copy is generated from it.
 
 ## Refactor plan and its guardrails (for when code follows this doc)
 
