@@ -17,6 +17,13 @@
 // result and a large error bound. Returning the scale from the same loop that
 // computed the value is what stops a test from quietly substituting |result|
 // and calling a wrong answer correct.
+//
+// For float64 routines there is no wider hardware type, so the package carries
+// two of DESIGN.md §5 rule 1's three float64 arms: definition-order float64
+// references (ref64.go, peer precision, compared under PeerTolerance64) and
+// double-double references (dd.go, dd_ref.go, isolating, compared under
+// Tolerance64). The third arm, Gonum, is an independent implementation rather
+// than a reference and does not live here.
 package oracle
 
 import "math"
@@ -61,6 +68,63 @@ func Tolerance(n int, scale float64) float64 {
 		fn = 1
 	}
 	return c * fn * (eps32*scale + eta32/2)
+}
+
+// Tolerance64 is Tolerance for a float64 routine:
+//
+//	C·f(n)·(eps64·scale + eta64/2)
+//
+// with eps64 = 2⁻⁵² and eta64 = 2⁻¹⁰⁷⁴, and the same C = 4 and f(n) = n.
+//
+// # The derivation, at float64
+//
+// It is Tolerance's derivation with the type's two constants substituted, and
+// neither term changes meaning. A length-n reduction rounds f(n) = n times; each
+// rounding moves the result by at most eps64 times the magnitude being
+// accumulated, so the relative drift is bounded by n·eps64·scale (the standard
+// γₙ·Σ|terms| bound, written with eps64 rather than the unit roundoff 2⁻⁵³, which
+// is a factor of two of headroom both models already carry). C is the same slack
+// for FMA and reassociation: an FMA removes a rounding and a reassociated sum
+// rounds the same number of times, so neither raises the count, and neither
+// depends on the type. Below 2⁻¹⁰²² the error is absolute, eta64/2 per rounding,
+// for exactly the reason the float32 floor exists — a correctly rounded
+// subnormal or zero result must not read as a failure.
+//
+// # What it is the bound OF, and the factor of two
+//
+// Tolerance64 bounds ONE implementation's distance from the exact answer. That is
+// directly the comparison bound only against a reference whose own error is
+// negligible beside it — the double-double references (DotDD, GemvDD, GemmDD),
+// whose error is about 2⁻⁵³ of this (dd_ref.go). Against the float64
+// definition-order references (Ddot, Dgemm, …) it is not: those are
+// peer-precision, each side is within Tolerance64 of exact, and the triangle
+// inequality gives |keel − reference| ≤ 2·Tolerance64. That doubled bound is
+// PeerTolerance64, stated as its own function so the factor lives here and never
+// in a test (DESIGN.md §5 rule 1).
+func Tolerance64(n int, scale float64) float64 {
+	const eps64 = 2.220446049250313e-16   // 2^-52, float64 machine epsilon
+	const eta64 = 4.9406564584124654e-324 // 2^-1074, smallest positive float64 subnormal
+	const c = 4.0                         // slack for FMA/reassociation
+	fn := float64(n)
+	if fn < 1 {
+		fn = 1
+	}
+	// Not c*fn*(eps64*scale + eta64/2), though it is the same quantity: eta64/2 is
+	// 2^-1075, which float64 cannot hold, and it rounds (ties to even) to 0. The
+	// literal port of Tolerance's expression therefore had no floor at all, and
+	// TestTolerance64 is what caught it. Halving after the multiply keeps it.
+	return c*fn*eps64*scale + c*fn/2*eta64
+}
+
+// PeerTolerance64 is the comparison bound between two float64 computations of
+// the same quantity, each bounded by Tolerance64: their errors add, so it is
+// 2·Tolerance64. It is the bound for keel against a float64 definition-order
+// reference, and it is the sum of two errors rather than a measurement of one —
+// a defect both sides share cancels inside it, and an error up to twice keel's
+// own budget can hide in it. That blind spot is what the double-double arm,
+// compared under Tolerance64, exists to close.
+func PeerTolerance64(n int, scale float64) float64 {
+	return 2 * Tolerance64(n, scale)
 }
 
 // Index returns the offset of a strided BLAS vector's first element. For

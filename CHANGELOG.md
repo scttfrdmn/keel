@@ -8,6 +8,25 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **The float64 oracle: `Tolerance64`, definition-order float64 references, and a double-double arm**
+  (`internal/oracle`, DESIGN.md §5 rule 1's float64 amendment). `Tolerance64` is `Tolerance` with
+  `eps64 = 2⁻⁵²`, `eta64 = 2⁻¹⁰⁷⁴`; `PeerTolerance64` is its stated 2× for keel against a peer float64
+  reference. `Ddot`…`Dtrmm` mirror every float32 reference; `DotDD`, `GemvDD`, `GemmDD` accumulate in
+  ~106-bit double-double and round once, and are checked to 768 (a full 768³ `GemmDD` takes ~10 s on
+  the dev host, skipped under `-short`). No float32 reference changed: their files gained no line.
+  - **The float64 references are parallel functions, not a generic core, because arm64 fuses.** Go's
+    arm64 backend turns any add of a product into an FMA, across statements; amd64 never does. The
+    shipped `GemmEntry` differs from per-operation rounding in 696 of 1000 seeded trials on the dev
+    host, so a generic core either fuses on one GOARCH only or moves float32 results.
+  - **The same fusion silently breaks double-double.** Removing the one `float64(a*b)` barrier in
+    `twoProd` makes `mul`, `mulF` and `divF` read ~1.6e16 u² against bounds of 2–5 u² on arm64:
+    double-double collapses to float64 precision while `twoProd` alone still tests exact.
+  - **A literal port of `Tolerance`'s expression has no underflow floor at float64**: `eta64/2` is
+    2⁻¹⁰⁷⁵, which rounds to 0. `Tolerance64` halves after the multiply instead.
+  - **Double-double widens precision, not range**, so `Dnrm2` scales by a power of two (exact),
+    where the float32 oracle's `Nrm2` relied on float64's range.
+
 ## [0.2.4] - 2026-10-25
 
 Parallel Level 2 and amd64 kernel fixes. Not a re-certification: no judged `gate-p5` ran at this
