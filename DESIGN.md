@@ -1,4 +1,4 @@
-# keel — a float32 BLAS subset in pure Go on `GOEXPERIMENT=simd`
+# keel — a float32 (and, from v0.3, float64) BLAS in pure Go on `GOEXPERIMENT=simd`
 
 *Design document and Claude Code build plan. Working name "keel" (the foundation member of a hull) — rename at will.*
 
@@ -12,6 +12,8 @@ A pure-Go, cgo-free float32 BLAS subset whose hot kernels are written against th
 
 **Non-goals (v0):** float64 (Gonum owns it), complex types, full BLAS coverage, banded/packed storage, ARM64 (later; the architecture must make it a second microkernel, not a second library), float16 (no element type exists in the simd packages).
 
+- **Amended 2026-10-25 on Scott's ruling (#103): v0.3 is float64.** The non-goal list above is v0's and stays as written. float64 enters at **parity with float32**, staged: the float64 test references first (DESIGN.md §5 rule 1's three checks, already ruled 2026-10-04), then the element-type seam in the middle (#135), then the shim and microkernels, then the D routines (Level 1, 2, 3), then the `gonumblas` `blas.Float64` adapter. The float64 gates are written at the **start** of the phase that needs them, as every gate is, and not here: no float64 performance target is stated before a float64 peak has been measured. Of the other v0 non-goals, **full float32 coverage and banded/packed storage were delivered in v0.2.3** (#185) and **ARM64 in v0.2.0**. Complex types and float16 stay non-goals; float16 is #139, conditional on an upstream element type.
+
 ## 2. Scope: 12 routines, one keystone
 
 | Level | Routines | Notes |
@@ -21,7 +23,7 @@ A pure-Go, cgo-free float32 BLAS subset whose hot kernels are written against th
 | 3 core | **`Sgemm`** | The keystone. All effort concentrates here |
 | 3 derived | `Ssyrk, Strsm, Ssymm` | Blocked-GEMM + small corner kernels (BLIS decomposition) |
 
-Row-major only in the public API (`float32` slices + explicit `ld` strides), matching Go idiom rather than Fortran heritage. Transpose flags supported; the packing routines absorb them for free.
+Row-major only in the public API (`float32` slices + explicit `ld` strides), matching Go idiom rather than Fortran heritage. *(v0.2.3 extended the surface to every routine in Gonum's `blas.Float32`, 35 of them, and v0.3 adds their float64 twins; the table is v0's keystone plan and stays as the record of it.)* Transpose flags supported; the packing routines absorb them for free.
 
 ## 3. Architecture
 

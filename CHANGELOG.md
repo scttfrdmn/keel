@@ -9,6 +9,12 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **DESIGN.md: v0.3 is float64, at parity with float32** (Scott's ruling on #103, 2026-10-25). The v0
+  non-goal list stays as written, with a dated amendment beside it. That amendment also records that
+  full float32 coverage and banded/packed storage shipped in v0.2.3 and arm64 in v0.2.0, since the v0
+  list still read as if all of those were out of scope. `docs/f64-design.md` marks three of its own
+  claims VOID: the `big.Float` arm, "two layers", and "Gonum is not a dependency". The v0.3 work is
+  tracked as #189–#195.
 - **`keel/gonumblas` is now its own module, so the core `keel` module no longer depends on Gonum.**
   #182 had added Gonum to the root `go.mod`. DESIGN.md §5 rule 1 says Gonum stays out of keel's
   shipped module graph, and `go mod why gonum.org/v1/gonum` in the root now reports it isn't needed.

@@ -7,6 +7,23 @@ Design doc for the float64 (`f64`) port, written **before any kernel, shim, or b
 same discipline the arm64 seam followed (`docs/generic-middle.md`, `#135`). It is the map `#135`
 promised the type axis: *"do not cut it yet, and here is the map for when `#103` does."*
 
+> **Status, 2026-10-25.** Scott ruled that **v0.3 is float64**, at parity with float32 (#103). So
+> this doc's conditional framing is decided, and three of its statements are **VOID** by later
+> rulings or facts, named here so a reader does not act on them:
+> 1. **VOID: §3's Layer B on `math/big.Float`.** DESIGN.md §5 rule 1 (amended 2026-10-04) requires a
+>    **double-double** arm (~106 bits, reaching at least n≈768) and refuses `big.Float` for that role.
+>    It is built: `internal/oracle/dd.go` and `dd_ref.go` (`83b8d7b`). `big.Float` survives only as
+>    the exactness check *of* the double-double arithmetic, in its tests.
+> 2. **VOID: §3's "two layers".** The rule has **three** arms: a definition-order float64 reference
+>    (`internal/oracle/ref64.go`, compared under `PeerTolerance64` = 2·`Tolerance64`), the
+>    double-double arm (compared under `Tolerance64`), and Gonum as an independent implementation.
+> 3. **VOID: §3's "Gonum is not currently a keel dependency".** It became one through `keel/gonumblas`
+>    (#182). Since `4158715` the adapter is its own module and the root module again depends on no Gonum.
+>
+> The rest stands: the inherit/new split (§1), the tile prediction (§2, still a prediction), and the
+> invariant table (§4). The type-mechanism choice (§1) is being decided by a spike against the real
+> middle (F2).
+
 **This doc does not decide that f64 gets built.** `#103` records float64 as a v0 non-goal
 (`DESIGN.md:13`, "Gonum owns it") and the finding that its real blocker is the *oracle*, not the
 kernels. keel was built for the float32 gap Gonum leaves open; a float64 keel competes with Gonum's
