@@ -47,6 +47,27 @@ package vec
 // Zen 4/5 execute the copies (move elimination) and broadcasts off their FMA
 // pipes, so the same rows there should sit near 100% wherever the FMA chains
 // alone allow it.
+//
+// MEASURED, and it overrules parts of the table above. Exploration tier,
+// unjudged, 2026-10-25, one thread pinned to CPU 0, 5 interleaved passes,
+// median percent of the same pass's acc/N=12 rate (the clean 2-FMA/cycle
+// ceiling; janus i9-9960X 233.7, c7i.4xlarge Xeon 8488C 228.6, c8i.4xlarge
+// Xeon 6975P-C 235.8, c8a.4xlarge EPYC 9R45 286.6 GFLOP/s):
+//
+//	row                  janus  SPR   GNR   Zen5
+//	acc/N=8              100.1  90.8  92.5  96.2   8 chains: short of peak on SPR/GNR
+//	pf/reg/k=1,2,4       84/75/62  84/75/61  85/76/64  94/94/78
+//	pf/pre/k=4            94.1  81.9  77.2  96.2
+//	pf/mix/ld             61.5  62.6  60.6  82.2
+//	pf/mix/pre            80.0  86.2  72.6  99.8
+//	kf/mix/ld             42.1  62.2  59.8  70.0   copy-back: costly on janus only
+//	kernel/4x32 (const)   32.4  49.5  49.3  65.3
+//
+// The register-source broadcast rows match the port-0/5 prediction on all three
+// Intel parts. The copy-back rows do not on SPR/GNR: there the 12 zmm copies cost
+// about nothing (kf/mix/ld = pf/mix/ld), so 33.3% was the right prediction for
+// janus only. kernel/4x32 sits ~12 points under kf/mix/ld on SPR/GNR, which is
+// the slice-advance arithmetic the probe omits.
 
 import (
 	"fmt"
