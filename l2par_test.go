@@ -80,6 +80,11 @@ func l2parCases(m, n int, inc int) []l2parCase {
 				a, x := randVals(r, n*(n+1)), vec(r, n, inc)
 				Strmv(ul, NoTrans, d, n, a, n+1, x, inc)
 				return x
+			}}, l2parCase{fmt.Sprintf("StrmvT/%v/%v", ul, d) + sfx, tri, func() []float32 {
+				r := rand.New(rand.NewSource(7))
+				a, x := randVals(r, n*(n+1)), vec(r, n, inc)
+				Strmv(ul, Trans, d, n, a, n+1, x, inc)
+				return x
 			}})
 		}
 	}

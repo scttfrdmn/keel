@@ -3,8 +3,6 @@
 
 package keel
 
-import "github.com/scttfrdmn/keel/internal/block"
-
 // The triangular and symmetric Level-2 routines. Every one is a loop over A's
 // rows, each row being a contiguous run of row-major storage, so the work goes
 // through the active Level-1 backend's Dot and Axpy, which is where the vector
@@ -47,35 +45,49 @@ func Strmv(ul Uplo, tA Transpose, d Diag, n int, a []float32, lda int, x []float
 	}
 	xs := gather(n, x, incX) // read-only here: results go to out, written back at the end
 	out := make([]float32, n)
-	rows := func(r0, r1 int) {
-		for i := r0; i < r1; i++ {
-			row := a[i*lda : i*lda+n]
-			lo, hi := i+1, n // the strict part of row i that is stored
-			if lower {
-				lo, hi = 0, i
-			}
-			diag := xs[i]
-			if !unit {
-				diag *= row[i]
-			}
-			if !trans {
-				out[i] += diag + activeL1.Dot(row[lo:hi], xs[lo:hi])
-			} else {
-				// Row i of A is column i of Aᵀ: it scatters x_i into out[lo:hi].
-				out[i] += diag
-				activeL1.Axpy(xs[i], row[lo:hi], out[lo:hi])
-			}
-		}
-	}
-	if trans {
-		// Serial: row i scatters into other rows' elements, so a row split races.
-		// gemvTrans's column split would be exact here too; it is not done, because
-		// it needs triangle-balanced column cuts and nothing has measured the case.
-		rows(0, n)
-		block.NoteWorkers(1)
-	} else {
+	if !trans {
 		// Row i writes out[i] only, from a read-only xs (l2par.go).
-		l2Split(n, n*(n+1)/2, 1, triCost(lower, n), rows)
+		l2Split(n, n*(n+1)/2, 1, triCost(lower, n), func(r0, r1 int) {
+			for i := r0; i < r1; i++ {
+				row := a[i*lda : i*lda+n]
+				lo, hi := i+1, n // the strict part of row i that is stored
+				if lower {
+					lo, hi = 0, i
+				}
+				diag := xs[i]
+				if !unit {
+					diag *= row[i]
+				}
+				out[i] += diag + activeL1.Dot(row[lo:hi], xs[lo:hi])
+			}
+		})
+	} else {
+		// Row i of A is column i of Aᵀ: it scatters x_i into out[lo:hi], so a row split
+		// would race. Columns of out instead, as gemvTrans splits y: a worker owning
+		// [c0, c1) walks every row in order and applies only that row's diagonal term
+		// (if i is its own) and the part of its axpy inside [c0, c1). Each out[j] then
+		// takes its terms in exactly the serial order, so the result is bit-identical.
+		// Column j's work is the stored part of column j: rows 0..j of an upper
+		// triangle, j..n-1 of a lower one, which is triCost of the other triangle.
+		l2Split(n, n*(n+1)/2, 1, triCost(!lower, n), func(c0, c1 int) {
+			for i := 0; i < n; i++ {
+				row := a[i*lda : i*lda+n]
+				lo, hi := i+1, n
+				if lower {
+					lo, hi = 0, i
+				}
+				if c0 <= i && i < c1 {
+					diag := xs[i]
+					if !unit {
+						diag *= row[i]
+					}
+					out[i] += diag
+				}
+				if lo, hi := max(lo, c0), min(hi, c1); lo < hi {
+					activeL1.Axpy(xs[i], row[lo:hi], out[lo:hi])
+				}
+			}
+		})
 	}
 	if incX == 1 {
 		copy(x[:n], out)

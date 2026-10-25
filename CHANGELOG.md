@@ -9,6 +9,18 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **Transposed `Strmv` is parallel too, bit-identical at every `GOMAXPROCS`.** It splits columns of x,
+  as transposed `Sgemv` does: each worker walks every row in order and applies only that row's diagonal
+  term and the part of its axpy inside its own columns. Columns are cut by the triangle's per-column
+  work. orion (M4 Pro, `measured` slot, medians of 3, dev tier, unjudged), against 1 worker: 1.81× (4
+  workers) and 1.61× (8) at 1024², and 1.75× and 2.21× at 4096². The determinism test covers it, and a planted off-by-one in the ownership
+  check turns it red.
+  - **Cutting each share into 4 dynamically claimed pieces was tried and was slower**, so it isn't
+    shipped. Column splits lost most: transposed `Strmv` 1.2–1.8×, transposed `Sgemv` 2.2× at
+    4096²/4 workers. A column piece makes its worker walk every row of A, so narrower pieces mean more
+    passes over A's pages (a reading, not a measurement). With one piece per worker, transposed
+    `Sgemv`'s past-4-workers knee (#187) didn't reproduce in this run: 1.96× at 4 workers, 2.28× at 8
+    at 4096².
 - **The AVX-512 kernels now return with `VZEROUPPER`, and right-side `Strsm` is 20-27% faster on
   Skylake-X** (#188). go1.27 never emits the instruction (T30), so each kernel handed dirty upper
   halves to the scalar legacy-SSE pack that runs after it. On janus (i9-9960X, `measured` slot,

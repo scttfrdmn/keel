@@ -56,5 +56,9 @@ func BenchmarkL2Par(b *testing.B) {
 			copy(y, x)
 			Strmv(Upper, NoTrans, NonUnit, n, a, n, y, 1)
 		})
+		run("StrmvT", tri, func() {
+			copy(y, x)
+			Strmv(Upper, Trans, NonUnit, n, a, n, y, 1)
+		})
 	}
 }
