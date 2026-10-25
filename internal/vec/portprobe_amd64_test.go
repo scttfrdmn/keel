@@ -38,7 +38,7 @@ package vec
 //	kf/mix/pre     32   8     0         12     6      20   40.0%
 //	kf/k=0         28   8     0         17     0      25   32.0%
 //	pf/mix/ld      27   8     4          0     2+4    12   66.7%  no copy-back (231-like)
-//	pf/mix/pre     21   8     0          0     6       8  100%
+//	pf/mix/pre     20   8     0          0     6       8  100%
 //	pf/ld/k=1,2,4  16-22 8  1,2,4        0     k       9-12 88.9/80/66.7%
 //	pf/reg/k=1,2,4 13-19 8  1,2,4        0     0       9-12 88.9/80/66.7%
 //	pf/pre/k=1,2,4 15-18 8    0          0     k       8  100%
@@ -52,12 +52,27 @@ import (
 	"fmt"
 	"simd/archsimd"
 	"testing"
+	"unsafe"
 )
 
-var probeS [4][64]float32
-var probeV [4][32][16]float32
+// The panels are 64-byte aligned on purpose. As plain globals the linker put
+// probeV at 32 mod 64, so every 64-byte load split a cache line, and on janus the
+// pre-broadcast rows read exactly the ceiling of twice their load count.
+var (
+	probeS *[4][64]float32
+	probeV *[4][32][16]float32
+)
+
+// alignedF32 returns n float32s starting on a 64-byte boundary.
+func alignedF32(n int) []float32 {
+	s := make([]float32, n+16)
+	off := (16 - int(uintptr(unsafe.Pointer(&s[0]))%64)/4) % 16
+	return s[off : off+n]
+}
 
 func init() {
+	probeS = (*[4][64]float32)(unsafe.Pointer(&alignedF32(4 * 64)[0]))
+	probeV = (*[4][32][16]float32)(unsafe.Pointer(&alignedF32(4 * 32 * 16)[0]))
 	for p := range probeS {
 		for i := range probeS[p] {
 			probeS[p][i] = 1
@@ -986,6 +1001,11 @@ func TestPortProbeWitness(t *testing.T) {
 	if !HasAVX512() {
 		t.Skip("no AVX-512")
 	}
+	for _, a := range []uintptr{uintptr(unsafe.Pointer(probeS)), uintptr(unsafe.Pointer(probeV))} {
+		if a%64 != 0 {
+			t.Fatalf("probe panel at %#x is not 64-byte aligned", a)
+		}
+	}
 	for _, p := range portProbes {
 		for _, it := range []int{0, 1, 3, 17} {
 			want := float32(16 * (p.accs*(p.accs+1)/2 + p.fmas*it))
@@ -1027,9 +1047,9 @@ func BenchmarkPortProbe(b *testing.B) {
 		fn   func(int, []float32, []float32, []float32, int)
 	}{{"kernel/2x32", 2, Kernel2x32}, {"kernel/4x32", 4, Kernel4x32}} {
 		const kc, ldc = 128, 48
-		a := make([]float32, kc*k.mr)
-		bp := make([]float32, kc*32)
-		c := make([]float32, 4*ldc)
+		a := alignedF32(kc * k.mr)
+		bp := alignedF32(kc * 32)
+		c := alignedF32(4 * ldc)
 		for i := range a {
 			a[i] = 1e-3
 		}
