@@ -8,6 +8,15 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-24
+
+The float32 coverage release. keel now implements every routine in Gonum's `blas.Float32`
+interface, and `keel/gonumblas` is a drop-in that serves all 35 of them. This is not a
+re-certification: no judged `gate-p5` ran at this revision, and the certified Level-1 and
+Level-3 numbers are still v0.2.0's. The entries below run from v0.2.0 to here, gate and
+apparatus work included. There were no v0.2.1 or v0.2.2 tags; those milestones are themes,
+still open.
+
 ### Changed
 - **Right-side `Strsm` is about twice as fast** (#181). Its diagonal-block solve now runs as the left
   solve on a transposed copy of B's column window (X·op(A) = B is op(A)ᵀ·Xᵀ = Bᵀ), so the inner loop is
