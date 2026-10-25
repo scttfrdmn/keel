@@ -254,17 +254,7 @@ func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthC
 			continue
 		}
 		if depthContig {
-			for x := 0; x < valid; x++ {
-				row := src[(base+x)*ld+p0 : (base+x)*ld+p0+kc]
-				for p, v := range row {
-					panel[p*blk+x] = alpha * v
-				}
-			}
-			for x := valid; x < blk; x++ {
-				for p := 0; p < kc; p++ {
-					panel[p*blk+x] = 0
-				}
-			}
+			depthPanel(panel, blk, alpha, src, ld, base, valid, p0, kc)
 			continue
 		}
 		for p := 0; p < kc; p++ {
@@ -301,6 +291,65 @@ func panels(dst []float32, blk int, alpha float32, src []float32, ld int, depthC
 			for x := valid; x < blk; x++ {
 				out[x] = 0
 			}
+		}
+	}
+}
+
+// depthPanel fills one panel from a source whose depth index is contiguous — the
+// transposing direction, including its zero padding. It is every NN A pack, every
+// NT B pack, and right-side Strsm's pack of X, which is what found it (#186).
+//
+// Rows are read four (then three, two, one) at a time, so each depth writes one
+// contiguous run of the panel instead of each row writing kc slots blk floats
+// apart. Every slot is still alpha*v computed once, so the result is bit-identical
+// to the one-row-at-a-time loop this replaced; depth_test.go keeps that loop as the
+// reference. BenchmarkDepthPanel, hot source, blk 2-32, dev tier: 2.7-3.0 → 3.5-5.7
+// Gelem/s on the M4 Pro, 0.38-0.42 → 0.70-1.9 on janus (Skylake-X), where the old
+// loop's slowness did not move with buffer alignment or a non-power-of-two stride
+// and is unattributed. The plain interchange — depth outer, every row
+// inner, one index per element — was tried first and was SLOWER at every blk
+// (1.1-2.2 Gelem/s), so the strided write is not by itself the cost. That the
+// groups win by amortizing the per-element index and bounds check over a row
+// slice is a reading of the two loops, not a measurement.
+func depthPanel(panel []float32, blk int, alpha float32, src []float32, ld, base, valid, p0, kc int) {
+	row := func(x int) []float32 { return src[(base+x)*ld+p0:][:kc] }
+	x := 0
+	for ; x+4 <= valid; x += 4 {
+		r0, r1, r2, r3 := row(x), row(x+1), row(x+2), row(x+3)
+		for p := range r0 {
+			o := panel[p*blk+x:][:4]
+			o[0] = alpha * r0[p]
+			o[1] = alpha * r1[p]
+			o[2] = alpha * r2[p]
+			o[3] = alpha * r3[p]
+		}
+	}
+	if x+3 == valid {
+		r0, r1, r2 := row(x), row(x+1), row(x+2)
+		for p := range r0 {
+			o := panel[p*blk+x:][:3]
+			o[0] = alpha * r0[p]
+			o[1] = alpha * r1[p]
+			o[2] = alpha * r2[p]
+		}
+		x += 3
+	}
+	for ; x+2 <= valid; x += 2 {
+		r0, r1 := row(x), row(x+1)
+		for p := range r0 {
+			o := panel[p*blk+x:][:2]
+			o[0] = alpha * r0[p]
+			o[1] = alpha * r1[p]
+		}
+	}
+	for ; x < valid; x++ {
+		for p, v := range row(x) {
+			panel[p*blk+x] = alpha * v
+		}
+	}
+	for x := valid; x < blk; x++ {
+		for p := 0; p < kc; p++ {
+			panel[p*blk+x] = 0
 		}
 	}
 }

@@ -24,6 +24,43 @@ While the major version is 0, minor versions may contain breaking changes.
   - Transposed `Sgemv` at 4096² stops scaling past 4 workers on orion: 2.1–2.5× at 4, then 1.6–2.3× at 8
     across two runs. In a second run, the serial times at 2048² and above came in 1.3–1.5× slower than
     the first while the parallel times held, so the larger ratios there are unpublished. Unexplained.
+- **The transposing pack runs about twice as fast, and right-side `Strsm` gains 7-10%** (#186). It's
+  the pack for every NN A operand, every NT B operand, and right-side `Strsm`'s X, which is gemm's A
+  operand there. #186 had that backwards: it blamed a strided pack of the triangle, which goes through
+  memmove. The pack now reads four (then three, two, one) source rows at a time and writes each depth
+  as one contiguous run. Output is bit-identical to the old row loop, which a test keeps as the
+  reference. n=2048, MB=64, one thread, old and new binaries interleaved, unjudged:
+  - **M4 Pro** (dev tier, medians of 4): side=R's X pack 30.6 → 18.6 ms, side=R full 195 → 182 ms
+    (3x24), 205 → 189 (4x16), 235 → 211 (8x8). Rank update R/L (≈ full − solve-only) is now 1.20x /
+    1.04x / 0.95x, down from 1.29x / 1.13x / 1.10x. Part of 3x24's remainder is kernel padding (64
+    columns pad to 72 at NR=24): its side=R `rank-no-pack` is 132 ms against side=L's 125.
+  - **janus** (`build` queue, indicative, medians of 3): side=R full 269 → 243 ms (2x32), 282 → 255
+    (4x32). Side=L full and NN `Sgemm` full don't move outside the spread on either host; the NN A
+    pack is under 1% of the nest at n=2048.
+  - **Interchanging the loop outright was slower** at every tile width on the M4 Pro (1.1-2.2 against
+    2.7-3.0 Gelem/s), so the strided write was not, by itself, the cost.
+  - **On janus the pack pays a dirty-upper penalty, so the gap is not closed there.** X's pack alone
+    went 156 → 57 ms. In situ (full − solve-only − `rank-no-pack`) it went only 135 → 114, against
+    side=L's ~30. The shipped AVX-512 kernels return without `VZEROUPPER`; objdump finds none in any
+    Go-compiled function. The pack is scalar legacy-SSE code, and right after one kernel call it runs
+    2.2x (2x32) and 3.2x (4x32) slower than alone. A memmove in between, whose AVX path ends in
+    `VZEROUPPER`, brings it back to 1.2x. This is the *boundary* case of `golang/go#80835`, on a
+    shipped path. The 2026-10-09 reply there treated that case as not keel's. The fix would be in
+    `internal/vec` and is not made here.
+  - `MB` stays 64. An n=2048 re-sweep found side=R on 3x24 10% faster at 72 or 96, both multiples of
+    NR, with side=L flat. That's not the dominance the pre-registered rule asks for (see `MB`).
+
+### Added
+- **`BenchmarkNest` has an NT pair, `full-transB` and `pack-b-transB`** (#65). It's the same product with
+  B stored transposed, so B's pack takes the transposing branch and nothing else changes. M4 Pro 3x24,
+  n=2048, dev tier, medians of 3: NT's serial B pack is 1.95 ms before this release's pack change and
+  1.20 after, against NN's 0.83. At one thread NT `Sgemm` runs within 2.2% of NN either way (251
+  against 245 ms before, 241 against 243 after). At 8 threads, run-to-run spread on a loaded host
+  (46-73 ms) is wider than the difference. janus 2x32, one thread: NT pack 9.9 → 3.4 ms against NN's
+  1.8, full NT 229 → 224 ms against NN's 224 → 221.
+- **`BenchmarkTrsmMB` splits the rank update** (#186). `rank-pack-a` and `rank-pack-b` replay only its
+  packs, and `rank-no-pack` replays its nests without them. `BenchmarkPackAfterKernel` times the A
+  pack alone, after a kernel call, and after a kernel call plus a memmove.
 
 ## [0.2.3] - 2026-10-24
 

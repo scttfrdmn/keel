@@ -95,11 +95,11 @@ import (
 // arithmetic, no beta pass, no fringe tile, no macro loops). See its doc, and
 // callsPerDepth's.
 //
-// GFLOP/s is reported for full, nest-no-pack and kernel-calls over the same useful
-// 2mnk, so ratios among them are pure ratios of time; the marker line prints
-// padwaste so the reader can confirm the padded tiles do no extra arithmetic at
-// these shapes. kernel/ctiles=N reports its own 2·MR·NR·kc per call, since it is a
-// per-call ceiling and not a whole-GEMM rate. The two pack sub-benchmarks report no
+// GFLOP/s is reported for full, full-transB, nest-no-pack and kernel-calls over the
+// same useful 2mnk, so ratios among them are pure ratios of time; the marker line
+// prints padwaste so the reader can confirm the padded tiles do no extra arithmetic
+// at these shapes. kernel/ctiles=N reports its own 2·MR·NR·kc per call, since it is
+// a per-call ceiling and not a whole-GEMM rate. The three pack sub-benchmarks report no
 // flop rate at all: they do no arithmetic, and inventing a numerator for them is the
 // thing rule 7 forbids. Their contribution is read off ns/op, in the same units as
 // full.
@@ -195,6 +195,25 @@ func BenchmarkNest(b *testing.B) {
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
 						packBOnly(kn, m, n, k, bm, n, bp, false)
+					}
+				})
+				// The NT pair (#65): the same product with B stored transposed,
+				// so its pack takes the scalar transposing branch instead of
+				// memmove, and nothing else changes — the kernel calls are the
+				// ones above. full-transB − full is the cost of that branch on
+				// the critical path, and pack-b-transB − pack-b is its serial
+				// size. bm is square, so it serves as Bᵀ unchanged.
+				b.Run("full-transB", func(b *testing.B) {
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						Gemm(kn, false, true, m, n, k, 1, am, k, bm, k, 0, c, n)
+					}
+					b.ReportMetric(flops*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+				})
+				b.Run("pack-b-transB", func(b *testing.B) {
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						packBOnly(kn, m, n, k, bm, k, bp, true)
 					}
 				})
 				// D1, the P2-style ceiling: one call at one depth on a single
@@ -408,6 +427,34 @@ func BenchmarkTrsmMB(b *testing.B) {
 						}
 						trsmMetrics(b, total, solve)
 					})
+					// The rank updates without their packs, restored like full.
+					b.Run(name+"/rank-no-pack", func(b *testing.B) {
+						MB = mb
+						b.ResetTimer()
+						for i := 0; i < b.N; i++ {
+							b.StopTimer()
+							copy(bm, b0)
+							b.StartTimer()
+							trsmRankNoPack(kn, side.left, m, n, a, dim, bm, dim)
+						}
+					})
+					// The rank updates' pack calls and nothing else (#186): the
+					// share of full − solve-only that is data movement rather than
+					// kernel time. Not restored between iterations because a pack
+					// does not write B.
+					for _, op := range []struct {
+						tag  string
+						a, b bool
+					}{{"rank-pack-a", true, false}, {"rank-pack-b", false, true}} {
+						b.Run(name+"/"+op.tag, func(b *testing.B) {
+							MB = mb
+							copy(bm, b0)
+							b.ResetTimer()
+							for i := 0; i < b.N; i++ {
+								trsmRankPacksOnly(kn, side.left, op.a, op.b, m, n, a, dim, bm, dim)
+							}
+						})
+					}
 					// The in-place solve can only drift toward infinity, never back,
 					// so one look after both arms catches it for both. replayColdC
 					// checks the same property for the same reason: "cannot at the
@@ -469,6 +516,86 @@ func trsmSolvesOnly(left bool, m, n int, a []float32, lda int, bmat []float32, l
 		for _, j0 := range trsmSolveOrder(false, lowerEff, n) {
 			solveRight(l1.Backends()[0].Axpy, l1.Backends()[0].ScalDiv, lowerEff, false, false, im, min(MB, n-j0),
 				a[j0*lda+j0:], lda, bmat[i0*ldb+j0:], ldb, t)
+		}
+	})
+}
+
+// trsmRankPacksOnly makes exactly the pack calls Trsm's rank updates make at the
+// current MB — the operand slices, alpha and flags trsmLeft and trsmRight hand to
+// gemm, walked through nestBlocks — with the kernel calls and the solves removed.
+// doA and doB select gemm's A-side and B-side packs, so the X operand is doB on the
+// left and doA on the right (see trsmPackCount). Flags as trsmSolvesOnly's.
+func trsmRankPacksOnly(kn kern.Kernel, left, doA, doB bool, m, n int, a []float32, lda int, bmat []float32, ldb int) {
+	const lowerEff = true
+	rank := func(gm, gn, kk int, as []float32, las int, bs []float32, lbs int) {
+		kc, mc, nc := plan(kn, gm, gn, kk)
+		ap := make([]float32, pack.ALen(kn.MR, mc, kc))
+		bp := make([]float32, pack.BLen(kn.NR, nc, kc))
+		for _, blk := range nestBlocks(kn, gm, gn, kk) {
+			if doB && blk.newPanel {
+				pack.BPanels(bp, kn.NR, bs, lbs, false, blk.pc, blk.kk, blk.jc, blk.jn)
+			}
+			if doA {
+				pack.APanels(ap, kn.MR, -1, as, las, false, blk.ic, blk.im, blk.pc, blk.kk)
+			}
+		}
+	}
+	if left {
+		strips(n, func(j0, jn int) {
+			for _, i0 := range trsmSolveOrder(true, lowerEff, m) {
+				if i0 > 0 {
+					rank(min(MB, m-i0), jn, i0, a[i0*lda:], lda, bmat[j0:], ldb)
+				}
+			}
+		})
+		return
+	}
+	strips(m, func(i0, im int) {
+		for _, j0 := range trsmSolveOrder(false, lowerEff, n) {
+			nb := min(MB, n-j0)
+			if p0 := j0 + nb; p0 < n {
+				rank(im, nb, n-p0, bmat[i0*ldb+p0:], ldb, a[p0*lda+j0:], lda)
+			}
+		}
+	})
+}
+
+// trsmRankNoPack is the complement of trsmRankPacksOnly: every rank update's
+// nest at the current MB, through nestNoPack, writing the same window of B the
+// real update writes, with the packs removed and the solves too. Each call packs
+// its first block once to have panels to read — one block of the call's whole
+// pack, inside the timer, and named here so it is not rediscovered in the
+// residual. full − solve-only − this is the in-situ pack cost plus whatever
+// interference packing and the kernel have on each other; the pack-only arms
+// measure the packs alone, and the two need not agree (#186 found they did not on
+// janus).
+func trsmRankNoPack(kn kern.Kernel, left bool, m, n int, a []float32, lda int, bmat []float32, ldb int) {
+	const lowerEff = true
+	tile := make([]float32, kn.MR*kn.NR)
+	rank := func(gm, gn, kk int, as []float32, las int, bs []float32, lbs int, c []float32) {
+		kc, mc, nc := plan(kn, gm, gn, kk)
+		ap := make([]float32, pack.ALen(kn.MR, mc, kc))
+		bp := make([]float32, pack.BLen(kn.NR, nc, kc))
+		pack.APanels(ap, kn.MR, -1, as, las, false, 0, min(mc, gm), 0, kc)
+		pack.BPanels(bp, kn.NR, bs, lbs, false, 0, kc, 0, min(nc, gn))
+		nestNoPack(kn, gm, gn, kk, 1, ap, bp, c, ldb, tile)
+	}
+	if left {
+		strips(n, func(j0, jn int) {
+			for _, i0 := range trsmSolveOrder(true, lowerEff, m) {
+				if i0 > 0 {
+					rank(min(MB, m-i0), jn, i0, a[i0*lda:], lda, bmat[j0:], ldb, bmat[i0*ldb+j0:])
+				}
+			}
+		})
+		return
+	}
+	strips(m, func(i0, im int) {
+		for _, j0 := range trsmSolveOrder(false, lowerEff, n) {
+			nb := min(MB, n-j0)
+			if p0 := j0 + nb; p0 < n {
+				rank(im, nb, n-p0, bmat[i0*ldb+p0:], ldb, a[p0*lda+j0:], lda, bmat[i0*ldb+j0:])
+			}
 		}
 	})
 }
@@ -1207,6 +1334,47 @@ func packBOnly(kn kern.Kernel, m, n, k int, bm []float32, ldb int, bp []float32,
 	for _, b := range nestBlocks(kn, m, n, k) {
 		if b.newPanel {
 			pack.BPanels(bp, kn.NR, bm, ldb, trans, b.pc, b.kk, b.jc, b.jn)
+		}
+	}
+}
+
+// BenchmarkPackAfterKernel times one NN A-pack block (144 rows × kc=256 at a
+// 2048 stride) alone, right after one microkernel call, and after a kernel call
+// followed by a 16 KB copy() (#186). It exists because on janus the right-side
+// Trsm's X pack cost ~2x in situ (full − solve-only − rank-no-pack) what
+// rank-pack-a measured alone.
+//
+// The arms differ in the vector state the pack starts in. The pack is scalar Go,
+// which amd64 compiles to legacy-SSE MULSS/MOVSS. The shipped AVX-512 kernels
+// return with no VZEROUPPER (none anywhere in Go-compiled code in this binary,
+// by objdump), so after kernel the upper ZMM state is dirty. runtime memmove's
+// AVX path ends in VZEROUPPER, so kernel+copy+pack starts clean again. Read
+// kernel+pack − kernel against pack, and kernel+copy+pack − kernel+copy against
+// pack. On arm64 there is no such state and the arms should agree.
+func BenchmarkPackAfterKernel(b *testing.B) {
+	const ld, rows, kc = 2048, 144, 256
+	src := benchMat(rows, ld)
+	from, to := make([]float32, 4096), make([]float32, 4096)
+	for _, kn := range benchKernels(b) {
+		ap := make([]float32, pack.ALen(kn.MR, rows, kc))
+		pa, pb, c, ldc := benchPanels(kn, kc)
+		kernel := func() { kn.Fn(kc, pa, pb, c, ldc) }
+		packA := func() { pack.APanels(ap, kn.MR, -1, src, ld, false, 0, rows, 0, kc) }
+		for _, arm := range []struct {
+			name string
+			fn   func()
+		}{
+			{"pack", packA},
+			{"kernel", kernel},
+			{"kernel+pack", func() { kernel(); packA() }},
+			{"kernel+copy", func() { kernel(); copy(to, from) }},
+			{"kernel+copy+pack", func() { kernel(); copy(to, from); packA() }},
+		} {
+			b.Run(kn.ID()+"/"+arm.name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					arm.fn()
+				}
+			})
 		}
 	}
 }

@@ -228,7 +228,14 @@ func Symm(kn kern.Kernel, left, lower bool, m, n int, alpha float32, a []float32
 //	n=2048 side=L: MB=96  -2.6%      n=2048 side=R: MB=48  -14.7%
 //	n=4096 side=L: MB=256 -5.6%      n=4096 side=R: MB=48   -6.5%
 //
-// (These are from before #181 changed solveRight, so the side=R column is stale.)
+// (These are from before #181 changed solveRight, so the side=R column is stale.
+// Re-swept at n=2048 only after #186 sped up the pack of X, one thread, dev tier,
+// medians of 3 on a loaded host: on 3x24, side=R is -5.8% at 48, -10.3% at 72 and
+// -10.4% at 96 against 64, side=L flat within 1% from 48 to 96. Every winner is a
+// multiple of NR=24 and 64 is not — the side=R rank update's N is the block, so it
+// pads to 72 — which makes the right side's optimum a property of NR, not of
+// Trsm. 4x16 and 8x8 show no side=R win over 64. Not a dominance result either:
+// n=4096 was not re-run, and side=L's -0.9% at 72 is inside the run's spread.)
 // THE TWO SIDES PULL IN OPPOSITE DIRECTIONS and that is the finding, not the
 // winner: side=R wants 48 at both n while side=L pays +6.8% there and wants 96
 // then 256. MB=48 is the best single compromise (mean -3.7%, better in 3 of 4
@@ -295,7 +302,26 @@ type ScalDiv func(alpha float32, x []float32)
 // copy of the column window, and the solve-only gap is ~1.2x on the M4 Pro dev host
 // (21 ms against 18 ms; was 171) and ~2.2x on janus's AVX-512 (23 ms against 10;
 // was 251), n=2048, MB=64, one thread, unjudged. The side=R MB optimum at MB's
-// declaration was measured on the old form and is stale.
+// declaration was measured on the old form; the re-sweep is beside it.
+//
+// The rank update was then the right side's gap (#186): X is that gemm's A operand,
+// so it takes the transposing A pack, against the left side's memmove of X as B.
+// Split with BenchmarkTrsmMB's rank-pack arms on the M4 Pro's shipped 3x24 (n=2048,
+// MB=64, one thread, dev tier): packing X took 30.6 ms of side=R's ~173 ms rank
+// update against 14.1 ms of side=L's ~136, and pack.depthPanel cut it to 18.6.
+// Rank update ≈ full − solve-only, R/L, after: 1.20x on 3x24, 1.04x on 4x16, 0.95x
+// on 8x8 (was 1.29x, 1.13x, 1.10x). Part of what 3x24 keeps is kernel padding: the
+// side=R gemm's N is the 64-column block, which pads to 72 at NR=24, against
+// side=L's 64 rows padding to 66 at MR=3: rank-no-pack is 132.4 ms against 125.3.
+//
+// janus (2x32 AVX-512, build queue, indicative) is a different story. side=R full
+// went 269 → 243 ms, the X pack alone 156 → 57, but X's pack IN SITU (full −
+// solve-only − rank-no-pack) only 135 → 114, against side=L's ~30. The kernels
+// return with dirty upper ZMM state and the scalar pack is legacy-SSE code, so it
+// runs 2.2x slower right after a kernel call than alone (BenchmarkPackAfterKernel).
+// 57 ms at 2.2x predicts ~125 in situ, against the 114 measured — a prediction from
+// a microbenchmark, not an in-situ A/B. The candidate fix is a VZEROUPPER at the
+// kernel boundary, which is internal/vec's to make and has not been tried.
 //
 // What these solves must not do is get clever: they divide rather than multiply by a
 // reciprocal (a reciprocal changes the answer in the last bit and disagrees with
