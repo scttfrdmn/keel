@@ -152,8 +152,9 @@ Where Gonum is wrong, the adapter keeps keel's answer: `Ssyrk` at `beta = 0`
 rounds twice and which returns 0 rather than `alpha` when `n = 0`
 ([gonum#2130](https://github.com/gonum/gonum/issues/2130)). Results agree with Gonum within keel's
 tolerance model rather than bit-for-bit, because keel's kernels sum in a different
-order and fuse multiply-adds. The core `keel` package does not depend on Gonum; only
-`keel/gonumblas` does.
+order and fuse multiply-adds. `keel/gonumblas` is its own module
+(`github.com/scttfrdmn/keel/gonumblas`), so the core `keel` module does not depend on
+Gonum at all; only the adapter does.
 
 ## Building
 ```
