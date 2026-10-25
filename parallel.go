@@ -39,7 +39,9 @@ func Workers(n int) int { return par.Workers(n) }
 
 // WorkersLastCall reports how many workers the most recently completed Level-3
 // call in this process distributed work to, counting the calling goroutine as a
-// worker. It is 0 before the first such call.
+// worker. It is 0 before the first such call. The parallel Level-2 routines (see
+// doc.go) record it too, 1 when a call ran serially; a call that returns before
+// its main loop, such as alpha == 0, leaves it as it was.
 //
 // It is instrumentation for a benchmark harness, not configuration: under
 // concurrent Level-3 calls the value belongs to whichever call finished last.

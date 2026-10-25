@@ -237,6 +237,11 @@ func recordWorkers(w int) {
 	}
 }
 
+// NoteWorkers sets the count for a call that does not go through this package: the
+// parallel Level-2 routines, which split their output in package keel and record
+// the width once, as one completed call. A serial one records 1.
+func NoteWorkers(w int) { workersLast.Store(int64(w)) }
+
 // WorkersLastCall reports how many worker goroutines the most recently completed
 // Level-3 call distributed work to, counting the calling goroutine as a worker.
 //

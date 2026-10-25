@@ -434,17 +434,20 @@ func Sgemv(tA Transpose, m, n int, alpha float32, a []float32, lda int, x []floa
 	}
 	xs := gather(inner, x, incX)
 	iy := offset(rows, incY)
-	for i := 0; i < m; i++ {
-		d := alpha * activeL1.Dot(a[i*lda:i*lda+n], xs)
-		switch beta {
-		case 0:
-			y[iy+i*incY] = d
-		case 1:
-			y[iy+i*incY] += d
-		default:
-			y[iy+i*incY] = d + beta*y[iy+i*incY]
+	// Rows of y, each one Dot: a worker owns its y[i] outright (l2par.go).
+	l2Split(m, m*n, 1, nil, func(lo, hi int) {
+		for i := lo; i < hi; i++ {
+			d := alpha * activeL1.Dot(a[i*lda:i*lda+n], xs)
+			switch beta {
+			case 0:
+				y[iy+i*incY] = d
+			case 1:
+				y[iy+i*incY] += d
+			default:
+				y[iy+i*incY] = d + beta*y[iy+i*incY]
+			}
 		}
-	}
+	})
 }
 
 // gemvTrans is Sgemv's y = alpha·Aᵀ·x + beta·y, split out because its shape is the
@@ -469,17 +472,24 @@ func gemvTrans(m, n int, alpha float32, a []float32, lda int, x []float32, incX 
 			}
 		}
 	}
-	scaleStrided(beta, n, ys, 1)
 	ix := offset(m, incX)
-	for i := 0; i < m; i++ {
-		// No `if s != 0` guard, deliberately. Skipping a zero row scale would be
-		// free and would change the answer: 0·Inf is NaN, so a guard makes y
-		// depend on which of two mathematically equal formulations ran. Reference
-		// SGER has such a guard and reference SGEMV does not; keel takes the
-		// unguarded rule for both, because it is the one a float64 oracle can
-		// check element by element (see internal/oracle.GemvEntry).
-		activeL1.Axpy(alpha*x[ix+i*incX], a[i*lda:i*lda+n], ys[:n])
-	}
+	// Columns of y, not rows of A: a worker runs every row's axpy restricted to its
+	// own [c0, c1), so each element still takes its rows in order 0..m-1 and no
+	// partial sums are ever combined. A row split would need exactly that reduction,
+	// and a reduction's order is what would move with GOMAXPROCS.
+	l2Split(n, m*n, l2Cols, nil, func(c0, c1 int) {
+		yr := ys[c0:c1]
+		scaleStrided(beta, c1-c0, yr, 1)
+		for i := 0; i < m; i++ {
+			// No `if s != 0` guard, deliberately. Skipping a zero row scale would
+			// be free and would change the answer: 0·Inf is NaN, so a guard makes y
+			// depend on which of two mathematically equal formulations ran.
+			// Reference SGER has such a guard and reference SGEMV does not; keel
+			// takes the unguarded rule for both, because it is the one a float64
+			// oracle can check element by element (see internal/oracle.GemvEntry).
+			activeL1.Axpy(alpha*x[ix+i*incX], a[i*lda+c0:i*lda+c1], yr)
+		}
+	})
 	if scattered {
 		iy := offset(n, incY)
 		for j := 0; j < n; j++ {
@@ -507,9 +517,12 @@ func Sger(m, n int, alpha float32, x []float32, incX int, y []float32, incY int,
 	}
 	ys := gather(n, y, incY)
 	ix := offset(m, incX)
-	for i := 0; i < m; i++ {
-		activeL1.Axpy(alpha*x[ix+i*incX], ys, a[i*lda:i*lda+n])
-	}
+	// Rows of A, each written by one Axpy (l2par.go).
+	l2Split(m, m*n, 1, nil, func(lo, hi int) {
+		for i := lo; i < hi; i++ {
+			activeL1.Axpy(alpha*x[ix+i*incX], ys, a[i*lda:i*lda+n])
+		}
+	})
 }
 
 // gather returns n elements of a strided BLAS vector as a contiguous slice,

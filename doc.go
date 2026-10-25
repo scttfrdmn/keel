@@ -138,6 +138,25 @@ atomic in the path. No goroutine outlives a call, so repeated calls leak nothing
 and keel is safe to call from code that counts goroutines. [Workers] reports the
 sizing rule.
 
+Level 2 is parallel where its output splits without touching any element's sum:
+[Sgemv] (rows of y with NoTrans, columns of y with Trans, each worker running
+every row of A over its own columns in row order), [Sger], [Ssyr] and [Ssyr2]
+(rows of A, the triangular ones cut by work rather than by row count), and
+[Strmv] with NoTrans (rows of x). A call starts one worker per 131072 element
+updates of A, up to GOMAXPROCS, so anything smaller than a 512×512 Sgemv runs
+serially in the calling goroutine; the threshold was measured on one host and is
+not a tuning knob. These routines read each element of A once, so above the
+last-level cache their speedup is the memory system's to give, not the core
+count's.
+
+The rest of Level 2 is serial. The solves ([Strsv], [Stbsv], [Stpsv]) carry a
+dependence from each element to the next. [Ssymv], [Ssbmv], [Sspmv] and the
+transposed triangular products scatter each row of A into other rows' outputs, so
+a row split would race and any other split would need either a reduction, whose
+order would move with GOMAXPROCS, or a column split of a triangle that nothing
+has measured. The band and packed routines are left serial until a measurement
+says otherwise.
+
 Level 1 is not parallelized: those routines are memory-bound at every size where
 a thread would pay for itself, so reach Level-1 parallelism by calling from
 parallel code.

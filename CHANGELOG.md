@@ -8,6 +8,23 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **`Sgemv`, `Sger`, `Ssyr`, `Ssyr2` and NoTrans `Strmv` are now parallel, and still bit-identical at
+  every `GOMAXPROCS`.** Each splits its output: rows of y, rows of A, or for transposed `Sgemv` columns
+  of y, with every worker running all of A's rows over its own columns in row order. No element's sum
+  is split or reordered. A call takes one worker per 131072 element updates, so anything under a
+  512×512 `Sgemv` stays serial with no goroutine. The threshold came from a forced-width sweep on orion
+  (M4 Pro, NEON, measured slot, dev tier, unjudged). At 32K elements per worker, 256² ran at
+  0.75–0.77× of one thread; at 128K per worker every swept row gained. At 4096², 8 workers against 1:
+  `Sgemv` NoTrans 3.6×, Trans 2.3×, `Sger` 4.2×, `Ssyr` 4.3×, `Ssyr2` 5.8×, `Strmv` 3.0×. On janus
+  (i9-9960X, AVX-512, build group, indicative only) the same rows were 5.0×, 3.0×, 2.5×, 3.1×, 3.8×
+  and 4.4×. These routines read A once, so the large-n gain is memory bandwidth, not cores.
+  `WorkersLastCall` now records these calls too. The solves, `Ssymv`, the transposed triangular
+  products, and the band and packed routines stay serial. doc.go gives the reasons.
+  - Transposed `Sgemv` at 4096² stops scaling past 4 workers on orion: 2.1–2.5× at 4, then 1.6–2.3× at 8
+    across two runs. In a second run, the serial times at 2048² and above came in 1.3–1.5× slower than
+    the first while the parallel times held, so the larger ratios there are unpublished. Unexplained.
+
 ## [0.2.3] - 2026-10-24
 
 The float32 coverage release. keel now implements every routine in Gonum's `blas.Float32`

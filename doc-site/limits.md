@@ -15,7 +15,10 @@
   and the [simd experience report](https://github.com/scttfrdmn/keel/blob/main/docs/simd-experience-report.md)).
 - **A scalar path that builds anywhere**, with the same results.
 - **Parallel Level 3**, sized by `GOMAXPROCS`, bit-identical at every thread
-  count.
+  count. Level 2 is parallel where the output splits without reordering any
+  element's sum — `Sgemv`, `Sger`, `Ssyr`, `Ssyr2` and `Strmv` without a
+  transpose — above a size threshold, and bit-identical the same way; the
+  solves, the symmetric products and the band and packed routines are serial.
 - **Pure Go**: no cgo, no assembly, no code generation, no `init` that spawns
   anything, no goroutine that outlives a call.
 

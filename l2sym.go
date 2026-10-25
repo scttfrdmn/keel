@@ -3,6 +3,8 @@
 
 package keel
 
+import "github.com/scttfrdmn/keel/internal/block"
+
 // The triangular and symmetric Level-2 routines. Every one is a loop over A's
 // rows, each row being a contiguous run of row-major storage, so the work goes
 // through the active Level-1 backend's Dot and Axpy, which is where the vector
@@ -45,23 +47,35 @@ func Strmv(ul Uplo, tA Transpose, d Diag, n int, a []float32, lda int, x []float
 	}
 	xs := gather(n, x, incX) // read-only here: results go to out, written back at the end
 	out := make([]float32, n)
-	for i := 0; i < n; i++ {
-		row := a[i*lda : i*lda+n]
-		lo, hi := i+1, n // the strict part of row i that is stored
-		if lower {
-			lo, hi = 0, i
+	rows := func(r0, r1 int) {
+		for i := r0; i < r1; i++ {
+			row := a[i*lda : i*lda+n]
+			lo, hi := i+1, n // the strict part of row i that is stored
+			if lower {
+				lo, hi = 0, i
+			}
+			diag := xs[i]
+			if !unit {
+				diag *= row[i]
+			}
+			if !trans {
+				out[i] += diag + activeL1.Dot(row[lo:hi], xs[lo:hi])
+			} else {
+				// Row i of A is column i of Aᵀ: it scatters x_i into out[lo:hi].
+				out[i] += diag
+				activeL1.Axpy(xs[i], row[lo:hi], out[lo:hi])
+			}
 		}
-		diag := xs[i]
-		if !unit {
-			diag *= row[i]
-		}
-		if !trans {
-			out[i] += diag + activeL1.Dot(row[lo:hi], xs[lo:hi])
-		} else {
-			// Row i of A is column i of Aᵀ: it scatters x_i into out[lo:hi].
-			out[i] += diag
-			activeL1.Axpy(xs[i], row[lo:hi], out[lo:hi])
-		}
+	}
+	if trans {
+		// Serial: row i scatters into other rows' elements, so a row split races.
+		// gemvTrans's column split would be exact here too; it is not done, because
+		// it needs triangle-balanced column cuts and nothing has measured the case.
+		rows(0, n)
+		block.NoteWorkers(1)
+	} else {
+		// Row i writes out[i] only, from a read-only xs (l2par.go).
+		l2Split(n, n*(n+1)/2, 1, triCost(lower, n), rows)
 	}
 	if incX == 1 {
 		copy(x[:n], out)
@@ -179,13 +193,16 @@ func Ssyr(ul Uplo, n int, alpha float32, x []float32, incX int, a []float32, lda
 		return
 	}
 	xs := gather(n, x, incX)
-	for i := 0; i < n; i++ {
-		lo, hi := i, n
-		if lower {
-			lo, hi = 0, i+1
+	// Row i of A is written by one Axpy and nothing else (l2par.go).
+	l2Split(n, n*(n+1)/2, 1, triCost(lower, n), func(r0, r1 int) {
+		for i := r0; i < r1; i++ {
+			lo, hi := i, n
+			if lower {
+				lo, hi = 0, i+1
+			}
+			activeL1.Axpy(alpha*xs[i], xs[lo:hi], a[i*lda+lo:i*lda+hi])
 		}
-		activeL1.Axpy(alpha*xs[i], xs[lo:hi], a[i*lda+lo:i*lda+hi])
-	}
+	})
 }
 
 // Ssyr2 computes A += alpha·(x·yᵀ + y·xᵀ) on the triangle of the n×n symmetric A
@@ -202,13 +219,16 @@ func Ssyr2(ul Uplo, n int, alpha float32, x []float32, incX int, y []float32, in
 		return
 	}
 	xs, ys := gather(n, x, incX), gather(n, y, incY)
-	for i := 0; i < n; i++ {
-		lo, hi := i, n
-		if lower {
-			lo, hi = 0, i+1
+	// As Ssyr: row i of A is written by its two Axpys, in this order, and nothing else.
+	l2Split(n, 2*(n*(n+1)/2), 1, triCost(lower, n), func(r0, r1 int) {
+		for i := r0; i < r1; i++ {
+			lo, hi := i, n
+			if lower {
+				lo, hi = 0, i+1
+			}
+			r := a[i*lda+lo : i*lda+hi]
+			activeL1.Axpy(alpha*xs[i], ys[lo:hi], r)
+			activeL1.Axpy(alpha*ys[i], xs[lo:hi], r)
 		}
-		r := a[i*lda+lo : i*lda+hi]
-		activeL1.Axpy(alpha*xs[i], ys[lo:hi], r)
-		activeL1.Axpy(alpha*ys[i], xs[lo:hi], r)
-	}
+	})
 }
