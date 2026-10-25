@@ -238,6 +238,9 @@ func (s Shape) emitRawArchsimd() string {
 			p("\tarchsimd.LoadFloat32x%d(r[%d:%d]).Add(%s).Store(r[%d:%d])", isa.Lanes, lo, hi, acc, lo, hi)
 		}
 	}
+	// VZEROUPPER on the way out: go1.27 never emits it, and the scalar pack after a
+	// kernel call ran 2.2-3.2x slower on janus without it (see internal/vec/gemm_amd64.go, #188).
+	p("\tarchsimd.ClearAVXUpperBits()")
 	p("}")
 	return b.String()
 }

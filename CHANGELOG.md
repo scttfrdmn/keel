@@ -9,6 +9,15 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The AVX-512 kernels now return with `VZEROUPPER`, and right-side `Strsm` is 20-27% faster on
+  Skylake-X** (#188). go1.27 never emits the instruction (T30), so each kernel handed dirty upper
+  halves to the scalar legacy-SSE pack that runs after it. On janus (i9-9960X, `measured` slot,
+  medians of 3 interleaved passes, one thread, unjudged), that pack took 1.8x (2x32) and 3.2x (4x32)
+  its time alone. With one `archsimd.ClearAVXUpperBits()` after each kernel's stores it matches its
+  time alone. Right-side `Strsm` at n=2048, MB=64: 245 -> 195 ms (2x32), 254 -> 185 ms (4x32).
+  Left-side `Strsm` and NN `Sgemm` don't move outside the spread. `tools/shapegen` emits the line.
+  - **The Level-1 routines do not clear, by measurement.** Clearing at their exits made `Sgemv` 5-7%
+    slower at 64²-256² (one `Dot` per row) and `Sdot` 3% slower at n=256, with no gain at large n.
 - **`Sgemv`, `Sger`, `Ssyr`, `Ssyr2` and NoTrans `Strmv` are now parallel, and still bit-identical at
   every `GOMAXPROCS`.** Each splits its output: rows of y, rows of A, or for transposed `Sgemv` columns
   of y, with every worker running all of A's rows over its own columns in row order. No element's sum

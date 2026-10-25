@@ -11,6 +11,25 @@ import "simd/archsimd"
 // registry and the scalar reference live in internal/kern; only the K-loops are
 // here, and they are here for a measured reason.
 //
+// # Each kernel ends with archsimd.ClearAVXUpperBits (#188)
+//
+// That is VZEROUPPER, which zeroes the upper bits of Y0-Y15 and Z0-Z15. go1.27
+// never emits it (docs/toolchain-notes.md T30, #188), so an AVX function returns
+// with dirty uppers and the legacy-SSE scalar code after it pays the AVX-SSE
+// transition on Intel. It must sit outside every loop, because it discards the
+// accumulators' upper lanes. AVX is the floor of both amd64 backends, so it is
+// always executable where it is called.
+//
+// WHERE, BY MEASUREMENT (janus, Skylake-X, measured slot, medians of 3 interleaved
+// passes, one thread, unjudged). At the Level-3 kernel exits it pays: the scalar A
+// pack right after a kernel call ran 1.8x (2x32) and 3.2x (4x32) as long as alone,
+// and with the clear it matches alone. Right-side Strsm at n=2048 went 247 -> 197 ms
+// (2x32) and 255 -> 185 ms (4x32). At the Level-1 exits it does not: Level 2 makes
+// one Dot per row, and clearing there made Sgemv 5-7% slower at 64^2-256^2 and Sdot
+// 3% slower at n=256, with no gain at large n. The scalar work after a Level-1 call
+// is a few instructions, which costs less than the clear. So the kernels call it
+// (tools/shapegen emits the line), and the l1 routines do not.
+//
 // # Why the loops are not in internal/kern
 //
 // CLAUDE.md puts every simd import in this package. A kernel in internal/kern
@@ -140,6 +159,7 @@ func Kernel2x32(kc int, a, b, c []float32, ldc int) {
 	r = c[1*ldc : 1*ldc+32]
 	archsimd.LoadFloat32x16(r[0:16]).Add(c1l).Store(r[0:16])
 	archsimd.LoadFloat32x16(r[16:32]).Add(c1h).Store(r[16:32])
+	archsimd.ClearAVXUpperBits()
 }
 
 // Kernel4x32 computes C += A·B for one 4x32 tile, one k-step per pass.
@@ -194,6 +214,7 @@ func Kernel4x32(kc int, a, b, c []float32, ldc int) {
 	r = c[3*ldc : 3*ldc+32]
 	archsimd.LoadFloat32x16(r[0:16]).Add(c3l).Store(r[0:16])
 	archsimd.LoadFloat32x16(r[16:32]).Add(c3h).Store(r[16:32])
+	archsimd.ClearAVXUpperBits()
 }
 
 // Kernel6x32 is DESIGN.md §4/P2's tile — 12 accumulators, unrolled 4 — and it
@@ -324,4 +345,5 @@ func Kernel6x32(kc int, a, b, c []float32, ldc int) {
 	r = c[5*ldc : 5*ldc+32]
 	archsimd.LoadFloat32x16(r[0:16]).Add(c5l).Store(r[0:16])
 	archsimd.LoadFloat32x16(r[16:32]).Add(c5h).Store(r[16:32])
+	archsimd.ClearAVXUpperBits()
 }

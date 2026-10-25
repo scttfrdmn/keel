@@ -2849,3 +2849,51 @@ $ GOEXPERIMENT=simd GOARCH=amd64 GOOS=linux go doc simd/archsimd | grep -c Float
 bare query's answer is not evidence about the name. The doc output also settles that
 `MulAdd` is `VFMADD213PS` by design, which is the `231` gap of `golang/go#80829` stated in
 upstream's own reference.
+
+## T30 (#188) — go1.27 never emits `VZEROUPPER`, so every AVX function returns with dirty upper halves
+
+A function whose only vector work is AVX-512 compiles to the vector ops and a bare `RET`.
+No `VZEROUPPER` appears in any Go-compiled function in keel's amd64 binary. Legacy-SSE
+scalar code that runs next (keel's pack is `MULSS`) then pays the AVX-SSE transition on
+Intel: on janus (Skylake-X) the A pack ran 2.2× (2x32) and 3.2× (4x32) slower straight
+after one kernel call than alone. This is the boundary case raised on `golang/go#80835`.
+
+```
+$ cat main.go
+//go:build goexperiment.simd
+
+package main
+
+import "simd/archsimd"
+
+//go:noinline
+func AddSlices(dst, a, b []float32) {
+	for len(dst) >= 16 && len(a) >= 16 && len(b) >= 16 {
+		archsimd.LoadFloat32x16(a).Add(archsimd.LoadFloat32x16(b)).Store(dst)
+		dst, a, b = dst[16:], a[16:], b[16:]
+	}
+}
+
+//go:noinline
+func AddSlicesClean(dst, a, b []float32) {
+	AddSlices(dst, a, b)
+	archsimd.ClearAVXUpperBits()
+}
+
+func main() {
+	x := make([]float32, 64)
+	AddSlices(x, x, x)
+	AddSlicesClean(x, x, x)
+}
+$ GOOS=linux GOARCH=amd64 GOEXPERIMENT=simd go build -o vzu . && go tool objdump -s 'main\.AddSlices$' vzu | grep -c VZEROUPPER
+0
+$ go tool objdump -s 'main\.AddSlicesClean$' vzu | grep -E 'VZEROUPPER|RET'
+  main.go:18		0x47dc25		c5f8774883		VZEROUPPER
+  main.go:19		0x47dc2d		c3			RET
+$ go version
+go version go1.27.3 darwin/arm64
+```
+
+**What changed in the tree.** The three AVX-512 kernels call `archsimd.ClearAVXUpperBits()`
+once on the way out, and `tools/shapegen` emits that line. The Level-1 routines do not: there
+it measured 3–7% slower on short calls and gained nothing at large n (#188).
