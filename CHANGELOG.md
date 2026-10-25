@@ -8,6 +8,12 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-10-25
+
+Parallel Level 2 and amd64 kernel fixes. Not a re-certification: no judged `gate-p5` ran at this
+revision, and the certified Level-1 and Level-3 numbers are still v0.2.0's. Every figure below is
+dev tier or exploration tier, as each entry states.
+
 ### Changed
 - **Transposed `Strmv` is parallel too, bit-identical at every `GOMAXPROCS`.** It splits columns of x,
   as transposed `Sgemv` does: each worker walks every row in order and applies only that row's diagonal
