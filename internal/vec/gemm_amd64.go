@@ -22,7 +22,7 @@ import "simd/archsimd"
 //
 // WHERE, BY MEASUREMENT (janus, Skylake-X, measured slot, medians of 3 interleaved
 // passes, one thread, unjudged). At the Level-3 kernel exits it pays: the scalar A
-// pack right after a kernel call ran 1.8x (2x32) and 3.2x (4x32) as long as alone,
+// pack right after a kernel call ran 2.2x (2x32) and 3.3x (4x32) as long as alone,
 // and with the clear it matches alone. Right-side Strsm at n=2048 went 247 -> 197 ms
 // (2x32) and 255 -> 185 ms (4x32). At the Level-1 exits it does not: Level 2 makes
 // one Dot per row, and clearing there made Sgemv 5-7% slower at 64^2-256^2 and Sdot
