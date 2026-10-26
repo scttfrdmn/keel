@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/scttfrdmn/keel/internal/kern"
@@ -113,4 +114,20 @@ func TestVectorAgainstScalarTile64(t *testing.T) {
 		}
 	}
 	t.Logf("float64 vector kernels compared against their scalar twins: %d", n)
+}
+
+// TestBackendCoverage64 prints the float64 marker gate-p2 parses under
+// KEEL_ELEM=f64, as TestBackendCoverage does at float32: which backends the
+// float64 kernel tests actually ran, so a green run on a host where every float64
+// vector kernel was compiled out cannot read as AVX-512 coverage.
+func TestBackendCoverage64(t *testing.T) {
+	seen := map[string]bool{}
+	var b []string
+	for _, k := range kern.Kernels64() {
+		if !seen[k.Name] {
+			seen[k.Name] = true
+			b = append(b, k.Name)
+		}
+	}
+	t.Logf("keel-kern64-backends-exercised: %s", strings.Join(b, " "))
 }

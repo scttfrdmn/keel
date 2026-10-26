@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The float64 P2 go/no-go is pre-registered** (#191): DESIGN.md's "P2 at float64" amendment and
+  `KEEL_ELEM=f64 scripts/gate-p2.sh`. They were committed after the float64 peak was measured (janus
+  104.0–104.3 GFLOP/s, 0.500 of float32) and before any float64 kernel was. Only names move:
+  `KernelD2x16`/`KernelD4x16`, `avx512PeakD`, the `Tile64`/`FMARoof64` benchmarks and a float64
+  coverage marker. Every threshold is the float32 gate's, shared. `SWEEP_BEST_IPF` stays 4.625, the
+  float64 frontier that `shapegen -elem f64` derives. `reconcile_sweep_best_ipf` passes the element
+  through, and `-elem f32` is byte-identical to no flag on both architectures.
 - **`kern.Kernel64` can be ranked and listed like `kern.Kernel`** (#191): `InsnsPerFMA`,
   `MemOpsPerFMA` (lanes derived from register bytes, so 8 per ZMM and 2 per NEON register at float64),
   `Ref`, `Kernels64`/`Measured64`/`Preferred64`, and empty per-architecture float64 kernel tables

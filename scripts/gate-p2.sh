@@ -122,9 +122,34 @@ GATE_PEAK_FUNC="avx512Peak"
 # still matches under a four-element pattern. The kc sweep is a deliberate one-off;
 # KERNEL.md §1 has the command.
 BENCH_FILTER='Peak|Kernel/.*/.*/kc=128'
+
+# KEEL_ELEM=f64 (#191) runs this same go/no-go at float64. Pre-registered 2026-10-26,
+# after the float64 peak was measured (janus 104.0-104.3 GFLOP/s, 0.500 of float32)
+# and before any float64 kernel was. ONLY the type-specific names move: every
+# threshold above (PEAK_FLOOR, ROOF_FLOOR, the classifier, ROOF_SHAPE_SLACK) is
+# type-neutral and stays shared, so the float64 gate cannot be a softer one.
+# SWEEP_BEST_IPF stays 4.625 because shapegen -elem f64's frontier is 2x16/4 at
+# exactly 4.625 (124 of 128 float64 shapes audit identically to their float32
+# twins); reconcile_sweep_best_ipf re-derives it every run regardless. The peak
+# ceilings are the float64 peak loops' own audits (27/12 and 23/20, as at float32).
+# Benchmark names avoid "Peak" and "Kernel" so no float32 filter selects them.
+KEEL_ELEM="${KEEL_ELEM:-f32}"
+KPFX="Kernel/" SHAPE_A=2x32 SHAPE_B=4x32 COVER_MARK=keel-kern-backends-exercised
+case "$KEEL_ELEM" in
+  f32) ;;
+  f64)
+    KERN_FUNCS="KernelD2x16,KernelD4x16" REF_FUNCS="KernelD6x16"
+    PEAK_FUNCS="avx512PeakD,scalarPeakD" PEAK_IPF_CEILINGS="avx512PeakD:2.25 scalarPeakD:1.15"
+    KPFX="Tile64/" SHAPE_A=2x16 SHAPE_B=4x16 COVER_MARK=keel-kern64-backends-exercised
+    GATE_KERNELS="Tile64/2x16/avx512/kc=128 Tile64/4x16/avx512/kc=128"
+    GATE_REF_KERNEL="Tile64/6x16/avx512/kc=128" GATE_PEAK="FMARoof64/avx512"
+    GATE_KERNEL_FUNC_2x32="KernelD2x16" GATE_KERNEL_FUNC_4x32="KernelD4x16" GATE_PEAK_FUNC="avx512PeakD"
+    BENCH_FILTER='FMARoof64|Tile64/.*/.*/kc=128' ;;
+  *) echo "gate-p2: KEEL_ELEM must be f32 or f64, not '$KEEL_ELEM'" >&2; exit 2 ;;
+esac
 SSADIR="build/ssa"
 
-echo "== gate-p2: microkernel + spill audit (GO/NO-GO) =="
+echo "== gate-p2: microkernel + spill audit (GO/NO-GO), element $KEEL_ELEM =="
 gate_provenance   # what was measured (#68)
 echo
 
@@ -207,7 +232,7 @@ echo "-- microkernel correctness (differential vs the scalar tile reference) --"
 score_run() {
   local name="$1" log="$2" ok="$3" cover
   test_verdict "$name" "$log" "$ok" "kernel tests pass"
-  cover="$(grep -o 'keel-kern-backends-exercised:.*' "$log" | tail -1 || true)"
+  cover="$(grep -o "$COVER_MARK:.*" "$log" | tail -1 || true)"
   if [[ -z "$cover" ]]; then
     fail "[$name] no kernel backend-coverage marker in test output"
     return
@@ -255,7 +280,7 @@ else
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
     score_run "$host" "$LOG" "$OK"
-    if [[ "$OK" -eq 0 ]] && grep -qE 'keel-kern-backends-exercised:.*(^| )avx512( |$)' "$LOG"; then
+    if [[ "$OK" -eq 0 ]] && grep -qE "$COVER_MARK:.*(^| )avx512( |\$)" "$LOG"; then
       AVX512_GREEN="$host"
     fi
     # Coverage state for the aggregate below (#73's tier C): the discriminator
@@ -272,7 +297,7 @@ else
     # `avx512` appearing in this marker at all means the host has the ISA, and
     # AVX512_GREEN's extra OK==0 is what separates "had it and the run failed"
     # from "had it and the run was green".
-    if grep -qE 'keel-kern-backends-exercised:.*(^| )avx512( |$)' "$LOG"; then
+    if grep -qE "$COVER_MARK:.*(^| )avx512( |\$)" "$LOG"; then
       AVX512_SEEN=$((AVX512_SEEN + 1))
     fi
   done < <(hosts_lines)
@@ -312,7 +337,7 @@ done
 # ------------------------- the shape threshold, re-derived rather than trusted
 echo
 echo "-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#107) --"
-reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG"
+reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG" amd64 "$KEEL_ELEM"
 
 # ------------------------------- the tile that cannot be allocated (evidence)
 echo
@@ -438,7 +463,7 @@ else
     # ceiling is a number in the gate log rather than an assertion in a doc.
     if [[ -n "$(bench_stat "$GATE_REF_KERNEL" "$BENCHCSV" GFLOP/s)" ]]; then
       refpt="$(bench_ratio "$GATE_REF_KERNEL" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
-      info "[$host] 6x32  $(bench_describe "$GATE_REF_KERNEL" "$BENCHCSV" GFLOP/s) = $(awk -v r="${refpt:-0}" 'BEGIN{printf "%.1f", r * 100}')% of peak (spills; not shipped)"
+      info "[$host] ${GATE_REF_KERNEL#"$KPFX"}  $(bench_describe "$GATE_REF_KERNEL" "$BENCHCSV" GFLOP/s) = $(awk -v r="${refpt:-0}" 'BEGIN{printf "%.1f", r * 100}')% of peak (spills; not shipped)"
     fi
 
     # The floor applies to the shape that wins here (criterion 5). Every shape's
@@ -469,18 +494,18 @@ else
       # would narrow an interval that was never measured.
       if [[ -z "$klo" || -z "$khi" ]]; then
         UNBOUNDED="$UNBOUNDED $kname"
-        info "[$host] ${kname##Kernel/} $(bench_describe "$kname" "$BENCHCSV" GFLOP/s) — no CI, not counted"
+        info "[$host] ${kname##"$KPFX"} $(bench_describe "$kname" "$BENCHCSV" GFLOP/s) — no CI, not counted"
         continue
       fi
       case "$kname" in
-        *2x32*) kipf="$IPF_2x32" ;;
-        *4x32*) kipf="$IPF_4x32" ;;
+        *"$SHAPE_A"*) kipf="$IPF_2x32" ;;
+        *"$SHAPE_B"*) kipf="$IPF_4x32" ;;
         *)      kipf="" ;;
       esac
-      info "[$host] ${kname##Kernel/} $(bench_describe "$kname" "$BENCHCSV" GFLOP/s) = $(awk -v r="$kpt" 'BEGIN{printf "%.1f", r * 100}')% of peak, $(awk -v r="$klo" 'BEGIN{printf "%.1f", r * 100}')% net of CI"
-      [[ -n "$kipf" ]] && MIXES="$MIXES ${kname##Kernel/}|$kpt:$kipf:$klo:$khi"
+      info "[$host] ${kname##"$KPFX"} $(bench_describe "$kname" "$BENCHCSV" GFLOP/s) = $(awk -v r="$kpt" 'BEGIN{printf "%.1f", r * 100}')% of peak, $(awk -v r="$klo" 'BEGIN{printf "%.1f", r * 100}')% net of CI"
+      [[ -n "$kipf" ]] && MIXES="$MIXES ${kname##"$KPFX"}|$kpt:$kipf:$klo:$khi"
       if [[ -z "$BEST_LO" ]] || awk -v a="$klo" -v b="$BEST_LO" 'BEGIN{exit !(a > b)}'; then
-        BEST_LO="$klo"; BEST_PT="$kpt"; BEST_HI="$khi"; BEST_ID="${kname##Kernel/}"; BEST_IPF="$kipf"
+        BEST_LO="$klo"; BEST_PT="$kpt"; BEST_HI="$khi"; BEST_ID="${kname##"$KPFX"}"; BEST_IPF="$kipf"
       fi
     done
     # The peak kernel is always a ceiling mix, and its fraction is 1 by

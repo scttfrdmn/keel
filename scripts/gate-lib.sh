@@ -609,8 +609,8 @@ baseline_candidate() {
 reconcile_sweep_best_ipf() {
   # arch defaults to amd64; -arch amd64 is the tool's own default, so it is byte-identical
   # to the pre-ARCH invocation and avoids an empty-array expansion under set -u (bash 3.2).
-  local stated="$1" log="$2" arch="${3:-amd64}" got n shape
-  if ! GOEXPERIMENT=simd go run ./tools/shapegen -frontier -arch "$arch" >"$log" 2>&1; then
+  local stated="$1" log="$2" arch="${3:-amd64}" elem="${4:-f32}" got n shape
+  if ! GOEXPERIMENT=simd go run ./tools/shapegen -frontier -arch "$arch" -elem "$elem" >"$log" 2>&1; then
     sed 's/^/        /' "$log" | tail -10
     fail "shapegen -frontier stated no frontier, so SWEEP_BEST_IPF=$stated is unreconciled (#107)"
     return
