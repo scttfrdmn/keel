@@ -1,0 +1,91 @@
+== gate-p2: microkernel + spill audit (GO/NO-GO), element f64 ==
+        rev aa6c78ae09638ed7d6190012b57ce8c39d584cbd tree=clean toolchain=go1.27.3 goexperiment=none
+
+  PASS  no stray git worktrees (this repo is the only registered checkout)
+-- throughput verdict controls (scripts/roofline-test.sh) --
+  PASS  roofline verdict controls (76 fixtures, incl. padded/slow/sandbagged kernels)
+
+-- builds --
+  PASS  make build (GOEXPERIMENT=simd)
+  PASS  make stock (scalar path, no experiment)
+  PASS  go vet (GOEXPERIMENT=simd)
+  PASS  go vet (GOEXPERIMENT=simd, linux/amd64)
+
+-- microkernel correctness (differential vs the scalar tile reference) --
+  PASS  [local darwin/arm64] kernel tests pass
+        [local darwin/arm64] keel-kern64-backends-exercised: scalar
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 12105 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+  PASS  [janus.local] cpufreq governor is performance (§5 rule 5)
+        [janus.local] admission class: evidentiary (instance=none, virt=metal, spawn=none) — bare metal (no hypervisor flag) with governor=performance: a whole machine owns its socket more completely than any instance type can demonstrate
+  PASS  cross-compiled linux/amd64 kernel test binary
+        builder toolchain go1.27.3-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+        [janus.local] Intel(R) Core(TM) i9-9960X CPU @ 3.10GHz | instance=none | virt=metal | 32 cpus | 16 cores | smt=2 | 1 sockets | governor=performance | load1=0.00 load5=0.01 load15=0.00 runnable=1/553 | tmux=yes | Linux 5.14.0-611.34.1.el9_7.x86_64 | L2=1024K L1d=32K L3=22528K | spawn=none
+  PASS  [janus.local] kernel tests pass
+        [janus.local] keel-kern64-backends-exercised: avx512 scalar
+  PASS  kernel tests green with the avx512 tile exercised (target: janus.local)
+
+-- spill audit: steady-state K-loop of the shipped shapes (KernelD2x16,KernelD4x16) --
+        compile-time property, audited against the linux/amd64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.KernelD2x16: steady-state loop [70,430] 74 insns for 16 arith (4.62 per arith): 0 vector stack refs, 8 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.KernelD4x16: steady-state loop [101,341] 50 insns for 8 arith (6.25 per arith): 0 vector stack refs, 12 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  PASS  0 accumulator spills in the steady-state K-loop
+  PASS  0 calls in the steady-state K-loop (no write barrier, no runtime helper)
+  PASS  0 surviving bounds checks in the steady-state K-loop (panels are pre-sliced)
+        ssa.html archived: build/ssa/KernelD2x16.html (5036408 bytes; gitignored, see KERNEL.md)
+        ssa.html archived: build/ssa/KernelD4x16.html (4301390 bytes; gitignored, see KERNEL.md)
+
+-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#107) --
+  PASS  SWEEP_BEST_IPF=4.625 reconciles against shapegen -frontier: 4.625 from 2x16 u=4 broadcast, best of 36 emittable zero-spill shapes
+
+-- reference tile KernelD6x16: DESIGN.md's 12 accumulators, EVIDENCE ONLY --
+        expected to spill on go1.26.5 (T10, issue #18); this audit cannot fail the gate
+        github.com/scttfrdmn/keel/internal/vec.KernelD6x16: steady-state loop [152,1486] 219 insns for 48 arith (4.56 per arith): 44 vector stack refs, 45 reg copies, 24 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        spills as documented; the GFLOP/s cost of that is measured below
+
+-- kernel shaping: bounds checks outside the K-loop (provenance, not a check) --
+        the criterion is the loop-body check above; this is the whole-package count
+        check_bce: 115 bounds check(s) in ./internal/vec + ./internal/kern, all outside the K-loop
+          (prologue slices a[:kc*MR]/b[:kc*NR], the write-out's c[i*ldc:...], and the scalar reference)
+        internal/vec/edge_amd64.go:87:14: Found IsSliceInBounds
+        internal/vec/edge_amd64.go:87:36: Found IsSliceInBounds
+        internal/vec/edge_amd64.go:134:19: Found IsSliceInBounds
+        internal/vec/gemm64_amd64.go:39:9: Found IsSliceInBounds
+        internal/vec/gemm64_amd64.go:40:9: Found IsSliceInBounds
+          ... 110 more; full output is in the gate log
+  PASS  check_bce output recorded as provenance
+
+-- peak kernels: no memory in the loop (issue #11, property 1) --
+        github.com/scttfrdmn/keel/internal/vec.avx512PeakD: steady-state loop [264,355] 27 insns for 12 arith (2.25 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 12 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.scalarPeakD: steady-state loop [134,233] 23 insns for 20 arith (1.15 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  PASS  every peak kernel's steady-state loop is register-only
+
+-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --
+        the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that
+  PASS  avx512PeakD audits 2.250000 insns/FMA, at or under its recorded ceiling 2.25
+  PASS  scalarPeakD audits 1.150000 insns/FMA, at or under its recorded ceiling 1.15
+
+-- microkernel vs measured peak (FMA-bound: >= 55%; issue-bound: >= 90% of roofline) --
+        -count=10 -benchtime=1s; numerator and denominator measured in the same run
+        audited insns/FMA: 2x32 4.625, 4x32 6.250, avx512PeakD 2.250 (roofline inputs)
+  PASS  cross-compiled linux/amd64 bench binary
+        [janus.local] governor=performance
+        [janus.local] peak   103.7 GFLOP/s +/- 0.1% [103.3, 103.9] D=3 (span 0.58% / interval 0.1930%)
+        [janus.local] 6x16/avx512/kc=128  43.45 GFLOP/s +/- 0.6% [43.25, 44.73] D=3.289 (span 3.41% / interval 1.0358%) = 41.9% of peak (spills; not shipped)
+        [janus.local] 2x16/avx512/kc=128 47.83 GFLOP/s +/- 0.3% [47.66, 47.92] D=1.625 (span 0.54% / interval 0.3346%) = 46.1% of peak, 45.9% net of CI
+        [janus.local] 4x16/avx512/kc=128 37.81 GFLOP/s +/- 0.1% [37.71, 37.89] D=2.25 (span 0.48% / interval 0.2116%) = 36.5% of peak, 36.4% net of CI
+        [janus.local] ceiling mixes converge 1.014x (interval [1.011x, 1.017x], clear of 1.10) over a 2.778x spread in insns/FMA -> issue-bound
+        [janus.local] shape guard: 2x16/avx512/kc=128 at 4.625 insns/FMA, within 5% of the sweep best 4.625
+        [janus.local] issue roofline for 2x16/avx512/kc=128 = 49.3% of measured peak, so the effective floor here is 44.4% (the flat 55% is unreachable: the front end cannot deliver this mix that fast)
+  PASS  [janus.local] issue-bound: 2x16/avx512/kc=128 at 46.1% of peak (45.9% net of CI) = 93.1% of its 49.3% issue roofline (>= 90%)
+  PASS  every one of the 1 configured gate hosts cleared its floor (1/1), each under the performance governor asserted per host (§5 rule 5)
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p2 tally: 22 PASS / 0 FAIL / 0 UNMEASURED / 0 BASELINE / 0 REPORTED
+gate-p2: GREEN

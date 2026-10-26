@@ -9,6 +9,12 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The float64 P2 go/no-go is GREEN on the judged amd64 fleet** (#191). `KEEL_ELEM=f64 scripts/gate-p2.sh`
+  scored 28/0/0 on c5n.18xlarge, c7a.48xlarge and c8a.48xlarge (16m51s, about $6.8), after a 22/0/0 lab
+  pre-check on janus. Results: keel-skx issue-bound at 93.5% of its roofline (floor 90%), keel-zen4
+  FMA-bound at 96.5% of the float64 peak, keel-zen5 at 65.2% (floor 55%). Every pre-registered
+  prediction held, and each host lands within 0.6 points of its judged float32 P2 reading. Evidence is in
+  `archive/p2-f64-amd64/`. The AVX-512 half of #191 is done; NEON and the float64 block sizes remain.
 - **The float64 AVX-512 microkernels: `KernelD2x16`, `KernelD4x16`, and the spilling reference
   `KernelD6x16`** (#191). They're the float32 shipped shapes at half the columns, emitted by
   `shapegen -elem f64` and held to it as fixed points by text and by audit. The audits match their
