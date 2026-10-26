@@ -76,10 +76,15 @@ func BenchmarkPeak(b *testing.B) {
 
 var peakSink float32
 
-// BenchmarkPeak64 is BenchmarkPeak for the float64 ceilings (#191): witness
+// BenchmarkFMARoof64 is BenchmarkPeak for the float64 ceilings (#191): witness
 // first, then GFLOP/s. A separate benchmark rather than more sub-benchmarks of
 // BenchmarkPeak, so the float32 denominator's rows keep their names.
-func BenchmarkPeak64(b *testing.B) {
+// It is deliberately NOT named BenchmarkPeak64: every gate selects benchmarks with
+// unanchored -bench regexes ('Peak', 'Peak|Kernel/...', '(Peak|Sgemm)/(avx512|...)'),
+// and a name containing "Peak" would run inside each of their peak windows,
+// lengthening them silently. Rename it only alongside every filter that would
+// then match it.
+func BenchmarkFMARoof64(b *testing.B) {
 	provenance()
 	for _, k := range vec.PeakKernels64() {
 		b.Run(k.Name, func(b *testing.B) {
