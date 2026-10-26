@@ -75,9 +75,30 @@ func referenceTiles() []Kernel {
 	return []Kernel{ReferenceTile}
 }
 
-// vectorKernels64 is vectorKernels at float64. Empty until #191 ships the
-// float64 kernels, so Kernels64 falls back to the scalar shapes.
-func vectorKernels64() []Kernel64 { return nil }
+// vectorKernels64 is vectorKernels at float64 (#191): the float32 shapes at half
+// the columns, so the same accumulator counts and the same audited instruction
+// counts (shapegen -verify -elem f64 reproduces both, text and audit).
+func vectorKernels64() []Kernel64 {
+	if !vec.HasAVX512() {
+		return nil
+	}
+	return []Kernel64{
+		{Name: AVX512, MR: 4, NR: 16, Unroll: 1, Fn: vec.KernelD4x16, InsnsPerFMA: 50.0 / 8},
+		{Name: AVX512, MR: 2, NR: 16, Unroll: 4, Fn: vec.KernelD2x16, InsnsPerFMA: 74.0 / 16},
+	}
+}
 
-// referenceTiles64 is referenceTiles at float64.
-func referenceTiles64() []Kernel64 { return nil }
+// ReferenceTile64 is ReferenceTile at float64: the 12-accumulator 6x16 tile, which
+// spills (44 stack references in the steady loop). Measured as evidence, never
+// shipped, unaudited on purpose for the reason ReferenceTile gives.
+var ReferenceTile64 = Kernel64{Name: AVX512, MR: 6, NR: 16, Unroll: 4, Fn: vec.KernelD6x16}
+
+// referenceTiles64 is referenceTiles at float64, under the same HasAVX512 guard:
+// KernelD6x16 is AVX-512 unconditionally, so on a CPU without it the guard is what
+// stands between Measured64 and SIGILL (#87).
+func referenceTiles64() []Kernel64 {
+	if !vec.HasAVX512() {
+		return nil
+	}
+	return []Kernel64{ReferenceTile64}
+}

@@ -186,3 +186,48 @@ func TestReportDiffNamesEveryDisagreement(t *testing.T) {
 		t.Error("a spill appearing in the loop body was reported as agreement")
 	}
 }
+
+// TestShippedF64ShapesAuditIdentically is TestShippedShapesAuditIdentically for the
+// float64 kernels: each shipped float64 body's audit, compiled in package vec, must
+// equal the audit of the candidate -elem f64 emits, field for field (#191).
+func TestShippedF64ShapesAuditIdentically(t *testing.T) {
+	if err := setISA("amd64", "f64"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := setArch("amd64"); err != nil {
+			t.Fatal(err)
+		}
+	})
+	root, err := repoRoot()
+	if err != nil {
+		t.Fatalf("locating the repo root: %v", err)
+	}
+	listing, err := compile("./internal/vec")
+	if err != nil {
+		t.Fatalf("compiling the shipped kernels: %v", err)
+	}
+	fns, err := spill.Parse(bytes.NewReader(listing))
+	if err != nil {
+		t.Fatalf("parsing the listing: %v", err)
+	}
+	for _, s := range shippedF64 {
+		t.Run(s.Label(), func(t *testing.T) {
+			f, err := spill.Find(fns, s.Name())
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			loop, err := f.SteadyLoop()
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			got, err := audit(root, s, "")
+			if err != nil {
+				t.Fatalf("emitting and auditing the candidate: %v", err)
+			}
+			if d := reportDiff(spill.Audit(f, loop), got); d != "" {
+				t.Errorf("the emitted float64 candidate is not the shipped kernel: %s", d)
+			}
+		})
+	}
+}

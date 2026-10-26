@@ -9,6 +9,14 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The float64 AVX-512 microkernels: `KernelD2x16`, `KernelD4x16`, and the spilling reference
+  `KernelD6x16`** (#191). They're the float32 shipped shapes at half the columns, emitted by
+  `shapegen -elem f64` and held to it as fixed points by text and by audit. The audits match their
+  float32 twins (2x16/4: 74 insns for 16 FMAs; 4x16: 50 for 8; 6x16 spills 44). They're registered in
+  `vectorKernels64` and run through the generated `block64` nest in its float64 tests. On janus
+  (AVX-512), `TestVectorAgainstScalarTile64` compares all three against their scalar twins, and a
+  planted accumulator bug turns it red. `BenchmarkTile64` is the gate's numerator; its name, like
+  `BenchmarkFMARoof64`'s, keeps it out of every float32 filter, which was checked by running them.
 - **The float64 P2 go/no-go is pre-registered** (#191): DESIGN.md's "P2 at float64" amendment and
   `KEEL_ELEM=f64 scripts/gate-p2.sh`. They were committed after the float64 peak was measured (janus
   104.0–104.3 GFLOP/s, 0.500 of float32) and before any float64 kernel was. Only names move:

@@ -183,9 +183,6 @@ func main() {
 		}
 		fmt.Print(s.Emit())
 	case *verify:
-		if isa.Elem == "f64" {
-			die(fmt.Errorf("-verify -elem f64: no float64 kernel ships yet, so there is no tree to verify against"))
-		}
 		if !runVerify() {
 			os.Exit(1)
 		}
@@ -370,18 +367,32 @@ var shippedNEON = []Shape{
 	{MR: 4, V: 8, U: 1, Form: Broadcast}, // Kernel4x32
 }
 
+// shippedF64 is the three float64 kernels in internal/vec/gemm64_amd64.go (#191):
+// the float32 shipped shapes at half the columns, chosen by the -elem f64 sweep.
+var shippedF64 = []Shape{
+	{MR: 2, V: 2, U: 4, Form: Broadcast}, // KernelD2x16, the frontier
+	{MR: 4, V: 2, U: 1, Form: Broadcast}, // KernelD4x16
+	{MR: 6, V: 2, U: 4, Form: Broadcast}, // KernelD6x16, the spilling reference
+}
+
 // verifyShapes and verifySource return the shape list and the tree file runVerify
-// checks against, per the active ISA.
+// checks against, per the active ISA and element.
 func verifyShapes() []Shape {
-	if isa.Arch == "arm64" {
+	switch {
+	case isa.Arch == "arm64":
 		return shippedNEON
+	case isa.Elem == "f64":
+		return shippedF64
 	}
 	return shipped
 }
 
 func verifySource() string {
-	if isa.Arch == "arm64" {
+	switch {
+	case isa.Arch == "arm64":
 		return "gemm_neon.go"
+	case isa.Elem == "f64":
+		return "gemm64_amd64.go"
 	}
 	return "gemm_amd64.go"
 }

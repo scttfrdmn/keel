@@ -290,3 +290,37 @@ func readShipped(t *testing.T) string {
 	}
 	return string(b)
 }
+
+// TestShippedF64ShapesAreFixedPoints is TestShippedShapesAreFixedPoints for the
+// float64 kernels in internal/vec/gemm64_amd64.go (#191): each shipped float64 body
+// must be exactly what -elem f64 emits. Like the float32 check it compares source
+// text, so it runs on every toolchain.
+func TestShippedF64ShapesAreFixedPoints(t *testing.T) {
+	if err := setISA("amd64", "f64"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := setArch("amd64"); err != nil {
+			t.Fatal(err)
+		}
+	})
+	root, err := repoRoot()
+	if err != nil {
+		t.Fatalf("locating the repo root: %v", err)
+	}
+	b, err := os.ReadFile(filepath.Join(root, "internal", "vec", "gemm64_amd64.go"))
+	if err != nil {
+		t.Fatalf("reading the shipped float64 kernels: %v", err)
+	}
+	for _, s := range shippedF64 {
+		t.Run(s.Label(), func(t *testing.T) {
+			want := normalize(funcBody(string(b), s.Name()))
+			if want == "" {
+				t.Fatalf("%s is not in internal/vec/gemm64_amd64.go; shippedF64 is stale", s.Name())
+			}
+			if got := normalize(funcBody(s.Emit(), s.Name())); got != want {
+				t.Errorf("emitted body differs from the shipped float64 kernel.\n--- tree ---\n%s\n--- emitted ---\n%s", want, got)
+			}
+		})
+	}
+}
