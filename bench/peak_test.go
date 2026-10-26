@@ -76,6 +76,28 @@ func BenchmarkPeak(b *testing.B) {
 
 var peakSink float32
 
+// BenchmarkPeak64 is BenchmarkPeak for the float64 ceilings (#191): witness
+// first, then GFLOP/s. A separate benchmark rather than more sub-benchmarks of
+// BenchmarkPeak, so the float32 denominator's rows keep their names.
+func BenchmarkPeak64(b *testing.B) {
+	provenance()
+	for _, k := range vec.PeakKernels64() {
+		b.Run(k.Name, func(b *testing.B) {
+			if got, want := k.Run(1000), k.Witness(1000); got != want {
+				b.Fatalf("%s: float64 witness Run(1000) = %v, want %v — accumulator chains "+
+					"did not survive compilation, so this is not a ceiling", k.Name, got, want)
+			}
+			for i := 0; i < b.N; i++ {
+				peakSink64 = k.Run(peakItersPerOp)
+			}
+			flops := float64(k.FlopsPerIter) * float64(peakItersPerOp) * float64(b.N)
+			b.ReportMetric(flops/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+		})
+	}
+}
+
+var peakSink64 float64
+
 // peakFormulaLines returns one cross-check line per measurable width.
 //
 // Printed as provenance, never used as a denominator. The clock is the maximum

@@ -9,3 +9,6 @@ package vec
 // one definition of vectorPeakKernels and the scalar ceiling remains measurable
 // on a stock toolchain on every GOARCH.
 func vectorPeakKernels() []PeakKernel { return nil }
+
+// vectorPeakKernels64 is the float64 complement, for the same reason.
+func vectorPeakKernels64() []PeakKernel64 { return nil }

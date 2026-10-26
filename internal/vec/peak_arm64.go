@@ -67,3 +67,7 @@ func vectorPeakKernels() []PeakKernel {
 		Run:          neonPeak,
 	}}
 }
+
+// vectorPeakKernels64 has no NEON float64 ceiling yet: the NEON float64 shim is a
+// later #191 stage, so arm64 measures only the scalar float64 reference for now.
+func vectorPeakKernels64() []PeakKernel64 { return nil }

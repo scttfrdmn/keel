@@ -89,3 +89,45 @@ func TestPeakKernelsSelfConsistent(t *testing.T) {
 		t.Errorf("peakOne() = %v, want 1", got)
 	}
 }
+
+// TestPeak64ChainsAreIndependent is the CSE guard for the float64 ceilings. The
+// witness is exact in float64 at every count below 2^53, so the largest count
+// here is far larger than the float32 test can afford.
+func TestPeak64ChainsAreIndependent(t *testing.T) {
+	for _, k := range PeakKernels64() {
+		for _, iters := range []int{0, 1, 2, 3, 17, 1000, 1 << 20} {
+			if got, want := k.Run(iters), k.Witness(iters); got != want {
+				t.Errorf("%s: Run(%d) = %v, want %v — %d chains of %d float64 lanes did not "+
+					"all survive compilation; the measured peak is not a ceiling",
+					k.Name, iters, got, want, k.Chains, k.Lanes)
+			}
+		}
+	}
+}
+
+// TestPeakKernels64SelfConsistent is TestPeakKernelsSelfConsistent for float64.
+func TestPeakKernels64SelfConsistent(t *testing.T) {
+	ks := PeakKernels64()
+	if len(ks) == 0 {
+		t.Fatal("PeakKernels64 returned nothing; the scalar ceiling is always measurable")
+	}
+	if last := ks[len(ks)-1]; last.Name != BackendScalar {
+		t.Errorf("last float64 kernel is %q, want %q", last.Name, BackendScalar)
+	}
+	for _, k := range ks {
+		if k.Run == nil {
+			t.Errorf("%s: nil Run", k.Name)
+			continue
+		}
+		if want := k.Chains * k.Lanes * 2; k.FlopsPerIter != want {
+			t.Errorf("%s: FlopsPerIter = %d, want %d (%d chains x %d lanes x 2 flops)",
+				k.Name, k.FlopsPerIter, want, k.Chains, k.Lanes)
+		}
+		if k.Chains < 8 {
+			t.Errorf("%s: %d chains is too few to cover FMA latency x ports (~8)", k.Name, k.Chains)
+		}
+	}
+	if got := peakOneD(); got != 1 {
+		t.Errorf("peakOneD() = %v, want 1", got)
+	}
+}

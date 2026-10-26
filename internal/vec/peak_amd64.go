@@ -98,3 +98,49 @@ func vectorPeakKernels() []PeakKernel {
 	}
 	return out
 }
+
+// avx512PeakD is avx512Peak on Float64x8: twelve chains, accumulator in the
+// multiplicand position, built only from the float64 hot-layer wrappers
+// (Broadcast512D, FMA512D, Add512D, HSum512D), which vec_diff64_test.go binds to
+// the scalar spec. The expected steady-state loop is avx512Peak's with PD for PS:
+// twelve VFMADD213PD, the counter, no memory.
+func avx512PeakD(iters int) float64 {
+	x := Broadcast512D(peakOneD())
+	y := Broadcast512D(peakOneD())
+	a0, a1, a2, a3 := Broadcast512D(1), Broadcast512D(2), Broadcast512D(3), Broadcast512D(4)
+	a4, a5, a6, a7 := Broadcast512D(5), Broadcast512D(6), Broadcast512D(7), Broadcast512D(8)
+	a8, a9, a10, a11 := Broadcast512D(9), Broadcast512D(10), Broadcast512D(11), Broadcast512D(12)
+	for i := 0; i < iters; i++ {
+		a0 = FMA512D(a0, y, x)
+		a1 = FMA512D(a1, y, x)
+		a2 = FMA512D(a2, y, x)
+		a3 = FMA512D(a3, y, x)
+		a4 = FMA512D(a4, y, x)
+		a5 = FMA512D(a5, y, x)
+		a6 = FMA512D(a6, y, x)
+		a7 = FMA512D(a7, y, x)
+		a8 = FMA512D(a8, y, x)
+		a9 = FMA512D(a9, y, x)
+		a10 = FMA512D(a10, y, x)
+		a11 = FMA512D(a11, y, x)
+	}
+	s := Add512D(Add512D(Add512D(a0, a1), Add512D(a2, a3)), Add512D(Add512D(a4, a5), Add512D(a6, a7)))
+	s = Add512D(s, Add512D(Add512D(a8, a9), Add512D(a10, a11)))
+	return HSum512D(s)
+}
+
+// vectorPeakKernels64 is vectorPeakKernels for float64. AVX-512 only for now;
+// an AVX2 float64 ceiling arrives with an AVX2 float64 shim (#191).
+func vectorPeakKernels64() []PeakKernel64 {
+	if !HasAVX512() {
+		return nil
+	}
+	return []PeakKernel64{{
+		Name:         BackendAVX512,
+		Chains:       Chains512,
+		Lanes:        Lanes64,
+		FlopsPerIter: Chains512 * Lanes64 * 2,
+		Fused:        true,
+		Run:          avx512PeakD,
+	}}
+}

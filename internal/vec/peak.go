@@ -187,3 +187,69 @@ func scalarPeak(iters int) float32 {
 	}
 	return ((a0 + a1) + (a2 + a3)) + ((a4 + a5) + (a6 + a7)) + (a8 + a9)
 }
+
+// ------------------------------------------------------ float64 ceilings (#191)
+//
+// The float64 denominator, by the same four properties and the same chain
+// counts: register file, FMA latency and operand form are per-instruction, not
+// per-element, so twelve 512-bit chains cover VFMADD213PD exactly as they cover
+// VFMADD213PS. Only the lane count halves. A separate type rather than a
+// float64 Run on PeakKernel, so PeakKernels() and every consumer of its
+// float32 Run stay untouched.
+
+// PeakKernel64 is PeakKernel for float64: same fields, a float64 Run.
+type PeakKernel64 struct {
+	Name         string
+	Chains       int
+	Lanes        int // float64 lanes per chain
+	FlopsPerIter int // Chains x Lanes x 2
+	Fused        bool
+	Run          func(iters int) float64
+}
+
+// Witness returns the exact value Run(iters) must produce, by PeakKernel.Witness's
+// formula. In float64 it is exact while the total stays below 2^53, so it holds
+// for any iteration count a benchmark runs, not only the small ones float32 allows.
+func (k PeakKernel64) Witness(iters int) float64 {
+	c, l := k.Chains, k.Lanes
+	return float64(l) * float64(c*(c+1)/2+c*iters)
+}
+
+// PeakKernels64 returns the float64 ceilings measurable on this machine, widest
+// first, with the scalar reference always last and always present.
+func PeakKernels64() []PeakKernel64 {
+	return append(vectorPeakKernels64(), PeakKernel64{
+		Name:         BackendScalar,
+		Chains:       ChainsScalar,
+		Lanes:        1,
+		FlopsPerIter: ChainsScalar * 2,
+		Fused:        false,
+		Run:          scalarPeakD,
+	})
+}
+
+// peakOneD is peakOne for float64: 1, opaque to constant folding.
+//
+//go:noinline
+func peakOneD() float64 { return 1 }
+
+// scalarPeakD is scalarPeak on float64 scalars: a separate multiply and add,
+// unfused on amd64 for the reason scalarPeak gives, hence Fused false.
+func scalarPeakD(iters int) float64 {
+	x, y := peakOneD(), peakOneD()
+	a0, a1, a2, a3, a4 := float64(1), float64(2), float64(3), float64(4), float64(5)
+	a5, a6, a7, a8, a9 := float64(6), float64(7), float64(8), float64(9), float64(10)
+	for i := 0; i < iters; i++ {
+		a0 = a0*y + x
+		a1 = a1*y + x
+		a2 = a2*y + x
+		a3 = a3*y + x
+		a4 = a4*y + x
+		a5 = a5*y + x
+		a6 = a6*y + x
+		a7 = a7*y + x
+		a8 = a8*y + x
+		a9 = a9*y + x
+	}
+	return ((a0 + a1) + (a2 + a3)) + ((a4 + a5) + (a6 + a7)) + (a8 + a9)
+}

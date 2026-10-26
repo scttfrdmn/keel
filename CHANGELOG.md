@@ -16,6 +16,15 @@ While the major version is 0, minor versions may contain breaking changes.
   as `better`, rather than a copy of it. `TestVectorAgainstScalarTile64` is the float64 differential
   harness, using `PeerTolerance64` and a guard region. It reports how many kernels it compared (0
   until the kernels land) rather than passing silently.
+- **The AVX-512 float64 shim and its FMA ceiling** (#191). `internal/vec` gains `F64x8` and the
+  `*512D` ops, with scalar twins `ScalarD*` over `Block64` (`Lanes64 = 8`). `vec_diff64_test.go` holds
+  them bit-exact over NaN, ±0, ±Inf, denormals and extremes; it passes on janus (i9-9960X).
+  `Float64x8.Abs()` exists but is emulated with `AndNot`, so `Abs512D` uses float32's `And` mask (T27).
+  `PeakKernels64`/`BenchmarkPeak64` add the float64 ceiling. Its loop is `avx512Peak`'s with PD for PS:
+  27 instructions, 12 `VFMADD213PD`, no memory (spill-audit `nomemory`). On janus (measured slot, n=5)
+  it runs at 104.0-104.3 GFLOP/s against float32's 205.8-208.6. That is 0.500x, at identical ns/op.
+  No OpenBLAS reference was taken. Not yet caught by any test: `Max`/`Min` operand order. The SSA ops
+  are commutative (golang/go#81468), and a swapped `Max512D` stayed green.
 - **The float64 middle layer, generated: `internal/pack64` and `internal/block64`** (#190). `tools/f64gen`
   writes them from the float32 `internal/pack` and `internal/block`, which stay the only source. The
   transform rewrites the identifier `float32` to `float64`, renames the package, imports `pack64` under

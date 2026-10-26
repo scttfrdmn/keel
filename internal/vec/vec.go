@@ -47,6 +47,17 @@ const Lanes = 16
 // backends to the scalar spec in one test binary.
 type Block [Lanes]float32
 
+// Lanes64 is the width of a Block64: the AVX-512 float64 vector width, half of
+// Lanes because a float64 is twice as wide (#191). The float64 surface puts the
+// element in every name (Add512D, ScalarDAdd, Block64) rather than in the width
+// suffix, because the suffix is register width in bits and a 512-bit float64 add
+// would otherwise collide with Add512 (docs/f64-design.md §1).
+const Lanes64 = 8
+
+// Block64 is Block's float64 analogue: the differential-testing currency of the
+// float64 surface, one Lanes64-wide vector as a plain Go array.
+type Block64 [Lanes64]float64
+
 // Backend names, as they appear in test output and in KEEL_FORCE.
 const (
 	BackendScalar = "scalar"
