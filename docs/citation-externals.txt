@@ -34,6 +34,9 @@ KERNEL.md	§3.3	1	docs/spill-report.md §3.3 — the spill accounting, not DESIG
 DESIGN.md	§4.3	1	Van Zee & van de Geijn, TOMS 2015 (BLIS) §4.3 — the Strsm recipe
 CHANGELOG.md	§4.3	2	Van Zee & van de Geijn, TOMS 2015 (BLIS) §4.3 — the Strsm recipe
 internal/block/tri.go	§4.3	1	Van Zee & van de Geijn, TOMS 2015 (BLIS) §4.3 — the Strsm recipe
+internal/block64/tri.go	§4.3	1	Van Zee & van de Geijn, TOMS 2015 (BLIS) §4.3 — the Strsm recipe (generated copy of internal/block/tri.go, tools/f64gen)
+internal/block64/f64_test.go	§3.1	1	Higham, Accuracy and Stability of Numerical Algorithms §3.1 — the gamma_n dot-product bound
+internal/block64/f64_test.go	§13.1	1	Higham, Accuracy and Stability of Numerical Algorithms §13.1 — blocked triangular solve
 KERNEL.md	§5.2	1	docs/spill-report.md §5.2-5.3 — the en dash hides the §5.3 half from the scanner
 docs/spill-report.md	§5.1	1	SELF — this file's own §5.1, resolved against its headings (#91)
 docs/spill-report.md	§5.2	1	SELF — this file's own §5.2, resolved against its headings (#91)
