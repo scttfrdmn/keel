@@ -18,8 +18,9 @@ While the major version is 0, minor versions may contain breaking changes.
 - **`keel/gonumblas` is now its own module, so the core `keel` module no longer depends on Gonum.**
   #182 had added Gonum to the root `go.mod`. DESIGN.md §5 rule 1 says Gonum stays out of keel's
   shipped module graph, and `go mod why gonum.org/v1/gonum` in the root now reports it isn't needed.
-  The import path is unchanged. A `go.work` keeps both modules building together in the repo, and CI
-  and `make` now name `./gonumblas/...` explicitly, since `./...` doesn't cross a module boundary.
+  The import path is unchanged. CI and `make` run the adapter's commands from inside `gonumblas/` (its development `replace
+  => ../` resolves keel locally). A root `go.work` was tried first and removed: every agent worktree nests
+  under the repo, so it found that `go.work` and stopped building.
   - **Not yet consumable on its own.** The adapter module can't require keel v0.2.4, because that
     release still contains `gonumblas`, which makes the import ambiguous. It carries a development
     `replace => ../` until the next keel release, which it will then require.

@@ -12,17 +12,17 @@ GOEXP := GOEXPERIMENT=simd
 # that sees the amd64 vector path from here; it is a `build` and not a separate
 # target so it cannot be the step someone skips.
 build:
-	$(GOEXP) go build ./... ./gonumblas/...
-	GOOS=linux GOARCH=amd64 $(GOEXP) go build ./... ./gonumblas/...
+	$(GOEXP) go build ./... && (cd gonumblas && $(GOEXP) go build ./...)
+	GOOS=linux GOARCH=amd64 $(GOEXP) go build ./... && (cd gonumblas && GOOS=linux GOARCH=amd64 $(GOEXP) go build ./...)
 
 stock:
-	go build ./... ./gonumblas/...
+	go build ./... && (cd gonumblas && go build ./...)
 
 test:
-	$(GOEXP) go test ./... ./gonumblas/...
+	$(GOEXP) go test ./... && (cd gonumblas && $(GOEXP) go test ./...)
 
 test-scalar:
-	KEEL_FORCE=scalar $(GOEXP) go test ./... ./gonumblas/...
+	KEEL_FORCE=scalar $(GOEXP) go test ./... && (cd gonumblas && KEEL_FORCE=scalar $(GOEXP) go test ./...)
 
 bench:
 	$(GOEXP) go test -run=NONE -bench=. -benchtime=3x ./bench/...
@@ -32,7 +32,7 @@ bench:
 # reaches only its clean path on a healthy tree and a green from it would otherwise
 # say nothing about the seven branches that matter.
 lint:
-	go vet ./... ./gonumblas/...
+	go vet ./... && (cd gonumblas && go vet ./...)
 	bash scripts/citation-lint-test.sh
 	bash scripts/citation-lint.sh
 	bash scripts/baseline-test.sh
