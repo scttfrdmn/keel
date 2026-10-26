@@ -76,20 +76,27 @@ func Preferred(class Class, ks []Kernel) (Kernel, bool) {
 // instruction counts, 0.75 and 1.0 from 1/MR + Lanes/NR — so an epsilon here
 // would only blur a tie the ranking already resolves in the next clause.
 func betterFor(class Class, a, b Kernel) bool {
-	if a.InsnsPerFMA <= 0 || b.InsnsPerFMA <= 0 {
+	return better(class, a.InsnsPerFMA, a.MemOpsPerFMA(), b.InsnsPerFMA, b.MemOpsPerFMA())
+}
+
+// better is betterFor on the two numbers it ranks by, so that Kernel and Kernel64
+// share one comparator rather than two copies of it (a ranking rule changed in one
+// place and not the other is how a float64 host would come to prefer a shape for
+// a reason the float32 one refuses).
+func better(class Class, aIPF, aMem, bIPF, bMem float64) bool {
+	if aIPF <= 0 || bIPF <= 0 {
 		return false
 	}
-	am, bm := a.MemOpsPerFMA(), b.MemOpsPerFMA()
 	if class == ClassIssue {
-		if a.InsnsPerFMA != b.InsnsPerFMA {
-			return a.InsnsPerFMA < b.InsnsPerFMA
+		if aIPF != bIPF {
+			return aIPF < bIPF
 		}
-		return am < bm
+		return aMem < bMem
 	}
-	if am != bm {
-		return am < bm
+	if aMem != bMem {
+		return aMem < bMem
 	}
-	return a.InsnsPerFMA < b.InsnsPerFMA
+	return aIPF < bIPF
 }
 
 // Class is what binds a host's K-loop: the same two-way classification P2's

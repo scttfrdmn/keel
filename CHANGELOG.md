@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`kern.Kernel64` can be ranked and listed like `kern.Kernel`** (#191): `InsnsPerFMA`,
+  `MemOpsPerFMA` (lanes derived from register bytes, so 8 per ZMM and 2 per NEON register at float64),
+  `Ref`, `Kernels64`/`Measured64`/`Preferred64`, and empty per-architecture float64 kernel tables
+  ready for the kernels. `Preferred64` ranks through the same comparator as `Preferred`, factored out
+  as `better`, rather than a copy of it. `TestVectorAgainstScalarTile64` is the float64 differential
+  harness, using `PeerTolerance64` and a guard region. It reports how many kernels it compared (0
+  until the kernels land) rather than passing silently.
 - **The float64 middle layer, generated: `internal/pack64` and `internal/block64`** (#190). `tools/f64gen`
   writes them from the float32 `internal/pack` and `internal/block`, which stay the only source. The
   transform rewrites the identifier `float32` to `float64`, renames the package, imports `pack64` under

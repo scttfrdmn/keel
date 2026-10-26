@@ -74,3 +74,10 @@ func referenceTiles() []Kernel {
 	}
 	return []Kernel{ReferenceTile}
 }
+
+// vectorKernels64 is vectorKernels at float64. Empty until #191 ships the
+// float64 kernels, so Kernels64 falls back to the scalar shapes.
+func vectorKernels64() []Kernel64 { return nil }
+
+// referenceTiles64 is referenceTiles at float64.
+func referenceTiles64() []Kernel64 { return nil }

@@ -14,3 +14,10 @@ func vectorKernels() []Kernel { return nil }
 
 // referenceTiles is likewise empty: the shapes it names are AVX-512 loop bodies.
 func referenceTiles() []Kernel { return nil }
+
+// vectorKernels64 is vectorKernels at float64. Empty until #191 ships the
+// float64 kernels, so Kernels64 falls back to the scalar shapes.
+func vectorKernels64() []Kernel64 { return nil }
+
+// referenceTiles64 is referenceTiles at float64.
+func referenceTiles64() []Kernel64 { return nil }
