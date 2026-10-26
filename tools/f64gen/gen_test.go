@@ -119,7 +119,19 @@ func TestUnknownKernSelectorIsRefused(t *testing.T) {
 	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := transform(path, "internal/block/x.go", "block64"); err == nil || !strings.Contains(err.Error(), "kern.Preferred") {
+	if _, err := transform(path, "internal/block/x.go", "block64", map[string]bool{}); err == nil || !strings.Contains(err.Error(), "kern.Preferred") {
 		t.Fatalf("transform accepted an undecided kern selector (err = %v)", err)
+	}
+}
+
+// TestOverrideMustFindItsVar pins the per-package check: an override naming a var
+// the package does not declare is an error, not a silent no-op that would leave
+// float64 running float32's value while the override's comment claimed otherwise.
+func TestOverrideMustFindItsVar(t *testing.T) {
+	old := varOverrides
+	t.Cleanup(func() { varOverrides = old })
+	varOverrides = map[string]map[string]string{"block64": {"NoSuchVar": "1"}}
+	if _, err := generate(root); err == nil || !strings.Contains(err.Error(), "NoSuchVar") {
+		t.Fatalf("generate accepted an override with no var (err = %v)", err)
 	}
 }

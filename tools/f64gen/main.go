@@ -90,7 +90,19 @@ var (
 
 // varOverrides replaces a package-level var's initializer in a generated package,
 // for float64 tuning that differs from float32's. Keyed by generated package name.
-var varOverrides = map[string]map[string]string{}
+var varOverrides = map[string]map[string]string{
+	"block64": {
+		// KC = 512 (float32: 384), by the selection rule pre-registered in 2a41213
+		// (internal/block64/blocking64_bench_test.go): it beats the incumbent on BOTH
+		// shipped float64 kernels with disjoint 3-pass ranges, and has the best
+		// geometric mean of the 13 grid points that do. janus (i9-9960X, Skylake-X),
+		// measured slot, 2048^3 Gemm, one thread, dev tier: KernelD2x16 36.38 ->
+		// 38.69 GFLOP/s, KernelD4x16 33.68 -> 34.82. Measured on ONE host, and 512 is
+		// the top of the swept grid, so a larger KC is untested. MC, NC and MB are
+		// unchanged: no other value cleared the rule.
+		"KC": "512",
+	},
+}
 
 func main() {
 	check := flag.Bool("check", false, "report differences instead of writing")
@@ -144,22 +156,28 @@ func generate(root string) (map[string][]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		applied := map[string]bool{} // overrides are per package, so checked per package
 		for _, src := range srcs {
 			if strings.HasSuffix(src, "_test.go") {
 				continue
 			}
 			rel := filepath.ToSlash(filepath.Join(p.src, filepath.Base(src)))
-			b, err := transform(src, rel, p.name)
+			b, err := transform(src, rel, p.name, applied)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", rel, err)
 			}
 			out[filepath.ToSlash(filepath.Join(p.dst, filepath.Base(src)))] = b
 		}
+		for name := range varOverrides[p.name] {
+			if !applied[name] {
+				return nil, fmt.Errorf("%s: override %s: no such package-level var", p.src, name)
+			}
+		}
 	}
 	return out, nil
 }
 
-func transform(path, rel, pkgName string) ([]byte, error) {
+func transform(path, rel, pkgName string, applied map[string]bool) ([]byte, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
@@ -206,7 +224,7 @@ func transform(path, rel, pkgName string) ([]byte, error) {
 		return nil, fmt.Errorf("%s", strings.Join(bad, "; "))
 	}
 	if ov := varOverrides[pkgName]; ov != nil {
-		if err := applyOverrides(f, ov); err != nil {
+		if err := applyOverrides(f, ov, applied); err != nil {
 			return nil, err
 		}
 	}
@@ -217,9 +235,10 @@ func transform(path, rel, pkgName string) ([]byte, error) {
 	return addHeader(buf.Bytes(), rel)
 }
 
-// applyOverrides replaces the initializer of each named package-level var.
-func applyOverrides(f *ast.File, ov map[string]string) error {
-	seen := map[string]bool{}
+// applyOverrides replaces the initializer of each named package-level var declared
+// in f, recording each one it applied. A package's vars are spread over its files,
+// so whether every override found its var is checked once per package, by generate.
+func applyOverrides(f *ast.File, ov map[string]string, applied map[string]bool) error {
 	for _, d := range f.Decls {
 		gd, ok := d.(*ast.GenDecl)
 		if !ok || gd.Tok != token.VAR {
@@ -237,13 +256,8 @@ func applyOverrides(f *ast.File, ov map[string]string) error {
 					return fmt.Errorf("override %s: %w", name.Name, err)
 				}
 				vs.Values[i] = e
-				seen[name.Name] = true
+				applied[name.Name] = true
 			}
-		}
-	}
-	for name := range ov {
-		if !seen[name] {
-			return fmt.Errorf("override %s: no such package-level var", name)
 		}
 	}
 	return nil

@@ -9,6 +9,14 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **float64 `KC` is 512, chosen by a pre-registered sweep** (#191). The sweep ran on janus (`measured`
+  slot, 2048³ `Gemm`, one thread, dev tier). Against float32's KC of 384, `KernelD2x16` went 36.38 →
+  38.69 GFLOP/s and `KernelD4x16` 33.68 → 34.82. KC=512 is the best of the 13 grid points that won on
+  both kernels with disjoint ranges. MC, NC and MB are unchanged, since no other value cleared the rule.
+  512 is the top of the grid, so larger is untested. Applied through `tools/f64gen` `varOverrides`. Its
+  first real use exposed a bug: overrides were checked per file, not per package, so every file
+  lacking `KC` errored. Fixed, with a test that an override naming no var still fails. Evidence is in
+  `archive/blocking64-janus/`.
 - **The float64 P2 go/no-go is GREEN on the judged amd64 fleet** (#191). `KEEL_ELEM=f64 scripts/gate-p2.sh`
   scored 28/0/0 on c5n.18xlarge, c7a.48xlarge and c8a.48xlarge (16m51s, about $6.8), after a 22/0/0 lab
   pre-check on janus. Results: keel-skx issue-bound at 93.5% of its roofline (floor 90%), keel-zen4

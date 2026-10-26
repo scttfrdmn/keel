@@ -123,7 +123,8 @@ import (
 var (
 	// KC is the depth of one packed block: A panel MC×KC and B panel KC×NC must
 	// both stay resident, so this is the parameter L2 pays for.
-	KC = 384
+	KC = 512
+
 	// MC is the rows of A packed at once. A multiple of every shipped MR.
 	MC = 144
 	// NC is the columns of B packed at once, sized for L3.
