@@ -4,6 +4,8 @@
 package block
 
 import (
+	"unsafe"
+
 	"github.com/scttfrdmn/keel/internal/kern"
 	"github.com/scttfrdmn/keel/internal/par"
 )
@@ -604,10 +606,11 @@ func solveLeft(ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, d, n int, a []fl
 // p order per row of t rather than per element, so it is held to oracle.Tolerance,
 // as solveLeft is. It still divides rather than multiplying by a reciprocal, and
 // skips no zero multiplier, because solveLeft does neither.
-// tStride is the row stride of solveRight's transpose buffer: m, padded by 16
-// floats so that the d rows it writes per row of B do not map to the same cache
-// sets when m is a power of two.
-func tStride(m int) int { return m + 16 }
+// tStride is the row stride of solveRight's transpose buffer: m, padded by one
+// 64-byte line (16 float32s) so that the d rows it writes per row of B do not map
+// to the same cache sets when m is a power of two. In bytes, so the generated
+// float64 copy pads by the same line.
+func tStride(m int) int { return m + int(64/unsafe.Sizeof(float32(0))) }
 
 func solveRight(ax Axpy, sd ScalDiv, lowerEff, trans, unit bool, m, d int, a []float32, lda int, b []float32, ldb int, t []float32) {
 	ldt := tStride(m)

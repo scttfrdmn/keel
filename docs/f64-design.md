@@ -21,8 +21,9 @@ promised the type axis: *"do not cut it yet, and here is the map for when `#103`
 >    (#182). Since `4158715` the adapter is its own module and the root module again depends on no Gonum.
 >
 > The rest stands: the inherit/new split (§1), the tile prediction (§2, still a prediction), and the
-> invariant table (§4). The type-mechanism choice (§1) is being decided by a spike against the real
-> middle (F2).
+> invariant table (§4). **The type-mechanism choice (§1) is decided: code generation** (#190). Go
+> generics were built and refused (`696942a`/`709840d`); `tools/f64gen` writes `internal/pack64` and
+> `internal/block64` from the float32 sources, with `kern.Kernel64` as the seam.
 
 **This doc does not decide that f64 gets built.** `#103` records float64 as a v0 non-goal
 (`DESIGN.md:13`, "Gonum owns it") and the finding that its real blocker is the *oracle*, not the

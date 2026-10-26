@@ -8,6 +8,22 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+- **The float64 middle layer, generated: `internal/pack64` and `internal/block64`** (#190). `tools/f64gen`
+  writes them from the float32 `internal/pack` and `internal/block`, which stay the only source. The
+  transform rewrites the identifier `float32` to `float64`, renames the package, imports `pack64` under
+  the name `pack`, and maps three `kern` selectors to `kern.Kernel64`/`ScalarKernel64`/`ScalarTile64`
+  (new, hand-written in `kern64.go`). Any other `kern` selector is an error, so a new dependency of
+  the middle has to be decided rather than copied across. `TestGeneratedIsCurrent` fails CI if a copy
+  is stale or orphaned, and its positive control shows a one-token source change is seen. 286 float64
+  subtests (ported from the generics spike's Higham-derived bounds) pass on arm64 and on janus x86-64,
+  including invariant I1 (parallel bit-identical to serial). `TestPack64IsPack` holds the float64
+  layout to the float32 one element for element.
+  - **Two byte-tuned constants are now written in bytes**: `memmoveFloor` and `tStride`'s pad, as
+    `64/unsafe.Sizeof(float32(0))`. So float64 gets 8 elements by the same 64-byte rule, and the float32
+    object code is instruction-identical on amd64 and arm64 (checked for `panels`, `depthPanel`,
+    `solveRight`, `trsmRight` and `gemm`).
+
 ### Changed
 - **DESIGN.md: v0.3 is float64, at parity with float32** (Scott's ruling on #103, 2026-10-25). The v0
   non-goal list stays as written, with a dated amendment beside it. That amendment also records that
