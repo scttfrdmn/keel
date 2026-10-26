@@ -61,25 +61,69 @@ import (
 // a package var so parseShape/NR/space/objective/compile all read one setting; it
 // DEFAULTS to amd64, so every mode and every test that does not pass -arch behaves
 // exactly as before this field existed — the live amd64 SWEEP_BEST_IPF is unmoved.
+//
+// Elem is the element type (#191). Lanes is not an independent setting: it is the
+// register's bytes over the element's, so AVX-512's 64-byte Z register holds 16
+// float32 or 8 float64 and NEON's 16-byte V register 4 or 2. Elem defaults to f32,
+// so the float32 outputs are unmoved by its existence.
 type ISA struct {
 	Arch  string // "amd64" | "arm64"
-	Lanes int    // float32 lanes per vector: 16 | 4
+	Elem  string // "f32" | "f64"
+	Lanes int    // elements per vector: 16 | 8 on amd64, 4 on arm64
 }
 
-var isa = ISA{Arch: "amd64", Lanes: 16}
+var isa = ISA{Arch: "amd64", Elem: "f32", Lanes: 16}
 
-// setArch resolves -arch to the ISA config and points the spill audit's
+// setArch is setISA at float32, the configuration every pre-#191 caller meant.
+func setArch(arch string) error { return setISA(arch, "f32") }
+
+// setISA resolves -arch and -elem to the ISA config and points the spill audit's
 // classification at the same instruction set (its rules differ per #13/#155).
-func setArch(arch string) error {
+//
+// f64 is amd64-only for now. The NEON f64 emitter is a later stage of #191: it
+// needs its own shim-form body (emitNEON reproduces gemm_neon.go's F32x4 wrappers,
+// and no F64x2 shim kernel exists to verify one against), so -arch arm64 -elem f64
+// is refused here rather than emitting a float32 NEON body under a float64 name.
+func setISA(arch, elem string) error {
+	var regBytes int
 	switch arch {
 	case "amd64":
-		isa = ISA{Arch: "amd64", Lanes: 16}
+		regBytes = 64
 	case "arm64":
-		isa = ISA{Arch: "arm64", Lanes: 4}
+		regBytes = 16
 	default:
 		return fmt.Errorf("arch %q is not amd64 or arm64", arch)
 	}
+	var elemBytes int
+	switch elem {
+	case "f32":
+		elemBytes = 4
+	case "f64":
+		elemBytes = 8
+		if arch != "amd64" {
+			return fmt.Errorf("-elem f64 is amd64-only so far: the NEON f64 emitter is a later stage of #191")
+		}
+	default:
+		return fmt.Errorf("elem %q is not f32 or f64", elem)
+	}
+	isa = ISA{Arch: arch, Elem: elem, Lanes: regBytes / elemBytes}
 	return spill.SetArch(arch)
+}
+
+// elemType and vecType are the Go spellings of the active element and vector
+// types, the only two places emission learns which one it is writing.
+func elemType() string {
+	if isa.Elem == "f64" {
+		return "float64"
+	}
+	return "float32"
+}
+
+func vecType() string {
+	if isa.Elem == "f64" {
+		return fmt.Sprintf("Float64x%d", isa.Lanes)
+	}
+	return fmt.Sprintf("Float32x%d", isa.Lanes)
 }
 
 // shippedUArch is the microarchitecture the sweep reports against by default.
@@ -117,10 +161,11 @@ func main() {
 		keep     = flag.String("keep", "", "if set, leave each emitted candidate in this directory")
 		uarch    = flag.String("uarch", "skylake-x:4:2:4", "score against NAME:WIDTH:PORTS:LATENCY")
 		arch     = flag.String("arch", "amd64", "target ISA: amd64 (AVX-512, 16-lane) | arm64 (NEON, 4-lane)")
+		elem     = flag.String("elem", "f32", "element type: f32 | f64 (amd64 only; 8-lane)")
 	)
 	flag.Parse()
 
-	if err := setArch(*arch); err != nil {
+	if err := setISA(*arch, *elem); err != nil {
 		die(err)
 	}
 
@@ -138,6 +183,9 @@ func main() {
 		}
 		fmt.Print(s.Emit())
 	case *verify:
+		if isa.Elem == "f64" {
+			die(fmt.Errorf("-verify -elem f64: no float64 kernel ships yet, so there is no tree to verify against"))
+		}
 		if !runVerify() {
 			os.Exit(1)
 		}
@@ -175,6 +223,9 @@ func parseShape(spec, form string) (Shape, error) {
 	case "permute":
 		if isa.Arch == "arm64" {
 			return Shape{}, fmt.Errorf("permute form is amd64-only: NEON has no window-permute, so arm64 emits broadcast only")
+		}
+		if isa.Elem == "f64" {
+			return Shape{}, fmt.Errorf("permute form is f32-only: its window rule is 16-lane (PermuteWindowExact); an 8-lane rule is future work")
 		}
 		f = Permute
 	default:
@@ -246,6 +297,9 @@ func audit(root string, s Shape, keep string) (spill.Report, error) {
 	}
 	if keep != "" {
 		name := fmt.Sprintf("%dx%d-u%d-%s.go", s.MR, s.NR(), s.U, s.Form)
+		if isa.Elem == "f64" {
+			name = "d" + name
+		}
 		if err := os.WriteFile(filepath.Join(keep, name), []byte(src), 0o644); err != nil {
 			return spill.Report{}, err
 		}
@@ -522,12 +576,19 @@ func printDiff(want, got string) {
 // NR 16..64 across Broadcast and Permute. arm64 (4-lane) runs V 1..8 for NR 4..32
 // — the range #136's candidates cover (8×8 V=2, 4×16 V=4, 8×12 V=3, 8×16 V=4,
 // 4×32 V=8) — and Broadcast only, since NEON has no window-permute form.
+//
+// f64 (#191) keeps amd64's V 1..4, so NR 8..32 — the range docs/f64-design.md §2's
+// predicted 4x16 and 2x16 sit inside — and drops Permute, whose window predicate is
+// stated for a 16-lane load; the 8-lane analogue is unwritten, not refuted.
 func space() []Shape {
 	forms := []Form{Broadcast, Permute}
 	vMax := 4
 	if isa.Arch == "arm64" {
 		forms = []Form{Broadcast}
 		vMax = 8
+	}
+	if isa.Elem == "f64" {
+		forms = []Form{Broadcast}
 	}
 	var out []Shape
 	for _, form := range forms {
@@ -564,6 +625,9 @@ func runSweep(keep string) error {
 		}
 	}
 	all := space()
+	if isa.Elem == "f64" {
+		fmt.Printf("element type: float64 (%s, %d lanes; permute form not enumerated)\n", vecType(), isa.Lanes)
+	}
 	fmt.Printf("shapegen sweep: %d shapes (%d broadcast, %d permute), uarch %s (width %d, %d FMA ports, %d-cycle latency)\n",
 		len(all), countForm(all, Broadcast), countForm(all, Permute),
 		shippedUArch.Name, shippedUArch.Width, shippedUArch.Ports, shippedUArch.Lat)
@@ -699,6 +763,9 @@ func summarize(rows []row) {
 			if r.Shape.Form == form {
 				total++
 			}
+		}
+		if total == 0 && isa.Elem == "f64" {
+			continue // Permute is not enumerated at f64 (see space)
 		}
 		fmt.Printf("\n%s: %d shapes, %d zero-spill\n", form, total, len(zero))
 		if len(zero) == 0 {

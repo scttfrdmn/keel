@@ -5,6 +5,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -201,6 +202,79 @@ func TestFrontierRefusesRatherThanReportingZero(t *testing.T) {
 	}
 	if got, ok := best([]row{clean}, fewestInsnsPerFMA); !ok || got.Score.InsnsPerFMA() != 4.625 {
 		t.Errorf("best over one clean row gave %.3f (ok=%v), want 4.625", got.Score.InsnsPerFMA(), ok)
+	}
+}
+
+// TestF64EmissionNamesOnlyFloat64 pins the -elem f64 body's type surface (#191). The
+// float32 emitter writes its element type in five places (signature, accumulators,
+// panel loads, broadcasts, write-out), so one missed substitution compiles a mixed
+// kernel or fails to compile at all; this asserts every site switched and none of the
+// float32 spellings survive. The names asserted were copied from `go doc
+// simd/archsimd` for linux/amd64 on go1.27.3, not from the emitter.
+func TestF64EmissionNamesOnlyFloat64(t *testing.T) {
+	if err := setISA("amd64", "f64"); err != nil {
+		t.Fatalf("setISA(amd64, f64): %v", err)
+	}
+	t.Cleanup(func() { _ = setArch("amd64") })
+	if isa.Lanes != 8 {
+		t.Fatalf("a 64-byte register holds 8 float64, got Lanes=%d", isa.Lanes)
+	}
+	for _, s := range []Shape{{MR: 4, V: 2, U: 1}, {MR: 2, V: 2, U: 4}, {MR: 3, V: 3, U: 2}} {
+		src := s.Emit()
+		want := fmt.Sprintf("func KernelD%dx%d(kc int, a, b, c []float64, ldc int) {", s.MR, s.V*8)
+		for _, w := range []string{want, "archsimd.Float64x8", "archsimd.LoadFloat64x8(bp[",
+			"archsimd.BroadcastFloat64x8(ap[", "archsimd.LoadFloat64x8(r[", ".MulAdd(",
+			"archsimd.ClearAVXUpperBits()"} {
+			if !strings.Contains(src, w) {
+				t.Errorf("%s: emitted body lacks %q", s.Label(), w)
+			}
+		}
+		for _, bad := range []string{"float32", "Float32", "Uint32x16", "Permute"} {
+			if strings.Contains(src, bad) {
+				t.Errorf("%s: a float32-surface name %q survived into the f64 body", s.Label(), bad)
+			}
+		}
+	}
+}
+
+// TestF64RefusesWhatItCannotEmit drives the three refusals: NEON f64 (a later stage),
+// the Permute form (its window rule is stated for 16 lanes), and an unknown element.
+// Each must be an error, never a silent float32 emission under a float64 name.
+func TestF64RefusesWhatItCannotEmit(t *testing.T) {
+	t.Cleanup(func() { _ = setArch("amd64") })
+	if err := setISA("arm64", "f64"); err == nil {
+		t.Error("-arch arm64 -elem f64 was accepted; the NEON f64 emitter does not exist yet")
+	}
+	if err := setISA("amd64", "f16"); err == nil {
+		t.Error("-elem f16 was accepted")
+	}
+	if err := setISA("amd64", "f64"); err != nil {
+		t.Fatalf("setISA(amd64, f64): %v", err)
+	}
+	if _, err := parseShape("4x16/4", "permute"); err == nil {
+		t.Error("the Permute form was accepted at f64, whose 16-lane window rule does not hold at 8 lanes")
+	}
+	n := 0
+	for _, s := range space() {
+		if s.Form == Permute {
+			t.Errorf("the f64 sweep enumerated %s", s.Label())
+		}
+		n++
+	}
+	if n == 0 {
+		t.Error("the f64 sweep enumerated nothing, so the loop above proved nothing")
+	}
+	s, err := parseShape("4x16/1", "broadcast")
+	if err != nil || s.V != 2 || s.Name() != "KernelD4x16" {
+		t.Errorf("parseShape(4x16/1) at f64 = %+v %q (%v), want V=2 named KernelD4x16", s, s.Name(), err)
+	}
+	// The control: the same shape at f32 keeps the shipped name, so the D is the
+	// element type's doing and not a constant.
+	if err := setArch("amd64"); err != nil {
+		t.Fatal(err)
+	}
+	if got := (Shape{MR: 4, V: 2, U: 1}).Name(); got != "Kernel4x32" {
+		t.Errorf("f32 4x32 is named %q, want Kernel4x32", got)
 	}
 }
 

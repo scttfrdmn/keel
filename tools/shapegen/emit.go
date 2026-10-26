@@ -45,8 +45,8 @@ func (f Form) String() string {
 }
 
 // NR is the tile's column count: V vectors of the active ISA's lane width (16 for
-// AVX-512's Float32x16, 4 for NEON's Float32x4). isa defaults to amd64, so on the
-// unset-arch default this is the original V*16.
+// AVX-512's Float32x16, 8 for its Float64x8, 4 for NEON's Float32x4). isa defaults
+// to amd64 float32, so on the unset default this is the original V*16.
 func (s Shape) NR() int { return s.V * isa.Lanes }
 
 // Accs is the number of accumulator registers the shape needs live across the
@@ -60,8 +60,14 @@ func (s Shape) FMAs() int { return s.MR * s.V * s.U }
 
 // Name is the emitted function's name. It matches the shipped kernels' names, so
 // an emission of a shipped shape is comparable to the tree by text and not only
-// by audit reading.
-func (s Shape) Name() string { return fmt.Sprintf("Kernel%dx%d", s.MR, s.NR()) }
+// by audit reading. A float64 kernel is KernelD<MR>x<NR> (#191): 4x16 names a
+// shape at both element types, and both will live in package vec.
+func (s Shape) Name() string {
+	if isa.Elem == "f64" {
+		return fmt.Sprintf("KernelD%dx%d", s.MR, s.NR())
+	}
+	return fmt.Sprintf("Kernel%dx%d", s.MR, s.NR())
+}
 
 // Label identifies a shape in sweep output.
 func (s Shape) Label() string {
@@ -160,7 +166,9 @@ func (s Shape) Emit() string {
 	return s.emitRawArchsimd()
 }
 
-// emitRawArchsimd is the amd64 emitter: self-contained raw archsimd (Float32x16),
+// emitRawArchsimd is the amd64 emitter: self-contained raw archsimd (Float32x16, or
+// Float64x8 at -elem f64, whose names were copied from `go doc simd/archsimd` for
+// linux/amd64 on go1.27.3: LoadFloat64x8, BroadcastFloat64x8, MulAdd, Add, Store),
 // which matches gemm_amd64.go by text and compiles in isolation. Parameterized by
 // isa.Lanes, but only ever reached with isa.Arch=="amd64" (lanes 16) now that arm64
 // has its own shim-form emitter; the parameterization is retained so the default
@@ -168,7 +176,7 @@ func (s Shape) Emit() string {
 func (s Shape) emitRawArchsimd() string {
 	var b strings.Builder
 	p := func(format string, a ...any) { fmt.Fprintf(&b, format+"\n", a...) }
-	typ := fmt.Sprintf("archsimd.Float32x%d", isa.Lanes)
+	typ := "archsimd." + vecType()
 
 	p("// Copyright 2026 Scott Friedman")
 	p("// SPDX-License-Identifier: Apache-2.0")
@@ -182,7 +190,7 @@ func (s Shape) emitRawArchsimd() string {
 	p("// %s is a generated candidate: %s.", s.Name(), s.Label())
 	p("//")
 	p("// Emitted by tools/shapegen. Not a shipped kernel; see KERNEL.md.")
-	p("func %s(kc int, a, b, c []float32, ldc int) {", s.Name())
+	p("func %s(kc int, a, b, c []%s, ldc int) {", s.Name(), elemType())
 
 	// Accumulators. The zero vector is a zeroed register, so no broadcast is
 	// needed to start them (gemm_amd64.go:81).
@@ -235,7 +243,7 @@ func (s Shape) emitRawArchsimd() string {
 		p("\t%s c[%d*ldc : %d*ldc+%d]", assign, r, r, s.NR())
 		for j, acc := range s.accNames(r) {
 			lo, hi := j*isa.Lanes, j*isa.Lanes+isa.Lanes
-			p("\tarchsimd.LoadFloat32x%d(r[%d:%d]).Add(%s).Store(r[%d:%d])", isa.Lanes, lo, hi, acc, lo, hi)
+			p("\tarchsimd.Load%s(r[%d:%d]).Add(%s).Store(r[%d:%d])", vecType(), lo, hi, acc, lo, hi)
 		}
 	}
 	// VZEROUPPER on the way out: go1.27 never emits it, and the scalar pack after a
@@ -362,14 +370,14 @@ func (s Shape) emitBody(p func(string, ...any), u int, label bool) {
 		loads := make([]string, s.V)
 		for j := range loads {
 			off := k*s.NR() + j*isa.Lanes
-			loads[j] = fmt.Sprintf("archsimd.LoadFloat32x%d(bp[%d:%d])", isa.Lanes, off, off+isa.Lanes)
+			loads[j] = fmt.Sprintf("archsimd.Load%s(bp[%d:%d])", vecType(), off, off+isa.Lanes)
 		}
 		p("\t\t%s = %s", strings.Join(bn, ", "), strings.Join(loads, ", "))
 
 		if s.Form == Permute && k == 0 {
 			// One 16-lane load per body serves every row of every k-step. Guarded
 			// by PermuteWindowExact, so the loop condition guarantees the read.
-			// Permute is amd64-only, so the 16 here is not lane-parameterized.
+			// Permute is amd64 float32 only, so the 16 here is not lane-parameterized.
 			p("\t\taw = archsimd.LoadFloat32x16(ap[0:16])")
 		}
 		for r := 0; r < s.MR; r++ {
@@ -377,7 +385,7 @@ func (s Shape) emitBody(p func(string, ...any), u int, label bool) {
 			if s.Form == Permute {
 				p("\t\tav = aw.Permute(idx%d)", i)
 			} else {
-				p("\t\tav = archsimd.BroadcastFloat32x%d(ap[%d])", isa.Lanes, i)
+				p("\t\tav = archsimd.Broadcast%s(ap[%d])", vecType(), i)
 			}
 			acc := s.accNames(r)
 			fmas := make([]string, s.V)

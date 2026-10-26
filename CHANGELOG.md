@@ -25,6 +25,17 @@ While the major version is 0, minor versions may contain breaking changes.
   it runs at 104.0-104.3 GFLOP/s against float32's 205.8-208.6. That is 0.500x, at identical ns/op.
   No OpenBLAS reference was taken. Not yet caught by any test: `Max`/`Min` operand order. The SSA ops
   are commutative (golang/go#81468), and a swapped `Max512D` stayed green.
+- **`tools/shapegen -elem f64`: the AVX-512 float64 shape sweep** (#191). Lanes derive from register
+  over element bytes (8 per `Float64x8`); kernels are named `KernelD<MR>x<NR>`; Permute is refused at
+  f64 (its window rule is 16-lane) and so is `-arch arm64 -elem f64` (NEON f64 is a later stage). The
+  f32 outputs of every mode are byte-identical. Frontier: `4.625 36 2x16 u=4`. 124 of 128 f64 shapes
+  audit identically (insns, spills) to the f32 shape with the same MR, vectors and unroll, so
+  docs/f64-design.md §2's "same accumulators, same register problem" held; 2x16 u=4 tops both
+  objectives; 4x16 u=1 fits but ties 12th of 36 by insns/FMA (6.250), as f32's 4x32 u=1 does.
+- **The spill audit counts float64 register copies with no new rule**, and a test now proves it
+  (`TestF64RegisterCopiesAreCounted`). The expected `VMOVUPD`/`VMOVAPD` never appear: the compiler
+  picks a move by width alone (`moveByRegsWidth`), so a `Float64x8` copy is the same `VMOVDQU64` as a
+  `Float32x16` copy. Removing `VMOVDQU` from the rule turns the test red at 0 of 2 copies.
 - **The float64 middle layer, generated: `internal/pack64` and `internal/block64`** (#190). `tools/f64gen`
   writes them from the float32 `internal/pack` and `internal/block`, which stay the only source. The
   transform rewrites the identifier `float32` to `float64`, renames the package, imports `pack64` under

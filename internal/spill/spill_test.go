@@ -458,6 +458,86 @@ func TestARM64SeesRealSpiller(t *testing.T) {
 	}
 }
 
+// f64CopyProbe is a loop whose body is one add and a two-register rotation, so its
+// steady state holds exactly two vector register-to-register copies — at each
+// element type, so the float64 count is read beside its float32 twin.
+const f64CopyProbe = `//go:build goexperiment.simd && amd64
+
+package spillprobe
+
+import "simd/archsimd"
+
+func Rot64(n int, a, b []float64) {
+	x, y := archsimd.LoadFloat64x8(a), archsimd.LoadFloat64x8(b)
+	for i := 0; i < n; i++ {
+		x, y = y, x.Add(y)
+	}
+	x.Store(a)
+	y.Store(b)
+}
+
+func Rot32(n int, a, b []float32) {
+	x, y := archsimd.LoadFloat32x16(a), archsimd.LoadFloat32x16(b)
+	for i := 0; i < n; i++ {
+		x, y = y, x.Add(y)
+	}
+	x.Store(a)
+	y.Store(b)
+}
+`
+
+// TestF64RegisterCopiesAreCounted is #191's witness that the amd64 copy rule needs
+// no float64 mnemonics. It was expected to need VMOVUPD/VMOVAPD; it does not, because
+// the compiler picks a register move by width alone (cmd/compile/internal/amd64
+// ssa.go moveByRegsWidth: MOVUPS / VMOVDQU / VMOVDQU64 at 16/32/64 bytes, never a
+// PD form), so a Float64x8 copy prints as the same VMOVDQU64 a Float32x16 copy does.
+// A rule entry for a mnemonic the compiler cannot emit would be dead, so this test is
+// the guard instead: if a toolchain ever starts choosing moves by element type, the
+// float64 count drops to zero here and the failure names the op it did not know.
+//
+// The probe is compiled in a dot-dir under internal/vec, the one place CLAUDE.md
+// lets a simd import live, and dot-prefixed so ./... can never pick up a leftover.
+func TestF64RegisterCopiesAreCounted(t *testing.T) {
+	dir, err := os.MkdirTemp("../vec", ".spill-f64-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	if err := os.WriteFile(dir+"/probe.go", []byte(f64CopyProbe), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "build", "-gcflags=-S", "-o", os.DevNull, ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOEXPERIMENT=simd", "GOOS=linux", "GOARCH=amd64", "CGO_ENABLED=0")
+	var errb bytes.Buffer
+	cmd.Stderr = &errb
+	if err := cmd.Run(); err != nil {
+		t.Skipf("cannot cross-compile the probe for amd64 (needs the simd toolchain): %v", err)
+	}
+	fns, err := Parse(&errb)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	for _, name := range []string{"Rot64", "Rot32"} {
+		f, err := Find(fns, name)
+		if err != nil {
+			t.Fatalf("Find %s: %v", name, err)
+		}
+		loop, err := f.SteadyLoop()
+		if err != nil {
+			t.Fatalf("SteadyLoop %s: %v", name, err)
+		}
+		if r := Audit(f, loop); r.VecCopies != 2 {
+			var ops []string
+			for _, in := range loop.Insns {
+				ops = append(ops, in.Op+" "+in.Args)
+			}
+			t.Errorf("%s: %d vector copies counted, want 2 (one rotation); loop body:\n  %s",
+				name, r.VecCopies, strings.Join(ops, "\n  "))
+		}
+	}
+}
+
 // TestARM64ArithCountsScalarFP is #173's regression witness, and it is written as
 // two controls rather than one assertion.
 //

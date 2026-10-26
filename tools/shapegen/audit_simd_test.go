@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/scttfrdmn/keel/internal/spill"
@@ -120,6 +121,46 @@ func TestNEONShapesAuditIdentically(t *testing.T) {
 			t.Logf("%s: %d insns / %d FMAs = %.3f insns/FMA, %d spills, %d copies, %d broadcasts, %d nops",
 				s.Label(), got.Insns, got.Arith, float64(got.Insns)/float64(got.Arith),
 				got.Spills(), got.VecCopies, got.Broadcasts, got.Nops)
+		})
+	}
+}
+
+// TestF64PredictedShapesAuditClean compiles docs/f64-design.md §2's two predicted
+// AVX-512 tiles through the same audit path the sweep uses (#191), and asserts what
+// the prediction is stated in: zero spills, and one double-precision FMA per
+// accumulator per k-step. The FMA check reads the mnemonics, not just the count, so
+// a body that silently compiled as float32 would fail on the PS suffix rather than
+// pass on an equal tally. No f64 kernel ships, so there is no tree to compare
+// against; that comparison arrives with the kernels.
+func TestF64PredictedShapesAuditClean(t *testing.T) {
+	if err := setISA("amd64", "f64"); err != nil {
+		t.Fatalf("setISA(amd64, f64): %v", err)
+	}
+	t.Cleanup(func() { _ = setArch("amd64") })
+	root, err := repoRoot()
+	if err != nil {
+		t.Fatalf("locating the repo root: %v", err)
+	}
+	for _, s := range []Shape{{MR: 4, V: 2, U: 1}, {MR: 2, V: 2, U: 4}} {
+		t.Run(s.Label(), func(t *testing.T) {
+			r, err := audit(root, s, "")
+			if err != nil {
+				t.Fatalf("emitting and auditing the f64 candidate: %v", err)
+			}
+			if r.Spills() != 0 {
+				t.Errorf("%s spills %d; docs/f64-design.md §2 predicts it fits", s.Label(), r.Spills())
+			}
+			if r.Arith != s.FMAs() {
+				t.Errorf("%s audited %d arith, want %d FMAs", s.Label(), r.Arith, s.FMAs())
+			}
+			for _, in := range r.Loop.Insns {
+				if strings.HasPrefix(in.Op, "VFMADD") && !strings.HasSuffix(in.Op, "PD") {
+					t.Errorf("%s: %s in an f64 loop body", s.Label(), in.Op)
+				}
+			}
+			t.Logf("%s: %d insns / %d FMAs = %.3f insns/FMA, %d spills, %d copies, %d broadcasts, %d nops",
+				s.Label(), r.Insns, r.Arith, float64(r.Insns)/float64(r.Arith),
+				r.Spills(), r.VecCopies, r.Broadcasts, r.Nops)
 		})
 	}
 }
