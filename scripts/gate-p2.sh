@@ -112,8 +112,9 @@ GATE_PEAK="Peak/avx512"
 # fraction with the instruction count of the loop that produced it. The peak
 # kernel is the third mix, and its fraction is 1 by definition: it is the
 # denominator.
-GATE_KERNEL_FUNC_2x32="Kernel2x32"
-GATE_KERNEL_FUNC_4x32="Kernel4x32"
+# The shipped shapes the roofline classifies, as shape:function pairs: any number of
+# them (NEON ships three), each looked up by its own shape, never by position.
+GATE_SHAPES="2x32:Kernel2x32 4x32:Kernel4x32"
 GATE_PEAK_FUNC="avx512Peak"
 # The gate runs exactly what it reads. `Peak|Kernel` also ran the kc=32/64/256/512
 # sweep — 20 sub-benchmarks per host, ~7 min each at -count=10, none of which any
@@ -134,22 +135,50 @@ BENCH_FILTER='Peak|Kernel/.*/.*/kc=128'
 # ceilings are the float64 peak loops' own audits (27/12 and 23/20, as at float32).
 # Benchmark names avoid "Peak" and "Kernel" so no float32 filter selects them.
 KEEL_ELEM="${KEEL_ELEM:-f32}"
-KPFX="Kernel/" SHAPE_A=2x32 SHAPE_B=4x32 COVER_MARK=keel-kern-backends-exercised
-case "$KEEL_ELEM" in
-  f32) ;;
-  f64)
+# KEEL_ARCH=arm64 (#191, Scott's ruling 2026-10-26) runs the same go/no-go on NEON,
+# at either element: the float32 NEON kernels never had a P2-style verdict (they came
+# through #136's sweep and gate-p3/p5), so the arm64 f32 arm is a NEW verdict on
+# shipped code, and the arm64 f64 arm is pre-registered here before any NEON float64
+# kernel was measured (the float64 NEON peak was: orion M4 Pro, 63.21-63.66 GFLOP/s,
+# 0.496 of float32). Thresholds stay shared. The arm64 peak ceilings are arm64's own
+# audits: neonPeak and neonPeakD 35/16 = 2.1875, scalarPeak and scalarPeakD 13/10 =
+# 1.30 (not amd64's 1.15). SWEEP_BEST_IPF is shapegen -arch arm64's frontier, 4.111
+# at both elements (3x24/2 and 3x12/2). Hosts must be linux/arm64: the binaries are
+# cross-compiled with GOOS=linux (remote.sh, KEEL_GOARCH).
+KEEL_ARCH="${KEEL_ARCH:-amd64}"
+KPFX="Kernel/" COVER_MARK=keel-kern-backends-exercised ISA_TAG=avx512
+case "$KEEL_ARCH/$KEEL_ELEM" in
+  amd64/f32) ;;
+  amd64/f64)
     KERN_FUNCS="KernelD2x16,KernelD4x16" REF_FUNCS="KernelD6x16"
     PEAK_FUNCS="avx512PeakD,scalarPeakD" PEAK_IPF_CEILINGS="avx512PeakD:2.25 scalarPeakD:1.15"
-    KPFX="Tile64/" SHAPE_A=2x16 SHAPE_B=4x16 COVER_MARK=keel-kern64-backends-exercised
+    KPFX="Tile64/" COVER_MARK=keel-kern64-backends-exercised
     GATE_KERNELS="Tile64/2x16/avx512/kc=128 Tile64/4x16/avx512/kc=128"
     GATE_REF_KERNEL="Tile64/6x16/avx512/kc=128" GATE_PEAK="FMARoof64/avx512"
-    GATE_KERNEL_FUNC_2x32="KernelD2x16" GATE_KERNEL_FUNC_4x32="KernelD4x16" GATE_PEAK_FUNC="avx512PeakD"
+    GATE_SHAPES="2x16:KernelD2x16 4x16:KernelD4x16" GATE_PEAK_FUNC="avx512PeakD"
     BENCH_FILTER='FMARoof64|Tile64/.*/.*/kc=128' ;;
-  *) echo "gate-p2: KEEL_ELEM must be f32 or f64, not '$KEEL_ELEM'" >&2; exit 2 ;;
+  arm64/f32)
+    KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24" REF_FUNCS="Kernel8x12" ISA_TAG=neon
+    PEAK_FUNCS="neonPeak,scalarPeak" PEAK_IPF_CEILINGS="neonPeak:2.1875 scalarPeak:1.30"
+    SWEEP_BEST_IPF=4.111
+    GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128 Kernel/3x24/neon/kc=128"
+    GATE_REF_KERNEL="Kernel/8x12/neon/kc=128" GATE_PEAK="Peak/neon"
+    GATE_SHAPES="8x8:Kernel8x8 4x16:Kernel4x16 3x24:Kernel3x24" GATE_PEAK_FUNC="neonPeak" ;;
+  arm64/f64)
+    KERN_FUNCS="KernelD8x4,KernelD4x8,KernelD3x12" REF_FUNCS="KernelD8x6" ISA_TAG=neon
+    PEAK_FUNCS="neonPeakD,scalarPeakD" PEAK_IPF_CEILINGS="neonPeakD:2.1875 scalarPeakD:1.30"
+    SWEEP_BEST_IPF=4.111
+    KPFX="Tile64/" COVER_MARK=keel-kern64-backends-exercised
+    GATE_KERNELS="Tile64/8x4/neon/kc=128 Tile64/4x8/neon/kc=128 Tile64/3x12/neon/kc=128"
+    GATE_REF_KERNEL="Tile64/8x6/neon/kc=128" GATE_PEAK="FMARoof64/neon"
+    GATE_SHAPES="8x4:KernelD8x4 4x8:KernelD4x8 3x12:KernelD3x12" GATE_PEAK_FUNC="neonPeakD"
+    BENCH_FILTER='FMARoof64|Tile64/.*/.*/kc=128' ;;
+  *) echo "gate-p2: KEEL_ARCH/KEEL_ELEM must be amd64|arm64 / f32|f64, not '$KEEL_ARCH/$KEEL_ELEM'" >&2; exit 2 ;;
 esac
+export KEEL_GOARCH="$KEEL_ARCH" # remote.sh cross-compiles every binary for this
 SSADIR="build/ssa"
 
-echo "== gate-p2: microkernel + spill audit (GO/NO-GO), element $KEEL_ELEM =="
+echo "== gate-p2: microkernel + spill audit (GO/NO-GO), $KEEL_ARCH, element $KEEL_ELEM =="
 gate_provenance   # what was measured (#68)
 echo
 
@@ -217,7 +246,7 @@ echo "-- builds --"
 if GOEXPERIMENT=simd go build ./... 2>&1; then pass "make build (GOEXPERIMENT=simd)"; else fail "make build (GOEXPERIMENT=simd)"; fi
 if go build ./... 2>&1; then pass "make stock (scalar path, no experiment)"; else fail "make stock (scalar path, no experiment)"; fi
 if GOEXPERIMENT=simd go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd)"; else fail "go vet (GOEXPERIMENT=simd)"; fi
-if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/amd64)"; else fail "go vet (GOEXPERIMENT=simd, linux/amd64)"; fi
+if GOEXPERIMENT=simd GOOS=linux GOARCH="$KEEL_ARCH" go vet ./... 2>&1; then pass "go vet (GOEXPERIMENT=simd, linux/$KEEL_ARCH)"; else fail "go vet (GOEXPERIMENT=simd, linux/$KEEL_ARCH)"; fi
 
 gate_tmpdir
 # The audit logs outlive $LOG: the roofline branch of criterion 5b reads its
@@ -270,17 +299,17 @@ done < <(hosts_lines)
 AVX512_GREEN=""
 AVX512_SEEN=0
 if [[ -z "$HOSTS" ]]; then
-  unmeasured "P2 needs an amd64 host to execute the AVX-512 kernel and none is configured, so the kernel is unmeasured on real silicon"
+  unmeasured "P2 needs a $KEEL_ARCH host to execute the $ISA_TAG kernel and none is configured, so the kernel is unmeasured on real silicon"
 else
   remote_build_test_or_fail ./internal/kern "$BIN" "$LOG" \
-    "cross-compiled linux/amd64 kernel test binary" \
-    "cross-compile of linux/amd64 kernel test binary"
+    "cross-compiled linux/$KEEL_ARCH kernel test binary" \
+    "cross-compile of linux/$KEEL_ARCH kernel test binary"
   while read -r host; do
     probe_or_unmeasured "$host" || continue
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
     score_run "$host" "$LOG" "$OK"
-    if [[ "$OK" -eq 0 ]] && grep -qE "$COVER_MARK:.*(^| )avx512( |\$)" "$LOG"; then
+    if [[ "$OK" -eq 0 ]] && grep -qE "$COVER_MARK:.*(^| )$ISA_TAG( |\$)" "$LOG"; then
       AVX512_GREEN="$host"
     fi
     # Coverage state for the aggregate below (#73's tier C): the discriminator
@@ -297,25 +326,25 @@ else
     # `avx512` appearing in this marker at all means the host has the ISA, and
     # AVX512_GREEN's extra OK==0 is what separates "had it and the run failed"
     # from "had it and the run was green".
-    if grep -qE "$COVER_MARK:.*(^| )avx512( |\$)" "$LOG"; then
+    if grep -qE "$COVER_MARK:.*(^| )$ISA_TAG( |\$)" "$LOG"; then
       AVX512_SEEN=$((AVX512_SEEN + 1))
     fi
   done < <(hosts_lines)
   if [[ -n "$AVX512_GREEN" ]]; then
-    pass "kernel tests green with the avx512 tile exercised (target: $AVX512_GREEN)"
+    pass "kernel tests green with the $ISA_TAG tile exercised (target: $AVX512_GREEN)"
   elif [[ "$AVX512_SEEN" -gt 0 ]]; then
-    fail "no target ran the kernel tests green with the avx512 tile, though $AVX512_SEEN target(s) reported it available"
+    fail "no target ran the kernel tests green with the $ISA_TAG tile, though $AVX512_SEEN target(s) reported it available"
   else
-    unmeasured "no target reported the avx512 tile available, so whether the kernel tests pass on it is unmeasured rather than short: there was no host to ask"
+    unmeasured "no target reported the $ISA_TAG tile available, so whether the kernel tests pass on it is unmeasured rather than short: there was no host to ask"
   fi
 fi
 
 # ------------------------------------------------------------- spill audit
 echo
 echo "-- spill audit: steady-state K-loop of the shipped shapes ($KERN_FUNCS) --"
-info "compile-time property, audited against the linux/amd64 object code the hosts run"
+info "compile-time property, audited against the linux/$KEEL_ARCH object code the hosts run"
 if GOEXPERIMENT=simd go run ./internal/spill/cmd/spill-audit \
-     -pkg "$KERN_PKG" -func "$KERN_FUNCS" -mode spill -ssa "$SSADIR" >"$AUDITKERN" 2>&1; then
+     -pkg "$KERN_PKG" -func "$KERN_FUNCS" -mode spill -goarch "$KEEL_ARCH" -ssa "$SSADIR" >"$AUDITKERN" 2>&1; then
   cp "$AUDITKERN" "$LOG"
   sed 's/^/        /' "$LOG"
   pass "0 accumulator spills in the steady-state K-loop"
@@ -337,7 +366,7 @@ done
 # ------------------------- the shape threshold, re-derived rather than trusted
 echo
 echo "-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#107) --"
-reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG" amd64 "$KEEL_ELEM"
+reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG" "$KEEL_ARCH" "$KEEL_ELEM"
 
 # ------------------------------- the tile that cannot be allocated (evidence)
 echo
@@ -345,7 +374,7 @@ echo "-- reference tile $REF_FUNCS: DESIGN.md's 12 accumulators, EVIDENCE ONLY -
 info "expected to spill on go1.26.5 (T10, issue #18); this audit cannot fail the gate"
 REF_OK=0
 GOEXPERIMENT=simd go run ./internal/spill/cmd/spill-audit \
-  -pkg "$KERN_PKG" -func "$REF_FUNCS" -mode spill -ssa "$SSADIR" >"$LOG" 2>&1 || REF_OK=$?
+  -pkg "$KERN_PKG" -func "$REF_FUNCS" -mode spill -goarch "$KEEL_ARCH" -ssa "$SSADIR" >"$LOG" 2>&1 || REF_OK=$?
 grep -E 'steady-state loop' "$LOG" | sed 's/^/        /' || true
 if [[ "$REF_OK" -eq 0 ]]; then
   # Worth knowing loudly: it would mean the register ceiling moved, and the
@@ -359,7 +388,7 @@ fi
 echo
 echo "-- kernel shaping: bounds checks outside the K-loop (provenance, not a check) --"
 info "the criterion is the loop-body check above; this is the whole-package count"
-if GOEXPERIMENT=simd GOOS=linux GOARCH=amd64 \
+if GOEXPERIMENT=simd GOOS=linux GOARCH="$KEEL_ARCH" \
      go build -gcflags='-d=ssa/check_bce' "$KERN_PKG" ./internal/kern 2>"$LOG"; then
   BCE_N="$(grep -c 'Found Is\(Slice\)\?InBounds' "$LOG" || true)"
   info "check_bce: ${BCE_N:-0} bounds check(s) in $KERN_PKG + ./internal/kern, all outside the K-loop"
@@ -376,7 +405,7 @@ fi
 echo
 echo "-- peak kernels: no memory in the loop (issue #11, property 1) --"
 if go run ./internal/spill/cmd/spill-audit \
-     -pkg ./internal/vec -func "$PEAK_FUNCS" -mode nomemory >"$AUDITPEAK" 2>&1; then
+     -pkg ./internal/vec -func "$PEAK_FUNCS" -mode nomemory -goarch "$KEEL_ARCH" >"$AUDITPEAK" 2>&1; then
   cp "$AUDITPEAK" "$LOG"
   sed 's/^/        /' "$LOG"
   pass "every peak kernel's steady-state loop is register-only"
@@ -395,14 +424,26 @@ info "-count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME; numerator and denomi
 # Instruction counts for the roofline, from the audits above. Missing counts are
 # not a silent fallback to the flat floor: without them the host cannot be
 # classified, so the gate says so and fails rather than guessing.
-IPF_2x32="$(audit_ipf "$GATE_KERNEL_FUNC_2x32" "$AUDITKERN")"
-IPF_4x32="$(audit_ipf "$GATE_KERNEL_FUNC_4x32" "$AUDITKERN")"
+SHAPE_IPFS="" IPF_ALL=1 IPF_SAID="" IPF_RAW=""
+for sf in $GATE_SHAPES; do
+  ipf="$(audit_ipf "${sf#*:}" "$AUDITKERN")"
+  SHAPE_IPFS="$SHAPE_IPFS ${sf%%:*}=$ipf"
+  [[ -n "$ipf" ]] || IPF_ALL=0
+  IPF_SAID="$IPF_SAID${sf%%:*} $(printf '%.3f' "${ipf:-0}"), " IPF_RAW="$IPF_RAW${sf%%:*}='$ipf' "
+done
 IPF_PEAK="$(audit_ipf "$GATE_PEAK_FUNC" "$AUDITPEAK")"
-if [[ -n "$IPF_2x32" && -n "$IPF_4x32" && -n "$IPF_PEAK" ]]; then
-  info "audited insns/FMA: 2x32 $(printf '%.3f' "$IPF_2x32"), 4x32 $(printf '%.3f' "$IPF_4x32"), $GATE_PEAK_FUNC $(printf '%.3f' "$IPF_PEAK") (roofline inputs)"
+if [[ "$IPF_ALL" -eq 1 && -n "$IPF_PEAK" ]]; then
+  info "audited insns/FMA: $IPF_SAID$GATE_PEAK_FUNC $(printf '%.3f' "$IPF_PEAK") (roofline inputs)"
 else
-  unmeasured "could not read insns/FMA from the audits (2x32='$IPF_2x32' 4x32='$IPF_4x32' peak='$IPF_PEAK'), so hosts cannot be classified"
+  unmeasured "could not read insns/FMA from the audits (${IPF_RAW}peak='$IPF_PEAK'), so hosts cannot be classified"
 fi
+# shape_ipf KNAME: the audited insns/FMA of the shipped shape KNAME names, or "".
+shape_ipf() {
+  local kv
+  for kv in $SHAPE_IPFS; do
+    [[ "$1" == *"/${kv%%=*}/"* ]] && { printf '%s' "${kv#*=}"; return; }
+  done
+}
 BFLAGS=()
 while read -r f; do BFLAGS+=("$f"); done < <(bench_flags)
 
@@ -432,11 +473,11 @@ N_INDET=0
 N_NOTADM=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
-  unmeasured "the 55% criterion needs an amd64 host and none is configured, so it is unmeasured rather than missed"
+  unmeasured "the 55% criterion needs a $KEEL_ARCH host and none is configured, so it is unmeasured rather than missed"
 else
   remote_build_test_or_fail ./bench "$BENCHBIN" "$LOG" \
-    "cross-compiled linux/amd64 bench binary" \
-    "cross-compile of linux/amd64 bench binary"
+    "cross-compiled linux/$KEEL_ARCH bench binary" \
+    "cross-compile of linux/$KEEL_ARCH bench binary"
   while read -r host; do
     # Re-read at the moment of measurement, not merely in the preamble above: a
     # governor that changed in between belongs to a machine somebody started
@@ -497,11 +538,7 @@ else
         info "[$host] ${kname##"$KPFX"} $(bench_describe "$kname" "$BENCHCSV" GFLOP/s) — no CI, not counted"
         continue
       fi
-      case "$kname" in
-        *"$SHAPE_A"*) kipf="$IPF_2x32" ;;
-        *"$SHAPE_B"*) kipf="$IPF_4x32" ;;
-        *)      kipf="" ;;
-      esac
+      kipf="$(shape_ipf "$kname")"
       info "[$host] ${kname##"$KPFX"} $(bench_describe "$kname" "$BENCHCSV" GFLOP/s) = $(awk -v r="$kpt" 'BEGIN{printf "%.1f", r * 100}')% of peak, $(awk -v r="$klo" 'BEGIN{printf "%.1f", r * 100}')% net of CI"
       [[ -n "$kipf" ]] && MIXES="$MIXES ${kname##"$KPFX"}|$kpt:$kipf:$klo:$khi"
       if [[ -z "$BEST_LO" ]] || awk -v a="$klo" -v b="$BEST_LO" 'BEGIN{exit !(a > b)}'; then
@@ -520,7 +557,7 @@ else
     [[ -n "$IPF_PEAK" ]] && MIXES="$MIXES $GATE_PEAK_FUNC|1.0:$IPF_PEAK"
 
     if [[ -z "$MEASURED" ]]; then
-      info "[$host] no avx512 kernel sub-benchmark (CPU lacks it); not counted"
+      info "[$host] no $ISA_TAG kernel sub-benchmark (CPU lacks it); not counted"
       continue
     fi
     if [[ -z "$BEST_LO" ]]; then

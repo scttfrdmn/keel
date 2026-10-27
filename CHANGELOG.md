@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **gate-p2 gains an arm64 arm, `KEEL_ARCH=arm64`, at both elements** (#191, Scott's ruling). It's the
+  same type-neutral go/no-go on NEON. The float64 arm is pre-registered before any NEON float64 kernel was
+  measured. The float32 arm is a **new verdict on already-shipped kernels** that never had a P2 gate,
+  and DESIGN.md says so. The gate no longer assumes exactly two shipped shapes: `GATE_SHAPES` lists
+  `shape:function` pairs looked up by shape, since NEON ships three, and the amd64 messages render
+  byte-identically. The arm64 peak ceilings are arm64's own audits (2.1875; scalar 1.30, not amd64's
+  1.15), and `SWEEP_BEST_IPF` is the arm64 frontier, 4.111 at both elements.
 - **The NEON float64 microkernels: `KernelD8x4`, `KernelD4x8`, `KernelD3x12`** (#191), with spilling
   references `KernelD8x6`/`KernelD8x8`/`KernelD4x16`. These are float32 NEON's shapes at half the
   columns. They're emitted by `shapegen -arch arm64 -elem f64`, whose frontier is 3x12/2 at 4.111
