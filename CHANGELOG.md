@@ -9,6 +9,12 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **float64 microkernel dispatch, `activeKern64`** (#191). It uses float32's rule: `KEEL_FORCE` goes
+  through `kernBackend`, now shared by both selections so they can't read it differently, then the
+  shape for the host's class comes from `Preferred64`. On janus it picks `2x16/avx512` (issue-bound),
+  the same backend float32 dispatches to; on the arm64 dev host it's scalar until the NEON float64
+  kernels land. `ActiveKern64Backend`/`ActiveKern64Tile` report it. The public float64 routines (#192)
+  will block around it.
 - **float64 `KC` is 512, chosen by a pre-registered sweep** (#191). The sweep ran on janus (`measured`
   slot, 2048³ `Gemm`, one thread, dev tier). Against float32's KC of 384, `KernelD2x16` went 36.38 →
   38.69 GFLOP/s and `KernelD4x16` 33.68 → 34.82. KC=512 is the best of the 13 grid points that won on

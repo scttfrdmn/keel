@@ -152,24 +152,11 @@ var activeKern = selectKern()
 // measured the other one is worse than a crash.
 func selectKern() kern.Kernel {
 	avail := kern.Kernels() // widest tile first, scalar references last
-	want, forced := os.LookupEnv(envForce)
-	backend := avail[0].Name
-	if forced && want != "" {
-		backend = ""
-		for _, k := range avail {
-			if k.Name == want {
-				backend = want
-				break
-			}
-		}
-		if backend == "" {
-			// KEEL_FORCE names a backend with no microkernel — avx2 today. It
-			// acts as a ceiling at Level 3 rather than a panic, so that a
-			// legitimate Level-1 configuration can still call Sgemm, and
-			// ActiveKernBackend reports what actually ran.
-			backend = kern.Scalar
-		}
+	names := make([]string, len(avail))
+	for i, k := range avail {
+		names[i] = k.Name
 	}
+	backend := kernBackend(names)
 	var cand []kern.Kernel
 	for _, k := range avail {
 		if k.Name == backend {
@@ -183,6 +170,61 @@ func selectKern() kern.Kernel {
 	}
 	return k
 }
+
+// kernBackend resolves which backend a microkernel registry's entries (by name,
+// widest first) dispatch to under KEEL_FORCE. Shared by selectKern and
+// selectKern64 so that the float32 and float64 Level-3 paths cannot read the same
+// KEEL_FORCE differently.
+func kernBackend(names []string) string {
+	want, forced := os.LookupEnv(envForce)
+	if !forced || want == "" {
+		return names[0]
+	}
+	for _, n := range names {
+		if n == want {
+			return want
+		}
+	}
+	// KEEL_FORCE names a backend with no microkernel — avx2 today. It acts as a
+	// ceiling at Level 3 rather than a panic, so that a legitimate Level-1
+	// configuration can still call Sgemm, and ActiveKernBackend reports what
+	// actually ran.
+	return kern.Scalar
+}
+
+// activeKern64 is activeKern at float64 (#191): the float64 microkernel the
+// float64 Level-3 routines block around, chosen by the same rule — KEEL_FORCE
+// through kernBackend, then the shape for the host's class through
+// kern.Preferred64, which shares Preferred's comparator.
+var activeKern64 = selectKern64()
+
+func selectKern64() kern.Kernel64 {
+	avail := kern.Kernels64()
+	names := make([]string, len(avail))
+	for i, k := range avail {
+		names[i] = k.Name
+	}
+	backend := kernBackend(names)
+	var cand []kern.Kernel64
+	for _, k := range avail {
+		if k.Name == backend {
+			cand = append(cand, k)
+		}
+	}
+	k, ok := kern.Preferred64(activeKernClass, cand)
+	if !ok {
+		panic("keel: no float64 microkernel available for backend " + backend +
+			" (internal/kern.Kernels64 has none, not even scalar)")
+	}
+	return k
+}
+
+// ActiveKern64Backend and ActiveKern64Tile report the float64 microkernel, as
+// ActiveKernBackend and ActiveKernTile do for float32. Instrumentation, not API.
+func ActiveKern64Backend() string { return activeKern64.Name }
+
+// ActiveKern64Tile is the float64 microkernel's "MRxNR".
+func ActiveKern64Tile() string { return activeKern64.Tile() }
 
 // activeKernClass is the host classification shape selection is made from, and it
 // is a variable rather than a call so that both it and the kernel chosen under it
