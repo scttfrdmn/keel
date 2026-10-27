@@ -42,8 +42,11 @@ timeout 300 spawn list --state running 2>&1 | sed 's/^/   /' || true
 say "launch"
 timeout 3600 scripts/aws-fleet.sh up
 timeout 600 scripts/aws-fleet.sh status || true
-say "provision"
-timeout 7200 scripts/provision-openblas.sh --yes
+# No provisioning step: P2 runs cross-compiled test and bench binaries and uses no
+# OpenBLAS. The first launch (ee5dac1) ran provision-openblas.sh out of the gate-p5
+# driver pattern, and it refused this host: OpenBLAS 0.3.29 picks the generic armv8sve
+# kernel on Neoverse-V3, which is off the reference allowlist
+# (VOID-provision-refused-ee5dac1.log). That matters to gate-p3/p5, not to P2.
 set +e
 GATE_RC=0
 for e in f64 f32; do
