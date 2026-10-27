@@ -1,0 +1,648 @@
+== launch 03:58:07 rev 7538489
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.16 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (993ms)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (795ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.6s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (278ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (483ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-00f41163a287c9dbd
+  Public IP    3.237.234.185
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt3  c7g.4xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.28 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (825ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (277ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (507ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.5s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0ad0f696186f66df5
+  Public IP    3.88.146.67
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt4  c8g.4xlarge  (Neoverse-V2, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (831ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (285ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (629ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0273b50b97714fd5a
+  Public IP    3.235.135.7
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt5  c9g.4xlarge  (AWS Graviton5, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.4xlarge      3.235.135.7      on-demand  2h       2026-10-27T03:59:38Z
+  keel-gvt4            c8g.4xlarge      3.88.146.67      on-demand  2h       2026-10-27T03:58:59Z
+  keel-gvt3            c7g.4xlarge      3.237.234.185    on-demand  2h       2026-10-27T03:58:31Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== keel-gvt3 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd40
+Model name:                              Neoverse-V1
+16
+ 04:00:55 up 2 min,  1 user,  load average: 0.04, 0.04, 0.01
+== keel-gvt4 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd4f
+Model name:                              Neoverse-V2
+16
+ 04:00:57 up 1 min,  1 user,  load average: 0.08, 0.06, 0.02
+== keel-gvt5 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd84
+Model name:                              Neoverse-V3
+16
+ 04:00:59 up 1 min,  1 user,  load average: 0.05, 0.03, 0.00
+keel-gvt3 r1 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2317106	       518.6 ns/op	        35.54 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585693	      2042 ns/op	        36.10 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343664	       511.9 ns/op	        36.00 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/raw/3x24u1/kc=512          	  590376	      2027 ns/op	        36.38 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235327	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/raw/2x24u2/kc=512          	  807560	      1476 ns/op	        33.30 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2324827	       515.8 ns/op	        17.87 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  585644	      2043 ns/op	        18.05 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361614	       508.1 ns/op	        18.14 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  592911	      2016 ns/op	        18.29 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3267055	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r1 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  818646	      1469 ns/op	        16.73 GFLOP/s
+keel-gvt3 r1 BenchmarkPeak/neon 	    5827	    202525 ns/op	        41.42 GFLOP/s
+keel-gvt3 r1 BenchmarkFMARoof64/neon         	    5916	    202556 ns/op	        20.71 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2313648	       518.6 ns/op	        35.54 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585748	      2039 ns/op	        36.16 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343415	       512.0 ns/op	        36.00 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/raw/3x24u1/kc=512          	  591682	      2027 ns/op	        36.37 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235386	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/raw/2x24u2/kc=512          	  812463	      1476 ns/op	        33.30 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2326077	       515.9 ns/op	        17.86 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  584107	      2041 ns/op	        18.06 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361694	       508.2 ns/op	        18.13 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  590937	      2016 ns/op	        18.28 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3265488	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r2 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  816405	      1463 ns/op	        16.79 GFLOP/s
+keel-gvt3 r2 BenchmarkPeak/neon 	    5838	    202540 ns/op	        41.42 GFLOP/s
+keel-gvt3 r2 BenchmarkFMARoof64/neon         	    5911	    202543 ns/op	        20.71 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2313288	       518.5 ns/op	        35.55 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585040	      2043 ns/op	        36.09 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343848	       512.1 ns/op	        36.00 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/raw/3x24u1/kc=512          	  590356	      2020 ns/op	        36.49 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235124	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/raw/2x24u2/kc=512          	  811753	      1471 ns/op	        33.42 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2326216	       516.0 ns/op	        17.86 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  584598	      2042 ns/op	        18.05 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361472	       508.2 ns/op	        18.14 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  591040	      2019 ns/op	        18.26 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3266938	       367.3 ns/op	        16.73 GFLOP/s
+keel-gvt3 r3 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  817366	      1461 ns/op	        16.83 GFLOP/s
+keel-gvt3 r3 BenchmarkPeak/neon 	    5827	    202527 ns/op	        41.42 GFLOP/s
+keel-gvt3 r3 BenchmarkFMARoof64/neon         	    5914	    202547 ns/op	        20.71 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2312222	       518.1 ns/op	        35.58 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/shim/3x24u2/kc=512         	  587594	      2042 ns/op	        36.10 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343800	       512.1 ns/op	        35.99 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/raw/3x24u1/kc=512          	  590901	      2026 ns/op	        36.40 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235166	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/raw/2x24u2/kc=512          	  812859	      1476 ns/op	        33.30 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2326106	       515.9 ns/op	        17.86 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  586070	      2047 ns/op	        18.01 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361714	       508.1 ns/op	        18.14 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  593842	      2022 ns/op	        18.23 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3267280	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r4 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  815500	      1468 ns/op	        16.74 GFLOP/s
+keel-gvt3 r4 BenchmarkPeak/neon 	    5841	    202535 ns/op	        41.42 GFLOP/s
+keel-gvt3 r4 BenchmarkFMARoof64/neon         	    5906	    202543 ns/op	        20.71 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2312064	       518.4 ns/op	        35.55 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585842	      2042 ns/op	        36.10 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343252	       512.0 ns/op	        36.00 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/raw/3x24u1/kc=512          	  590755	      2027 ns/op	        36.38 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235052	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/raw/2x24u2/kc=512          	  810746	      1477 ns/op	        33.27 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2325962	       515.9 ns/op	        17.86 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  585830	      2043 ns/op	        18.04 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361724	       508.1 ns/op	        18.14 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  591382	      2022 ns/op	        18.23 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3265798	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r5 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  819436	      1458 ns/op	        16.86 GFLOP/s
+keel-gvt3 r5 BenchmarkPeak/neon 	    5840	    202575 ns/op	        41.41 GFLOP/s
+keel-gvt3 r5 BenchmarkFMARoof64/neon         	    5913	    202545 ns/op	        20.71 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2316619	       518.0 ns/op	        35.59 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585091	      2038 ns/op	        36.17 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343393	       512.0 ns/op	        36.00 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/raw/3x24u1/kc=512          	  592227	      2028 ns/op	        36.36 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235230	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/raw/2x24u2/kc=512          	  807937	      1471 ns/op	        33.42 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2325638	       516.1 ns/op	        17.86 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  585570	      2047 ns/op	        18.01 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361469	       508.1 ns/op	        18.14 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  592046	      2019 ns/op	        18.26 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3266914	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r6 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  821971	      1457 ns/op	        16.87 GFLOP/s
+keel-gvt3 r6 BenchmarkPeak/neon 	    5846	    202565 ns/op	        41.41 GFLOP/s
+keel-gvt3 r6 BenchmarkFMARoof64/neon         	    5906	    202549 ns/op	        20.71 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2318709	       518.7 ns/op	        35.53 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585183	      2043 ns/op	        36.09 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343997	       512.1 ns/op	        36.00 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/raw/3x24u1/kc=512          	  590635	      2020 ns/op	        36.50 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235486	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/raw/2x24u2/kc=512          	  809059	      1488 ns/op	        33.03 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2325903	       516.0 ns/op	        17.86 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  585759	      2042 ns/op	        18.05 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361498	       508.1 ns/op	        18.14 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  592852	      2021 ns/op	        18.24 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3267214	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r7 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  815857	      1457 ns/op	        16.87 GFLOP/s
+keel-gvt3 r7 BenchmarkPeak/neon 	    5845	    202566 ns/op	        41.41 GFLOP/s
+keel-gvt3 r7 BenchmarkFMARoof64/neon         	    5904	    202547 ns/op	        20.71 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2318359	       517.6 ns/op	        35.61 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585903	      2041 ns/op	        36.12 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343676	       512.0 ns/op	        36.00 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/raw/3x24u1/kc=512          	  590581	      2021 ns/op	        36.48 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235312	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/raw/2x24u2/kc=512          	  807885	      1486 ns/op	        33.09 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2325382	       516.0 ns/op	        17.86 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  585770	      2042 ns/op	        18.05 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361591	       508.2 ns/op	        18.14 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  592531	      2022 ns/op	        18.23 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3267694	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r8 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  813429	      1458 ns/op	        16.85 GFLOP/s
+keel-gvt3 r8 BenchmarkPeak/neon 	    5830	    202551 ns/op	        41.41 GFLOP/s
+keel-gvt3 r8 BenchmarkFMARoof64/neon         	    5938	    202532 ns/op	        20.71 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2316768	       517.5 ns/op	        35.62 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585784	      2039 ns/op	        36.17 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2342959	       512.0 ns/op	        36.00 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/raw/3x24u1/kc=512          	  590877	      2022 ns/op	        36.46 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235131	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/raw/2x24u2/kc=512          	  805770	      1477 ns/op	        33.29 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2325940	       515.9 ns/op	        17.86 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  584426	      2042 ns/op	        18.05 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361560	       508.1 ns/op	        18.14 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  594116	      2016 ns/op	        18.29 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3267386	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r9 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  818281	      1469 ns/op	        16.73 GFLOP/s
+keel-gvt3 r9 BenchmarkPeak/neon 	    5832	    202555 ns/op	        41.41 GFLOP/s
+keel-gvt3 r9 BenchmarkFMARoof64/neon         	    5907	    202538 ns/op	        20.71 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2317924	       518.9 ns/op	        35.52 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/shim/3x24u2/kc=512         	  585705	      2036 ns/op	        36.22 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2343945	       512.1 ns/op	        35.99 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/raw/3x24u1/kc=512          	  590391	      2020 ns/op	        36.50 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3235376	       370.9 ns/op	        33.13 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/raw/2x24u2/kc=512          	  811911	      1471 ns/op	        33.42 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2326154	       515.9 ns/op	        17.86 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  585280	      2046 ns/op	        18.02 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2361516	       508.0 ns/op	        18.14 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  593624	      2023 ns/op	        18.23 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3267235	       367.2 ns/op	        16.73 GFLOP/s
+keel-gvt3 r10 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  821464	      1459 ns/op	        16.84 GFLOP/s
+keel-gvt3 r10 BenchmarkPeak/neon 	    5827	    202542 ns/op	        41.42 GFLOP/s
+keel-gvt3 r10 BenchmarkFMARoof64/neon         	    5910	    202561 ns/op	        20.71 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2599298	       461.3 ns/op	        39.95 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/shim/3x24u2/kc=512         	  658492	      1822 ns/op	        40.47 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2667086	       450.0 ns/op	        40.96 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/raw/3x24u1/kc=512          	  676041	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3867159	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/raw/2x24u2/kc=512          	  976521	      1226 ns/op	        40.09 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2601362	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658087	      1822 ns/op	        20.23 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2666731	       449.9 ns/op	        20.48 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  675398	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3865875	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r1 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  978272	      1228 ns/op	        20.02 GFLOP/s
+keel-gvt4 r1 BenchmarkPeak/neon 	    8829	    129627 ns/op	        64.71 GFLOP/s
+keel-gvt4 r1 BenchmarkFMARoof64/neon         	    9342	    131743 ns/op	        31.84 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2600749	       461.3 ns/op	        39.95 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/shim/3x24u2/kc=512         	  657729	      1822 ns/op	        40.47 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2666937	       449.9 ns/op	        40.97 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/raw/3x24u1/kc=512          	  675567	      1775 ns/op	        41.55 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3866220	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/raw/2x24u2/kc=512          	  978508	      1226 ns/op	        40.09 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2600289	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658668	      1822 ns/op	        20.24 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2666812	       450.0 ns/op	        20.48 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  674349	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3867477	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r2 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  972897	      1231 ns/op	        19.97 GFLOP/s
+keel-gvt4 r2 BenchmarkPeak/neon 	    9012	    127979 ns/op	        65.55 GFLOP/s
+keel-gvt4 r2 BenchmarkFMARoof64/neon         	   10000	    132006 ns/op	        31.77 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2601063	       461.3 ns/op	        39.95 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/shim/3x24u2/kc=512         	  657634	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2666136	       449.9 ns/op	        40.97 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/raw/3x24u1/kc=512          	  675350	      1777 ns/op	        41.50 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3864384	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/raw/2x24u2/kc=512          	  975582	      1226 ns/op	        40.09 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2601129	       461.4 ns/op	        19.98 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658576	      1822 ns/op	        20.24 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2667225	       449.9 ns/op	        20.48 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  675100	      1777 ns/op	        20.75 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3867459	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r3 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  978454	      1229 ns/op	        20.00 GFLOP/s
+keel-gvt4 r3 BenchmarkPeak/neon 	    9613	    129846 ns/op	        64.60 GFLOP/s
+keel-gvt4 r3 BenchmarkFMARoof64/neon         	    9181	    126622 ns/op	        33.12 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2600404	       461.3 ns/op	        39.95 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/shim/3x24u2/kc=512         	  657075	      1822 ns/op	        40.46 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2666689	       450.0 ns/op	        40.96 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/raw/3x24u1/kc=512          	  674696	      1775 ns/op	        41.55 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3867208	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/raw/2x24u2/kc=512          	  977038	      1226 ns/op	        40.09 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2601409	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658245	      1822 ns/op	        20.24 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2666469	       449.9 ns/op	        20.48 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  674266	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3866042	       310.5 ns/op	        19.79 GFLOP/s
+keel-gvt4 r4 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  974448	      1226 ns/op	        20.04 GFLOP/s
+keel-gvt4 r4 BenchmarkPeak/neon 	    9117	    130366 ns/op	        64.35 GFLOP/s
+keel-gvt4 r4 BenchmarkFMARoof64/neon         	    9264	    131232 ns/op	        31.96 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2600932	       461.3 ns/op	        39.95 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/shim/3x24u2/kc=512         	  658576	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2667164	       450.0 ns/op	        40.96 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/raw/3x24u1/kc=512          	  675914	      1776 ns/op	        41.52 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3866223	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/raw/2x24u2/kc=512          	  977607	      1226 ns/op	        40.08 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2601115	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  657777	      1822 ns/op	        20.23 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2664741	       450.2 ns/op	        20.47 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  673292	      1779 ns/op	        20.72 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3867018	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r5 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  978691	      1226 ns/op	        20.04 GFLOP/s
+keel-gvt4 r5 BenchmarkPeak/neon 	    9362	    129722 ns/op	        64.67 GFLOP/s
+keel-gvt4 r5 BenchmarkFMARoof64/neon         	    9628	    126421 ns/op	        33.18 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2599552	       461.3 ns/op	        39.96 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/shim/3x24u2/kc=512         	  658093	      1822 ns/op	        40.46 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2666818	       450.0 ns/op	        40.96 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/raw/3x24u1/kc=512          	  675854	      1775 ns/op	        41.54 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3865590	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/raw/2x24u2/kc=512          	  977181	      1230 ns/op	        39.96 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2600893	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658206	      1822 ns/op	        20.24 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2667222	       450.0 ns/op	        20.48 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  675060	      1776 ns/op	        20.75 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3866233	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r6 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  977548	      1228 ns/op	        20.02 GFLOP/s
+keel-gvt4 r6 BenchmarkPeak/neon 	    8803	    128702 ns/op	        65.18 GFLOP/s
+keel-gvt4 r6 BenchmarkFMARoof64/neon         	    9985	    124058 ns/op	        33.81 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2600390	       461.3 ns/op	        39.95 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/shim/3x24u2/kc=512         	  657584	      1822 ns/op	        40.46 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2664072	       450.3 ns/op	        40.94 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/raw/3x24u1/kc=512          	  674982	      1775 ns/op	        41.54 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3867222	       310.3 ns/op	        39.59 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/raw/2x24u2/kc=512          	  978043	      1226 ns/op	        40.09 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2601489	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658587	      1823 ns/op	        20.22 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2667318	       449.9 ns/op	        20.48 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  674200	      1778 ns/op	        20.73 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3866464	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r7 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  976857	      1226 ns/op	        20.04 GFLOP/s
+keel-gvt4 r7 BenchmarkPeak/neon 	    8806	    128837 ns/op	        65.11 GFLOP/s
+keel-gvt4 r7 BenchmarkFMARoof64/neon         	    9225	    130602 ns/op	        32.12 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2599908	       461.4 ns/op	        39.95 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/shim/3x24u2/kc=512         	  658551	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2665298	       450.3 ns/op	        40.93 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/raw/3x24u1/kc=512          	  675366	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3867200	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/raw/2x24u2/kc=512          	  976200	      1229 ns/op	        39.98 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2600755	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658262	      1822 ns/op	        20.24 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2666352	       449.9 ns/op	        20.48 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  673960	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3867118	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r8 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  976404	      1226 ns/op	        20.05 GFLOP/s
+keel-gvt4 r8 BenchmarkPeak/neon 	    8917	    128740 ns/op	        65.16 GFLOP/s
+keel-gvt4 r8 BenchmarkFMARoof64/neon         	    8845	    131407 ns/op	        31.92 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2600635	       461.3 ns/op	        39.95 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/shim/3x24u2/kc=512         	  657471	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2666938	       449.9 ns/op	        40.97 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/raw/3x24u1/kc=512          	  674882	      1774 ns/op	        41.55 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3865582	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/raw/2x24u2/kc=512          	  974486	      1229 ns/op	        39.98 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2601112	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658209	      1822 ns/op	        20.23 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2667208	       449.9 ns/op	        20.48 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  673664	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3867650	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r9 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  975819	      1226 ns/op	        20.04 GFLOP/s
+keel-gvt4 r9 BenchmarkPeak/neon 	    9037	    129722 ns/op	        64.67 GFLOP/s
+keel-gvt4 r9 BenchmarkFMARoof64/neon         	    9248	    130989 ns/op	        32.02 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/shim/3x24u2/kc=128         	 2600168	       461.3 ns/op	        39.95 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/shim/3x24u2/kc=512         	  658794	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/raw/3x24u1/kc=128          	 2667206	       450.0 ns/op	        40.96 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/raw/3x24u1/kc=512          	  675363	      1777 ns/op	        41.50 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/raw/2x24u2/kc=128          	 3867602	       310.3 ns/op	        39.60 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/raw/2x24u2/kc=512          	  976526	      1226 ns/op	        40.09 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 2600880	       461.3 ns/op	        19.98 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  658926	      1822 ns/op	        20.24 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 2666624	       450.0 ns/op	        20.48 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  674784	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 3866872	       310.3 ns/op	        19.80 GFLOP/s
+keel-gvt4 r10 BenchmarkRawNEON/raw/D2x12u2/kc=512         	  978298	      1229 ns/op	        20.00 GFLOP/s
+keel-gvt4 r10 BenchmarkPeak/neon 	    9206	    128956 ns/op	        65.05 GFLOP/s
+keel-gvt4 r10 BenchmarkFMARoof64/neon         	    9543	    131380 ns/op	        31.92 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3100153	       386.5 ns/op	        47.69 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/shim/3x24u2/kc=512         	  785490	      1518 ns/op	        48.55 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3201648	       376.5 ns/op	        48.95 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/raw/3x24u1/kc=512          	  805430	      1477 ns/op	        49.93 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4579275	       262.0 ns/op	        46.89 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1029 ns/op	        47.79 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3093892	       388.3 ns/op	        23.73 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  779895	      1530 ns/op	        24.09 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3174322	       379.2 ns/op	        24.30 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  796480	      1499 ns/op	        24.60 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4558567	       262.8 ns/op	        23.38 GFLOP/s
+keel-gvt5 r1 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1043 ns/op	        23.57 GFLOP/s
+keel-gvt5 r1 BenchmarkPeak/neon 	   10000	    109469 ns/op	        76.63 GFLOP/s
+keel-gvt5 r1 BenchmarkFMARoof64/neon         	    9924	    111827 ns/op	        37.51 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3103986	       386.5 ns/op	        47.69 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/shim/3x24u2/kc=512         	  782799	      1518 ns/op	        48.56 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3194644	       375.1 ns/op	        49.14 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/raw/3x24u1/kc=512          	  812036	      1483 ns/op	        49.71 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4593718	       261.6 ns/op	        46.98 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1030 ns/op	        47.71 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3097702	       388.3 ns/op	        23.73 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  780105	      1546 ns/op	        23.85 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3175173	       378.2 ns/op	        24.37 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  786387	      1518 ns/op	        24.29 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4539486	       263.1 ns/op	        23.35 GFLOP/s
+keel-gvt5 r2 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1037 ns/op	        23.70 GFLOP/s
+keel-gvt5 r2 BenchmarkPeak/neon 	   10000	    110802 ns/op	        75.71 GFLOP/s
+keel-gvt5 r2 BenchmarkFMARoof64/neon         	   10000	    110939 ns/op	        37.81 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3106800	       386.1 ns/op	        47.74 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/shim/3x24u2/kc=512         	  785036	      1518 ns/op	        48.56 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3196236	       375.1 ns/op	        49.14 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/raw/3x24u1/kc=512          	  806404	      1477 ns/op	        49.93 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4589016	       262.5 ns/op	        46.81 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1023 ns/op	        48.05 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3099648	       387.2 ns/op	        23.80 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  778418	      1532 ns/op	        24.07 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3181245	       378.5 ns/op	        24.35 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  796978	      1497 ns/op	        24.62 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4527589	       266.1 ns/op	        23.09 GFLOP/s
+keel-gvt5 r3 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1036 ns/op	        23.73 GFLOP/s
+keel-gvt5 r3 BenchmarkPeak/neon 	   10000	    106605 ns/op	        78.69 GFLOP/s
+keel-gvt5 r3 BenchmarkFMARoof64/neon         	   10000	    110820 ns/op	        37.85 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3104202	       386.0 ns/op	        47.76 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/shim/3x24u2/kc=512         	  787956	      1518 ns/op	        48.58 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3164870	       378.4 ns/op	        48.72 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/raw/3x24u1/kc=512          	  807676	      1476 ns/op	        49.96 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4580248	       262.0 ns/op	        46.90 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1025 ns/op	        47.98 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3096738	       387.4 ns/op	        23.79 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  782743	      1545 ns/op	        23.87 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3186223	       376.7 ns/op	        24.46 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  793400	      1497 ns/op	        24.63 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4549562	       263.2 ns/op	        23.35 GFLOP/s
+keel-gvt5 r4 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1039 ns/op	        23.65 GFLOP/s
+keel-gvt5 r4 BenchmarkPeak/neon 	   10000	    106383 ns/op	        78.85 GFLOP/s
+keel-gvt5 r4 BenchmarkFMARoof64/neon         	   10000	    112302 ns/op	        37.35 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3106980	       385.3 ns/op	        47.84 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/shim/3x24u2/kc=512         	  788996	      1530 ns/op	        48.18 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3201946	       374.2 ns/op	        49.26 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/raw/3x24u1/kc=512          	  813356	      1474 ns/op	        50.01 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4581411	       262.4 ns/op	        46.83 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1024 ns/op	        47.98 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3103612	       387.4 ns/op	        23.79 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  779454	      1544 ns/op	        23.87 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3170113	       378.3 ns/op	        24.36 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  799406	      1520 ns/op	        24.26 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4581046	       263.2 ns/op	        23.34 GFLOP/s
+keel-gvt5 r5 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1038 ns/op	        23.68 GFLOP/s
+keel-gvt5 r5 BenchmarkPeak/neon 	   10000	    111152 ns/op	        75.47 GFLOP/s
+keel-gvt5 r5 BenchmarkFMARoof64/neon         	   10000	    111389 ns/op	        37.65 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3107107	       385.8 ns/op	        47.78 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/shim/3x24u2/kc=512         	  789928	      1531 ns/op	        48.15 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3167190	       379.4 ns/op	        48.58 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/raw/3x24u1/kc=512          	  813171	      1483 ns/op	        49.73 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4574101	       263.3 ns/op	        46.67 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1025 ns/op	        47.95 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3092682	       387.7 ns/op	        23.77 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  777687	      1536 ns/op	        24.00 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3165763	       378.8 ns/op	        24.33 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  799484	      1517 ns/op	        24.30 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4552173	       263.4 ns/op	        23.32 GFLOP/s
+keel-gvt5 r6 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1050 ns/op	        23.40 GFLOP/s
+keel-gvt5 r6 BenchmarkPeak/neon 	   10000	    110955 ns/op	        75.60 GFLOP/s
+keel-gvt5 r6 BenchmarkFMARoof64/neon         	   10000	    110725 ns/op	        37.88 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3105429	       386.8 ns/op	        47.65 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/shim/3x24u2/kc=512         	  788728	      1517 ns/op	        48.59 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3202917	       373.6 ns/op	        49.34 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/raw/3x24u1/kc=512          	  806655	      1489 ns/op	        49.52 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4574856	       259.7 ns/op	        47.31 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1024 ns/op	        48.01 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3108668	       386.7 ns/op	        23.83 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  776701	      1533 ns/op	        24.05 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3172113	       378.6 ns/op	        24.34 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  788958	      1503 ns/op	        24.52 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4587662	       263.7 ns/op	        23.30 GFLOP/s
+keel-gvt5 r7 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1051 ns/op	        23.39 GFLOP/s
+keel-gvt5 r7 BenchmarkPeak/neon 	   10000	    106819 ns/op	        78.53 GFLOP/s
+keel-gvt5 r7 BenchmarkFMARoof64/neon         	   10000	    110299 ns/op	        38.03 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3113434	       386.7 ns/op	        47.66 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/shim/3x24u2/kc=512         	  790461	      1516 ns/op	        48.64 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3182938	       378.8 ns/op	        48.66 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/raw/3x24u1/kc=512          	  805010	      1477 ns/op	        49.92 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4608111	       260.7 ns/op	        47.13 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1024 ns/op	        48.01 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3100069	       387.0 ns/op	        23.81 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  778142	      1538 ns/op	        23.96 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3200552	       375.5 ns/op	        24.54 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  794968	      1500 ns/op	        24.58 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4594644	       263.8 ns/op	        23.29 GFLOP/s
+keel-gvt5 r8 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1033 ns/op	        23.80 GFLOP/s
+keel-gvt5 r8 BenchmarkPeak/neon 	   10000	    110845 ns/op	        75.68 GFLOP/s
+keel-gvt5 r8 BenchmarkFMARoof64/neon         	   10000	    111020 ns/op	        37.78 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3109876	       385.9 ns/op	        47.76 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/shim/3x24u2/kc=512         	  785718	      1530 ns/op	        48.20 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3201949	       375.3 ns/op	        49.11 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/raw/3x24u1/kc=512          	  807031	      1488 ns/op	        49.56 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4581637	       261.5 ns/op	        47.00 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1028 ns/op	        47.81 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3098558	       388.1 ns/op	        23.75 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  781804	      1536 ns/op	        23.99 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3131373	       382.0 ns/op	        24.13 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  799069	      1521 ns/op	        24.24 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4574486	       262.9 ns/op	        23.37 GFLOP/s
+keel-gvt5 r9 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1028 ns/op	        23.90 GFLOP/s
+keel-gvt5 r9 BenchmarkPeak/neon 	   10000	    103167 ns/op	        81.31 GFLOP/s
+keel-gvt5 r9 BenchmarkFMARoof64/neon         	   10000	    111108 ns/op	        37.75 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/shim/3x24u2/kc=128         	 3107860	       386.0 ns/op	        47.76 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/shim/3x24u2/kc=512         	  789152	      1517 ns/op	        48.59 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/raw/3x24u1/kc=128          	 3216634	       373.3 ns/op	        49.37 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/raw/3x24u1/kc=512          	  801087	      1489 ns/op	        49.53 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/raw/2x24u2/kc=128          	 4577827	       263.3 ns/op	        46.66 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/raw/2x24u2/kc=512          	 1000000	      1032 ns/op	        47.64 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/shim/D3x12u2/kc=128        	 3093552	       387.4 ns/op	        23.79 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/shim/D3x12u2/kc=512        	  783162	      1544 ns/op	        23.88 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/raw/D3x12u1/kc=128         	 3136053	       383.7 ns/op	        24.02 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/raw/D3x12u1/kc=512         	  798382	      1517 ns/op	        24.29 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/raw/D2x12u2/kc=128         	 4532329	       265.3 ns/op	        23.16 GFLOP/s
+keel-gvt5 r10 BenchmarkRawNEON/raw/D2x12u2/kc=512         	 1000000	      1036 ns/op	        23.72 GFLOP/s
+keel-gvt5 r10 BenchmarkPeak/neon 	   10000	    104096 ns/op	        80.59 GFLOP/s
+keel-gvt5 r10 BenchmarkFMARoof64/neon         	   10000	    111707 ns/op	        37.55 GFLOP/s
+== done 04:04:21
+== TEARDOWN 04:04:21
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0273b50b97714fd5a...
+
+✅ Terminate request sent!
+   Instance: i-0273b50b97714fd5a
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0ad0f696186f66df5...
+
+✅ Terminate request sent!
+   Instance: i-0ad0f696186f66df5
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-00f41163a287c9dbd...
+
+✅ Terminate request sent!
+   Instance: i-00f41163a287c9dbd
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   fleet is down

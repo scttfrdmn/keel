@@ -16,6 +16,11 @@ While the major version is 0, minor versions may contain breaking changes.
   top. The zero-spill raw frontier is 2x24/2 at 2.833 insns/FMA (3x24/1 at 2.889), against the shim
   form's 4.111. The raw kernels sit test-only in `internal/vec/rawneon_arm64_test.go` with a timing
   A/B against the shipped ones. Nothing dispatches them.
+  **The A/B refutes the shim as V2/V3's limit** (`archive/neon-raw/`, exploration tier, c7g, c8g
+  and c9g 4xlarge). Raw 3x24/1 does 30% fewer insns per FMA and lands 1–2.6 points above shipped
+  3x24/2: on V2, 64.0% against 62.4% of peak, and on V3, 64.2% against 62.6%. The worst raw round
+  beats the best shim round on every host at both elements. The "7–8 insns/cycle" reading in
+  `archive/p2-arm64-c9g/` is marked VOID as a causal claim.
 - **Graviton5's judged arm64 P2 is GREEN at both elements** (#191). On c9g.48xlarge (Neoverse-V3),
   `KEEL_ARCH=arm64 scripts/gate-p2.sh` scored 22/0/0 at each element: float64 3x12 at 62.7% of peak,
   float32 3x24 at 64.0% (floor 55%), FMA-bound, both inside their pre-registered bands. It took 12

@@ -20,3 +20,8 @@ Fleet: c9g.48xlarge (keel-gvt5, Neoverse-V3, MIDR 0xd84), on-demand, us-east-1,
 Both predictions held. Neoverse-V3 lands beside V2 (62.6%/61.7%), as the per-cycle reading
 predicts: the kernels retire about 7–8 instructions per cycle on every Neoverse generation,
 while the FMA peak per cycle grew from about 2.0 (V1) to about 2.9 (V2, V3).
+
+> **VOID, 2026-10-26, the causal reading above, not the verdict or the bands.** "The kernels
+> retire about 7–8 instructions per cycle" was read as an instruction-issue ceiling. The
+> shim-removal A/B (`../neon-raw/`) cut insns/FMA by 30% and gained 1–2.6 points on V2 and
+> V3, so issue is not the limit. 7–8 insns/cycle was one instruction mix's rate.
