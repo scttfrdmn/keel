@@ -81,8 +81,8 @@ func setArch(arch string) error { return setISA(arch, "f32") }
 // classification at the same instruction set (its rules differ per #13/#155).
 //
 // f64 is accepted on both ISAs. On arm64 emitNEON writes the float64 shim
-// (vec.F64x2, Load128D/…), two lanes per V register. No NEON float64 kernel ships
-// yet, so -verify has nothing to bind against there and refuses (verifyShapes).
+// (vec.F64x2, Load128D/…), two lanes per V register, and -verify binds against
+// internal/vec/gemm64_neon.go (shippedNEONF64).
 func setISA(arch, elem string) error {
 	var regBytes int
 	switch arch {
@@ -371,10 +371,24 @@ var shippedF64 = []Shape{
 	{MR: 6, V: 2, U: 4, Form: Broadcast}, // KernelD6x16, the spilling reference
 }
 
+// shippedNEONF64 is the six NEON float64 kernels in internal/vec/gemm64_neon.go
+// (#191): shippedNEON's shapes at half the columns (V counts registers, 2 lanes
+// each). 8x4, 4x8 and 3x12/2 ship; 8x6, 8x8 and 4x16 are spilling references.
+var shippedNEONF64 = []Shape{
+	{MR: 8, V: 2, U: 1, Form: Broadcast}, // KernelD8x4
+	{MR: 8, V: 3, U: 1, Form: Broadcast}, // KernelD8x6
+	{MR: 4, V: 4, U: 1, Form: Broadcast}, // KernelD4x8
+	{MR: 8, V: 4, U: 1, Form: Broadcast}, // KernelD8x8
+	{MR: 4, V: 8, U: 1, Form: Broadcast}, // KernelD4x16
+	{MR: 3, V: 6, U: 2, Form: Broadcast}, // KernelD3x12, the frontier
+}
+
 // verifyShapes and verifySource return the shape list and the tree file runVerify
 // checks against, per the active ISA and element.
 func verifyShapes() []Shape {
 	switch {
+	case isa.Arch == "arm64" && isa.Elem == "f64":
+		return shippedNEONF64
 	case isa.Arch == "arm64":
 		return shippedNEON
 	case isa.Elem == "f64":
@@ -385,6 +399,8 @@ func verifyShapes() []Shape {
 
 func verifySource() string {
 	switch {
+	case isa.Arch == "arm64" && isa.Elem == "f64":
+		return "gemm64_neon.go"
 	case isa.Arch == "arm64":
 		return "gemm_neon.go"
 	case isa.Elem == "f64":
@@ -414,11 +430,6 @@ func verifySource() string {
 //     instruction count, FMA count, spill count, copy count and broadcast count as
 //     what ships — every quantity the objective reads. Naming cannot affect it.
 func runVerify() bool {
-	if isa.Arch == "arm64" && isa.Elem == "f64" {
-		// Fail closed: a verify over zero shapes would print a vacuous pass.
-		fmt.Println("verify: no NEON float64 kernel ships yet (#191), so there is no tree to verify -arch arm64 -elem f64 against.")
-		return false
-	}
 	root, err := repoRoot()
 	if err != nil {
 		die(err)

@@ -231,3 +231,46 @@ func TestShippedF64ShapesAuditIdentically(t *testing.T) {
 		})
 	}
 }
+
+// TestNEONF64ShapesAuditIdentically is TestNEONShapesAuditIdentically for the NEON
+// float64 kernels in internal/vec/gemm64_neon.go (#191): each shipped body's audit,
+// compiled in package vec, equals the -arch arm64 -elem f64 candidate's, field for
+// field. As at float32, the text differs only by the shim's package qualifier, so
+// the audit is what binds.
+func TestNEONF64ShapesAuditIdentically(t *testing.T) {
+	if err := setISA("arm64", "f64"); err != nil {
+		t.Fatalf("setISA(arm64, f64): %v", err)
+	}
+	t.Cleanup(func() { _ = setArch("amd64") })
+	root, err := repoRoot()
+	if err != nil {
+		t.Fatalf("locating the repo root: %v", err)
+	}
+	listing, err := compile("./internal/vec")
+	if err != nil {
+		t.Fatalf("compiling the shipped NEON float64 kernels: %v", err)
+	}
+	fns, err := spill.Parse(bytes.NewReader(listing))
+	if err != nil {
+		t.Fatalf("parsing the listing: %v", err)
+	}
+	for _, s := range shippedNEONF64 {
+		t.Run(s.Label(), func(t *testing.T) {
+			f, err := spill.Find(fns, s.Name())
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			loop, err := f.SteadyLoop()
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			got, err := audit(root, s, "")
+			if err != nil {
+				t.Fatalf("emitting and auditing the candidate: %v", err)
+			}
+			if d := reportDiff(spill.Audit(f, loop), got); d != "" {
+				t.Errorf("the emitted NEON float64 candidate is not the shipped kernel: %s", d)
+			}
+		})
+	}
+}

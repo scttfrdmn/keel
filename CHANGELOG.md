@@ -9,6 +9,14 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The NEON float64 microkernels: `KernelD8x4`, `KernelD4x8`, `KernelD3x12`** (#191), with spilling
+  references `KernelD8x6`/`KernelD8x8`/`KernelD4x16`. These are float32 NEON's shapes at half the
+  columns. They're emitted by `shapegen -arch arm64 -elem f64`, whose frontier is 3x12/2 at 4.111
+  insns/FMA, float32 NEON's own figure. Each is held to the emitter by audit
+  (`TestNEONF64ShapesAuditIdentically`), as float32's NEON kernels are. They're registered in
+  `vectorKernels64` behind `HasNEON`, tested against their scalar twins (all 6 on the arm64 dev host, a
+  planted accumulator bug goes red) and run through `block64`. Dispatch picks `3x12/neon` on an
+  FMA-bound host.
 - **The NEON float64 shim and its ceiling, `neonPeakD`** (#191). `internal/vec/vec_neon_f64.go` puts
   `vec_neon.go` on `Float64x2`: `Load128D` … `HSum128D`, with Max/Min built the same compare+select
   way. The `NEOND*` Block64 layer is registered in the float64 differential tests, so

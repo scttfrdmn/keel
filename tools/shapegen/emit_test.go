@@ -293,9 +293,9 @@ func TestF64RefusesWhatItCannotEmit(t *testing.T) {
 	if _, err := parseShape("4x7/1", "broadcast"); err == nil {
 		t.Error("NR=7 was accepted at arm64 f64, which is not a multiple of 2 lanes")
 	}
-	if runVerify() {
-		t.Error("-verify passed at arm64 f64, where no NEON float64 kernel ships")
-	}
+	// -verify at arm64 f64 binds against gemm64_neon.go now that the NEON float64
+	// kernels ship (#191); TestNEONF64ShapesAuditIdentically checks it field by
+	// field, so it is not repeated here.
 	if err := setISA("amd64", "f16"); err == nil {
 		t.Error("-elem f16 was accepted")
 	}

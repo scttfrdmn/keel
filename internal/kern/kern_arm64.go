@@ -90,9 +90,29 @@ func referenceTiles() []Kernel {
 	}
 }
 
-// vectorKernels64 is vectorKernels at float64. Empty until #191 ships the
-// float64 kernels, so Kernels64 falls back to the scalar shapes.
-func vectorKernels64() []Kernel64 { return nil }
+// vectorKernels64 is vectorKernels at float64 (#191): the float32 NEON shapes at
+// half the columns (two float64 lanes per V register). The audited counts are the
+// shipped bodies' own, which shapegen -verify -arch arm64 -elem f64 reproduces.
+func vectorKernels64() []Kernel64 {
+	if !vec.HasNEON() {
+		return nil
+	}
+	return []Kernel64{
+		{Name: NEON, MR: 8, NR: 4, Unroll: 1, Fn: vec.KernelD8x4, InsnsPerFMA: 94.0 / 16},
+		{Name: NEON, MR: 4, NR: 8, Unroll: 1, Fn: vec.KernelD4x8, InsnsPerFMA: 80.0 / 16},
+		{Name: NEON, MR: 3, NR: 12, Unroll: 2, Fn: vec.KernelD3x12, InsnsPerFMA: 148.0 / 36},
+	}
+}
 
-// referenceTiles64 is referenceTiles at float64.
-func referenceTiles64() []Kernel64 { return nil }
+// referenceTiles64 is referenceTiles at float64: the spilling twins of float32's
+// NEON references (8x12, 8x16, 4x32), measured as evidence, never shipped.
+func referenceTiles64() []Kernel64 {
+	if !vec.HasNEON() {
+		return nil
+	}
+	return []Kernel64{
+		{Name: NEON, MR: 8, NR: 6, Unroll: 1, Fn: vec.KernelD8x6},
+		{Name: NEON, MR: 8, NR: 8, Unroll: 1, Fn: vec.KernelD8x8},
+		{Name: NEON, MR: 4, NR: 16, Unroll: 1, Fn: vec.KernelD4x16},
+	}
+}
