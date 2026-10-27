@@ -1,0 +1,5 @@
+KernelP3x24Ctl: steady-state loop [144,348] 52 insns for 18 arith (2.89 per arith): 0 vector stack refs, 6 reg copies, 3 broadcasts, 1 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+KernelP3x24PB: steady-state loop [144,312] 43 insns for 18 arith (2.39 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+KernelP3x24NB: steady-state loop [216,376] 41 insns for 18 arith (2.28 per arith): 0 vector stack refs, 6 reg copies, 3 broadcasts, 1 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+KernelP3x24PBNB: steady-state loop [216,340] 32 insns for 18 arith (1.78 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+KernelP3x24FO: steady-state loop [276,368] 24 insns for 18 arith (1.33 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
