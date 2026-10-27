@@ -9,6 +9,12 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Graviton5's judged arm64 P2 is GREEN at both elements** (#191). On c9g.48xlarge (Neoverse-V3),
+  `KEEL_ARCH=arm64 scripts/gate-p2.sh` scored 22/0/0 at each element: float64 3x12 at 62.7% of peak,
+  float32 3x24 at 64.0% (floor 55%), FMA-bound, both inside their pre-registered bands. It took 12
+  minutes, about $1.7. The first launch stopped at a provisioning step P2 doesn't need. That exposed
+  #196: OpenBLAS 0.3.29 picks generic armv8sve on V3, while v0.3.33+ maps V3 to the Neoverse-V2 kernels.
+  Evidence is in `archive/p2-arm64-c9g/`.
 - **Graviton5 (c9g.48xlarge, Neoverse-V3) joins the judged class** (#191). It's added to
   `KEEL_EVIDENTIARY_SIZES` as the family-max non-metal size: 192 vCPU / 192 cores, one thread per core,
   equal to c9g.metal-48xl, read via `describe-instance-types` the same day. A c9g.4xlarge read-back gives
