@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The arm64 P2 go/no-go is GREEN on the judged Graviton fleet at both elements** (#191).
+  `KEEL_ARCH=arm64 scripts/gate-p2.sh` scored 25/0/0 at float64 and at float32 on c7g.16xlarge and
+  c8g.48xlarge (24m46s, about $4.3). Both hosts are FMA-bound. On Neoverse-V1 the best shipped shape
+  reaches 86.1% of peak at float64 (3x12) and 85.8% at float32 (3x24); on Neoverse-V2, 62.6% and 61.7%
+  (floor 55%). Every pre-registered band held. It's the float32 NEON kernels' first P2-style verdict.
+  Evidence is in `archive/p2-arm64/`. With the amd64 run, both float64 kernel families have passed
+  their go/no-go.
 - **gate-p2 gains an arm64 arm, `KEEL_ARCH=arm64`, at both elements** (#191, Scott's ruling). It's the
   same type-neutral go/no-go on NEON. The float64 arm is pre-registered before any NEON float64 kernel was
   measured. The float32 arm is a **new verdict on already-shipped kernels** that never had a P2 gate,
