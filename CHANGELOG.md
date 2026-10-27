@@ -9,6 +9,14 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The NEON float64 shim and its ceiling, `neonPeakD`** (#191). `internal/vec/vec_neon_f64.go` puts
+  `vec_neon.go` on `Float64x2`: `Load128D` … `HSum128D`, with Max/Min built the same compare+select
+  way. The `NEOND*` Block64 layer is registered in the float64 differential tests, so
+  `keel-backends64-exercised: scalar neon`, bit-exact. `neonPeakD` (16 chains, 2 lanes) is now in
+  `PeakKernels64()`. Its audit is neonPeak's: 35 insns for 16 VFMLA, 2.1875/FMA, nothing in memory.
+  Lab pre-check on orion (M4 Pro, `measured` task 41, dev tier, count 5): float64 63.21–63.66 GFLOP/s
+  against float32 `BenchmarkPeak/neon` 127.2–129.1, a ratio of 0.496 by median. No OpenBLAS
+  reference; the judged NEON hosts are Graviton.
 - **float64 microkernel dispatch, `activeKern64`** (#191). It uses float32's rule: `KEEL_FORCE` goes
   through `kernBackend`, now shared by both selections so they can't read it differently, then the
   shape for the host's class comes from `Preferred64`. On janus it picks `2x16/avx512` (issue-bound),

@@ -68,6 +68,52 @@ func vectorPeakKernels() []PeakKernel {
 	}}
 }
 
-// vectorPeakKernels64 has no NEON float64 ceiling yet: the NEON float64 shim is a
-// later #191 stage, so arm64 measures only the scalar float64 reference for now.
-func vectorPeakKernels64() []PeakKernel64 { return nil }
+// neonPeakD is neonPeak on Float64x2: ChainsNEON chains, accumulator as the
+// addend so each chain is one in-place VFMLA, built only from the float64 hot
+// wrappers (Broadcast128D, FMA128D, Add128D, HSum128D) that vec_diff64_test.go
+// binds to the scalar spec. Same register budget as neonPeak: 16 accumulators
+// plus x and y in V registers, no memory in the loop.
+func neonPeakD(iters int) float64 {
+	x := Broadcast128D(peakOneD())
+	y := Broadcast128D(peakOneD())
+	a0, a1, a2, a3 := Broadcast128D(1), Broadcast128D(2), Broadcast128D(3), Broadcast128D(4)
+	a4, a5, a6, a7 := Broadcast128D(5), Broadcast128D(6), Broadcast128D(7), Broadcast128D(8)
+	a8, a9, a10, a11 := Broadcast128D(9), Broadcast128D(10), Broadcast128D(11), Broadcast128D(12)
+	a12, a13, a14, a15 := Broadcast128D(13), Broadcast128D(14), Broadcast128D(15), Broadcast128D(16)
+	for i := 0; i < iters; i++ {
+		a0 = FMA128D(x, y, a0)
+		a1 = FMA128D(x, y, a1)
+		a2 = FMA128D(x, y, a2)
+		a3 = FMA128D(x, y, a3)
+		a4 = FMA128D(x, y, a4)
+		a5 = FMA128D(x, y, a5)
+		a6 = FMA128D(x, y, a6)
+		a7 = FMA128D(x, y, a7)
+		a8 = FMA128D(x, y, a8)
+		a9 = FMA128D(x, y, a9)
+		a10 = FMA128D(x, y, a10)
+		a11 = FMA128D(x, y, a11)
+		a12 = FMA128D(x, y, a12)
+		a13 = FMA128D(x, y, a13)
+		a14 = FMA128D(x, y, a14)
+		a15 = FMA128D(x, y, a15)
+	}
+	s := Add128D(Add128D(Add128D(Add128D(a0, a1), Add128D(a2, a3)), Add128D(Add128D(a4, a5), Add128D(a6, a7))), Add128D(Add128D(Add128D(a8, a9), Add128D(a10, a11)), Add128D(Add128D(a12, a13), Add128D(a14, a15))))
+	return HSum128D(s)
+}
+
+// vectorPeakKernels64 is the arm64 float64 half: the NEON float64 ceiling.
+// FlopsPerIter is chains x 2 lanes x 2 flops per FMA.
+func vectorPeakKernels64() []PeakKernel64 {
+	if !HasNEON() {
+		return nil
+	}
+	return []PeakKernel64{{
+		Name:         BackendNEON,
+		Chains:       ChainsNEON,
+		Lanes:        2,
+		FlopsPerIter: ChainsNEON * 2 * 2,
+		Fused:        true,
+		Run:          neonPeakD,
+	}}
+}
