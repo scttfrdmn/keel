@@ -60,3 +60,28 @@ own trap before measuring anything, because of a quoting bug in the driver.
 Why it matters: every arm64 P2 percentage divides by `neonPeak`/`neonPeakD`. If FO's rate is
 the true ceiling, the shipped NEON kernels are at about 46–49% of it, below the 55% floor.
 Nothing in the gate has changed. This is the open question, not a verdict.
+
+## Peak variants (afac2e0): the denominator, settled on V2/V3, open on V1
+
+`peakvariants-afac2e0-summary.txt`; predictions in `probe-prereg.md`. Each variant changes
+one property of `neonPeak`'s raw twin. **On V2 and V3 the cause is multiplicand-register
+reuse.** The 4x4 outer-product variants, whose 16 FMAs read 8 distinct multiplicand registers,
+reach FO's rate: x44 at 100.4% / 97.4% of FO and x44v at 99.6% / 98.8%. The float64 Dx44 reaches
+43.77 / 50.70 against half of FO, 43.86 / 51.65. Non-unit operands alone (vals) and FO's 3x6
+shape on a counter loop (x36) land between, at 84–89% of FO. Every FMA in `neonPeak` reads the
+same two registers, and in its raw twin only one, because CSE merges x and y when both are
+1.0. The pre-registered reading names this property the cause on these two hosts, and x44 the
+candidate corrected ceiling. By that ceiling, `BenchmarkPeak/neon` under-reads by 1.35× (V2,
+88.05/65.07) and 1.26× (V3, 100.6/79.67).
+
+**On V1 nothing moved.** All seven variants read 41.42 GFLOP/s, exactly 2.0 FMA/cycle, to four
+digits. FO and PBNB, which are kernel-shaped loops with pointer bookkeeping, read 78.2 and 76.0.
+By the pre-registered reading, on V1 the gap is not a property of the peak loop body, and both
+instruments are suspects there. Cause open.
+
+**Consequence, stated, not acted on.** The shipped NEON kernels sit at 46.0–49.7% of the x44
+ceiling on V2 and V3. That is under the 55% floor that their published P2 greens (62.6% and
+61.7% on V2, 62.7% and 64.0% on V3) cleared against `neonPeak`. Nine README rows divide by the V2
+`neonPeak` figure (61.87 GFLOP/s, 1T and that ×8). All of this was measured at the exploration
+tier on 4xlarge sizes. A corrected judged denominator does not exist yet, so no published
+figure has been changed here.

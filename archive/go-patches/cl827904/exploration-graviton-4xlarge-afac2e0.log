@@ -1,0 +1,885 @@
+== launch 04:51:22 rev afac2e0
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.16 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (849ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (295ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (597ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.5s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0ba1608c777dc9e0d
+  Public IP    3.231.22.227
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt3  c7g.4xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.28 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (827ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (294ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (599ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0fc242db816a2574a
+  Public IP    52.205.18.12
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt4  c8g.4xlarge  (Neoverse-V2, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (837ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (294ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (654ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0c61f971bf2eddfca
+  Public IP    100.62.72.131
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt5  c9g.4xlarge  (AWS Graviton5, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.4xlarge      100.62.72.131    on-demand  2h       2026-10-27T04:52:55Z
+  keel-gvt4            c8g.4xlarge      52.205.18.12     on-demand  2h       2026-10-27T04:52:26Z
+  keel-gvt3            c7g.4xlarge      3.231.22.227     on-demand  2h       2026-10-27T04:51:47Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== keel-gvt3 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd40
+Model name:                              Neoverse-V1
+ 04:54:11 up 2 min,  1 user,  load average: 0.22, 0.22, 0.09
+== keel-gvt4 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd4f
+Model name:                              Neoverse-V2
+ 04:54:15 up 1 min,  1 user,  load average: 0.58, 0.39, 0.16
+== keel-gvt5 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd84
+Model name:                              Neoverse-V3
+ 04:54:18 up 1 min,  1 user,  load average: 0.13, 0.05, 0.02
+keel-gvt3 r1 stock BenchmarkLimiterProbe/ctl/kc=512         	  581337	      2027 ns/op	        36.37 GFLOP/s
+keel-gvt3 r1 stock BenchmarkLimiterProbe/PB/kc=512          	  954582	      1249 ns/op	        59.05 GFLOP/s
+keel-gvt3 r1 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1236982	       969.6 ns/op	        76.04 GFLOP/s
+keel-gvt3 r1 stock BenchmarkLimiterProbe/FO/kc=512          	 1273000	       942.6 ns/op	        78.22 GFLOP/s
+keel-gvt3 r1 stock BenchmarkPeakVariants/raw16              	    5917	    202495 ns/op	        41.43 GFLOP/s
+keel-gvt3 r1 stock BenchmarkPeakVariants/vals               	    5916	    202499 ns/op	        41.43 GFLOP/s
+keel-gvt3 r1 stock BenchmarkPeakVariants/x44                	    5912	    202493 ns/op	        41.43 GFLOP/s
+keel-gvt3 r1 stock BenchmarkPeakVariants/x44v               	    5912	    202495 ns/op	        41.43 GFLOP/s
+keel-gvt3 r1 stock BenchmarkPeakVariants/x36                	    5241	    227811 ns/op	        41.43 GFLOP/s
+keel-gvt3 r1 stock BenchmarkPeakVariants/rawD16             	    5917	    202479 ns/op	        20.71 GFLOP/s
+keel-gvt3 r1 stock BenchmarkPeakVariants/Dx44               	    5917	    202520 ns/op	        20.71 GFLOP/s
+keel-gvt3 r1 bench BenchmarkPeak/neon         	    5821	    202528 ns/op	        41.42 GFLOP/s
+keel-gvt3 r1 base BenchmarkLimiterProbe/shim/kc=512         	  579170	      2032 ns/op	        36.29 GFLOP/s
+keel-gvt3 r1 base BenchmarkLimiterProbe/ctl/kc=512          	  594298	      2019 ns/op	        36.52 GFLOP/s
+keel-gvt3 r1 base BenchmarkLimiterProbe/PB/kc=512           	  958407	      1255 ns/op	        58.76 GFLOP/s
+keel-gvt3 r1 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r1 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  590790	      2018 ns/op	        18.27 GFLOP/s
+keel-gvt3 r1 cl BenchmarkLimiterProbe/shim/kc=512         	  746149	      1587 ns/op	        46.46 GFLOP/s
+keel-gvt3 r1 cl BenchmarkLimiterProbe/ctl/kc=512          	  747483	      1598 ns/op	        46.13 GFLOP/s
+keel-gvt3 r1 cl BenchmarkLimiterProbe/PB/kc=512           	  953270	      1266 ns/op	        58.25 GFLOP/s
+keel-gvt3 r1 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.15 GFLOP/s
+keel-gvt3 r1 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  746056	      1602 ns/op	        23.01 GFLOP/s
+keel-gvt3 r2 stock BenchmarkLimiterProbe/ctl/kc=512         	  580767	      2026 ns/op	        36.40 GFLOP/s
+keel-gvt3 r2 stock BenchmarkLimiterProbe/PB/kc=512          	  954054	      1253 ns/op	        58.82 GFLOP/s
+keel-gvt3 r2 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1237398	       969.6 ns/op	        76.04 GFLOP/s
+keel-gvt3 r2 stock BenchmarkLimiterProbe/FO/kc=512          	 1272999	       942.7 ns/op	        78.21 GFLOP/s
+keel-gvt3 r2 stock BenchmarkPeakVariants/raw16              	    5913	    202483 ns/op	        41.43 GFLOP/s
+keel-gvt3 r2 stock BenchmarkPeakVariants/vals               	    5912	    202482 ns/op	        41.43 GFLOP/s
+keel-gvt3 r2 stock BenchmarkPeakVariants/x44                	    5913	    202518 ns/op	        41.42 GFLOP/s
+keel-gvt3 r2 stock BenchmarkPeakVariants/x44v               	    5913	    202503 ns/op	        41.42 GFLOP/s
+keel-gvt3 r2 stock BenchmarkPeakVariants/x36                	    5254	    227816 ns/op	        41.42 GFLOP/s
+keel-gvt3 r2 stock BenchmarkPeakVariants/rawD16             	    5916	    202490 ns/op	        20.71 GFLOP/s
+keel-gvt3 r2 stock BenchmarkPeakVariants/Dx44               	    5917	    202511 ns/op	        20.71 GFLOP/s
+keel-gvt3 r2 bench BenchmarkPeak/neon         	    5828	    202529 ns/op	        41.42 GFLOP/s
+keel-gvt3 r2 cl BenchmarkLimiterProbe/shim/kc=512         	  744189	      1587 ns/op	        46.46 GFLOP/s
+keel-gvt3 r2 cl BenchmarkLimiterProbe/ctl/kc=512          	  747770	      1599 ns/op	        46.12 GFLOP/s
+keel-gvt3 r2 cl BenchmarkLimiterProbe/PB/kc=512           	  954296	      1261 ns/op	        58.47 GFLOP/s
+keel-gvt3 r2 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1007 ns/op	        73.18 GFLOP/s
+keel-gvt3 r2 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  745102	      1603 ns/op	        23.00 GFLOP/s
+keel-gvt3 r2 base BenchmarkLimiterProbe/shim/kc=512         	  579396	      2037 ns/op	        36.20 GFLOP/s
+keel-gvt3 r2 base BenchmarkLimiterProbe/ctl/kc=512          	  594088	      2011 ns/op	        36.66 GFLOP/s
+keel-gvt3 r2 base BenchmarkLimiterProbe/PB/kc=512           	  957835	      1251 ns/op	        58.93 GFLOP/s
+keel-gvt3 r2 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r2 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  590155	      2015 ns/op	        18.29 GFLOP/s
+keel-gvt3 r3 stock BenchmarkLimiterProbe/ctl/kc=512         	  585235	      2031 ns/op	        36.30 GFLOP/s
+keel-gvt3 r3 stock BenchmarkLimiterProbe/PB/kc=512          	  953814	      1253 ns/op	        58.84 GFLOP/s
+keel-gvt3 r3 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1237401	       969.7 ns/op	        76.03 GFLOP/s
+keel-gvt3 r3 stock BenchmarkLimiterProbe/FO/kc=512          	 1272418	       942.8 ns/op	        78.20 GFLOP/s
+keel-gvt3 r3 stock BenchmarkPeakVariants/raw16              	    5912	    202498 ns/op	        41.43 GFLOP/s
+keel-gvt3 r3 stock BenchmarkPeakVariants/vals               	    5918	    202478 ns/op	        41.43 GFLOP/s
+keel-gvt3 r3 stock BenchmarkPeakVariants/x44                	    5923	    202490 ns/op	        41.43 GFLOP/s
+keel-gvt3 r3 stock BenchmarkPeakVariants/x44v               	    5914	    202508 ns/op	        41.42 GFLOP/s
+keel-gvt3 r3 stock BenchmarkPeakVariants/x36                	    5259	    227804 ns/op	        41.43 GFLOP/s
+keel-gvt3 r3 stock BenchmarkPeakVariants/rawD16             	    5916	    202526 ns/op	        20.71 GFLOP/s
+keel-gvt3 r3 stock BenchmarkPeakVariants/Dx44               	    5913	    202501 ns/op	        20.71 GFLOP/s
+keel-gvt3 r3 bench BenchmarkPeak/neon         	    5832	    202532 ns/op	        41.42 GFLOP/s
+keel-gvt3 r3 base BenchmarkLimiterProbe/shim/kc=512         	  578968	      2043 ns/op	        36.09 GFLOP/s
+keel-gvt3 r3 base BenchmarkLimiterProbe/ctl/kc=512          	  594093	      2019 ns/op	        36.53 GFLOP/s
+keel-gvt3 r3 base BenchmarkLimiterProbe/PB/kc=512           	  958624	      1254 ns/op	        58.80 GFLOP/s
+keel-gvt3 r3 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.16 GFLOP/s
+keel-gvt3 r3 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  593634	      2017 ns/op	        18.28 GFLOP/s
+keel-gvt3 r3 cl BenchmarkLimiterProbe/shim/kc=512         	  740824	      1587 ns/op	        46.45 GFLOP/s
+keel-gvt3 r3 cl BenchmarkLimiterProbe/ctl/kc=512          	  741964	      1606 ns/op	        45.91 GFLOP/s
+keel-gvt3 r3 cl BenchmarkLimiterProbe/PB/kc=512           	  956230	      1254 ns/op	        58.82 GFLOP/s
+keel-gvt3 r3 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r3 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  748452	      1602 ns/op	        23.00 GFLOP/s
+keel-gvt3 r4 stock BenchmarkLimiterProbe/ctl/kc=512         	  581127	      2026 ns/op	        36.39 GFLOP/s
+keel-gvt3 r4 stock BenchmarkLimiterProbe/PB/kc=512          	  956937	      1254 ns/op	        58.80 GFLOP/s
+keel-gvt3 r4 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1237612	       970.3 ns/op	        75.98 GFLOP/s
+keel-gvt3 r4 stock BenchmarkLimiterProbe/FO/kc=512          	 1272698	       942.7 ns/op	        78.21 GFLOP/s
+keel-gvt3 r4 stock BenchmarkPeakVariants/raw16              	    5913	    202485 ns/op	        41.43 GFLOP/s
+keel-gvt3 r4 stock BenchmarkPeakVariants/vals               	    5906	    202507 ns/op	        41.42 GFLOP/s
+keel-gvt3 r4 stock BenchmarkPeakVariants/x44                	    5916	    202503 ns/op	        41.42 GFLOP/s
+keel-gvt3 r4 stock BenchmarkPeakVariants/x44v               	    5917	    202517 ns/op	        41.42 GFLOP/s
+keel-gvt3 r4 stock BenchmarkPeakVariants/x36                	    5259	    227783 ns/op	        41.43 GFLOP/s
+keel-gvt3 r4 stock BenchmarkPeakVariants/rawD16             	    5917	    202513 ns/op	        20.71 GFLOP/s
+keel-gvt3 r4 stock BenchmarkPeakVariants/Dx44               	    5917	    202507 ns/op	        20.71 GFLOP/s
+keel-gvt3 r4 bench BenchmarkPeak/neon         	    5829	    202528 ns/op	        41.42 GFLOP/s
+keel-gvt3 r4 cl BenchmarkLimiterProbe/shim/kc=512         	  737241	      1577 ns/op	        46.74 GFLOP/s
+keel-gvt3 r4 cl BenchmarkLimiterProbe/ctl/kc=512          	  745174	      1606 ns/op	        45.91 GFLOP/s
+keel-gvt3 r4 cl BenchmarkLimiterProbe/PB/kc=512           	  951720	      1262 ns/op	        58.41 GFLOP/s
+keel-gvt3 r4 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1007 ns/op	        73.18 GFLOP/s
+keel-gvt3 r4 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  746595	      1601 ns/op	        23.02 GFLOP/s
+keel-gvt3 r4 base BenchmarkLimiterProbe/shim/kc=512         	  579241	      2043 ns/op	        36.08 GFLOP/s
+keel-gvt3 r4 base BenchmarkLimiterProbe/ctl/kc=512          	  590815	      2018 ns/op	        36.53 GFLOP/s
+keel-gvt3 r4 base BenchmarkLimiterProbe/PB/kc=512           	  950498	      1254 ns/op	        58.78 GFLOP/s
+keel-gvt3 r4 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1007 ns/op	        73.19 GFLOP/s
+keel-gvt3 r4 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  591616	      2019 ns/op	        18.26 GFLOP/s
+keel-gvt3 r5 stock BenchmarkLimiterProbe/ctl/kc=512         	  581356	      2026 ns/op	        36.40 GFLOP/s
+keel-gvt3 r5 stock BenchmarkLimiterProbe/PB/kc=512          	  951776	      1251 ns/op	        58.95 GFLOP/s
+keel-gvt3 r5 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1236836	       970.3 ns/op	        75.99 GFLOP/s
+keel-gvt3 r5 stock BenchmarkLimiterProbe/FO/kc=512          	 1272752	       943.0 ns/op	        78.19 GFLOP/s
+keel-gvt3 r5 stock BenchmarkPeakVariants/raw16              	    5914	    202427 ns/op	        41.44 GFLOP/s
+keel-gvt3 r5 stock BenchmarkPeakVariants/vals               	    5917	    202498 ns/op	        41.43 GFLOP/s
+keel-gvt3 r5 stock BenchmarkPeakVariants/x44                	    5916	    202508 ns/op	        41.42 GFLOP/s
+keel-gvt3 r5 stock BenchmarkPeakVariants/x44v               	    5916	    202497 ns/op	        41.43 GFLOP/s
+keel-gvt3 r5 stock BenchmarkPeakVariants/x36                	    5260	    227814 ns/op	        41.42 GFLOP/s
+keel-gvt3 r5 stock BenchmarkPeakVariants/rawD16             	    5916	    202465 ns/op	        20.72 GFLOP/s
+keel-gvt3 r5 stock BenchmarkPeakVariants/Dx44               	    5914	    202508 ns/op	        20.71 GFLOP/s
+keel-gvt3 r5 bench BenchmarkPeak/neon         	    5830	    202531 ns/op	        41.42 GFLOP/s
+keel-gvt3 r5 base BenchmarkLimiterProbe/shim/kc=512         	  579853	      2043 ns/op	        36.09 GFLOP/s
+keel-gvt3 r5 base BenchmarkLimiterProbe/ctl/kc=512          	  592516	      2011 ns/op	        36.67 GFLOP/s
+keel-gvt3 r5 base BenchmarkLimiterProbe/PB/kc=512           	  956068	      1255 ns/op	        58.76 GFLOP/s
+keel-gvt3 r5 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r5 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  592652	      2016 ns/op	        18.29 GFLOP/s
+keel-gvt3 r5 cl BenchmarkLimiterProbe/shim/kc=512         	  742867	      1578 ns/op	        46.73 GFLOP/s
+keel-gvt3 r5 cl BenchmarkLimiterProbe/ctl/kc=512          	  743364	      1597 ns/op	        46.15 GFLOP/s
+keel-gvt3 r5 cl BenchmarkLimiterProbe/PB/kc=512           	  957252	      1252 ns/op	        58.87 GFLOP/s
+keel-gvt3 r5 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r5 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  747162	      1608 ns/op	        22.93 GFLOP/s
+keel-gvt3 r6 stock BenchmarkLimiterProbe/ctl/kc=512         	  581433	      2026 ns/op	        36.40 GFLOP/s
+keel-gvt3 r6 stock BenchmarkLimiterProbe/PB/kc=512          	  952754	      1253 ns/op	        58.85 GFLOP/s
+keel-gvt3 r6 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1237336	       969.5 ns/op	        76.05 GFLOP/s
+keel-gvt3 r6 stock BenchmarkLimiterProbe/FO/kc=512          	 1272852	       942.7 ns/op	        78.21 GFLOP/s
+keel-gvt3 r6 stock BenchmarkPeakVariants/raw16              	    5913	    202532 ns/op	        41.42 GFLOP/s
+keel-gvt3 r6 stock BenchmarkPeakVariants/vals               	    5917	    202490 ns/op	        41.43 GFLOP/s
+keel-gvt3 r6 stock BenchmarkPeakVariants/x44                	    5914	    202491 ns/op	        41.43 GFLOP/s
+keel-gvt3 r6 stock BenchmarkPeakVariants/x44v               	    5916	    202496 ns/op	        41.43 GFLOP/s
+keel-gvt3 r6 stock BenchmarkPeakVariants/x36                	    5258	    227800 ns/op	        41.43 GFLOP/s
+keel-gvt3 r6 stock BenchmarkPeakVariants/rawD16             	    5916	    202481 ns/op	        20.71 GFLOP/s
+keel-gvt3 r6 stock BenchmarkPeakVariants/Dx44               	    5917	    202515 ns/op	        20.71 GFLOP/s
+keel-gvt3 r6 bench BenchmarkPeak/neon         	    5829	    202517 ns/op	        41.42 GFLOP/s
+keel-gvt3 r6 cl BenchmarkLimiterProbe/shim/kc=512         	  739323	      1587 ns/op	        46.45 GFLOP/s
+keel-gvt3 r6 cl BenchmarkLimiterProbe/ctl/kc=512          	  747691	      1598 ns/op	        46.13 GFLOP/s
+keel-gvt3 r6 cl BenchmarkLimiterProbe/PB/kc=512           	  953460	      1266 ns/op	        58.25 GFLOP/s
+keel-gvt3 r6 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.15 GFLOP/s
+keel-gvt3 r6 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  745341	      1603 ns/op	        23.00 GFLOP/s
+keel-gvt3 r6 base BenchmarkLimiterProbe/shim/kc=512         	  579495	      2041 ns/op	        36.12 GFLOP/s
+keel-gvt3 r6 base BenchmarkLimiterProbe/ctl/kc=512          	  593292	      2013 ns/op	        36.62 GFLOP/s
+keel-gvt3 r6 base BenchmarkLimiterProbe/PB/kc=512           	  952728	      1252 ns/op	        58.87 GFLOP/s
+keel-gvt3 r6 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1007 ns/op	        73.18 GFLOP/s
+keel-gvt3 r6 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  593492	      2018 ns/op	        18.26 GFLOP/s
+keel-gvt3 r7 stock BenchmarkLimiterProbe/ctl/kc=512         	  582955	      2027 ns/op	        36.38 GFLOP/s
+keel-gvt3 r7 stock BenchmarkLimiterProbe/PB/kc=512          	  956014	      1250 ns/op	        58.97 GFLOP/s
+keel-gvt3 r7 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1237620	       969.6 ns/op	        76.04 GFLOP/s
+keel-gvt3 r7 stock BenchmarkLimiterProbe/FO/kc=512          	 1272776	       942.6 ns/op	        78.22 GFLOP/s
+keel-gvt3 r7 stock BenchmarkPeakVariants/raw16              	    5916	    202511 ns/op	        41.42 GFLOP/s
+keel-gvt3 r7 stock BenchmarkPeakVariants/vals               	    5918	    202527 ns/op	        41.42 GFLOP/s
+keel-gvt3 r7 stock BenchmarkPeakVariants/x44                	    5913	    202518 ns/op	        41.42 GFLOP/s
+keel-gvt3 r7 stock BenchmarkPeakVariants/x44v               	    5916	    202511 ns/op	        41.42 GFLOP/s
+keel-gvt3 r7 stock BenchmarkPeakVariants/x36                	    5253	    227825 ns/op	        41.42 GFLOP/s
+keel-gvt3 r7 stock BenchmarkPeakVariants/rawD16             	    5914	    202485 ns/op	        20.71 GFLOP/s
+keel-gvt3 r7 stock BenchmarkPeakVariants/Dx44               	    5916	    202494 ns/op	        20.71 GFLOP/s
+keel-gvt3 r7 bench BenchmarkPeak/neon         	    5822	    202509 ns/op	        41.42 GFLOP/s
+keel-gvt3 r7 base BenchmarkLimiterProbe/shim/kc=512         	  580098	      2038 ns/op	        36.18 GFLOP/s
+keel-gvt3 r7 base BenchmarkLimiterProbe/ctl/kc=512          	  593943	      2019 ns/op	        36.52 GFLOP/s
+keel-gvt3 r7 base BenchmarkLimiterProbe/PB/kc=512           	  951384	      1263 ns/op	        58.37 GFLOP/s
+keel-gvt3 r7 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r7 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  591584	      2021 ns/op	        18.24 GFLOP/s
+keel-gvt3 r7 cl BenchmarkLimiterProbe/shim/kc=512         	  736587	      1588 ns/op	        46.44 GFLOP/s
+keel-gvt3 r7 cl BenchmarkLimiterProbe/ctl/kc=512          	  742572	      1602 ns/op	        46.04 GFLOP/s
+keel-gvt3 r7 cl BenchmarkLimiterProbe/PB/kc=512           	  954448	      1255 ns/op	        58.74 GFLOP/s
+keel-gvt3 r7 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r7 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  746775	      1603 ns/op	        22.99 GFLOP/s
+keel-gvt3 r8 stock BenchmarkLimiterProbe/ctl/kc=512         	  582933	      2031 ns/op	        36.29 GFLOP/s
+keel-gvt3 r8 stock BenchmarkLimiterProbe/PB/kc=512          	  957736	      1250 ns/op	        58.97 GFLOP/s
+keel-gvt3 r8 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1236970	       969.5 ns/op	        76.05 GFLOP/s
+keel-gvt3 r8 stock BenchmarkLimiterProbe/FO/kc=512          	 1272294	       942.8 ns/op	        78.20 GFLOP/s
+keel-gvt3 r8 stock BenchmarkPeakVariants/raw16              	    5914	    202496 ns/op	        41.43 GFLOP/s
+keel-gvt3 r8 stock BenchmarkPeakVariants/vals               	    5908	    202478 ns/op	        41.43 GFLOP/s
+keel-gvt3 r8 stock BenchmarkPeakVariants/x44                	    5934	    202518 ns/op	        41.42 GFLOP/s
+keel-gvt3 r8 stock BenchmarkPeakVariants/x44v               	    5917	    202520 ns/op	        41.42 GFLOP/s
+keel-gvt3 r8 stock BenchmarkPeakVariants/x36                	    5259	    227831 ns/op	        41.42 GFLOP/s
+keel-gvt3 r8 stock BenchmarkPeakVariants/rawD16             	    5917	    202489 ns/op	        20.71 GFLOP/s
+keel-gvt3 r8 stock BenchmarkPeakVariants/Dx44               	    5917	    202501 ns/op	        20.71 GFLOP/s
+keel-gvt3 r8 bench BenchmarkPeak/neon         	    5828	    202518 ns/op	        41.42 GFLOP/s
+keel-gvt3 r8 cl BenchmarkLimiterProbe/shim/kc=512         	  737350	      1587 ns/op	        46.46 GFLOP/s
+keel-gvt3 r8 cl BenchmarkLimiterProbe/ctl/kc=512          	  745926	      1602 ns/op	        46.03 GFLOP/s
+keel-gvt3 r8 cl BenchmarkLimiterProbe/PB/kc=512           	  957951	      1251 ns/op	        58.94 GFLOP/s
+keel-gvt3 r8 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.18 GFLOP/s
+keel-gvt3 r8 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  736130	      1603 ns/op	        23.00 GFLOP/s
+keel-gvt3 r8 base BenchmarkLimiterProbe/shim/kc=512         	  580514	      2038 ns/op	        36.17 GFLOP/s
+keel-gvt3 r8 base BenchmarkLimiterProbe/ctl/kc=512          	  594354	      2019 ns/op	        36.52 GFLOP/s
+keel-gvt3 r8 base BenchmarkLimiterProbe/PB/kc=512           	  947775	      1256 ns/op	        58.70 GFLOP/s
+keel-gvt3 r8 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1007 ns/op	        73.18 GFLOP/s
+keel-gvt3 r8 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  592401	      2016 ns/op	        18.28 GFLOP/s
+keel-gvt3 r9 stock BenchmarkLimiterProbe/ctl/kc=512         	  584490	      2026 ns/op	        36.39 GFLOP/s
+keel-gvt3 r9 stock BenchmarkLimiterProbe/PB/kc=512          	  962086	      1257 ns/op	        58.67 GFLOP/s
+keel-gvt3 r9 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1237645	       969.6 ns/op	        76.04 GFLOP/s
+keel-gvt3 r9 stock BenchmarkLimiterProbe/FO/kc=512          	 1272854	       942.7 ns/op	        78.21 GFLOP/s
+keel-gvt3 r9 stock BenchmarkPeakVariants/raw16              	    5912	    202481 ns/op	        41.43 GFLOP/s
+keel-gvt3 r9 stock BenchmarkPeakVariants/vals               	    5913	    202489 ns/op	        41.43 GFLOP/s
+keel-gvt3 r9 stock BenchmarkPeakVariants/x44                	    5918	    202490 ns/op	        41.43 GFLOP/s
+keel-gvt3 r9 stock BenchmarkPeakVariants/x44v               	    5919	    202531 ns/op	        41.42 GFLOP/s
+keel-gvt3 r9 stock BenchmarkPeakVariants/x36                	    5263	    227835 ns/op	        41.42 GFLOP/s
+keel-gvt3 r9 stock BenchmarkPeakVariants/rawD16             	    5906	    202471 ns/op	        20.72 GFLOP/s
+keel-gvt3 r9 stock BenchmarkPeakVariants/Dx44               	    5918	    202507 ns/op	        20.71 GFLOP/s
+keel-gvt3 r9 bench BenchmarkPeak/neon         	    5829	    202505 ns/op	        41.42 GFLOP/s
+keel-gvt3 r9 base BenchmarkLimiterProbe/shim/kc=512         	  580696	      2031 ns/op	        36.29 GFLOP/s
+keel-gvt3 r9 base BenchmarkLimiterProbe/ctl/kc=512          	  595477	      2011 ns/op	        36.67 GFLOP/s
+keel-gvt3 r9 base BenchmarkLimiterProbe/PB/kc=512           	  950629	      1257 ns/op	        58.66 GFLOP/s
+keel-gvt3 r9 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r9 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  591854	      2015 ns/op	        18.30 GFLOP/s
+keel-gvt3 r9 cl BenchmarkLimiterProbe/shim/kc=512         	  740662	      1584 ns/op	        46.54 GFLOP/s
+keel-gvt3 r9 cl BenchmarkLimiterProbe/ctl/kc=512          	  744519	      1602 ns/op	        46.02 GFLOP/s
+keel-gvt3 r9 cl BenchmarkLimiterProbe/PB/kc=512           	  952414	      1257 ns/op	        58.65 GFLOP/s
+keel-gvt3 r9 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.18 GFLOP/s
+keel-gvt3 r9 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  744676	      1602 ns/op	        23.02 GFLOP/s
+keel-gvt3 r10 stock BenchmarkLimiterProbe/ctl/kc=512         	  582657	      2024 ns/op	        36.42 GFLOP/s
+keel-gvt3 r10 stock BenchmarkLimiterProbe/PB/kc=512          	  954493	      1255 ns/op	        58.77 GFLOP/s
+keel-gvt3 r10 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1236901	       969.5 ns/op	        76.05 GFLOP/s
+keel-gvt3 r10 stock BenchmarkLimiterProbe/FO/kc=512          	 1273042	       942.8 ns/op	        78.21 GFLOP/s
+keel-gvt3 r10 stock BenchmarkPeakVariants/raw16              	    5912	    202511 ns/op	        41.42 GFLOP/s
+keel-gvt3 r10 stock BenchmarkPeakVariants/vals               	    5917	    202512 ns/op	        41.42 GFLOP/s
+keel-gvt3 r10 stock BenchmarkPeakVariants/x44                	    5907	    202477 ns/op	        41.43 GFLOP/s
+keel-gvt3 r10 stock BenchmarkPeakVariants/x44v               	    5916	    202481 ns/op	        41.43 GFLOP/s
+keel-gvt3 r10 stock BenchmarkPeakVariants/x36                	    5260	    227819 ns/op	        41.42 GFLOP/s
+keel-gvt3 r10 stock BenchmarkPeakVariants/rawD16             	    5918	    202500 ns/op	        20.71 GFLOP/s
+keel-gvt3 r10 stock BenchmarkPeakVariants/Dx44               	    5914	    202488 ns/op	        20.71 GFLOP/s
+keel-gvt3 r10 bench BenchmarkPeak/neon         	    5828	    202505 ns/op	        41.42 GFLOP/s
+keel-gvt3 r10 cl BenchmarkLimiterProbe/shim/kc=512         	  743522	      1585 ns/op	        46.52 GFLOP/s
+keel-gvt3 r10 cl BenchmarkLimiterProbe/ctl/kc=512          	  746121	      1598 ns/op	        46.13 GFLOP/s
+keel-gvt3 r10 cl BenchmarkLimiterProbe/PB/kc=512           	  954628	      1251 ns/op	        58.95 GFLOP/s
+keel-gvt3 r10 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.17 GFLOP/s
+keel-gvt3 r10 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  746557	      1599 ns/op	        23.05 GFLOP/s
+keel-gvt3 r10 base BenchmarkLimiterProbe/shim/kc=512         	  579423	      2043 ns/op	        36.08 GFLOP/s
+keel-gvt3 r10 base BenchmarkLimiterProbe/ctl/kc=512          	  593088	      2018 ns/op	        36.53 GFLOP/s
+keel-gvt3 r10 base BenchmarkLimiterProbe/PB/kc=512           	  956414	      1254 ns/op	        58.81 GFLOP/s
+keel-gvt3 r10 base BenchmarkLimiterProbe/PBNB/kc=512         	 1000000	      1008 ns/op	        73.16 GFLOP/s
+keel-gvt3 r10 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  593432	      2017 ns/op	        18.28 GFLOP/s
+keel-gvt4 r1 stock BenchmarkLimiterProbe/ctl/kc=512         	  664897	      1775 ns/op	        41.55 GFLOP/s
+keel-gvt4 r1 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r1 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1341145	       894.8 ns/op	        82.39 GFLOP/s
+keel-gvt4 r1 stock BenchmarkLimiterProbe/FO/kc=512          	 1427588	       840.6 ns/op	        87.71 GFLOP/s
+keel-gvt4 r1 stock BenchmarkPeakVariants/raw16              	    9495	    127210 ns/op	        65.94 GFLOP/s
+keel-gvt4 r1 stock BenchmarkPeakVariants/vals               	   10000	    109074 ns/op	        76.91 GFLOP/s
+keel-gvt4 r1 stock BenchmarkPeakVariants/x44                	   12588	     95155 ns/op	        88.16 GFLOP/s
+keel-gvt4 r1 stock BenchmarkPeakVariants/x44v               	   12508	     95810 ns/op	        87.55 GFLOP/s
+keel-gvt4 r1 stock BenchmarkPeakVariants/x36                	    9453	    128174 ns/op	        73.63 GFLOP/s
+keel-gvt4 r1 stock BenchmarkPeakVariants/rawD16             	    9178	    121392 ns/op	        34.55 GFLOP/s
+keel-gvt4 r1 stock BenchmarkPeakVariants/Dx44               	   12524	     95760 ns/op	        43.80 GFLOP/s
+keel-gvt4 r1 bench BenchmarkPeak/neon         	    8504	    129409 ns/op	        64.82 GFLOP/s
+keel-gvt4 r1 base BenchmarkLimiterProbe/shim/kc=512         	  650030	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r1 base BenchmarkLimiterProbe/ctl/kc=512          	  676362	      1774 ns/op	        41.55 GFLOP/s
+keel-gvt4 r1 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r1 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289919	       930.3 ns/op	        79.25 GFLOP/s
+keel-gvt4 r1 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  673915	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r1 cl BenchmarkLimiterProbe/shim/kc=512         	  823908	      1432 ns/op	        51.48 GFLOP/s
+keel-gvt4 r1 cl BenchmarkLimiterProbe/ctl/kc=512          	  921860	      1300 ns/op	        56.70 GFLOP/s
+keel-gvt4 r1 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1119 ns/op	        65.91 GFLOP/s
+keel-gvt4 r1 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1289974	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r1 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  919671	      1303 ns/op	        28.29 GFLOP/s
+keel-gvt4 r2 stock BenchmarkLimiterProbe/ctl/kc=512         	  665824	      1776 ns/op	        41.52 GFLOP/s
+keel-gvt4 r2 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1118 ns/op	        65.92 GFLOP/s
+keel-gvt4 r2 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1340971	       894.7 ns/op	        82.40 GFLOP/s
+keel-gvt4 r2 stock BenchmarkLimiterProbe/FO/kc=512          	 1427486	       840.6 ns/op	        87.71 GFLOP/s
+keel-gvt4 r2 stock BenchmarkPeakVariants/raw16              	   10000	    118809 ns/op	        70.61 GFLOP/s
+keel-gvt4 r2 stock BenchmarkPeakVariants/vals               	   10000	    107629 ns/op	        77.94 GFLOP/s
+keel-gvt4 r2 stock BenchmarkPeakVariants/x44                	   12600	     95253 ns/op	        88.07 GFLOP/s
+keel-gvt4 r2 stock BenchmarkPeakVariants/x44v               	   12484	     95940 ns/op	        87.44 GFLOP/s
+keel-gvt4 r2 stock BenchmarkPeakVariants/x36                	    9139	    128072 ns/op	        73.69 GFLOP/s
+keel-gvt4 r2 stock BenchmarkPeakVariants/rawD16             	    9444	    122060 ns/op	        34.36 GFLOP/s
+keel-gvt4 r2 stock BenchmarkPeakVariants/Dx44               	   12530	     95737 ns/op	        43.81 GFLOP/s
+keel-gvt4 r2 bench BenchmarkPeak/neon         	    9505	    128491 ns/op	        65.29 GFLOP/s
+keel-gvt4 r2 cl BenchmarkLimiterProbe/shim/kc=512         	  823711	      1433 ns/op	        51.45 GFLOP/s
+keel-gvt4 r2 cl BenchmarkLimiterProbe/ctl/kc=512          	  920967	      1303 ns/op	        56.60 GFLOP/s
+keel-gvt4 r2 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1117 ns/op	        65.99 GFLOP/s
+keel-gvt4 r2 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1289938	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r2 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  919578	      1303 ns/op	        28.28 GFLOP/s
+keel-gvt4 r2 base BenchmarkLimiterProbe/shim/kc=512         	  649917	      1822 ns/op	        40.47 GFLOP/s
+keel-gvt4 r2 base BenchmarkLimiterProbe/ctl/kc=512          	  676281	      1774 ns/op	        41.55 GFLOP/s
+keel-gvt4 r2 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.92 GFLOP/s
+keel-gvt4 r2 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289859	       930.4 ns/op	        79.25 GFLOP/s
+keel-gvt4 r2 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  673734	      1777 ns/op	        20.74 GFLOP/s
+keel-gvt4 r3 stock BenchmarkLimiterProbe/ctl/kc=512         	  665204	      1775 ns/op	        41.54 GFLOP/s
+keel-gvt4 r3 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r3 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1340968	       894.7 ns/op	        82.40 GFLOP/s
+keel-gvt4 r3 stock BenchmarkLimiterProbe/FO/kc=512          	 1427491	       840.6 ns/op	        87.71 GFLOP/s
+keel-gvt4 r3 stock BenchmarkPeakVariants/raw16              	   10000	    117813 ns/op	        71.20 GFLOP/s
+keel-gvt4 r3 stock BenchmarkPeakVariants/vals               	   10000	    106984 ns/op	        78.41 GFLOP/s
+keel-gvt4 r3 stock BenchmarkPeakVariants/x44                	   12590	     95326 ns/op	        88.00 GFLOP/s
+keel-gvt4 r3 stock BenchmarkPeakVariants/x44v               	   12504	     95908 ns/op	        87.47 GFLOP/s
+keel-gvt4 r3 stock BenchmarkPeakVariants/x36                	    9388	    128243 ns/op	        73.59 GFLOP/s
+keel-gvt4 r3 stock BenchmarkPeakVariants/rawD16             	    8923	    130240 ns/op	        32.20 GFLOP/s
+keel-gvt4 r3 stock BenchmarkPeakVariants/Dx44               	   12356	     96740 ns/op	        43.36 GFLOP/s
+keel-gvt4 r3 bench BenchmarkPeak/neon         	    9320	    128471 ns/op	        65.30 GFLOP/s
+keel-gvt4 r3 base BenchmarkLimiterProbe/shim/kc=512         	  649804	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r3 base BenchmarkLimiterProbe/ctl/kc=512          	  676095	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r3 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r3 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289790	       930.4 ns/op	        79.24 GFLOP/s
+keel-gvt4 r3 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  674328	      1778 ns/op	        20.74 GFLOP/s
+keel-gvt4 r3 cl BenchmarkLimiterProbe/shim/kc=512         	  824042	      1433 ns/op	        51.45 GFLOP/s
+keel-gvt4 r3 cl BenchmarkLimiterProbe/ctl/kc=512          	  922210	      1300 ns/op	        56.70 GFLOP/s
+keel-gvt4 r3 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.95 GFLOP/s
+keel-gvt4 r3 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1290103	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r3 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  920270	      1303 ns/op	        28.28 GFLOP/s
+keel-gvt4 r4 stock BenchmarkLimiterProbe/ctl/kc=512         	  666145	      1776 ns/op	        41.52 GFLOP/s
+keel-gvt4 r4 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1119 ns/op	        65.91 GFLOP/s
+keel-gvt4 r4 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1341110	       894.7 ns/op	        82.40 GFLOP/s
+keel-gvt4 r4 stock BenchmarkLimiterProbe/FO/kc=512          	 1427677	       840.5 ns/op	        87.72 GFLOP/s
+keel-gvt4 r4 stock BenchmarkPeakVariants/raw16              	   10000	    117321 ns/op	        71.50 GFLOP/s
+keel-gvt4 r4 stock BenchmarkPeakVariants/vals               	   10000	    108015 ns/op	        77.66 GFLOP/s
+keel-gvt4 r4 stock BenchmarkPeakVariants/x44                	   12584	     95217 ns/op	        88.10 GFLOP/s
+keel-gvt4 r4 stock BenchmarkPeakVariants/x44v               	   12507	     95979 ns/op	        87.40 GFLOP/s
+keel-gvt4 r4 stock BenchmarkPeakVariants/x36                	    9414	    128024 ns/op	        73.71 GFLOP/s
+keel-gvt4 r4 stock BenchmarkPeakVariants/rawD16             	    8904	    130307 ns/op	        32.19 GFLOP/s
+keel-gvt4 r4 stock BenchmarkPeakVariants/Dx44               	   12400	     95841 ns/op	        43.76 GFLOP/s
+keel-gvt4 r4 bench BenchmarkPeak/neon         	    8925	    128643 ns/op	        65.21 GFLOP/s
+keel-gvt4 r4 cl BenchmarkLimiterProbe/shim/kc=512         	  824546	      1433 ns/op	        51.46 GFLOP/s
+keel-gvt4 r4 cl BenchmarkLimiterProbe/ctl/kc=512          	  920676	      1300 ns/op	        56.71 GFLOP/s
+keel-gvt4 r4 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r4 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1289947	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r4 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  919791	      1303 ns/op	        28.30 GFLOP/s
+keel-gvt4 r4 base BenchmarkLimiterProbe/shim/kc=512         	  649455	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r4 base BenchmarkLimiterProbe/ctl/kc=512          	  676371	      1774 ns/op	        41.55 GFLOP/s
+keel-gvt4 r4 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.95 GFLOP/s
+keel-gvt4 r4 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289833	       930.4 ns/op	        79.25 GFLOP/s
+keel-gvt4 r4 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  673076	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r5 stock BenchmarkLimiterProbe/ctl/kc=512         	  666030	      1775 ns/op	        41.55 GFLOP/s
+keel-gvt4 r5 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r5 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1340967	       894.8 ns/op	        82.40 GFLOP/s
+keel-gvt4 r5 stock BenchmarkLimiterProbe/FO/kc=512          	 1427502	       840.7 ns/op	        87.70 GFLOP/s
+keel-gvt4 r5 stock BenchmarkPeakVariants/raw16              	   10000	    117439 ns/op	        71.43 GFLOP/s
+keel-gvt4 r5 stock BenchmarkPeakVariants/vals               	   10000	    107887 ns/op	        77.75 GFLOP/s
+keel-gvt4 r5 stock BenchmarkPeakVariants/x44                	   12600	     95315 ns/op	        88.01 GFLOP/s
+keel-gvt4 r5 stock BenchmarkPeakVariants/x44v               	   12471	     96021 ns/op	        87.36 GFLOP/s
+keel-gvt4 r5 stock BenchmarkPeakVariants/x36                	    9170	    128030 ns/op	        73.71 GFLOP/s
+keel-gvt4 r5 stock BenchmarkPeakVariants/rawD16             	    9571	    125374 ns/op	        33.45 GFLOP/s
+keel-gvt4 r5 stock BenchmarkPeakVariants/Dx44               	   12524	     95800 ns/op	        43.78 GFLOP/s
+keel-gvt4 r5 bench BenchmarkPeak/neon         	    9477	    129248 ns/op	        64.90 GFLOP/s
+keel-gvt4 r5 base BenchmarkLimiterProbe/shim/kc=512         	  649802	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r5 base BenchmarkLimiterProbe/ctl/kc=512          	  676306	      1774 ns/op	        41.56 GFLOP/s
+keel-gvt4 r5 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r5 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289841	       930.3 ns/op	        79.25 GFLOP/s
+keel-gvt4 r5 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  674304	      1776 ns/op	        20.75 GFLOP/s
+keel-gvt4 r5 cl BenchmarkLimiterProbe/shim/kc=512         	  824737	      1433 ns/op	        51.46 GFLOP/s
+keel-gvt4 r5 cl BenchmarkLimiterProbe/ctl/kc=512          	  922674	      1303 ns/op	        56.60 GFLOP/s
+keel-gvt4 r5 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r5 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1289940	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r5 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  915992	      1303 ns/op	        28.29 GFLOP/s
+keel-gvt4 r6 stock BenchmarkLimiterProbe/ctl/kc=512         	  666586	      1777 ns/op	        41.49 GFLOP/s
+keel-gvt4 r6 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1119 ns/op	        65.91 GFLOP/s
+keel-gvt4 r6 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1341031	       894.8 ns/op	        82.40 GFLOP/s
+keel-gvt4 r6 stock BenchmarkLimiterProbe/FO/kc=512          	 1427256	       840.6 ns/op	        87.71 GFLOP/s
+keel-gvt4 r6 stock BenchmarkPeakVariants/raw16              	   10000	    117371 ns/op	        71.47 GFLOP/s
+keel-gvt4 r6 stock BenchmarkPeakVariants/vals               	   10000	    108270 ns/op	        77.48 GFLOP/s
+keel-gvt4 r6 stock BenchmarkPeakVariants/x44                	   12592	     95295 ns/op	        88.03 GFLOP/s
+keel-gvt4 r6 stock BenchmarkPeakVariants/x44v               	   12499	     96077 ns/op	        87.31 GFLOP/s
+keel-gvt4 r6 stock BenchmarkPeakVariants/x36                	    9352	    128531 ns/op	        73.42 GFLOP/s
+keel-gvt4 r6 stock BenchmarkPeakVariants/rawD16             	    9723	    119684 ns/op	        35.04 GFLOP/s
+keel-gvt4 r6 stock BenchmarkPeakVariants/Dx44               	   12514	     95721 ns/op	        43.82 GFLOP/s
+keel-gvt4 r6 bench BenchmarkPeak/neon         	    9106	    128551 ns/op	        65.25 GFLOP/s
+keel-gvt4 r6 cl BenchmarkLimiterProbe/shim/kc=512         	  824155	      1433 ns/op	        51.44 GFLOP/s
+keel-gvt4 r6 cl BenchmarkLimiterProbe/ctl/kc=512          	  921421	      1300 ns/op	        56.69 GFLOP/s
+keel-gvt4 r6 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.95 GFLOP/s
+keel-gvt4 r6 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1289996	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r6 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  920004	      1303 ns/op	        28.29 GFLOP/s
+keel-gvt4 r6 base BenchmarkLimiterProbe/shim/kc=512         	  649497	      1822 ns/op	        40.48 GFLOP/s
+keel-gvt4 r6 base BenchmarkLimiterProbe/ctl/kc=512          	  675756	      1774 ns/op	        41.56 GFLOP/s
+keel-gvt4 r6 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.95 GFLOP/s
+keel-gvt4 r6 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289917	       930.4 ns/op	        79.24 GFLOP/s
+keel-gvt4 r6 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  674790	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt4 r7 stock BenchmarkLimiterProbe/ctl/kc=512         	  665972	      1775 ns/op	        41.54 GFLOP/s
+keel-gvt4 r7 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1118 ns/op	        65.92 GFLOP/s
+keel-gvt4 r7 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1340937	       894.8 ns/op	        82.40 GFLOP/s
+keel-gvt4 r7 stock BenchmarkLimiterProbe/FO/kc=512          	 1427454	       840.6 ns/op	        87.71 GFLOP/s
+keel-gvt4 r7 stock BenchmarkPeakVariants/raw16              	   10000	    118118 ns/op	        71.02 GFLOP/s
+keel-gvt4 r7 stock BenchmarkPeakVariants/vals               	   10000	    108248 ns/op	        77.49 GFLOP/s
+keel-gvt4 r7 stock BenchmarkPeakVariants/x44                	   12597	     96480 ns/op	        86.95 GFLOP/s
+keel-gvt4 r7 stock BenchmarkPeakVariants/x44v               	   12468	     96081 ns/op	        87.31 GFLOP/s
+keel-gvt4 r7 stock BenchmarkPeakVariants/x36                	    9402	    128288 ns/op	        73.56 GFLOP/s
+keel-gvt4 r7 stock BenchmarkPeakVariants/rawD16             	    8545	    130983 ns/op	        32.02 GFLOP/s
+keel-gvt4 r7 stock BenchmarkPeakVariants/Dx44               	   12522	     95795 ns/op	        43.78 GFLOP/s
+keel-gvt4 r7 bench BenchmarkPeak/neon         	    8959	    129450 ns/op	        64.80 GFLOP/s
+keel-gvt4 r7 base BenchmarkLimiterProbe/shim/kc=512         	  649338	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r7 base BenchmarkLimiterProbe/ctl/kc=512          	  676407	      1774 ns/op	        41.55 GFLOP/s
+keel-gvt4 r7 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r7 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289926	       930.4 ns/op	        79.25 GFLOP/s
+keel-gvt4 r7 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  674179	      1776 ns/op	        20.75 GFLOP/s
+keel-gvt4 r7 cl BenchmarkLimiterProbe/shim/kc=512         	  823377	      1433 ns/op	        51.44 GFLOP/s
+keel-gvt4 r7 cl BenchmarkLimiterProbe/ctl/kc=512          	  920866	      1301 ns/op	        56.69 GFLOP/s
+keel-gvt4 r7 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r7 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1289985	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r7 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  920868	      1303 ns/op	        28.29 GFLOP/s
+keel-gvt4 r8 stock BenchmarkLimiterProbe/ctl/kc=512         	  665601	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r8 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1119 ns/op	        65.92 GFLOP/s
+keel-gvt4 r8 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1340960	       894.8 ns/op	        82.39 GFLOP/s
+keel-gvt4 r8 stock BenchmarkLimiterProbe/FO/kc=512          	 1427607	       840.6 ns/op	        87.71 GFLOP/s
+keel-gvt4 r8 stock BenchmarkPeakVariants/raw16              	   10000	    116497 ns/op	        72.01 GFLOP/s
+keel-gvt4 r8 stock BenchmarkPeakVariants/vals               	   10000	    107581 ns/op	        77.98 GFLOP/s
+keel-gvt4 r8 stock BenchmarkPeakVariants/x44                	   12590	     95328 ns/op	        88.00 GFLOP/s
+keel-gvt4 r8 stock BenchmarkPeakVariants/x44v               	   12514	     96017 ns/op	        87.37 GFLOP/s
+keel-gvt4 r8 stock BenchmarkPeakVariants/x36                	    9440	    128271 ns/op	        73.57 GFLOP/s
+keel-gvt4 r8 stock BenchmarkPeakVariants/rawD16             	    9357	    130594 ns/op	        32.12 GFLOP/s
+keel-gvt4 r8 stock BenchmarkPeakVariants/Dx44               	   12394	     96302 ns/op	        43.55 GFLOP/s
+keel-gvt4 r8 bench BenchmarkPeak/neon         	    9528	    129199 ns/op	        64.93 GFLOP/s
+keel-gvt4 r8 cl BenchmarkLimiterProbe/shim/kc=512         	  823749	      1433 ns/op	        51.45 GFLOP/s
+keel-gvt4 r8 cl BenchmarkLimiterProbe/ctl/kc=512          	  920584	      1303 ns/op	        56.59 GFLOP/s
+keel-gvt4 r8 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r8 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1289979	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r8 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  920128	      1303 ns/op	        28.29 GFLOP/s
+keel-gvt4 r8 base BenchmarkLimiterProbe/shim/kc=512         	  649029	      1822 ns/op	        40.48 GFLOP/s
+keel-gvt4 r8 base BenchmarkLimiterProbe/ctl/kc=512          	  675162	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r8 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1117 ns/op	        65.98 GFLOP/s
+keel-gvt4 r8 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289828	       930.4 ns/op	        79.25 GFLOP/s
+keel-gvt4 r8 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  674287	      1778 ns/op	        20.74 GFLOP/s
+keel-gvt4 r9 stock BenchmarkLimiterProbe/ctl/kc=512         	  665870	      1778 ns/op	        41.48 GFLOP/s
+keel-gvt4 r9 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1119 ns/op	        65.89 GFLOP/s
+keel-gvt4 r9 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1341166	       894.8 ns/op	        82.40 GFLOP/s
+keel-gvt4 r9 stock BenchmarkLimiterProbe/FO/kc=512          	 1427630	       840.6 ns/op	        87.71 GFLOP/s
+keel-gvt4 r9 stock BenchmarkPeakVariants/raw16              	    9351	    117825 ns/op	        71.20 GFLOP/s
+keel-gvt4 r9 stock BenchmarkPeakVariants/vals               	   10000	    107216 ns/op	        78.24 GFLOP/s
+keel-gvt4 r9 stock BenchmarkPeakVariants/x44                	   12585	     95235 ns/op	        88.08 GFLOP/s
+keel-gvt4 r9 stock BenchmarkPeakVariants/x44v               	   12516	     95993 ns/op	        87.39 GFLOP/s
+keel-gvt4 r9 stock BenchmarkPeakVariants/x36                	    9326	    127932 ns/op	        73.77 GFLOP/s
+keel-gvt4 r9 stock BenchmarkPeakVariants/rawD16             	    9357	    118528 ns/op	        35.39 GFLOP/s
+keel-gvt4 r9 stock BenchmarkPeakVariants/Dx44               	   12534	     95873 ns/op	        43.75 GFLOP/s
+keel-gvt4 r9 bench BenchmarkPeak/neon         	    8368	    129422 ns/op	        64.82 GFLOP/s
+keel-gvt4 r9 base BenchmarkLimiterProbe/shim/kc=512         	  647953	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r9 base BenchmarkLimiterProbe/ctl/kc=512          	  675325	      1775 ns/op	        41.54 GFLOP/s
+keel-gvt4 r9 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r9 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289883	       930.3 ns/op	        79.25 GFLOP/s
+keel-gvt4 r9 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  674427	      1776 ns/op	        20.75 GFLOP/s
+keel-gvt4 r9 cl BenchmarkLimiterProbe/shim/kc=512         	  824233	      1433 ns/op	        51.44 GFLOP/s
+keel-gvt4 r9 cl BenchmarkLimiterProbe/ctl/kc=512          	  920527	      1300 ns/op	        56.70 GFLOP/s
+keel-gvt4 r9 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1119 ns/op	        65.91 GFLOP/s
+keel-gvt4 r9 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1290004	       930.2 ns/op	        79.26 GFLOP/s
+keel-gvt4 r9 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  919285	      1303 ns/op	        28.30 GFLOP/s
+keel-gvt4 r10 stock BenchmarkLimiterProbe/ctl/kc=512         	  666024	      1777 ns/op	        41.48 GFLOP/s
+keel-gvt4 r10 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1119 ns/op	        65.91 GFLOP/s
+keel-gvt4 r10 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1341184	       894.7 ns/op	        82.40 GFLOP/s
+keel-gvt4 r10 stock BenchmarkLimiterProbe/FO/kc=512          	 1427530	       840.5 ns/op	        87.72 GFLOP/s
+keel-gvt4 r10 stock BenchmarkPeakVariants/raw16              	    9962	    116931 ns/op	        71.74 GFLOP/s
+keel-gvt4 r10 stock BenchmarkPeakVariants/vals               	   10000	    107352 ns/op	        78.14 GFLOP/s
+keel-gvt4 r10 stock BenchmarkPeakVariants/x44                	   12601	     95252 ns/op	        88.07 GFLOP/s
+keel-gvt4 r10 stock BenchmarkPeakVariants/x44v               	   12510	     96018 ns/op	        87.36 GFLOP/s
+keel-gvt4 r10 stock BenchmarkPeakVariants/x36                	    9031	    128185 ns/op	        73.62 GFLOP/s
+keel-gvt4 r10 stock BenchmarkPeakVariants/rawD16             	   10000	    118650 ns/op	        35.35 GFLOP/s
+keel-gvt4 r10 stock BenchmarkPeakVariants/Dx44               	   12520	     95888 ns/op	        43.74 GFLOP/s
+keel-gvt4 r10 bench BenchmarkPeak/neon         	    9153	    128306 ns/op	        65.38 GFLOP/s
+keel-gvt4 r10 cl BenchmarkLimiterProbe/shim/kc=512         	  823400	      1433 ns/op	        51.46 GFLOP/s
+keel-gvt4 r10 cl BenchmarkLimiterProbe/ctl/kc=512          	  922239	      1300 ns/op	        56.69 GFLOP/s
+keel-gvt4 r10 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r10 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1289988	       930.3 ns/op	        79.25 GFLOP/s
+keel-gvt4 r10 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	  919501	      1305 ns/op	        28.26 GFLOP/s
+keel-gvt4 r10 base BenchmarkLimiterProbe/shim/kc=512         	  648763	      1821 ns/op	        40.48 GFLOP/s
+keel-gvt4 r10 base BenchmarkLimiterProbe/ctl/kc=512          	  675253	      1775 ns/op	        41.54 GFLOP/s
+keel-gvt4 r10 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r10 base BenchmarkLimiterProbe/PBNB/kc=512         	 1289880	       930.3 ns/op	        79.25 GFLOP/s
+keel-gvt4 r10 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  674919	      1776 ns/op	        20.76 GFLOP/s
+keel-gvt5 r1 stock BenchmarkLimiterProbe/ctl/kc=512         	  803397	      1478 ns/op	        49.89 GFLOP/s
+keel-gvt5 r1 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1032 ns/op	        71.43 GFLOP/s
+keel-gvt5 r1 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684509	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r1 stock BenchmarkLimiterProbe/FO/kc=512          	 1681544	       713.5 ns/op	       103.3 GFLOP/s
+keel-gvt5 r1 stock BenchmarkPeakVariants/raw16              	   10000	    104618 ns/op	        80.18 GFLOP/s
+keel-gvt5 r1 stock BenchmarkPeakVariants/vals               	   12288	     98284 ns/op	        85.35 GFLOP/s
+keel-gvt5 r1 stock BenchmarkPeakVariants/x44                	   14442	     83245 ns/op	       100.8 GFLOP/s
+keel-gvt5 r1 stock BenchmarkPeakVariants/x44v               	   14593	     82203 ns/op	       102.0 GFLOP/s
+keel-gvt5 r1 stock BenchmarkPeakVariants/x36                	   10000	    108838 ns/op	        86.71 GFLOP/s
+keel-gvt5 r1 stock BenchmarkPeakVariants/rawD16             	   10000	    101191 ns/op	        41.45 GFLOP/s
+keel-gvt5 r1 stock BenchmarkPeakVariants/Dx44               	   14512	     82935 ns/op	        50.57 GFLOP/s
+keel-gvt5 r1 bench BenchmarkPeak/neon         	   10000	    104379 ns/op	        80.37 GFLOP/s
+keel-gvt5 r1 base BenchmarkLimiterProbe/shim/kc=512         	  770503	      1542 ns/op	        47.82 GFLOP/s
+keel-gvt5 r1 base BenchmarkLimiterProbe/ctl/kc=512          	  814357	      1475 ns/op	        50.00 GFLOP/s
+keel-gvt5 r1 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1012 ns/op	        72.87 GFLOP/s
+keel-gvt5 r1 base BenchmarkLimiterProbe/PBNB/kc=512         	 1684834	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r1 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  809550	      1504 ns/op	        24.51 GFLOP/s
+keel-gvt5 r1 cl BenchmarkLimiterProbe/shim/kc=512         	  882760	      1341 ns/op	        54.99 GFLOP/s
+keel-gvt5 r1 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1115 ns/op	        66.12 GFLOP/s
+keel-gvt5 r1 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1010 ns/op	        73.02 GFLOP/s
+keel-gvt5 r1 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1685203	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r1 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1140 ns/op	        32.34 GFLOP/s
+keel-gvt5 r2 stock BenchmarkLimiterProbe/ctl/kc=512         	  800146	      1477 ns/op	        49.93 GFLOP/s
+keel-gvt5 r2 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1030 ns/op	        71.60 GFLOP/s
+keel-gvt5 r2 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684458	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r2 stock BenchmarkLimiterProbe/FO/kc=512          	 1681159	       713.6 ns/op	       103.3 GFLOP/s
+keel-gvt5 r2 stock BenchmarkPeakVariants/raw16              	   10000	    107449 ns/op	        78.07 GFLOP/s
+keel-gvt5 r2 stock BenchmarkPeakVariants/vals               	   12391	     97312 ns/op	        86.20 GFLOP/s
+keel-gvt5 r2 stock BenchmarkPeakVariants/x44                	   14427	     83395 ns/op	       100.6 GFLOP/s
+keel-gvt5 r2 stock BenchmarkPeakVariants/x44v               	   14626	     82066 ns/op	       102.2 GFLOP/s
+keel-gvt5 r2 stock BenchmarkPeakVariants/x36                	   10000	    108633 ns/op	        86.87 GFLOP/s
+keel-gvt5 r2 stock BenchmarkPeakVariants/rawD16             	   12876	     93102 ns/op	        45.05 GFLOP/s
+keel-gvt5 r2 stock BenchmarkPeakVariants/Dx44               	   14491	     82691 ns/op	        50.72 GFLOP/s
+keel-gvt5 r2 bench BenchmarkPeak/neon         	   10000	    105156 ns/op	        79.77 GFLOP/s
+keel-gvt5 r2 cl BenchmarkLimiterProbe/shim/kc=512         	  872641	      1346 ns/op	        54.79 GFLOP/s
+keel-gvt5 r2 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1109 ns/op	        66.50 GFLOP/s
+keel-gvt5 r2 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1009 ns/op	        73.09 GFLOP/s
+keel-gvt5 r2 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1685098	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r2 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1143 ns/op	        32.26 GFLOP/s
+keel-gvt5 r2 base BenchmarkLimiterProbe/shim/kc=512         	  775515	      1526 ns/op	        48.31 GFLOP/s
+keel-gvt5 r2 base BenchmarkLimiterProbe/ctl/kc=512          	  814470	      1475 ns/op	        50.00 GFLOP/s
+keel-gvt5 r2 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1012 ns/op	        72.86 GFLOP/s
+keel-gvt5 r2 base BenchmarkLimiterProbe/PBNB/kc=512         	 1685169	       712.2 ns/op	       103.5 GFLOP/s
+keel-gvt5 r2 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  801499	      1511 ns/op	        24.40 GFLOP/s
+keel-gvt5 r3 stock BenchmarkLimiterProbe/ctl/kc=512         	  800338	      1486 ns/op	        49.61 GFLOP/s
+keel-gvt5 r3 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1033 ns/op	        71.37 GFLOP/s
+keel-gvt5 r3 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684652	       712.3 ns/op	       103.5 GFLOP/s
+keel-gvt5 r3 stock BenchmarkLimiterProbe/FO/kc=512          	 1681894	       713.5 ns/op	       103.3 GFLOP/s
+keel-gvt5 r3 stock BenchmarkPeakVariants/raw16              	   10000	    108054 ns/op	        77.63 GFLOP/s
+keel-gvt5 r3 stock BenchmarkPeakVariants/vals               	   12397	     97967 ns/op	        85.63 GFLOP/s
+keel-gvt5 r3 stock BenchmarkPeakVariants/x44                	   14412	     83502 ns/op	       100.5 GFLOP/s
+keel-gvt5 r3 stock BenchmarkPeakVariants/x44v               	   14614	     82233 ns/op	       102.0 GFLOP/s
+keel-gvt5 r3 stock BenchmarkPeakVariants/x36                	   10000	    108853 ns/op	        86.70 GFLOP/s
+keel-gvt5 r3 stock BenchmarkPeakVariants/rawD16             	   12622	     92931 ns/op	        45.13 GFLOP/s
+keel-gvt5 r3 stock BenchmarkPeakVariants/Dx44               	   14480	     82986 ns/op	        50.54 GFLOP/s
+keel-gvt5 r3 bench BenchmarkPeak/neon         	   10000	    111177 ns/op	        75.45 GFLOP/s
+keel-gvt5 r3 base BenchmarkLimiterProbe/shim/kc=512         	  766135	      1546 ns/op	        47.70 GFLOP/s
+keel-gvt5 r3 base BenchmarkLimiterProbe/ctl/kc=512          	  810192	      1479 ns/op	        49.85 GFLOP/s
+keel-gvt5 r3 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1011 ns/op	        72.95 GFLOP/s
+keel-gvt5 r3 base BenchmarkLimiterProbe/PBNB/kc=512         	 1685106	       712.2 ns/op	       103.5 GFLOP/s
+keel-gvt5 r3 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  795634	      1503 ns/op	        24.53 GFLOP/s
+keel-gvt5 r3 cl BenchmarkLimiterProbe/shim/kc=512         	  875899	      1340 ns/op	        55.02 GFLOP/s
+keel-gvt5 r3 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1118 ns/op	        65.92 GFLOP/s
+keel-gvt5 r3 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1011 ns/op	        72.89 GFLOP/s
+keel-gvt5 r3 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1685115	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r3 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1143 ns/op	        32.26 GFLOP/s
+keel-gvt5 r4 stock BenchmarkLimiterProbe/ctl/kc=512         	  803395	      1474 ns/op	        50.01 GFLOP/s
+keel-gvt5 r4 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1028 ns/op	        71.69 GFLOP/s
+keel-gvt5 r4 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684557	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r4 stock BenchmarkLimiterProbe/FO/kc=512          	 1681965	       713.4 ns/op	       103.3 GFLOP/s
+keel-gvt5 r4 stock BenchmarkPeakVariants/raw16              	   10000	    108372 ns/op	        77.41 GFLOP/s
+keel-gvt5 r4 stock BenchmarkPeakVariants/vals               	   12324	     97356 ns/op	        86.16 GFLOP/s
+keel-gvt5 r4 stock BenchmarkPeakVariants/x44                	   14378	     83378 ns/op	       100.6 GFLOP/s
+keel-gvt5 r4 stock BenchmarkPeakVariants/x44v               	   14598	     82148 ns/op	       102.1 GFLOP/s
+keel-gvt5 r4 stock BenchmarkPeakVariants/x36                	   10000	    108666 ns/op	        86.85 GFLOP/s
+keel-gvt5 r4 stock BenchmarkPeakVariants/rawD16             	   10000	    101199 ns/op	        41.45 GFLOP/s
+keel-gvt5 r4 stock BenchmarkPeakVariants/Dx44               	   14493	     82918 ns/op	        50.58 GFLOP/s
+keel-gvt5 r4 bench BenchmarkPeak/neon         	   10000	    105099 ns/op	        79.82 GFLOP/s
+keel-gvt5 r4 cl BenchmarkLimiterProbe/shim/kc=512         	  871764	      1343 ns/op	        54.90 GFLOP/s
+keel-gvt5 r4 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1112 ns/op	        66.33 GFLOP/s
+keel-gvt5 r4 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1013 ns/op	        72.78 GFLOP/s
+keel-gvt5 r4 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1685340	       712.0 ns/op	       103.5 GFLOP/s
+keel-gvt5 r4 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1133 ns/op	        32.55 GFLOP/s
+keel-gvt5 r4 base BenchmarkLimiterProbe/shim/kc=512         	  772590	      1533 ns/op	        48.09 GFLOP/s
+keel-gvt5 r4 base BenchmarkLimiterProbe/ctl/kc=512          	  813844	      1477 ns/op	        49.93 GFLOP/s
+keel-gvt5 r4 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1010 ns/op	        73.00 GFLOP/s
+keel-gvt5 r4 base BenchmarkLimiterProbe/PBNB/kc=512         	 1685274	       712.0 ns/op	       103.5 GFLOP/s
+keel-gvt5 r4 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  803713	      1496 ns/op	        24.64 GFLOP/s
+keel-gvt5 r5 stock BenchmarkLimiterProbe/ctl/kc=512         	  797872	      1487 ns/op	        49.59 GFLOP/s
+keel-gvt5 r5 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1033 ns/op	        71.34 GFLOP/s
+keel-gvt5 r5 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684564	       712.2 ns/op	       103.5 GFLOP/s
+keel-gvt5 r5 stock BenchmarkLimiterProbe/FO/kc=512          	 1681777	       713.5 ns/op	       103.3 GFLOP/s
+keel-gvt5 r5 stock BenchmarkPeakVariants/raw16              	   10000	    107562 ns/op	        77.99 GFLOP/s
+keel-gvt5 r5 stock BenchmarkPeakVariants/vals               	   12256	     96999 ns/op	        86.48 GFLOP/s
+keel-gvt5 r5 stock BenchmarkPeakVariants/x44                	   14365	     83558 ns/op	       100.4 GFLOP/s
+keel-gvt5 r5 stock BenchmarkPeakVariants/x44v               	   14605	     82150 ns/op	       102.1 GFLOP/s
+keel-gvt5 r5 stock BenchmarkPeakVariants/x36                	   10000	    108892 ns/op	        86.67 GFLOP/s
+keel-gvt5 r5 stock BenchmarkPeakVariants/rawD16             	   10000	    101391 ns/op	        41.37 GFLOP/s
+keel-gvt5 r5 stock BenchmarkPeakVariants/Dx44               	   14474	     82636 ns/op	        50.76 GFLOP/s
+keel-gvt5 r5 bench BenchmarkPeak/neon         	   10000	    102357 ns/op	        81.95 GFLOP/s
+keel-gvt5 r5 base BenchmarkLimiterProbe/shim/kc=512         	  771244	      1535 ns/op	        48.02 GFLOP/s
+keel-gvt5 r5 base BenchmarkLimiterProbe/ctl/kc=512          	  814648	      1475 ns/op	        49.97 GFLOP/s
+keel-gvt5 r5 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1009 ns/op	        73.06 GFLOP/s
+keel-gvt5 r5 base BenchmarkLimiterProbe/PBNB/kc=512         	 1685044	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r5 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  801252	      1508 ns/op	        24.45 GFLOP/s
+keel-gvt5 r5 cl BenchmarkLimiterProbe/shim/kc=512         	  871002	      1355 ns/op	        54.42 GFLOP/s
+keel-gvt5 r5 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1102 ns/op	        66.90 GFLOP/s
+keel-gvt5 r5 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1009 ns/op	        73.08 GFLOP/s
+keel-gvt5 r5 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1685120	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r5 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1137 ns/op	        32.43 GFLOP/s
+keel-gvt5 r6 stock BenchmarkLimiterProbe/ctl/kc=512         	  798666	      1472 ns/op	        50.10 GFLOP/s
+keel-gvt5 r6 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1037 ns/op	        71.12 GFLOP/s
+keel-gvt5 r6 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684270	       712.3 ns/op	       103.5 GFLOP/s
+keel-gvt5 r6 stock BenchmarkLimiterProbe/FO/kc=512          	 1680943	       714.0 ns/op	       103.3 GFLOP/s
+keel-gvt5 r6 stock BenchmarkPeakVariants/raw16              	   10000	    110094 ns/op	        76.19 GFLOP/s
+keel-gvt5 r6 stock BenchmarkPeakVariants/vals               	   10000	    118265 ns/op	        70.93 GFLOP/s
+keel-gvt5 r6 stock BenchmarkPeakVariants/x44                	   14262	     84277 ns/op	        99.54 GFLOP/s
+keel-gvt5 r6 stock BenchmarkPeakVariants/x44v               	   14436	     82228 ns/op	       102.0 GFLOP/s
+keel-gvt5 r6 stock BenchmarkPeakVariants/x36                	   10000	    108842 ns/op	        86.71 GFLOP/s
+keel-gvt5 r6 stock BenchmarkPeakVariants/rawD16             	   10000	    100515 ns/op	        41.73 GFLOP/s
+keel-gvt5 r6 stock BenchmarkPeakVariants/Dx44               	   14487	     82507 ns/op	        50.84 GFLOP/s
+keel-gvt5 r6 bench BenchmarkPeak/neon         	   10000	    105427 ns/op	        79.57 GFLOP/s
+keel-gvt5 r6 cl BenchmarkLimiterProbe/shim/kc=512         	  875839	      1345 ns/op	        54.82 GFLOP/s
+keel-gvt5 r6 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1105 ns/op	        66.71 GFLOP/s
+keel-gvt5 r6 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1008 ns/op	        73.13 GFLOP/s
+keel-gvt5 r6 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1684816	       712.3 ns/op	       103.5 GFLOP/s
+keel-gvt5 r6 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1148 ns/op	        32.10 GFLOP/s
+keel-gvt5 r6 base BenchmarkLimiterProbe/shim/kc=512         	  765416	      1547 ns/op	        47.65 GFLOP/s
+keel-gvt5 r6 base BenchmarkLimiterProbe/ctl/kc=512          	  805173	      1489 ns/op	        49.50 GFLOP/s
+keel-gvt5 r6 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1011 ns/op	        72.96 GFLOP/s
+keel-gvt5 r6 base BenchmarkLimiterProbe/PBNB/kc=512         	 1684964	       712.2 ns/op	       103.5 GFLOP/s
+keel-gvt5 r6 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  802030	      1508 ns/op	        24.44 GFLOP/s
+keel-gvt5 r7 stock BenchmarkLimiterProbe/ctl/kc=512         	  803856	      1486 ns/op	        49.62 GFLOP/s
+keel-gvt5 r7 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1033 ns/op	        71.36 GFLOP/s
+keel-gvt5 r7 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684405	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r7 stock BenchmarkLimiterProbe/FO/kc=512          	 1681887	       713.5 ns/op	       103.3 GFLOP/s
+keel-gvt5 r7 stock BenchmarkPeakVariants/raw16              	   10000	    107794 ns/op	        77.82 GFLOP/s
+keel-gvt5 r7 stock BenchmarkPeakVariants/vals               	   12366	     97730 ns/op	        85.83 GFLOP/s
+keel-gvt5 r7 stock BenchmarkPeakVariants/x44                	   14394	     83219 ns/op	       100.8 GFLOP/s
+keel-gvt5 r7 stock BenchmarkPeakVariants/x44v               	   14632	     82298 ns/op	       101.9 GFLOP/s
+keel-gvt5 r7 stock BenchmarkPeakVariants/x36                	   10000	    108654 ns/op	        86.86 GFLOP/s
+keel-gvt5 r7 stock BenchmarkPeakVariants/rawD16             	   10000	    101109 ns/op	        41.48 GFLOP/s
+keel-gvt5 r7 stock BenchmarkPeakVariants/Dx44               	   14511	     82752 ns/op	        50.69 GFLOP/s
+keel-gvt5 r7 bench BenchmarkPeak/neon         	   10000	    106111 ns/op	        79.05 GFLOP/s
+keel-gvt5 r7 base BenchmarkLimiterProbe/shim/kc=512         	  769687	      1532 ns/op	        48.12 GFLOP/s
+keel-gvt5 r7 base BenchmarkLimiterProbe/ctl/kc=512          	  817159	      1471 ns/op	        50.13 GFLOP/s
+keel-gvt5 r7 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1009 ns/op	        73.10 GFLOP/s
+keel-gvt5 r7 base BenchmarkLimiterProbe/PBNB/kc=512         	 1685082	       712.0 ns/op	       103.5 GFLOP/s
+keel-gvt5 r7 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  798512	      1501 ns/op	        24.55 GFLOP/s
+keel-gvt5 r7 cl BenchmarkLimiterProbe/shim/kc=512         	  875164	      1342 ns/op	        54.93 GFLOP/s
+keel-gvt5 r7 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1116 ns/op	        66.05 GFLOP/s
+keel-gvt5 r7 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1009 ns/op	        73.08 GFLOP/s
+keel-gvt5 r7 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1685385	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r7 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1128 ns/op	        32.69 GFLOP/s
+keel-gvt5 r8 stock BenchmarkLimiterProbe/ctl/kc=512         	  800600	      1473 ns/op	        50.07 GFLOP/s
+keel-gvt5 r8 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1035 ns/op	        71.21 GFLOP/s
+keel-gvt5 r8 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1685035	       712.2 ns/op	       103.5 GFLOP/s
+keel-gvt5 r8 stock BenchmarkLimiterProbe/FO/kc=512          	 1681867	       713.1 ns/op	       103.4 GFLOP/s
+keel-gvt5 r8 stock BenchmarkPeakVariants/raw16              	   10000	    107015 ns/op	        78.39 GFLOP/s
+keel-gvt5 r8 stock BenchmarkPeakVariants/vals               	   12352	     97405 ns/op	        86.12 GFLOP/s
+keel-gvt5 r8 stock BenchmarkPeakVariants/x44                	   14413	     83508 ns/op	       100.5 GFLOP/s
+keel-gvt5 r8 stock BenchmarkPeakVariants/x44v               	   14582	     82095 ns/op	       102.2 GFLOP/s
+keel-gvt5 r8 stock BenchmarkPeakVariants/x36                	   10000	    108835 ns/op	        86.71 GFLOP/s
+keel-gvt5 r8 stock BenchmarkPeakVariants/rawD16             	   10000	    101971 ns/op	        41.13 GFLOP/s
+keel-gvt5 r8 stock BenchmarkPeakVariants/Dx44               	   14526	     82804 ns/op	        50.65 GFLOP/s
+keel-gvt5 r8 bench BenchmarkPeak/neon         	   10000	    110677 ns/op	        75.79 GFLOP/s
+keel-gvt5 r8 cl BenchmarkLimiterProbe/shim/kc=512         	  879585	      1346 ns/op	        54.77 GFLOP/s
+keel-gvt5 r8 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1120 ns/op	        65.81 GFLOP/s
+keel-gvt5 r8 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1009 ns/op	        73.07 GFLOP/s
+keel-gvt5 r8 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1685430	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r8 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1124 ns/op	        32.81 GFLOP/s
+keel-gvt5 r8 base BenchmarkLimiterProbe/shim/kc=512         	  771274	      1542 ns/op	        47.82 GFLOP/s
+keel-gvt5 r8 base BenchmarkLimiterProbe/ctl/kc=512          	  812781	      1488 ns/op	        49.54 GFLOP/s
+keel-gvt5 r8 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1009 ns/op	        73.06 GFLOP/s
+keel-gvt5 r8 base BenchmarkLimiterProbe/PBNB/kc=512         	 1684873	       712.2 ns/op	       103.5 GFLOP/s
+keel-gvt5 r8 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  800136	      1508 ns/op	        24.44 GFLOP/s
+keel-gvt5 r9 stock BenchmarkLimiterProbe/ctl/kc=512         	  800478	      1472 ns/op	        50.08 GFLOP/s
+keel-gvt5 r9 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1029 ns/op	        71.63 GFLOP/s
+keel-gvt5 r9 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684221	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r9 stock BenchmarkLimiterProbe/FO/kc=512          	 1681755	       713.7 ns/op	       103.3 GFLOP/s
+keel-gvt5 r9 stock BenchmarkPeakVariants/raw16              	   10000	    108071 ns/op	        77.62 GFLOP/s
+keel-gvt5 r9 stock BenchmarkPeakVariants/vals               	   12324	     97848 ns/op	        85.73 GFLOP/s
+keel-gvt5 r9 stock BenchmarkPeakVariants/x44                	   14388	     83383 ns/op	       100.6 GFLOP/s
+keel-gvt5 r9 stock BenchmarkPeakVariants/x44v               	   14582	     82228 ns/op	       102.0 GFLOP/s
+keel-gvt5 r9 stock BenchmarkPeakVariants/x36                	   10000	    108769 ns/op	        86.76 GFLOP/s
+keel-gvt5 r9 stock BenchmarkPeakVariants/rawD16             	   10000	    101628 ns/op	        41.27 GFLOP/s
+keel-gvt5 r9 stock BenchmarkPeakVariants/Dx44               	   14492	     82736 ns/op	        50.70 GFLOP/s
+keel-gvt5 r9 bench BenchmarkPeak/neon         	   10000	    110444 ns/op	        75.95 GFLOP/s
+keel-gvt5 r9 base BenchmarkLimiterProbe/shim/kc=512         	  767200	      1543 ns/op	        47.79 GFLOP/s
+keel-gvt5 r9 base BenchmarkLimiterProbe/ctl/kc=512          	  815899	      1476 ns/op	        49.96 GFLOP/s
+keel-gvt5 r9 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1011 ns/op	        72.91 GFLOP/s
+keel-gvt5 r9 base BenchmarkLimiterProbe/PBNB/kc=512         	 1684285	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r9 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  803874	      1503 ns/op	        24.52 GFLOP/s
+keel-gvt5 r9 cl BenchmarkLimiterProbe/shim/kc=512         	  885195	      1333 ns/op	        55.32 GFLOP/s
+keel-gvt5 r9 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1114 ns/op	        66.17 GFLOP/s
+keel-gvt5 r9 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1012 ns/op	        72.83 GFLOP/s
+keel-gvt5 r9 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1684947	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r9 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1139 ns/op	        32.36 GFLOP/s
+keel-gvt5 r10 stock BenchmarkLimiterProbe/ctl/kc=512         	  800578	      1469 ns/op	        50.21 GFLOP/s
+keel-gvt5 r10 stock BenchmarkLimiterProbe/PB/kc=512          	 1000000	      1033 ns/op	        71.35 GFLOP/s
+keel-gvt5 r10 stock BenchmarkLimiterProbe/PBNB/kc=512        	 1684551	       712.3 ns/op	       103.5 GFLOP/s
+keel-gvt5 r10 stock BenchmarkLimiterProbe/FO/kc=512          	 1681635	       713.6 ns/op	       103.3 GFLOP/s
+keel-gvt5 r10 stock BenchmarkPeakVariants/raw16              	   10000	    107365 ns/op	        78.13 GFLOP/s
+keel-gvt5 r10 stock BenchmarkPeakVariants/vals               	   12266	     97088 ns/op	        86.40 GFLOP/s
+keel-gvt5 r10 stock BenchmarkPeakVariants/x44                	   14360	     83331 ns/op	       100.7 GFLOP/s
+keel-gvt5 r10 stock BenchmarkPeakVariants/x44v               	   14604	     82165 ns/op	       102.1 GFLOP/s
+keel-gvt5 r10 stock BenchmarkPeakVariants/x36                	   10000	    108897 ns/op	        86.66 GFLOP/s
+keel-gvt5 r10 stock BenchmarkPeakVariants/rawD16             	   10000	    100586 ns/op	        41.70 GFLOP/s
+keel-gvt5 r10 stock BenchmarkPeakVariants/Dx44               	   14488	     82682 ns/op	        50.73 GFLOP/s
+keel-gvt5 r10 bench BenchmarkPeak/neon         	   10000	    102939 ns/op	        81.49 GFLOP/s
+keel-gvt5 r10 cl BenchmarkLimiterProbe/shim/kc=512         	  881401	      1354 ns/op	        54.46 GFLOP/s
+keel-gvt5 r10 cl BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1117 ns/op	        66.00 GFLOP/s
+keel-gvt5 r10 cl BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1008 ns/op	        73.11 GFLOP/s
+keel-gvt5 r10 cl BenchmarkLimiterProbe/PBNB/kc=512         	 1685007	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r10 cl BenchmarkRawNEON/raw/D3x12u1/kc=512       	 1000000	      1132 ns/op	        32.56 GFLOP/s
+keel-gvt5 r10 base BenchmarkLimiterProbe/shim/kc=512         	  769339	      1536 ns/op	        48.00 GFLOP/s
+keel-gvt5 r10 base BenchmarkLimiterProbe/ctl/kc=512          	  808695	      1484 ns/op	        49.70 GFLOP/s
+keel-gvt5 r10 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1009 ns/op	        73.05 GFLOP/s
+keel-gvt5 r10 base BenchmarkLimiterProbe/PBNB/kc=512         	 1684768	       712.1 ns/op	       103.5 GFLOP/s
+keel-gvt5 r10 base BenchmarkRawNEON/raw/D3x12u1/kc=512       	  800884	      1505 ns/op	        24.49 GFLOP/s
+== done 04:59:55
+== TEARDOWN 04:59:55
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0c61f971bf2eddfca...
+
+✅ Terminate request sent!
+   Instance: i-0c61f971bf2eddfca
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0fc242db816a2574a...
+
+✅ Terminate request sent!
+   Instance: i-0fc242db816a2574a
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0ba1608c777dc9e0d...
+
+✅ Terminate request sent!
+   Instance: i-0ba1608c777dc9e0d
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   fleet is down

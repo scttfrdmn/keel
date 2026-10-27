@@ -26,6 +26,16 @@ While the major version is 0, minor versions may contain breaking changes.
   conflict in the arm64 P2 denominator.** An FMA-only loop reads 1.28–1.89× `BenchmarkPeak/neon`. The
   anchor-NOP explanation was tested and refuted: the 0-NOP twin of `neonPeak` reads the same. The cause
   is open, so every arm64 percentage of peak is in question, and the gate is unchanged.
+  **Peak variants settle that on V2 and V3** (`archive/neon-raw/`, exploration tier). Every `neonPeak` FMA
+  reads the same multiplicand registers. A 4x4 outer-product variant over 8 distinct registers reaches
+  the FMA-only rate, so `BenchmarkPeak/neon` under-reads by 1.35× (V2) and 1.26× (V3). By that ceiling,
+  the shipped NEON kernels sit at 46.0–49.7%, under the 55% P2 floor. On V1 every variant reads exactly
+  2.0 FMA/cycle and the gap is unexplained. No gate or published row has changed; a decision is
+  pending.
+- **First local Go-fork A/B (#197): CL 827904 (golang/go#81352)** at a common master base
+  (`archive/go-patches/cl827904/`, exploration tier). Folding the NEON broadcast speeds keel's kernels
+  on V1/V2/V3. Shipped 3x24 gains +28.6% / +27.1% / +14.5%. Raw 3x24/1 gains +26.1% / +36.4% / +32.4%.
+  Raw float64 3x12/1 gains +25.8% / +36.3% / +32.2%. This is experiment evidence only; keel ships on stock Go.
 - **Graviton5's judged arm64 P2 is GREEN at both elements** (#191). On c9g.48xlarge (Neoverse-V3),
   `KEEL_ARCH=arm64 scripts/gate-p2.sh` scored 22/0/0 at each element: float64 3x12 at 62.7% of peak,
   float32 3x24 at 64.0% (floor 55%), FMA-bound, both inside their pre-registered bands. It took 12
