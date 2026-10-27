@@ -17,6 +17,12 @@ While the major version is 0, minor versions may contain breaking changes.
   Lab pre-check on orion (M4 Pro, `measured` task 41, dev tier, count 5): float64 63.21–63.66 GFLOP/s
   against float32 `BenchmarkPeak/neon` 127.2–129.1, a ratio of 0.496 by median. No OpenBLAS
   reference; the judged NEON hosts are Graviton.
+- **`tools/shapegen -arch arm64 -elem f64`: the NEON float64 emitter** (#191). It writes the float64
+  shim (`vec.F64x2`, `Load128D`/`Broadcast128D`/`FMA128D`/`Add128D`/`Store128D`), two lanes per V
+  register, `KernelD<MR>x<NR>`. Against that shim, the 256-shape sweep has the same 107
+  zero-spill shapes as float32 NEON, and the frontier is `3x12 u=2` at 4.111 insns/FMA, the same as
+  float32's `3x24 u=2`. 24 rows differ by ±2 scalar addressing insns; spills and FMAs match in every row.
+  `-verify` at NEON f64 refuses until a kernel ships. Float32 output is byte-identical.
 - **float64 microkernel dispatch, `activeKern64`** (#191). It uses float32's rule: `KEEL_FORCE` goes
   through `kernBackend`, now shared by both selections so they can't read it differently, then the
   shape for the host's class comes from `Preferred64`. On janus it picks `2x16/avx512` (issue-bound),

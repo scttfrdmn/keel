@@ -69,7 +69,7 @@ import (
 type ISA struct {
 	Arch  string // "amd64" | "arm64"
 	Elem  string // "f32" | "f64"
-	Lanes int    // elements per vector: 16 | 8 on amd64, 4 on arm64
+	Lanes int    // elements per vector: 16 | 8 on amd64, 4 | 2 on arm64
 }
 
 var isa = ISA{Arch: "amd64", Elem: "f32", Lanes: 16}
@@ -80,10 +80,9 @@ func setArch(arch string) error { return setISA(arch, "f32") }
 // setISA resolves -arch and -elem to the ISA config and points the spill audit's
 // classification at the same instruction set (its rules differ per #13/#155).
 //
-// f64 is amd64-only for now. The NEON f64 emitter is a later stage of #191: it
-// needs its own shim-form body (emitNEON reproduces gemm_neon.go's F32x4 wrappers,
-// and no F64x2 shim kernel exists to verify one against), so -arch arm64 -elem f64
-// is refused here rather than emitting a float32 NEON body under a float64 name.
+// f64 is accepted on both ISAs. On arm64 emitNEON writes the float64 shim
+// (vec.F64x2, Load128D/…), two lanes per V register. No NEON float64 kernel ships
+// yet, so -verify has nothing to bind against there and refuses (verifyShapes).
 func setISA(arch, elem string) error {
 	var regBytes int
 	switch arch {
@@ -100,9 +99,6 @@ func setISA(arch, elem string) error {
 		elemBytes = 4
 	case "f64":
 		elemBytes = 8
-		if arch != "amd64" {
-			return fmt.Errorf("-elem f64 is amd64-only so far: the NEON f64 emitter is a later stage of #191")
-		}
 	default:
 		return fmt.Errorf("elem %q is not f32 or f64", elem)
 	}
@@ -161,7 +157,7 @@ func main() {
 		keep     = flag.String("keep", "", "if set, leave each emitted candidate in this directory")
 		uarch    = flag.String("uarch", "skylake-x:4:2:4", "score against NAME:WIDTH:PORTS:LATENCY")
 		arch     = flag.String("arch", "amd64", "target ISA: amd64 (AVX-512, 16-lane) | arm64 (NEON, 4-lane)")
-		elem     = flag.String("elem", "f32", "element type: f32 | f64 (amd64 only; 8-lane)")
+		elem     = flag.String("elem", "f32", "element type: f32 | f64 (8-lane on amd64, 2-lane on arm64)")
 	)
 	flag.Parse()
 
@@ -418,6 +414,11 @@ func verifySource() string {
 //     instruction count, FMA count, spill count, copy count and broadcast count as
 //     what ships — every quantity the objective reads. Naming cannot affect it.
 func runVerify() bool {
+	if isa.Arch == "arm64" && isa.Elem == "f64" {
+		// Fail closed: a verify over zero shapes would print a vacuous pass.
+		fmt.Println("verify: no NEON float64 kernel ships yet (#191), so there is no tree to verify -arch arm64 -elem f64 against.")
+		return false
+	}
 	root, err := repoRoot()
 	if err != nil {
 		die(err)
@@ -590,7 +591,9 @@ func printDiff(want, got string) {
 //
 // f64 (#191) keeps amd64's V 1..4, so NR 8..32 — the range docs/f64-design.md §2's
 // predicted 4x16 and 2x16 sit inside — and drops Permute, whose window predicate is
-// stated for a 16-lane load; the 8-lane analogue is unwritten, not refuted.
+// stated for a 16-lane load; the 8-lane analogue is unwritten, not refuted. On
+// arm64 f64 keeps NEON's V 1..8, so NR 2..16: the same register counts as the
+// float32 NEON space, which is what lets the two sweeps be compared shape for shape.
 func space() []Shape {
 	forms := []Form{Broadcast, Permute}
 	vMax := 4

@@ -259,7 +259,9 @@ func (s Shape) emitRawArchsimd() string {
 // the shipped NEON kernels use, and each bodied wrapper costs an anchor NOP in the
 // loop (golang/go#80830, keel neon-probe). A raw-archsimd emission would audit ~26
 // NOPs lighter than the tree and mint a frontier the shipped kernels do not sit on
-// — the rank inversion #156 exists to avoid. So it emits the shim.
+// — the rank inversion #156 exists to avoid. So it emits the shim. At -elem f64
+// (#191) it emits the float64 shim instead (F64x2 and the D-suffixed wrappers, see
+// neonShim), two lanes per V register.
 //
 // It is vec-QUALIFIED (vec.Load128, package shapegencand, importing internal/vec)
 // rather than package-local like gemm_neon.go: audit() compiles one candidate in
@@ -269,7 +271,7 @@ func (s Shape) emitRawArchsimd() string {
 // is why arm64 -verify binds on the audit, not the text. NEON has no window-permute,
 // so Broadcast only; space() never enumerates Permute on arm64.
 func (s Shape) emitNEON() string {
-	lanes := isa.Lanes // 4
+	lanes := isa.Lanes // 4, or 2 at -elem f64
 	var b strings.Builder
 	p := func(format string, a ...any) { fmt.Fprintf(&b, format+"\n", a...) }
 
@@ -285,20 +287,21 @@ func (s Shape) emitNEON() string {
 	p("// %s is a generated candidate: %s.", s.Name(), s.Label())
 	p("//")
 	p("// Emitted by tools/shapegen. Not a shipped kernel; see KERNEL.md.")
-	p("func %s(kc int, a, b, c []float32, ldc int) {", s.Name())
+	p("func %s(kc int, a, b, c []%s, ldc int) {", s.Name(), elemType())
 
+	vt := neonVec()
 	for r := 0; r < s.MR; r++ {
 		names := make([]string, s.V)
 		for j := range names {
 			names[j] = fmt.Sprintf("c%d_%d", r, j)
 		}
-		p("\tvar %s vec.F32x4", strings.Join(names, ", "))
+		p("\tvar %s vec.%s", strings.Join(names, ", "), vt)
 	}
 	bn := make([]string, s.V)
 	for j := range bn {
 		bn[j] = fmt.Sprintf("b%d", j)
 	}
-	p("\tvar %s, av vec.F32x4", strings.Join(bn, ", "))
+	p("\tvar %s, av vec.%s", strings.Join(bn, ", "), vt)
 
 	p("\tap := a[:kc*%d]", s.MR)
 	p("\tbp := b[:kc*%d]", s.NR())
@@ -321,11 +324,30 @@ func (s Shape) emitNEON() string {
 		p("\tr%d := c[%d*ldc : %d*ldc+%d]", r, r, r, s.NR())
 		for j := 0; j < s.V; j++ {
 			lo, hi := j*lanes, j*lanes+lanes
-			p("\tvec.Store128(r%d[%d:%d], vec.Add128(vec.Load128(r%d[%d:%d]), c%d_%d))", r, lo, hi, r, lo, hi, r, j)
+			p("\tvec.%s(r%d[%d:%d], vec.%s(vec.%s(r%d[%d:%d]), c%d_%d))",
+				neonShim("Store128"), r, lo, hi, neonShim("Add128"), neonShim("Load128"), r, lo, hi, r, j)
 		}
 	}
 	p("}")
 	return b.String()
+}
+
+// neonVec and neonShim spell the NEON shim's vector type and wrapper names for the
+// active element. The float64 shim (#191) is the float32 one with a D suffix —
+// F64x2, Load128D, Broadcast128D, FMA128D (FMA128's x*y+z operand order), Add128D,
+// Store128D — so a float32 emission passes through unchanged.
+func neonVec() string {
+	if isa.Elem == "f64" {
+		return "F64x2"
+	}
+	return "F32x4"
+}
+
+func neonShim(name string) string {
+	if isa.Elem == "f64" {
+		return name + "D"
+	}
+	return name
 }
 
 // emitBodyNEON writes u k-steps of the NEON steady state (gemm_neon.go's shape):
@@ -340,16 +362,16 @@ func (s Shape) emitBodyNEON(p func(string, ...any), lanes, u int) {
 		loads := make([]string, s.V)
 		for j := range loads {
 			off := k*s.NR() + j*lanes
-			loads[j] = fmt.Sprintf("vec.Load128(bp[%d:%d])", off, off+lanes)
+			loads[j] = fmt.Sprintf("vec.%s(bp[%d:%d])", neonShim("Load128"), off, off+lanes)
 		}
 		p("\t\t%s = %s", strings.Join(bn, ", "), strings.Join(loads, ", "))
 		for r := 0; r < s.MR; r++ {
-			p("\t\tav = vec.Broadcast128(ap[%d])", k*s.MR+r)
+			p("\t\tav = vec.%s(ap[%d])", neonShim("Broadcast128"), k*s.MR+r)
 			acc := make([]string, s.V)
 			fmas := make([]string, s.V)
 			for j := range acc {
 				acc[j] = fmt.Sprintf("c%d_%d", r, j)
-				fmas[j] = fmt.Sprintf("vec.FMA128(av, %s, c%d_%d)", bn[j], r, j)
+				fmas[j] = fmt.Sprintf("vec.%s(av, %s, c%d_%d)", neonShim("FMA128"), bn[j], r, j)
 			}
 			p("\t\t%s = %s", strings.Join(acc, ", "), strings.Join(fmas, ", "))
 		}

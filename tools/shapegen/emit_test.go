@@ -237,13 +237,64 @@ func TestF64EmissionNamesOnlyFloat64(t *testing.T) {
 	}
 }
 
-// TestF64RefusesWhatItCannotEmit drives the three refusals: NEON f64 (a later stage),
-// the Permute form (its window rule is stated for 16 lanes), and an unknown element.
-// Each must be an error, never a silent float32 emission under a float64 name.
+// TestNEONF64EmissionNamesOnlyFloat64 is the arm64 counterpart (#191): the NEON
+// emitter writes the shim in six places (signature, accumulators, B loads,
+// broadcasts, FMAs, write-out), and at f64 every one must name the float64 shim —
+// F64x2 and the D-suffixed wrappers — and none the float32 one. The expected names
+// are the shim contract fixed on #191, not read back from the emitter.
+func TestNEONF64EmissionNamesOnlyFloat64(t *testing.T) {
+	if err := setISA("arm64", "f64"); err != nil {
+		t.Fatalf("setISA(arm64, f64): %v", err)
+	}
+	t.Cleanup(func() { _ = setArch("amd64") })
+	if isa.Lanes != 2 {
+		t.Fatalf("a 16-byte V register holds 2 float64, got Lanes=%d", isa.Lanes)
+	}
+	for _, s := range []Shape{{MR: 4, V: 4, U: 1}, {MR: 8, V: 2, U: 1}, {MR: 3, V: 6, U: 2}} {
+		src := s.Emit()
+		want := fmt.Sprintf("func KernelD%dx%d(kc int, a, b, c []float64, ldc int) {", s.MR, s.V*2)
+		for _, w := range []string{want, "vec.F64x2", "vec.Load128D(bp[0:2])", "vec.Broadcast128D(ap[",
+			"vec.FMA128D(av, b0, c0_0)", "vec.Store128D(r0[0:2], vec.Add128D(vec.Load128D(r0[0:2]), c0_0))"} {
+			if !strings.Contains(src, w) {
+				t.Errorf("%s: emitted body lacks %q", s.Label(), w)
+			}
+		}
+		for _, bad := range []string{"float32", "F32x4", "Load128(", "Broadcast128(", "FMA128(",
+			"Add128(", "Store128(", "archsimd"} {
+			if strings.Contains(src, bad) {
+				t.Errorf("%s: a float32-shim name %q survived into the NEON f64 body", s.Label(), bad)
+			}
+		}
+	}
+	// The control: the same shape at f32 still names the float32 shim, so the D is
+	// the element type's doing.
+	if err := setArch("arm64"); err != nil {
+		t.Fatal(err)
+	}
+	if src := (Shape{MR: 4, V: 4, U: 1}).Emit(); !strings.Contains(src, "vec.FMA128(av, b0, c0_0)") ||
+		strings.Contains(src, "128D") || strings.Contains(src, "float64") {
+		t.Error("the f32 NEON emission changed: it should name FMA128 and no float64 shim")
+	}
+}
+
+// TestF64RefusesWhatItCannotEmit drives the refusals: the Permute form at f64 on
+// either ISA (its window rule is stated for 16 lanes, and NEON has none), an unknown
+// element, and -verify at NEON f64, which has no shipped kernel to bind against and
+// must not pass vacuously. Each must refuse, never a silent float32 emission under a
+// float64 name.
 func TestF64RefusesWhatItCannotEmit(t *testing.T) {
 	t.Cleanup(func() { _ = setArch("amd64") })
-	if err := setISA("arm64", "f64"); err == nil {
-		t.Error("-arch arm64 -elem f64 was accepted; the NEON f64 emitter does not exist yet")
+	if err := setISA("arm64", "f64"); err != nil {
+		t.Fatalf("setISA(arm64, f64): %v", err)
+	}
+	if _, err := parseShape("4x8/1", "permute"); err == nil {
+		t.Error("the Permute form was accepted at arm64 f64")
+	}
+	if _, err := parseShape("4x7/1", "broadcast"); err == nil {
+		t.Error("NR=7 was accepted at arm64 f64, which is not a multiple of 2 lanes")
+	}
+	if runVerify() {
+		t.Error("-verify passed at arm64 f64, where no NEON float64 kernel ships")
 	}
 	if err := setISA("amd64", "f16"); err == nil {
 		t.Error("-elem f16 was accepted")
