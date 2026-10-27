@@ -21,6 +21,11 @@ While the major version is 0, minor versions may contain breaking changes.
   3x24/2: on V2, 64.0% against 62.4% of peak, and on V3, 64.2% against 62.6%. The worst raw round
   beats the best shim round on every host at both elements. The "7–8 insns/cycle" reading in
   `archive/p2-arm64-c9g/` is marked VOID as a causal claim.
+  **A limiter probe finds the broadcast** (`archive/neon-raw/`): pre-broadcast A beats raw 3x24/1 by
+  43–62% on V1–V3. That is golang/go#81352, whose fix CL 827904 is in review. **It also finds an open
+  conflict in the arm64 P2 denominator.** An FMA-only loop reads 1.28–1.89× `BenchmarkPeak/neon`. The
+  anchor-NOP explanation was tested and refuted: the 0-NOP twin of `neonPeak` reads the same. The cause
+  is open, so every arm64 percentage of peak is in question, and the gate is unchanged.
 - **Graviton5's judged arm64 P2 is GREEN at both elements** (#191). On c9g.48xlarge (Neoverse-V3),
   `KEEL_ARCH=arm64 scripts/gate-p2.sh` scored 22/0/0 at each element: float64 3x12 at 62.7% of peak,
   float32 3x24 at 64.0% (floor 55%), FMA-bound, both inside their pre-registered bands. It took 12

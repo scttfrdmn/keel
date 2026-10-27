@@ -33,3 +33,30 @@ and 1.78 (V3, 0.626 × 2.85) FMA/cycle. That uses
 the same peak-per-cycle figures as that README, so it is one derivation, not three
 corroborations. Open hypothesis, untested: the broadcast (`VMOV` element insert, then `VDUP`)
 or the load path, not the front end.
+
+## Limiter probe (9cf8848) and denominator check (89ccacd)
+
+Predictions are in `probe-prereg.md`, committed before each run. Both ran on the same three
+4xlarge hosts as above, pinned to core 2, with 10 interleaved rounds.
+
+**The limiter is the broadcast: predicted, and it held.** Pre-broadcast A (PB) beats raw
+3x24/1 by 62% on V1, 59% on V2 and 43% on V3. No B loads (NB) moves nothing. Each
+`BroadcastFloat32x4` lowers to 3 vector ops (zero copy, insert, `VDUP`). This is
+golang/go#81352, open and labelled FixPending, with fix CL 827904 (cmd/compile: fold arm64
+broadcasts of inserted scalars) at Code-Review+2 on PS2 and not submitted as of 2026-10-26.
+
+**The denominator conflict is open.** The FMA-only probe (FO) reads 78.2 / 87.75 / 103.2
+GFLOP/s, which is 1.89× / 1.35× / 1.28× `BenchmarkPeak/neon`, in the same binary on the same
+core. My explanation, that the shim's 16 anchor NOPs bound the peak kernel, is **REFUTED**
+(`peakcheck-89ccacd-summary.txt`). Its raw-archsimd twin, with 0 NOPs, reads 41.42 against
+41.42 on V1, +8% on V2 and +5% on V3. 24 chains read no higher than 16. So `neonPeak`
+under-reads FO for a reason not yet identified. Two differences stand out: all 16 of its FMAs
+read the same two multiplicand registers, where FO's 18 spread over 9; and its operands are
+exactly 1.0. **VOID by name: commit `89ccacd`'s subject clause "the NEON peak under-reads"
+stands as an observation, but its body's "the denominator ... is NOP-bound" is refuted.**
+`VOID-peakcheck-89ccacd-quoting.log` is the first launch of this check. It was killed by its
+own trap before measuring anything, because of a quoting bug in the driver.
+
+Why it matters: every arm64 P2 percentage divides by `neonPeak`/`neonPeakD`. If FO's rate is
+the true ceiling, the shipped NEON kernels are at about 46–49% of it, below the 55% floor.
+Nothing in the gate has changed. This is the open question, not a verdict.

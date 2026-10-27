@@ -1,0 +1,252 @@
+== launch 04:33:34 rev 89ccacd
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.16 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (1ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.1s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (883ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (287ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (627ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0816e857377bfe195
+  Public IP    100.31.125.69
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt3  c7g.4xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.28 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (833ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (295ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (608ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-054b932a92b08e310
+  Public IP    35.153.104.6
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt4  c8g.4xlarge  (Neoverse-V2, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (852ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (287ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (600ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0bc752092c52f175f
+  Public IP    100.58.162.225
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt5  c9g.4xlarge  (AWS Graviton5, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.4xlarge      100.58.162.225   on-demand  2h       2026-10-27T04:34:57Z
+  keel-gvt4            c8g.4xlarge      35.153.104.6     on-demand  2h       2026-10-27T04:34:28Z
+  keel-gvt3            c7g.4xlarge      100.31.125.69    on-demand  2h       2026-10-27T04:34:00Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== TEARDOWN 04:36:14
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0bc752092c52f175f...
+
+✅ Terminate request sent!
+   Instance: i-0bc752092c52f175f
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-054b932a92b08e310...
+
+✅ Terminate request sent!
+   Instance: i-054b932a92b08e310
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0816e857377bfe195...
+
+✅ Terminate request sent!
+   Instance: i-0816e857377bfe195
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   fleet is down
+== keel-gvt3 read-back
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+scp: Connection closed
+!! keel-gvt3 scp failed
+== keel-gvt4 read-back
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+scp: Connection closed
+!! keel-gvt4 scp failed
+== keel-gvt5 read-back
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+scp: Connection closed
+!! keel-gvt5 scp failed
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt4: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt3: nodename nor servname provided, or not known
+ssh: Could not resolve hostname keel-gvt5: nodename nor servname provided, or not known
+== done 04:37:16
