@@ -54,3 +54,22 @@ audit, raw 3x24/1 is 49 insns under base and 43 under cl (the broadcast becomes 
 plus one `VDUP`). Shipped shim `Kernel3x24` is 142 → 130. Predictions, on V2 and V3:
 - raw 3x24/1 under cl is at least 15% faster than under base;
 - raw 3x24/1 under cl reaches at least 85% of PB under cl. **REFUTED if** it gains under 5%.
+
+## V1 probe (#198), predictions (written before the run)
+
+On Neoverse-V1, every counter-loop peak variant reads exactly 2.0 FMA/cycle (41.42 GFLOP/s),
+while FO, a kernel-shaped loop with 18 independent chains, reads 3.76 (78.2). `BenchmarkV1Probe`
+starts from pkX36 (FO's 3x6 shape on a counter loop, 9 distinct multiplicand registers, 21
+insns) and changes one property toward FO in each variant:
+- i512: 512 iterations per call, FO's kc;
+- zero: accumulators start at 0, as in FO;
+- data: random operands read from memory once, with a zero start;
+- slice: FO's exact loop condition, two counters and two compare-branches (24 insns by audit, FO's count);
+- int: plus 8 loop-carried integer ops (29 insns);
+- unroll2: the body twice per iteration (39 insns, 36 FMAs).
+
+All are spill-free with 0 NOPs and 9 distinct multiplicand registers (by audit). I make no
+directional prediction. The reading: on V1, a variant whose median is at least 90% of FO's
+names the property, and that property's shape is the candidate V1 ceiling. If none reaches
+90%, no single property explains the gap, and the result is reported as such, not argued
+into one. V2 and V3 run the same binary as a contrast.

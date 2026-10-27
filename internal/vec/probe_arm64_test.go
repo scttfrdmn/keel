@@ -806,3 +806,385 @@ func BenchmarkPeakVariants(b *testing.B) {
 		})
 	}
 }
+
+// v1Zero: pkX36 with every accumulator starting at 0, as in FO.
+func v1Zero(iters int) float32 {
+	x0, x1, x2 := archsimd.BroadcastFloat32x4(0.75*peakOne()+0.0/1024), archsimd.BroadcastFloat32x4(0.75*peakOne()+1.0/1024), archsimd.BroadcastFloat32x4(0.75*peakOne()+2.0/1024)
+	y0, y1, y2, y3, y4, y5 := archsimd.BroadcastFloat32x4(1.25*peakOne()+0.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+1.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+2.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+3.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+4.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+5.0/1024)
+	a0_0 := archsimd.BroadcastFloat32x4(0)
+	a0_1 := archsimd.BroadcastFloat32x4(0)
+	a0_2 := archsimd.BroadcastFloat32x4(0)
+	a0_3 := archsimd.BroadcastFloat32x4(0)
+	a0_4 := archsimd.BroadcastFloat32x4(0)
+	a0_5 := archsimd.BroadcastFloat32x4(0)
+	a1_0 := archsimd.BroadcastFloat32x4(0)
+	a1_1 := archsimd.BroadcastFloat32x4(0)
+	a1_2 := archsimd.BroadcastFloat32x4(0)
+	a1_3 := archsimd.BroadcastFloat32x4(0)
+	a1_4 := archsimd.BroadcastFloat32x4(0)
+	a1_5 := archsimd.BroadcastFloat32x4(0)
+	a2_0 := archsimd.BroadcastFloat32x4(0)
+	a2_1 := archsimd.BroadcastFloat32x4(0)
+	a2_2 := archsimd.BroadcastFloat32x4(0)
+	a2_3 := archsimd.BroadcastFloat32x4(0)
+	a2_4 := archsimd.BroadcastFloat32x4(0)
+	a2_5 := archsimd.BroadcastFloat32x4(0)
+	for i := 0; i < iters; i++ {
+		a0_0 = x0.MulAdd(y0, a0_0)
+		a0_1 = x0.MulAdd(y1, a0_1)
+		a0_2 = x0.MulAdd(y2, a0_2)
+		a0_3 = x0.MulAdd(y3, a0_3)
+		a0_4 = x0.MulAdd(y4, a0_4)
+		a0_5 = x0.MulAdd(y5, a0_5)
+		a1_0 = x1.MulAdd(y0, a1_0)
+		a1_1 = x1.MulAdd(y1, a1_1)
+		a1_2 = x1.MulAdd(y2, a1_2)
+		a1_3 = x1.MulAdd(y3, a1_3)
+		a1_4 = x1.MulAdd(y4, a1_4)
+		a1_5 = x1.MulAdd(y5, a1_5)
+		a2_0 = x2.MulAdd(y0, a2_0)
+		a2_1 = x2.MulAdd(y1, a2_1)
+		a2_2 = x2.MulAdd(y2, a2_2)
+		a2_3 = x2.MulAdd(y3, a2_3)
+		a2_4 = x2.MulAdd(y4, a2_4)
+		a2_5 = x2.MulAdd(y5, a2_5)
+	}
+	s := a0_0
+	s = s.Add(a0_1)
+	s = s.Add(a0_2)
+	s = s.Add(a0_3)
+	s = s.Add(a0_4)
+	s = s.Add(a0_5)
+	s = s.Add(a1_0)
+	s = s.Add(a1_1)
+	s = s.Add(a1_2)
+	s = s.Add(a1_3)
+	s = s.Add(a1_4)
+	s = s.Add(a1_5)
+	s = s.Add(a2_0)
+	s = s.Add(a2_1)
+	s = s.Add(a2_2)
+	s = s.Add(a2_3)
+	s = s.Add(a2_4)
+	s = s.Add(a2_5)
+	return HSum128(s)
+}
+
+// v1Data: pkX36 with random operands read from d once (FO reads its operands from data), and zero start.
+func v1Data(iters int, d []float32) float32 {
+	x0, x1, x2 := archsimd.BroadcastFloat32x4(d[0]), archsimd.BroadcastFloat32x4(d[1]), archsimd.BroadcastFloat32x4(d[2])
+	y0, y1, y2, y3, y4, y5 := archsimd.BroadcastFloat32x4(d[3]), archsimd.BroadcastFloat32x4(d[4]), archsimd.BroadcastFloat32x4(d[5]), archsimd.BroadcastFloat32x4(d[6]), archsimd.BroadcastFloat32x4(d[7]), archsimd.BroadcastFloat32x4(d[8])
+	a0_0 := archsimd.BroadcastFloat32x4(0)
+	a0_1 := archsimd.BroadcastFloat32x4(0)
+	a0_2 := archsimd.BroadcastFloat32x4(0)
+	a0_3 := archsimd.BroadcastFloat32x4(0)
+	a0_4 := archsimd.BroadcastFloat32x4(0)
+	a0_5 := archsimd.BroadcastFloat32x4(0)
+	a1_0 := archsimd.BroadcastFloat32x4(0)
+	a1_1 := archsimd.BroadcastFloat32x4(0)
+	a1_2 := archsimd.BroadcastFloat32x4(0)
+	a1_3 := archsimd.BroadcastFloat32x4(0)
+	a1_4 := archsimd.BroadcastFloat32x4(0)
+	a1_5 := archsimd.BroadcastFloat32x4(0)
+	a2_0 := archsimd.BroadcastFloat32x4(0)
+	a2_1 := archsimd.BroadcastFloat32x4(0)
+	a2_2 := archsimd.BroadcastFloat32x4(0)
+	a2_3 := archsimd.BroadcastFloat32x4(0)
+	a2_4 := archsimd.BroadcastFloat32x4(0)
+	a2_5 := archsimd.BroadcastFloat32x4(0)
+	for i := 0; i < iters; i++ {
+		a0_0 = x0.MulAdd(y0, a0_0)
+		a0_1 = x0.MulAdd(y1, a0_1)
+		a0_2 = x0.MulAdd(y2, a0_2)
+		a0_3 = x0.MulAdd(y3, a0_3)
+		a0_4 = x0.MulAdd(y4, a0_4)
+		a0_5 = x0.MulAdd(y5, a0_5)
+		a1_0 = x1.MulAdd(y0, a1_0)
+		a1_1 = x1.MulAdd(y1, a1_1)
+		a1_2 = x1.MulAdd(y2, a1_2)
+		a1_3 = x1.MulAdd(y3, a1_3)
+		a1_4 = x1.MulAdd(y4, a1_4)
+		a1_5 = x1.MulAdd(y5, a1_5)
+		a2_0 = x2.MulAdd(y0, a2_0)
+		a2_1 = x2.MulAdd(y1, a2_1)
+		a2_2 = x2.MulAdd(y2, a2_2)
+		a2_3 = x2.MulAdd(y3, a2_3)
+		a2_4 = x2.MulAdd(y4, a2_4)
+		a2_5 = x2.MulAdd(y5, a2_5)
+	}
+	s := a0_0
+	s = s.Add(a0_1)
+	s = s.Add(a0_2)
+	s = s.Add(a0_3)
+	s = s.Add(a0_4)
+	s = s.Add(a0_5)
+	s = s.Add(a1_0)
+	s = s.Add(a1_1)
+	s = s.Add(a1_2)
+	s = s.Add(a1_3)
+	s = s.Add(a1_4)
+	s = s.Add(a1_5)
+	s = s.Add(a2_0)
+	s = s.Add(a2_1)
+	s = s.Add(a2_2)
+	s = s.Add(a2_3)
+	s = s.Add(a2_4)
+	s = s.Add(a2_5)
+	return HSum128(s)
+}
+
+// v1Slice: pkX36 driven by FO's exact loop condition, two slices and two compare-branches, instead of a counter.
+func v1Slice(iters int, p, q []float32) float32 {
+	x0, x1, x2 := archsimd.BroadcastFloat32x4(0.75*peakOne()+0.0/1024), archsimd.BroadcastFloat32x4(0.75*peakOne()+1.0/1024), archsimd.BroadcastFloat32x4(0.75*peakOne()+2.0/1024)
+	y0, y1, y2, y3, y4, y5 := archsimd.BroadcastFloat32x4(1.25*peakOne()+0.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+1.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+2.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+3.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+4.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+5.0/1024)
+	a0_0 := archsimd.BroadcastFloat32x4(1)
+	a0_1 := archsimd.BroadcastFloat32x4(2)
+	a0_2 := archsimd.BroadcastFloat32x4(3)
+	a0_3 := archsimd.BroadcastFloat32x4(4)
+	a0_4 := archsimd.BroadcastFloat32x4(5)
+	a0_5 := archsimd.BroadcastFloat32x4(6)
+	a1_0 := archsimd.BroadcastFloat32x4(7)
+	a1_1 := archsimd.BroadcastFloat32x4(8)
+	a1_2 := archsimd.BroadcastFloat32x4(9)
+	a1_3 := archsimd.BroadcastFloat32x4(10)
+	a1_4 := archsimd.BroadcastFloat32x4(11)
+	a1_5 := archsimd.BroadcastFloat32x4(12)
+	a2_0 := archsimd.BroadcastFloat32x4(13)
+	a2_1 := archsimd.BroadcastFloat32x4(14)
+	a2_2 := archsimd.BroadcastFloat32x4(15)
+	a2_3 := archsimd.BroadcastFloat32x4(16)
+	a2_4 := archsimd.BroadcastFloat32x4(17)
+	a2_5 := archsimd.BroadcastFloat32x4(18)
+	p, q = p[:iters*3], q[:iters*24]
+	for len(p) >= 3 && len(q) >= 24 {
+		a0_0 = x0.MulAdd(y0, a0_0)
+		a0_1 = x0.MulAdd(y1, a0_1)
+		a0_2 = x0.MulAdd(y2, a0_2)
+		a0_3 = x0.MulAdd(y3, a0_3)
+		a0_4 = x0.MulAdd(y4, a0_4)
+		a0_5 = x0.MulAdd(y5, a0_5)
+		a1_0 = x1.MulAdd(y0, a1_0)
+		a1_1 = x1.MulAdd(y1, a1_1)
+		a1_2 = x1.MulAdd(y2, a1_2)
+		a1_3 = x1.MulAdd(y3, a1_3)
+		a1_4 = x1.MulAdd(y4, a1_4)
+		a1_5 = x1.MulAdd(y5, a1_5)
+		a2_0 = x2.MulAdd(y0, a2_0)
+		a2_1 = x2.MulAdd(y1, a2_1)
+		a2_2 = x2.MulAdd(y2, a2_2)
+		a2_3 = x2.MulAdd(y3, a2_3)
+		a2_4 = x2.MulAdd(y4, a2_4)
+		a2_5 = x2.MulAdd(y5, a2_5)
+		p, q = p[3:], q[24:]
+	}
+	s := a0_0
+	s = s.Add(a0_1)
+	s = s.Add(a0_2)
+	s = s.Add(a0_3)
+	s = s.Add(a0_4)
+	s = s.Add(a0_5)
+	s = s.Add(a1_0)
+	s = s.Add(a1_1)
+	s = s.Add(a1_2)
+	s = s.Add(a1_3)
+	s = s.Add(a1_4)
+	s = s.Add(a1_5)
+	s = s.Add(a2_0)
+	s = s.Add(a2_1)
+	s = s.Add(a2_2)
+	s = s.Add(a2_3)
+	s = s.Add(a2_4)
+	s = s.Add(a2_5)
+	return HSum128(s)
+}
+
+// v1Int: pkX36 plus 8 loop-carried integer ops per iteration.
+func v1Int(iters int) float32 {
+	x0, x1, x2 := archsimd.BroadcastFloat32x4(0.75*peakOne()+0.0/1024), archsimd.BroadcastFloat32x4(0.75*peakOne()+1.0/1024), archsimd.BroadcastFloat32x4(0.75*peakOne()+2.0/1024)
+	y0, y1, y2, y3, y4, y5 := archsimd.BroadcastFloat32x4(1.25*peakOne()+0.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+1.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+2.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+3.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+4.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+5.0/1024)
+	a0_0 := archsimd.BroadcastFloat32x4(1)
+	a0_1 := archsimd.BroadcastFloat32x4(2)
+	a0_2 := archsimd.BroadcastFloat32x4(3)
+	a0_3 := archsimd.BroadcastFloat32x4(4)
+	a0_4 := archsimd.BroadcastFloat32x4(5)
+	a0_5 := archsimd.BroadcastFloat32x4(6)
+	a1_0 := archsimd.BroadcastFloat32x4(7)
+	a1_1 := archsimd.BroadcastFloat32x4(8)
+	a1_2 := archsimd.BroadcastFloat32x4(9)
+	a1_3 := archsimd.BroadcastFloat32x4(10)
+	a1_4 := archsimd.BroadcastFloat32x4(11)
+	a1_5 := archsimd.BroadcastFloat32x4(12)
+	a2_0 := archsimd.BroadcastFloat32x4(13)
+	a2_1 := archsimd.BroadcastFloat32x4(14)
+	a2_2 := archsimd.BroadcastFloat32x4(15)
+	a2_3 := archsimd.BroadcastFloat32x4(16)
+	a2_4 := archsimd.BroadcastFloat32x4(17)
+	a2_5 := archsimd.BroadcastFloat32x4(18)
+	k0, k1, k2, k3 := 1, 2, 3, 4
+	for i := 0; i < iters; i++ {
+		a0_0 = x0.MulAdd(y0, a0_0)
+		a0_1 = x0.MulAdd(y1, a0_1)
+		a0_2 = x0.MulAdd(y2, a0_2)
+		a0_3 = x0.MulAdd(y3, a0_3)
+		a0_4 = x0.MulAdd(y4, a0_4)
+		a0_5 = x0.MulAdd(y5, a0_5)
+		a1_0 = x1.MulAdd(y0, a1_0)
+		a1_1 = x1.MulAdd(y1, a1_1)
+		a1_2 = x1.MulAdd(y2, a1_2)
+		a1_3 = x1.MulAdd(y3, a1_3)
+		a1_4 = x1.MulAdd(y4, a1_4)
+		a1_5 = x1.MulAdd(y5, a1_5)
+		a2_0 = x2.MulAdd(y0, a2_0)
+		a2_1 = x2.MulAdd(y1, a2_1)
+		a2_2 = x2.MulAdd(y2, a2_2)
+		a2_3 = x2.MulAdd(y3, a2_3)
+		a2_4 = x2.MulAdd(y4, a2_4)
+		a2_5 = x2.MulAdd(y5, a2_5)
+		k0 += i
+		k1 ^= k0
+		k2 += k1 >> 1
+		k3 -= k2
+		k0 ^= k3 << 2
+		k1 += k3
+		k2 ^= k0
+		k3 += k1
+	}
+	s := a0_0
+	s = s.Add(a0_1)
+	s = s.Add(a0_2)
+	s = s.Add(a0_3)
+	s = s.Add(a0_4)
+	s = s.Add(a0_5)
+	s = s.Add(a1_0)
+	s = s.Add(a1_1)
+	s = s.Add(a1_2)
+	s = s.Add(a1_3)
+	s = s.Add(a1_4)
+	s = s.Add(a1_5)
+	s = s.Add(a2_0)
+	s = s.Add(a2_1)
+	s = s.Add(a2_2)
+	s = s.Add(a2_3)
+	s = s.Add(a2_4)
+	s = s.Add(a2_5)
+	return HSum128(s) + float32(k3&1)
+}
+
+// v1Unroll2: pkX36 with the body twice per iteration and half the iterations.
+func v1Unroll2(iters int) float32 {
+	x0, x1, x2 := archsimd.BroadcastFloat32x4(0.75*peakOne()+0.0/1024), archsimd.BroadcastFloat32x4(0.75*peakOne()+1.0/1024), archsimd.BroadcastFloat32x4(0.75*peakOne()+2.0/1024)
+	y0, y1, y2, y3, y4, y5 := archsimd.BroadcastFloat32x4(1.25*peakOne()+0.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+1.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+2.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+3.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+4.0/1024), archsimd.BroadcastFloat32x4(1.25*peakOne()+5.0/1024)
+	a0_0 := archsimd.BroadcastFloat32x4(1)
+	a0_1 := archsimd.BroadcastFloat32x4(2)
+	a0_2 := archsimd.BroadcastFloat32x4(3)
+	a0_3 := archsimd.BroadcastFloat32x4(4)
+	a0_4 := archsimd.BroadcastFloat32x4(5)
+	a0_5 := archsimd.BroadcastFloat32x4(6)
+	a1_0 := archsimd.BroadcastFloat32x4(7)
+	a1_1 := archsimd.BroadcastFloat32x4(8)
+	a1_2 := archsimd.BroadcastFloat32x4(9)
+	a1_3 := archsimd.BroadcastFloat32x4(10)
+	a1_4 := archsimd.BroadcastFloat32x4(11)
+	a1_5 := archsimd.BroadcastFloat32x4(12)
+	a2_0 := archsimd.BroadcastFloat32x4(13)
+	a2_1 := archsimd.BroadcastFloat32x4(14)
+	a2_2 := archsimd.BroadcastFloat32x4(15)
+	a2_3 := archsimd.BroadcastFloat32x4(16)
+	a2_4 := archsimd.BroadcastFloat32x4(17)
+	a2_5 := archsimd.BroadcastFloat32x4(18)
+	for i := 0; i < iters; i += 2 {
+		a0_0 = x0.MulAdd(y0, a0_0)
+		a0_1 = x0.MulAdd(y1, a0_1)
+		a0_2 = x0.MulAdd(y2, a0_2)
+		a0_3 = x0.MulAdd(y3, a0_3)
+		a0_4 = x0.MulAdd(y4, a0_4)
+		a0_5 = x0.MulAdd(y5, a0_5)
+		a1_0 = x1.MulAdd(y0, a1_0)
+		a1_1 = x1.MulAdd(y1, a1_1)
+		a1_2 = x1.MulAdd(y2, a1_2)
+		a1_3 = x1.MulAdd(y3, a1_3)
+		a1_4 = x1.MulAdd(y4, a1_4)
+		a1_5 = x1.MulAdd(y5, a1_5)
+		a2_0 = x2.MulAdd(y0, a2_0)
+		a2_1 = x2.MulAdd(y1, a2_1)
+		a2_2 = x2.MulAdd(y2, a2_2)
+		a2_3 = x2.MulAdd(y3, a2_3)
+		a2_4 = x2.MulAdd(y4, a2_4)
+		a2_5 = x2.MulAdd(y5, a2_5)
+		a0_0 = x0.MulAdd(y0, a0_0)
+		a0_1 = x0.MulAdd(y1, a0_1)
+		a0_2 = x0.MulAdd(y2, a0_2)
+		a0_3 = x0.MulAdd(y3, a0_3)
+		a0_4 = x0.MulAdd(y4, a0_4)
+		a0_5 = x0.MulAdd(y5, a0_5)
+		a1_0 = x1.MulAdd(y0, a1_0)
+		a1_1 = x1.MulAdd(y1, a1_1)
+		a1_2 = x1.MulAdd(y2, a1_2)
+		a1_3 = x1.MulAdd(y3, a1_3)
+		a1_4 = x1.MulAdd(y4, a1_4)
+		a1_5 = x1.MulAdd(y5, a1_5)
+		a2_0 = x2.MulAdd(y0, a2_0)
+		a2_1 = x2.MulAdd(y1, a2_1)
+		a2_2 = x2.MulAdd(y2, a2_2)
+		a2_3 = x2.MulAdd(y3, a2_3)
+		a2_4 = x2.MulAdd(y4, a2_4)
+		a2_5 = x2.MulAdd(y5, a2_5)
+	}
+	s := a0_0
+	s = s.Add(a0_1)
+	s = s.Add(a0_2)
+	s = s.Add(a0_3)
+	s = s.Add(a0_4)
+	s = s.Add(a0_5)
+	s = s.Add(a1_0)
+	s = s.Add(a1_1)
+	s = s.Add(a1_2)
+	s = s.Add(a1_3)
+	s = s.Add(a1_4)
+	s = s.Add(a1_5)
+	s = s.Add(a2_0)
+	s = s.Add(a2_1)
+	s = s.Add(a2_2)
+	s = s.Add(a2_3)
+	s = s.Add(a2_4)
+	s = s.Add(a2_5)
+	return HSum128(s)
+}
+
+var v1Data32 = func() []float32 {
+	rng := rand.New(rand.NewSource(7))
+	d := make([]float32, 3*(1<<16))
+	for i := range d {
+		d[i] = rng.Float32()*2 - 1
+	}
+	return d
+}()
+
+var v1DataB = make([]float32, 24*(1<<16))
+
+// BenchmarkV1Probe isolates why every counter loop sits at exactly 2.0 FMA/cycle on
+// Neoverse-V1 while FO, a kernel-shaped loop with the same 18 chains, reaches 3.76 (#198).
+// Each variant changes one property of pkX36 toward FO. GFLOP/s counts 18 x 4 x 2 flops
+// per (original) iteration for every variant.
+func BenchmarkV1Probe(b *testing.B) {
+	for _, p := range []struct {
+		name  string
+		iters int
+		f     func(int) float32
+	}{
+		{"x36", 1 << 16, pkX36},
+		{"i512", 512, pkX36},
+		{"zero", 1 << 16, v1Zero},
+		{"data", 1 << 16, func(n int) float32 { return v1Data(n, v1Data32) }},
+		{"slice", 1 << 16, func(n int) float32 { return v1Slice(n, v1Data32, v1DataB) }},
+		{"int", 1 << 16, v1Int},
+		{"unroll2", 1 << 16, v1Unroll2},
+	} {
+		b.Run(p.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				probeSink += p.f(p.iters)
+			}
+			b.ReportMetric(18*4*2*float64(p.iters)*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+		})
+	}
+}
