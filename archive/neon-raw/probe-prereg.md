@@ -35,3 +35,22 @@ Predictions for the denominator check (`BenchmarkPeakProbe`, written before it r
   This is the FO ratio. **REFUTED if** raw16 is within 10% of shim16 anywhere.
 - raw24 is within 5% of raw16: 16 chains already saturate.
 - raw16 is within 10% of FO's FMA rate on each host.
+
+## Peak variants and the CL 827904 A/B, predictions (written before the run)
+
+**Peak variants** (`BenchmarkPeakVariants`). Each changes one property of `neonPeak`'s raw
+twin. Distinct multiplicand registers by audit: raw16 has 1 (x and y are both 1.0, so CSE
+merged them into one register; the shim `neonPeak` has 2), vals 2, x44 8, x44v 8, x36 9. All
+are spill-free with 0 NOPs. I make no directional prediction about which property it is. The
+pre-registered reading is:
+- a variant whose median is within 5% of FO's rate on a host names the cause on that host,
+  and is the candidate corrected ceiling;
+- if none comes within 5% of FO anywhere, the gap is not a property of the peak loop body,
+  and FO itself becomes the suspect instrument.
+
+**CL 827904 A/B** (#197). The toolchains are master@46f508b3aa (base) and master@46f508b3aa +
+CL 827904 PS2 = 213d6fb3d2 (cl), from the same tree, with only the patch differing. In the
+audit, raw 3x24/1 is 49 insns under base and 43 under cl (the broadcast becomes a scalar load
+plus one `VDUP`). Shipped shim `Kernel3x24` is 142 → 130. Predictions, on V2 and V3:
+- raw 3x24/1 under cl is at least 15% faster than under base;
+- raw 3x24/1 under cl reaches at least 85% of PB under cl. **REFUTED if** it gains under 5%.
