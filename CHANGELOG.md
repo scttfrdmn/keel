@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **shapegen gains `-form raw` for arm64, the NEON shim-removal experiment** (#191). It emits the
+  kernel against archsimd directly, through array-pointer loads and stores, `MulAdd` and `Add`, so the
+  only bodied call left is `BroadcastFloat32x4`. In the audit, 3x24/2 drops from 148 to 98 insns and
+  from 63 NOPs to 3, but spills 11: without the anchors the scheduler hoists both B groups to the loop
+  top. The zero-spill raw frontier is 2x24/2 at 2.833 insns/FMA (3x24/1 at 2.889), against the shim
+  form's 4.111. The raw kernels sit test-only in `internal/vec/rawneon_arm64_test.go` with a timing
+  A/B against the shipped ones. Nothing dispatches them.
 - **Graviton5's judged arm64 P2 is GREEN at both elements** (#191). On c9g.48xlarge (Neoverse-V3),
   `KEEL_ARCH=arm64 scripts/gate-p2.sh` scored 22/0/0 at each element: float64 3x12 at 62.7% of peak,
   float32 3x24 at 64.0% (floor 55%), FMA-bound, both inside their pre-registered bands. It took 12

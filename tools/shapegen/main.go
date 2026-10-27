@@ -150,7 +150,7 @@ func parseUArch(spec string) (UArch, error) {
 func main() {
 	var (
 		emitFlag = flag.String("emit", "", "print one candidate: MRxNR/U")
-		form     = flag.String("form", "broadcast", "accumulate form: broadcast | permute")
+		form     = flag.String("form", "broadcast", "accumulate form: broadcast | permute | raw (arm64, -emit only)")
 		verify   = flag.Bool("verify", false, "emit the shipped shapes and compare against internal/vec")
 		sweep    = flag.Bool("sweep", false, "emit, audit and rank the whole shape space")
 		frontier = flag.Bool("frontier", false, "print the best emittable zero-spill insns/FMA and nothing else")
@@ -213,6 +213,11 @@ func parseShape(spec, form string) (Shape, error) {
 	f := Broadcast
 	switch form {
 	case "broadcast":
+	case "raw":
+		if isa.Arch != "arm64" {
+			return Shape{}, fmt.Errorf("raw form is arm64-only: the amd64 emitter is already raw archsimd")
+		}
+		f = Raw
 	case "permute":
 		if isa.Arch == "arm64" {
 			return Shape{}, fmt.Errorf("permute form is amd64-only: NEON has no window-permute, so arm64 emits broadcast only")

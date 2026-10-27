@@ -35,11 +35,23 @@ const (
 	// each row's lane with archsimd.Float32x16.Permute against a hoisted index
 	// vector. It trades MR*U memory broadcasts for one load plus MR*U permutes.
 	Permute
+	// Raw is the NEON broadcast form written against archsimd directly instead of
+	// the vec shim (#191, the shim-removal experiment): bodiless intrinsics wherever
+	// arm64 archsimd has one (LoadFloat32x4Array/StoreArray on array pointers carved
+	// from the panels, the MulAdd and Add methods), so the only inlined bodied call
+	// left in the K-loop is BroadcastFloat32x4, for which arm64 archsimd has no
+	// bodiless form (go1.27.3: SetElem then an unexported broadcast1To4). arm64 only,
+	// and only on request (-form raw): it is not in the default sweep, so the frontier
+	// the gates reconcile against does not move until a ruling adopts it.
+	Raw
 )
 
 func (f Form) String() string {
-	if f == Permute {
+	switch f {
+	case Permute:
 		return "permute"
+	case Raw:
+		return "raw"
 	}
 	return "broadcast"
 }
@@ -63,6 +75,14 @@ func (s Shape) FMAs() int { return s.MR * s.V * s.U }
 // by audit reading. A float64 kernel is KernelD<MR>x<NR> (#191): 4x16 names a
 // shape at both element types, and both will live in package vec.
 func (s Shape) Name() string {
+	if s.Form == Raw {
+		// Distinct from the shipped kernels' names, and carrying U, so raw candidates
+		// of one shape at two unrolls can sit beside the shim kernel in package vec.
+		if isa.Elem == "f64" {
+			return fmt.Sprintf("KernelDR%dx%dU%d", s.MR, s.NR(), s.U)
+		}
+		return fmt.Sprintf("KernelR%dx%dU%d", s.MR, s.NR(), s.U)
+	}
 	if isa.Elem == "f64" {
 		return fmt.Sprintf("KernelD%dx%d", s.MR, s.NR())
 	}
@@ -160,6 +180,9 @@ func (s Shape) bNames() []string {
 // code — the shim wrappers inline away — which is why arm64 -verify binds on the
 // audit report (identical insns/FMAs/spills/…) rather than on the text.
 func (s Shape) Emit() string {
+	if isa.Arch == "arm64" && s.Form == Raw {
+		return s.emitRawNEON()
+	}
 	if isa.Arch == "arm64" {
 		return s.emitNEON()
 	}
@@ -417,4 +440,88 @@ func (s Shape) emitBody(p func(string, ...any), u int, label bool) {
 			p("\t\t%s = %s", strings.Join(acc, ", "), strings.Join(fmas, ", "))
 		}
 	}
+}
+
+// emitRawNEON is the Raw form (see Form): the NEON broadcast kernel against archsimd
+// directly. Names copied from `GOEXPERIMENT=simd GOARCH=arm64 go doc simd/archsimd`
+// on go1.27.3: LoadFloat32x4Array / LoadFloat64x2Array (bodiless), StoreArray
+// (bodiless), MulAdd and Add (bodiless, VFMLA / VFADD), BroadcastFloat32x4 /
+// BroadcastFloat64x2 (bodied). The FMA operand order is the shim's: av.MulAdd(b, c)
+// is FMA128(av, b, c) = av*b + c.
+func (s Shape) emitRawNEON() string {
+	lanes := isa.Lanes
+	vt, et := "Float32x4", "float32"
+	if isa.Elem == "f64" {
+		vt, et = "Float64x2", "float64"
+	}
+	ld := func(src string, lo int) string {
+		return fmt.Sprintf("archsimd.Load%sArray((*[%d]%s)(%s[%d:%d]))", vt, lanes, et, src, lo, lo+lanes)
+	}
+	var b strings.Builder
+	p := func(format string, a ...any) { fmt.Fprintf(&b, format+"\n", a...) }
+	p("// Copyright 2026 Scott Friedman")
+	p("// SPDX-License-Identifier: Apache-2.0")
+	p("")
+	p("//go:build goexperiment.simd && arm64")
+	p("")
+	p("package shapegencand")
+	p("")
+	p(`import "simd/archsimd"`)
+	p("")
+	p("// %s is a generated candidate: %s.", s.Name(), s.Label())
+	p("//")
+	p("// Emitted by tools/shapegen. Not a shipped kernel; see KERNEL.md.")
+	p("func %s(kc int, a, b, c []%s, ldc int) {", s.Name(), et)
+	for r := 0; r < s.MR; r++ {
+		names := make([]string, s.V)
+		for j := range names {
+			names[j] = fmt.Sprintf("c%d_%d", r, j)
+		}
+		p("\tvar %s archsimd.%s", strings.Join(names, ", "), vt)
+	}
+	bn := make([]string, s.V)
+	for j := range bn {
+		bn[j] = fmt.Sprintf("b%d", j)
+	}
+	p("\tvar %s, av archsimd.%s", strings.Join(bn, ", "), vt)
+	p("\tap := a[:kc*%d]", s.MR)
+	p("\tbp := b[:kc*%d]", s.NR())
+	body := func(u int) {
+		for k := 0; k < u; k++ {
+			loads := make([]string, s.V)
+			for j := range loads {
+				loads[j] = ld("bp", k*s.NR()+j*lanes)
+			}
+			p("\t\t%s = %s", strings.Join(bn, ", "), strings.Join(loads, ", "))
+			for r := 0; r < s.MR; r++ {
+				p("\t\tav = archsimd.Broadcast%s(ap[%d])", vt, k*s.MR+r)
+				acc := make([]string, s.V)
+				fmas := make([]string, s.V)
+				for j := range acc {
+					acc[j] = fmt.Sprintf("c%d_%d", r, j)
+					fmas[j] = fmt.Sprintf("av.MulAdd(%s, c%d_%d)", bn[j], r, j)
+				}
+				p("\t\t%s = %s", strings.Join(acc, ", "), strings.Join(fmas, ", "))
+			}
+		}
+	}
+	p("\tfor len(ap) >= %d && len(bp) >= %d {", s.MR*s.U, s.NR()*s.U)
+	body(s.U)
+	p("\t\tap, bp = ap[%d:], bp[%d:]", s.MR*s.U, s.NR()*s.U)
+	p("\t}")
+	if s.U > 1 {
+		p("\tfor len(ap) >= %d && len(bp) >= %d {", s.MR, s.NR())
+		body(1)
+		p("\t\tap, bp = ap[%d:], bp[%d:]", s.MR, s.NR())
+		p("\t}")
+	}
+	for r := 0; r < s.MR; r++ {
+		p("\tr%d := c[%d*ldc : %d*ldc+%d]", r, r, r, s.NR())
+		for j := 0; j < s.V; j++ {
+			lo := j * lanes
+			p("\t%s.Add(c%d_%d).StoreArray((*[%d]%s)(r%d[%d:%d]))", ld(fmt.Sprintf("r%d", r), lo), r, j, lanes, et, r, lo, lo+lanes)
+		}
+	}
+	p("}")
+	return b.String()
 }
