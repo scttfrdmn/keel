@@ -8,11 +8,6 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
-### Changed
-- **README: the 18 Neoverse rows' percentages are flagged as under review** (#198). The NEON peak they
-  divide by reads 1.35× low on Neoverse-V2 at the exploration tier, and is unresolved on V1. The rates
-  are unaffected, and no figure has changed pending a judged corrected peak.
-
 ### Added
 - **shapegen gains `-form raw` for arm64, the NEON shim-removal experiment** (#191). It emits the
   kernel against archsimd directly, through array-pointer loads and stores, `MulAdd` and `Add`, so the
@@ -166,6 +161,9 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **README: the 18 Neoverse rows' percentages are flagged as under review** (#198). The NEON peak they
+  divide by reads 1.35× low on Neoverse-V2 at the exploration tier, and is unresolved on V1. The rates
+  are unaffected, and no figure has changed pending a judged corrected peak.
 - **DESIGN.md: v0.3 is float64, at parity with float32** (Scott's ruling on #103, 2026-10-25). The v0
   non-goal list stays as written, with a dated amendment beside it. That amendment also records that
   full float32 coverage and banded/packed storage shipped in v0.2.3 and arm64 in v0.2.0, since the v0
