@@ -259,3 +259,228 @@ func BenchmarkLimiterProbe(b *testing.B) {
 		})
 	}
 }
+
+// rawPeak16 is neonPeak with archsimd called directly: 16 chains, each `a = x.MulAdd(y, a)`,
+// so no inlined shim body leaves an anchor NOP between the FMAs.
+func rawPeak16(iters int) float32 {
+	x, y := archsimd.BroadcastFloat32x4(peakOne()), archsimd.BroadcastFloat32x4(peakOne())
+	a0 := archsimd.BroadcastFloat32x4(1)
+	a1 := archsimd.BroadcastFloat32x4(2)
+	a2 := archsimd.BroadcastFloat32x4(3)
+	a3 := archsimd.BroadcastFloat32x4(4)
+	a4 := archsimd.BroadcastFloat32x4(5)
+	a5 := archsimd.BroadcastFloat32x4(6)
+	a6 := archsimd.BroadcastFloat32x4(7)
+	a7 := archsimd.BroadcastFloat32x4(8)
+	a8 := archsimd.BroadcastFloat32x4(9)
+	a9 := archsimd.BroadcastFloat32x4(10)
+	a10 := archsimd.BroadcastFloat32x4(11)
+	a11 := archsimd.BroadcastFloat32x4(12)
+	a12 := archsimd.BroadcastFloat32x4(13)
+	a13 := archsimd.BroadcastFloat32x4(14)
+	a14 := archsimd.BroadcastFloat32x4(15)
+	a15 := archsimd.BroadcastFloat32x4(16)
+	for i := 0; i < iters; i++ {
+		a0 = x.MulAdd(y, a0)
+		a1 = x.MulAdd(y, a1)
+		a2 = x.MulAdd(y, a2)
+		a3 = x.MulAdd(y, a3)
+		a4 = x.MulAdd(y, a4)
+		a5 = x.MulAdd(y, a5)
+		a6 = x.MulAdd(y, a6)
+		a7 = x.MulAdd(y, a7)
+		a8 = x.MulAdd(y, a8)
+		a9 = x.MulAdd(y, a9)
+		a10 = x.MulAdd(y, a10)
+		a11 = x.MulAdd(y, a11)
+		a12 = x.MulAdd(y, a12)
+		a13 = x.MulAdd(y, a13)
+		a14 = x.MulAdd(y, a14)
+		a15 = x.MulAdd(y, a15)
+	}
+	s := a0
+	s = s.Add(a1)
+	s = s.Add(a2)
+	s = s.Add(a3)
+	s = s.Add(a4)
+	s = s.Add(a5)
+	s = s.Add(a6)
+	s = s.Add(a7)
+	s = s.Add(a8)
+	s = s.Add(a9)
+	s = s.Add(a10)
+	s = s.Add(a11)
+	s = s.Add(a12)
+	s = s.Add(a13)
+	s = s.Add(a14)
+	s = s.Add(a15)
+	return HSum128(s)
+}
+
+// rawPeak24 is neonPeak with archsimd called directly: 24 chains, each `a = x.MulAdd(y, a)`,
+// so no inlined shim body leaves an anchor NOP between the FMAs.
+func rawPeak24(iters int) float32 {
+	x, y := archsimd.BroadcastFloat32x4(peakOne()), archsimd.BroadcastFloat32x4(peakOne())
+	a0 := archsimd.BroadcastFloat32x4(1)
+	a1 := archsimd.BroadcastFloat32x4(2)
+	a2 := archsimd.BroadcastFloat32x4(3)
+	a3 := archsimd.BroadcastFloat32x4(4)
+	a4 := archsimd.BroadcastFloat32x4(5)
+	a5 := archsimd.BroadcastFloat32x4(6)
+	a6 := archsimd.BroadcastFloat32x4(7)
+	a7 := archsimd.BroadcastFloat32x4(8)
+	a8 := archsimd.BroadcastFloat32x4(9)
+	a9 := archsimd.BroadcastFloat32x4(10)
+	a10 := archsimd.BroadcastFloat32x4(11)
+	a11 := archsimd.BroadcastFloat32x4(12)
+	a12 := archsimd.BroadcastFloat32x4(13)
+	a13 := archsimd.BroadcastFloat32x4(14)
+	a14 := archsimd.BroadcastFloat32x4(15)
+	a15 := archsimd.BroadcastFloat32x4(16)
+	a16 := archsimd.BroadcastFloat32x4(17)
+	a17 := archsimd.BroadcastFloat32x4(18)
+	a18 := archsimd.BroadcastFloat32x4(19)
+	a19 := archsimd.BroadcastFloat32x4(20)
+	a20 := archsimd.BroadcastFloat32x4(21)
+	a21 := archsimd.BroadcastFloat32x4(22)
+	a22 := archsimd.BroadcastFloat32x4(23)
+	a23 := archsimd.BroadcastFloat32x4(24)
+	for i := 0; i < iters; i++ {
+		a0 = x.MulAdd(y, a0)
+		a1 = x.MulAdd(y, a1)
+		a2 = x.MulAdd(y, a2)
+		a3 = x.MulAdd(y, a3)
+		a4 = x.MulAdd(y, a4)
+		a5 = x.MulAdd(y, a5)
+		a6 = x.MulAdd(y, a6)
+		a7 = x.MulAdd(y, a7)
+		a8 = x.MulAdd(y, a8)
+		a9 = x.MulAdd(y, a9)
+		a10 = x.MulAdd(y, a10)
+		a11 = x.MulAdd(y, a11)
+		a12 = x.MulAdd(y, a12)
+		a13 = x.MulAdd(y, a13)
+		a14 = x.MulAdd(y, a14)
+		a15 = x.MulAdd(y, a15)
+		a16 = x.MulAdd(y, a16)
+		a17 = x.MulAdd(y, a17)
+		a18 = x.MulAdd(y, a18)
+		a19 = x.MulAdd(y, a19)
+		a20 = x.MulAdd(y, a20)
+		a21 = x.MulAdd(y, a21)
+		a22 = x.MulAdd(y, a22)
+		a23 = x.MulAdd(y, a23)
+	}
+	s := a0
+	s = s.Add(a1)
+	s = s.Add(a2)
+	s = s.Add(a3)
+	s = s.Add(a4)
+	s = s.Add(a5)
+	s = s.Add(a6)
+	s = s.Add(a7)
+	s = s.Add(a8)
+	s = s.Add(a9)
+	s = s.Add(a10)
+	s = s.Add(a11)
+	s = s.Add(a12)
+	s = s.Add(a13)
+	s = s.Add(a14)
+	s = s.Add(a15)
+	s = s.Add(a16)
+	s = s.Add(a17)
+	s = s.Add(a18)
+	s = s.Add(a19)
+	s = s.Add(a20)
+	s = s.Add(a21)
+	s = s.Add(a22)
+	s = s.Add(a23)
+	return HSum128(s)
+}
+
+// rawPeakD16 is neonPeakD with archsimd called directly: 16 chains, each `a = x.MulAdd(y, a)`,
+// so no inlined shim body leaves an anchor NOP between the FMAs.
+func rawPeakD16(iters int) float64 {
+	x, y := archsimd.BroadcastFloat64x2(peakOneD()), archsimd.BroadcastFloat64x2(peakOneD())
+	a0 := archsimd.BroadcastFloat64x2(1)
+	a1 := archsimd.BroadcastFloat64x2(2)
+	a2 := archsimd.BroadcastFloat64x2(3)
+	a3 := archsimd.BroadcastFloat64x2(4)
+	a4 := archsimd.BroadcastFloat64x2(5)
+	a5 := archsimd.BroadcastFloat64x2(6)
+	a6 := archsimd.BroadcastFloat64x2(7)
+	a7 := archsimd.BroadcastFloat64x2(8)
+	a8 := archsimd.BroadcastFloat64x2(9)
+	a9 := archsimd.BroadcastFloat64x2(10)
+	a10 := archsimd.BroadcastFloat64x2(11)
+	a11 := archsimd.BroadcastFloat64x2(12)
+	a12 := archsimd.BroadcastFloat64x2(13)
+	a13 := archsimd.BroadcastFloat64x2(14)
+	a14 := archsimd.BroadcastFloat64x2(15)
+	a15 := archsimd.BroadcastFloat64x2(16)
+	for i := 0; i < iters; i++ {
+		a0 = x.MulAdd(y, a0)
+		a1 = x.MulAdd(y, a1)
+		a2 = x.MulAdd(y, a2)
+		a3 = x.MulAdd(y, a3)
+		a4 = x.MulAdd(y, a4)
+		a5 = x.MulAdd(y, a5)
+		a6 = x.MulAdd(y, a6)
+		a7 = x.MulAdd(y, a7)
+		a8 = x.MulAdd(y, a8)
+		a9 = x.MulAdd(y, a9)
+		a10 = x.MulAdd(y, a10)
+		a11 = x.MulAdd(y, a11)
+		a12 = x.MulAdd(y, a12)
+		a13 = x.MulAdd(y, a13)
+		a14 = x.MulAdd(y, a14)
+		a15 = x.MulAdd(y, a15)
+	}
+	s := a0
+	s = s.Add(a1)
+	s = s.Add(a2)
+	s = s.Add(a3)
+	s = s.Add(a4)
+	s = s.Add(a5)
+	s = s.Add(a6)
+	s = s.Add(a7)
+	s = s.Add(a8)
+	s = s.Add(a9)
+	s = s.Add(a10)
+	s = s.Add(a11)
+	s = s.Add(a12)
+	s = s.Add(a13)
+	s = s.Add(a14)
+	s = s.Add(a15)
+	return HSum128D(s)
+}
+
+// BenchmarkPeakProbe is the denominator check (#191): the shipped neonPeak/neonPeakD
+// beside their raw-archsimd twins, in GFLOP/s, chains x lanes x 2 flops per iteration.
+// If the raw twins read above the shim ones, the shipped ceiling is NOP-bound.
+func BenchmarkPeakProbe(b *testing.B) {
+	const iters = 1 << 16
+	for _, p := range []struct {
+		name         string
+		flopsPerIter int
+		f32          func(int) float32
+		f64          func(int) float64
+	}{
+		{"shim16", 16 * 4 * 2, neonPeak, nil},
+		{"raw16", 16 * 4 * 2, rawPeak16, nil},
+		{"raw24", 24 * 4 * 2, rawPeak24, nil},
+		{"shimD16", 16 * 2 * 2, nil, neonPeakD},
+		{"rawD16", 16 * 2 * 2, nil, rawPeakD16},
+	} {
+		b.Run(p.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if p.f32 != nil {
+					probeSink += p.f32(iters)
+				} else {
+					probeSink += float32(p.f64(iters))
+				}
+			}
+			b.ReportMetric(float64(p.flopsPerIter)*iters*float64(b.N)/b.Elapsed().Seconds()/1e9, "GFLOP/s")
+		})
+	}
+}

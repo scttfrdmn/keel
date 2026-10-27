@@ -1,0 +1,435 @@
+== launch 04:25:48 rev 9cf8848
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.16 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.1s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (811ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (310ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (692ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.1s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0255f768b92e10740
+  Public IP    3.236.7.208
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt3  c7g.4xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.28 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.1s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (867ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.6s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (313ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (637ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0a85360aacba31b85
+  Public IP    54.196.74.184
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt4  c8g.4xlarge  (Neoverse-V2, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (856ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (295ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (631ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0baa90c82227ae960
+  Public IP    44.201.51.221
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt5  c9g.4xlarge  (AWS Graviton5, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.4xlarge      44.201.51.221    on-demand  2h       2026-10-27T04:27:12Z
+  keel-gvt4            c8g.4xlarge      54.196.74.184    on-demand  2h       2026-10-27T04:26:43Z
+  keel-gvt3            c7g.4xlarge      3.236.7.208      on-demand  2h       2026-10-27T04:26:13Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== keel-gvt3 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd40
+Model name:                              Neoverse-V1
+ 04:28:29 up 2 min,  1 user,  load average: 0.04, 0.04, 0.01
+== keel-gvt4 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd4f
+Model name:                              Neoverse-V2
+ 04:28:31 up 1 min,  1 user,  load average: 0.17, 0.09, 0.03
+== keel-gvt5 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd84
+Model name:                              Neoverse-V3
+ 04:28:33 up 1 min,  1 user,  load average: 0.19, 0.08, 0.03
+keel-gvt3 r1 BenchmarkLimiterProbe/shim/kc=512         	  577894	      2042 ns/op	        36.11 GFLOP/s
+keel-gvt3 r1 BenchmarkLimiterProbe/ctl/kc=512          	  591955	      2026 ns/op	        36.39 GFLOP/s
+keel-gvt3 r1 BenchmarkLimiterProbe/PB/kc=512           	  961137	      1248 ns/op	        59.06 GFLOP/s
+keel-gvt3 r1 BenchmarkLimiterProbe/NB/kc=512           	  606825	      1970 ns/op	        37.42 GFLOP/s
+keel-gvt3 r1 BenchmarkLimiterProbe/PBNB/kc=512         	 1236927	       970.0 ns/op	        76.01 GFLOP/s
+keel-gvt3 r1 BenchmarkLimiterProbe/FO/kc=512           	 1272765	       942.9 ns/op	        78.19 GFLOP/s
+keel-gvt3 r1 BenchmarkPeak/neon         	    5829	    202559 ns/op	        41.41 GFLOP/s
+keel-gvt3 r2 BenchmarkLimiterProbe/shim/kc=512         	  576588	      2042 ns/op	        36.10 GFLOP/s
+keel-gvt3 r2 BenchmarkLimiterProbe/ctl/kc=512          	  592267	      2022 ns/op	        36.47 GFLOP/s
+keel-gvt3 r2 BenchmarkLimiterProbe/PB/kc=512           	  946492	      1249 ns/op	        59.03 GFLOP/s
+keel-gvt3 r2 BenchmarkLimiterProbe/NB/kc=512           	  608124	      1970 ns/op	        37.43 GFLOP/s
+keel-gvt3 r2 BenchmarkLimiterProbe/PBNB/kc=512         	 1236378	       970.5 ns/op	        75.97 GFLOP/s
+keel-gvt3 r2 BenchmarkLimiterProbe/FO/kc=512           	 1272613	       942.7 ns/op	        78.21 GFLOP/s
+keel-gvt3 r2 BenchmarkPeak/neon         	    5824	    202556 ns/op	        41.41 GFLOP/s
+keel-gvt3 r3 BenchmarkLimiterProbe/shim/kc=512         	  578517	      2048 ns/op	        36.00 GFLOP/s
+keel-gvt3 r3 BenchmarkLimiterProbe/ctl/kc=512          	  591655	      2019 ns/op	        36.51 GFLOP/s
+keel-gvt3 r3 BenchmarkLimiterProbe/PB/kc=512           	  958015	      1252 ns/op	        58.88 GFLOP/s
+keel-gvt3 r3 BenchmarkLimiterProbe/NB/kc=512           	  607494	      1970 ns/op	        37.42 GFLOP/s
+keel-gvt3 r3 BenchmarkLimiterProbe/PBNB/kc=512         	 1237267	       969.8 ns/op	        76.02 GFLOP/s
+keel-gvt3 r3 BenchmarkLimiterProbe/FO/kc=512           	 1272673	       942.9 ns/op	        78.20 GFLOP/s
+keel-gvt3 r3 BenchmarkPeak/neon         	    5827	    202555 ns/op	        41.41 GFLOP/s
+keel-gvt3 r4 BenchmarkLimiterProbe/shim/kc=512         	  577249	      2044 ns/op	        36.08 GFLOP/s
+keel-gvt3 r4 BenchmarkLimiterProbe/ctl/kc=512          	  592238	      2022 ns/op	        36.47 GFLOP/s
+keel-gvt3 r4 BenchmarkLimiterProbe/PB/kc=512           	  959660	      1248 ns/op	        59.06 GFLOP/s
+keel-gvt3 r4 BenchmarkLimiterProbe/NB/kc=512           	  607965	      1972 ns/op	        37.38 GFLOP/s
+keel-gvt3 r4 BenchmarkLimiterProbe/PBNB/kc=512         	 1237110	       969.9 ns/op	        76.02 GFLOP/s
+keel-gvt3 r4 BenchmarkLimiterProbe/FO/kc=512           	 1272680	       942.8 ns/op	        78.20 GFLOP/s
+keel-gvt3 r4 BenchmarkPeak/neon         	    5835	    202559 ns/op	        41.41 GFLOP/s
+keel-gvt3 r5 BenchmarkLimiterProbe/shim/kc=512         	  576750	      2035 ns/op	        36.22 GFLOP/s
+keel-gvt3 r5 BenchmarkLimiterProbe/ctl/kc=512          	  592388	      2019 ns/op	        36.52 GFLOP/s
+keel-gvt3 r5 BenchmarkLimiterProbe/PB/kc=512           	  958725	      1250 ns/op	        58.98 GFLOP/s
+keel-gvt3 r5 BenchmarkLimiterProbe/NB/kc=512           	  605648	      1970 ns/op	        37.43 GFLOP/s
+keel-gvt3 r5 BenchmarkLimiterProbe/PBNB/kc=512         	 1236813	       970.2 ns/op	        75.99 GFLOP/s
+keel-gvt3 r5 BenchmarkLimiterProbe/FO/kc=512           	 1272613	       942.8 ns/op	        78.20 GFLOP/s
+keel-gvt3 r5 BenchmarkPeak/neon         	    5827	    202552 ns/op	        41.41 GFLOP/s
+keel-gvt3 r6 BenchmarkLimiterProbe/shim/kc=512         	  578594	      2043 ns/op	        36.09 GFLOP/s
+keel-gvt3 r6 BenchmarkLimiterProbe/ctl/kc=512          	  592437	      2022 ns/op	        36.47 GFLOP/s
+keel-gvt3 r6 BenchmarkLimiterProbe/PB/kc=512           	  951241	      1248 ns/op	        59.08 GFLOP/s
+keel-gvt3 r6 BenchmarkLimiterProbe/NB/kc=512           	  606808	      1970 ns/op	        37.43 GFLOP/s
+keel-gvt3 r6 BenchmarkLimiterProbe/PBNB/kc=512         	 1237287	       969.5 ns/op	        76.05 GFLOP/s
+keel-gvt3 r6 BenchmarkLimiterProbe/FO/kc=512           	 1272753	       942.9 ns/op	        78.19 GFLOP/s
+keel-gvt3 r6 BenchmarkPeak/neon         	    5828	    202550 ns/op	        41.42 GFLOP/s
+keel-gvt3 r7 BenchmarkLimiterProbe/shim/kc=512         	  577722	      2048 ns/op	        35.99 GFLOP/s
+keel-gvt3 r7 BenchmarkLimiterProbe/ctl/kc=512          	  592849	      2019 ns/op	        36.52 GFLOP/s
+keel-gvt3 r7 BenchmarkLimiterProbe/PB/kc=512           	  957036	      1250 ns/op	        58.98 GFLOP/s
+keel-gvt3 r7 BenchmarkLimiterProbe/NB/kc=512           	  607443	      1973 ns/op	        37.38 GFLOP/s
+keel-gvt3 r7 BenchmarkLimiterProbe/PBNB/kc=512         	 1237214	       969.5 ns/op	        76.04 GFLOP/s
+keel-gvt3 r7 BenchmarkLimiterProbe/FO/kc=512           	 1272636	       942.8 ns/op	        78.20 GFLOP/s
+keel-gvt3 r7 BenchmarkPeak/neon         	    5827	    202559 ns/op	        41.41 GFLOP/s
+keel-gvt3 r8 BenchmarkLimiterProbe/shim/kc=512         	  580218	      2035 ns/op	        36.23 GFLOP/s
+keel-gvt3 r8 BenchmarkLimiterProbe/ctl/kc=512          	  592594	      2026 ns/op	        36.39 GFLOP/s
+keel-gvt3 r8 BenchmarkLimiterProbe/PB/kc=512           	  959937	      1248 ns/op	        59.06 GFLOP/s
+keel-gvt3 r8 BenchmarkLimiterProbe/NB/kc=512           	  608538	      1970 ns/op	        37.43 GFLOP/s
+keel-gvt3 r8 BenchmarkLimiterProbe/PBNB/kc=512         	 1237077	       970.0 ns/op	        76.01 GFLOP/s
+keel-gvt3 r8 BenchmarkLimiterProbe/FO/kc=512           	 1272871	       942.8 ns/op	        78.20 GFLOP/s
+keel-gvt3 r8 BenchmarkPeak/neon         	    5828	    202442 ns/op	        41.44 GFLOP/s
+keel-gvt3 r9 BenchmarkLimiterProbe/shim/kc=512         	  578656	      2043 ns/op	        36.09 GFLOP/s
+keel-gvt3 r9 BenchmarkLimiterProbe/ctl/kc=512          	  591566	      2022 ns/op	        36.47 GFLOP/s
+keel-gvt3 r9 BenchmarkLimiterProbe/PB/kc=512           	  952365	      1248 ns/op	        59.09 GFLOP/s
+keel-gvt3 r9 BenchmarkLimiterProbe/NB/kc=512           	  607320	      1973 ns/op	        37.37 GFLOP/s
+keel-gvt3 r9 BenchmarkLimiterProbe/PBNB/kc=512         	 1236579	       970.3 ns/op	        75.99 GFLOP/s
+keel-gvt3 r9 BenchmarkLimiterProbe/FO/kc=512           	 1272795	       942.9 ns/op	        78.19 GFLOP/s
+keel-gvt3 r9 BenchmarkPeak/neon         	    5828	    202552 ns/op	        41.41 GFLOP/s
+keel-gvt3 r10 BenchmarkLimiterProbe/shim/kc=512         	  578133	      2043 ns/op	        36.09 GFLOP/s
+keel-gvt3 r10 BenchmarkLimiterProbe/ctl/kc=512          	  592224	      2022 ns/op	        36.47 GFLOP/s
+keel-gvt3 r10 BenchmarkLimiterProbe/PB/kc=512           	  950569	      1248 ns/op	        59.10 GFLOP/s
+keel-gvt3 r10 BenchmarkLimiterProbe/NB/kc=512           	  606838	      1971 ns/op	        37.41 GFLOP/s
+keel-gvt3 r10 BenchmarkLimiterProbe/PBNB/kc=512         	 1237627	       969.8 ns/op	        76.02 GFLOP/s
+keel-gvt3 r10 BenchmarkLimiterProbe/FO/kc=512           	 1272716	       942.7 ns/op	        78.21 GFLOP/s
+keel-gvt3 r10 BenchmarkPeak/neon         	    5826	    202450 ns/op	        41.44 GFLOP/s
+keel-gvt4 r1 BenchmarkLimiterProbe/shim/kc=512         	  649646	      1820 ns/op	        40.50 GFLOP/s
+keel-gvt4 r1 BenchmarkLimiterProbe/ctl/kc=512          	  674838	      1775 ns/op	        41.54 GFLOP/s
+keel-gvt4 r1 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.95 GFLOP/s
+keel-gvt4 r1 BenchmarkLimiterProbe/NB/kc=512           	  678043	      1768 ns/op	        41.70 GFLOP/s
+keel-gvt4 r1 BenchmarkLimiterProbe/PBNB/kc=512         	 1341685	       894.4 ns/op	        82.44 GFLOP/s
+keel-gvt4 r1 BenchmarkLimiterProbe/FO/kc=512           	 1428104	       840.1 ns/op	        87.76 GFLOP/s
+keel-gvt4 r1 BenchmarkPeak/neon         	    8452	    129508 ns/op	        64.77 GFLOP/s
+keel-gvt4 r2 BenchmarkLimiterProbe/shim/kc=512         	  649395	      1821 ns/op	        40.50 GFLOP/s
+keel-gvt4 r2 BenchmarkLimiterProbe/ctl/kc=512          	  675624	      1774 ns/op	        41.57 GFLOP/s
+keel-gvt4 r2 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r2 BenchmarkLimiterProbe/NB/kc=512           	  677953	      1768 ns/op	        41.70 GFLOP/s
+keel-gvt4 r2 BenchmarkLimiterProbe/PBNB/kc=512         	 1341534	       894.3 ns/op	        82.44 GFLOP/s
+keel-gvt4 r2 BenchmarkLimiterProbe/FO/kc=512           	 1428318	       840.2 ns/op	        87.75 GFLOP/s
+keel-gvt4 r2 BenchmarkPeak/neon         	    9396	    130201 ns/op	        64.43 GFLOP/s
+keel-gvt4 r3 BenchmarkLimiterProbe/shim/kc=512         	  649224	      1821 ns/op	        40.50 GFLOP/s
+keel-gvt4 r3 BenchmarkLimiterProbe/ctl/kc=512          	  674901	      1775 ns/op	        41.55 GFLOP/s
+keel-gvt4 r3 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.97 GFLOP/s
+keel-gvt4 r3 BenchmarkLimiterProbe/NB/kc=512           	  676693	      1768 ns/op	        41.69 GFLOP/s
+keel-gvt4 r3 BenchmarkLimiterProbe/PBNB/kc=512         	 1341660	       894.4 ns/op	        82.44 GFLOP/s
+keel-gvt4 r3 BenchmarkLimiterProbe/FO/kc=512           	 1428256	       840.2 ns/op	        87.75 GFLOP/s
+keel-gvt4 r3 BenchmarkPeak/neon         	    8994	    127965 ns/op	        65.55 GFLOP/s
+keel-gvt4 r4 BenchmarkLimiterProbe/shim/kc=512         	  649316	      1820 ns/op	        40.50 GFLOP/s
+keel-gvt4 r4 BenchmarkLimiterProbe/ctl/kc=512          	  674992	      1775 ns/op	        41.55 GFLOP/s
+keel-gvt4 r4 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1117 ns/op	        65.99 GFLOP/s
+keel-gvt4 r4 BenchmarkLimiterProbe/NB/kc=512           	  677272	      1768 ns/op	        41.70 GFLOP/s
+keel-gvt4 r4 BenchmarkLimiterProbe/PBNB/kc=512         	 1341476	       894.3 ns/op	        82.44 GFLOP/s
+keel-gvt4 r4 BenchmarkLimiterProbe/FO/kc=512           	 1428166	       840.3 ns/op	        87.74 GFLOP/s
+keel-gvt4 r4 BenchmarkPeak/neon         	    9398	    130354 ns/op	        64.35 GFLOP/s
+keel-gvt4 r5 BenchmarkLimiterProbe/shim/kc=512         	  649687	      1821 ns/op	        40.50 GFLOP/s
+keel-gvt4 r5 BenchmarkLimiterProbe/ctl/kc=512          	  674454	      1775 ns/op	        41.54 GFLOP/s
+keel-gvt4 r5 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r5 BenchmarkLimiterProbe/NB/kc=512           	  677725	      1768 ns/op	        41.70 GFLOP/s
+keel-gvt4 r5 BenchmarkLimiterProbe/PBNB/kc=512         	 1341676	       894.3 ns/op	        82.44 GFLOP/s
+keel-gvt4 r5 BenchmarkLimiterProbe/FO/kc=512           	 1428226	       840.2 ns/op	        87.75 GFLOP/s
+keel-gvt4 r5 BenchmarkPeak/neon         	    9841	    128831 ns/op	        65.11 GFLOP/s
+keel-gvt4 r6 BenchmarkLimiterProbe/shim/kc=512         	  649112	      1820 ns/op	        40.50 GFLOP/s
+keel-gvt4 r6 BenchmarkLimiterProbe/ctl/kc=512          	  675002	      1774 ns/op	        41.57 GFLOP/s
+keel-gvt4 r6 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r6 BenchmarkLimiterProbe/NB/kc=512           	  676699	      1768 ns/op	        41.70 GFLOP/s
+keel-gvt4 r6 BenchmarkLimiterProbe/PBNB/kc=512         	 1341715	       894.4 ns/op	        82.43 GFLOP/s
+keel-gvt4 r6 BenchmarkLimiterProbe/FO/kc=512           	 1428271	       840.2 ns/op	        87.75 GFLOP/s
+keel-gvt4 r6 BenchmarkPeak/neon         	    9602	    128064 ns/op	        65.50 GFLOP/s
+keel-gvt4 r7 BenchmarkLimiterProbe/shim/kc=512         	  649000	      1821 ns/op	        40.49 GFLOP/s
+keel-gvt4 r7 BenchmarkLimiterProbe/ctl/kc=512          	  673641	      1774 ns/op	        41.57 GFLOP/s
+keel-gvt4 r7 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r7 BenchmarkLimiterProbe/NB/kc=512           	  678368	      1768 ns/op	        41.70 GFLOP/s
+keel-gvt4 r7 BenchmarkLimiterProbe/PBNB/kc=512         	 1341736	       894.4 ns/op	        82.43 GFLOP/s
+keel-gvt4 r7 BenchmarkLimiterProbe/FO/kc=512           	 1428204	       840.2 ns/op	        87.75 GFLOP/s
+keel-gvt4 r7 BenchmarkPeak/neon         	    9098	    128553 ns/op	        65.25 GFLOP/s
+keel-gvt4 r8 BenchmarkLimiterProbe/shim/kc=512         	  649510	      1821 ns/op	        40.49 GFLOP/s
+keel-gvt4 r8 BenchmarkLimiterProbe/ctl/kc=512          	  676591	      1774 ns/op	        41.57 GFLOP/s
+keel-gvt4 r8 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r8 BenchmarkLimiterProbe/NB/kc=512           	  677324	      1768 ns/op	        41.70 GFLOP/s
+keel-gvt4 r8 BenchmarkLimiterProbe/PBNB/kc=512         	 1341754	       894.4 ns/op	        82.43 GFLOP/s
+keel-gvt4 r8 BenchmarkLimiterProbe/FO/kc=512           	 1428234	       840.4 ns/op	        87.73 GFLOP/s
+keel-gvt4 r8 BenchmarkPeak/neon         	    8994	    129692 ns/op	        64.68 GFLOP/s
+keel-gvt4 r9 BenchmarkLimiterProbe/shim/kc=512         	  649132	      1821 ns/op	        40.50 GFLOP/s
+keel-gvt4 r9 BenchmarkLimiterProbe/ctl/kc=512          	  675747	      1774 ns/op	        41.57 GFLOP/s
+keel-gvt4 r9 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.95 GFLOP/s
+keel-gvt4 r9 BenchmarkLimiterProbe/NB/kc=512           	  676946	      1768 ns/op	        41.69 GFLOP/s
+keel-gvt4 r9 BenchmarkLimiterProbe/PBNB/kc=512         	 1341678	       894.3 ns/op	        82.44 GFLOP/s
+keel-gvt4 r9 BenchmarkLimiterProbe/FO/kc=512           	 1428288	       840.2 ns/op	        87.75 GFLOP/s
+keel-gvt4 r9 BenchmarkPeak/neon         	    8965	    129248 ns/op	        64.90 GFLOP/s
+keel-gvt4 r10 BenchmarkLimiterProbe/shim/kc=512         	  648610	      1820 ns/op	        40.50 GFLOP/s
+keel-gvt4 r10 BenchmarkLimiterProbe/ctl/kc=512          	  673962	      1775 ns/op	        41.55 GFLOP/s
+keel-gvt4 r10 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1117 ns/op	        65.98 GFLOP/s
+keel-gvt4 r10 BenchmarkLimiterProbe/NB/kc=512           	  678519	      1768 ns/op	        41.70 GFLOP/s
+keel-gvt4 r10 BenchmarkLimiterProbe/PBNB/kc=512         	 1341700	       894.5 ns/op	        82.42 GFLOP/s
+keel-gvt4 r10 BenchmarkLimiterProbe/FO/kc=512           	 1428336	       840.2 ns/op	        87.75 GFLOP/s
+keel-gvt4 r10 BenchmarkPeak/neon         	    8656	    129903 ns/op	        64.58 GFLOP/s
+keel-gvt5 r1 BenchmarkLimiterProbe/shim/kc=512         	  770985	      1519 ns/op	        48.54 GFLOP/s
+keel-gvt5 r1 BenchmarkLimiterProbe/ctl/kc=512          	  806272	      1476 ns/op	        49.94 GFLOP/s
+keel-gvt5 r1 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1035 ns/op	        71.26 GFLOP/s
+keel-gvt5 r1 BenchmarkLimiterProbe/NB/kc=512           	  826486	      1451 ns/op	        50.82 GFLOP/s
+keel-gvt5 r1 BenchmarkLimiterProbe/PBNB/kc=512         	 1684272	       712.6 ns/op	       103.5 GFLOP/s
+keel-gvt5 r1 BenchmarkLimiterProbe/FO/kc=512           	 1681296	       713.7 ns/op	       103.3 GFLOP/s
+keel-gvt5 r1 BenchmarkPeak/neon         	   10000	    103707 ns/op	        80.89 GFLOP/s
+keel-gvt5 r2 BenchmarkLimiterProbe/shim/kc=512         	  770931	      1518 ns/op	        48.58 GFLOP/s
+keel-gvt5 r2 BenchmarkLimiterProbe/ctl/kc=512          	  816328	      1470 ns/op	        50.15 GFLOP/s
+keel-gvt5 r2 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1036 ns/op	        71.18 GFLOP/s
+keel-gvt5 r2 BenchmarkLimiterProbe/NB/kc=512           	  826672	      1451 ns/op	        50.82 GFLOP/s
+keel-gvt5 r2 BenchmarkLimiterProbe/PBNB/kc=512         	 1684773	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r2 BenchmarkLimiterProbe/FO/kc=512           	 1680626	       713.7 ns/op	       103.3 GFLOP/s
+keel-gvt5 r2 BenchmarkPeak/neon         	   10000	    111290 ns/op	        75.38 GFLOP/s
+keel-gvt5 r3 BenchmarkLimiterProbe/shim/kc=512         	  781680	      1528 ns/op	        48.24 GFLOP/s
+keel-gvt5 r3 BenchmarkLimiterProbe/ctl/kc=512          	  808009	      1472 ns/op	        50.10 GFLOP/s
+keel-gvt5 r3 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1033 ns/op	        71.39 GFLOP/s
+keel-gvt5 r3 BenchmarkLimiterProbe/NB/kc=512           	  827040	      1451 ns/op	        50.82 GFLOP/s
+keel-gvt5 r3 BenchmarkLimiterProbe/PBNB/kc=512         	 1684675	       712.5 ns/op	       103.5 GFLOP/s
+keel-gvt5 r3 BenchmarkLimiterProbe/FO/kc=512           	 1681123	       713.7 ns/op	       103.3 GFLOP/s
+keel-gvt5 r3 BenchmarkPeak/neon         	   10000	    104315 ns/op	        80.42 GFLOP/s
+keel-gvt5 r4 BenchmarkLimiterProbe/shim/kc=512         	  774738	      1516 ns/op	        48.64 GFLOP/s
+keel-gvt5 r4 BenchmarkLimiterProbe/ctl/kc=512          	  810864	      1473 ns/op	        50.04 GFLOP/s
+keel-gvt5 r4 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1031 ns/op	        71.51 GFLOP/s
+keel-gvt5 r4 BenchmarkLimiterProbe/NB/kc=512           	  827011	      1451 ns/op	        50.82 GFLOP/s
+keel-gvt5 r4 BenchmarkLimiterProbe/PBNB/kc=512         	 1684328	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r4 BenchmarkLimiterProbe/FO/kc=512           	 1680862	       713.7 ns/op	       103.3 GFLOP/s
+keel-gvt5 r4 BenchmarkPeak/neon         	   10000	    102550 ns/op	        81.80 GFLOP/s
+keel-gvt5 r5 BenchmarkLimiterProbe/shim/kc=512         	  779319	      1516 ns/op	        48.62 GFLOP/s
+keel-gvt5 r5 BenchmarkLimiterProbe/ctl/kc=512          	  810289	      1473 ns/op	        50.07 GFLOP/s
+keel-gvt5 r5 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1029 ns/op	        71.65 GFLOP/s
+keel-gvt5 r5 BenchmarkLimiterProbe/NB/kc=512           	  827734	      1450 ns/op	        50.83 GFLOP/s
+keel-gvt5 r5 BenchmarkLimiterProbe/PBNB/kc=512         	 1683994	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r5 BenchmarkLimiterProbe/FO/kc=512           	 1681048	       713.8 ns/op	       103.3 GFLOP/s
+keel-gvt5 r5 BenchmarkPeak/neon         	   10000	    105948 ns/op	        79.18 GFLOP/s
+keel-gvt5 r6 BenchmarkLimiterProbe/shim/kc=512         	  771345	      1532 ns/op	        48.13 GFLOP/s
+keel-gvt5 r6 BenchmarkLimiterProbe/ctl/kc=512          	  808915	      1484 ns/op	        49.69 GFLOP/s
+keel-gvt5 r6 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1036 ns/op	        71.18 GFLOP/s
+keel-gvt5 r6 BenchmarkLimiterProbe/NB/kc=512           	  825998	      1451 ns/op	        50.81 GFLOP/s
+keel-gvt5 r6 BenchmarkLimiterProbe/PBNB/kc=512         	 1684005	       712.5 ns/op	       103.5 GFLOP/s
+keel-gvt5 r6 BenchmarkLimiterProbe/FO/kc=512           	 1681140	       713.8 ns/op	       103.3 GFLOP/s
+keel-gvt5 r6 BenchmarkPeak/neon         	   10000	    106515 ns/op	        78.76 GFLOP/s
+keel-gvt5 r7 BenchmarkLimiterProbe/shim/kc=512         	  778543	      1515 ns/op	        48.65 GFLOP/s
+keel-gvt5 r7 BenchmarkLimiterProbe/ctl/kc=512          	  808351	      1484 ns/op	        49.67 GFLOP/s
+keel-gvt5 r7 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1037 ns/op	        71.12 GFLOP/s
+keel-gvt5 r7 BenchmarkLimiterProbe/NB/kc=512           	  826696	      1451 ns/op	        50.82 GFLOP/s
+keel-gvt5 r7 BenchmarkLimiterProbe/PBNB/kc=512         	 1684230	       712.6 ns/op	       103.5 GFLOP/s
+keel-gvt5 r7 BenchmarkLimiterProbe/FO/kc=512           	 1681155	       713.7 ns/op	       103.3 GFLOP/s
+keel-gvt5 r7 BenchmarkPeak/neon         	   10000	    103544 ns/op	        81.01 GFLOP/s
+keel-gvt5 r8 BenchmarkLimiterProbe/shim/kc=512         	  776764	      1516 ns/op	        48.62 GFLOP/s
+keel-gvt5 r8 BenchmarkLimiterProbe/ctl/kc=512          	  812810	      1474 ns/op	        50.01 GFLOP/s
+keel-gvt5 r8 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1033 ns/op	        71.38 GFLOP/s
+keel-gvt5 r8 BenchmarkLimiterProbe/NB/kc=512           	  825800	      1451 ns/op	        50.81 GFLOP/s
+keel-gvt5 r8 BenchmarkLimiterProbe/PBNB/kc=512         	 1684144	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r8 BenchmarkLimiterProbe/FO/kc=512           	 1681550	       713.6 ns/op	       103.3 GFLOP/s
+keel-gvt5 r8 BenchmarkPeak/neon         	   10000	    110550 ns/op	        75.88 GFLOP/s
+keel-gvt5 r9 BenchmarkLimiterProbe/shim/kc=512         	  777487	      1517 ns/op	        48.60 GFLOP/s
+keel-gvt5 r9 BenchmarkLimiterProbe/ctl/kc=512          	  810264	      1474 ns/op	        50.03 GFLOP/s
+keel-gvt5 r9 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1033 ns/op	        71.36 GFLOP/s
+keel-gvt5 r9 BenchmarkLimiterProbe/NB/kc=512           	  827754	      1451 ns/op	        50.83 GFLOP/s
+keel-gvt5 r9 BenchmarkLimiterProbe/PBNB/kc=512         	 1684147	       712.5 ns/op	       103.5 GFLOP/s
+keel-gvt5 r9 BenchmarkLimiterProbe/FO/kc=512           	 1681252	       713.8 ns/op	       103.3 GFLOP/s
+keel-gvt5 r9 BenchmarkPeak/neon         	   10000	    110286 ns/op	        76.06 GFLOP/s
+keel-gvt5 r10 BenchmarkLimiterProbe/shim/kc=512         	  780670	      1516 ns/op	        48.62 GFLOP/s
+keel-gvt5 r10 BenchmarkLimiterProbe/ctl/kc=512          	  815408	      1477 ns/op	        49.91 GFLOP/s
+keel-gvt5 r10 BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1030 ns/op	        71.61 GFLOP/s
+keel-gvt5 r10 BenchmarkLimiterProbe/NB/kc=512           	  825685	      1451 ns/op	        50.81 GFLOP/s
+keel-gvt5 r10 BenchmarkLimiterProbe/PBNB/kc=512         	 1684168	       712.5 ns/op	       103.5 GFLOP/s
+keel-gvt5 r10 BenchmarkLimiterProbe/FO/kc=512           	 1681340	       713.7 ns/op	       103.3 GFLOP/s
+keel-gvt5 r10 BenchmarkPeak/neon         	   10000	    106981 ns/op	        78.41 GFLOP/s
+== done 04:30:22
+== TEARDOWN 04:30:22
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0baa90c82227ae960...
+
+✅ Terminate request sent!
+   Instance: i-0baa90c82227ae960
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0a85360aacba31b85...
+
+✅ Terminate request sent!
+   Instance: i-0a85360aacba31b85
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0255f768b92e10740...
+
+✅ Terminate request sent!
+   Instance: i-0255f768b92e10740
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   fleet is down

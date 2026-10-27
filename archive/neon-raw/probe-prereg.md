@@ -20,3 +20,18 @@ Predictions, on V2 and V3, as % of the host's measured NEON peak:
 - FO reaches at least 90% of peak. **If it does not**, the limiter is in the loop's own
   structure (18 accumulators, one FMA each per iteration, or the bookkeeping), and neither
   the broadcast nor the loads explain the gap.
+
+## Result of the limiter probe (9cf8848), and the denominator check it forced
+
+The prediction "the broadcast is the limiter" **held**. PB beat ctl by 43–62% on every host,
+and NB stayed within 0.4 GFLOP/s of ctl (`probe-9cf8848.log`). FO, the loop with nothing but
+FMAs, read **131–189% of `BenchmarkPeak/neon`**. A loop cannot beat the true peak, so the
+shipped NEON ceiling under-reads. spill-audit puts `neonPeak` and `neonPeakD` at 35 insns for
+16 FMAs, 16 of them anchor NOPs (golang/go#80830), against 19 and 0 for their raw-archsimd
+twins.
+
+Predictions for the denominator check (`BenchmarkPeakProbe`, written before it runs):
+- raw16 reads at least 1.25× shim16 on V2 and V3, and at least 1.7× on V1, at both elements.
+  This is the FO ratio. **REFUTED if** raw16 is within 10% of shim16 anywhere.
+- raw24 is within 5% of raw16: 16 chains already saturate.
+- raw16 is within 10% of FO's FMA rate on each host.
