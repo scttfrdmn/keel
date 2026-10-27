@@ -85,3 +85,23 @@ ceiling on V2 and V3. That is under the 55% floor that their published P2 greens
 `neonPeak` figure (61.87 GFLOP/s, 1T and that ×8). All of this was measured at the exploration
 tier on 4xlarge sizes. A corrected judged denominator does not exist yet, so no published
 figure has been changed here.
+
+## V1 probe (21f76e4): no single property explains V1
+
+Predictions are in `probe-prereg.md`; results in `v1probe-21f76e4-summary.txt`. It ran on the
+same three hosts and took 6m43s, and the fleet was verified down. **On V1 no variant reaches
+90% of FO.** All seven counter-loop variants read 40.85–41.45 GFLOP/s, against FO's 78.22.
+That includes `slice`, which has FO's exact loop condition and instruction count (24), and
+`data`, which has FO's operands-from-memory and zero start. Per the pre-registered reading
+this is reported as it is: **no single property explains the gap, and the V1 ceiling is
+unresolved.**
+
+**The same gap exists, smaller, on V2 and V3.** There every 3x6 counter-loop variant (x36,
+zero, data, slice, unroll2, i512) reads 81–86% of FO, while FO, which has the same 3x6 shape,
+and the 4x4 x44 both read about 100%. So on all three hosts, FO beats every counter-loop
+rendering of its own shape: by 1.89× on V1 and about 1.19× on V2 and V3. Adding 8 integer
+ops costs V2 and V3 (69% and 66% of FO) but not V1. The causes of these effects are not
+established.
+
+**For the denominator (#198).** x44 agrees with FO on V2 and V3, so it is two different
+loops witnessing one ceiling. On V1 it reads the old value, 41.4, while FO reads 1.89× that.

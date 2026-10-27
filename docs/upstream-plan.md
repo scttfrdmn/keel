@@ -24,7 +24,7 @@ and the others do not.
 | [#125](https://github.com/scttfrdmn/keel/issues/125) | **CL 3** — emulated broadcast + inlined-wrapper NOP anchor | `golang/go#80830` | [#17](https://github.com/scttfrdmn/keel/issues/17) |
 | [#128](https://github.com/scttfrdmn/keel/issues/128) | experience report on the graduation thread | `golang/go#73787` | the whole tree |
 | [#129](https://github.com/scttfrdmn/keel/issues/129) | NEON feasibility probe — **done**, `docs/neon-probe.md` | — | — |
-| [#130](https://github.com/scttfrdmn/keel/issues/130) | arm64 filing — **subject now fixed**: dead zero-init in emulated broadcast | new | `docs/neon-probe.md` §2b |
+| [#130](https://github.com/scttfrdmn/keel/issues/130) | arm64 filing — **already filed by another reporter** as `golang/go#81352`, fix CL 827904; keel's measured delta (+14.5–36.4% across Neoverse-V1/V2/V3, `archive/go-patches/cl827904/`) **posted 2026-10-26** on Scott's go; standing task [#163](https://github.com/scttfrdmn/keel/issues/163) | `golang/go#81352` | `docs/neon-probe.md` §2b |
 | — | **answered 2026-08-30, duplicate of `golang/go#78753`** — X16–X31 withheld from the SIMD allocator; fixed by CL 768262 | `golang/go#80828` | [#18](https://github.com/scttfrdmn/keel/issues/18), `docs/toolchain-notes.md` T28 |
 | [#144](https://github.com/scttfrdmn/keel/issues/144) | **already filed by another reporter** — legacy-SSE `MOVUPS` in `archsimd`, AVX-SSE transition penalties | `golang/go#80835` | `docs/spill-report.md` §11.1 |
 

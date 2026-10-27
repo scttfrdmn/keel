@@ -32,6 +32,9 @@ While the major version is 0, minor versions may contain breaking changes.
   the shipped NEON kernels sit at 46.0–49.7%, under the 55% P2 floor. On V1 every variant reads exactly
   2.0 FMA/cycle and the gap is unexplained. No gate or published row has changed; a decision is
   pending.
+  **A V1 probe leaves that open** (`archive/neon-raw/`). Six one-property variants of the counter loop
+  toward FO all read 40.85–41.45 GFLOP/s on V1 against FO's 78.22, including FO's exact loop condition.
+  The same, smaller gap exists on V2 and V3, where 3x6 counter loops reach 81–86% of the same-shape FO.
 - **First local Go-fork A/B (#197): CL 827904 (golang/go#81352)** at a common master base
   (`archive/go-patches/cl827904/`, exploration tier). Folding the NEON broadcast speeds keel's kernels
   on V1/V2/V3. Shipped 3x24 gains +28.6% / +27.1% / +14.5%. Raw 3x24/1 gains +26.1% / +36.4% / +32.4%.
