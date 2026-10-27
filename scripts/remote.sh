@@ -1401,7 +1401,15 @@ assert_governor() {
 # host" is the ownership claim the class rests on, and family-max is a whole host. The
 # per-host read-back (core count, NUMA topology, corename) lands in the #137 launch record,
 # as c5n's did in its build log.
-KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge c5n.18xlarge c7g.16xlarge c8g.48xlarge"
+#
+# c9g.48xlarge added 2026-10-27 (#191, Scott's go), the family-max non-metal size by the
+# same rule: `aws ec2 describe-instance-types` that day reads 192 vCPU / 192 cores, one
+# thread per core, equal to c9g.metal-48xl's count. The read-back on c9g.4xlarge the same day
+# (archive/p2-arm64/exploration-c9g-4xlarge-c917b05.log) is MIDR part 0xd84, which lscpu names
+# Neoverse-V3 (Graviton5), so the registry key is a distinct third arm64 generation and no
+# Neoverse-V2 row is shared. Its first judged run renders BASELINE wherever a registry keys
+# on the model; P2 keys on nothing and judges it outright.
+KEEL_EVIDENTIARY_SIZES="c7i.48xlarge c8i.96xlarge c7a.48xlarge c8a.48xlarge c5n.18xlarge c7g.16xlarge c8g.48xlarge c9g.48xlarge"
 
 # host_admission PROV — set ADM_CLASS and ADM_INSTANCE from a provenance line
 # (docs/hosts.md, ruled 2026-08-17 on #104). ADM_CLASS is one of:

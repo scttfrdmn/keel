@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Graviton5 (c9g.48xlarge, Neoverse-V3) joins the judged class** (#191). It's added to
+  `KEEL_EVIDENTIARY_SIZES` as the family-max non-metal size: 192 vCPU / 192 cores, one thread per core,
+  equal to c9g.metal-48xl, read via `describe-instance-types` the same day. A c9g.4xlarge read-back gives
+  MIDR part 0xd84, which `lscpu` names Neoverse-V3, so it's a third, distinct arm64 registry key. Its
+  first judged run renders BASELINE wherever a registry keys on the CPU model.
 - **The arm64 P2 go/no-go is GREEN on the judged Graviton fleet at both elements** (#191).
   `KEEL_ARCH=arm64 scripts/gate-p2.sh` scored 25/0/0 at float64 and at float32 on c7g.16xlarge and
   c8g.48xlarge (24m46s, about $4.3). Both hosts are FMA-bound. On Neoverse-V1 the best shipped shape
