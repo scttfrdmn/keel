@@ -150,7 +150,7 @@ func parseUArch(spec string) (UArch, error) {
 func main() {
 	var (
 		emitFlag = flag.String("emit", "", "print one candidate: MRxNR/U")
-		form     = flag.String("form", "broadcast", "accumulate form: broadcast | permute | raw (arm64, -emit only)")
+		form     = flag.String("form", "broadcast", "accumulate form: broadcast | permute | raw | pb (raw and pb: arm64; with -sweep/-frontier, that form's space only)")
 		verify   = flag.Bool("verify", false, "emit the shipped shapes and compare against internal/vec")
 		sweep    = flag.Bool("sweep", false, "emit, audit and rank the whole shape space")
 		frontier = flag.Bool("frontier", false, "print the best emittable zero-spill insns/FMA and nothing else")
@@ -170,6 +170,14 @@ func main() {
 		die(err)
 	}
 	shippedUArch = u
+
+	if (*sweep || *frontier) && (*form == "raw" || *form == "pb") {
+		s, err := parseShape(fmt.Sprintf("1x%d/1", isa.Lanes), *form)
+		if err != nil {
+			die(err)
+		}
+		spaceForm = &s.Form
+	}
 
 	switch {
 	case *emitFlag != "":
@@ -213,11 +221,14 @@ func parseShape(spec, form string) (Shape, error) {
 	f := Broadcast
 	switch form {
 	case "broadcast":
-	case "raw":
+	case "raw", "pb":
 		if isa.Arch != "arm64" {
-			return Shape{}, fmt.Errorf("raw form is arm64-only: the amd64 emitter is already raw archsimd")
+			return Shape{}, fmt.Errorf("%s form is arm64-only: the amd64 emitter is already raw archsimd", form)
 		}
 		f = Raw
+		if form == "pb" {
+			f = PB
+		}
 	case "permute":
 		if isa.Arch == "arm64" {
 			return Shape{}, fmt.Errorf("permute form is amd64-only: NEON has no window-permute, so arm64 emits broadcast only")
@@ -610,6 +621,11 @@ func printDiff(want, got string) {
 // stated for a 16-lane load; the 8-lane analogue is unwritten, not refuted. On
 // arm64 f64 keeps NEON's V 1..8, so NR 2..16: the same register counts as the
 // float32 NEON space, which is what lets the two sweeps be compared shape for shape.
+// spaceForm, when set by -form raw|pb alongside -sweep or -frontier, replaces the
+// space's forms with that one (arm64): the experiment's space, leaving the default
+// sweep, and so the frontier the gates reconcile against, exactly as it was.
+var spaceForm *Form
+
 func space() []Shape {
 	forms := []Form{Broadcast, Permute}
 	vMax := 4
@@ -619,6 +635,9 @@ func space() []Shape {
 	}
 	if isa.Elem == "f64" {
 		forms = []Form{Broadcast}
+	}
+	if spaceForm != nil {
+		forms = []Form{*spaceForm}
 	}
 	var out []Shape
 	for _, form := range forms {

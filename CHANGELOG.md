@@ -9,6 +9,12 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **shapegen `-form pb`: NEON kernels that read A pre-broadcast** (#198, the shaping step). Each A element is packed
+  replicated across a register's lanes, so a row's multiplicand is one q-load instead of the 3-op
+  `BroadcastFloat*`. Its 160 zero-spill shapes reach a frontier of 1.556 insns/FMA (4x20/8) against the broadcast
+  form's 4.111. With `-sweep` or `-frontier`, `-form raw|pb` now selects that form's space alone, and the default
+  frontier is unchanged. Nine candidates per element sit test-only in `internal/vec/pb_arm64_test.go`, with the
+  selection rule pre-registered in `archive/neon-pb/prereg.md`.
 - **shapegen gains `-form raw` for arm64, the NEON shim-removal experiment** (#191). It emits the
   kernel against archsimd directly, through array-pointer loads and stores, `MulAdd` and `Add`, so the
   only bodied call left is `BroadcastFloat32x4`. In the audit, 3x24/2 drops from 148 to 98 insns and

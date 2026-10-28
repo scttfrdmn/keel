@@ -44,6 +44,12 @@ const (
 	// and only on request (-form raw): it is not in the default sweep, so the frontier
 	// the gates reconcile against does not move until a ruling adopts it.
 	Raw
+	// PB is Raw with A packed pre-broadcast (#198): each A element is stored replicated
+	// across a register's lanes, so a row's multiplicand is one LoadFloat32x4Array
+	// instead of BroadcastFloat32x4, which arm64 lowers to three vector-pipe ops
+	// (golang/go#81352). The A panel is lanes times longer: kc*MR*lanes, row r of
+	// k-step k at (k*MR+r)*lanes. arm64 only, on request (-form pb).
+	PB
 )
 
 func (f Form) String() string {
@@ -52,6 +58,8 @@ func (f Form) String() string {
 		return "permute"
 	case Raw:
 		return "raw"
+	case PB:
+		return "pb"
 	}
 	return "broadcast"
 }
@@ -75,6 +83,14 @@ func (s Shape) FMAs() int { return s.MR * s.V * s.U }
 // by audit reading. A float64 kernel is KernelD<MR>x<NR> (#191): 4x16 names a
 // shape at both element types, and both will live in package vec.
 func (s Shape) Name() string {
+	if s.Form == PB {
+		// A different A-panel contract from every other kernel, so a different name:
+		// a PB kernel handed a conventionally packed panel must not link.
+		if isa.Elem == "f64" {
+			return fmt.Sprintf("KernelDPB%dx%d", s.MR, s.NR())
+		}
+		return fmt.Sprintf("KernelPB%dx%d", s.MR, s.NR())
+	}
 	if s.Form == Raw {
 		// Distinct from the shipped kernels' names, and carrying U, so raw candidates
 		// of one shape at two unrolls can sit beside the shim kernel in package vec.
@@ -180,7 +196,7 @@ func (s Shape) bNames() []string {
 // code — the shim wrappers inline away — which is why arm64 -verify binds on the
 // audit report (identical insns/FMAs/spills/…) rather than on the text.
 func (s Shape) Emit() string {
-	if isa.Arch == "arm64" && s.Form == Raw {
+	if isa.Arch == "arm64" && (s.Form == Raw || s.Form == PB) {
 		return s.emitRawNEON()
 	}
 	if isa.Arch == "arm64" {
@@ -484,7 +500,11 @@ func (s Shape) emitRawNEON() string {
 		bn[j] = fmt.Sprintf("b%d", j)
 	}
 	p("\tvar %s, av archsimd.%s", strings.Join(bn, ", "), vt)
-	p("\tap := a[:kc*%d]", s.MR)
+	aw := s.MR // A elements per k-step
+	if s.Form == PB {
+		aw = s.MR * lanes
+	}
+	p("\tap := a[:kc*%d]", aw)
 	p("\tbp := b[:kc*%d]", s.NR())
 	body := func(u int) {
 		for k := 0; k < u; k++ {
@@ -494,7 +514,11 @@ func (s Shape) emitRawNEON() string {
 			}
 			p("\t\t%s = %s", strings.Join(bn, ", "), strings.Join(loads, ", "))
 			for r := 0; r < s.MR; r++ {
-				p("\t\tav = archsimd.Broadcast%s(ap[%d])", vt, k*s.MR+r)
+				if s.Form == PB {
+					p("\t\tav = %s", ld("ap", (k*s.MR+r)*lanes))
+				} else {
+					p("\t\tav = archsimd.Broadcast%s(ap[%d])", vt, k*s.MR+r)
+				}
 				acc := make([]string, s.V)
 				fmas := make([]string, s.V)
 				for j := range acc {
@@ -505,14 +529,14 @@ func (s Shape) emitRawNEON() string {
 			}
 		}
 	}
-	p("\tfor len(ap) >= %d && len(bp) >= %d {", s.MR*s.U, s.NR()*s.U)
+	p("\tfor len(ap) >= %d && len(bp) >= %d {", aw*s.U, s.NR()*s.U)
 	body(s.U)
-	p("\t\tap, bp = ap[%d:], bp[%d:]", s.MR*s.U, s.NR()*s.U)
+	p("\t\tap, bp = ap[%d:], bp[%d:]", aw*s.U, s.NR()*s.U)
 	p("\t}")
 	if s.U > 1 {
-		p("\tfor len(ap) >= %d && len(bp) >= %d {", s.MR, s.NR())
+		p("\tfor len(ap) >= %d && len(bp) >= %d {", aw, s.NR())
 		body(1)
-		p("\t\tap, bp = ap[%d:], bp[%d:]", s.MR, s.NR())
+		p("\t\tap, bp = ap[%d:], bp[%d:]", aw, s.NR())
 		p("\t}")
 	}
 	for r := 0; r < s.MR; r++ {
