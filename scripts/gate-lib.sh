@@ -70,7 +70,10 @@ audit_ipf() {
 # meaning "no tile declared", which is not an error.
 audit_ipf_tile() {
   [[ -n "$1" ]] || return 0
-  audit_ipf "Kernel$1" "$2"
+  case "$1" in
+    *-pb) audit_ipf "KernelPB${1%-pb}" "$2" ;; # a pre-broadcast tile's function (#198)
+    *) audit_ipf "Kernel$1" "$2" ;;
+  esac
 }
 
 # peak_ipf_criterion CEILINGS FILE — peak_ipf_verdicts rendered as gate verdicts.

@@ -202,7 +202,11 @@ func (k Kernel) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
 // must never share an ID, which Kernels() dedupes on and every benchmark row is named
 // by. The mark is on the tile half, not the backend half, because consumers parse
 // the part after the slash as a backend name (TestP5Dispatch).
-func (k Kernel) ID() string { return k.Tile() + pbSuffix(k.ALanes) + "/" + k.Name }
+func (k Kernel) ID() string { return k.IDTile() + "/" + k.Name }
+
+// IDTile is the tile half of ID, the shape as benchmark rows and gate markers name it:
+// Tile() plus the pre-broadcast mark, e.g. "5x16-pb".
+func (k Kernel) IDTile() string { return k.Tile() + pbSuffix(k.ALanes) }
 
 func pbSuffix(lanes int) string {
 	if lanes > 1 {

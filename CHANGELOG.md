@@ -196,6 +196,17 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **Fixes found by the arm64 gate-p5 exploration pass before the judged pair** (#200, `archive/p5-arm64-famax/`).
+  - `CEIL_FRACTION` (42.8, typed in `ceil8` from old-instrument NEON rows) is suspended in any era but its own, per
+    §5 rule 17(d). famax's founding run reports, and a reviewed commit types its bar. The derivation line also named
+    the current era as 42.8's source; it now names `ceil8`.
+  - gate-p3 and gate-p4's arm64 arms were never updated at the pre-broadcast promotion. They gain the PB shapes,
+    the family-max peak function and the 1.556 frontier.
+  - `audit_ipf_tile` maps a `-pb` tile to its `KernelPB` function. `ActiveKernTile` returns the ID's tile half
+    (`5x16-pb`), so the dispatch markers name the row that benchmarks the kernel.
+  - The `-race` run gets `-timeout 30m`. Pre-broadcast dispatch makes the root package 27% slower under `-race`
+    (392 s against 308 s), and a 16-vCPU V1 host crossed the 10-minute default with no race present.
+  - The README's under-review note stated rates outside the generated block (§7 rule 7). It now cites the archive.
 - **Measurement eras are scoped per architecture** (#200, Scott's ruling; DESIGN.md §5 rule 17, 2026-10-28).
   `measurement-eras.tsv` gains a `scope` column, and `era_current LEDGER ARCH` resolves an architecture's last in-scope
   era. Era `famax` opens for arm64 alone, for the family-max ceiling instrument and the pre-broadcast kernel; amd64

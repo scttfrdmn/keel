@@ -105,6 +105,9 @@ CEIL_FRACTION=42.8
 # rows would therefore convict both Neoverse hosts on every share row. They stay in
 # archive/arm64-ceil8-transition/ as the proposal they are.
 CEIL_DERIVED_FROM="Neoverse-V1|Neoverse-V2"
+# The era CEIL_FRACTION was typed in. The derivation line names it, not $P5_ERA: printed
+# from the current era it claimed 42.8 came from famax's founding run, which it did not.
+CEIL_FRACTION_ERA=ceil8
 # The margin between a registered baseline and the bar it sets; the registry it is
 # subtracted from is named below, once the exercise seam has decided which one that is.
 #
@@ -199,6 +202,13 @@ WITNESS_CANDIDATES="build/witness-candidates-$P5_REV-$RUN_STAMP.tsv"
 # resolve" — checked as its own criterion below rather than defaulted, because defaulting
 # would judge under whichever era happened to parse.
 P5_ERA="$(era_current "$BASELINE_ERAS" "${KEEL_GOARCH:-amd64}")" # eras are per-arch (§5 rule 17, #200)
+# A DERIVED BAR DOES NOT CROSS AN ERA (§5 rule 17(d)). CEIL_FRACTION was typed from eight NEON
+# rows in ceil8, under the old ceiling instrument; arm64 now judges in famax, whose ceiling is the
+# family-max loop (#198). So in famax the fraction is suspended to EMPTY, the branch every era
+# boundary has used: the founding run REPORTS, a reviewed commit types famax's bar from that run's
+# rows, and the next run is the first judged one. amd64 stays in ceil8, where 42.8 was derived and
+# where its derivation set has no amd64 host anyway.
+if [[ -n "$P5_ERA" && "$P5_ERA" != "$CEIL_FRACTION_ERA" ]]; then CEIL_FRACTION=""; fi
 
 # ONE JUDGED CLASS as of 2026-10-05 (ruled on #177; DESIGN.md §4/P5). There were two
 # (criterion 1, ruled 2026-08-12): GEMM-shaped nests over independent tiles here, and Strsm --
@@ -917,7 +927,11 @@ RACE_LOCAL=0
 # The local dev-host -race run is skipped under replay: it is a slow native compile the port
 # does not touch (DESIGN.md rule 12), so replaying it only costs minutes. Live runs are unaffected.
 if [[ -z "${KEEL_REPLAY:-}" ]]; then
-  GOEXPERIMENT=simd go test -race -count=1 ./... >"$LOG" 2>&1 || RACE_LOCAL=$?
+  # -timeout 30m, not go test's 10m default (#200): pre-broadcast dispatch made the root package
+  # 27% slower under -race (dev host, 392 s against 308 s at e2e4273), and on c7g.4xlarge it
+  # crossed 600 s and read UNMEASURED with no race in it. The criterion is race-cleanliness;
+  # the default timeout was never part of it.
+  GOEXPERIMENT=simd go test -race -count=1 -timeout 30m ./... >"$LOG" 2>&1 || RACE_LOCAL=$?
   race_verdict "[local $(go env GOHOSTOS)/$(go env GOHOSTARCH), scalar path]" "$RACE_LOCAL" "$LOG"
 fi
 
@@ -954,7 +968,7 @@ else
     # shellcheck disable=SC2029  # client-side expansion of a client-side path is intended
     NRC=0
     ssh "${KEEL_SSH_OPTS[@]}" "$host" \
-      "cd '$P5_REMOTE_SRC' && GOEXPERIMENT=simd CGO_ENABLED=1 go test -race -count=1 ./... 2>&1" >"$LOG" 2>&1 || NRC=$?
+      "cd '$P5_REMOTE_SRC' && GOEXPERIMENT=simd CGO_ENABLED=1 go test -race -count=1 -timeout 30m ./... 2>&1" >"$LOG" 2>&1 || NRC=$?
     race_verdict "[$host, vector path live, $hgo, GOMAXPROCS at the host default]" "$NRC" "$LOG"
     # An `[[ ... ]] && x` here would be the loop body's last command, and a false
     # test under `set -e` would end the gate mid-host-list.
@@ -974,7 +988,7 @@ info "-test.count=$KEEL_BENCH_COUNT -test.benchtime=$KEEL_BENCH_TIME; one invoca
 info "counts inside it, and the floor counts as cleared only net of both intervals"
 if [[ -n "$CEIL_FRACTION" ]]; then
   info "judged at >= ${CEIL_FRACTION}% of each host's own measured ${P5_THREADS}-thread ceiling: $P5_JUDGED — one parallelism class since 2026-10-05, Strsm having joined it (ruled 2026-08-12 for the other three; denominator ruled 2026-08-20; this fraction typed 2026-10-06 on #177)"
-  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest of EIGHT admissible judged rows in era $P5_ERA's founding run (keel-gvt4 Strsm, 45.4% net of BOTH intervals) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. Construction is the PRECEDENT one -- the lowest row of the typing run less the margin, which is how 44.2, 51.0 and 57.8 were each set. The stricter alternative was computed and refused: 45.0 (the lowest of the argmin's three draws) less ${BASELINE_MARGIN} types 42.4, and choosing it would have changed what \"the lowest row\" ranges over AFTER seeing that one of the eight rows is noisier than the other seven, which is a threshold shaped by the data it judges (Scott deferred the choice 2026-10-06; §5 rule 15's direction rule is satisfied by stating that the refused option was the stricter one)"
+  info "  DERIVATION of ${CEIL_FRACTION}%: a regression bar set below every healthy observation, from the lowest of EIGHT admissible judged rows in era ${CEIL_FRACTION_ERA}'s founding run (keel-gvt4 Strsm, 45.4% net of BOTH intervals) less ${BASELINE_MARGIN} points of margin. Derived from that run and enforced here, so this reading can fail it. Construction is the PRECEDENT one -- the lowest row of the typing run less the margin, which is how 44.2, 51.0 and 57.8 were each set. The stricter alternative was computed and refused: 45.0 (the lowest of the argmin's three draws) less ${BASELINE_MARGIN} types 42.4, and choosing it would have changed what \"the lowest row\" ranges over AFTER seeing that one of the eight rows is noisier than the other seven, which is a threshold shaped by the data it judges (Scott deferred the choice 2026-10-06; §5 rule 15's direction rule is satisfied by stating that the refused option was the stricter one)"
   info "  THE ARGMIN IS THE NOISIEST ROW OF THE EIGHT, and that is the disclosure this bar most needs. Strsm had no share at all before #177, so it arrived as the fleet's lowest row with ONE draw. It was not typed from that draw: its share was RECOMPUTED from the two earlier 3x24 draws, which both took the 8-thread rate and the ceiling, so only the division is new -- 45.8 / 45.0 / 45.4, median 45.4, which is ALSO this run's row. The recomputation is positive-controlled by running the transition run's own archive back through the same path and reproducing its printed 45.4 and 61.2 exactly (archive/arm64-ceil8-transition/). Rule 19 admitted all eight: widest share interval 1.40 points against the ${BASELINE_MARGIN}-point cap, and that widest one is the argmin's -- the three GEMM-shaped rows reproduce to <= 0.2 points across the same three draws"
   info "  WHAT THE SET CANNOT SEE, stated inside it (§5 rule 12): NO amd64 silicon derived this bar and no Intel or AMD row is in it, so it is a two-host, one-ISA, one-microkernel (3x24/neon) derivation. The eight rows span 45.4-79.3%, so one fleet bar is set by the weakest host AND its weakest routine, and keel-gvt3 clears it by 18.4 to 36.5 points — per-host convergence is the option named at CEIL_DERIVED_FROM. The bar therefore binds the two Graviton models ONLY; every amd64 host is registry-governed and renders BASELINE once in this era, which is what #155 ruling 2 requires of a bar that would otherwise travel across ISAs"
   info "  PRE-REGISTERED FOR THE CONFIRMATION RUN, so it can fail. keel-gvt4 Strsm is tightest at EXACTLY the margin (45.4 against 42.8), so a >5.73% fall in its 8-thread rate flips it with no change to the nest, as would a >6.07% rise in that host's measured ceiling. The two sensitivities differ because a share is a RATIO and quoting one for the other is #110's units error in miniature. Nothing else is close: the second-tightest row is keel-gvt4 Ssymm at 53.0, needing a 19.2% fall, and keel-gvt3 Strsm at 61.2 needs 30.1%"

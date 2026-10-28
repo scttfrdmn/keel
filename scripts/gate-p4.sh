@@ -130,13 +130,13 @@ if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   # Kernel3x24 joins the audited set with its promotion (#136): it is now the
   # DISPATCHED shape, so the zero-spill/no-calls/no-BCE criteria must cover it or a
   # shipped kernel goes unaudited on the host that runs it.
-  KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24"
+  KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24,KernelPB5x16,KernelPB7x12" # + the dispatched pre-broadcast shapes (#198)
   # arm64's audited peak ceilings (#145). Same values gate-p3 declares, and
   # duplicated rather than shared because each gate states its own source facts;
   # gate-lib's criterion now renders UNMEASURED if a caller forgets, which is how
   # this omission was found -- it killed gate-p4 under `set -u` on a judged run.
-  PEAK_IPF_CEILINGS="neonPeak:2.1875 scalarPeak:1.30"
-  PEAK_FUNCS="neonPeak,scalarPeak"
+  PEAK_IPF_CEILINGS="neonPeakTile:1.333334 scalarPeak:1.30" # the family-max ceiling (#198)
+  PEAK_FUNCS="neonPeakTile,scalarPeak"
   GATE_PEAK="Peak/neon"
   P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(neon|n=2048)'
 fi

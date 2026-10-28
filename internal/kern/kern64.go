@@ -153,7 +153,10 @@ func Preferred64(class Class, ks []Kernel64) (Kernel64, bool) {
 func (k Kernel64) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
 
 // ID is "MRxNR/backend", as Kernel.ID.
-func (k Kernel64) ID() string { return k.Tile() + pbSuffix(k.ALanes) + "/" + k.Name }
+func (k Kernel64) ID() string { return k.IDTile() + "/" + k.Name }
+
+// IDTile is Kernel.IDTile at float64.
+func (k Kernel64) IDTile() string { return k.Tile() + pbSuffix(k.ALanes) }
 
 // ScalarKernel64 is ScalarKernel over float64: the executable specification of an
 // mr×nr tile, and until #191 the only float64 kernel there is.

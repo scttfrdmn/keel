@@ -88,16 +88,12 @@ Derived from the table above, so pooled over the era's archives rather than read
 Every one of the 20 routine-host pairs those 40 routine rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: the judged routines must reach 42.8% of each host's own measured 8-thread ceiling (#6), and Strsm's own >= x T8/T1 floor is RETIRED (#177, 2026-10-05): it was the same quantity the 6.0x cross-host floor was retired for, and it reddened a microkernel that improved both of its arms. The 6.0x cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.
 <!-- keel-caption: end -->
 
-> **Under review, #198 (2026-10-26): the Neoverse percentages.** The NEON peak that the 18
-> Neoverse rows divide by issues every FMA from the same multiplicand registers. On
-> exploration-tier 4xlarge hosts, a peak loop that spreads its FMAs over 8 registers reads
-> 1.35× higher on Neoverse-V2. On Neoverse-V1 a kernel-shaped loop reads 1.89× higher, and the
-> cause is still open. The rates in GFLOP/s are unaffected, but the Neoverse percentages, and the
-> Neoverse shares in the bar above, may be overstated by up to those factors. No figure here
-> changes until a corrected peak has been measured at the judged tier. **Measured 2026-10-27**
-> (gate-p2, judged `ba29105`, `archive/p2-arm64-family/`): the 1-thread NEON peak is 78.16 GFLOP/s on
-> Neoverse-V1 (c7g.16xlarge) and 84.43 on Neoverse-V2 (c8g.48xlarge), against the 41.42 and 61.87 these
-> rows divide by. The rows are re-derived at the next gate-p5 run, not edited here.
+> **Under review, #198 and #200: the Neoverse percentages.** The NEON peak these 18 Neoverse rows
+> divide by under-read an FMA-only loop that beats it: by 1.35× on Neoverse-V2, and by 1.89× on
+> Neoverse-V1, where the cause is still open. The corrected peak, judged on these instance types, is in
+> `archive/p2-arm64-family/`. The Neoverse percentages, and the Neoverse shares in the bar above, may be
+> overstated by up to those factors. The rows are re-derived by gate-p5 in era `famax` (#200), not
+> edited here.
 
 **The denominator here is keel's own microkernel, not OpenBLAS.** No OpenBLAS
 reference was taken at these thread counts, so the comparison DESIGN.md §7

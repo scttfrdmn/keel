@@ -257,26 +257,27 @@ if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   # Kernel3x24 joins the audited set with its promotion (#136): it is now the
   # DISPATCHED shape, so the zero-spill/no-calls/no-BCE criteria must cover it or a
   # shipped kernel goes unaudited on the host that runs it.
-  KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24"
-  PEAK_FUNCS="neonPeak,scalarPeak"
+  KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24,KernelPB5x16,KernelPB7x12" # + the dispatched pre-broadcast shapes (#198)
+  PEAK_FUNCS="neonPeakTile,scalarPeak" # the family-max ceiling (DESIGN.md P2, 2026-10-27)
   # arm64's own audited readings, not the amd64 ones: neonPeak 35 insns / 16 arith,
   # scalarPeak 13/10. scalarPeak's arm64 figure differs from amd64's 1.15 for a real
   # reason rather than noise -- arm64 fuses a*b+c (FMADDS) where amd64 does not, so
   # the two scalar ceilings are not the same quantity. This arm was UNMEASURABLE
   # until #173: the audit's arith rule was vector-only, so every scalar arm64
   # function read 0 arith and insns-per-arith rendered `n/a`.
-  PEAK_IPF_CEILINGS="neonPeak:2.1875 scalarPeak:1.30"
+  PEAK_IPF_CEILINGS="neonPeakTile:1.333334 scalarPeak:1.30" # neonPeakTile 24/18 (#198)
   # 3x24 must be in the JUDGED set too, not just the audited one: criterion 5
   # fails when "Sgemm dispatches to a shape this gate did not benchmark", and the
   # passed-over shapes become its ceiling set.
-  GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128 Kernel/3x24/neon/kc=128"
-  GATE_PEAK_FUNC="neonPeak"
+  GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128 Kernel/3x24/neon/kc=128 Kernel/5x16-pb/neon/kc=128 Kernel/7x12-pb/neon/kc=128"
+  GATE_PEAK_FUNC="neonPeakTile"
   GATE_PEAK="Peak/neon"
   SGEMM_BENCH_FILTER='(Peak|Sgemm|OpenBLAS)/(neon|n=2048)'
   # The NEON zero-spill shape frontier, best of 107 emittable shapes: 3x24 u=2, shim form (the
   # anchor NOPs the shipped kernels pay are in the count). Stated here and reconciled live against
   # shapegen -frontier -arch arm64 on every run (#107's mint check), never trusted. #156.
-  SWEEP_BEST_IPF_ARM64=4.111
+  # 1.556 since #198 put the pre-broadcast form in the arm64 space: 4x20/8, tied by the dispatched 5x16/8.
+  SWEEP_BEST_IPF_ARM64=1.556
 fi
 OPENBLAS_REMOTE_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 

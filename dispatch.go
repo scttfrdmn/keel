@@ -224,7 +224,7 @@ func selectKern64() kern.Kernel64 {
 func ActiveKern64Backend() string { return activeKern64.Name }
 
 // ActiveKern64Tile is the float64 microkernel's "MRxNR".
-func ActiveKern64Tile() string { return activeKern64.Tile() }
+func ActiveKern64Tile() string { return activeKern64.IDTile() }
 
 // activeKernClass is the host classification shape selection is made from, and it
 // is a variable rather than a call so that both it and the kernel chosen under it
@@ -261,8 +261,10 @@ func selectKernClass() kern.Class {
 func ActiveKernBackend() string { return activeKern.Name }
 
 // ActiveKernTile reports the active microkernel's tile as it appears in gate
-// markers and benchmark names, e.g. "4x32".
-func ActiveKernTile() string { return activeKern.Tile() }
+// markers and benchmark names, e.g. "4x32", or "5x16-pb" for a pre-broadcast kernel:
+// its IDTile, so a marker always names the row that benchmarks it (#200; it printed
+// the bare shape, and gate-p3 could not find the dispatched kernel's row).
+func ActiveKernTile() string { return activeKern.IDTile() }
 
 // ActiveKernClass reports the host classification the tile was chosen under —
 // "fma" or "issue" — and ActiveKernClassEvidence the grounds for it. Both are
