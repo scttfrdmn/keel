@@ -14,6 +14,8 @@
 # gate-p5 defaults to amd64, so a run that inherited no KEEL_GOARCH would judge arm64 hosts
 # in amd64's era. The ceil8 r1 archive holds a VOID-wrong-goarch log from that dependency.
 # V1 + V2 only: c9g (V3) needs OpenBLAS v0.3.34 first (#196), and has no README rows yet.
+# Re-frozen 2026-10-28 after the exploration pass, for the fixes in 30af10d; the SELF check
+# below requires the freezing commit to be HEAD.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
