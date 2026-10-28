@@ -25,3 +25,7 @@ era question turns on. If none does, `avx512Peak` stands as a ceiling on these C
 of `avx512Peak` (`a4a2ca1`), so on those hosts a member can beat it by at most about 7% and
 4%. Zen 5 (65.2%) is not bounded that way. I make no directional prediction beyond these
 bounds.
+
+> **VOID, 2026-10-28:** the "What the record already bounds" paragraph above. The inference runs
+> backwards (a kernel below the peak bounds nothing), and the run refuted it: x44 beat `avx512Peak` by
+> 12.5% on Skylake-SP. See `README.md`.

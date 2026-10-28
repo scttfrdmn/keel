@@ -1,0 +1,465 @@
+== launch 16:14:36 rev 7b55f74
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.73 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.0s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (274ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (618ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.5s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-06932b280a8f96c6d
+  Public IP    44.204.252.130
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-skx
+
+🌍 DNS: keel-skx.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-skx.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  skx  c5n.4xlarge  (Intel Skylake-SP, amd64, AMI ami-0d6dd9e8265d48906, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$0.82 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.0s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (291ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (596ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-05bdfb0ec7d9a6414
+  Public IP    100.55.75.107
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-zen4
+
+🌍 DNS: keel-zen4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-zen4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  zen4  c7a.2xlarge  (AMD EPYC Genoa, amd64, AMI ami-0d6dd9e8265d48906, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$0.86 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (987ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.3s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (1.4s)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (658ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.3s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0b9ce79bf569458d4
+  Public IP    54.173.41.4
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-zen5
+
+🌍 DNS: keel-zen5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-zen5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  zen5  c8a.2xlarge  (AMD EPYC Turin, amd64, AMI ami-0d6dd9e8265d48906, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-zen5 cloud-init settled
+  keel-zen5 has tmux
+  keel-zen4 cloud-init settled
+  keel-zen4 has tmux
+  keel-skx cloud-init settled
+  keel-skx has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-zen5            c8a.2xlarge      54.173.41.4      on-demand  2h       2026-10-28T16:16:09Z
+  keel-zen4            c7a.2xlarge      100.55.75.107    on-demand  2h       2026-10-28T16:15:41Z
+  keel-skx             c5n.4xlarge      44.204.252.130   on-demand  2h       2026-10-28T16:15:01Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== keel-skx read-back
+CPU(s):                                  16
+Model name:                              Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz
+Thread(s) per core:                      2
+avx512f
+ 16:17:31 up 2 min,  1 user,  load average: 0.25, 0.23, 0.09
+== keel-skx witness
+--- PASS: TestPeakFamilyWitness (0.01s)
+--- PASS: TestPeakCanonicalIsFamilyHead (0.00s)
+--- PASS: TestPeakChainsAreIndependent (0.00s)
+PASS
+== keel-zen4 read-back
+CPU(s):                                  8
+Model name:                              AMD EPYC 9R14
+Thread(s) per core:                      1
+avx512f
+ 16:17:33 up 1 min,  1 user,  load average: 0.10, 0.07, 0.02
+== keel-zen4 witness
+--- PASS: TestPeakFamilyWitness (0.01s)
+--- PASS: TestPeakCanonicalIsFamilyHead (0.00s)
+--- PASS: TestPeakChainsAreIndependent (0.00s)
+PASS
+== keel-zen5 read-back
+CPU(s):                                  8
+Model name:                              AMD EPYC 9R45
+Thread(s) per core:                      1
+avx512f
+ 16:17:36 up 1 min,  1 user,  load average: 0.15, 0.08, 0.03
+== keel-zen5 witness
+--- PASS: TestPeakFamilyWitness (0.00s)
+--- PASS: TestPeakCanonicalIsFamilyHead (0.00s)
+--- PASS: TestPeakChainsAreIndependent (0.00s)
+PASS
+keel-skx r1 BenchmarkFMAFamily/f32/shared         	    7610	    151568 ns/op	       166.0 GFLOP/s
+keel-skx r1 BenchmarkFMAFamily/f32/x44            	    6669	    179544 ns/op	       186.9 GFLOP/s
+keel-skx r1 BenchmarkFMAFamily/f32/fo             	    7036	    170120 ns/op	        98.62 GFLOP/s
+keel-skx r1 BenchmarkFMAFamily/f64/shared         	    7899	    151527 ns/op	        83.04 GFLOP/s
+keel-skx r1 BenchmarkFMAFamily/f64/x44            	    6676	    179577 ns/op	        93.43 GFLOP/s
+keel-skx r1 BenchmarkFMAFamily/f64/fo             	    6981	    171773 ns/op	        48.84 GFLOP/s
+keel-skx r1 BenchmarkPeak/avx512                  	    7911	    151520 ns/op	       166.1 GFLOP/s
+keel-skx r1 BenchmarkFMARoof64/avx512             	    7924	    151616 ns/op	        82.99 GFLOP/s
+keel-skx r2 BenchmarkFMAFamily/f32/shared         	    7620	    151566 ns/op	       166.0 GFLOP/s
+keel-skx r2 BenchmarkFMAFamily/f32/x44            	    6679	    179611 ns/op	       186.8 GFLOP/s
+keel-skx r2 BenchmarkFMAFamily/f32/fo             	    7060	    170143 ns/op	        98.61 GFLOP/s
+keel-skx r2 BenchmarkFMAFamily/f64/shared         	    7926	    151521 ns/op	        83.04 GFLOP/s
+keel-skx r2 BenchmarkFMAFamily/f64/x44            	    6687	    179601 ns/op	        93.41 GFLOP/s
+keel-skx r2 BenchmarkFMAFamily/f64/fo             	    6979	    171844 ns/op	        48.82 GFLOP/s
+keel-skx r2 BenchmarkPeak/avx512                  	    7897	    151524 ns/op	       166.1 GFLOP/s
+keel-skx r2 BenchmarkFMARoof64/avx512             	    7910	    151505 ns/op	        83.05 GFLOP/s
+keel-skx r3 BenchmarkFMAFamily/f32/shared         	    7615	    151621 ns/op	       166.0 GFLOP/s
+keel-skx r3 BenchmarkFMAFamily/f32/x44            	    6679	    179605 ns/op	       186.8 GFLOP/s
+keel-skx r3 BenchmarkFMAFamily/f32/fo             	    7046	    170138 ns/op	        98.61 GFLOP/s
+keel-skx r3 BenchmarkFMAFamily/f64/shared         	    7918	    151523 ns/op	        83.04 GFLOP/s
+keel-skx r3 BenchmarkFMAFamily/f64/x44            	    6691	    179602 ns/op	        93.41 GFLOP/s
+keel-skx r3 BenchmarkFMAFamily/f64/fo             	    6979	    171801 ns/op	        48.83 GFLOP/s
+keel-skx r3 BenchmarkPeak/avx512                  	    7910	    151604 ns/op	       166.0 GFLOP/s
+keel-skx r3 BenchmarkFMARoof64/avx512             	    7910	    151625 ns/op	        82.99 GFLOP/s
+keel-skx r4 BenchmarkFMAFamily/f32/shared         	    7624	    151559 ns/op	       166.0 GFLOP/s
+keel-skx r4 BenchmarkFMAFamily/f32/x44            	    6678	    179525 ns/op	       186.9 GFLOP/s
+keel-skx r4 BenchmarkFMAFamily/f32/fo             	    7040	    170221 ns/op	        98.56 GFLOP/s
+keel-skx r4 BenchmarkFMAFamily/f64/shared         	    7891	    151558 ns/op	        83.02 GFLOP/s
+keel-skx r4 BenchmarkFMAFamily/f64/x44            	    6674	    179591 ns/op	        93.42 GFLOP/s
+keel-skx r4 BenchmarkFMAFamily/f64/fo             	    6948	    171842 ns/op	        48.82 GFLOP/s
+keel-skx r4 BenchmarkPeak/avx512                  	    7904	    151528 ns/op	       166.1 GFLOP/s
+keel-skx r4 BenchmarkFMARoof64/avx512             	    7915	    151568 ns/op	        83.02 GFLOP/s
+keel-skx r5 BenchmarkFMAFamily/f32/shared         	    7608	    151611 ns/op	       166.0 GFLOP/s
+keel-skx r5 BenchmarkFMAFamily/f32/x44            	    6676	    179569 ns/op	       186.9 GFLOP/s
+keel-skx r5 BenchmarkFMAFamily/f32/fo             	    7047	    170134 ns/op	        98.61 GFLOP/s
+keel-skx r5 BenchmarkFMAFamily/f64/shared         	    7890	    151575 ns/op	        83.01 GFLOP/s
+keel-skx r5 BenchmarkFMAFamily/f64/x44            	    6662	    179581 ns/op	        93.42 GFLOP/s
+keel-skx r5 BenchmarkFMAFamily/f64/fo             	    6987	    171771 ns/op	        48.84 GFLOP/s
+keel-skx r5 BenchmarkPeak/avx512                  	    7924	    151496 ns/op	       166.1 GFLOP/s
+keel-skx r5 BenchmarkFMARoof64/avx512             	    7920	    151496 ns/op	        83.06 GFLOP/s
+keel-skx r6 BenchmarkFMAFamily/f32/shared         	    7624	    151531 ns/op	       166.1 GFLOP/s
+keel-skx r6 BenchmarkFMAFamily/f32/x44            	    6688	    179538 ns/op	       186.9 GFLOP/s
+keel-skx r6 BenchmarkFMAFamily/f32/fo             	    7056	    170152 ns/op	        98.60 GFLOP/s
+keel-skx r6 BenchmarkFMAFamily/f64/shared         	    7912	    151492 ns/op	        83.06 GFLOP/s
+keel-skx r6 BenchmarkFMAFamily/f64/x44            	    6686	    179567 ns/op	        93.43 GFLOP/s
+keel-skx r6 BenchmarkFMAFamily/f64/fo             	    6998	    171721 ns/op	        48.85 GFLOP/s
+keel-skx r6 BenchmarkPeak/avx512                  	    7893	    151482 ns/op	       166.1 GFLOP/s
+keel-skx r6 BenchmarkFMARoof64/avx512             	    7923	    151509 ns/op	        83.05 GFLOP/s
+keel-skx r7 BenchmarkFMAFamily/f32/shared         	    7563	    151577 ns/op	       166.0 GFLOP/s
+keel-skx r7 BenchmarkFMAFamily/f32/x44            	    6681	    179599 ns/op	       186.8 GFLOP/s
+keel-skx r7 BenchmarkFMAFamily/f32/fo             	    7045	    170152 ns/op	        98.60 GFLOP/s
+keel-skx r7 BenchmarkFMAFamily/f64/shared         	    7911	    151501 ns/op	        83.05 GFLOP/s
+keel-skx r7 BenchmarkFMAFamily/f64/x44            	    6686	    179577 ns/op	        93.43 GFLOP/s
+keel-skx r7 BenchmarkFMAFamily/f64/fo             	    6888	    171738 ns/op	        48.85 GFLOP/s
+keel-skx r7 BenchmarkPeak/avx512                  	    7892	    151512 ns/op	       166.1 GFLOP/s
+keel-skx r7 BenchmarkFMARoof64/avx512             	    7908	    151521 ns/op	        83.04 GFLOP/s
+keel-skx r8 BenchmarkFMAFamily/f32/shared         	    7614	    151555 ns/op	       166.1 GFLOP/s
+keel-skx r8 BenchmarkFMAFamily/f32/x44            	    6670	    179594 ns/op	       186.8 GFLOP/s
+keel-skx r8 BenchmarkFMAFamily/f32/fo             	    7039	    170146 ns/op	        98.61 GFLOP/s
+keel-skx r8 BenchmarkFMAFamily/f64/shared         	    7916	    151510 ns/op	        83.05 GFLOP/s
+keel-skx r8 BenchmarkFMAFamily/f64/x44            	    6664	    179535 ns/op	        93.45 GFLOP/s
+keel-skx r8 BenchmarkFMAFamily/f64/fo             	    6925	    171828 ns/op	        48.82 GFLOP/s
+keel-skx r8 BenchmarkPeak/avx512                  	    7792	    151525 ns/op	       166.1 GFLOP/s
+keel-skx r8 BenchmarkFMARoof64/avx512             	    7912	    151508 ns/op	        83.05 GFLOP/s
+keel-skx r9 BenchmarkFMAFamily/f32/shared         	    7566	    151524 ns/op	       166.1 GFLOP/s
+keel-skx r9 BenchmarkFMAFamily/f32/x44            	    6663	    179611 ns/op	       186.8 GFLOP/s
+keel-skx r9 BenchmarkFMAFamily/f32/fo             	    7046	    170158 ns/op	        98.60 GFLOP/s
+keel-skx r9 BenchmarkFMAFamily/f64/shared         	    7911	    151512 ns/op	        83.05 GFLOP/s
+keel-skx r9 BenchmarkFMAFamily/f64/x44            	    6678	    179567 ns/op	        93.43 GFLOP/s
+keel-skx r9 BenchmarkFMAFamily/f64/fo             	    6981	    171856 ns/op	        48.81 GFLOP/s
+keel-skx r9 BenchmarkPeak/avx512                  	    7911	    151544 ns/op	       166.1 GFLOP/s
+keel-skx r9 BenchmarkFMARoof64/avx512             	    7911	    151502 ns/op	        83.05 GFLOP/s
+keel-skx r10 BenchmarkFMAFamily/f32/shared         	    7629	    151596 ns/op	       166.0 GFLOP/s
+keel-skx r10 BenchmarkFMAFamily/f32/x44            	    6664	    179606 ns/op	       186.8 GFLOP/s
+keel-skx r10 BenchmarkFMAFamily/f32/fo             	    7033	    170204 ns/op	        98.57 GFLOP/s
+keel-skx r10 BenchmarkFMAFamily/f64/shared         	    7790	    151559 ns/op	        83.02 GFLOP/s
+keel-skx r10 BenchmarkFMAFamily/f64/x44            	    6654	    179564 ns/op	        93.43 GFLOP/s
+keel-skx r10 BenchmarkFMAFamily/f64/fo             	    6976	    171859 ns/op	        48.81 GFLOP/s
+keel-skx r10 BenchmarkPeak/avx512                  	    7914	    151565 ns/op	       166.0 GFLOP/s
+keel-skx r10 BenchmarkFMARoof64/avx512             	    7911	    151537 ns/op	        83.04 GFLOP/s
+keel-zen4 r1 BenchmarkFMAFamily/f32/shared         	    5424	    215071 ns/op	       117.0 GFLOP/s
+keel-zen4 r1 BenchmarkFMAFamily/f32/x44            	    4179	    286693 ns/op	       117.0 GFLOP/s
+keel-zen4 r1 BenchmarkFMAFamily/f32/fo             	    8362	    143546 ns/op	       116.9 GFLOP/s
+keel-zen4 r1 BenchmarkFMAFamily/f64/shared         	    5578	    215065 ns/op	        58.51 GFLOP/s
+keel-zen4 r1 BenchmarkFMAFamily/f64/x44            	    4185	    286697 ns/op	        58.52 GFLOP/s
+keel-zen4 r1 BenchmarkFMAFamily/f64/fo             	    8348	    143535 ns/op	        58.44 GFLOP/s
+keel-zen4 r1 BenchmarkPeak/avx512                  	    5572	    215030 ns/op	       117.0 GFLOP/s
+keel-zen4 r1 BenchmarkFMARoof64/avx512             	    5574	    215021 ns/op	        58.52 GFLOP/s
+keel-zen4 r2 BenchmarkFMAFamily/f32/shared         	    5445	    215061 ns/op	       117.0 GFLOP/s
+keel-zen4 r2 BenchmarkFMAFamily/f32/x44            	    4183	    286739 ns/op	       117.0 GFLOP/s
+keel-zen4 r2 BenchmarkFMAFamily/f32/fo             	    8358	    143551 ns/op	       116.9 GFLOP/s
+keel-zen4 r2 BenchmarkFMAFamily/f64/shared         	    5580	    215058 ns/op	        58.51 GFLOP/s
+keel-zen4 r2 BenchmarkFMAFamily/f64/x44            	    4184	    286729 ns/op	        58.51 GFLOP/s
+keel-zen4 r2 BenchmarkFMAFamily/f64/fo             	    8364	    143517 ns/op	        58.45 GFLOP/s
+keel-zen4 r2 BenchmarkPeak/avx512                  	    5574	    215045 ns/op	       117.0 GFLOP/s
+keel-zen4 r2 BenchmarkFMARoof64/avx512             	    5576	    215058 ns/op	        58.51 GFLOP/s
+keel-zen4 r3 BenchmarkFMAFamily/f32/shared         	    5421	    215061 ns/op	       117.0 GFLOP/s
+keel-zen4 r3 BenchmarkFMAFamily/f32/x44            	    4184	    286671 ns/op	       117.0 GFLOP/s
+keel-zen4 r3 BenchmarkFMAFamily/f32/fo             	    8359	    143564 ns/op	       116.9 GFLOP/s
+keel-zen4 r3 BenchmarkFMAFamily/f64/shared         	    5578	    215025 ns/op	        58.52 GFLOP/s
+keel-zen4 r3 BenchmarkFMAFamily/f64/x44            	    4180	    286721 ns/op	        58.51 GFLOP/s
+keel-zen4 r3 BenchmarkFMAFamily/f64/fo             	    8343	    143510 ns/op	        58.45 GFLOP/s
+keel-zen4 r3 BenchmarkPeak/avx512                  	    5569	    215038 ns/op	       117.0 GFLOP/s
+keel-zen4 r3 BenchmarkFMARoof64/avx512             	    5576	    215038 ns/op	        58.51 GFLOP/s
+keel-zen4 r4 BenchmarkFMAFamily/f32/shared         	    5442	    215060 ns/op	       117.0 GFLOP/s
+keel-zen4 r4 BenchmarkFMAFamily/f32/x44            	    4184	    286702 ns/op	       117.0 GFLOP/s
+keel-zen4 r4 BenchmarkFMAFamily/f32/fo             	    8366	    143565 ns/op	       116.9 GFLOP/s
+keel-zen4 r4 BenchmarkFMAFamily/f64/shared         	    5576	    215071 ns/op	        58.51 GFLOP/s
+keel-zen4 r4 BenchmarkFMAFamily/f64/x44            	    4182	    286712 ns/op	        58.52 GFLOP/s
+keel-zen4 r4 BenchmarkFMAFamily/f64/fo             	    8368	    143534 ns/op	        58.44 GFLOP/s
+keel-zen4 r4 BenchmarkPeak/avx512                  	    5576	    215036 ns/op	       117.0 GFLOP/s
+keel-zen4 r4 BenchmarkFMARoof64/avx512             	    5578	    215047 ns/op	        58.51 GFLOP/s
+keel-zen4 r5 BenchmarkFMAFamily/f32/shared         	    5422	    215057 ns/op	       117.0 GFLOP/s
+keel-zen4 r5 BenchmarkFMAFamily/f32/x44            	    4184	    286744 ns/op	       117.0 GFLOP/s
+keel-zen4 r5 BenchmarkFMAFamily/f32/fo             	    8347	    143571 ns/op	       116.9 GFLOP/s
+keel-zen4 r5 BenchmarkFMAFamily/f64/shared         	    5576	    215025 ns/op	        58.52 GFLOP/s
+keel-zen4 r5 BenchmarkFMAFamily/f64/x44            	    4185	    286693 ns/op	        58.52 GFLOP/s
+keel-zen4 r5 BenchmarkFMAFamily/f64/fo             	    8346	    143527 ns/op	        58.45 GFLOP/s
+keel-zen4 r5 BenchmarkPeak/avx512                  	    5574	    215037 ns/op	       117.0 GFLOP/s
+keel-zen4 r5 BenchmarkFMARoof64/avx512             	    5572	    215050 ns/op	        58.51 GFLOP/s
+keel-zen4 r6 BenchmarkFMAFamily/f32/shared         	    5455	    215066 ns/op	       117.0 GFLOP/s
+keel-zen4 r6 BenchmarkFMAFamily/f32/x44            	    4180	    286711 ns/op	       117.0 GFLOP/s
+keel-zen4 r6 BenchmarkFMAFamily/f32/fo             	    8355	    143560 ns/op	       116.9 GFLOP/s
+keel-zen4 r6 BenchmarkFMAFamily/f64/shared         	    5569	    215042 ns/op	        58.51 GFLOP/s
+keel-zen4 r6 BenchmarkFMAFamily/f64/x44            	    4186	    286707 ns/op	        58.52 GFLOP/s
+keel-zen4 r6 BenchmarkFMAFamily/f64/fo             	    8368	    143502 ns/op	        58.46 GFLOP/s
+keel-zen4 r6 BenchmarkPeak/avx512                  	    5575	    215053 ns/op	       117.0 GFLOP/s
+keel-zen4 r6 BenchmarkFMARoof64/avx512             	    5580	    215031 ns/op	        58.52 GFLOP/s
+keel-zen4 r7 BenchmarkFMAFamily/f32/shared         	    5422	    215060 ns/op	       117.0 GFLOP/s
+keel-zen4 r7 BenchmarkFMAFamily/f32/x44            	    4184	    286741 ns/op	       117.0 GFLOP/s
+keel-zen4 r7 BenchmarkFMAFamily/f32/fo             	    8346	    143579 ns/op	       116.9 GFLOP/s
+keel-zen4 r7 BenchmarkFMAFamily/f64/shared         	    5574	    215046 ns/op	        58.51 GFLOP/s
+keel-zen4 r7 BenchmarkFMAFamily/f64/x44            	    4184	    286701 ns/op	        58.52 GFLOP/s
+keel-zen4 r7 BenchmarkFMAFamily/f64/fo             	    8362	    143524 ns/op	        58.45 GFLOP/s
+keel-zen4 r7 BenchmarkPeak/avx512                  	    5571	    215066 ns/op	       117.0 GFLOP/s
+keel-zen4 r7 BenchmarkFMARoof64/avx512             	    5571	    215038 ns/op	        58.51 GFLOP/s
+keel-zen4 r8 BenchmarkFMAFamily/f32/shared         	    5426	    215042 ns/op	       117.0 GFLOP/s
+keel-zen4 r8 BenchmarkFMAFamily/f32/x44            	    4182	    286724 ns/op	       117.0 GFLOP/s
+keel-zen4 r8 BenchmarkFMAFamily/f32/fo             	    8350	    143545 ns/op	       116.9 GFLOP/s
+keel-zen4 r8 BenchmarkFMAFamily/f64/shared         	    5547	    215017 ns/op	        58.52 GFLOP/s
+keel-zen4 r8 BenchmarkFMAFamily/f64/x44            	    4182	    286710 ns/op	        58.52 GFLOP/s
+keel-zen4 r8 BenchmarkFMAFamily/f64/fo             	    8346	    143503 ns/op	        58.46 GFLOP/s
+keel-zen4 r8 BenchmarkPeak/avx512                  	    5576	    215061 ns/op	       117.0 GFLOP/s
+keel-zen4 r8 BenchmarkFMARoof64/avx512             	    5576	    215061 ns/op	        58.51 GFLOP/s
+keel-zen4 r9 BenchmarkFMAFamily/f32/shared         	    5422	    215066 ns/op	       117.0 GFLOP/s
+keel-zen4 r9 BenchmarkFMAFamily/f32/x44            	    4184	    286701 ns/op	       117.0 GFLOP/s
+keel-zen4 r9 BenchmarkFMAFamily/f32/fo             	    8344	    143553 ns/op	       116.9 GFLOP/s
+keel-zen4 r9 BenchmarkFMAFamily/f64/shared         	    5578	    215085 ns/op	        58.50 GFLOP/s
+keel-zen4 r9 BenchmarkFMAFamily/f64/x44            	    4182	    286717 ns/op	        58.51 GFLOP/s
+keel-zen4 r9 BenchmarkFMAFamily/f64/fo             	    8353	    143498 ns/op	        58.46 GFLOP/s
+keel-zen4 r9 BenchmarkPeak/avx512                  	    5574	    215060 ns/op	       117.0 GFLOP/s
+keel-zen4 r9 BenchmarkFMARoof64/avx512             	    5577	    215043 ns/op	        58.51 GFLOP/s
+keel-zen4 r10 BenchmarkFMAFamily/f32/shared         	    5449	    215062 ns/op	       117.0 GFLOP/s
+keel-zen4 r10 BenchmarkFMAFamily/f32/x44            	    4180	    286753 ns/op	       117.0 GFLOP/s
+keel-zen4 r10 BenchmarkFMAFamily/f32/fo             	    8367	    143557 ns/op	       116.9 GFLOP/s
+keel-zen4 r10 BenchmarkFMAFamily/f64/shared         	    5581	    215036 ns/op	        58.52 GFLOP/s
+keel-zen4 r10 BenchmarkFMAFamily/f64/x44            	    4165	    286706 ns/op	        58.52 GFLOP/s
+keel-zen4 r10 BenchmarkFMAFamily/f64/fo             	    8370	    143506 ns/op	        58.45 GFLOP/s
+keel-zen4 r10 BenchmarkPeak/avx512                  	    5575	    215054 ns/op	       117.0 GFLOP/s
+keel-zen4 r10 BenchmarkFMARoof64/avx512             	    5572	    215051 ns/op	        58.51 GFLOP/s
+keel-zen5 r1 BenchmarkFMAFamily/f32/shared         	   13621	     88073 ns/op	       285.7 GFLOP/s
+keel-zen5 r1 BenchmarkFMAFamily/f32/x44            	   10000	    117431 ns/op	       285.7 GFLOP/s
+keel-zen5 r1 BenchmarkFMAFamily/f32/fo             	   18560	     64724 ns/op	       259.2 GFLOP/s
+keel-zen5 r1 BenchmarkFMAFamily/f64/shared         	   13608	     87967 ns/op	       143.0 GFLOP/s
+keel-zen5 r1 BenchmarkFMAFamily/f64/x44            	   10000	    117305 ns/op	       143.0 GFLOP/s
+keel-zen5 r1 BenchmarkFMAFamily/f64/fo             	   18442	     65115 ns/op	       128.8 GFLOP/s
+keel-zen5 r1 BenchmarkPeak/avx512                  	   13634	     87938 ns/op	       286.2 GFLOP/s
+keel-zen5 r1 BenchmarkFMARoof64/avx512             	   13640	     87989 ns/op	       143.0 GFLOP/s
+keel-zen5 r2 BenchmarkFMAFamily/f32/shared         	   13654	     88110 ns/op	       285.6 GFLOP/s
+keel-zen5 r2 BenchmarkFMAFamily/f32/x44            	   10000	    117325 ns/op	       286.0 GFLOP/s
+keel-zen5 r2 BenchmarkFMAFamily/f32/fo             	   18498	     64801 ns/op	       258.9 GFLOP/s
+keel-zen5 r2 BenchmarkFMAFamily/f64/shared         	   13629	     88104 ns/op	       142.8 GFLOP/s
+keel-zen5 r2 BenchmarkFMAFamily/f64/x44            	   10000	    117465 ns/op	       142.8 GFLOP/s
+keel-zen5 r2 BenchmarkFMAFamily/f64/fo             	   18416	     65093 ns/op	       128.9 GFLOP/s
+keel-zen5 r2 BenchmarkPeak/avx512                  	   13624	     88051 ns/op	       285.8 GFLOP/s
+keel-zen5 r2 BenchmarkFMARoof64/avx512             	   13623	     87991 ns/op	       143.0 GFLOP/s
+keel-zen5 r3 BenchmarkFMAFamily/f32/shared         	   13636	     88047 ns/op	       285.8 GFLOP/s
+keel-zen5 r3 BenchmarkFMAFamily/f32/x44            	   10000	    117369 ns/op	       285.9 GFLOP/s
+keel-zen5 r3 BenchmarkFMAFamily/f32/fo             	   18679	     64248 ns/op	       261.1 GFLOP/s
+keel-zen5 r3 BenchmarkFMAFamily/f64/shared         	   13608	     88170 ns/op	       142.7 GFLOP/s
+keel-zen5 r3 BenchmarkFMAFamily/f64/x44            	   10000	    117383 ns/op	       142.9 GFLOP/s
+keel-zen5 r3 BenchmarkFMAFamily/f64/fo             	   18464	     65158 ns/op	       128.7 GFLOP/s
+keel-zen5 r3 BenchmarkPeak/avx512                  	   13660	     87916 ns/op	       286.2 GFLOP/s
+keel-zen5 r3 BenchmarkFMARoof64/avx512             	   13621	     87941 ns/op	       143.1 GFLOP/s
+keel-zen5 r4 BenchmarkFMAFamily/f32/shared         	   13653	     87911 ns/op	       286.3 GFLOP/s
+keel-zen5 r4 BenchmarkFMAFamily/f32/x44            	   10000	    117337 ns/op	       286.0 GFLOP/s
+keel-zen5 r4 BenchmarkFMAFamily/f32/fo             	   18577	     64744 ns/op	       259.1 GFLOP/s
+keel-zen5 r4 BenchmarkFMAFamily/f64/shared         	   13636	     87956 ns/op	       143.1 GFLOP/s
+keel-zen5 r4 BenchmarkFMAFamily/f64/x44            	   10000	    117321 ns/op	       143.0 GFLOP/s
+keel-zen5 r4 BenchmarkFMAFamily/f64/fo             	   18445	     65007 ns/op	       129.0 GFLOP/s
+keel-zen5 r4 BenchmarkPeak/avx512                  	   13622	     88075 ns/op	       285.7 GFLOP/s
+keel-zen5 r4 BenchmarkFMARoof64/avx512             	   13639	     87982 ns/op	       143.0 GFLOP/s
+keel-zen5 r5 BenchmarkFMAFamily/f32/shared         	   13633	     88033 ns/op	       285.9 GFLOP/s
+keel-zen5 r5 BenchmarkFMAFamily/f32/x44            	   10000	    117355 ns/op	       285.9 GFLOP/s
+keel-zen5 r5 BenchmarkFMAFamily/f32/fo             	   18705	     64194 ns/op	       261.4 GFLOP/s
+keel-zen5 r5 BenchmarkFMAFamily/f64/shared         	   13648	     87921 ns/op	       143.1 GFLOP/s
+keel-zen5 r5 BenchmarkFMAFamily/f64/x44            	   10000	    117169 ns/op	       143.2 GFLOP/s
+keel-zen5 r5 BenchmarkFMAFamily/f64/fo             	   18423	     65000 ns/op	       129.1 GFLOP/s
+keel-zen5 r5 BenchmarkPeak/avx512                  	   13666	     87892 ns/op	       286.3 GFLOP/s
+keel-zen5 r5 BenchmarkFMARoof64/avx512             	   13628	     88067 ns/op	       142.9 GFLOP/s
+keel-zen5 r6 BenchmarkFMAFamily/f32/shared         	   13628	     88136 ns/op	       285.5 GFLOP/s
+keel-zen5 r6 BenchmarkFMAFamily/f32/x44            	   10000	    117421 ns/op	       285.8 GFLOP/s
+keel-zen5 r6 BenchmarkFMAFamily/f32/fo             	   18674	     64120 ns/op	       261.7 GFLOP/s
+keel-zen5 r6 BenchmarkFMAFamily/f64/shared         	   13660	     87979 ns/op	       143.0 GFLOP/s
+keel-zen5 r6 BenchmarkFMAFamily/f64/x44            	   10000	    117392 ns/op	       142.9 GFLOP/s
+keel-zen5 r6 BenchmarkFMAFamily/f64/fo             	   18477	     65229 ns/op	       128.6 GFLOP/s
+keel-zen5 r6 BenchmarkPeak/avx512                  	   13626	     88188 ns/op	       285.4 GFLOP/s
+keel-zen5 r6 BenchmarkFMARoof64/avx512             	   13615	     88113 ns/op	       142.8 GFLOP/s
+keel-zen5 r7 BenchmarkFMAFamily/f32/shared         	   13628	     88030 ns/op	       285.9 GFLOP/s
+keel-zen5 r7 BenchmarkFMAFamily/f32/x44            	   10000	    117426 ns/op	       285.8 GFLOP/s
+keel-zen5 r7 BenchmarkFMAFamily/f32/fo             	   18544	     64775 ns/op	       259.0 GFLOP/s
+keel-zen5 r7 BenchmarkFMAFamily/f64/shared         	   13604	     88068 ns/op	       142.9 GFLOP/s
+keel-zen5 r7 BenchmarkFMAFamily/f64/x44            	   10000	    117319 ns/op	       143.0 GFLOP/s
+keel-zen5 r7 BenchmarkFMAFamily/f64/fo             	   18369	     65442 ns/op	       128.2 GFLOP/s
+keel-zen5 r7 BenchmarkPeak/avx512                  	   13612	     88079 ns/op	       285.7 GFLOP/s
+keel-zen5 r7 BenchmarkFMARoof64/avx512             	   13648	     88053 ns/op	       142.9 GFLOP/s
+keel-zen5 r8 BenchmarkFMAFamily/f32/shared         	   13632	     88116 ns/op	       285.6 GFLOP/s
+keel-zen5 r8 BenchmarkFMAFamily/f32/x44            	   10000	    117277 ns/op	       286.1 GFLOP/s
+keel-zen5 r8 BenchmarkFMAFamily/f32/fo             	   18723	     64195 ns/op	       261.3 GFLOP/s
+keel-zen5 r8 BenchmarkFMAFamily/f64/shared         	   13611	     88175 ns/op	       142.7 GFLOP/s
+keel-zen5 r8 BenchmarkFMAFamily/f64/x44            	   10000	    117460 ns/op	       142.8 GFLOP/s
+keel-zen5 r8 BenchmarkFMAFamily/f64/fo             	   18400	     65107 ns/op	       128.8 GFLOP/s
+keel-zen5 r8 BenchmarkPeak/avx512                  	   13621	     88051 ns/op	       285.8 GFLOP/s
+keel-zen5 r8 BenchmarkFMARoof64/avx512             	   13633	     88171 ns/op	       142.7 GFLOP/s
+keel-zen5 r9 BenchmarkFMAFamily/f32/shared         	   13617	     88235 ns/op	       285.2 GFLOP/s
+keel-zen5 r9 BenchmarkFMAFamily/f32/x44            	   10000	    117457 ns/op	       285.7 GFLOP/s
+keel-zen5 r9 BenchmarkFMAFamily/f32/fo             	   18673	     64242 ns/op	       261.2 GFLOP/s
+keel-zen5 r9 BenchmarkFMAFamily/f64/shared         	   13610	     87969 ns/op	       143.0 GFLOP/s
+keel-zen5 r9 BenchmarkFMAFamily/f64/x44            	   10000	    117434 ns/op	       142.9 GFLOP/s
+keel-zen5 r9 BenchmarkFMAFamily/f64/fo             	   18428	     65109 ns/op	       128.8 GFLOP/s
+keel-zen5 r9 BenchmarkPeak/avx512                  	   13611	     88067 ns/op	       285.8 GFLOP/s
+keel-zen5 r9 BenchmarkFMARoof64/avx512             	   13624	     88202 ns/op	       142.7 GFLOP/s
+keel-zen5 r10 BenchmarkFMAFamily/f32/shared         	   13604	     87981 ns/op	       286.0 GFLOP/s
+keel-zen5 r10 BenchmarkFMAFamily/f32/x44            	   10000	    117439 ns/op	       285.7 GFLOP/s
+keel-zen5 r10 BenchmarkFMAFamily/f32/fo             	   18681	     64292 ns/op	       261.0 GFLOP/s
+keel-zen5 r10 BenchmarkFMAFamily/f64/shared         	   13603	     88185 ns/op	       142.7 GFLOP/s
+keel-zen5 r10 BenchmarkFMAFamily/f64/x44            	   10000	    117543 ns/op	       142.7 GFLOP/s
+keel-zen5 r10 BenchmarkFMAFamily/f64/fo             	   18423	     65006 ns/op	       129.0 GFLOP/s
+keel-zen5 r10 BenchmarkPeak/avx512                  	   13645	     88045 ns/op	       285.8 GFLOP/s
+keel-zen5 r10 BenchmarkFMARoof64/avx512             	   13626	     88164 ns/op	       142.7 GFLOP/s
+== done 16:20:04
+== TEARDOWN 16:20:04
+  terminating keel-zen5
+Looking up instance keel-zen5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0b9ce79bf569458d4...
+
+✅ Terminate request sent!
+   Instance: i-0b9ce79bf569458d4
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  terminating keel-zen4
+Looking up instance keel-zen4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-05bdfb0ec7d9a6414...
+
+✅ Terminate request sent!
+   Instance: i-05bdfb0ec7d9a6414
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  terminating keel-skx
+Looking up instance keel-skx...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-06932b280a8f96c6d...
+
+✅ Terminate request sent!
+   Instance: i-06932b280a8f96c6d
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   fleet is down

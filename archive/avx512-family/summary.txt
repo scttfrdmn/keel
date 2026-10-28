@@ -1,0 +1,21 @@
+== keel-skx  Peak/avx512 166.10 [166.00,166.10]  FMARoof64/avx512 83.05 [82.99,83.06]
+   FMAFamily/f32/fo         n=10 med=   98.60 [   98.56,   98.62]    59.4% of row   worst/row-best 0.593
+   FMAFamily/f32/shared     n=10 med=  166.00 [  166.00,  166.10]    99.9% of row   worst/row-best 0.999
+   FMAFamily/f32/x44        n=10 med=  186.80 [  186.80,  186.90]   112.5% of row   worst/row-best 1.125
+   FMAFamily/f64/fo         n=10 med=   48.83 [   48.81,   48.85]    58.8% of row   worst/row-best 0.588
+   FMAFamily/f64/shared     n=10 med=   83.04 [   83.01,   83.06]   100.0% of row   worst/row-best 0.999
+   FMAFamily/f64/x44        n=10 med=   93.43 [   93.41,   93.45]   112.5% of row   worst/row-best 1.125
+== keel-zen4  Peak/avx512 117.00 [117.00,117.00]  FMARoof64/avx512 58.51 [58.51,58.52]
+   FMAFamily/f32/fo         n=10 med=  116.90 [  116.90,  116.90]    99.9% of row   worst/row-best 0.999
+   FMAFamily/f32/shared     n=10 med=  117.00 [  117.00,  117.00]   100.0% of row   worst/row-best 1.000
+   FMAFamily/f32/x44        n=10 med=  117.00 [  117.00,  117.00]   100.0% of row   worst/row-best 1.000
+   FMAFamily/f64/fo         n=10 med=   58.45 [   58.44,   58.46]    99.9% of row   worst/row-best 0.999
+   FMAFamily/f64/shared     n=10 med=   58.51 [   58.50,   58.52]   100.0% of row   worst/row-best 1.000
+   FMAFamily/f64/x44        n=10 med=   58.52 [   58.51,   58.52]   100.0% of row   worst/row-best 1.000
+== keel-zen5  Peak/avx512 285.80 [285.40,286.30]  FMARoof64/avx512 142.90 [142.70,143.10]
+   FMAFamily/f32/fo         n=10 med=  261.05 [  258.90,  261.70]    91.3% of row   worst/row-best 0.904
+   FMAFamily/f32/shared     n=10 med=  285.75 [  285.20,  286.30]   100.0% of row   worst/row-best 0.996
+   FMAFamily/f32/x44        n=10 med=  285.85 [  285.70,  286.10]   100.0% of row   worst/row-best 0.998
+   FMAFamily/f64/fo         n=10 med=  128.80 [  128.20,  129.10]    90.1% of row   worst/row-best 0.896
+   FMAFamily/f64/shared     n=10 med=  142.95 [  142.70,  143.10]   100.0% of row   worst/row-best 0.997
+   FMAFamily/f64/x44        n=10 med=  142.90 [  142.70,  143.20]   100.0% of row   worst/row-best 0.997
