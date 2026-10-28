@@ -1,0 +1,1425 @@
+== launch 03:37:07 rev 825d997
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.16 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (858ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (16.9s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (281ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (626ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-068fd80db9fe76d40
+  Public IP    13.223.53.234
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt3  c7g.4xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.28 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (831ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (292ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (617ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-084ad1b6b60ed7226
+  Public IP    3.88.26.94
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt4  c8g.4xlarge  (Neoverse-V2, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (831ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (277ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (605ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0df7c4ac6648b617d
+  Public IP    3.235.108.59
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt5  c9g.4xlarge  (AWS Graviton5, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.4xlarge      3.235.108.59     on-demand  2h       2026-10-28T03:38:30Z
+  keel-gvt4            c8g.4xlarge      3.88.26.94       on-demand  2h       2026-10-28T03:38:01Z
+  keel-gvt3            c7g.4xlarge      13.223.53.234    on-demand  2h       2026-10-28T03:37:32Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== keel-gvt3 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd40
+Model name:                              Neoverse-V1
+ 03:39:47 up 2 min,  1 user,  load average: 0.03, 0.03, 0.01
+== keel-gvt4 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd4f
+Model name:                              Neoverse-V2
+ 03:39:49 up 1 min,  1 user,  load average: 0.15, 0.08, 0.02
+== keel-gvt5 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd84
+Model name:                              Neoverse-V3
+ 03:39:51 up 1 min,  1 user,  load average: 0.21, 0.07, 0.02
+keel-gvt3 r1 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3904062	       307.0 ns/op	        66.71 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  917074	      1309 ns/op	        62.60 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3954606	       304.2 ns/op	        67.33 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  904506	      1327 ns/op	        61.73 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3657597	       328.1 ns/op	        65.55 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  859872	      1397 ns/op	        61.57 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3717336	       322.7 ns/op	        66.63 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  865870	      1380 ns/op	        62.33 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4712346	       254.6 ns/op	        64.36 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1074 ns/op	        61.05 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4254073	       282.1 ns/op	        65.34 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  982372	      1216 ns/op	        60.62 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4227066	       283.9 ns/op	        64.93 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  999291	      1210 ns/op	        60.91 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4008224	       299.2 ns/op	        61.60 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  941694	      1273 ns/op	        57.90 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3565215	       336.6 ns/op	        60.84 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  858909	      1397 ns/op	        58.66 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3910389	       306.7 ns/op	        33.39 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  912873	      1314 ns/op	        31.16 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3954468	       303.8 ns/op	        33.70 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  906910	      1322 ns/op	        30.99 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3654091	       328.4 ns/op	        32.75 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  856922	      1400 ns/op	        30.72 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3718882	       322.7 ns/op	        33.32 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  859957	      1387 ns/op	        31.01 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4712181	       254.6 ns/op	        32.17 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1075 ns/op	        30.48 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4253919	       282.1 ns/op	        32.67 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  980112	      1202 ns/op	        30.67 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4223624	       284.1 ns/op	        32.44 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  987198	      1208 ns/op	        30.51 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4007049	       299.4 ns/op	        30.78 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  940471	      1268 ns/op	        29.06 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3564145	       336.7 ns/op	        30.41 GFLOP/s
+keel-gvt3 r1 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  859256	      1395 ns/op	        29.37 GFLOP/s
+keel-gvt3 r1 bench BenchmarkKernel/3x24/neon/kc=128         	 2313240	       518.4 ns/op	        35.55 GFLOP/s	     18432 flops/call
+keel-gvt3 r1 bench BenchmarkPeak/neon                       	    9918	    120741 ns/op	        78.16 GFLOP/s
+keel-gvt3 r1 bench BenchmarkFMARoof64/neon                  	    9910	    120784 ns/op	        39.07 GFLOP/s
+keel-gvt3 r1 bench BenchmarkTile64/3x12/neon/kc=128         	 2321074	       516.8 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r2 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3900981	       306.9 ns/op	        66.73 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  916418	      1307 ns/op	        62.66 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3943146	       303.7 ns/op	        67.43 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  903747	      1324 ns/op	        61.88 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3657398	       328.2 ns/op	        65.53 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  831778	      1400 ns/op	        61.46 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3717771	       322.5 ns/op	        66.68 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  864256	      1382 ns/op	        62.25 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4716396	       254.4 ns/op	        64.41 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1074 ns/op	        61.00 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4254010	       282.1 ns/op	        65.33 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  981177	      1212 ns/op	        60.83 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4225268	       283.9 ns/op	        64.93 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  995448	      1199 ns/op	        61.50 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4010082	       299.2 ns/op	        61.60 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  929383	      1277 ns/op	        57.74 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3565304	       336.4 ns/op	        60.88 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  855487	      1398 ns/op	        58.60 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3912414	       306.8 ns/op	        33.37 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  913785	      1312 ns/op	        31.23 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3954080	       303.3 ns/op	        33.76 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  906339	      1319 ns/op	        31.04 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3655443	       328.4 ns/op	        32.74 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  832767	      1404 ns/op	        30.63 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3718473	       322.5 ns/op	        33.34 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  861456	      1389 ns/op	        30.96 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4708088	       254.7 ns/op	        32.17 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1076 ns/op	        30.46 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4253871	       282.1 ns/op	        32.67 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  988846	      1210 ns/op	        30.46 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4223178	       284.1 ns/op	        32.44 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  984880	      1199 ns/op	        30.75 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4003362	       299.4 ns/op	        30.78 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  938556	      1277 ns/op	        28.88 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3565137	       336.7 ns/op	        30.41 GFLOP/s
+keel-gvt3 r2 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  858814	      1395 ns/op	        29.36 GFLOP/s
+keel-gvt3 r2 bench BenchmarkKernel/3x24/neon/kc=128         	 2316472	       517.9 ns/op	        35.59 GFLOP/s	     18432 flops/call
+keel-gvt3 r2 bench BenchmarkPeak/neon                       	    9921	    120748 ns/op	        78.16 GFLOP/s
+keel-gvt3 r2 bench BenchmarkFMARoof64/neon                  	    9915	    120746 ns/op	        39.08 GFLOP/s
+keel-gvt3 r2 bench BenchmarkTile64/3x12/neon/kc=128         	 2321456	       516.8 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r3 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3908826	       306.5 ns/op	        66.82 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  905046	      1324 ns/op	        61.86 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3944400	       303.9 ns/op	        67.38 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  907411	      1325 ns/op	        61.81 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3655356	       328.2 ns/op	        65.52 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  856107	      1397 ns/op	        61.59 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3718004	       322.8 ns/op	        66.61 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  864732	      1385 ns/op	        62.11 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4715427	       254.2 ns/op	        64.45 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1075 ns/op	        60.96 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4249108	       282.3 ns/op	        65.29 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  980097	      1223 ns/op	        60.30 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4225968	       284.0 ns/op	        64.91 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  986563	      1207 ns/op	        61.07 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4008961	       299.2 ns/op	        61.60 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  941677	      1272 ns/op	        57.96 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3565636	       336.4 ns/op	        60.88 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  857124	      1395 ns/op	        58.72 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3916321	       306.4 ns/op	        33.42 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  902274	      1323 ns/op	        30.96 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3947968	       303.8 ns/op	        33.71 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  905144	      1327 ns/op	        30.87 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3654140	       328.4 ns/op	        32.74 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  858248	      1394 ns/op	        30.85 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3717456	       322.8 ns/op	        33.31 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  864026	      1384 ns/op	        31.07 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4709509	       254.4 ns/op	        32.20 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1071 ns/op	        30.61 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4250680	       282.2 ns/op	        32.65 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  991161	      1206 ns/op	        30.57 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4221126	       284.2 ns/op	        32.43 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  984644	      1215 ns/op	        30.33 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4007086	       299.5 ns/op	        30.77 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  940185	      1272 ns/op	        28.99 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3564303	       336.6 ns/op	        30.42 GFLOP/s
+keel-gvt3 r3 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  859852	      1391 ns/op	        29.44 GFLOP/s
+keel-gvt3 r3 bench BenchmarkKernel/3x24/neon/kc=128         	 2314342	       518.4 ns/op	        35.55 GFLOP/s	     18432 flops/call
+keel-gvt3 r3 bench BenchmarkPeak/neon                       	    9903	    120745 ns/op	        78.16 GFLOP/s
+keel-gvt3 r3 bench BenchmarkFMARoof64/neon                  	    9903	    120748 ns/op	        39.08 GFLOP/s
+keel-gvt3 r3 bench BenchmarkTile64/3x12/neon/kc=128         	 2321538	       516.9 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r4 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3912950	       305.9 ns/op	        66.95 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  915729	      1309 ns/op	        62.60 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3949675	       303.9 ns/op	        67.40 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  906272	      1322 ns/op	        61.96 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3654802	       328.1 ns/op	        65.54 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  864729	      1387 ns/op	        62.03 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3719644	       322.7 ns/op	        66.64 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  868854	      1377 ns/op	        62.46 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4717881	       254.6 ns/op	        64.34 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1055 ns/op	        62.11 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4252531	       282.2 ns/op	        65.32 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  988812	      1212 ns/op	        60.84 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4226899	       283.9 ns/op	        64.93 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  991170	      1209 ns/op	        61.00 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4012119	       299.2 ns/op	        61.60 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  943288	      1268 ns/op	        58.13 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3564916	       336.5 ns/op	        60.87 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  853042	      1400 ns/op	        58.53 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3926794	       306.0 ns/op	        33.47 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  913447	      1309 ns/op	        31.28 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3954208	       303.3 ns/op	        33.77 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  905775	      1324 ns/op	        30.94 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3654243	       328.3 ns/op	        32.75 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  865232	      1386 ns/op	        31.04 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3719749	       322.5 ns/op	        33.34 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  869032	      1377 ns/op	        31.22 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4717224	       254.7 ns/op	        32.16 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1061 ns/op	        30.87 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4252989	       282.1 ns/op	        32.67 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  978742	      1221 ns/op	        30.19 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4223272	       284.2 ns/op	        32.43 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  992053	      1208 ns/op	        30.51 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4007308	       299.5 ns/op	        30.78 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  944043	      1269 ns/op	        29.06 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3563049	       336.7 ns/op	        30.42 GFLOP/s
+keel-gvt3 r4 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  853215	      1399 ns/op	        29.27 GFLOP/s
+keel-gvt3 r4 bench BenchmarkKernel/3x24/neon/kc=128         	 2314279	       518.4 ns/op	        35.55 GFLOP/s	     18432 flops/call
+keel-gvt3 r4 bench BenchmarkPeak/neon                       	    9693	    120739 ns/op	        78.16 GFLOP/s
+keel-gvt3 r4 bench BenchmarkFMARoof64/neon                  	    9924	    120764 ns/op	        39.07 GFLOP/s
+keel-gvt3 r4 bench BenchmarkTile64/3x12/neon/kc=128         	 2321900	       516.8 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r5 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3907371	       306.6 ns/op	        66.79 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  916396	      1307 ns/op	        62.67 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3951356	       304.1 ns/op	        67.34 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  904420	      1329 ns/op	        61.65 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3657062	       328.2 ns/op	        65.53 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  856449	      1394 ns/op	        61.69 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3718687	       322.7 ns/op	        66.64 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  864554	      1381 ns/op	        62.29 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4715450	       254.5 ns/op	        64.37 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1075 ns/op	        60.98 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4253875	       282.1 ns/op	        65.33 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  985416	      1212 ns/op	        60.81 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4226994	       283.8 ns/op	        64.94 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  989778	      1199 ns/op	        61.49 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4008020	       299.2 ns/op	        61.61 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  942121	      1269 ns/op	        58.09 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3565833	       336.6 ns/op	        60.84 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  856006	      1397 ns/op	        58.65 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3911242	       306.8 ns/op	        33.38 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  914361	      1312 ns/op	        31.22 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3955779	       303.8 ns/op	        33.70 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  907359	      1324 ns/op	        30.93 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3653612	       328.4 ns/op	        32.74 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  856872	      1398 ns/op	        30.75 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3718926	       322.7 ns/op	        33.32 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  860259	      1389 ns/op	        30.97 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4710182	       254.7 ns/op	        32.17 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1076 ns/op	        30.46 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4250596	       282.1 ns/op	        32.67 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  981348	      1202 ns/op	        30.66 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4223696	       284.1 ns/op	        32.44 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  988856	      1208 ns/op	        30.52 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4007451	       299.4 ns/op	        30.78 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  941948	      1269 ns/op	        29.06 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3562630	       336.6 ns/op	        30.42 GFLOP/s
+keel-gvt3 r5 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  859340	      1393 ns/op	        29.41 GFLOP/s
+keel-gvt3 r5 bench BenchmarkKernel/3x24/neon/kc=128         	 2314695	       518.3 ns/op	        35.56 GFLOP/s	     18432 flops/call
+keel-gvt3 r5 bench BenchmarkPeak/neon                       	    9910	    120732 ns/op	        78.17 GFLOP/s
+keel-gvt3 r5 bench BenchmarkFMARoof64/neon                  	    9920	    120751 ns/op	        39.08 GFLOP/s
+keel-gvt3 r5 bench BenchmarkTile64/3x12/neon/kc=128         	 2321595	       516.9 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r6 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3908823	       306.5 ns/op	        66.82 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  916347	      1307 ns/op	        62.70 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3954883	       304.1 ns/op	        67.34 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  895726	      1324 ns/op	        61.85 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3657034	       328.1 ns/op	        65.54 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  858549	      1394 ns/op	        61.71 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3717127	       322.7 ns/op	        66.64 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  865216	      1380 ns/op	        62.34 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4716680	       254.4 ns/op	        64.39 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1075 ns/op	        60.97 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4253587	       282.1 ns/op	        65.34 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  986104	      1216 ns/op	        60.64 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4225712	       283.9 ns/op	        64.93 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  998598	      1210 ns/op	        60.92 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4009772	       299.2 ns/op	        61.60 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  941222	      1274 ns/op	        57.88 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3566653	       336.6 ns/op	        60.85 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  859016	      1396 ns/op	        58.67 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3910932	       306.8 ns/op	        33.38 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  913885	      1311 ns/op	        31.25 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3954210	       303.9 ns/op	        33.69 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  906848	      1323 ns/op	        30.97 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3654673	       328.4 ns/op	        32.74 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  857731	      1400 ns/op	        30.72 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3718752	       322.7 ns/op	        33.32 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  859544	      1387 ns/op	        31.01 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4713764	       254.7 ns/op	        32.16 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1075 ns/op	        30.47 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4254198	       282.1 ns/op	        32.67 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  992538	      1219 ns/op	        30.23 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4222664	       284.1 ns/op	        32.44 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  990148	      1213 ns/op	        30.40 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4008060	       299.4 ns/op	        30.78 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  940225	      1273 ns/op	        28.96 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3563590	       336.6 ns/op	        30.42 GFLOP/s
+keel-gvt3 r6 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  860853	      1392 ns/op	        29.42 GFLOP/s
+keel-gvt3 r6 bench BenchmarkKernel/3x24/neon/kc=128         	 2314845	       518.2 ns/op	        35.57 GFLOP/s	     18432 flops/call
+keel-gvt3 r6 bench BenchmarkPeak/neon                       	    9903	    120760 ns/op	        78.15 GFLOP/s
+keel-gvt3 r6 bench BenchmarkFMARoof64/neon                  	    9921	    120757 ns/op	        39.08 GFLOP/s
+keel-gvt3 r6 bench BenchmarkTile64/3x12/neon/kc=128         	 2320987	       516.9 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r7 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3911684	       306.7 ns/op	        66.76 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  905160	      1321 ns/op	        62.03 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3951583	       304.0 ns/op	        67.37 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  897150	      1343 ns/op	        61.00 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3655761	       328.1 ns/op	        65.54 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  855433	      1400 ns/op	        61.44 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3716649	       322.7 ns/op	        66.63 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  851920	      1415 ns/op	        60.77 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4720314	       254.4 ns/op	        64.39 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1075 ns/op	        60.98 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4249879	       282.3 ns/op	        65.30 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  977086	      1222 ns/op	        60.31 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4223785	       283.9 ns/op	        64.93 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  990534	      1218 ns/op	        60.54 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4009942	       299.3 ns/op	        61.58 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  941800	      1272 ns/op	        57.98 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3565212	       336.5 ns/op	        60.87 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  857227	      1399 ns/op	        58.54 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3911815	       306.6 ns/op	        33.40 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  906631	      1322 ns/op	        30.99 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3947414	       303.6 ns/op	        33.73 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  894006	      1345 ns/op	        30.44 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3653774	       328.4 ns/op	        32.74 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  859825	      1395 ns/op	        30.82 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3717498	       322.8 ns/op	        33.31 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  852451	      1417 ns/op	        30.35 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4715120	       254.7 ns/op	        32.16 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1070 ns/op	        30.63 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4251603	       282.3 ns/op	        32.65 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  992529	      1220 ns/op	        30.22 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4222123	       284.2 ns/op	        32.43 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  986803	      1218 ns/op	        30.26 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4005624	       299.5 ns/op	        30.77 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  943837	      1271 ns/op	        29.00 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3565317	       336.7 ns/op	        30.42 GFLOP/s
+keel-gvt3 r7 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  857576	      1398 ns/op	        29.29 GFLOP/s
+keel-gvt3 r7 bench BenchmarkKernel/3x24/neon/kc=128         	 2314582	       518.3 ns/op	        35.56 GFLOP/s	     18432 flops/call
+keel-gvt3 r7 bench BenchmarkPeak/neon                       	    9913	    120734 ns/op	        78.16 GFLOP/s
+keel-gvt3 r7 bench BenchmarkFMARoof64/neon                  	    9909	    120764 ns/op	        39.07 GFLOP/s
+keel-gvt3 r7 bench BenchmarkTile64/3x12/neon/kc=128         	 2321071	       516.8 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r8 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3913095	       306.6 ns/op	        66.79 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  906424	      1324 ns/op	        61.86 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3945187	       319.2 ns/op	        64.16 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  903970	      1325 ns/op	        61.81 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3656608	       328.2 ns/op	        65.52 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  857132	      1397 ns/op	        61.59 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3717309	       322.8 ns/op	        66.62 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  865221	      1385 ns/op	        62.11 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4717222	       254.3 ns/op	        64.43 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1075 ns/op	        60.96 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4250510	       282.2 ns/op	        65.31 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  976887	      1222 ns/op	        60.31 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4221234	       283.9 ns/op	        64.92 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  988418	      1207 ns/op	        61.08 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4009593	       299.2 ns/op	        61.60 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  934854	      1272 ns/op	        57.96 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3566812	       336.5 ns/op	        60.87 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  856898	      1395 ns/op	        58.74 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3917901	       317.4 ns/op	        32.26 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  901429	      1323 ns/op	        30.96 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3949374	       318.2 ns/op	        32.18 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  903870	      1327 ns/op	        30.88 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3654506	       328.5 ns/op	        32.74 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  858789	      1394 ns/op	        30.85 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3718074	       322.8 ns/op	        33.31 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  865258	      1385 ns/op	        31.06 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4709863	       254.3 ns/op	        32.21 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1070 ns/op	        30.61 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4251820	       282.3 ns/op	        32.65 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  991062	      1206 ns/op	        30.57 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4221368	       284.2 ns/op	        32.43 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  984105	      1215 ns/op	        30.33 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4006238	       299.4 ns/op	        30.78 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  939814	      1272 ns/op	        28.99 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3564831	       336.7 ns/op	        30.42 GFLOP/s
+keel-gvt3 r8 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  860409	      1391 ns/op	        29.44 GFLOP/s
+keel-gvt3 r8 bench BenchmarkKernel/3x24/neon/kc=128         	 2314192	       518.5 ns/op	        35.55 GFLOP/s	     18432 flops/call
+keel-gvt3 r8 bench BenchmarkPeak/neon                       	    9909	    120745 ns/op	        78.16 GFLOP/s
+keel-gvt3 r8 bench BenchmarkFMARoof64/neon                  	    9903	    120747 ns/op	        39.08 GFLOP/s
+keel-gvt3 r8 bench BenchmarkTile64/3x12/neon/kc=128         	 2321361	       516.8 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r9 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3911062	       307.1 ns/op	        66.70 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  916831	      1305 ns/op	        62.77 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3946129	       303.6 ns/op	        67.46 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  907936	      1323 ns/op	        61.90 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3656563	       328.2 ns/op	        65.53 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  858382	      1395 ns/op	        61.65 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3717381	       322.7 ns/op	        66.64 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  870424	      1374 ns/op	        62.62 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4715860	       254.3 ns/op	        64.42 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1072 ns/op	        61.15 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4251590	       282.1 ns/op	        65.34 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  989635	      1204 ns/op	        61.23 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4227780	       283.9 ns/op	        64.93 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  995668	      1198 ns/op	        61.54 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4010229	       299.2 ns/op	        61.60 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  944901	      1265 ns/op	        58.27 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3566268	       336.6 ns/op	        60.85 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  857792	      1395 ns/op	        58.73 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3909584	       306.7 ns/op	        33.38 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  917672	      1306 ns/op	        31.37 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3948885	       303.4 ns/op	        33.76 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  910989	      1329 ns/op	        30.81 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3654654	       328.1 ns/op	        32.77 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  853984	      1402 ns/op	        30.67 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3718460	       322.7 ns/op	        33.32 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  861385	      1388 ns/op	        30.98 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4709450	       254.7 ns/op	        32.16 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1068 ns/op	        30.69 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4252890	       282.1 ns/op	        32.67 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  983978	      1212 ns/op	        30.42 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4222945	       284.1 ns/op	        32.44 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  992622	      1199 ns/op	        30.75 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4007362	       299.4 ns/op	        30.78 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  945478	      1263 ns/op	        29.19 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3564552	       336.6 ns/op	        30.42 GFLOP/s
+keel-gvt3 r9 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  859699	      1395 ns/op	        29.36 GFLOP/s
+keel-gvt3 r9 bench BenchmarkKernel/3x24/neon/kc=128         	 2315593	       518.5 ns/op	        35.55 GFLOP/s	     18432 flops/call
+keel-gvt3 r9 bench BenchmarkPeak/neon                       	    9810	    120733 ns/op	        78.17 GFLOP/s
+keel-gvt3 r9 bench BenchmarkFMARoof64/neon                  	    9922	    120753 ns/op	        39.08 GFLOP/s
+keel-gvt3 r9 bench BenchmarkTile64/3x12/neon/kc=128         	 2322175	       516.9 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r10 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 3911292	       307.0 ns/op	        66.72 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/4x20u8/kc=512         	  906409	      1321 ns/op	        62.02 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 3951836	       304.3 ns/op	        67.31 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/5x16u8/kc=512         	  902755	      1322 ns/op	        61.96 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3655694	       328.1 ns/op	        65.54 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/3x28u8/kc=512         	  860406	      1394 ns/op	        61.70 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3718977	       322.6 ns/op	        66.67 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/7x12u8/kc=512         	  866392	      1401 ns/op	        61.39 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 4714820	       254.5 ns/op	        64.38 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1000000	      1073 ns/op	        61.05 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4252774	       282.1 ns/op	        65.34 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/3x24u8/kc=512         	  981680	      1212 ns/op	        60.81 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4227150	       283.9 ns/op	        64.93 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/6x12u8/kc=512         	  998910	      1199 ns/op	        61.49 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4009683	       299.3 ns/op	        61.59 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/3x24u4/kc=512         	  942242	      1270 ns/op	        58.04 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 3563751	       336.6 ns/op	        60.84 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f32/4x20u4/kc=512         	  846025	      1396 ns/op	        58.69 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 3917564	       307.0 ns/op	        33.36 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/4x10u8/kc=512         	  914632	      1311 ns/op	        31.25 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 3954704	       303.9 ns/op	        33.70 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/5x8u8/kc=512          	  904833	      1320 ns/op	        31.04 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3654824	       328.4 ns/op	        32.74 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/3x14u8/kc=512         	  834072	      1442 ns/op	        29.83 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3717032	       322.5 ns/op	        33.34 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/7x6u8/kc=512          	  864369	      1402 ns/op	        30.68 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 4712744	       254.6 ns/op	        32.17 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1000000	      1075 ns/op	        30.49 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4252963	       282.1 ns/op	        32.67 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/3x12u8/kc=512         	  980842	      1202 ns/op	        30.66 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4221883	       284.1 ns/op	        32.43 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/6x6u8/kc=512          	  990158	      1199 ns/op	        30.75 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4007574	       299.5 ns/op	        30.78 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/3x12u4/kc=512         	  939632	      1271 ns/op	        29.01 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 3564153	       336.5 ns/op	        30.43 GFLOP/s
+keel-gvt3 r10 vec BenchmarkPBTile/f64/4x10u4/kc=512         	  859069	      1393 ns/op	        29.41 GFLOP/s
+keel-gvt3 r10 bench BenchmarkKernel/3x24/neon/kc=128         	 2313955	       518.5 ns/op	        35.55 GFLOP/s	     18432 flops/call
+keel-gvt3 r10 bench BenchmarkPeak/neon                       	    9916	    120764 ns/op	        78.15 GFLOP/s
+keel-gvt3 r10 bench BenchmarkFMARoof64/neon                  	    9913	    120765 ns/op	        39.07 GFLOP/s
+keel-gvt3 r10 bench BenchmarkTile64/3x12/neon/kc=128         	 2321846	       516.9 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt4 r1 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4170088	       287.7 ns/op	        71.19 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1108 ns/op	        73.95 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4186328	       286.7 ns/op	        71.43 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1106 ns/op	        74.05 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3868863	       310.5 ns/op	        69.25 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1184 ns/op	        72.66 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3901454	       307.5 ns/op	        69.93 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1178 ns/op	        73.00 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5079159	       236.0 ns/op	        69.43 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1299619	       923.3 ns/op	        70.98 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4517778	       265.6 ns/op	        69.40 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1024 ns/op	        72.02 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4507656	       266.2 ns/op	        69.24 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1030 ns/op	        71.57 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4440309	       270.2 ns/op	        68.22 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1027 ns/op	        71.82 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4087707	       293.5 ns/op	        69.78 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1111 ns/op	        73.74 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4172478	       287.5 ns/op	        35.61 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1108 ns/op	        36.97 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4184348	       286.7 ns/op	        35.72 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1109 ns/op	        36.92 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3865549	       310.5 ns/op	        34.63 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1190 ns/op	        36.13 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3902888	       307.4 ns/op	        34.97 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1185 ns/op	        36.30 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5077773	       236.3 ns/op	        34.67 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1298815	       923.6 ns/op	        35.48 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4519942	       265.5 ns/op	        34.71 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1025 ns/op	        35.98 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4503906	       266.4 ns/op	        34.60 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1030 ns/op	        35.80 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4438864	       270.3 ns/op	        34.10 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1026 ns/op	        35.94 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4089224	       293.6 ns/op	        34.88 GFLOP/s
+keel-gvt4 r1 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1112 ns/op	        36.85 GFLOP/s
+keel-gvt4 r1 bench BenchmarkKernel/3x24/neon/kc=128         	 2600059	       461.4 ns/op	        39.95 GFLOP/s	     18432 flops/call
+keel-gvt4 r1 bench BenchmarkPeak/neon                       	   10000	    107624 ns/op	        87.69 GFLOP/s
+keel-gvt4 r1 bench BenchmarkFMARoof64/neon                  	   10000	    107736 ns/op	        43.80 GFLOP/s
+keel-gvt4 r1 bench BenchmarkTile64/3x12/neon/kc=128         	 2601493	       461.3 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r2 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4171221	       287.7 ns/op	        71.18 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1110 ns/op	        73.80 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4186276	       286.7 ns/op	        71.43 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1111 ns/op	        73.71 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3863679	       310.5 ns/op	        69.25 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1184 ns/op	        72.62 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3905124	       307.5 ns/op	        69.94 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1182 ns/op	        72.75 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5084114	       236.3 ns/op	        69.33 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1298251	       924.0 ns/op	        70.93 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4519120	       265.6 ns/op	        69.40 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1023 ns/op	        72.06 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4505895	       266.3 ns/op	        69.22 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1026 ns/op	        71.83 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4446954	       270.1 ns/op	        68.25 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1025 ns/op	        71.96 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4094233	       292.9 ns/op	        69.91 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1113 ns/op	        73.58 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4171468	       287.6 ns/op	        35.60 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1110 ns/op	        36.90 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4185802	       286.7 ns/op	        35.72 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1110 ns/op	        36.89 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3865261	       310.6 ns/op	        34.62 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1185 ns/op	        36.31 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3901599	       307.5 ns/op	        34.96 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1181 ns/op	        36.42 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5084073	       236.3 ns/op	        34.67 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1296508	       925.7 ns/op	        35.40 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4521544	       265.5 ns/op	        34.71 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1023 ns/op	        36.02 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4504652	       266.4 ns/op	        34.59 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1026 ns/op	        35.92 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4447551	       270.0 ns/op	        34.13 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1024 ns/op	        36.00 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4082482	       293.2 ns/op	        34.93 GFLOP/s
+keel-gvt4 r2 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1115 ns/op	        36.75 GFLOP/s
+keel-gvt4 r2 bench BenchmarkKernel/3x24/neon/kc=128         	 2600182	       461.4 ns/op	        39.95 GFLOP/s	     18432 flops/call
+keel-gvt4 r2 bench BenchmarkPeak/neon                       	   10000	    107620 ns/op	        87.69 GFLOP/s
+keel-gvt4 r2 bench BenchmarkFMARoof64/neon                  	   10000	    107775 ns/op	        43.78 GFLOP/s
+keel-gvt4 r2 bench BenchmarkTile64/3x12/neon/kc=128         	 2601730	       461.3 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r3 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4168202	       287.6 ns/op	        71.20 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1108 ns/op	        73.90 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4185427	       286.7 ns/op	        71.43 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1107 ns/op	        73.98 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3861868	       310.5 ns/op	        69.26 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1190 ns/op	        72.27 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3901233	       307.5 ns/op	        69.93 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1185 ns/op	        72.62 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5080951	       236.2 ns/op	        69.37 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1299808	       923.6 ns/op	        70.96 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4521030	       265.6 ns/op	        69.40 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1026 ns/op	        71.83 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4507086	       266.2 ns/op	        69.25 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1031 ns/op	        71.53 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4439958	       270.2 ns/op	        68.22 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1026 ns/op	        71.83 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4083597	       293.3 ns/op	        69.83 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1113 ns/op	        73.64 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4170273	       287.6 ns/op	        35.60 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1106 ns/op	        37.02 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4184580	       286.7 ns/op	        35.72 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1109 ns/op	        36.93 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3866281	       310.6 ns/op	        34.62 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1185 ns/op	        36.29 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3903524	       307.5 ns/op	        34.97 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1180 ns/op	        36.45 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5083497	       236.2 ns/op	        34.68 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1298829	       924.0 ns/op	        35.46 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4519125	       265.5 ns/op	        34.71 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1025 ns/op	        35.96 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4504730	       266.4 ns/op	        34.60 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1030 ns/op	        35.78 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4440015	       270.2 ns/op	        34.10 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1026 ns/op	        35.91 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4080596	       293.7 ns/op	        34.87 GFLOP/s
+keel-gvt4 r3 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1110 ns/op	        36.90 GFLOP/s
+keel-gvt4 r3 bench BenchmarkKernel/3x24/neon/kc=128         	 2598992	       461.3 ns/op	        39.95 GFLOP/s	     18432 flops/call
+keel-gvt4 r3 bench BenchmarkPeak/neon                       	   10000	    107635 ns/op	        87.68 GFLOP/s
+keel-gvt4 r3 bench BenchmarkFMARoof64/neon                  	   10000	    107801 ns/op	        43.77 GFLOP/s
+keel-gvt4 r3 bench BenchmarkTile64/3x12/neon/kc=128         	 2600634	       461.3 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r4 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4169928	       287.7 ns/op	        71.19 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1109 ns/op	        73.89 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4185879	       286.6 ns/op	        71.45 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1108 ns/op	        73.90 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3863940	       310.5 ns/op	        69.26 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1189 ns/op	        72.36 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3902161	       307.5 ns/op	        69.94 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1185 ns/op	        72.57 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5081588	       235.8 ns/op	        69.47 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1299284	       923.8 ns/op	        70.94 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4518247	       265.7 ns/op	        69.38 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1026 ns/op	        71.85 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4511018	       266.3 ns/op	        69.23 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1032 ns/op	        71.42 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4439503	       270.2 ns/op	        68.22 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1027 ns/op	        71.79 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4092614	       293.5 ns/op	        69.77 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1112 ns/op	        73.69 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4171296	       287.7 ns/op	        35.60 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1108 ns/op	        36.96 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4186458	       286.7 ns/op	        35.72 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1109 ns/op	        36.93 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3867088	       310.5 ns/op	        34.63 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1190 ns/op	        36.14 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3903033	       307.5 ns/op	        34.97 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1185 ns/op	        36.30 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5079273	       236.0 ns/op	        34.71 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1298578	       924.4 ns/op	        35.45 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4519759	       265.6 ns/op	        34.70 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1026 ns/op	        35.94 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4505596	       266.4 ns/op	        34.59 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1031 ns/op	        35.77 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4438366	       270.3 ns/op	        34.10 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1026 ns/op	        35.92 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4085912	       293.8 ns/op	        34.85 GFLOP/s
+keel-gvt4 r4 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1112 ns/op	        36.83 GFLOP/s
+keel-gvt4 r4 bench BenchmarkKernel/3x24/neon/kc=128         	 2600676	       461.4 ns/op	        39.95 GFLOP/s	     18432 flops/call
+keel-gvt4 r4 bench BenchmarkPeak/neon                       	   10000	    107621 ns/op	        87.69 GFLOP/s
+keel-gvt4 r4 bench BenchmarkFMARoof64/neon                  	   10000	    107799 ns/op	        43.77 GFLOP/s
+keel-gvt4 r4 bench BenchmarkTile64/3x12/neon/kc=128         	 2601636	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r5 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4170580	       287.6 ns/op	        71.20 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1108 ns/op	        73.95 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4185040	       286.7 ns/op	        71.43 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1109 ns/op	        73.89 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3865388	       310.6 ns/op	        69.24 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1191 ns/op	        72.24 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3902268	       307.5 ns/op	        69.94 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1185 ns/op	        72.57 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5085424	       236.0 ns/op	        69.42 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1299974	       923.0 ns/op	        71.01 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4518104	       265.6 ns/op	        69.41 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1026 ns/op	        71.87 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4505677	       266.2 ns/op	        69.23 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1031 ns/op	        71.50 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4440541	       270.2 ns/op	        68.21 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1027 ns/op	        71.79 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4083962	       293.5 ns/op	        69.77 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1111 ns/op	        73.75 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4174822	       287.5 ns/op	        35.62 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1108 ns/op	        36.96 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4185272	       286.7 ns/op	        35.72 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1108 ns/op	        36.96 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3864714	       310.4 ns/op	        34.64 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1190 ns/op	        36.15 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3903724	       307.5 ns/op	        34.97 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1183 ns/op	        36.35 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5086543	       236.0 ns/op	        34.71 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1299014	       923.6 ns/op	        35.48 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4519152	       265.6 ns/op	        34.70 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1025 ns/op	        35.96 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4504245	       266.4 ns/op	        34.59 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1030 ns/op	        35.79 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4439794	       270.3 ns/op	        34.10 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1030 ns/op	        35.78 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4080192	       293.5 ns/op	        34.89 GFLOP/s
+keel-gvt4 r5 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1112 ns/op	        36.84 GFLOP/s
+keel-gvt4 r5 bench BenchmarkKernel/3x24/neon/kc=128         	 2600065	       461.4 ns/op	        39.95 GFLOP/s	     18432 flops/call
+keel-gvt4 r5 bench BenchmarkPeak/neon                       	   10000	    107630 ns/op	        87.68 GFLOP/s
+keel-gvt4 r5 bench BenchmarkFMARoof64/neon                  	   10000	    107810 ns/op	        43.77 GFLOP/s
+keel-gvt4 r5 bench BenchmarkTile64/3x12/neon/kc=128         	 2601043	       461.3 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r6 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4169334	       287.6 ns/op	        71.20 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1108 ns/op	        73.92 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4187748	       286.7 ns/op	        71.44 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1108 ns/op	        73.95 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3863178	       310.5 ns/op	        69.26 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1188 ns/op	        72.39 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3904291	       307.5 ns/op	        69.94 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1185 ns/op	        72.62 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5079091	       236.0 ns/op	        69.42 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1300083	       923.1 ns/op	        71.00 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4516954	       265.6 ns/op	        69.41 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1023 ns/op	        72.06 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4508098	       266.2 ns/op	        69.23 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1030 ns/op	        71.59 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4438369	       270.2 ns/op	        68.22 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1026 ns/op	        71.84 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4094296	       292.7 ns/op	        69.96 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1111 ns/op	        73.71 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4171287	       287.6 ns/op	        35.60 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1109 ns/op	        36.93 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4185832	       286.7 ns/op	        35.72 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1108 ns/op	        36.97 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3866856	       310.5 ns/op	        34.63 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1190 ns/op	        36.14 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3901692	       307.5 ns/op	        34.97 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1185 ns/op	        36.31 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5079512	       236.0 ns/op	        34.71 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1299306	       923.6 ns/op	        35.48 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4520511	       265.5 ns/op	        34.71 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1026 ns/op	        35.94 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4503363	       266.4 ns/op	        34.59 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1030 ns/op	        35.78 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4438047	       270.3 ns/op	        34.09 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1026 ns/op	        35.93 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4078940	       293.1 ns/op	        34.94 GFLOP/s
+keel-gvt4 r6 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1111 ns/op	        36.85 GFLOP/s
+keel-gvt4 r6 bench BenchmarkKernel/3x24/neon/kc=128         	 2600334	       461.4 ns/op	        39.95 GFLOP/s	     18432 flops/call
+keel-gvt4 r6 bench BenchmarkPeak/neon                       	   10000	    107622 ns/op	        87.69 GFLOP/s
+keel-gvt4 r6 bench BenchmarkFMARoof64/neon                  	   10000	    107792 ns/op	        43.77 GFLOP/s
+keel-gvt4 r6 bench BenchmarkTile64/3x12/neon/kc=128         	 2601445	       461.3 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r7 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4168176	       287.8 ns/op	        71.17 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1108 ns/op	        73.96 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4187458	       286.7 ns/op	        71.43 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1107 ns/op	        73.99 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3865693	       310.6 ns/op	        69.24 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1189 ns/op	        72.33 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3902756	       307.4 ns/op	        69.94 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1185 ns/op	        72.58 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5078163	       236.2 ns/op	        69.35 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1302668	       921.7 ns/op	        71.11 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4519478	       265.6 ns/op	        69.41 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1025 ns/op	        71.96 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4506091	       266.2 ns/op	        69.24 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1028 ns/op	        71.71 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4440394	       270.0 ns/op	        68.28 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1026 ns/op	        71.88 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4084875	       293.8 ns/op	        69.70 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1111 ns/op	        73.74 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4174312	       287.7 ns/op	        35.59 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1107 ns/op	        37.00 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4186356	       286.6 ns/op	        35.73 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1108 ns/op	        36.97 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3864398	       310.3 ns/op	        34.65 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1191 ns/op	        36.12 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3903576	       307.5 ns/op	        34.97 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1184 ns/op	        36.33 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5078892	       236.3 ns/op	        34.67 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1300524	       923.0 ns/op	        35.50 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4520155	       265.4 ns/op	        34.72 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1024 ns/op	        35.98 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4503924	       266.5 ns/op	        34.59 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1030 ns/op	        35.79 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4441383	       270.3 ns/op	        34.09 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1025 ns/op	        35.96 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4081957	       294.1 ns/op	        34.82 GFLOP/s
+keel-gvt4 r7 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1111 ns/op	        36.85 GFLOP/s
+keel-gvt4 r7 bench BenchmarkKernel/3x24/neon/kc=128         	 2600032	       461.2 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r7 bench BenchmarkPeak/neon                       	   10000	    107609 ns/op	        87.70 GFLOP/s
+keel-gvt4 r7 bench BenchmarkFMARoof64/neon                  	   10000	    107658 ns/op	        43.83 GFLOP/s
+keel-gvt4 r7 bench BenchmarkTile64/3x12/neon/kc=128         	 2600671	       461.3 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r8 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4171129	       287.5 ns/op	        71.23 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1107 ns/op	        73.97 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4185337	       286.7 ns/op	        71.44 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1108 ns/op	        73.91 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3863100	       310.4 ns/op	        69.27 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1190 ns/op	        72.31 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3901839	       307.6 ns/op	        69.92 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1180 ns/op	        72.87 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5085075	       236.2 ns/op	        69.36 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1300162	       922.9 ns/op	        71.01 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4517965	       265.6 ns/op	        69.41 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1025 ns/op	        71.96 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4509468	       266.2 ns/op	        69.23 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1029 ns/op	        71.62 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4441623	       270.2 ns/op	        68.22 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1026 ns/op	        71.89 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4086874	       293.3 ns/op	        69.82 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1111 ns/op	        73.73 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4171917	       287.6 ns/op	        35.61 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1106 ns/op	        37.02 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4184498	       286.6 ns/op	        35.73 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1108 ns/op	        36.95 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3866166	       310.4 ns/op	        34.63 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1185 ns/op	        36.29 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3902244	       307.4 ns/op	        34.97 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1180 ns/op	        36.44 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5085860	       236.0 ns/op	        34.71 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1299660	       923.3 ns/op	        35.49 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4518996	       265.5 ns/op	        34.71 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1023 ns/op	        36.03 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4504264	       266.4 ns/op	        34.59 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1027 ns/op	        35.90 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4438939	       270.3 ns/op	        34.10 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1025 ns/op	        35.95 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4080010	       293.8 ns/op	        34.86 GFLOP/s
+keel-gvt4 r8 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1110 ns/op	        36.89 GFLOP/s
+keel-gvt4 r8 bench BenchmarkKernel/3x24/neon/kc=128         	 2600078	       461.4 ns/op	        39.95 GFLOP/s	     18432 flops/call
+keel-gvt4 r8 bench BenchmarkPeak/neon                       	   10000	    107626 ns/op	        87.69 GFLOP/s
+keel-gvt4 r8 bench BenchmarkFMARoof64/neon                  	   10000	    107817 ns/op	        43.76 GFLOP/s
+keel-gvt4 r8 bench BenchmarkTile64/3x12/neon/kc=128         	 2600956	       461.4 ns/op	        19.97 GFLOP/s	      9216 flops/call
+keel-gvt4 r9 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4167858	       287.6 ns/op	        71.20 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1109 ns/op	        73.90 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4184460	       286.7 ns/op	        71.43 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1107 ns/op	        74.03 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3865411	       310.6 ns/op	        69.23 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1183 ns/op	        72.69 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3901564	       307.5 ns/op	        69.94 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1184 ns/op	        72.63 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5077190	       236.3 ns/op	        69.35 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1299261	       923.6 ns/op	        70.96 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4518302	       265.5 ns/op	        69.43 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1024 ns/op	        71.99 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4505772	       266.2 ns/op	        69.25 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1028 ns/op	        71.71 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4440484	       269.8 ns/op	        68.32 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1026 ns/op	        71.86 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4083594	       293.8 ns/op	        69.70 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1111 ns/op	        73.74 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4171242	       287.7 ns/op	        35.59 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1106 ns/op	        37.02 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4185720	       286.7 ns/op	        35.71 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1108 ns/op	        36.98 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3864363	       310.6 ns/op	        34.62 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1190 ns/op	        36.13 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3904134	       307.4 ns/op	        34.98 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1186 ns/op	        36.26 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5079357	       236.0 ns/op	        34.71 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1298799	       924.2 ns/op	        35.46 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4523636	       265.2 ns/op	        34.75 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1024 ns/op	        35.99 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4506090	       266.3 ns/op	        34.61 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1029 ns/op	        35.82 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4437928	       270.2 ns/op	        34.10 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1025 ns/op	        35.96 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4079775	       293.9 ns/op	        34.84 GFLOP/s
+keel-gvt4 r9 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1111 ns/op	        36.86 GFLOP/s
+keel-gvt4 r9 bench BenchmarkKernel/3x24/neon/kc=128         	 2600383	       461.3 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r9 bench BenchmarkPeak/neon                       	   10000	    107623 ns/op	        87.69 GFLOP/s
+keel-gvt4 r9 bench BenchmarkFMARoof64/neon                  	   10000	    107786 ns/op	        43.78 GFLOP/s
+keel-gvt4 r9 bench BenchmarkTile64/3x12/neon/kc=128         	 2601186	       461.3 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r10 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4170066	       287.6 ns/op	        71.22 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1000000	      1108 ns/op	        73.96 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4185644	       286.7 ns/op	        71.43 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1000000	      1106 ns/op	        74.05 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 3863223	       310.5 ns/op	        69.25 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1183 ns/op	        72.71 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 3903086	       307.5 ns/op	        69.94 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1185 ns/op	        72.61 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5080330	       236.2 ns/op	        69.35 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1299764	       923.1 ns/op	        71.00 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 4519936	       265.4 ns/op	        69.45 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1000000	      1024 ns/op	        72.03 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 4506109	       266.4 ns/op	        69.19 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1000000	      1028 ns/op	        71.75 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 4440338	       269.7 ns/op	        68.34 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1000000	      1026 ns/op	        71.85 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4085430	       293.8 ns/op	        69.70 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1000000	      1111 ns/op	        73.73 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4171509	       287.6 ns/op	        35.61 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1000000	      1107 ns/op	        36.99 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4184773	       286.7 ns/op	        35.71 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1000000	      1107 ns/op	        36.99 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 3864669	       310.5 ns/op	        34.63 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1190 ns/op	        36.13 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 3901388	       307.5 ns/op	        34.96 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1185 ns/op	        36.29 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5079066	       236.0 ns/op	        34.71 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1298497	       924.3 ns/op	        35.45 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 4525633	       265.4 ns/op	        34.72 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1000000	      1025 ns/op	        35.98 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 4504386	       266.4 ns/op	        34.59 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1000000	      1029 ns/op	        35.82 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 4446871	       269.8 ns/op	        34.16 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1000000	      1025 ns/op	        35.97 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4080579	       293.9 ns/op	        34.84 GFLOP/s
+keel-gvt4 r10 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1000000	      1111 ns/op	        36.88 GFLOP/s
+keel-gvt4 r10 bench BenchmarkKernel/3x24/neon/kc=128         	 2599846	       461.3 ns/op	        39.95 GFLOP/s	     18432 flops/call
+keel-gvt4 r10 bench BenchmarkPeak/neon                       	   10000	    107611 ns/op	        87.70 GFLOP/s
+keel-gvt4 r10 bench BenchmarkFMARoof64/neon                  	   10000	    107784 ns/op	        43.78 GFLOP/s
+keel-gvt4 r10 bench BenchmarkTile64/3x12/neon/kc=128         	 2601230	       461.4 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt5 r1 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4889394	       245.3 ns/op	        83.50 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1221373	       979.7 ns/op	        83.62 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4926480	       243.6 ns/op	        84.06 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1218141	       984.9 ns/op	        83.18 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4483219	       267.8 ns/op	        80.31 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1077 ns/op	        79.85 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4535742	       264.6 ns/op	        81.28 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1071 ns/op	        80.28 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5963786	       200.9 ns/op	        81.54 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1517962	       790.4 ns/op	        82.92 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5161314	       232.8 ns/op	        79.17 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1293079	       923.9 ns/op	        79.80 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5250218	       228.4 ns/op	        80.69 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1280480	       933.5 ns/op	        78.98 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5046091	       238.6 ns/op	        77.24 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1312008	       923.3 ns/op	        79.85 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4766226	       251.8 ns/op	        81.32 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1232364	       974.3 ns/op	        84.08 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4892961	       245.2 ns/op	        41.76 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1227195	       978.0 ns/op	        41.88 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4930113	       243.5 ns/op	        42.06 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1216873	       982.0 ns/op	        41.71 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4483837	       267.9 ns/op	        40.13 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1076 ns/op	        39.98 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4533207	       264.5 ns/op	        40.65 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1065 ns/op	        40.37 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5962441	       200.9 ns/op	        40.78 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1519052	       790.0 ns/op	        41.48 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5152668	       232.6 ns/op	        39.62 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1292808	       925.6 ns/op	        39.83 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5261558	       228.1 ns/op	        40.40 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1281750	       936.4 ns/op	        39.37 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5036304	       238.9 ns/op	        38.57 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1311682	       910.5 ns/op	        40.49 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4757970	       252.1 ns/op	        40.61 GFLOP/s
+keel-gvt5 r1 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1239339	       970.2 ns/op	        42.22 GFLOP/s
+keel-gvt5 r1 bench BenchmarkKernel/3x24/neon/kc=128         	 3117018	       383.6 ns/op	        48.05 GFLOP/s	     18432 flops/call
+keel-gvt5 r1 bench BenchmarkPeak/neon                       	   13125	     91385 ns/op	       103.3 GFLOP/s
+keel-gvt5 r1 bench BenchmarkFMARoof64/neon                  	   13126	     91376 ns/op	        51.64 GFLOP/s
+keel-gvt5 r1 bench BenchmarkTile64/3x12/neon/kc=128         	 3125042	       385.6 ns/op	        23.90 GFLOP/s	      9216 flops/call
+keel-gvt5 r2 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4885561	       245.2 ns/op	        83.52 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1232389	       977.7 ns/op	        83.78 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4929656	       243.4 ns/op	        84.15 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1222305	       971.7 ns/op	        84.31 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4482160	       267.7 ns/op	        80.34 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1065 ns/op	        80.73 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4533825	       264.6 ns/op	        81.26 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1057 ns/op	        81.40 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5970259	       201.0 ns/op	        81.52 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1509172	       795.5 ns/op	        82.38 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5158094	       232.5 ns/op	        79.28 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1329585	       917.2 ns/op	        80.39 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5254170	       228.4 ns/op	        80.70 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1296621	       927.6 ns/op	        79.49 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5044489	       237.9 ns/op	        77.49 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1278045	       921.8 ns/op	        79.98 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4778961	       252.0 ns/op	        81.27 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1223472	       997.4 ns/op	        82.13 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4898037	       245.1 ns/op	        41.78 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1226516	       974.9 ns/op	        42.01 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4930695	       243.4 ns/op	        42.07 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1219245	       985.0 ns/op	        41.59 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4485074	       267.9 ns/op	        40.13 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1066 ns/op	        40.35 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4539062	       264.6 ns/op	        40.63 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1060 ns/op	        40.59 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5973073	       201.0 ns/op	        40.76 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1508676	       795.4 ns/op	        41.20 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5151636	       232.5 ns/op	        39.63 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1314087	       922.0 ns/op	        39.98 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5261259	       228.1 ns/op	        40.40 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1296721	       932.8 ns/op	        39.52 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5048050	       237.9 ns/op	        38.74 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1259935	       919.7 ns/op	        40.08 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4770775	       252.0 ns/op	        40.64 GFLOP/s
+keel-gvt5 r2 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1239954	       981.0 ns/op	        41.75 GFLOP/s
+keel-gvt5 r2 bench BenchmarkKernel/3x24/neon/kc=128         	 3111650	       384.6 ns/op	        47.92 GFLOP/s	     18432 flops/call
+keel-gvt5 r2 bench BenchmarkPeak/neon                       	   13132	     91362 ns/op	       103.3 GFLOP/s
+keel-gvt5 r2 bench BenchmarkFMARoof64/neon                  	   13132	     91364 ns/op	        51.65 GFLOP/s
+keel-gvt5 r2 bench BenchmarkTile64/3x12/neon/kc=128         	 3109984	       383.8 ns/op	        24.01 GFLOP/s	      9216 flops/call
+keel-gvt5 r3 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4892124	       245.0 ns/op	        83.58 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1228035	       977.2 ns/op	        83.83 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4930170	       243.4 ns/op	        84.14 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1225363	       976.6 ns/op	        83.89 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4478727	       268.0 ns/op	        80.25 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1077 ns/op	        79.85 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4538562	       264.7 ns/op	        81.24 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1073 ns/op	        80.20 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5970553	       201.5 ns/op	        81.33 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1516281	       791.6 ns/op	        82.79 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5161436	       232.4 ns/op	        79.32 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1308470	       924.0 ns/op	        79.79 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5259237	       228.2 ns/op	        80.76 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1302616	       935.3 ns/op	        78.83 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5064955	       237.5 ns/op	        77.61 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1275534	       912.2 ns/op	        80.82 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4782444	       251.5 ns/op	        81.44 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1222303	       981.0 ns/op	        83.51 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4898204	       245.0 ns/op	        41.79 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1228040	       974.3 ns/op	        42.04 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4931260	       243.4 ns/op	        42.07 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1223181	       979.8 ns/op	        41.81 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4477416	       268.0 ns/op	        40.12 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1078 ns/op	        39.91 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4532766	       264.6 ns/op	        40.63 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1073 ns/op	        40.07 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5970630	       201.1 ns/op	        40.73 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1516754	       791.2 ns/op	        41.42 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5158072	       232.6 ns/op	        39.62 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1302412	       922.8 ns/op	        39.95 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5270416	       227.6 ns/op	        40.48 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1299127	       936.0 ns/op	        39.38 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5047621	       238.3 ns/op	        38.67 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1304892	       915.2 ns/op	        40.28 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4777186	       251.4 ns/op	        40.73 GFLOP/s
+keel-gvt5 r3 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1218316	       982.3 ns/op	        41.70 GFLOP/s
+keel-gvt5 r3 bench BenchmarkKernel/3x24/neon/kc=128         	 3122713	       387.3 ns/op	        47.60 GFLOP/s	     18432 flops/call
+keel-gvt5 r3 bench BenchmarkPeak/neon                       	   13131	     91381 ns/op	       103.3 GFLOP/s
+keel-gvt5 r3 bench BenchmarkFMARoof64/neon                  	   13131	     91370 ns/op	        51.64 GFLOP/s
+keel-gvt5 r3 bench BenchmarkTile64/3x12/neon/kc=128         	 3090979	       384.1 ns/op	        24.00 GFLOP/s	      9216 flops/call
+keel-gvt5 r4 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4888276	       245.1 ns/op	        83.56 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1222155	       979.9 ns/op	        83.60 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4933645	       243.5 ns/op	        84.10 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1225550	       983.1 ns/op	        83.33 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4473717	       268.0 ns/op	        80.25 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1047 ns/op	        82.18 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4532878	       264.5 ns/op	        81.30 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1037 ns/op	        82.91 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5955487	       201.2 ns/op	        81.44 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1517690	       790.8 ns/op	        82.87 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5157835	       232.7 ns/op	        79.20 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1313892	       914.9 ns/op	        80.58 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5253453	       228.4 ns/op	        80.69 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1306152	       919.1 ns/op	        80.22 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5021377	       239.6 ns/op	        76.93 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1317534	       910.2 ns/op	        81.00 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4773350	       251.9 ns/op	        81.30 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1223217	       978.9 ns/op	        83.69 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4894410	       245.0 ns/op	        41.79 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1223952	       981.7 ns/op	        41.72 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4929800	       243.5 ns/op	        42.06 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1224756	       977.3 ns/op	        41.91 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4475858	       268.0 ns/op	        40.11 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1059 ns/op	        40.59 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4534489	       264.7 ns/op	        40.62 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1045 ns/op	        41.15 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5954960	       201.2 ns/op	        40.71 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1514034	       792.8 ns/op	        41.33 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5152447	       232.9 ns/op	        39.58 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1312772	       915.4 ns/op	        40.27 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5264197	       227.9 ns/op	        40.43 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1301199	       921.1 ns/op	        40.02 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5001664	       240.0 ns/op	        38.40 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1321525	       912.1 ns/op	        40.42 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4763502	       251.4 ns/op	        40.74 GFLOP/s
+keel-gvt5 r4 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1227550	       978.1 ns/op	        41.88 GFLOP/s
+keel-gvt5 r4 bench BenchmarkKernel/3x24/neon/kc=128         	 3099261	       383.4 ns/op	        48.07 GFLOP/s	     18432 flops/call
+keel-gvt5 r4 bench BenchmarkPeak/neon                       	   13131	     91382 ns/op	       103.3 GFLOP/s
+keel-gvt5 r4 bench BenchmarkFMARoof64/neon                  	   13134	     91367 ns/op	        51.64 GFLOP/s
+keel-gvt5 r4 bench BenchmarkTile64/3x12/neon/kc=128         	 3117981	       384.3 ns/op	        23.98 GFLOP/s	      9216 flops/call
+keel-gvt5 r5 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4891089	       245.0 ns/op	        83.58 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1217760	       984.9 ns/op	        83.18 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4929002	       243.5 ns/op	        84.11 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1213173	       982.1 ns/op	        83.42 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4482140	       267.8 ns/op	        80.29 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1065 ns/op	        80.73 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4536265	       264.6 ns/op	        81.27 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1061 ns/op	        81.09 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5970933	       201.0 ns/op	        81.51 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1509072	       794.5 ns/op	        82.49 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5162440	       232.4 ns/op	        79.30 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1304847	       918.1 ns/op	        80.30 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5258582	       228.2 ns/op	        80.76 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1285993	       934.5 ns/op	        78.89 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5053450	       238.0 ns/op	        77.44 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1316468	       914.2 ns/op	        80.65 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4764183	       251.8 ns/op	        81.34 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1227804	       973.9 ns/op	        84.12 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4892906	       245.1 ns/op	        41.78 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1220727	       979.7 ns/op	        41.81 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4928270	       243.5 ns/op	        42.06 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1217205	       988.1 ns/op	        41.46 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4477344	       267.8 ns/op	        40.15 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1070 ns/op	        40.18 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4531388	       264.6 ns/op	        40.63 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1067 ns/op	        40.31 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5968428	       201.0 ns/op	        40.75 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1510206	       794.7 ns/op	        41.24 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5153307	       232.7 ns/op	        39.60 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1304798	       922.8 ns/op	        39.95 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5270577	       227.8 ns/op	        40.45 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1279893	       934.2 ns/op	        39.46 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5034542	       238.0 ns/op	        38.73 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1325709	       915.3 ns/op	        40.28 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4772520	       251.9 ns/op	        40.65 GFLOP/s
+keel-gvt5 r5 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1243450	       967.6 ns/op	        42.33 GFLOP/s
+keel-gvt5 r5 bench BenchmarkKernel/3x24/neon/kc=128         	 3124123	       384.0 ns/op	        48.00 GFLOP/s	     18432 flops/call
+keel-gvt5 r5 bench BenchmarkPeak/neon                       	   13131	     91372 ns/op	       103.3 GFLOP/s
+keel-gvt5 r5 bench BenchmarkFMARoof64/neon                  	   13134	     91361 ns/op	        51.65 GFLOP/s
+keel-gvt5 r5 bench BenchmarkTile64/3x12/neon/kc=128         	 3126686	       383.8 ns/op	        24.01 GFLOP/s	      9216 flops/call
+keel-gvt5 r6 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4889707	       245.2 ns/op	        83.54 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1228290	       976.4 ns/op	        83.90 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4930315	       243.6 ns/op	        84.07 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1224222	       981.2 ns/op	        83.49 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4480171	       267.8 ns/op	        80.29 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1053 ns/op	        81.72 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4535607	       264.6 ns/op	        81.28 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1043 ns/op	        82.50 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5972823	       201.2 ns/op	        81.43 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1509720	       794.5 ns/op	        82.49 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5157093	       232.7 ns/op	        79.21 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1309059	       917.1 ns/op	        80.39 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5251593	       228.5 ns/op	        80.67 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1297605	       925.4 ns/op	        79.67 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5052489	       237.9 ns/op	        77.47 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1319034	       907.5 ns/op	        81.24 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4759888	       252.1 ns/op	        81.25 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1221404	       975.0 ns/op	        84.02 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4894824	       245.1 ns/op	        41.78 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1221111	       987.6 ns/op	        41.48 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4935394	       243.6 ns/op	        42.04 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1218852	       982.5 ns/op	        41.69 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4478788	       267.8 ns/op	        40.15 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1058 ns/op	        40.64 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4537010	       264.8 ns/op	        40.61 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1050 ns/op	        40.94 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5970800	       201.2 ns/op	        40.72 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1510563	       794.6 ns/op	        41.24 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5157121	       232.9 ns/op	        39.58 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1307078	       916.4 ns/op	        40.23 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5261589	       228.1 ns/op	        40.41 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1292338	       923.9 ns/op	        39.90 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5033506	       238.2 ns/op	        38.69 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1316428	       904.1 ns/op	        40.78 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4752240	       251.9 ns/op	        40.66 GFLOP/s
+keel-gvt5 r6 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1236664	       971.2 ns/op	        42.18 GFLOP/s
+keel-gvt5 r6 bench BenchmarkKernel/3x24/neon/kc=128         	 3111842	       387.7 ns/op	        47.54 GFLOP/s	     18432 flops/call
+keel-gvt5 r6 bench BenchmarkPeak/neon                       	   13131	     91379 ns/op	       103.3 GFLOP/s
+keel-gvt5 r6 bench BenchmarkFMARoof64/neon                  	   13131	     91380 ns/op	        51.64 GFLOP/s
+keel-gvt5 r6 bench BenchmarkTile64/3x12/neon/kc=128         	 3096135	       388.4 ns/op	        23.73 GFLOP/s	      9216 flops/call
+keel-gvt5 r7 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4891100	       245.1 ns/op	        83.56 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1213033	       989.8 ns/op	        82.76 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4928482	       243.6 ns/op	        84.08 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1209243	       990.1 ns/op	        82.74 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4480196	       267.8 ns/op	        80.30 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1072 ns/op	        80.23 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4536318	       264.6 ns/op	        81.28 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1072 ns/op	        80.27 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5967481	       201.0 ns/op	        81.53 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1510791	       794.7 ns/op	        82.46 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5153976	       233.0 ns/op	        79.10 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1296826	       925.4 ns/op	        79.67 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5249625	       228.5 ns/op	        80.68 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1280952	       940.0 ns/op	        78.44 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5031829	       238.6 ns/op	        77.24 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1324828	       907.4 ns/op	        81.25 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4766335	       253.2 ns/op	        80.88 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1233250	       971.2 ns/op	        84.35 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4891143	       245.1 ns/op	        41.78 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1210357	       990.9 ns/op	        41.34 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4926733	       243.5 ns/op	        42.05 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1213056	       993.0 ns/op	        41.25 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4481330	       267.9 ns/op	        40.13 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1072 ns/op	        40.13 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4533807	       264.5 ns/op	        40.65 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1070 ns/op	        40.18 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5968964	       201.0 ns/op	        40.76 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1512892	       793.4 ns/op	        41.30 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5152912	       232.9 ns/op	        39.56 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1298204	       928.3 ns/op	        39.71 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5262663	       227.9 ns/op	        40.43 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1281692	       937.9 ns/op	        39.31 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5035598	       238.5 ns/op	        38.63 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1323734	       903.3 ns/op	        40.81 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4765632	       253.2 ns/op	        40.44 GFLOP/s
+keel-gvt5 r7 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1240977	       967.6 ns/op	        42.33 GFLOP/s
+keel-gvt5 r7 bench BenchmarkKernel/3x24/neon/kc=128         	 3118443	       384.7 ns/op	        47.91 GFLOP/s	     18432 flops/call
+keel-gvt5 r7 bench BenchmarkPeak/neon                       	   13131	     91375 ns/op	       103.3 GFLOP/s
+keel-gvt5 r7 bench BenchmarkFMARoof64/neon                  	   13132	     91370 ns/op	        51.64 GFLOP/s
+keel-gvt5 r7 bench BenchmarkTile64/3x12/neon/kc=128         	 3086473	       384.7 ns/op	        23.96 GFLOP/s	      9216 flops/call
+keel-gvt5 r8 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4894352	       245.0 ns/op	        83.58 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1220024	       970.5 ns/op	        84.41 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4928842	       243.5 ns/op	        84.09 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1232460	       983.6 ns/op	        83.29 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4478259	       268.1 ns/op	        80.20 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1062 ns/op	        81.03 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4534164	       264.7 ns/op	        81.24 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1061 ns/op	        81.04 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5969412	       201.5 ns/op	        81.30 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1510104	       795.3 ns/op	        82.41 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5161686	       232.6 ns/op	        79.24 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1303287	       921.5 ns/op	        80.01 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5254234	       228.3 ns/op	        80.75 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1291934	       935.5 ns/op	        78.81 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5013742	       238.5 ns/op	        77.29 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1270178	       910.7 ns/op	        80.96 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4753022	       252.0 ns/op	        81.27 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1236036	       970.9 ns/op	        84.37 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4896514	       245.2 ns/op	        41.77 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1230010	       983.1 ns/op	        41.66 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4928750	       243.4 ns/op	        42.07 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1230033	       984.6 ns/op	        41.60 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4473016	       268.0 ns/op	        40.11 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1059 ns/op	        40.61 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4535250	       264.4 ns/op	        40.66 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1061 ns/op	        40.55 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5969059	       201.5 ns/op	        40.66 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1510540	       794.4 ns/op	        41.25 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5162949	       232.6 ns/op	        39.62 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1306963	       920.6 ns/op	        40.04 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5264602	       227.9 ns/op	        40.44 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1290687	       933.5 ns/op	        39.49 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5031556	       238.6 ns/op	        38.63 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1278201	       915.8 ns/op	        40.25 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4756976	       251.9 ns/op	        40.66 GFLOP/s
+keel-gvt5 r8 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1231125	       967.8 ns/op	        42.32 GFLOP/s
+keel-gvt5 r8 bench BenchmarkKernel/3x24/neon/kc=128         	 3125107	       387.8 ns/op	        47.52 GFLOP/s	     18432 flops/call
+keel-gvt5 r8 bench BenchmarkPeak/neon                       	   13130	     91369 ns/op	       103.3 GFLOP/s
+keel-gvt5 r8 bench BenchmarkFMARoof64/neon                  	   13130	     91372 ns/op	        51.64 GFLOP/s
+keel-gvt5 r8 bench BenchmarkTile64/3x12/neon/kc=128         	 3077895	       389.0 ns/op	        23.69 GFLOP/s	      9216 flops/call
+keel-gvt5 r9 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4890300	       245.2 ns/op	        83.54 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1227894	       979.7 ns/op	        83.62 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4928010	       243.5 ns/op	        84.12 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1218328	       978.7 ns/op	        83.71 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4484605	       267.6 ns/op	        80.37 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1064 ns/op	        80.86 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4535058	       264.5 ns/op	        81.29 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1058 ns/op	        81.32 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5970913	       201.0 ns/op	        81.53 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1510132	       794.8 ns/op	        82.45 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5155204	       232.7 ns/op	        79.21 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1324045	       911.8 ns/op	        80.86 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5251740	       228.4 ns/op	        80.70 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1295215	       931.0 ns/op	        79.20 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5047400	       238.2 ns/op	        77.37 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1272643	       917.1 ns/op	        80.39 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4771503	       252.0 ns/op	        81.28 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1236300	       981.4 ns/op	        83.48 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4897114	       245.1 ns/op	        41.78 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1221118	       981.3 ns/op	        41.74 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4930033	       243.5 ns/op	        42.05 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1227483	       986.7 ns/op	        41.51 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4482852	       267.8 ns/op	        40.14 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1061 ns/op	        40.53 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4537399	       264.4 ns/op	        40.67 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1060 ns/op	        40.57 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5970972	       200.9 ns/op	        40.77 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1509907	       794.6 ns/op	        41.24 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5152182	       232.5 ns/op	        39.63 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1316133	       922.5 ns/op	        39.96 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5261911	       228.1 ns/op	        40.40 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1296993	       926.4 ns/op	        39.79 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5048137	       238.2 ns/op	        38.68 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1257718	       912.6 ns/op	        40.39 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4769299	       251.9 ns/op	        40.65 GFLOP/s
+keel-gvt5 r9 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1238986	       992.4 ns/op	        41.27 GFLOP/s
+keel-gvt5 r9 bench BenchmarkKernel/3x24/neon/kc=128         	 3116455	       384.5 ns/op	        47.94 GFLOP/s	     18432 flops/call
+keel-gvt5 r9 bench BenchmarkPeak/neon                       	   13130	     91376 ns/op	       103.3 GFLOP/s
+keel-gvt5 r9 bench BenchmarkFMARoof64/neon                  	   13134	     91363 ns/op	        51.65 GFLOP/s
+keel-gvt5 r9 bench BenchmarkTile64/3x12/neon/kc=128         	 3096616	       386.0 ns/op	        23.87 GFLOP/s	      9216 flops/call
+keel-gvt5 r10 vec BenchmarkPBTile/f32/4x20u8/kc=128         	 4889406	       245.0 ns/op	        83.59 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/4x20u8/kc=512         	 1216856	       985.8 ns/op	        83.10 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/5x16u8/kc=128         	 4930818	       243.4 ns/op	        84.14 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/5x16u8/kc=512         	 1217848	       986.0 ns/op	        83.08 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/3x28u8/kc=128         	 4479330	       267.9 ns/op	        80.26 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/3x28u8/kc=512         	 1000000	      1070 ns/op	        80.42 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/7x12u8/kc=128         	 4535230	       264.7 ns/op	        81.25 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/7x12u8/kc=512         	 1000000	      1068 ns/op	        80.57 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/4x16u8/kc=128         	 5967433	       201.1 ns/op	        81.49 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/4x16u8/kc=512         	 1507892	       795.6 ns/op	        82.38 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/3x24u8/kc=128         	 5167017	       232.5 ns/op	        79.27 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/3x24u8/kc=512         	 1302358	       921.9 ns/op	        79.97 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/6x12u8/kc=128         	 5255510	       228.4 ns/op	        80.71 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/6x12u8/kc=512         	 1293340	       938.3 ns/op	        78.58 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/3x24u4/kc=128         	 5033776	       237.9 ns/op	        77.49 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/3x24u4/kc=512         	 1309636	       917.8 ns/op	        80.33 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/4x20u4/kc=128         	 4780473	       251.9 ns/op	        81.32 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f32/4x20u4/kc=512         	 1232208	       974.8 ns/op	        84.04 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/4x10u8/kc=128         	 4898972	       245.1 ns/op	        41.77 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/4x10u8/kc=512         	 1220517	       982.2 ns/op	        41.70 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/5x8u8/kc=128          	 4932883	       243.5 ns/op	        42.06 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/5x8u8/kc=512          	 1213966	       987.8 ns/op	        41.47 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/3x14u8/kc=128         	 4478244	       267.9 ns/op	        40.14 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/3x14u8/kc=512         	 1000000	      1074 ns/op	        40.03 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/7x6u8/kc=128          	 4535842	       264.7 ns/op	        40.62 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/7x6u8/kc=512          	 1000000	      1068 ns/op	        40.27 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/4x8u8/kc=128          	 5968642	       201.2 ns/op	        40.71 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/4x8u8/kc=512          	 1509996	       795.1 ns/op	        41.21 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/3x12u8/kc=128         	 5158934	       232.6 ns/op	        39.61 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/3x12u8/kc=512         	 1298458	       924.1 ns/op	        39.89 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/6x6u8/kc=128          	 5262958	       227.7 ns/op	        40.47 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/6x6u8/kc=512          	 1290576	       936.0 ns/op	        39.38 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/3x12u4/kc=128         	 5068582	       239.4 ns/op	        38.49 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/3x12u4/kc=512         	 1313137	       908.4 ns/op	        40.58 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/4x10u4/kc=128         	 4774731	       251.5 ns/op	        40.72 GFLOP/s
+keel-gvt5 r10 vec BenchmarkPBTile/f64/4x10u4/kc=512         	 1235247	       965.3 ns/op	        42.43 GFLOP/s
+keel-gvt5 r10 bench BenchmarkKernel/3x24/neon/kc=128         	 3121082	       384.8 ns/op	        47.90 GFLOP/s	     18432 flops/call
+keel-gvt5 r10 bench BenchmarkPeak/neon                       	   13132	     91384 ns/op	       103.3 GFLOP/s
+keel-gvt5 r10 bench BenchmarkFMARoof64/neon                  	   13130	     91359 ns/op	        51.65 GFLOP/s
+keel-gvt5 r10 bench BenchmarkTile64/3x12/neon/kc=128         	 3124228	       384.7 ns/op	        23.96 GFLOP/s	      9216 flops/call
+== done 03:51:13
+== TEARDOWN 03:51:13
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0df7c4ac6648b617d...
+
+✅ Terminate request sent!
+   Instance: i-0df7c4ac6648b617d
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-084ad1b6b60ed7226...
+
+✅ Terminate request sent!
+   Instance: i-084ad1b6b60ed7226
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-068fd80db9fe76d40...
+
+✅ Terminate request sent!
+   Instance: i-068fd80db9fe76d40
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   fleet is down
