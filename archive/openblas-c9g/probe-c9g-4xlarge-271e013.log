@@ -1,0 +1,135 @@
+== launch 17:24:00 wip-196 @ 271e013
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.0s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.8s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (275ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (596ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (67.4s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-06bceb6a5fb79d9a1
+  Public IP    98.80.196.100
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect obls196-c9g
+
+🌍 DNS: obls196-c9g.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@obls196-c9g.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Searching all AWS regions...
+== read-back
+Warning: Permanently added '98.80.196.100' (ED25519) to the list of known hosts.
+CPU(s):                                  16
+Model name:                              Neoverse-V3
+CPU part	: 0xd84
+== provision v0.3.34 17:25:51
+Setting up build-essential (12.10ubuntu1) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+   on obls196-c9g: install go1.27.0 into /usr/local/go
+[1m==[0m downloading go1.27.0.linux-arm64.tar.gz
+#=#=#                                                                           ##O#- #                                                                         ##O=#  #                                                                        #=#=-#  #                                                                       ######################################################################### 100.0%-#O#- #   #                                                                                                                                                 0.0%                                                                            0.1%                                                                            0.2%                                                                            0.5%                                                                            1.0%#                                                                           2.3%###                                                                         5.4%#########                                                                  12.4%##############                                                             19.8%###################                                                        27.3%#########################                                                  34.7%##############################                                             42.3%####################################                                       49.6%#########################################                                  57.2%###############################################                            64.7%####################################################                       72.3%##########################################################                 79.9%###############################################################            87.5%#####################################################################      95.0%######################################################################### 100.0%
+   digest ok (51798d2c42d0e1c6ed7fd9f48728b4193abac9e8aad6dbac2fe96a81f5909bda) against go.dev/dl?mode=json (same origin as the download: integrity, not provenance)
+go version go1.27.0 linux/arm64
+   reference: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=16
+   linked reference confirmed as the v0.3.34 source build
+   OPENBLAS_NUM_THREADS=1 enforced, kernel family neoversev2 on the allowlist
+   unknown (no model name in /proc/cpuinfo)
+[1m==[0m obls196-c9g: ready
+
+all hosts have a same-host OpenBLAS reference the gate can use
+== rounds 17:29:18
+r1 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r1 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 235098974 ns/op	        73.08 GFLOP/s
+r1 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r1 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198809160 ns/op	        86.41 GFLOP/s
+r1 keel BenchmarkSgemm/n=2048         	       5	 222501875 ns/op	        77.21 GFLOP/s
+r2 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r2 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198819029 ns/op	        86.41 GFLOP/s
+r2 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r2 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 235035099 ns/op	        73.10 GFLOP/s
+r2 keel BenchmarkSgemm/n=2048         	       5	 222528804 ns/op	        77.20 GFLOP/s
+r3 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r3 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 235372803 ns/op	        72.99 GFLOP/s
+r3 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r3 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198830474 ns/op	        86.40 GFLOP/s
+r3 keel BenchmarkSgemm/n=2048         	       5	 223393803 ns/op	        76.90 GFLOP/s
+r4 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r4 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198893606 ns/op	        86.38 GFLOP/s
+r4 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r4 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 235003979 ns/op	        73.10 GFLOP/s
+r4 keel BenchmarkSgemm/n=2048         	       5	 222518524 ns/op	        77.21 GFLOP/s
+r5 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r5 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 235001269 ns/op	        73.11 GFLOP/s
+r5 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r5 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198833066 ns/op	        86.40 GFLOP/s
+r5 keel BenchmarkSgemm/n=2048         	       5	 223707471 ns/op	        76.80 GFLOP/s
+r6 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r6 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198712524 ns/op	        86.46 GFLOP/s
+r6 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r6 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 235062243 ns/op	        73.09 GFLOP/s
+r6 keel BenchmarkSgemm/n=2048         	       5	 222721816 ns/op	        77.14 GFLOP/s
+r7 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r7 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 235194662 ns/op	        73.05 GFLOP/s
+r7 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r7 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198843224 ns/op	        86.40 GFLOP/s
+r7 keel BenchmarkSgemm/n=2048         	       5	 222612463 ns/op	        77.17 GFLOP/s
+r8 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r8 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198718302 ns/op	        86.45 GFLOP/s
+r8 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r8 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 234990782 ns/op	        73.11 GFLOP/s
+r8 keel BenchmarkSgemm/n=2048         	       5	 222436229 ns/op	        77.24 GFLOP/s
+r9 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r9 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 235063923 ns/op	        73.09 GFLOP/s
+r9 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r9 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198839144 ns/op	        86.40 GFLOP/s
+r9 keel BenchmarkSgemm/n=2048         	       5	 223302846 ns/op	        76.94 GFLOP/s
+r10 NEOVERSEV2 keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY neoversev2 MAX_THREADS=16 corename=neoversev2 threads=1 procs=1
+r10 NEOVERSEV2 BenchmarkOpenBLAS/n=2048         	       6	 198755197 ns/op	        86.44 GFLOP/s
+r10 ARMV8SVE keel-bench-openblas: OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY armv8sve MAX_THREADS=16 corename=armv8sve threads=1 procs=1
+r10 ARMV8SVE BenchmarkOpenBLAS/n=2048         	       5	 234759736 ns/op	        73.18 GFLOP/s
+r10 keel BenchmarkSgemm/n=2048         	       5	 222166258 ns/op	        77.33 GFLOP/s
+== done 17:30:57
+== TEARDOWN 17:30:57
+
+The instance is shutting down and will be destroyed.
+   obls196-c9g is down
