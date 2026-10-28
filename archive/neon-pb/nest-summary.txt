@@ -1,0 +1,26 @@
+== f32  baseline Blocking/3x24/neon/kc=384/mc=144/nc=2048: V1 33.51 [33.26,33.65] n=5  V2 37.68 [37.57,37.71] n=5  V3 46.08 [46.07,46.10] n=5
+  Blocking/5x16/neon-pb/kc=384/mc=72/nc=2048       geo  65.66 V1  56.24 (+67.8%) V2  64.05 (+70.0%) V3  78.58 (+70.5%)  worst>best on all: True
+  Blocking/5x16/neon-pb/kc=256/mc=36/nc=2048       geo  65.50 V1  56.02 (+67.2%) V2  64.49 (+71.2%) V3  77.79 (+68.8%)  worst>best on all: True
+  Blocking/5x16/neon-pb/kc=384/mc=36/nc=2048       geo  65.37 V1  55.94 (+66.9%) V2  64.81 (+72.0%) V3  77.05 (+67.2%)  worst>best on all: True
+  Blocking/5x16/neon-pb/kc=256/mc=72/nc=2048       geo  65.35 V1  56.88 (+69.7%) V2  62.69 (+66.4%) V3  78.27 (+69.9%)  worst>best on all: True
+  Blocking/5x16/neon-pb/kc=256/mc=144/nc=2048      geo  64.03 V1  54.74 (+63.4%) V2  60.84 (+61.5%) V3  78.81 (+71.0%)  worst>best on all: True
+  Blocking/5x16/neon-pb/kc=384/mc=144/nc=2048      geo  62.92 V1  50.59 (+51.0%) V2  62.55 (+66.0%) V3  78.70 (+70.8%)  worst>best on all: True
+  Blocking/4x20/neon-pb/kc=256/mc=72/nc=2048       geo  61.60 V1  53.59 (+59.9%) V2  59.15 (+57.0%) V3  73.74 (+60.0%)  worst>best on all: True
+  Blocking/4x20/neon-pb/kc=384/mc=72/nc=2048       geo  61.39 V1  52.62 (+57.0%) V2  59.43 (+57.7%) V3  73.99 (+60.6%)  worst>best on all: True
+  Blocking/4x20/neon-pb/kc=384/mc=36/nc=2048       geo  61.02 V1  52.48 (+56.6%) V2  59.50 (+57.9%) V3  72.77 (+57.9%)  worst>best on all: True
+  Blocking/4x20/neon-pb/kc=256/mc=144/nc=2048      geo  61.01 V1  52.31 (+56.1%) V2  58.72 (+55.8%) V3  73.95 (+60.5%)  worst>best on all: True
+  Blocking/4x20/neon-pb/kc=256/mc=36/nc=2048       geo  60.76 V1  52.38 (+56.3%) V2  58.75 (+55.9%) V3  72.90 (+58.2%)  worst>best on all: True
+  Blocking/7x12/neon-pb/kc=384/mc=72/nc=2048       geo  60.45 V1  51.87 (+54.8%) V2  59.02 (+56.6%) V3  72.17 (+56.6%)  worst>best on all: True
+== f64  baseline Blocking64/3x12/neon/kc=512/mc=144/nc=2048: V1 16.58 [16.54,16.66] n=5  V2 19.05 [18.98,19.07] n=5  V3 23.67 [23.65,23.68] n=5
+  Blocking64/5x8/neon-pb/kc=256/mc=72/nc=2048      geo  33.03 V1  29.11 (+75.6%) V2  30.79 (+61.6%) V3  40.20 (+69.8%)  worst>best on all: True
+  Blocking64/5x8/neon-pb/kc=256/mc=144/nc=2048     geo  32.34 V1  27.36 (+65.0%) V2  30.64 (+60.8%) V3  40.36 (+70.5%)  worst>best on all: True
+  Blocking64/5x8/neon-pb/kc=512/mc=144/nc=2048     geo  32.27 V1  26.12 (+57.5%) V2  32.61 (+71.2%) V3  39.44 (+66.6%)  worst>best on all: True
+  Blocking64/4x10/neon-pb/kc=256/mc=72/nc=2048     geo  32.13 V1  28.01 (+68.9%) V2  30.05 (+57.7%) V3  39.40 (+66.5%)  worst>best on all: True
+  Blocking64/5x8/neon-pb/kc=512/mc=72/nc=2048      geo  32.06 V1  25.98 (+56.7%) V2  31.42 (+64.9%) V3  40.38 (+70.6%)  worst>best on all: True
+  Blocking64/4x10/neon-pb/kc=256/mc=144/nc=2048    geo  31.97 V1  27.04 (+63.1%) V2  30.93 (+62.4%) V3  39.06 (+65.0%)  worst>best on all: True
+  Blocking64/4x10/neon-pb/kc=512/mc=144/nc=2048    geo  31.58 V1  25.69 (+54.9%) V2  31.80 (+66.9%) V3  38.57 (+62.9%)  worst>best on all: True
+  Blocking64/4x10/neon-pb/kc=512/mc=72/nc=2048     geo  31.52 V1  25.56 (+54.2%) V2  31.11 (+63.3%) V3  39.39 (+66.4%)  worst>best on all: True
+  Blocking64/7x6/neon-pb/kc=256/mc=72/nc=2048      geo  31.36 V1  27.12 (+63.6%) V2  29.77 (+56.3%) V3  38.21 (+61.4%)  worst>best on all: True
+  Blocking64/7x6/neon-pb/kc=256/mc=144/nc=2048     geo  31.29 V1  26.42 (+59.3%) V2  30.09 (+58.0%) V3  38.54 (+62.8%)  worst>best on all: True
+  Blocking64/7x6/neon-pb/kc=512/mc=72/nc=2048      geo  31.24 V1  25.80 (+55.6%) V2  30.63 (+60.8%) V3  38.57 (+62.9%)  worst>best on all: True
+  Blocking64/7x6/neon-pb/kc=512/mc=144/nc=2048     geo  30.88 V1  25.30 (+52.6%) V2  31.32 (+64.4%) V3  37.17 (+57.0%)  worst>best on all: True
