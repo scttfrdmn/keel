@@ -218,6 +218,19 @@ func apGet(n int) *apBuf {
 
 func apPut(b *apBuf) { apPool.Put(b) }
 
+// apxPool holds the pre-broadcast expansions macro builds (#198), apart from apPool so
+// the two sizes never meet: a pool returning the other kind's buffer would fail apGet's
+// capacity check and allocate on every call.
+var apxPool sync.Pool
+
+func apxGet(n int) *apBuf {
+	if b, ok := apxPool.Get().(*apBuf); ok && cap(b.v) >= n {
+		b.v = b.v[:n]
+		return b
+	}
+	return &apBuf{v: make([]float64, n)}
+}
+
 // workersLast records how many workers the most recently completed Level-3 call
 // distributed work to. See WorkersLastCall for what it is for and what it is not.
 var workersLast atomic.Int64
@@ -465,8 +478,20 @@ func icOrder(u, nic int, tri triMask) int {
 //
 // i0 and j0 are the block's position in the whole C matrix, needed only by the
 // mask: c is already offset to (i0, j0), and every index below is local.
+//
+// ap is always the conventionally packed block. A pre-broadcast kernel
+// (kern.Kernel.ALanes > 1, #198) gets it expanded here, once per call, which is
+// once per packed (ic, pc) block: every packer, transpose and caller of macro
+// reaches the layout through this one copy, at 1/nc of the block's arithmetic.
 func macro(kn kern.Kernel64, ap, bp []float64, i0, j0, mc, nc, kk int, c []float64, ldc int, tile []float64, tri triMask) {
 	mr, nr := kn.MR, kn.NR
+	if lanes := kn.ALanes; lanes > 1 {
+		n := pack.ALen(mr, mc, kk)
+		x := apxGet(n * lanes)
+		defer apxPool.Put(x)
+		pack.Broadcast(x.v, ap[:n], lanes)
+		ap = x.v
+	}
 	for jr := 0; jr < nc; jr += nr {
 		bpanel := bp[(jr/nr)*nr*kk:][:nr*kk]
 		jn := min(nr, nc-jr)
@@ -475,7 +500,7 @@ func macro(kn kern.Kernel64, ap, bp []float64, i0, j0, mc, nc, kk int, c []float
 			if tri.none(i0+ir, j0+jr, im, jn) {
 				continue
 			}
-			apanel := ap[(ir/mr)*mr*kk:][:mr*kk]
+			apanel := ap[(ir/mr)*kn.APanelLen(kk):][:kn.APanelLen(kk)]
 			ct := c[ir*ldc+jr:]
 			if im == mr && jn == nr && tri.whole(i0+ir, j0+jr, im, jn) {
 				kn.Fn(kk, apanel, bpanel, ct, ldc)

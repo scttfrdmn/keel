@@ -1,0 +1,29 @@
+// Copyright 2026 Scott Friedman
+// SPDX-License-Identifier: Apache-2.0
+
+package pack
+
+import "fmt"
+
+// Broadcast expands a packed A block into the pre-broadcast layout a kern.Kernel
+// with ALanes = lanes reads (#198): every element of src stored lanes times
+// consecutively in dst, so a NEON kernel loads a row's multiplicand as one vector
+// instead of broadcasting a scalar, which arm64 lowers to three vector-pipe ops.
+//
+// It runs once per packed (ic, pc) block, after APanels or ASymPanels, so every
+// packing variant and transpose reaches the pre-broadcast layout through one copy,
+// at O(mc·kc·lanes) against the block's O(mc·kc·nc) of arithmetic.
+//
+// dst must hold at least len(src)*lanes floats.
+func Broadcast(dst, src []float32, lanes int) {
+	if lanes < 1 || len(dst) < len(src)*lanes {
+		panic(fmt.Sprintf("pack: Broadcast lanes=%d into %d floats from %d", lanes, len(dst), len(src)))
+	}
+	dst = dst[:len(src)*lanes]
+	for i, v := range src {
+		d := dst[i*lanes : i*lanes+lanes]
+		for l := range d {
+			d[l] = v
+		}
+	}
+}

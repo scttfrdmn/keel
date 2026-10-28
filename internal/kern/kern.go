@@ -155,7 +155,17 @@ type Kernel struct {
 	// Zero means unaudited, which is what the scalar reference shapes are.
 	// Preferred treats zero as unrankable rather than as lean.
 	InsnsPerFMA float64
+
+	// ALanes is the A-panel contract (#198). 0 or 1 is the conventional panel, MR
+	// elements per k-step. L > 1 means pre-broadcast: every element stored L times
+	// consecutively, so row i of k-step p starts at (p*MR+i)*L and the panel is L
+	// times longer. internal/block expands the packed block to this layout when a
+	// kernel asks for it; a kernel and its Ref always agree on it.
+	ALanes int
 }
+
+// APanelLen is the length of one packed A panel at depth kc under k's contract.
+func (k Kernel) APanelLen(kc int) int { return k.MR * kc * max(1, k.ALanes) }
 
 // Backend names, shared with the vec shim's vocabulary.
 const (
@@ -169,7 +179,18 @@ func (k Kernel) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
 
 // ID names one kernel uniquely: shape then backend, e.g. "4x32/avx512". This is
 // the string the benchmark sub-names and the gate's thresholds are keyed on.
-func (k Kernel) ID() string { return k.Tile() + "/" + k.Name }
+//
+// A pre-broadcast kernel's backend reads "<name>-pb" (#198): its A-panel contract
+// differs from the conventional kernel of the same shape, so the two must never
+// share an ID, which Kernels() dedupes on and every benchmark row is named by.
+func (k Kernel) ID() string { return k.Tile() + "/" + k.Name + pbSuffix(k.ALanes) }
+
+func pbSuffix(lanes int) string {
+	if lanes > 1 {
+		return "-pb"
+	}
+	return ""
+}
 
 // nativeLanes is the number of float32 elements one vector instruction of this
 // kernel's backend operates on — 16 for an AVX-512 Float32x16, 4 for a NEON
@@ -235,7 +256,15 @@ func (k Kernel) MemOpsPerFMA() float64 {
 // holds k to. Every vector kernel has one, and it is derived from the shape
 // rather than written per shape, so a new tile cannot arrive without its
 // reference.
-func (k Kernel) Ref() Kernel { return ScalarKernel(k.MR, k.NR) }
+//
+// A pre-broadcast kernel's reference reads the same pre-broadcast panel, so the
+// differential test feeds both the same bytes.
+func (k Kernel) Ref() Kernel {
+	if k.ALanes > 1 {
+		return ScalarKernelLanes(k.MR, k.NR, k.ALanes)
+	}
+	return ScalarKernel(k.MR, k.NR)
+}
 
 // Kernels returns every microkernel runnable on this machine: the vector shapes
 // widest-tile-first, then the scalar reference for each shape they use, so that
@@ -294,6 +323,49 @@ func ScalarKernel(mr, nr int) Kernel {
 		Fn: func(kc int, a, b, c []float32, ldc int) {
 			ScalarTile(mr, nr, kc, a, b, c, ldc)
 		},
+	}
+}
+
+// ScalarKernelLanes is ScalarKernel over a pre-broadcast A panel (see ALanes).
+func ScalarKernelLanes(mr, nr, lanes int) Kernel {
+	return Kernel{
+		Name:   Scalar,
+		MR:     mr,
+		NR:     nr,
+		Unroll: 1,
+		ALanes: lanes,
+		Fn: func(kc int, a, b, c []float32, ldc int) {
+			ScalarTileLanes(mr, nr, lanes, kc, a, b, c, ldc)
+		},
+	}
+}
+
+// ScalarTileLanes is ScalarTile reading a pre-broadcast A panel: row i of k-step p
+// is a[(p*mr+i)*lanes], and the other lanes-1 copies are not read. Same loop order,
+// same arithmetic, so on one A it agrees with ScalarTile bit for bit
+// (TestScalarTileLanesMatchesScalarTile).
+func ScalarTileLanes(mr, nr, lanes, kc int, a, b, c []float32, ldc int) {
+	if mr < 1 || mr > MaxMR || nr < 1 || nr > MaxNR || lanes < 1 {
+		panic(fmt.Sprintf("kern: tile %dx%d lanes %d outside %dx%d", mr, nr, lanes, MaxMR, MaxNR))
+	}
+	var buf [MaxMR * MaxNR]float32
+	acc := buf[: mr*nr : mr*nr]
+	for p := 0; p < kc; p++ {
+		bp := b[p*nr : p*nr+nr]
+		for i := 0; i < mr; i++ {
+			av := a[(p*mr+i)*lanes]
+			row := acc[i*nr : i*nr+nr]
+			for j, bv := range bp {
+				row[j] += av * bv
+			}
+		}
+	}
+	for i := 0; i < mr; i++ {
+		row := c[i*ldc : i*ldc+nr]
+		src := acc[i*nr : i*nr+nr]
+		for j, v := range src {
+			row[j] += v
+		}
 	}
 }
 

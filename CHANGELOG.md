@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The pre-broadcast A contract through the whole Level-3 path** (#198, the shaping step). `kern.Kernel`/`Kernel64`
+  gain `ALanes`, where L > 1 means every A element is stored L times. Such a kernel's `Ref` reads the same layout,
+  and its ID gets a `-pb` suffix so it can never collide with the conventional twin of its shape. `pack.Broadcast`
+  expands a packed block, and `internal/block`'s `macro` applies it once per packed (ic, pc) block from its own pool,
+  so every packer, transpose and caller reaches the layout through one copy. Pre-broadcast scalar twins give
+  bit-identical C to the conventional ones across Gemm, Syrk, Syr2k, Symm, Trmm and Trsm in every orientation
+  (96 subtests). Reverting the panel stride fails 89 of them, and skipping the expansion panics.
 - **shapegen `-form pb`: NEON kernels that read A pre-broadcast** (#198, the shaping step). Each A element is packed
   replicated across a register's lanes, so a row's multiplicand is one q-load instead of the 3-op
   `BroadcastFloat*`. Its 160 zero-spill shapes reach a frontier of 1.556 insns/FMA (4x20/8) against the broadcast

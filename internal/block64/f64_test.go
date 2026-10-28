@@ -63,7 +63,10 @@ func smallBlocks(t *testing.T, mb int) {
 // f64Kernels are the scalar reference at the tile docs/f64-design.md §2 predicts
 // for AVX-512 (4x16), plus an odd shape so the fringe path runs on both axes.
 func f64Kernels() []kern.Kernel64 {
-	ks := []kern.Kernel64{kern.ScalarKernel64(4, 16), kern.ScalarKernel64(3, 5)}
+	ks := []kern.Kernel64{kern.ScalarKernel64(4, 16), kern.ScalarKernel64(3, 5),
+		// The pre-broadcast A contract (#198) through the generated nest: macro's
+		// expansion and panel stride, at the shipped NEON shape and at an odd one.
+		kern.ScalarKernelLanes64(5, 8, 2), kern.ScalarKernelLanes64(3, 5, 2)}
 	// Every float64 vector kernel this host can run goes through the generated nest
 	// too (#191), so the shipped tiles are tested inside the blocking they serve,
 	// not only tile by tile against their scalar twins.

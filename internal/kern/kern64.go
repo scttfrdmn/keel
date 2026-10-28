@@ -21,7 +21,11 @@ type Kernel64 struct {
 	Unroll      int    // k-steps per pass of the steady-state loop
 	Fn          func(kc int, a, b, c []float64, ldc int)
 	InsnsPerFMA float64
+	ALanes      int // Kernel.ALanes at float64
 }
+
+// APanelLen is Kernel.APanelLen at float64.
+func (k Kernel64) APanelLen(kc int) int { return k.MR * kc * max(1, k.ALanes) }
 
 // nativeLanes is Kernel.nativeLanes at float64: the backend's register width in
 // bytes over eight. Stated as bytes so the ISA fact is written once per backend
@@ -48,7 +52,52 @@ func (k Kernel64) MemOpsPerFMA() float64 {
 }
 
 // Ref is the scalar reference for k's shape, as Kernel.Ref.
-func (k Kernel64) Ref() Kernel64 { return ScalarKernel64(k.MR, k.NR) }
+func (k Kernel64) Ref() Kernel64 {
+	if k.ALanes > 1 {
+		return ScalarKernelLanes64(k.MR, k.NR, k.ALanes)
+	}
+	return ScalarKernel64(k.MR, k.NR)
+}
+
+// ScalarKernelLanes64 is ScalarKernelLanes at float64.
+func ScalarKernelLanes64(mr, nr, lanes int) Kernel64 {
+	return Kernel64{
+		Name:   Scalar,
+		MR:     mr,
+		NR:     nr,
+		Unroll: 1,
+		ALanes: lanes,
+		Fn: func(kc int, a, b, c []float64, ldc int) {
+			ScalarTileLanes64(mr, nr, lanes, kc, a, b, c, ldc)
+		},
+	}
+}
+
+// ScalarTileLanes64 is ScalarTileLanes at float64.
+func ScalarTileLanes64(mr, nr, lanes, kc int, a, b, c []float64, ldc int) {
+	if mr < 1 || mr > MaxMR || nr < 1 || nr > MaxNR || lanes < 1 {
+		panic(fmt.Sprintf("kern: tile %dx%d lanes %d outside %dx%d", mr, nr, lanes, MaxMR, MaxNR))
+	}
+	var buf [MaxMR * MaxNR]float64
+	acc := buf[: mr*nr : mr*nr]
+	for p := 0; p < kc; p++ {
+		bp := b[p*nr : p*nr+nr]
+		for i := 0; i < mr; i++ {
+			av := a[(p*mr+i)*lanes]
+			row := acc[i*nr : i*nr+nr]
+			for j, bv := range bp {
+				row[j] += av * bv
+			}
+		}
+	}
+	for i := 0; i < mr; i++ {
+		row := c[i*ldc : i*ldc+nr]
+		src := acc[i*nr : i*nr+nr]
+		for j, v := range src {
+			row[j] += v
+		}
+	}
+}
 
 // Kernels64 is Kernels at float64: the vector shapes, then the scalar reference
 // for each, or two scalar shapes when there is no float64 vector kernel.
@@ -90,7 +139,7 @@ func Preferred64(class Class, ks []Kernel64) (Kernel64, bool) {
 func (k Kernel64) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
 
 // ID is "MRxNR/backend", as Kernel.ID.
-func (k Kernel64) ID() string { return k.Tile() + "/" + k.Name }
+func (k Kernel64) ID() string { return k.Tile() + "/" + k.Name + pbSuffix(k.ALanes) }
 
 // ScalarKernel64 is ScalarKernel over float64: the executable specification of an
 // mr×nr tile, and until #191 the only float64 kernel there is.
