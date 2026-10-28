@@ -291,3 +291,5 @@ func avx512PeakTileD(kc int, a, b, c []float64, ldc int) {
 	archsimd.LoadFloat64x8(r[8:16]).Add(c3h).Store(r[8:16])
 	archsimd.ClearAVXUpperBits()
 }
+
+func peakFamily() []PeakKernel { return PeakFamilyAVX512() }

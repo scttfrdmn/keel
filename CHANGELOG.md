@@ -9,6 +9,9 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`BenchmarkCeiling` gains a family arm** (#200): every FMA-ceiling family member at the ceiling's thread counts, so a
+  gate-p5 run witnesses that the canonical member is still the family maximum at 8 threads. It had only been checked
+  at 1. `vec.PeakFamily()` returns the build's family on either architecture. No gate addresses these rows.
 - **An AVX-512 FMA-ceiling family, measured and not yet adopted** (#199, `internal/vec/peak_family_amd64.go`).
   `avx512Peak` has the shared-operand structure that made `neonPeak` under-read, so `BenchmarkFMAFamily` now also runs
   on amd64. Its members are x44, a 4x4 outer product over 8 distinct registers, and fo, the 4x32/4x16 kernel loop

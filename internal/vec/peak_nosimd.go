@@ -12,3 +12,5 @@ func vectorPeakKernels() []PeakKernel { return nil }
 
 // vectorPeakKernels64 is the float64 complement, for the same reason.
 func vectorPeakKernels64() []PeakKernel64 { return nil }
+
+func peakFamily() []PeakKernel { return nil }

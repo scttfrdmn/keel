@@ -293,3 +293,5 @@ func neonPeakTileD(kc int, a, b, c []float64, ldc int) {
 	archsimd.LoadFloat64x2Array((*[2]float64)(r2[8:10])).Add(c2_4).StoreArray((*[2]float64)(r2[8:10]))
 	archsimd.LoadFloat64x2Array((*[2]float64)(r2[10:12])).Add(c2_5).StoreArray((*[2]float64)(r2[10:12]))
 }
+
+func peakFamily() []PeakKernel { return PeakFamilyNEON() }

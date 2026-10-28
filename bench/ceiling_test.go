@@ -270,6 +270,23 @@ func BenchmarkCeiling(b *testing.B) {
 			})
 		}
 	})
+	// Every member of this build's FMA-ceiling family at the same thread counts (#200): the
+	// compute arm runs the family's canonical member, so this is the per-host witness that
+	// it is still the family's maximum at 8 threads, where it had only been checked at 1.
+	// No gate addresses these rows; gate-p5 names its ceilings exactly (compute_name).
+	if fam := vec.PeakFamily(); len(fam) > 0 {
+		b.Run("family", func(b *testing.B) {
+			for _, k := range fam {
+				b.Run(k.Name, func(b *testing.B) {
+					for _, procs := range streamThreads {
+						b.Run(fmt.Sprint("threads=", procs), func(b *testing.B) {
+							computeArm(b, procs, k)
+						})
+					}
+				})
+			}
+		})
+	}
 	b.Run("stream", func(b *testing.B) {
 		for _, c := range streamCases() {
 			b.Run(c.name, func(b *testing.B) {
