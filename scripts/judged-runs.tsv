@@ -74,3 +74,5 @@ Neoverse-V1	ceil8	119b673	2026-10-05	keel-gvt3	archive/arm64-ceil8-transition/be
 AMD EPYC 9R45	ceil8	628c38a	2026-10-11	keel-zen5	archive/strsm-refresh-amd64-r1/bench-gate-p5-628c38a-keel-zen5-20261011T204552Z-1.txt
 AMD EPYC 9R14	ceil8	628c38a	2026-10-11	keel-zen4	archive/strsm-refresh-amd64-r1/bench-gate-p5-628c38a-keel-zen4-20261011T204552Z-2.txt
 Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	ceil8	628c38a	2026-10-11	keel-skx	archive/strsm-refresh-amd64-r1/bench-gate-p5-628c38a-keel-skx-20261011T204552Z-3.txt
+Neoverse-V2	famax	085f23e	2026-10-28	keel-gvt4	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt4-20261028T193133Z-1.txt
+Neoverse-V1	famax	085f23e	2026-10-28	keel-gvt3	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt3-20261028T193133Z-2.txt

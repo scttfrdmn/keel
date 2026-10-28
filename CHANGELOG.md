@@ -196,6 +196,16 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **The README's Neoverse rows are re-derived in era `famax`, and the era closes** (#200, `archive/p5-arm64-famax/`).
+  Judged r2 (`37d7c13`) was the first run against the 47.0 bar: 51 PASS / 2 FAIL, with all eight share rows passing
+  (the tightest, V2 Strsm, at 49.8%) and the only FAILs criterion 9 on the stale rows. Every r2 prediction held. With
+  `5x16-pb/neon` and the family-max denominator, the 18 Neoverse rows are pooled over N=2. Sgemm 1T is 58.78 (V1) and
+  65.39 (V2) GFLOP/s, at 75.2% and 77.5% of a 1-thread peak of 78.16 and 84.42. The old rows were 34.39 and 37.33,
+  at 83.0% and 60.3% of 41.42 and 61.87. The 27 amd64 rows are byte-identical.
+  - **Baselines landed over N=2**, from the gate's own candidates: 48 L1 rate rows, all inside the 5% same-claim band
+    (widest 3.52%, none held), plus `peak/5x16-pb/neon/kc=128` at 86.25 (V1) and 81.3 (V2), and both hosts' witness
+    rows. All 50 resolve `registered` through `baseline_state` with the production arguments.
+  - **The under-review note now covers only Skylake-SP**, whose AVX-512 peak under-reads by 12.5% (#199).
 - **Era `famax`'s share bar is typed: `CEIL_FRACTION = 47.0` for arm64** (#200; DESIGN.md §4/P5). It comes from the
   founding run (judged r1, `085f23e`, `archive/p5-arm64-famax/`) by the precedent construction: the lowest of eight
   admissible rows net of both intervals is keel-gvt4 Strsm at 49.6, less the 2.6-point margin. That is stricter than

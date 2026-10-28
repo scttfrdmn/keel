@@ -60,3 +60,7 @@ Neoverse-V1	ceil8	3745b72	archive/strsm-refresh-arm64-r1/gate-p5-arm64-strsm-r1-
 Neoverse-V2	ceil8	3745b72	archive/strsm-refresh-arm64-r1/gate-p5-arm64-strsm-r1-3745b72.log	archive/strsm-refresh-arm64-r1/bench-gate-p5-3745b72-keel-gvt4-20261012T005051Z-1.txt	canonical	arm64
 Neoverse-V1	ceil8	5948dda	archive/strsm-refresh-arm64-r2/gate-p5-arm64-strsm-r2-5948dda.log	archive/strsm-refresh-arm64-r2/bench-gate-p5-5948dda-keel-gvt3-20261012T173742Z-2.txt	canonical	arm64
 Neoverse-V2	ceil8	5948dda	archive/strsm-refresh-arm64-r2/gate-p5-arm64-strsm-r2-5948dda.log	archive/strsm-refresh-arm64-r2/bench-gate-p5-5948dda-keel-gvt4-20261012T173742Z-1.txt	canonical	arm64
+Neoverse-V2	famax	085f23e	archive/p5-arm64-famax/judged-r1-085f23e.log	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt4-20261028T193133Z-1.txt	canonical	arm64
+Neoverse-V1	famax	085f23e	archive/p5-arm64-famax/judged-r1-085f23e.log	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt3-20261028T193133Z-2.txt	canonical	arm64
+Neoverse-V2	famax	37d7c13	archive/p5-arm64-famax/judged-r2-37d7c13.log	archive/p5-arm64-famax/bench-gate-p5-37d7c13-keel-gvt4-20261028T212326Z-1.txt	canonical	arm64
+Neoverse-V1	famax	37d7c13	archive/p5-arm64-famax/judged-r2-37d7c13.log	archive/p5-arm64-famax/bench-gate-p5-37d7c13-keel-gvt3-20261028T212326Z-2.txt	canonical	arm64
