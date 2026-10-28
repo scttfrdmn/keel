@@ -86,7 +86,7 @@ func mat64(rows, cols int) []float64 {
 func BenchmarkBlocking64(b *testing.B) {
 	const n = 2048
 	flops := 2 * float64(n) * float64(n) * float64(n)
-	defer func(kc, mc, nc int) { KC, MC, NC = kc, mc, nc }(KC, MC, NC)
+	defer func(kc, mc, nc, kp, mp int) { KC, MC, NC, KCPB, MCPB = kc, mc, nc, kp, mp }(KC, MC, NC, KCPB, MCPB)
 	kcs := grid64(b, "KEEL_BLOCKING64_KC", []int{96, 128, 192, 256, 384, 512})
 	mcs := grid64(b, "KEEL_BLOCKING64_MC", []int{48, 72, 96, 144, 288})
 	ncs := grid64(b, "KEEL_BLOCKING64_NC", []int{512, 1024, 2048})
@@ -96,7 +96,7 @@ func BenchmarkBlocking64(b *testing.B) {
 			for _, mc := range mcs {
 				for _, nc := range ncs {
 					b.Run(fmt.Sprintf("%s/kc=%d/mc=%d/nc=%d", kn.ID(), kc, mc, nc), func(b *testing.B) {
-						KC, MC, NC = kc, mc, nc
+						KC, MC, NC, KCPB, MCPB = kc, mc, nc, kc, mc // the grid binds pre-broadcast kernels too
 						b.ResetTimer()
 						for i := 0; i < b.N; i++ {
 							Gemm(kn, false, false, n, n, n, 1, am, n, bm, n, 0, c, n)

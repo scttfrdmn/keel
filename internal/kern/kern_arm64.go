@@ -58,6 +58,20 @@ func vectorKernels() []Kernel {
 		// NR=24, since 4x16 divides 2048 exactly while 3x24 pays both an M- and an
 		// N-fringe.
 		{Name: NEON, MR: 3, NR: 24, Unroll: 2, Fn: vec.Kernel3x24, InsnsPerFMA: 148.0 / 36},
+		// PROMOTED 2026-10-27 (#198): the pre-broadcast-A kernels, A packed with each element
+		// replicated across the 4 lanes (ALanes) so a row's multiplicand is one q-load, not
+		// the 3-op BroadcastFloat32x4 (golang/go#81352). Counts are spill-audit's (`shapegen
+		// -arch arm64 -verify`): 249/160 and 264/168. Preferred picks 5x16 under both
+		// classes (1.556 < 4.111 insns/FMA, 0.45 < 0.5 mem-ops/FMA).
+		//
+		// On measured rate, by two pre-registered rules (archive/neon-pb/): kernel level,
+		// 5x16/8 reached 86.2/81.5/81.4% of the family-max peak on Neoverse V1/V2/V3
+		// against 3x24's 45.5-46.4%; and in the nest, single-thread Sgemm n=2048, 5x16 at
+		// its own blocking (block.KCPB/MCPB) beat 3x24 at its shipped blocking by
+		// +67.8/+70.0/+70.5%, worst round over best on every host (def1b79). 7x12 is the
+		// kernel-rate alternate.
+		{Name: NEON, MR: 5, NR: 16, Unroll: 8, Fn: vec.KernelPB5x16, InsnsPerFMA: 249.0 / 160, ALanes: 4},
+		{Name: NEON, MR: 7, NR: 12, Unroll: 8, Fn: vec.KernelPB7x12, InsnsPerFMA: 264.0 / 168, ALanes: 4},
 	}
 }
 
@@ -87,18 +101,11 @@ func referenceTiles() []Kernel {
 		{Name: NEON, MR: 8, NR: 12, Unroll: 1, Fn: vec.Kernel8x12},
 		{Name: NEON, MR: 8, NR: 16, Unroll: 1, Fn: vec.Kernel8x16},
 		{Name: NEON, MR: 4, NR: 32, Unroll: 1, Fn: vec.Kernel4x32},
-		// Not spilling tiles: the pre-broadcast-A kernels (#198, the P2 shaping step), A
-		// packed with each element replicated across the 4 lanes so a row's multiplicand
-		// is one q-load, not the 3-op BroadcastFloat32x4. Counts are spill-audit's
-		// (`shapegen -arch arm64 -verify`): 249/160, 249/160, 264/168. 5x16/8 is the shape
-		// archive/neon-pb/'s pre-registered rule selected by kernel rate. They are measured
-		// here and dispatched nowhere until a full Sgemm witness shows the lanes-times
-		// larger A pack pays for itself in the nest, as 3x24's promotion required
-		// (TestPreferredPicksTheMeasuredWinnerPerClass). 4x20 also ties 5x16 exactly on both
-		// of Preferred's axes, so at most one of the two can ever be a dispatch candidate.
-		{Name: NEON, MR: 5, NR: 16, Unroll: 8, Fn: vec.KernelPB5x16, InsnsPerFMA: 249.0 / 160, ALanes: 4},
+		// Not a spilling tile: the pre-broadcast 4x20/8 (#198), measured and never
+		// dispatched, because it ties the dispatched 5x16/8 exactly on both of Preferred's
+		// axes (249/160 insns/FMA, 0.45 mem-ops/FMA): as a candidate it would make the
+		// choice depend on list order (TestPreferredIsOrderIndependent).
 		{Name: NEON, MR: 4, NR: 20, Unroll: 8, Fn: vec.KernelPB4x20, InsnsPerFMA: 249.0 / 160, ALanes: 4},
-		{Name: NEON, MR: 7, NR: 12, Unroll: 8, Fn: vec.KernelPB7x12, InsnsPerFMA: 264.0 / 168, ALanes: 4},
 	}
 }
 
@@ -113,6 +120,11 @@ func vectorKernels64() []Kernel64 {
 		{Name: NEON, MR: 8, NR: 4, Unroll: 1, Fn: vec.KernelD8x4, InsnsPerFMA: 94.0 / 16},
 		{Name: NEON, MR: 4, NR: 8, Unroll: 1, Fn: vec.KernelD4x8, InsnsPerFMA: 80.0 / 16},
 		{Name: NEON, MR: 3, NR: 12, Unroll: 2, Fn: vec.KernelD3x12, InsnsPerFMA: 148.0 / 36},
+		// PROMOTED 2026-10-27 (#198): pre-broadcast A at float64 (ALanes 2). Kernel level
+		// 86.2/81.6/81.4% of peak (V1/V2/V3); nest, 5x8 at KCPB=256/MCPB=72 beat 3x12 at its
+		// shipped blocking by +75.6/+61.6/+69.8% (archive/neon-pb/, def1b79).
+		{Name: NEON, MR: 5, NR: 8, Unroll: 8, Fn: vec.KernelDPB5x8, InsnsPerFMA: 249.0 / 160, ALanes: 2},
+		{Name: NEON, MR: 7, NR: 6, Unroll: 8, Fn: vec.KernelDPB7x6, InsnsPerFMA: 264.0 / 168, ALanes: 2},
 	}
 }
 
@@ -126,10 +138,7 @@ func referenceTiles64() []Kernel64 {
 		{Name: NEON, MR: 8, NR: 6, Unroll: 1, Fn: vec.KernelD8x6},
 		{Name: NEON, MR: 8, NR: 8, Unroll: 1, Fn: vec.KernelD8x8},
 		{Name: NEON, MR: 4, NR: 16, Unroll: 1, Fn: vec.KernelD4x16},
-		// The pre-broadcast-A kernels at float64 (#198), ALanes 2, measured and not yet
-		// dispatched, for the reason referenceTiles gives.
-		{Name: NEON, MR: 5, NR: 8, Unroll: 8, Fn: vec.KernelDPB5x8, InsnsPerFMA: 249.0 / 160, ALanes: 2},
+		// The pre-broadcast 4x10/8: referenceTiles' 4x20 at float64, for the same reason.
 		{Name: NEON, MR: 4, NR: 10, Unroll: 8, Fn: vec.KernelDPB4x10, InsnsPerFMA: 249.0 / 160, ALanes: 2},
-		{Name: NEON, MR: 7, NR: 6, Unroll: 8, Fn: vec.KernelDPB7x6, InsnsPerFMA: 264.0 / 168, ALanes: 2},
 	}
 }

@@ -143,8 +143,10 @@ KEEL_ELEM="${KEEL_ELEM:-f32}"
 # kernel was measured (the float64 NEON peak was: orion M4 Pro, 63.21-63.66 GFLOP/s,
 # 0.496 of float32). Thresholds stay shared. The arm64 peak ceilings are arm64's own
 # audits: neonPeak and neonPeakD 35/16 = 2.1875, scalarPeak and scalarPeakD 13/10 =
-# 1.30 (not amd64's 1.15). SWEEP_BEST_IPF is shapegen -arch arm64's frontier, 4.111
-# at both elements (3x24/2 and 3x12/2). Hosts must be linux/arm64: the binaries are
+# 1.30 (not amd64's 1.15). SWEEP_BEST_IPF is shapegen -arch arm64's frontier: 4.111
+# (3x24/2, 3x12/2) until #198 added the pre-broadcast-A form to the space, 1.556
+# since (4x20/8, 4x10/8; the dispatched 5x16-pb/5x8-pb tie it). The peak loops moved
+# to the family-max neonPeakTile(D) in the same issue. Hosts must be linux/arm64: the binaries are
 # cross-compiled with GOOS=linux (remote.sh, KEEL_GOARCH).
 KEEL_ARCH="${KEEL_ARCH:-amd64}"
 KPFX="Kernel/" COVER_MARK=keel-kern-backends-exercised ISA_TAG=avx512
@@ -159,21 +161,21 @@ case "$KEEL_ARCH/$KEEL_ELEM" in
     GATE_SHAPES="2x16:KernelD2x16 4x16:KernelD4x16" GATE_PEAK_FUNC="avx512PeakD"
     BENCH_FILTER='FMARoof64|Tile64/.*/.*/kc=128' ;;
   arm64/f32)
-    KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24" REF_FUNCS="Kernel8x12" ISA_TAG=neon
+    KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24,KernelPB5x16,KernelPB7x12" REF_FUNCS="Kernel8x12" ISA_TAG=neon
     PEAK_FUNCS="neonPeakTile,scalarPeak" PEAK_IPF_CEILINGS="neonPeakTile:1.333334 scalarPeak:1.30"
-    SWEEP_BEST_IPF=4.111
-    GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128 Kernel/3x24/neon/kc=128"
+    SWEEP_BEST_IPF=1.556
+    GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128 Kernel/3x24/neon/kc=128 Kernel/5x16-pb/neon/kc=128 Kernel/7x12-pb/neon/kc=128"
     GATE_REF_KERNEL="Kernel/8x12/neon/kc=128" GATE_PEAK="Peak/neon"
-    GATE_SHAPES="8x8:Kernel8x8 4x16:Kernel4x16 3x24:Kernel3x24" GATE_PEAK_FUNC="neonPeakTile"
+    GATE_SHAPES="8x8:Kernel8x8 4x16:Kernel4x16 3x24:Kernel3x24 5x16-pb:KernelPB5x16 7x12-pb:KernelPB7x12" GATE_PEAK_FUNC="neonPeakTile"
     FAMILY="FMAFamily/f32" BENCH_FILTER="$BENCH_FILTER|$FAMILY" ;;
   arm64/f64)
-    KERN_FUNCS="KernelD8x4,KernelD4x8,KernelD3x12" REF_FUNCS="KernelD8x6" ISA_TAG=neon
+    KERN_FUNCS="KernelD8x4,KernelD4x8,KernelD3x12,KernelDPB5x8,KernelDPB7x6" REF_FUNCS="KernelD8x6" ISA_TAG=neon
     PEAK_FUNCS="neonPeakTileD,scalarPeakD" PEAK_IPF_CEILINGS="neonPeakTileD:1.333334 scalarPeakD:1.30"
-    SWEEP_BEST_IPF=4.111
+    SWEEP_BEST_IPF=1.556
     KPFX="Tile64/" COVER_MARK=keel-kern64-backends-exercised
-    GATE_KERNELS="Tile64/8x4/neon/kc=128 Tile64/4x8/neon/kc=128 Tile64/3x12/neon/kc=128"
+    GATE_KERNELS="Tile64/8x4/neon/kc=128 Tile64/4x8/neon/kc=128 Tile64/3x12/neon/kc=128 Tile64/5x8-pb/neon/kc=128 Tile64/7x6-pb/neon/kc=128"
     GATE_REF_KERNEL="Tile64/8x6/neon/kc=128" GATE_PEAK="FMARoof64/neon"
-    GATE_SHAPES="8x4:KernelD8x4 4x8:KernelD4x8 3x12:KernelD3x12" GATE_PEAK_FUNC="neonPeakTileD"
+    GATE_SHAPES="8x4:KernelD8x4 4x8:KernelD4x8 3x12:KernelD3x12 5x8-pb:KernelDPB5x8 7x6-pb:KernelDPB7x6" GATE_PEAK_FUNC="neonPeakTileD"
     FAMILY="FMAFamily/f64" BENCH_FILTER="FMARoof64|Tile64/.*/.*/kc=128|$FAMILY" ;;
   *) echo "gate-p2: KEEL_ARCH/KEEL_ELEM must be amd64|arm64 / f32|f64, not '$KEEL_ARCH/$KEEL_ELEM'" >&2; exit 2 ;;
 esac

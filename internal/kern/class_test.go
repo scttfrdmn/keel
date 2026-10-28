@@ -46,6 +46,14 @@ func TestPreferredPicksTheMeasuredWinnerPerClass(t *testing.T) {
 	// (1/3+4/24 == 1/4+4/16 == 0.5 exactly), so ClassFMA ties on its primary axis and falls
 	// through to the same tie-break ClassIssue reads first (#170).
 	//
+	// arm64's expectation moved 3x24 -> 5x16 on 2026-10-27 with #198's promotion of the
+	// pre-broadcast-A kernels. The witness is archive/neon-pb/: kernel level, 5x16/8 at
+	// 81.4-86.2% of the family-max peak on Neoverse V1/V2/V3 against 3x24's 45.5-46.4%;
+	// and in the nest, single-thread Sgemm n=2048, +67.8/+70.0/+70.5% over 3x24 at its
+	// shipped blocking, worst round over best on every host (def1b79). Both classes
+	// agree because 5x16 is leaner on both axes (1.556 < 4.111 insns/FMA, 0.45 < 0.5
+	// mem-ops/FMA). 4x20 ties it on both and is therefore not a candidate (kern_arm64.go).
+	//
 	// The superseded expectation is kept legible because it was correct when written: 4x16
 	// beat 8x8 by +32% at full Sgemm on castor and audits leaner on both axes
 	// (5.00<5.75 insns/FMA, 0.5<0.625 mem-ops). 3x24 was not in the registry to be ranked
@@ -55,7 +63,7 @@ func TestPreferredPicksTheMeasuredWinnerPerClass(t *testing.T) {
 		kern.ClassFMA:   "4x32", // fewest memory ops per FMA
 	}
 	if vec[0].Name == kern.NEON {
-		want = map[kern.Class]string{kern.ClassIssue: "3x24", kern.ClassFMA: "3x24"}
+		want = map[kern.Class]string{kern.ClassIssue: "5x16", kern.ClassFMA: "5x16"}
 	}
 	for _, class := range kern.Classes() {
 		k, ok := kern.Preferred(class, vec)

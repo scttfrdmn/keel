@@ -197,10 +197,12 @@ func (k Kernel) Tile() string { return fmt.Sprintf("%dx%d", k.MR, k.NR) }
 // ID names one kernel uniquely: shape then backend, e.g. "4x32/avx512". This is
 // the string the benchmark sub-names and the gate's thresholds are keyed on.
 //
-// A pre-broadcast kernel's backend reads "<name>-pb" (#198): its A-panel contract
-// differs from the conventional kernel of the same shape, so the two must never
-// share an ID, which Kernels() dedupes on and every benchmark row is named by.
-func (k Kernel) ID() string { return k.Tile() + "/" + k.Name + pbSuffix(k.ALanes) }
+// A pre-broadcast kernel's tile reads "<MRxNR>-pb" (#198), e.g. "5x16-pb/neon": its
+// A-panel contract differs from the conventional kernel of the same shape, so the two
+// must never share an ID, which Kernels() dedupes on and every benchmark row is named
+// by. The mark is on the tile half, not the backend half, because consumers parse
+// the part after the slash as a backend name (TestP5Dispatch).
+func (k Kernel) ID() string { return k.Tile() + pbSuffix(k.ALanes) + "/" + k.Name }
 
 func pbSuffix(lanes int) string {
 	if lanes > 1 {

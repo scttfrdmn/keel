@@ -125,6 +125,15 @@ var (
 	MC = 144
 	// NC is the columns of B packed at once, sized for L3.
 	NC = 4096
+
+	// KCPB and MCPB are KC and MC for pre-broadcast-A kernels (kern.Kernel.ALanes > 1,
+	// #198), whose packed A block is ALanes times the bytes. Measured, not derived:
+	// archive/neon-pb/'s pre-registered nest witness (def1b79, single-thread Sgemm
+	// n=2048 on Neoverse V1/V2/V3) chose KC=384, MC=72 for 5x16/neon-pb at float32;
+	// tools/f64gen overrides KCPB to 256 at float64 by the same witness. Separate vars,
+	// so amd64 and the conventional NEON kernels keep KC and MC unchanged.
+	KCPB = 384
+	MCPB = 72
 )
 
 // Params reports the blocking parameters actually in force for kn: the vars
@@ -132,7 +141,11 @@ var (
 // the gate's provenance marker instead of restating the constants and hoping
 // they match.
 func Params(kn kern.Kernel) (kc, mc, nc int) {
-	return KC, wholeTiles(MC, kn.MR), wholeTiles(NC, kn.NR)
+	kc, mc = KC, MC
+	if kn.ALanes > 1 {
+		kc, mc = KCPB, MCPB
+	}
+	return kc, wholeTiles(mc, kn.MR), wholeTiles(NC, kn.NR)
 }
 
 // plan is the blocking parameters clamped to one problem's shape: the vars above

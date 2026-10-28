@@ -636,10 +636,12 @@ func space() []Shape {
 	forms := []Form{Broadcast, Permute}
 	vMax := 4
 	if isa.Arch == "arm64" {
-		forms = []Form{Broadcast}
+		// PB since #198: the dispatched NEON kernels are pre-broadcast-A shapes, so the
+		// frontier the gate reconciles against must be the space they were chosen from.
+		forms = []Form{Broadcast, PB}
 		vMax = 8
 	}
-	if isa.Elem == "f64" {
+	if isa.Elem == "f64" && isa.Arch != "arm64" {
 		forms = []Form{Broadcast}
 	}
 	if spaceForm != nil {

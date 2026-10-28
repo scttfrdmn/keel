@@ -184,6 +184,14 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **arm64 dispatches the pre-broadcast-A NEON kernels** (#198). `5x16-pb/neon` at float32 and `5x8-pb/neon` at float64
+  replace 3x24 and 3x12 as `kern.Preferred`'s pick under both classes. The promotion is pre-registered, and its witness
+  is single-thread Sgemm at n=2048 through the nest: +67.8/+70.0/+70.5% (V1/V2/V3), and Dgemm +75.6/+61.6/+69.8%
+  (`archive/neon-pb/`, exploration tier). Pre-broadcast kernels get their own blocking, `block.KCPB`/`MCPB`
+  (384/72 at float32, 256/72 at float64 via f64gen); amd64's blocking and the conventional kernels' are unchanged.
+  `shapegen`'s arm64 space now includes the pre-broadcast form (frontier 1.556), and gate-p2's arm64 arms judge the new
+  shapes. A pre-broadcast kernel's ID marks its tile, as in `5x16-pb/neon`, because consumers parse the part after the
+  slash as a backend name.
 - **The arm64 P2 go/no-go is RED against the corrected denominator** (#198, judged `ba29105`, `archive/p2-arm64-family/`).
   The shipped NEON kernels reach 45.5–46.4% of the family-max peak on Neoverse V1/V2/V3 at both elements, against
   the 55% floor. Every pre-registered prediction held. Their kernel rates reproduce the earlier judged runs to

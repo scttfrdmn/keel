@@ -34,8 +34,8 @@ import (
 // structure under test is the loop bounds, and 4096-wide blocks would give every
 // case exactly one of everything.
 func TestNestBlocksDriveTheSameGemm(t *testing.T) {
-	defer func(kc, mc, nc int) { KC, MC, NC = kc, mc, nc }(KC, MC, NC)
-	KC, MC, NC = 24, 16, 64
+	defer func(kc, mc, nc, kp, mp int) { KC, MC, NC, KCPB, MCPB = kc, mc, nc, kp, mp }(KC, MC, NC, KCPB, MCPB)
+	KC, MC, NC, KCPB, MCPB = 24, 16, 64, 24, 16
 
 	shapes := []struct{ m, n, k int }{
 		{16, 64, 24},   // exactly one block in each dimension

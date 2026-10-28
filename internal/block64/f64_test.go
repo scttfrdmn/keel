@@ -55,9 +55,9 @@ func gamma64(k int) float64 { return float64(k) * u64 / (1 - float64(k)*u64) }
 // the triangular routines, and restores them when the test ends.
 func smallBlocks(t *testing.T, mb int) {
 	t.Helper()
-	kc, mc, nc, b := KC, MC, NC, MB
-	t.Cleanup(func() { KC, MC, NC, MB = kc, mc, nc, b })
-	KC, MC, NC, MB = 24, 16, 64, mb
+	kc, mc, nc, b, kp, mp := KC, MC, NC, MB, KCPB, MCPB
+	t.Cleanup(func() { KC, MC, NC, MB, KCPB, MCPB = kc, mc, nc, b, kp, mp })
+	KC, MC, NC, MB, KCPB, MCPB = 24, 16, 64, mb, 24, 16
 }
 
 // f64Kernels are the scalar reference at the tile docs/f64-design.md §2 predicts

@@ -101,6 +101,12 @@ var varOverrides = map[string]map[string]string{
 		// the top of the swept grid, so a larger KC is untested. MC, NC and MB are
 		// unchanged: no other value cleared the rule.
 		"KC": "512",
+		// KCPB = 256 (float32: 384), the pre-broadcast-A kernels' depth (#198), by the
+		// rule pre-registered in archive/neon-pb/nest-prereg.md: 5x8/neon-pb at KC=256,
+		// MC=72 had the best geomean over Neoverse V1/V2/V3 (c7g/c8g/c9g 4xlarge,
+		// exploration tier, def1b79), alone within 1%, and beat the shipped 3x12 at its
+		// shipped blocking by +75.6/+61.6/+69.8%. MCPB (72) is float32's value already.
+		"KCPB": "256",
 	},
 }
 

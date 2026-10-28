@@ -20,8 +20,8 @@ import (
 // should not. Small blocks put several blocks and both fringes in every call; the
 // odd tile puts a fringe on both axes.
 func TestPreBroadcastIsBitIdentical(t *testing.T) {
-	defer func(kc, mc, nc, mb int) { KC, MC, NC, MB = kc, mc, nc, mb }(KC, MC, NC, MB)
-	KC, MC, NC, MB = 24, 16, 64, 16
+	defer func(kc, mc, nc, mb, kp, mp int) { KC, MC, NC, MB, KCPB, MCPB = kc, mc, nc, mb, kp, mp }(KC, MC, NC, MB, KCPB, MCPB)
+	KC, MC, NC, MB, KCPB, MCPB = 24, 16, 64, 16, 24, 16
 	ax := func(alpha float32, x, y []float32) {
 		for i, v := range x {
 			y[i] += alpha * v
@@ -127,5 +127,19 @@ func TestPreBroadcastIsBitIdentical(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// TestParamsRoutesPreBroadcastBlocking pins which vars a kernel's blocking reads:
+// KCPB/MCPB for a pre-broadcast kernel, KC/MC for every other, so the #198 values
+// cannot leak into amd64's or the conventional NEON kernels' blocking.
+func TestParamsRoutesPreBroadcastBlocking(t *testing.T) {
+	defer func(kc, mc, kp, mp int) { KC, MC, KCPB, MCPB = kc, mc, kp, mp }(KC, MC, KCPB, MCPB)
+	KC, MC, KCPB, MCPB = 100, 120, 40, 60
+	if kc, mc, _ := Params(kern.ScalarKernel(5, 16)); kc != 100 || mc != 120 {
+		t.Errorf("conventional 5x16: kc, mc = %d, %d, want 100, 120", kc, mc)
+	}
+	if kc, mc, _ := Params(kern.ScalarKernelLanes(5, 16, 4)); kc != 40 || mc != 60 {
+		t.Errorf("pre-broadcast 5x16: kc, mc = %d, %d, want 40, 60", kc, mc)
 	}
 }

@@ -264,7 +264,7 @@ func BenchmarkNest(b *testing.B) {
 func BenchmarkBlocking(b *testing.B) {
 	const n = 2048
 	flops := 2 * float64(n) * float64(n) * float64(n)
-	defer func(kc, mc, nc int) { KC, MC, NC = kc, mc, nc }(KC, MC, NC)
+	defer func(kc, mc, nc, kp, mp int) { KC, MC, NC, KCPB, MCPB = kc, mc, nc, kp, mp }(KC, MC, NC, KCPB, MCPB)
 	kcs := benchGrid(b, "KEEL_BLOCKING_KC", []int{128, 256, 384, 512})
 	mcs := benchGrid(b, "KEEL_BLOCKING_MC", []int{72, 144, 288})
 	ncs := benchGrid(b, "KEEL_BLOCKING_NC", []int{512, 1024, 2048})
@@ -274,7 +274,7 @@ func BenchmarkBlocking(b *testing.B) {
 			for _, mc := range mcs {
 				for _, nc := range ncs {
 					b.Run(fmt.Sprintf("%s/kc=%d/mc=%d/nc=%d", kn.ID(), kc, mc, nc), func(b *testing.B) {
-						KC, MC, NC = kc, mc, nc
+						KC, MC, NC, KCPB, MCPB = kc, mc, nc, kc, mc // the grid binds pre-broadcast kernels too
 						b.ResetTimer()
 						for i := 0; i < b.N; i++ {
 							Gemm(kn, false, false, n, n, n, 1, am, n, bm, n, 0, c, n)
@@ -998,11 +998,11 @@ func BenchmarkFeed(b *testing.B) {
 	const n = 2048
 	m, k := n, n
 	flops := 2 * float64(m) * float64(n) * float64(k)
-	defer func(kc, mc, nc int) { KC, MC, NC = kc, mc, nc }(KC, MC, NC)
+	defer func(kc, mc, nc, kp, mp int) { KC, MC, NC, KCPB, MCPB = kc, mc, nc, kp, mp }(KC, MC, NC, KCPB, MCPB)
 	for _, kn := range benchKernels(b) {
 		am, bm, c := benchMat(m, k), benchMat(k, n), benchMat(m, n)
 		for _, kc := range []int{128, 256, 384, 512} {
-			KC = kc
+			KC, KCPB = kc, kc
 			// plan() clamps to the problem, so what this point actually ran at is
 			// read back from it rather than assumed to be the loop variable.
 			pkc, pmc, pnc := plan(kn, m, n, k)
