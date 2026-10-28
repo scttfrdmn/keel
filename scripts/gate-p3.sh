@@ -174,7 +174,7 @@ fi
 P3_BASELINE_REGISTRY="$P3_BASELINE_DIR/host-baselines.tsv"
 P3_BASELINE_WITNESS="$P3_BASELINE_DIR/judged-runs.tsv"
 P3_BASELINE_ERAS="$P3_BASELINE_DIR/measurement-eras.tsv"
-P3_ERA="$(era_current "$P3_BASELINE_ERAS")"
+P3_ERA="$(era_current "$P3_BASELINE_ERAS" "${KEEL_GOARCH:-amd64}")" # eras are per-arch (§5 rule 17, #200)
 # ---- THE FOUR PIECES OF STATE THIS GATE LACKED, so it can PROPOSE a candidate row (#178)
 #
 # Until 2026-10-07 this gate printed "RECORDED as its candidate baseline" and wrote no row

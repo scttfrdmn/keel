@@ -122,6 +122,34 @@ is 'an unnamed era resolves nothing' "$(era_current "$T/led-unnamed.tsv")" ''
 is 'a trailing blank line does not unresolve the era' \
    "$(printf '\n' >>"$LED"; era_current "$LED")" "$ERA"
 
+echo "-- era_current scope: an era opens for the hosts whose instrument changed (#200) --"
+# 5a. An arm64-scoped era is arm64's current era and NOT amd64's. The amd64 half is the one
+#     the ruling exists for: opening arm64's era must not hand every amd64 host a BASELINE.
+SC="$T/led-scope.tsv"
+cp "$LED" "$SC"
+printf 'armera\t2026-10-28\tDESIGN.md §5 rule 17\t—\tarm64 instrument changed\tarm64\n' >>"$SC"
+is 'an arm64-scoped era is arm64'"'"'s current era' "$(era_current "$SC" arm64)" armera
+is 'an arm64-scoped era is not amd64'"'"'s: amd64 keeps the era before it' "$(era_current "$SC" amd64)" "$ERA"
+is 'an unscoped row is every arch'"'"'s era' "$(era_current "$LED" arm64)" "$ERA"
+# 5b. A caller that forgets ARCH resolves nothing once any row is scoped.
+is 'an empty ARCH resolves nothing beside a scoped row' "$(era_current "$SC")" ''
+# 5c. The guard holds per scope: a malformed arm64 row unresolves arm64 without falling
+#     back, and leaves amd64 untouched.
+cp "$SC" "$T/led-scope-bad.tsv"
+printf 'armbad\t2026-10-28\t\t—\tno amendment\tarm64\n' >>"$T/led-scope-bad.tsv"
+is 'a malformed arm64 era resolves nothing for arm64, and does not fall back' "$(era_current "$T/led-scope-bad.tsv" arm64)" ''
+is 'a malformed arm64 era leaves amd64'"'"'s era alone' "$(era_current "$T/led-scope-bad.tsv" amd64)" "$ERA"
+# 5d. A scope this reader does not know is everyone'"'"'s row and nobody'"'"'s era: a typo can
+#     neither drop out of every scope nor open an era fleet-wide.
+cp "$SC" "$T/led-scope-typo.tsv"
+printf 'typoera\t2026-10-28\tDESIGN.md §5 rule 17\t—\ta typo in the scope\tarm\n' >>"$T/led-scope-typo.tsv"
+is 'an unknown scope resolves nothing for arm64' "$(era_current "$T/led-scope-typo.tsv" arm64)" ''
+is 'an unknown scope resolves nothing for amd64' "$(era_current "$T/led-scope-typo.tsv" amd64)" ''
+# 5e. The shipped ledger, read as the gates read it.
+is 'the shipped ledger: amd64 is in ceil8' "$(era_current scripts/measurement-eras.tsv amd64)" ceil8
+is 'the shipped ledger: arm64 is in famax' "$(era_current scripts/measurement-eras.tsv arm64)" famax
+era_provisional scripts/measurement-eras.tsv famax && ok 'famax is provisional until its transition archive lands' || no 'famax read as landed'
+
 echo "-- era_provisional: a disclosure about the archive, never a permission --"
 # 6. `—` and empty both mean the both-arms transition archive has not landed. The empty
 #    case gets its own ledger because it is a separate branch of the reader, and testing
@@ -304,7 +332,7 @@ is 'the tracked witness index was not written' "$(cksum <scripts/judged-runs.tsv
 #     tree rather than a fixture: gate-p5 FAILs when it does not, so a malformed ledger
 #     should be caught by `make lint` on every push and not by a $24/hr fleet.
 is 'the shipped era ledger resolves an era' \
-   "$([[ -n "$(era_current scripts/measurement-eras.tsv)" ]] && echo yes)" 'yes'
+   "$([[ -n "$(era_current scripts/measurement-eras.tsv amd64)" && -n "$(era_current scripts/measurement-eras.tsv arm64)" ]] && echo yes)" 'yes'
 
 echo "-- baseline_state: the classifier both criteria of the class now share (#119) --"
 # The six states in one place, because #119 gave the RATIO criteria the per-host admission

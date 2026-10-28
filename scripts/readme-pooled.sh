@@ -15,7 +15,9 @@
 # archived two sample sets per host at 6ba6566 differing only in a timestamp, and the wrong one
 # was reached for by hand on 2026-10-09.
 #
-# Era defaults to the current one; pass an era to reduce a different one.
+# With no argument each host is pooled from ITS architecture's current era (column 7 of the
+# manifest, eras being scoped per architecture since #200); pass an era to reduce that one
+# era for every host instead.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/bench.sh
@@ -24,17 +26,21 @@ source scripts/bench.sh
 source scripts/gate-lib.sh
 
 MAN=scripts/readme-archives.tsv
-ERA="${1:-$(era_current scripts/measurement-eras.tsv)}"
-[[ -n "$ERA" ]] || { echo "readme-pooled: no era resolves from scripts/measurement-eras.tsv" >&2; exit 2; }
 [[ -r "$MAN" ]] || { echo "readme-pooled: cannot read $MAN" >&2; exit 2; }
+ERA_AMD64="${1:-$(era_current scripts/measurement-eras.tsv amd64)}"
+ERA_ARM64="${1:-$(era_current scripts/measurement-eras.tsv arm64)}"
+[[ -n "$ERA_AMD64" && -n "$ERA_ARM64" ]] || { echo "readme-pooled: an architecture resolves no era from scripts/measurement-eras.tsv" >&2; exit 2; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 n=0
-awk -F'\t' -v e="$ERA" '/^#/ || $1=="cpu_model" { next } NF>=6 && $2==e && $6=="canonical" { print $1 }' "$MAN" \
+# A row is in scope iff its era is its own architecture's era; a row with no arch column is
+# refused rather than guessed at.
+inscope='/^#/ || $1=="cpu_model" { next } NF>=7 && $6=="canonical" && (($7=="amd64" && $2==ea) || ($7=="arm64" && $2==eb))'
+awk -F'\t' -v ea="$ERA_AMD64" -v eb="$ERA_ARM64" "$inscope"' { print $1 }' "$MAN" \
   | sort -u | while IFS= read -r cpu; do
-  read -r -a arch <<<"$(awk -F'\t' -v c="$cpu" -v e="$ERA" \
-    '/^#/ || $1=="cpu_model" { next } NF>=6 && $1==c && $2==e && $6=="canonical" { printf "%s ", $5 }' "$MAN")"
+  read -r -a arch <<<"$(awk -F'\t' -v c="$cpu" -v ea="$ERA_AMD64" -v eb="$ERA_ARM64" \
+    "$inscope"' && $1==c { printf "%s ", $5 }' "$MAN")"
   [[ "${#arch[@]}" -gt 0 ]] || continue
   n=$((n + 1))
   cat "${arch[@]}" > "$TMP/pool$n.txt"

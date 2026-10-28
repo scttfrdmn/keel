@@ -198,7 +198,7 @@ WITNESS_CANDIDATES="build/witness-candidates-$P5_REV-$RUN_STAMP.tsv"
 # Resolved once, and empty is a legitimate answer meaning "this tree's era ledger does not
 # resolve" — checked as its own criterion below rather than defaulted, because defaulting
 # would judge under whichever era happened to parse.
-P5_ERA="$(era_current "$BASELINE_ERAS")"
+P5_ERA="$(era_current "$BASELINE_ERAS" "${KEEL_GOARCH:-amd64}")" # eras are per-arch (§5 rule 17, #200)
 
 # ONE JUDGED CLASS as of 2026-10-05 (ruled on #177; DESIGN.md §4/P5). There were two
 # (criterion 1, ruled 2026-08-12): GEMM-shaped nests over independent tiles here, and Strsm --

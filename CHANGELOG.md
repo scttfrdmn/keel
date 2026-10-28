@@ -193,6 +193,14 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **Measurement eras are scoped per architecture** (#200, Scott's ruling; DESIGN.md §5 rule 17, 2026-10-28).
+  `measurement-eras.tsv` gains a `scope` column, and `era_current LEDGER ARCH` resolves an architecture's last in-scope
+  era. Era `famax` opens for arm64 alone, for the family-max ceiling instrument and the pre-broadcast kernel; amd64
+  stays in `ceil8`. Both failure edges are closed. An unrecognised scope resolves nothing for anyone, and a missing
+  architecture resolves nothing once any row is scoped. That second rule caught one production caller,
+  `readme-pooled.sh`, which now pools each host from its own architecture's era via a new `arch` column in
+  `readme-archives.tsv`. There are 11 new fixtures, and two mutants are killed: dropping the scope skip hands amd64
+  the arm64 era, and dropping the unknown-scope check lets a typo open an era.
 - **The arm64 P2 go/no-go is GREEN on the pre-broadcast-A kernels** (#198, judged `c9e191f`, `archive/p2-arm64-pb/`).
   28 PASS / 0 FAIL at each element on Neoverse V1/V2/V3. The dispatched 5x16-pb (float32) and 5x8-pb (float64) reach
   81.3–86.2% of the family-max peak net of CI, against 45.5–46.4% for the broadcast kernels they replace, and the

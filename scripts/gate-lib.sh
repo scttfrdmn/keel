@@ -344,7 +344,16 @@ flops_formula() {
 # rather than in gate-p5.sh only because a decision no harness can drive is a
 # decision nothing checks, and scripts/baseline-test.sh drives every branch of these.
 
-# era_current LEDGER — print the current era's id, or nothing at all.
+# era_current LEDGER ARCH — print ARCH's current era id, or nothing at all.
+#
+# An era is scoped (DESIGN.md §5 rule 17, amended 2026-10-28, #200): column 6 names `all`,
+# `amd64` or `arm64`, and a row without it is `all`. ARCH's era is the last row in ITS
+# scope, so an arm64 instrument change opens an era for arm64 hosts only. Every edge fails
+# closed. A scope value this reader does not recognise is in scope for EVERY arch AND
+# resolves nothing: skipping it would judge new readings against the era before it, and
+# honouring it would open an era fleet-wide by typo, so every gate fails loudly on "no era"
+# until it is fixed. An empty ARCH resolves nothing once any row is scoped, so a caller
+# that forgets the argument cannot fall through to another architecture's era.
 #
 # The current era is the LAST data row, and it is validated rather than searched for:
 # a ledger whose final row is malformed, unnamed, or cites no amendment yields NOTHING,
@@ -355,13 +364,19 @@ flops_formula() {
 # the two conditions), so an era with no cited amendment is not an era: that is the
 # loophole guard, and it lives here because a guard only in prose is a wish.
 era_current() {
-  local tsv="$1"
+  local tsv="$1" arch="${2:-}"
   [[ -r "$tsv" ]] || return 0
-  awk -F'\t' '
+  awk -F'\t' -v a="$arch" '
     /^#/ || /^[[:space:]]*$/ || $1 == "era" { next }
-    { last = $0; n = NF }
+    {
+      s = (NF >= 6 && $6 != "") ? $6 : "all"
+      if (s != "all") scoped = 1
+      known = (s == "all" || s == "amd64" || s == "arm64")
+      if (a != "" && known && s != "all" && s != a) next
+    }
+    { last = $0; n = NF; lastknown = known }
     END {
-      if (last == "") exit 0
+      if (last == "" || (a == "" && scoped) || !lastknown) exit 0
       split(last, f, "\t")
       # No `f[1] != ""` conjunct: an unnamed era would print an empty line, which every
       # caller already reads as "no era" — the guard was unkillable by mutation because it

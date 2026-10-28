@@ -272,7 +272,7 @@ preflight() {
   # reader, from the file the substitution will copy.
   # shellcheck source=scripts/gate-lib.sh
   source scripts/gate-lib.sh
-  ERA="$(era_current scripts/measurement-eras.tsv)"
+  ERA="$(era_current scripts/measurement-eras.tsv "${KEEL_GOARCH:-amd64}")"
   if [[ -z "$ERA" ]]; then
     refuse "exercise-baseline: no era resolves from scripts/measurement-eras.tsv, so gate-p5" \
            "  would FAIL every reading for want of a scope and no state below would be the" \
