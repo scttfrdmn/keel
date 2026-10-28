@@ -9,6 +9,12 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **An AVX-512 FMA-ceiling family, measured and not yet adopted** (#199, `internal/vec/peak_family_amd64.go`).
+  `avx512Peak` has the shared-operand structure that made `neonPeak` under-read, so `BenchmarkFMAFamily` now also runs
+  on amd64. Its members are x44, a 4x4 outer product over 8 distinct registers, and fo, the 4x32/4x16 kernel loop
+  hoisted. The 6x32 fo was refused because it spilled 22 times on go1.27.3's 15 allocatable registers. The witness
+  tests are shared with arm64, which now takes `peakOnes`, `peakChunk` and the fill helpers from `peak.go`. The reading
+  is pre-registered in `archive/avx512-family/prereg.md`.
 - **The judged arm64 P2 run on the pre-broadcast kernels is pre-registered** (#198, `archive/p2-arm64-pb/prereg.md`).
   It predicts GREEN at both elements on Neoverse V1/V2/V3, with the best shape at 76–91% of the family-max peak net
   of CI, from the same gate at the exploration tier (`ddf6e2d`: 81.3–86.2%, 24 PASS / 0 FAIL per element).

@@ -49,11 +49,6 @@ func PeakFamilyNEON64() []PeakKernel64 {
 	}
 }
 
-// peakOnes are the multiplicands, a package variable rather than constants so the
-// compiler cannot prove two of them equal and merge their registers.
-var peakOnes = [8]float32{1, 1, 1, 1, 1, 1, 1, 1}
-var peakOnesD = [8]float64{1, 1, 1, 1, 1, 1, 1, 1}
-
 // neonPeakX44 is a 4x4 outer product: 16 chains whose FMAs read 8 distinct multiplicand
 // registers. On V2/V3 it reached the FMA-only kernel loop's rate (archive/neon-raw/).
 func neonPeakX44(iters int) float32 {
@@ -169,10 +164,6 @@ func neonPeakX44D(iters int) float64 {
 	return HSum128D(s)
 }
 
-// peakChunk is the K-loop trip count per neonPeakTile call: 512, the kc at which the
-// FMA-only kernel loop was measured (archive/neon-raw/, LimiterProbe/FO/kc=512).
-const peakChunk = 512
-
 // The panels the FO members read. Only their first MR and NR elements are loaded (before
 // the loop); the lengths drive its two-counter exit, which is the loop as measured.
 var (
@@ -181,22 +172,6 @@ var (
 	peakPanelAD = peakFill64(3 * peakChunk)
 	peakPanelBD = peakFill64(12 * peakChunk)
 )
-
-func peakFill32(n int) []float32 {
-	s := make([]float32, n)
-	for i := range s {
-		s[i] = 1
-	}
-	return s
-}
-
-func peakFill64(n int) []float64 {
-	s := make([]float64, n)
-	for i := range s {
-		s[i] = 1
-	}
-	return s
-}
 
 // neonPeakFO runs neonPeakTile over iters K-steps in peakChunk pieces. C starts at each
 // chain's 1-based index in all four lanes, and every lane gains exactly a·b = 1 per

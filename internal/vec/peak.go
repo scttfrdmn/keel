@@ -253,3 +253,31 @@ func scalarPeakD(iters int) float64 {
 	}
 	return ((a0 + a1) + (a2 + a3)) + ((a4 + a5) + (a6 + a7)) + (a8 + a9)
 }
+
+// The pieces the FMA-ceiling families share (#198 arm64, #199 amd64).
+
+// peakOnes are the family members' multiplicands: a package variable rather than
+// constants, so the compiler cannot prove two of them equal and merge registers
+// that must stay distinct.
+var peakOnes = [8]float32{1, 1, 1, 1, 1, 1, 1, 1}
+var peakOnesD = [8]float64{1, 1, 1, 1, 1, 1, 1, 1}
+
+// peakChunk is the K-loop trip count per call of an fo member's tile: 512, the kc at
+// which the FMA-only kernel loop was first measured (archive/neon-raw/).
+const peakChunk = 512
+
+func peakFill32(n int) []float32 {
+	s := make([]float32, n)
+	for i := range s {
+		s[i] = 1
+	}
+	return s
+}
+
+func peakFill64(n int) []float64 {
+	s := make([]float64, n)
+	for i := range s {
+		s[i] = 1
+	}
+	return s
+}
