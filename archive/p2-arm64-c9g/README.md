@@ -25,3 +25,8 @@ while the FMA peak per cycle grew from about 2.0 (V1) to about 2.9 (V2, V3).
 > retire about 7–8 instructions per cycle" was read as an instruction-issue ceiling. The
 > shim-removal A/B (`../neon-raw/`) cut insns/FMA by 30% and gained 1–2.6 points on V2 and
 > V3, so issue is not the limit. 7–8 insns/cycle was one instruction mix's rate.
+
+> **VOID, 2026-10-27, the GREEN verdict of this archive** (#198). Its denominator `neonPeak` under-read a
+> loop that beats it by 1.26–1.89×. Re-judged against the family-max denominator at `ba29105`, the same
+> kernels are RED on every host and element at 45.5–46.4% of peak (`../p2-arm64-family/`). The kernel
+> rates here stand; the percentages and the verdict do not.

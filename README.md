@@ -94,7 +94,10 @@ Every one of the 20 routine-host pairs those 40 routine rows form clears the bar
 > 1.35× higher on Neoverse-V2. On Neoverse-V1 a kernel-shaped loop reads 1.89× higher, and the
 > cause is still open. The rates in GFLOP/s are unaffected, but the Neoverse percentages, and the
 > Neoverse shares in the bar above, may be overstated by up to those factors. No figure here
-> changes until a corrected peak has been measured at the judged tier.
+> changes until a corrected peak has been measured at the judged tier. **Measured 2026-10-27**
+> (gate-p2, judged `ba29105`, `archive/p2-arm64-family/`): the 1-thread NEON peak is 78.16 GFLOP/s on
+> Neoverse-V1 (c7g.16xlarge) and 84.43 on Neoverse-V2 (c8g.48xlarge), against the 41.42 and 61.87 these
+> rows divide by. The rows are re-derived at the next gate-p5 run, not edited here.
 
 **The denominator here is keel's own microkernel, not OpenBLAS.** No OpenBLAS
 reference was taken at these thread counts, so the comparison DESIGN.md §7

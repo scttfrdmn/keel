@@ -22,3 +22,8 @@ Every prediction held. **The float32 NEON kernels' first P2-style verdict is GRE
 had shipped through #136's sweep and gate-p3/p5 without one. As on amd64, float64 tracks
 float32 within a point on each host, because the kernels audit identically and the peak is
 half.
+
+> **VOID, 2026-10-27, the GREEN verdict of this archive** (#198). Its denominator `neonPeak` under-read a
+> loop that beats it by 1.26–1.89×. Re-judged against the family-max denominator at `ba29105`, the same
+> kernels are RED on every host and element at 45.5–46.4% of peak (`../p2-arm64-family/`). The kernel
+> rates here stand; the percentages and the verdict do not.

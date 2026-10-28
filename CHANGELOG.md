@@ -164,6 +164,12 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **The arm64 P2 go/no-go is RED against the corrected denominator** (#198, judged `ba29105`, `archive/p2-arm64-family/`).
+  The shipped NEON kernels reach 45.5–46.4% of the family-max peak on Neoverse V1/V2/V3 at both elements, against
+  the 55% floor. Every pre-registered prediction held. Their kernel rates reproduce the earlier judged runs to
+  within 0.3%; only the denominator moved. **This supersedes the arm64 P2 GREEN entries below** (V1 86.1/85.8%,
+  V2 62.6/61.7%, V3 62.7/64.0%), now marked VOID in their archives. The next step is pre-broadcast A packing,
+  which DESIGN.md now lists as a NEON shaping step.
 - **gate-p2's arm64 arms judge against the family-max NEON denominator** (#198, DESIGN.md P2, 2026-10-27).
   The peak audit, the IPF ceiling (24/18) and the roofline mix now name `neonPeakTile`/`neonPeakTileD`. Each host
   also runs `BenchmarkFMAFamily` and fails if any member beats the `neon` row by more than 1% net of CI. An absent

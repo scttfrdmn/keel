@@ -1,0 +1,513 @@
+
+========== preflight (HEAD=ba29105, TTL=3h, rate=$18.70/hr)  (02:51:27Z) ==========
+
+========== co-tenant census at launch  (02:51:27Z) ==========
+   Searching all AWS regions...
+   
+   Instance ID          Name             Type           State    IAM Role                 AZ          Age  TTL Left  Public IP       Spot
+   i-0f79cc77628a4aa79  adit-fp-proxy-0  c8gn.48xlarge  running  spawn-instance-010d8a6d  us-east-1a  16m  1h43m     184.194.244.94  
+   
+   A newer version of spawn is available: 0.145.0 → 0.146.0
+     https://github.com/spore-host/spawn/releases/tag/v0.146.0
+
+========== launch  (02:51:43Z) ==========
+  region us-east-1, TTL 3h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$6.96 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (833ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (302ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (469ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (26.4s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0d75b6f965d6003b7
+  Public IP    184.195.179.62
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt3  c7g.16xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$22.97 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (806ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (293ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (3.5s)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.6s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0b9698910714e5cfb
+  Public IP    44.204.216.175
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt4  c8g.48xlarge  (Neoverse-V2, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$25.04 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (790ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (298ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (621ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.5s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-036ff0564c306f17d
+  Public IP    3.236.194.204
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt5  c9g.48xlarge  (Neoverse-V3, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.48xlarge     3.236.194.204    on-demand  3h       2026-10-28T02:53:43Z
+  keel-gvt4            c8g.48xlarge     44.204.216.175   on-demand  3h       2026-10-28T02:52:59Z
+  keel-gvt3            c7g.16xlarge     184.195.179.62   on-demand  3h       2026-10-28T02:52:08Z
+
+  3 instance(s) billing. 'down' terminates every one.
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.48xlarge     3.236.194.204    on-demand  3h       2026-10-28T02:53:43Z
+  keel-gvt4            c8g.48xlarge     44.204.216.175   on-demand  3h       2026-10-28T02:52:59Z
+  keel-gvt3            c7g.16xlarge     184.195.179.62   on-demand  3h       2026-10-28T02:52:08Z
+
+  3 instance(s) billing. 'down' terminates every one.
+
+========== gate-p2, KEEL_ARCH=arm64 KEEL_ELEM=f64  (02:55:26Z) ==========
+== gate-p2: microkernel + spill audit (GO/NO-GO), arm64, element f64 ==
+        rev ba29105697789041b5e1e40694e2fa2ebe3dfb83 tree=clean toolchain=go1.27.3 goexperiment=none
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- throughput verdict controls (scripts/roofline-test.sh) --
+  [32mPASS[0m  roofline verdict controls (76 fixtures, incl. padded/slow/sandbagged kernels)
+
+-- builds --
+  [32mPASS[0m  make build (GOEXPERIMENT=simd)
+  [32mPASS[0m  make stock (scalar path, no experiment)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd, linux/arm64)
+
+-- microkernel correctness (differential vs the scalar tile reference) --
+  [32mPASS[0m  [local darwin/arm64] kernel tests pass
+        [local darwin/arm64] keel-kern64-backends-exercised: neon scalar
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 32535 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+        [keel-gvt5] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt5] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt5] admission class: evidentiary (instance=c9g.48xlarge, virt=?, spawn=i-036ff0564c306f17d:c9g.48xlarge:ondemand) — c9g.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c9g.48xlarge on-demand (i-036ff0564c306f17d)
+        [keel-gvt4] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt4] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt4] admission class: evidentiary (instance=c8g.48xlarge, virt=?, spawn=i-0b9698910714e5cfb:c8g.48xlarge:ondemand) — c8g.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c8g.48xlarge on-demand (i-0b9698910714e5cfb)
+        [keel-gvt3] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt3] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt3] admission class: evidentiary (instance=c7g.16xlarge, virt=?, spawn=i-0d75b6f965d6003b7:c7g.16xlarge:ondemand) — c7g.16xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c7g.16xlarge on-demand (i-0d75b6f965d6003b7)
+  [32mPASS[0m  cross-compiled linux/arm64 kernel test binary
+        builder toolchain go1.27.3-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+        [keel-gvt5] Neoverse-V3 | instance=c9g.48xlarge | virt=? | 192 cpus | 192 cores | smt=1 | 1 sockets | governor=absent | load1=0.07 load5=0.07 load15=0.03 runnable=1/2113 | tmux=yes | Linux 7.0.0-1014-aws | L2=2048K L1d=64K L3=98304K | spawn=i-036ff0564c306f17d:c9g.48xlarge:ondemand
+  [32mPASS[0m  [keel-gvt5] kernel tests pass
+        [keel-gvt5] keel-kern64-backends-exercised: neon scalar
+        [keel-gvt4] Neoverse-V2 | instance=c8g.48xlarge | virt=? | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | load1=0.02 load5=0.04 load15=0.01 runnable=1/2057 | tmux=yes | Linux 7.0.0-1014-aws | L2=2048K L1d=64K L3=36864K | spawn=i-0b9698910714e5cfb:c8g.48xlarge:ondemand
+  [32mPASS[0m  [keel-gvt4] kernel tests pass
+        [keel-gvt4] keel-kern64-backends-exercised: neon scalar
+        [keel-gvt3] Neoverse-V1 | instance=c7g.16xlarge | virt=? | 64 cpus | 64 cores | smt=1 | 1 sockets | governor=absent | load1=0.00 load5=0.01 load15=0.00 runnable=1/810 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=64K L3=32768K | spawn=i-0d75b6f965d6003b7:c7g.16xlarge:ondemand
+  [32mPASS[0m  [keel-gvt3] kernel tests pass
+        [keel-gvt3] keel-kern64-backends-exercised: neon scalar
+  [32mPASS[0m  kernel tests green with the neon tile exercised (target: keel-gvt3)
+
+-- spill audit: steady-state K-loop of the shipped shapes (KernelD8x4,KernelD4x8,KernelD3x12) --
+        compile-time property, audited against the linux/arm64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.KernelD8x4: steady-state loop [132,504] 94 insns for 16 arith (5.88 per arith): 0 vector stack refs, 16 reg copies, 8 broadcasts, 32 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.KernelD4x8: steady-state loop [132,448] 80 insns for 16 arith (5.00 per arith): 0 vector stack refs, 8 reg copies, 4 broadcasts, 30 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.KernelD3x12: steady-state loop [144,732] 148 insns for 36 arith (4.11 per arith): 0 vector stack refs, 12 reg copies, 6 broadcasts, 63 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  0 accumulator spills in the steady-state K-loop
+  [32mPASS[0m  0 calls in the steady-state K-loop (no write barrier, no runtime helper)
+  [32mPASS[0m  0 surviving bounds checks in the steady-state K-loop (panels are pre-sliced)
+        ssa.html archived: build/ssa/KernelD8x4.html (9758593 bytes; gitignored, see KERNEL.md)
+        ssa.html archived: build/ssa/KernelD4x8.html (8943555 bytes; gitignored, see KERNEL.md)
+        ssa.html archived: build/ssa/KernelD3x12.html (14897861 bytes; gitignored, see KERNEL.md)
+
+-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#107) --
+  [32mPASS[0m  SWEEP_BEST_IPF=4.111 reconciles against shapegen -frontier: 4.111 from 3x12 u=2 broadcast, best of 107 emittable zero-spill shapes
+
+-- reference tile KernelD8x6: DESIGN.md's 12 accumulators, EVIDENCE ONLY --
+        expected to spill on go1.26.5 (T10, issue #18); this audit cannot fail the gate
+        github.com/scttfrdmn/keel/internal/vec.KernelD8x6: steady-state loop [172,648] 120 insns for 24 arith (5.00 per arith): 16 vector stack refs, 10 reg copies, 8 broadcasts, 39 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        spills as documented; the GFLOP/s cost of that is measured below
+
+-- kernel shaping: bounds checks outside the K-loop (provenance, not a check) --
+        the criterion is the loop-body check above; this is the whole-package count
+        check_bce: 416 bounds check(s) in ./internal/vec + ./internal/kern, all outside the K-loop
+          (prologue slices a[:kc*MR]/b[:kc*NR], the write-out's c[i*ldc:...], and the scalar reference)
+        internal/vec/peak_family_arm64.go:244:9: Found IsSliceInBounds
+        internal/vec/peak_family_arm64.go:245:9: Found IsSliceInBounds
+        internal/vec/peak_family_arm64.go:246:71: Found IsSliceInBounds
+        internal/vec/peak_family_arm64.go:246:124: Found IsSliceInBounds
+        internal/vec/peak_family_arm64.go:246:177: Found IsSliceInBounds
+          ... 411 more; full output is in the gate log
+  [32mPASS[0m  check_bce output recorded as provenance
+
+-- peak kernels: no memory in the loop (issue #11, property 1) --
+        github.com/scttfrdmn/keel/internal/vec.neonPeakTileD: steady-state loop [276,368] 24 insns for 18 arith (1.33 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.scalarPeakD: steady-state loop [96,144] 13 insns for 10 arith (1.30 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  every peak kernel's steady-state loop is register-only
+
+-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --
+        the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that
+  [32mPASS[0m  neonPeakTileD audits 1.333333 insns/FMA, at or under its recorded ceiling 1.333334
+  [32mPASS[0m  scalarPeakD audits 1.300000 insns/FMA, at or under its recorded ceiling 1.30
+
+-- microkernel vs measured peak (FMA-bound: >= 55%; issue-bound: >= 90% of roofline) --
+        -count=10 -benchtime=1s; numerator and denominator measured in the same run
+        audited insns/FMA: 8x4 5.875, 4x8 5.000, 3x12 4.111, neonPeakTileD 1.333 (roofline inputs)
+  [32mPASS[0m  cross-compiled linux/arm64 bench binary
+        [keel-gvt5] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt5] peak series GFLOP/s: head 51.58, middle 51.6, tail 51.59 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt5] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.0372% against a 0.1268% floor, middle->tail +0.0186% against a 0.0448% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-gvt5] peak   51.6 GFLOP/s +/- 0.0% [51.52, 51.6] D=8 (span 0.16% / interval 0.0194%)
+        [keel-gvt5] family fo at 100.0% of FMARoof64/neon
+        [keel-gvt5] family x44 at 95.9% of FMARoof64/neon
+        [keel-gvt5] family shared at 73.6% of FMARoof64/neon
+        [keel-gvt5] 8x6/neon/kc=128  20.5 GFLOP/s +/- 0.0% [20.49, 20.52] D=1.5 (span 0.15% / interval 0.0976%) = 39.7% of peak (spills; not shipped)
+        [keel-gvt5] 8x4/neon/kc=128 16.1 GFLOP/s +/- 0.3% [16.05, 16.21] D=1.778 (span 0.99% / interval 0.5590%) = 31.2% of peak, 31.1% net of CI
+        [keel-gvt5] 4x8/neon/kc=128 20.46 GFLOP/s +/- 0.2% [20.39, 20.53] D=1.556 (span 0.68% / interval 0.4398%) = 39.7% of peak, 39.5% net of CI
+        [keel-gvt5] 3x12/neon/kc=128 23.84 GFLOP/s +/- 0.4% [23.65, 23.9] D=1.923 (span 1.05% / interval 0.5454%) = 46.2% of peak, 46.0% net of CI
+        [keel-gvt5] ceiling mixes disagree on retirement rate (1.489x, interval [1.481x, 1.492x], wholly over 1.10) -> fma-bound: the front end is not the limit here
+  [31mFAIL[0m  [keel-gvt5] FMA-bound: best shipped shape 3x12/neon/kc=128 at 46.2% of measured peak, only 46.0% net of CI (< 55%)
+        [keel-gvt4] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt4] peak series GFLOP/s: head 42.144999999999996, middle 42.144999999999996, tail 42.14 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt4] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.0085% against a 0.1542% floor, middle->tail +0.0228% against a 0.1184% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-gvt4] peak   42.14 GFLOP/s +/- 0.1% [42.14, 42.2] D=1.5 (span 0.14% / interval 0.0949%)
+        [keel-gvt4] family fo at 100.0% of FMARoof64/neon
+        [keel-gvt4] family x44 at 93.9% of FMARoof64/neon
+        [keel-gvt4] family shared at 72.3% of FMARoof64/neon
+        [keel-gvt4] 8x6/neon/kc=128  17.51 GFLOP/s +/- 0.1% [17.22, 17.51] D=29 (span 1.66% / interval 0.0571%) = 41.5% of peak (spills; not shipped)
+        [keel-gvt4] 8x4/neon/kc=128 13.46 GFLOP/s +/- 0.2% [13.42, 13.46] D=1.333 (span 0.30% / interval 0.2229%) = 31.9% of peak, 31.8% net of CI
+        [keel-gvt4] 4x8/neon/kc=128 17.45 GFLOP/s +/- 0.1% [17.42, 17.46] D=4 (span 0.23% / interval 0.0573%) = 41.4% of peak, 41.3% net of CI
+        [keel-gvt4] 3x12/neon/kc=128 19.24 GFLOP/s +/- 0.1% [19.23, 19.24] D=1 (span 0.05% / interval 0.0520%) = 45.7% of peak, 45.5% net of CI
+        [keel-gvt4] ceiling mixes disagree on retirement rate (1.552x, interval [1.549x, 1.556x], wholly over 1.10) -> fma-bound: the front end is not the limit here
+  [31mFAIL[0m  [keel-gvt4] FMA-bound: best shipped shape 3x12/neon/kc=128 at 45.7% of measured peak, only 45.5% net of CI (< 55%)
+        [keel-gvt3] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt3] peak series GFLOP/s: head 39.07, middle 39.07, tail 39.06 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt3] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle +0.0033% against a 0.0282% floor, middle->tail +0.0083% against a 0.0207% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-gvt3] peak   39.07 GFLOP/s +/- 0.0% [39.05, 39.07] D=2 (span 0.05% / interval 0.0256%)
+        [keel-gvt3] family fo at 100.0% of FMARoof64/neon
+        [keel-gvt3] family x44 at 53.0% of FMARoof64/neon
+        [keel-gvt3] family shared at 53.0% of FMARoof64/neon
+        [keel-gvt3] 8x6/neon/kc=128  14.78 GFLOP/s +/- 0.1% [14.78, 14.79] D=1 (span 0.07% / interval 0.0677%) = 37.8% of peak (spills; not shipped)
+        [keel-gvt3] 8x4/neon/kc=128 12.39 GFLOP/s +/- 0.1% [12.39, 12.4] D=1 (span 0.08% / interval 0.0807%) = 31.7% of peak, 31.7% net of CI
+        [keel-gvt3] 4x8/neon/kc=128 16.45 GFLOP/s +/- 0.1% [16.44, 16.45] D=1 (span 0.06% / interval 0.0608%) = 42.1% of peak, 42.0% net of CI
+        [keel-gvt3] 3x12/neon/kc=128 17.83 GFLOP/s +/- 0.0% [17.82, 17.83] D=inf (span 0.06% / interval 0.0000%) = 45.6% of peak, 45.6% net of CI
+        [keel-gvt3] ceiling mixes disagree on retirement rate (1.579x, interval [1.575x, 1.583x], wholly over 1.10) -> fma-bound: the front end is not the limit here
+  [31mFAIL[0m  [keel-gvt3] FMA-bound: best shipped shape 3x12/neon/kc=128 at 45.6% of measured peak, only 45.6% net of CI (< 55%)
+  [31mFAIL[0m  3 of 3 hosts that produced a judgeable throughput reading did not clear the floor (the per-host lines above say which)
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p2 tally: 24 PASS / 4 FAIL / 0 UNMEASURED / 0 BASELINE / 0 REPORTED
+gate-p2: RED
+P2 is a go/no-go: if this is still red after the documented shaping steps
+and one tile shrink, write docs/spill-report.md and stop (CLAUDE.md).
+
+========== gate-p2 arm64 f64 exited 1  (03:11:19Z) ==========
+
+========== gate-p2, KEEL_ARCH=arm64 KEEL_ELEM=f32  (03:11:19Z) ==========
+== gate-p2: microkernel + spill audit (GO/NO-GO), arm64, element f32 ==
+        rev ba29105697789041b5e1e40694e2fa2ebe3dfb83 tree=clean toolchain=go1.27.3 goexperiment=none
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- throughput verdict controls (scripts/roofline-test.sh) --
+  [32mPASS[0m  roofline verdict controls (76 fixtures, incl. padded/slow/sandbagged kernels)
+
+-- builds --
+  [32mPASS[0m  make build (GOEXPERIMENT=simd)
+  [32mPASS[0m  make stock (scalar path, no experiment)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd, linux/arm64)
+
+-- microkernel correctness (differential vs the scalar tile reference) --
+  [32mPASS[0m  [local darwin/arm64] kernel tests pass
+        [local darwin/arm64] keel-kern-backends-exercised: neon scalar
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 30755 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+        [keel-gvt5] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt5] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt5] admission class: evidentiary (instance=c9g.48xlarge, virt=?, spawn=i-036ff0564c306f17d:c9g.48xlarge:ondemand) — c9g.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c9g.48xlarge on-demand (i-036ff0564c306f17d)
+        [keel-gvt4] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt4] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt4] admission class: evidentiary (instance=c8g.48xlarge, virt=?, spawn=i-0b9698910714e5cfb:c8g.48xlarge:ondemand) — c8g.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c8g.48xlarge on-demand (i-0b9698910714e5cfb)
+        [keel-gvt3] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-gvt3] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-gvt3] admission class: evidentiary (instance=c7g.16xlarge, virt=?, spawn=i-0d75b6f965d6003b7:c7g.16xlarge:ondemand) — c7g.16xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c7g.16xlarge on-demand (i-0d75b6f965d6003b7)
+  [32mPASS[0m  cross-compiled linux/arm64 kernel test binary
+        builder toolchain go1.27.3-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+        [keel-gvt5] Neoverse-V3 | instance=c9g.48xlarge | virt=? | 192 cpus | 192 cores | smt=1 | 1 sockets | governor=absent | load1=0.00 load5=0.09 load15=0.14 runnable=1/2088 | tmux=yes | Linux 7.0.0-1014-aws | L2=2048K L1d=64K L3=98304K | spawn=i-036ff0564c306f17d:c9g.48xlarge:ondemand
+  [32mPASS[0m  [keel-gvt5] kernel tests pass
+        [keel-gvt5] keel-kern-backends-exercised: neon scalar
+        [keel-gvt4] Neoverse-V2 | instance=c8g.48xlarge | virt=? | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | load1=0.00 load5=0.16 load15=0.14 runnable=1/2031 | tmux=yes | Linux 7.0.0-1014-aws | L2=2048K L1d=64K L3=36864K | spawn=i-0b9698910714e5cfb:c8g.48xlarge:ondemand
+  [32mPASS[0m  [keel-gvt4] kernel tests pass
+        [keel-gvt4] keel-kern-backends-exercised: neon scalar
+        [keel-gvt3] Neoverse-V1 | instance=c7g.16xlarge | virt=? | 64 cpus | 64 cores | smt=1 | 1 sockets | governor=absent | load1=0.17 load5=0.37 load15=0.19 runnable=1/782 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=64K L3=32768K | spawn=i-0d75b6f965d6003b7:c7g.16xlarge:ondemand
+  [32mPASS[0m  [keel-gvt3] kernel tests pass
+        [keel-gvt3] keel-kern-backends-exercised: neon scalar
+  [32mPASS[0m  kernel tests green with the neon tile exercised (target: keel-gvt3)
+
+-- spill audit: steady-state K-loop of the shipped shapes (Kernel8x8,Kernel4x16,Kernel3x24) --
+        compile-time property, audited against the linux/arm64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.Kernel8x8: steady-state loop [128,492] 92 insns for 16 arith (5.75 per arith): 0 vector stack refs, 16 reg copies, 8 broadcasts, 32 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.Kernel4x16: steady-state loop [132,448] 80 insns for 16 arith (5.00 per arith): 0 vector stack refs, 8 reg copies, 4 broadcasts, 30 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.Kernel3x24: steady-state loop [144,732] 148 insns for 36 arith (4.11 per arith): 0 vector stack refs, 12 reg copies, 6 broadcasts, 63 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  0 accumulator spills in the steady-state K-loop
+  [32mPASS[0m  0 calls in the steady-state K-loop (no write barrier, no runtime helper)
+  [32mPASS[0m  0 surviving bounds checks in the steady-state K-loop (panels are pre-sliced)
+        ssa.html archived: build/ssa/Kernel8x8.html (9832679 bytes; gitignored, see KERNEL.md)
+        ssa.html archived: build/ssa/Kernel4x16.html (8947766 bytes; gitignored, see KERNEL.md)
+        ssa.html archived: build/ssa/Kernel3x24.html (14890436 bytes; gitignored, see KERNEL.md)
+
+-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#107) --
+  [32mPASS[0m  SWEEP_BEST_IPF=4.111 reconciles against shapegen -frontier: 4.111 from 3x24 u=2 broadcast, best of 107 emittable zero-spill shapes
+
+-- reference tile Kernel8x12: DESIGN.md's 12 accumulators, EVIDENCE ONLY --
+        expected to spill on go1.26.5 (T10, issue #18); this audit cannot fail the gate
+        github.com/scttfrdmn/keel/internal/vec.Kernel8x12: steady-state loop [172,648] 120 insns for 24 arith (5.00 per arith): 16 vector stack refs, 10 reg copies, 8 broadcasts, 39 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        spills as documented; the GFLOP/s cost of that is measured below
+
+-- kernel shaping: bounds checks outside the K-loop (provenance, not a check) --
+        the criterion is the loop-body check above; this is the whole-package count
+        check_bce: 416 bounds check(s) in ./internal/vec + ./internal/kern, all outside the K-loop
+          (prologue slices a[:kc*MR]/b[:kc*NR], the write-out's c[i*ldc:...], and the scalar reference)
+        internal/vec/peak_family_arm64.go:244:9: Found IsSliceInBounds
+        internal/vec/peak_family_arm64.go:245:9: Found IsSliceInBounds
+        internal/vec/peak_family_arm64.go:246:71: Found IsSliceInBounds
+        internal/vec/peak_family_arm64.go:246:124: Found IsSliceInBounds
+        internal/vec/peak_family_arm64.go:246:177: Found IsSliceInBounds
+          ... 411 more; full output is in the gate log
+  [32mPASS[0m  check_bce output recorded as provenance
+
+-- peak kernels: no memory in the loop (issue #11, property 1) --
+        github.com/scttfrdmn/keel/internal/vec.neonPeakTile: steady-state loop [276,368] 24 insns for 18 arith (1.33 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.scalarPeak: steady-state loop [96,144] 13 insns for 10 arith (1.30 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  every peak kernel's steady-state loop is register-only
+
+-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --
+        the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that
+  [32mPASS[0m  neonPeakTile audits 1.333333 insns/FMA, at or under its recorded ceiling 1.333334
+  [32mPASS[0m  scalarPeak audits 1.300000 insns/FMA, at or under its recorded ceiling 1.30
+
+-- microkernel vs measured peak (FMA-bound: >= 55%; issue-bound: >= 90% of roofline) --
+        -count=10 -benchtime=1s; numerator and denominator measured in the same run
+        audited insns/FMA: 8x8 5.750, 4x16 5.000, 3x24 4.111, neonPeakTile 1.333 (roofline inputs)
+  [32mPASS[0m  cross-compiled linux/arm64 bench binary
+        [keel-gvt5] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt5] peak series GFLOP/s: head 103.1, middle 103.2, tail 103.2 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt5] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.0224% against a 0.1330% floor, middle->tail +0.0087% against a 0.1356% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-gvt5] peak   103.2 GFLOP/s +/- 0.1% [103, 103.2] D=2 (span 0.19% / interval 0.0969%)
+        [keel-gvt5] family fo at 100.0% of Peak/neon
+        [keel-gvt5] family x44 at 94.0% of Peak/neon
+        [keel-gvt5] family shared at 72.3% of Peak/neon
+        [keel-gvt5] 8x12/neon/kc=128  41.06 GFLOP/s +/- 0.0% [41.01, 41.07] D=6 (span 0.15% / interval 0.0244%) = 39.8% of peak (spills; not shipped)
+        [keel-gvt5] 8x8/neon/kc=128 33.1 GFLOP/s +/- 0.0% [33.09, 33.1] D=1 (span 0.03% / interval 0.0302%) = 32.1% of peak, 32.0% net of CI
+        [keel-gvt5] 4x16/neon/kc=128 39.86 GFLOP/s +/- 0.7% [39.72, 40.14] D=1.105 (span 1.05% / interval 0.9535%) = 38.6% of peak, 38.5% net of CI
+        [keel-gvt5] 3x24/neon/kc=128 47.84 GFLOP/s +/- 0.2% [47.68, 48] D=1.684 (span 0.67% / interval 0.3971%) = 46.4% of peak, 46.2% net of CI
+        [keel-gvt5] ceiling mixes disagree on retirement rate (1.448x, interval [1.444x, 1.462x], wholly over 1.10) -> fma-bound: the front end is not the limit here
+  [31mFAIL[0m  [keel-gvt5] FMA-bound: best shipped shape 3x24/neon/kc=128 at 46.4% of measured peak, only 46.2% net of CI (< 55%)
+        [keel-gvt4] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt4] peak series GFLOP/s: head 84.42, middle 84.42500000000001, tail 84.41499999999999 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt4] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.0076% against a 0.0309% floor, middle->tail +0.0130% against a 0.0353% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-gvt4] peak   84.43 GFLOP/s +/- 0.0% [84.4, 84.43] D=1.5 (span 0.04% / interval 0.0237%)
+        [keel-gvt4] family fo at 100.0% of Peak/neon
+        [keel-gvt4] family x44 at 94.3% of Peak/neon
+        [keel-gvt4] family shared at 72.1% of Peak/neon
+        [keel-gvt4] 8x12/neon/kc=128  35.02 GFLOP/s +/- 0.0% [35.01, 35.02] D=1 (span 0.03% / interval 0.0286%) = 41.5% of peak (spills; not shipped)
+        [keel-gvt4] 8x8/neon/kc=128 26.93 GFLOP/s +/- 0.0% [26.91, 26.93] D=inf (span 0.07% / interval 0.0000%) = 31.9% of peak, 31.8% net of CI
+        [keel-gvt4] 4x16/neon/kc=128 34.89 GFLOP/s +/- 0.1% [34.84, 34.89] D=1.667 (span 0.14% / interval 0.0860%) = 41.3% of peak, 41.2% net of CI
+        [keel-gvt4] 3x24/neon/kc=128 38.47 GFLOP/s +/- 0.0% [38.46, 38.47] D=inf (span 0.03% / interval 0.0000%) = 45.6% of peak, 45.5% net of CI
+        [keel-gvt4] ceiling mixes disagree on retirement rate (1.549x, interval [1.545x, 1.552x], wholly over 1.10) -> fma-bound: the front end is not the limit here
+  [31mFAIL[0m  [keel-gvt4] FMA-bound: best shipped shape 3x24/neon/kc=128 at 45.6% of measured peak, only 45.5% net of CI (< 55%)
+        [keel-gvt3] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-gvt3] peak series GFLOP/s: head 78.15, middle 78.16, tail 78.14500000000001 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-gvt3] the peak series is bounded in every window and declines in one step but not across both: 1 of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.0083% against a 0.0248% floor, middle->tail +0.0190% against a 0.0182% floor), so the series is a non-monotone excursion and not the monotone decline §5 rule 5 names as throttling -- the resolved step is stated above rather than called a tie (#6, 2026-08-20)
+        [keel-gvt3] peak   78.16 GFLOP/s +/- 0.0% [78.14, 78.17] D=3 (span 0.04% / interval 0.0128%)
+        [keel-gvt3] family fo at 100.0% of Peak/neon
+        [keel-gvt3] family x44 at 53.0% of Peak/neon
+        [keel-gvt3] family shared at 53.0% of Peak/neon
+        [keel-gvt3] 8x12/neon/kc=128  28.83 GFLOP/s +/- 0.0% [28.82, 28.83] D=inf (span 0.03% / interval 0.0000%) = 36.9% of peak (spills; not shipped)
+        [keel-gvt3] 8x8/neon/kc=128 24.7 GFLOP/s +/- 0.0% [24.69, 24.7] D=1 (span 0.04% / interval 0.0405%) = 31.6% of peak, 31.5% net of CI
+        [keel-gvt3] 4x16/neon/kc=128 32.65 GFLOP/s +/- 0.0% [32.64, 32.65] D=1 (span 0.03% / interval 0.0306%) = 41.8% of peak, 41.7% net of CI
+        [keel-gvt3] 3x24/neon/kc=128 35.59 GFLOP/s +/- 0.1% [35.57, 35.6] D=1 (span 0.08% / interval 0.0843%) = 45.5% of peak, 45.5% net of CI
+        [keel-gvt3] ceiling mixes disagree on retirement rate (1.567x, interval [1.564x, 1.567x], wholly over 1.10) -> fma-bound: the front end is not the limit here
+  [31mFAIL[0m  [keel-gvt3] FMA-bound: best shipped shape 3x24/neon/kc=128 at 45.5% of measured peak, only 45.5% net of CI (< 55%)
+  [31mFAIL[0m  3 of 3 hosts that produced a judgeable throughput reading did not clear the floor (the per-host lines above say which)
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p2 tally: 24 PASS / 4 FAIL / 0 UNMEASURED / 0 BASELINE / 0 REPORTED
+gate-p2: RED
+P2 is a go/no-go: if this is still red after the documented shaping steps
+and one tile shrink, write docs/spill-report.md and stop (CLAUDE.md).
+
+========== gate-p2 arm64 f32 exited 1  (03:27:04Z) ==========
+
+========== TEARDOWN (driver rc=1) — $18.70/hr  (03:27:04Z) ==========
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-036ff0564c306f17d...
+
+✅ Terminate request sent!
+   Instance: i-036ff0564c306f17d
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0b9698910714e5cfb...
+
+✅ Terminate request sent!
+   Instance: i-0b9698910714e5cfb
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0d75b6f965d6003b7...
+
+✅ Terminate request sent!
+   Instance: i-0d75b6f965d6003b7
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   no keel- instance in 'spawn list --state running' — fleet is down
