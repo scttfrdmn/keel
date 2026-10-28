@@ -9,6 +9,9 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The judged arm64 P2 run on the pre-broadcast kernels is pre-registered** (#198, `archive/p2-arm64-pb/prereg.md`).
+  It predicts GREEN at both elements on Neoverse V1/V2/V3, with the best shape at 76–91% of the family-max peak net
+  of CI, from the same gate at the exploration tier (`ddf6e2d`: 81.3–86.2%, 24 PASS / 0 FAIL per element).
 - **Pre-broadcast-A NEON kernels in the tree, measured and not yet dispatched** (#198). `KernelPB5x16`, `KernelPB4x20`
   and `KernelPB7x12` at float32, and `KernelDPB5x8`/`4x10`/`7x6` at float64, all U=8, are `shapegen -form pb`
   fixed points by text and by audit (249/160 and 264/168 insns/FMA, 0 spills, 0 NOPs). They are registered as
