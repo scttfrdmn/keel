@@ -187,6 +187,10 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **The arm64 P2 go/no-go is GREEN on the pre-broadcast-A kernels** (#198, judged `c9e191f`, `archive/p2-arm64-pb/`).
+  28 PASS / 0 FAIL at each element on Neoverse V1/V2/V3. The dispatched 5x16-pb (float32) and 5x8-pb (float64) reach
+  81.3–86.2% of the family-max peak net of CI, against 45.5–46.4% for the broadcast kernels they replace, and the
+  floor is 55%. Every pre-registered prediction held.
 - **arm64 dispatches the pre-broadcast-A NEON kernels** (#198). `5x16-pb/neon` at float32 and `5x8-pb/neon` at float64
   replace 3x24 and 3x12 as `kern.Preferred`'s pick under both classes. The promotion is pre-registered, and its witness
   is single-thread Sgemm at n=2048 through the nest: +67.8/+70.0/+70.5% (V1/V2/V3), and Dgemm +75.6/+61.6/+69.8%
