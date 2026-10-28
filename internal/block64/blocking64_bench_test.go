@@ -44,6 +44,11 @@ func benchKernels64(b *testing.B) []kern.Kernel64 {
 			out = append(out, k)
 		}
 	}
+	for _, k := range kern.Measured64() { // block's benchKernels: the #198 candidates
+		if k.ALanes > 1 && k.Name != kern.Scalar {
+			out = append(out, k)
+		}
+	}
 	if len(out) == 0 {
 		b.Skip("no float64 vector microkernel on this build; run on an AVX-512 host")
 	}

@@ -1406,6 +1406,14 @@ func benchKernels(b *testing.B) []kern.Kernel {
 		}
 		out = append(out, k)
 	}
+	// Pre-broadcast-A promotion candidates (#198): measured reference tiles, not yet
+	// dispatched, timed through the nest beside the shipped shapes so their full-GEMM
+	// witness and the shipped kernel's come out of one binary and one process.
+	for _, k := range kern.Measured() {
+		if k.ALanes > 1 && k.Name != kern.Scalar {
+			out = append(out, k)
+		}
+	}
 	if len(out) == 0 {
 		b.Skip("no vector microkernel on this build (simd/archsimd is amd64-only, T1); " +
 			"run this on a host from docs/hosts.md")
