@@ -377,6 +377,9 @@ var shippedNEON = []Shape{
 	{MR: 4, V: 4, U: 1, Form: Broadcast}, // Kernel4x16
 	{MR: 8, V: 4, U: 1, Form: Broadcast}, // Kernel8x16
 	{MR: 4, V: 8, U: 1, Form: Broadcast}, // Kernel4x32
+	{MR: 5, V: 4, U: 8, Form: PB},        // KernelPB5x16 (#198, pre-broadcast A)
+	{MR: 4, V: 5, U: 8, Form: PB},        // KernelPB4x20
+	{MR: 7, V: 3, U: 8, Form: PB},        // KernelPB7x12
 }
 
 // shippedF64 is the three float64 kernels in internal/vec/gemm64_amd64.go (#191):
@@ -397,6 +400,9 @@ var shippedNEONF64 = []Shape{
 	{MR: 8, V: 4, U: 1, Form: Broadcast}, // KernelD8x8
 	{MR: 4, V: 8, U: 1, Form: Broadcast}, // KernelD4x16
 	{MR: 3, V: 6, U: 2, Form: Broadcast}, // KernelD3x12, the frontier
+	{MR: 5, V: 4, U: 8, Form: PB},        // KernelDPB5x8 (#198, pre-broadcast A)
+	{MR: 4, V: 5, U: 8, Form: PB},        // KernelDPB4x10
+	{MR: 7, V: 3, U: 8, Form: PB},        // KernelDPB7x6
 }
 
 // verifyShapes and verifySource return the shape list and the tree file runVerify
@@ -520,7 +526,7 @@ func runVerify() bool {
 		}
 	}
 	if ok {
-		fmt.Println("\nverify: the emitter reproduces all three shipped shapes, by text and by audit.")
+		fmt.Printf("\nverify: the emitter reproduces all %d shipped shapes, by text and by audit.\n", len(verifyShapes()))
 	} else {
 		fmt.Println("\nverify: FAILED — the emitter does not reproduce the tree. Its sweep readings are not trustworthy until it does.")
 	}

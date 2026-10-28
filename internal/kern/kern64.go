@@ -27,6 +27,20 @@ type Kernel64 struct {
 // APanelLen is Kernel.APanelLen at float64.
 func (k Kernel64) APanelLen(kc int) int { return k.MR * kc * max(1, k.ALanes) }
 
+// ExpandA is Kernel.ExpandA at float64.
+func (k Kernel64) ExpandA(a []float64) []float64 {
+	if k.ALanes <= 1 {
+		return a
+	}
+	o := make([]float64, len(a)*k.ALanes)
+	for i, v := range a {
+		for l := 0; l < k.ALanes; l++ {
+			o[i*k.ALanes+l] = v
+		}
+	}
+	return o
+}
+
 // nativeLanes is Kernel.nativeLanes at float64: the backend's register width in
 // bytes over eight. Stated as bytes so the ISA fact is written once per backend
 // and the lane count derives from the element size, rather than a second table

@@ -167,6 +167,23 @@ type Kernel struct {
 // APanelLen is the length of one packed A panel at depth kc under k's contract.
 func (k Kernel) APanelLen(kc int) int { return k.MR * kc * max(1, k.ALanes) }
 
+// ExpandA returns a conventionally packed A panel in k's contract: a itself when k is
+// conventional, otherwise a copy with every element replicated ALanes times. It is
+// for callers that build one panel by hand (tests, benchmarks); internal/block
+// expands whole packed blocks with pack.Broadcast.
+func (k Kernel) ExpandA(a []float32) []float32 {
+	if k.ALanes <= 1 {
+		return a
+	}
+	o := make([]float32, len(a)*k.ALanes)
+	for i, v := range a {
+		for l := 0; l < k.ALanes; l++ {
+			o[i*k.ALanes+l] = v
+		}
+	}
+	return o
+}
+
 // Backend names, shared with the vec shim's vocabulary.
 const (
 	Scalar = "scalar"

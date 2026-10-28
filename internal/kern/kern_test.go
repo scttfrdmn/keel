@@ -125,7 +125,7 @@ func TestKernelsAgainstOracle(t *testing.T) {
 					guard := make([]float32, len(c))
 					copy(guard, c)
 
-					k.Fn(kc, a, b, c, ldc)
+					k.Fn(kc, k.ExpandA(a), b, c, ldc)
 
 					for i := 0; i < k.MR; i++ {
 						for j := 0; j < k.NR; j++ {
@@ -179,8 +179,9 @@ func TestVectorAgainstScalarTile(t *testing.T) {
 				copy(cRef, c)
 
 				_, scale := tile(k.MR, k.NR, kc, a, b, c, ldc)
-				k.Fn(kc, a, b, c, ldc)
-				ref.Fn(kc, a, b, cRef, ldc)
+				ap := k.ExpandA(a) // the kernel and its Ref share the A contract
+				k.Fn(kc, ap, b, c, ldc)
+				ref.Fn(kc, ap, b, cRef, ldc)
 
 				for i := 0; i < k.MR; i++ {
 					for j := 0; j < k.NR; j++ {

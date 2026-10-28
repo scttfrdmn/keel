@@ -91,8 +91,9 @@ func TestVectorAgainstScalarTile64(t *testing.T) {
 				}
 				before := append([]float64(nil), c...)
 				cRef := append([]float64(nil), c...)
-				k.Fn(kc, a, b, c, ldc)
-				ref.Fn(kc, a, b, cRef, ldc)
+				ap := k.ExpandA(a) // the kernel and its Ref share the A contract
+				k.Fn(kc, ap, b, c, ldc)
+				ref.Fn(kc, ap, b, cRef, ldc)
 				for i := range c {
 					row, col := i/ldc, i%ldc
 					if col >= k.NR || row >= k.MR {

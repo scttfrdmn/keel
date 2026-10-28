@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Pre-broadcast-A NEON kernels in the tree, measured and not yet dispatched** (#198). `KernelPB5x16`, `KernelPB4x20`
+  and `KernelPB7x12` at float32, and `KernelDPB5x8`/`4x10`/`7x6` at float64, all U=8, are `shapegen -form pb`
+  fixed points by text and by audit (249/160 and 264/168 insns/FMA, 0 spills, 0 NOPs). They are registered as
+  reference tiles: every differential and nest test runs them (66 kernel-vs-twin subtests), and dispatch does
+  not. `TestPreferredPicksTheMeasuredWinnerPerClass` holds promotion to a full-Sgemm witness, as 3x24's did, and
+  the lanes-times-larger A pack has not yet been shown to pay for itself in the nest. `kern.Kernel.ExpandA` gives
+  hand-built test and benchmark panels the contract their kernel reads.
 - **The pre-broadcast A contract through the whole Level-3 path** (#198, the shaping step). `kern.Kernel`/`Kernel64`
   gain `ALanes`, where L > 1 means every A element is stored L times. Such a kernel's `Ref` reads the same layout,
   and its ID gets a `-pb` suffix so it can never collide with the conventional twin of its shape. `pack.Broadcast`

@@ -58,5 +58,5 @@ func tilePanels64(k kern.Kernel64, kc int) (a, b, c []float64, ldc int) {
 	for i := range b {
 		b[i] = rng.Float64()*2 - 1
 	}
-	return a, b, c, ldc
+	return k.ExpandA(a), b, c, ldc // a pre-broadcast kernel times the panel it reads
 }
