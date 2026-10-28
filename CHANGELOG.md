@@ -196,6 +196,11 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **Era `famax`'s share bar is typed: `CEIL_FRACTION = 47.0` for arm64** (#200; DESIGN.md §4/P5). It comes from the
+  founding run (judged r1, `085f23e`, `archive/p5-arm64-famax/`) by the precedent construction: the lowest of eight
+  admissible rows net of both intervals is keel-gvt4 Strsm at 49.6, less the 2.6-point margin. That is stricter than
+  `ceil8`'s 42.8, which amd64 keeps. r1 was 51 PASS / 2 FAIL, and both FAILs were criterion 9 on the stale Neoverse
+  README rows. With `5x16-pb/neon` dispatched, Sgemm 1T reads 58.58 (V1) and 65.40 (V2) GFLOP/s.
 - **Fixes found by the arm64 gate-p5 exploration pass before the judged pair** (#200, `archive/p5-arm64-famax/`).
   - `CEIL_FRACTION` (42.8, typed in `ceil8` from old-instrument NEON rows) is suspended in any era but its own, per
     §5 rule 17(d). famax's founding run reports, and a reviewed commit types its bar. The derivation line also named

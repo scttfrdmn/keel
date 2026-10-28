@@ -55,3 +55,43 @@ in `host-baselines.tsv`.
 
 **r2 is the first judged run** in famax, and it can fail. Its predictions are written after
 the bar is typed, and committed before r2 launches.
+
+## r1: result (085f23e, `judged-r1-085f23e.log`)
+
+51 PASS / 2 FAIL / 0 UNMEASURED / 2 BASELINE. 1h17m, about $13.3, fleet verified down.
+**Every prediction held but one, and that one is wording:**
+- era famax ✓; dispatch `5x16-pb/neon` on both hosts (`keel-bench-kern`) ✓;
+- the only FAILs are criterion 9 on each host's stale README rows ✓;
+- gate-p4 GREEN (64/0/0), and gate-p3 underneath it 0 FAIL ✓; `-race` clean on both hosts ✓;
+- fo is the family max at 8 threads ✓: V1 559.0 against 331.0, V2 674.8 against x44's 630.25;
+- Sgemm 1T **58.58 (V1, band 50–59) and 65.40 (V2, band 56–66)** ✓;
+- **missed, as written:** I predicted the share rows would render REPORTED, "never PASS or
+  FAIL". The gate tallies them as PASS lines whose text says "measured and REPORTED, NO
+  FRACTION IN FORCE", and its REPORTED count is 0. That is the gate's rendering of this
+  branch, not a wrong reading.
+
+The eight share rows, net of both intervals (`frac`, `bench_ratio_lo`):
+
+| host | Sgemm | Ssyrk | Ssymm | Strsm |
+|---|---|---|---|---|
+| V2 keel-gvt4 | 64.8 | 67.5 | 64.5 | **49.6** |
+| V1 keel-gvt3 | 72.1 | 74.1 | 71.7 | 51.6 |
+
+**famax's bar, typed** (`scripts/gate-p5.sh`, DESIGN.md §4/P5): 49.6 − 2.6 = **47.0**.
+
+## r2: predictions (written after the bar was typed, before r2)
+
+- era famax, with **`CEIL_FRACTION` 47.0 in force**, and its famax derivation lines printed;
+- **all eight share rows PASS** at ≥ 47.0. keel-gvt4 Strsm is tightest, predicted at 49.6 ± 1.5;
+- the rates reproduce r1 to within 1% (the ceil8 arm64 pair reproduced to 0.25%): Sgemm 1T
+  **V1 58.0–59.2, V2 64.7–66.1 GFLOP/s**;
+- criterion 9 FAILs on the stale README rows, and those are the only FAILs. BASELINE renders
+  again for the unlanded L1/peak rows, as the printed debt the registry describes;
+- gate-p4 and gate-p3 GREEN, `-race` clean, fo the family max at 8 threads.
+**REFUTED if** any share row FAILs, a host's 1T Sgemm moves more than 1% from r1, or any FAIL
+appears outside criterion 9.
+
+**After r2:** the famax baselines (peak/*, rate/*) and the witness rows land as medians over
+N=2 (r1 + r2) by `host-baselines.tsv`'s rules, as ceil8's did over its founding and
+confirmation runs. The README is regenerated from the famax archives, and its under-review
+note comes out in the same commit.

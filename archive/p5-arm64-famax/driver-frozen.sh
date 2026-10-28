@@ -16,6 +16,7 @@
 # V1 + V2 only: c9g (V3) needs OpenBLAS v0.3.34 first (#196), and has no README rows yet.
 # Re-frozen 2026-10-28 after the exploration pass, for the fixes in 30af10d; the SELF check
 # below requires the freezing commit to be HEAD.
+# Re-frozen again for r2, after famax's CEIL_FRACTION was typed from r1.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
