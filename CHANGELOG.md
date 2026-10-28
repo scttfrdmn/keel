@@ -164,6 +164,11 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **gate-p2's arm64 arms judge against the family-max NEON denominator** (#198, DESIGN.md P2, 2026-10-27).
+  The peak audit, the IPF ceiling (24/18) and the roofline mix now name `neonPeakTile`/`neonPeakTileD`. Each host
+  also runs `BenchmarkFMAFamily` and fails if any member beats the `neon` row by more than 1% net of CI. An absent
+  member is `unmeasured`. All three outcomes were fixture-tested against a real V2 log, unmodified, planted and
+  truncated. The judged re-run is pre-registered in `archive/p2-arm64-family/prereg.md` as RED.
 - **The NEON FMA ceiling is now the maximum over a family of FMA-only loops** (#198, Scott's ruling (b)).
   The `neon` rows of `BenchmarkPeak` and `BenchmarkFMARoof64` run the family's first member, FO's loop
   (`neonPeakTile`, 24 insns for 18 FMAs). It is byte-identical to the loop that measured 1.28–1.89× the old

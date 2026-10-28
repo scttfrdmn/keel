@@ -1,0 +1,825 @@
+== launch 02:34:46 rev 100a055
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.16 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.1s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (829ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.6s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (293ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (633ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.5s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0cba911bde8742eba
+  Public IP    44.203.229.73
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt3  c7g.4xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.28 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (842ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (304ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (634ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0a8b039513613a519
+  Public IP    3.90.7.216
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt4  c8g.4xlarge  (Neoverse-V2, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (864ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.6s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (19.2s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (283ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (756ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0107783c1b8253d05
+  Public IP    13.219.242.39
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  gvt5  c9g.4xlarge  (AWS Graviton5, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.4xlarge      13.219.242.39    on-demand  2h       2026-10-28T02:36:20Z
+  keel-gvt4            c8g.4xlarge      3.90.7.216       on-demand  2h       2026-10-28T02:35:51Z
+  keel-gvt3            c7g.4xlarge      44.203.229.73    on-demand  2h       2026-10-28T02:35:11Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== keel-gvt3 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd40
+Model name:                              Neoverse-V1
+ 02:37:42 up 2 min,  1 user,  load average: 0.21, 0.25, 0.10
+== keel-gvt4 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd4f
+Model name:                              Neoverse-V2
+ 02:37:43 up 1 min,  1 user,  load average: 0.07, 0.05, 0.01
+== keel-gvt5 read-back
+CPU implementer	: 0x41
+CPU part	: 0xd84
+Model name:                              Neoverse-V3
+ 02:37:45 up 1 min,  1 user,  load average: 0.05, 0.02, 0.00
+keel-gvt3 r1 bench BenchmarkFMAFamily/f32/fo         	    9702	    120713 ns/op	        78.18 GFLOP/s
+keel-gvt3 r1 bench BenchmarkFMAFamily/f32/x44        	    5913	    202306 ns/op	        41.47 GFLOP/s
+keel-gvt3 r1 bench BenchmarkFMAFamily/f32/shared     	    5916	    202495 ns/op	        41.43 GFLOP/s
+keel-gvt3 r1 bench BenchmarkFMAFamily/f64/fo         	    9919	    120718 ns/op	        39.09 GFLOP/s
+keel-gvt3 r1 bench BenchmarkFMAFamily/f64/x44        	    5919	    202326 ns/op	        20.73 GFLOP/s
+keel-gvt3 r1 bench BenchmarkFMAFamily/f64/shared     	    5917	    202499 ns/op	        20.71 GFLOP/s
+keel-gvt3 r1 bench BenchmarkKernel/8x8/neon/kc=128   	 1808682	       663.3 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r1 bench BenchmarkKernel/4x16/neon/kc=128  	 2390823	       501.8 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r1 bench BenchmarkKernel/3x24/neon/kc=128  	 2316777	       517.6 ns/op	        35.61 GFLOP/s	     18432 flops/call
+keel-gvt3 r1 bench BenchmarkKernel/8x12/neon/kc=128  	 1403036	       852.2 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r1 bench BenchmarkKernel/8x16/neon/kc=128  	  957018	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r1 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r1 bench BenchmarkPeak/neon                	    9924	    120720 ns/op	        78.17 GFLOP/s
+keel-gvt3 r1 bench BenchmarkFMARoof64/neon           	    9921	    120719 ns/op	        39.09 GFLOP/s
+keel-gvt3 r1 bench BenchmarkTile64/8x4/neon/kc=128   	 1815842	       660.7 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r1 bench BenchmarkTile64/4x8/neon/kc=128   	 2410144	       498.0 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r1 bench BenchmarkTile64/3x12/neon/kc=128  	 2322452	       516.6 ns/op	        17.84 GFLOP/s	      9216 flops/call
+keel-gvt3 r1 bench BenchmarkTile64/8x6/neon/kc=128   	 1444074	       830.9 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r1 bench BenchmarkTile64/8x8/neon/kc=128   	  975256	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r1 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r2 bench BenchmarkFMAFamily/f32/fo         	    9704	    120708 ns/op	        78.18 GFLOP/s
+keel-gvt3 r2 bench BenchmarkFMAFamily/f32/x44        	    5908	    202466 ns/op	        41.43 GFLOP/s
+keel-gvt3 r2 bench BenchmarkFMAFamily/f32/shared     	    5916	    202493 ns/op	        41.43 GFLOP/s
+keel-gvt3 r2 bench BenchmarkFMAFamily/f64/fo         	    9909	    120722 ns/op	        39.09 GFLOP/s
+keel-gvt3 r2 bench BenchmarkFMAFamily/f64/x44        	    5914	    202389 ns/op	        20.72 GFLOP/s
+keel-gvt3 r2 bench BenchmarkFMAFamily/f64/shared     	    5930	    202490 ns/op	        20.71 GFLOP/s
+keel-gvt3 r2 bench BenchmarkKernel/8x8/neon/kc=128   	 1808880	       663.2 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r2 bench BenchmarkKernel/4x16/neon/kc=128  	 2379776	       501.8 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r2 bench BenchmarkKernel/3x24/neon/kc=128  	 2318173	       517.7 ns/op	        35.60 GFLOP/s	     18432 flops/call
+keel-gvt3 r2 bench BenchmarkKernel/8x12/neon/kc=128  	 1408346	       852.2 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r2 bench BenchmarkKernel/8x16/neon/kc=128  	  957388	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r2 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r2 bench BenchmarkPeak/neon                	    9922	    120727 ns/op	        78.17 GFLOP/s
+keel-gvt3 r2 bench BenchmarkFMARoof64/neon           	    9915	    120720 ns/op	        39.09 GFLOP/s
+keel-gvt3 r2 bench BenchmarkTile64/8x4/neon/kc=128   	 1815914	       660.7 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r2 bench BenchmarkTile64/4x8/neon/kc=128   	 2409120	       498.0 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r2 bench BenchmarkTile64/3x12/neon/kc=128  	 2321372	       516.8 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r2 bench BenchmarkTile64/8x6/neon/kc=128   	 1444260	       830.8 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r2 bench BenchmarkTile64/8x8/neon/kc=128   	  974396	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r2 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r3 bench BenchmarkFMAFamily/f32/fo         	    9706	    120737 ns/op	        78.16 GFLOP/s
+keel-gvt3 r3 bench BenchmarkFMAFamily/f32/x44        	    5905	    202406 ns/op	        41.44 GFLOP/s
+keel-gvt3 r3 bench BenchmarkFMAFamily/f32/shared     	    5917	    202502 ns/op	        41.42 GFLOP/s
+keel-gvt3 r3 bench BenchmarkFMAFamily/f64/fo         	    9916	    120735 ns/op	        39.08 GFLOP/s
+keel-gvt3 r3 bench BenchmarkFMAFamily/f64/x44        	    5917	    202447 ns/op	        20.72 GFLOP/s
+keel-gvt3 r3 bench BenchmarkFMAFamily/f64/shared     	    5918	    202484 ns/op	        20.71 GFLOP/s
+keel-gvt3 r3 bench BenchmarkKernel/8x8/neon/kc=128   	 1809193	       663.2 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r3 bench BenchmarkKernel/4x16/neon/kc=128  	 2390667	       501.9 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r3 bench BenchmarkKernel/3x24/neon/kc=128  	 2318580	       517.6 ns/op	        35.61 GFLOP/s	     18432 flops/call
+keel-gvt3 r3 bench BenchmarkKernel/8x12/neon/kc=128  	 1408136	       852.1 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r3 bench BenchmarkKernel/8x16/neon/kc=128  	  962332	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r3 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r3 bench BenchmarkPeak/neon                	    9889	    120721 ns/op	        78.17 GFLOP/s
+keel-gvt3 r3 bench BenchmarkFMARoof64/neon           	    9883	    120749 ns/op	        39.08 GFLOP/s
+keel-gvt3 r3 bench BenchmarkTile64/8x4/neon/kc=128   	 1816021	       660.8 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r3 bench BenchmarkTile64/4x8/neon/kc=128   	 2409589	       498.1 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r3 bench BenchmarkTile64/3x12/neon/kc=128  	 2322289	       516.7 ns/op	        17.84 GFLOP/s	      9216 flops/call
+keel-gvt3 r3 bench BenchmarkTile64/8x6/neon/kc=128   	 1444222	       830.9 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r3 bench BenchmarkTile64/8x8/neon/kc=128   	  974634	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r3 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r4 bench BenchmarkFMAFamily/f32/fo         	    9694	    120739 ns/op	        78.16 GFLOP/s
+keel-gvt3 r4 bench BenchmarkFMAFamily/f32/x44        	    5917	    202451 ns/op	        41.44 GFLOP/s
+keel-gvt3 r4 bench BenchmarkFMAFamily/f32/shared     	    5917	    202429 ns/op	        41.44 GFLOP/s
+keel-gvt3 r4 bench BenchmarkFMAFamily/f64/fo         	    9891	    120737 ns/op	        39.08 GFLOP/s
+keel-gvt3 r4 bench BenchmarkFMAFamily/f64/x44        	    5916	    202401 ns/op	        20.72 GFLOP/s
+keel-gvt3 r4 bench BenchmarkFMAFamily/f64/shared     	    5916	    202432 ns/op	        20.72 GFLOP/s
+keel-gvt3 r4 bench BenchmarkKernel/8x8/neon/kc=128   	 1809356	       663.2 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r4 bench BenchmarkKernel/4x16/neon/kc=128  	 2391094	       501.8 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r4 bench BenchmarkKernel/3x24/neon/kc=128  	 2317226	       518.1 ns/op	        35.58 GFLOP/s	     18432 flops/call
+keel-gvt3 r4 bench BenchmarkKernel/8x12/neon/kc=128  	 1407967	       852.1 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r4 bench BenchmarkKernel/8x16/neon/kc=128  	  963801	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r4 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r4 bench BenchmarkPeak/neon                	    9909	    120722 ns/op	        78.17 GFLOP/s
+keel-gvt3 r4 bench BenchmarkFMARoof64/neon           	    9926	    120716 ns/op	        39.09 GFLOP/s
+keel-gvt3 r4 bench BenchmarkTile64/8x4/neon/kc=128   	 1815748	       660.8 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r4 bench BenchmarkTile64/4x8/neon/kc=128   	 2408970	       498.0 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r4 bench BenchmarkTile64/3x12/neon/kc=128  	 2321893	       516.7 ns/op	        17.84 GFLOP/s	      9216 flops/call
+keel-gvt3 r4 bench BenchmarkTile64/8x6/neon/kc=128   	 1444212	       830.8 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r4 bench BenchmarkTile64/8x8/neon/kc=128   	  974683	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r4 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1178 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r5 bench BenchmarkFMAFamily/f32/fo         	    9720	    120705 ns/op	        78.18 GFLOP/s
+keel-gvt3 r5 bench BenchmarkFMAFamily/f32/x44        	    5912	    202280 ns/op	        41.47 GFLOP/s
+keel-gvt3 r5 bench BenchmarkFMAFamily/f32/shared     	    5916	    202493 ns/op	        41.43 GFLOP/s
+keel-gvt3 r5 bench BenchmarkFMAFamily/f64/fo         	    9915	    120711 ns/op	        39.09 GFLOP/s
+keel-gvt3 r5 bench BenchmarkFMAFamily/f64/x44        	    5916	    202235 ns/op	        20.74 GFLOP/s
+keel-gvt3 r5 bench BenchmarkFMAFamily/f64/shared     	    5918	    202480 ns/op	        20.71 GFLOP/s
+keel-gvt3 r5 bench BenchmarkKernel/8x8/neon/kc=128   	 1808586	       663.4 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r5 bench BenchmarkKernel/4x16/neon/kc=128  	 2390946	       501.8 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r5 bench BenchmarkKernel/3x24/neon/kc=128  	 2318374	       518.0 ns/op	        35.59 GFLOP/s	     18432 flops/call
+keel-gvt3 r5 bench BenchmarkKernel/8x12/neon/kc=128  	 1408140	       852.3 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r5 bench BenchmarkKernel/8x16/neon/kc=128  	  963300	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r5 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r5 bench BenchmarkPeak/neon                	    9922	    120698 ns/op	        78.19 GFLOP/s
+keel-gvt3 r5 bench BenchmarkFMARoof64/neon           	    9913	    120724 ns/op	        39.09 GFLOP/s
+keel-gvt3 r5 bench BenchmarkTile64/8x4/neon/kc=128   	 1816281	       660.8 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r5 bench BenchmarkTile64/4x8/neon/kc=128   	 2409024	       498.0 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r5 bench BenchmarkTile64/3x12/neon/kc=128  	 2321805	       516.8 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r5 bench BenchmarkTile64/8x6/neon/kc=128   	 1444335	       830.8 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r5 bench BenchmarkTile64/8x8/neon/kc=128   	  974785	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r5 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r6 bench BenchmarkFMAFamily/f32/fo         	    9657	    120724 ns/op	        78.17 GFLOP/s
+keel-gvt3 r6 bench BenchmarkFMAFamily/f32/x44        	    5914	    202471 ns/op	        41.43 GFLOP/s
+keel-gvt3 r6 bench BenchmarkFMAFamily/f32/shared     	    5914	    202472 ns/op	        41.43 GFLOP/s
+keel-gvt3 r6 bench BenchmarkFMAFamily/f64/fo         	    9925	    120698 ns/op	        39.09 GFLOP/s
+keel-gvt3 r6 bench BenchmarkFMAFamily/f64/x44        	    5917	    202452 ns/op	        20.72 GFLOP/s
+keel-gvt3 r6 bench BenchmarkFMAFamily/f64/shared     	    5916	    202486 ns/op	        20.71 GFLOP/s
+keel-gvt3 r6 bench BenchmarkKernel/8x8/neon/kc=128   	 1809054	       663.4 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r6 bench BenchmarkKernel/4x16/neon/kc=128  	 2391440	       501.8 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r6 bench BenchmarkKernel/3x24/neon/kc=128  	 2316109	       518.0 ns/op	        35.58 GFLOP/s	     18432 flops/call
+keel-gvt3 r6 bench BenchmarkKernel/8x12/neon/kc=128  	 1408058	       852.2 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r6 bench BenchmarkKernel/8x16/neon/kc=128  	  964317	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r6 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r6 bench BenchmarkPeak/neon                	    9903	    120716 ns/op	        78.18 GFLOP/s
+keel-gvt3 r6 bench BenchmarkFMARoof64/neon           	    9891	    120715 ns/op	        39.09 GFLOP/s
+keel-gvt3 r6 bench BenchmarkTile64/8x4/neon/kc=128   	 1815784	       660.7 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r6 bench BenchmarkTile64/4x8/neon/kc=128   	 2409859	       498.0 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r6 bench BenchmarkTile64/3x12/neon/kc=128  	 2321526	       516.9 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r6 bench BenchmarkTile64/8x6/neon/kc=128   	 1444192	       830.8 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r6 bench BenchmarkTile64/8x8/neon/kc=128   	  973762	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r6 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r7 bench BenchmarkFMAFamily/f32/fo         	    9704	    120715 ns/op	        78.18 GFLOP/s
+keel-gvt3 r7 bench BenchmarkFMAFamily/f32/x44        	    5913	    202271 ns/op	        41.47 GFLOP/s
+keel-gvt3 r7 bench BenchmarkFMAFamily/f32/shared     	    5913	    202487 ns/op	        41.43 GFLOP/s
+keel-gvt3 r7 bench BenchmarkFMAFamily/f64/fo         	    9919	    120724 ns/op	        39.09 GFLOP/s
+keel-gvt3 r7 bench BenchmarkFMAFamily/f64/x44        	    5917	    202252 ns/op	        20.74 GFLOP/s
+keel-gvt3 r7 bench BenchmarkFMAFamily/f64/shared     	    5916	    202449 ns/op	        20.72 GFLOP/s
+keel-gvt3 r7 bench BenchmarkKernel/8x8/neon/kc=128   	 1809146	       663.3 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r7 bench BenchmarkKernel/4x16/neon/kc=128  	 2391109	       501.9 ns/op	        32.64 GFLOP/s	     16384 flops/call
+keel-gvt3 r7 bench BenchmarkKernel/3x24/neon/kc=128  	 2318016	       517.7 ns/op	        35.60 GFLOP/s	     18432 flops/call
+keel-gvt3 r7 bench BenchmarkKernel/8x12/neon/kc=128  	 1408128	       852.0 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r7 bench BenchmarkKernel/8x16/neon/kc=128  	  958378	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r7 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r7 bench BenchmarkPeak/neon                	    9897	    120709 ns/op	        78.18 GFLOP/s
+keel-gvt3 r7 bench BenchmarkFMARoof64/neon           	    9916	    120714 ns/op	        39.09 GFLOP/s
+keel-gvt3 r7 bench BenchmarkTile64/8x4/neon/kc=128   	 1815880	       660.7 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r7 bench BenchmarkTile64/4x8/neon/kc=128   	 2409043	       497.9 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r7 bench BenchmarkTile64/3x12/neon/kc=128  	 2321503	       517.0 ns/op	        17.82 GFLOP/s	      9216 flops/call
+keel-gvt3 r7 bench BenchmarkTile64/8x6/neon/kc=128   	 1444251	       830.9 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r7 bench BenchmarkTile64/8x8/neon/kc=128   	  974965	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r7 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r8 bench BenchmarkFMAFamily/f32/fo         	    9672	    120703 ns/op	        78.19 GFLOP/s
+keel-gvt3 r8 bench BenchmarkFMAFamily/f32/x44        	    5910	    202475 ns/op	        41.43 GFLOP/s
+keel-gvt3 r8 bench BenchmarkFMAFamily/f32/shared     	    5890	    202524 ns/op	        41.42 GFLOP/s
+keel-gvt3 r8 bench BenchmarkFMAFamily/f64/fo         	    9918	    120721 ns/op	        39.09 GFLOP/s
+keel-gvt3 r8 bench BenchmarkFMAFamily/f64/x44        	    5919	    202462 ns/op	        20.72 GFLOP/s
+keel-gvt3 r8 bench BenchmarkFMAFamily/f64/shared     	    5913	    202482 ns/op	        20.71 GFLOP/s
+keel-gvt3 r8 bench BenchmarkKernel/8x8/neon/kc=128   	 1809080	       663.3 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r8 bench BenchmarkKernel/4x16/neon/kc=128  	 2390914	       501.8 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r8 bench BenchmarkKernel/3x24/neon/kc=128  	 2317333	       517.9 ns/op	        35.59 GFLOP/s	     18432 flops/call
+keel-gvt3 r8 bench BenchmarkKernel/8x12/neon/kc=128  	 1408179	       852.1 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r8 bench BenchmarkKernel/8x16/neon/kc=128  	  945441	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r8 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r8 bench BenchmarkPeak/neon                	    9913	    120711 ns/op	        78.18 GFLOP/s
+keel-gvt3 r8 bench BenchmarkFMARoof64/neon           	    9919	    120767 ns/op	        39.07 GFLOP/s
+keel-gvt3 r8 bench BenchmarkTile64/8x4/neon/kc=128   	 1816173	       660.8 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r8 bench BenchmarkTile64/4x8/neon/kc=128   	 2409478	       498.0 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r8 bench BenchmarkTile64/3x12/neon/kc=128  	 2321613	       516.7 ns/op	        17.84 GFLOP/s	      9216 flops/call
+keel-gvt3 r8 bench BenchmarkTile64/8x6/neon/kc=128   	 1444238	       830.8 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r8 bench BenchmarkTile64/8x8/neon/kc=128   	  974664	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r8 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r9 bench BenchmarkFMAFamily/f32/fo         	    9698	    120726 ns/op	        78.17 GFLOP/s
+keel-gvt3 r9 bench BenchmarkFMAFamily/f32/x44        	    5914	    202456 ns/op	        41.43 GFLOP/s
+keel-gvt3 r9 bench BenchmarkFMAFamily/f32/shared     	    5918	    202451 ns/op	        41.44 GFLOP/s
+keel-gvt3 r9 bench BenchmarkFMAFamily/f64/fo         	    9918	    120710 ns/op	        39.09 GFLOP/s
+keel-gvt3 r9 bench BenchmarkFMAFamily/f64/x44        	    5920	    202437 ns/op	        20.72 GFLOP/s
+keel-gvt3 r9 bench BenchmarkFMAFamily/f64/shared     	    5913	    202446 ns/op	        20.72 GFLOP/s
+keel-gvt3 r9 bench BenchmarkKernel/8x8/neon/kc=128   	 1809583	       663.3 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r9 bench BenchmarkKernel/4x16/neon/kc=128  	 2391301	       501.8 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r9 bench BenchmarkKernel/3x24/neon/kc=128  	 2317890	       517.6 ns/op	        35.61 GFLOP/s	     18432 flops/call
+keel-gvt3 r9 bench BenchmarkKernel/8x12/neon/kc=128  	 1408321	       852.1 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r9 bench BenchmarkKernel/8x16/neon/kc=128  	  964491	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r9 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r9 bench BenchmarkPeak/neon                	    9830	    120703 ns/op	        78.19 GFLOP/s
+keel-gvt3 r9 bench BenchmarkFMARoof64/neon           	    9913	    120708 ns/op	        39.09 GFLOP/s
+keel-gvt3 r9 bench BenchmarkTile64/8x4/neon/kc=128   	 1815952	       660.7 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r9 bench BenchmarkTile64/4x8/neon/kc=128   	 2408108	       498.0 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r9 bench BenchmarkTile64/3x12/neon/kc=128  	 2322037	       516.8 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r9 bench BenchmarkTile64/8x6/neon/kc=128   	 1444207	       830.8 ns/op	        14.79 GFLOP/s	     12288 flops/call
+keel-gvt3 r9 bench BenchmarkTile64/8x8/neon/kc=128   	  974186	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r9 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt3 r10 bench BenchmarkFMAFamily/f32/fo         	    9657	    120725 ns/op	        78.17 GFLOP/s
+keel-gvt3 r10 bench BenchmarkFMAFamily/f32/x44        	    5914	    202477 ns/op	        41.43 GFLOP/s
+keel-gvt3 r10 bench BenchmarkFMAFamily/f32/shared     	    5916	    202477 ns/op	        41.43 GFLOP/s
+keel-gvt3 r10 bench BenchmarkFMAFamily/f64/fo         	    9925	    120719 ns/op	        39.09 GFLOP/s
+keel-gvt3 r10 bench BenchmarkFMAFamily/f64/x44        	    5914	    202446 ns/op	        20.72 GFLOP/s
+keel-gvt3 r10 bench BenchmarkFMAFamily/f64/shared     	    5916	    202471 ns/op	        20.72 GFLOP/s
+keel-gvt3 r10 bench BenchmarkKernel/8x8/neon/kc=128   	 1806838	       663.2 ns/op	        24.70 GFLOP/s	     16384 flops/call
+keel-gvt3 r10 bench BenchmarkKernel/4x16/neon/kc=128  	 2391080	       501.9 ns/op	        32.65 GFLOP/s	     16384 flops/call
+keel-gvt3 r10 bench BenchmarkKernel/3x24/neon/kc=128  	 2318553	       517.8 ns/op	        35.59 GFLOP/s	     18432 flops/call
+keel-gvt3 r10 bench BenchmarkKernel/8x12/neon/kc=128  	 1407892	       852.2 ns/op	        28.84 GFLOP/s	     24576 flops/call
+keel-gvt3 r10 bench BenchmarkKernel/8x16/neon/kc=128  	  964375	      1243 ns/op	        26.36 GFLOP/s	     32768 flops/call
+keel-gvt3 r10 bench BenchmarkKernel/4x32/neon/kc=128  	 1000000	      1189 ns/op	        27.56 GFLOP/s	     32768 flops/call
+keel-gvt3 r10 bench BenchmarkPeak/neon                	    9909	    120741 ns/op	        78.16 GFLOP/s
+keel-gvt3 r10 bench BenchmarkFMARoof64/neon           	    9897	    120737 ns/op	        39.08 GFLOP/s
+keel-gvt3 r10 bench BenchmarkTile64/8x4/neon/kc=128   	 1815474	       660.9 ns/op	        12.40 GFLOP/s	      8192 flops/call
+keel-gvt3 r10 bench BenchmarkTile64/4x8/neon/kc=128   	 2408515	       498.1 ns/op	        16.45 GFLOP/s	      8192 flops/call
+keel-gvt3 r10 bench BenchmarkTile64/3x12/neon/kc=128  	 2321652	       516.9 ns/op	        17.83 GFLOP/s	      9216 flops/call
+keel-gvt3 r10 bench BenchmarkTile64/8x6/neon/kc=128   	 1444089	       831.8 ns/op	        14.77 GFLOP/s	     12288 flops/call
+keel-gvt3 r10 bench BenchmarkTile64/8x8/neon/kc=128   	  968797	      1229 ns/op	        13.33 GFLOP/s	     16384 flops/call
+keel-gvt3 r10 bench BenchmarkTile64/4x16/neon/kc=128  	 1000000	      1179 ns/op	        13.90 GFLOP/s	     16384 flops/call
+keel-gvt4 r1 bench BenchmarkFMAFamily/f32/fo         	   10000	    107594 ns/op	        87.71 GFLOP/s
+keel-gvt4 r1 bench BenchmarkFMAFamily/f32/x44        	   10000	    101313 ns/op	        82.80 GFLOP/s
+keel-gvt4 r1 bench BenchmarkFMAFamily/f32/shared     	    8535	    131689 ns/op	        63.70 GFLOP/s
+keel-gvt4 r1 bench BenchmarkFMAFamily/f64/fo         	   10000	    107768 ns/op	        43.78 GFLOP/s
+keel-gvt4 r1 bench BenchmarkFMAFamily/f64/x44        	   10000	    101936 ns/op	        41.15 GFLOP/s
+keel-gvt4 r1 bench BenchmarkFMAFamily/f64/shared     	    8967	    131629 ns/op	        31.86 GFLOP/s
+keel-gvt4 r1 bench BenchmarkKernel/8x8/neon/kc=128   	 2048821	       585.7 ns/op	        27.97 GFLOP/s	     16384 flops/call
+keel-gvt4 r1 bench BenchmarkKernel/4x16/neon/kc=128  	 2654236	       452.0 ns/op	        36.25 GFLOP/s	     16384 flops/call
+keel-gvt4 r1 bench BenchmarkKernel/3x24/neon/kc=128  	 2601751	       461.2 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r1 bench BenchmarkKernel/8x12/neon/kc=128  	 1767292	       678.0 ns/op	        36.25 GFLOP/s	     24576 flops/call
+keel-gvt4 r1 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1035 ns/op	        31.67 GFLOP/s	     32768 flops/call
+keel-gvt4 r1 bench BenchmarkKernel/4x32/neon/kc=128  	 1211072	       990.9 ns/op	        33.07 GFLOP/s	     32768 flops/call
+keel-gvt4 r1 bench BenchmarkPeak/neon                	   10000	    107611 ns/op	        87.70 GFLOP/s
+keel-gvt4 r1 bench BenchmarkFMARoof64/neon           	   10000	    107640 ns/op	        43.84 GFLOP/s
+keel-gvt4 r1 bench BenchmarkTile64/8x4/neon/kc=128   	 2048679	       585.7 ns/op	        13.99 GFLOP/s	      8192 flops/call
+keel-gvt4 r1 bench BenchmarkTile64/4x8/neon/kc=128   	 2655330	       451.8 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r1 bench BenchmarkTile64/3x12/neon/kc=128  	 2601570	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r1 bench BenchmarkTile64/8x6/neon/kc=128   	 1776175	       675.8 ns/op	        18.18 GFLOP/s	     12288 flops/call
+keel-gvt4 r1 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1046 ns/op	        15.66 GFLOP/s	     16384 flops/call
+keel-gvt4 r1 bench BenchmarkTile64/4x16/neon/kc=128  	 1215183	       987.3 ns/op	        16.59 GFLOP/s	     16384 flops/call
+keel-gvt4 r2 bench BenchmarkFMAFamily/f32/fo         	   10000	    107592 ns/op	        87.71 GFLOP/s
+keel-gvt4 r2 bench BenchmarkFMAFamily/f32/x44        	   10000	    101302 ns/op	        82.81 GFLOP/s
+keel-gvt4 r2 bench BenchmarkFMAFamily/f32/shared     	    9944	    132645 ns/op	        63.24 GFLOP/s
+keel-gvt4 r2 bench BenchmarkFMAFamily/f64/fo         	   10000	    107779 ns/op	        43.78 GFLOP/s
+keel-gvt4 r2 bench BenchmarkFMAFamily/f64/x44        	   10000	    101889 ns/op	        41.17 GFLOP/s
+keel-gvt4 r2 bench BenchmarkFMAFamily/f64/shared     	    8972	    131912 ns/op	        31.80 GFLOP/s
+keel-gvt4 r2 bench BenchmarkKernel/8x8/neon/kc=128   	 2048924	       585.8 ns/op	        27.97 GFLOP/s	     16384 flops/call
+keel-gvt4 r2 bench BenchmarkKernel/4x16/neon/kc=128  	 2654341	       452.0 ns/op	        36.25 GFLOP/s	     16384 flops/call
+keel-gvt4 r2 bench BenchmarkKernel/3x24/neon/kc=128  	 2601517	       461.2 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r2 bench BenchmarkKernel/8x12/neon/kc=128  	 1775422	       675.7 ns/op	        36.37 GFLOP/s	     24576 flops/call
+keel-gvt4 r2 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1035 ns/op	        31.67 GFLOP/s	     32768 flops/call
+keel-gvt4 r2 bench BenchmarkKernel/4x32/neon/kc=128  	 1215454	       988.2 ns/op	        33.16 GFLOP/s	     32768 flops/call
+keel-gvt4 r2 bench BenchmarkPeak/neon                	   10000	    107594 ns/op	        87.71 GFLOP/s
+keel-gvt4 r2 bench BenchmarkFMARoof64/neon           	   10000	    107793 ns/op	        43.77 GFLOP/s
+keel-gvt4 r2 bench BenchmarkTile64/8x4/neon/kc=128   	 2048282	       585.7 ns/op	        13.99 GFLOP/s	      8192 flops/call
+keel-gvt4 r2 bench BenchmarkTile64/4x8/neon/kc=128   	 2656078	       451.8 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r2 bench BenchmarkTile64/3x12/neon/kc=128  	 2602027	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r2 bench BenchmarkTile64/8x6/neon/kc=128   	 1776031	       675.6 ns/op	        18.19 GFLOP/s	     12288 flops/call
+keel-gvt4 r2 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1037 ns/op	        15.81 GFLOP/s	     16384 flops/call
+keel-gvt4 r2 bench BenchmarkTile64/4x16/neon/kc=128  	 1215399	       987.4 ns/op	        16.59 GFLOP/s	     16384 flops/call
+keel-gvt4 r3 bench BenchmarkFMAFamily/f32/fo         	   10000	    107597 ns/op	        87.71 GFLOP/s
+keel-gvt4 r3 bench BenchmarkFMAFamily/f32/x44        	   10000	    101260 ns/op	        82.84 GFLOP/s
+keel-gvt4 r3 bench BenchmarkFMAFamily/f32/shared     	    9432	    133462 ns/op	        62.85 GFLOP/s
+keel-gvt4 r3 bench BenchmarkFMAFamily/f64/fo         	   10000	    107772 ns/op	        43.78 GFLOP/s
+keel-gvt4 r3 bench BenchmarkFMAFamily/f64/x44        	   10000	    101870 ns/op	        41.17 GFLOP/s
+keel-gvt4 r3 bench BenchmarkFMAFamily/f64/shared     	    8830	    132339 ns/op	        31.69 GFLOP/s
+keel-gvt4 r3 bench BenchmarkKernel/8x8/neon/kc=128   	 2048823	       585.7 ns/op	        27.98 GFLOP/s	     16384 flops/call
+keel-gvt4 r3 bench BenchmarkKernel/4x16/neon/kc=128  	 2653160	       452.0 ns/op	        36.25 GFLOP/s	     16384 flops/call
+keel-gvt4 r3 bench BenchmarkKernel/3x24/neon/kc=128  	 2601638	       461.2 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r3 bench BenchmarkKernel/8x12/neon/kc=128  	 1776321	       675.6 ns/op	        36.38 GFLOP/s	     24576 flops/call
+keel-gvt4 r3 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1035 ns/op	        31.67 GFLOP/s	     32768 flops/call
+keel-gvt4 r3 bench BenchmarkKernel/4x32/neon/kc=128  	 1215402	       987.3 ns/op	        33.19 GFLOP/s	     32768 flops/call
+keel-gvt4 r3 bench BenchmarkPeak/neon                	   10000	    107585 ns/op	        87.72 GFLOP/s
+keel-gvt4 r3 bench BenchmarkFMARoof64/neon           	   10000	    107789 ns/op	        43.78 GFLOP/s
+keel-gvt4 r3 bench BenchmarkTile64/8x4/neon/kc=128   	 2048644	       585.8 ns/op	        13.99 GFLOP/s	      8192 flops/call
+keel-gvt4 r3 bench BenchmarkTile64/4x8/neon/kc=128   	 2656287	       451.8 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r3 bench BenchmarkTile64/3x12/neon/kc=128  	 2601448	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r3 bench BenchmarkTile64/8x6/neon/kc=128   	 1776028	       675.7 ns/op	        18.19 GFLOP/s	     12288 flops/call
+keel-gvt4 r3 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1036 ns/op	        15.81 GFLOP/s	     16384 flops/call
+keel-gvt4 r3 bench BenchmarkTile64/4x16/neon/kc=128  	 1215525	       987.4 ns/op	        16.59 GFLOP/s	     16384 flops/call
+keel-gvt4 r4 bench BenchmarkFMAFamily/f32/fo         	   10000	    107600 ns/op	        87.71 GFLOP/s
+keel-gvt4 r4 bench BenchmarkFMAFamily/f32/x44        	   10000	    101474 ns/op	        82.67 GFLOP/s
+keel-gvt4 r4 bench BenchmarkFMAFamily/f32/shared     	    9092	    132666 ns/op	        63.23 GFLOP/s
+keel-gvt4 r4 bench BenchmarkFMAFamily/f64/fo         	   10000	    107775 ns/op	        43.78 GFLOP/s
+keel-gvt4 r4 bench BenchmarkFMAFamily/f64/x44        	   10000	    101902 ns/op	        41.16 GFLOP/s
+keel-gvt4 r4 bench BenchmarkFMAFamily/f64/shared     	    9027	    133362 ns/op	        31.45 GFLOP/s
+keel-gvt4 r4 bench BenchmarkKernel/8x8/neon/kc=128   	 2049204	       585.6 ns/op	        27.98 GFLOP/s	     16384 flops/call
+keel-gvt4 r4 bench BenchmarkKernel/4x16/neon/kc=128  	 2654179	       452.1 ns/op	        36.24 GFLOP/s	     16384 flops/call
+keel-gvt4 r4 bench BenchmarkKernel/3x24/neon/kc=128  	 2601324	       461.2 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r4 bench BenchmarkKernel/8x12/neon/kc=128  	 1775666	       675.6 ns/op	        36.38 GFLOP/s	     24576 flops/call
+keel-gvt4 r4 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1034 ns/op	        31.68 GFLOP/s	     32768 flops/call
+keel-gvt4 r4 bench BenchmarkKernel/4x32/neon/kc=128  	 1215433	       987.2 ns/op	        33.19 GFLOP/s	     32768 flops/call
+keel-gvt4 r4 bench BenchmarkPeak/neon                	   10000	    107583 ns/op	        87.72 GFLOP/s
+keel-gvt4 r4 bench BenchmarkFMARoof64/neon           	   10000	    107773 ns/op	        43.78 GFLOP/s
+keel-gvt4 r4 bench BenchmarkTile64/8x4/neon/kc=128   	 2047977	       585.8 ns/op	        13.98 GFLOP/s	      8192 flops/call
+keel-gvt4 r4 bench BenchmarkTile64/4x8/neon/kc=128   	 2655590	       451.8 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r4 bench BenchmarkTile64/3x12/neon/kc=128  	 2601946	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r4 bench BenchmarkTile64/8x6/neon/kc=128   	 1775606	       675.9 ns/op	        18.18 GFLOP/s	     12288 flops/call
+keel-gvt4 r4 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1036 ns/op	        15.81 GFLOP/s	     16384 flops/call
+keel-gvt4 r4 bench BenchmarkTile64/4x16/neon/kc=128  	 1215459	       987.3 ns/op	        16.59 GFLOP/s	     16384 flops/call
+keel-gvt4 r5 bench BenchmarkFMAFamily/f32/fo         	   10000	    107595 ns/op	        87.71 GFLOP/s
+keel-gvt4 r5 bench BenchmarkFMAFamily/f32/x44        	   10000	    101189 ns/op	        82.90 GFLOP/s
+keel-gvt4 r5 bench BenchmarkFMAFamily/f32/shared     	    9214	    131299 ns/op	        63.89 GFLOP/s
+keel-gvt4 r5 bench BenchmarkFMAFamily/f64/fo         	   10000	    107775 ns/op	        43.78 GFLOP/s
+keel-gvt4 r5 bench BenchmarkFMAFamily/f64/x44        	   10000	    102371 ns/op	        40.97 GFLOP/s
+keel-gvt4 r5 bench BenchmarkFMAFamily/f64/shared     	    8850	    133183 ns/op	        31.49 GFLOP/s
+keel-gvt4 r5 bench BenchmarkKernel/8x8/neon/kc=128   	 2048746	       585.7 ns/op	        27.98 GFLOP/s	     16384 flops/call
+keel-gvt4 r5 bench BenchmarkKernel/4x16/neon/kc=128  	 2654306	       452.1 ns/op	        36.24 GFLOP/s	     16384 flops/call
+keel-gvt4 r5 bench BenchmarkKernel/3x24/neon/kc=128  	 2601621	       461.2 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r5 bench BenchmarkKernel/8x12/neon/kc=128  	 1766590	       679.4 ns/op	        36.17 GFLOP/s	     24576 flops/call
+keel-gvt4 r5 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1034 ns/op	        31.68 GFLOP/s	     32768 flops/call
+keel-gvt4 r5 bench BenchmarkKernel/4x32/neon/kc=128  	 1214997	       987.3 ns/op	        33.19 GFLOP/s	     32768 flops/call
+keel-gvt4 r5 bench BenchmarkPeak/neon                	   10000	    107592 ns/op	        87.71 GFLOP/s
+keel-gvt4 r5 bench BenchmarkFMARoof64/neon           	   10000	    107772 ns/op	        43.78 GFLOP/s
+keel-gvt4 r5 bench BenchmarkTile64/8x4/neon/kc=128   	 2048512	       585.8 ns/op	        13.98 GFLOP/s	      8192 flops/call
+keel-gvt4 r5 bench BenchmarkTile64/4x8/neon/kc=128   	 2655392	       451.9 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r5 bench BenchmarkTile64/3x12/neon/kc=128  	 2601793	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r5 bench BenchmarkTile64/8x6/neon/kc=128   	 1775863	       675.9 ns/op	        18.18 GFLOP/s	     12288 flops/call
+keel-gvt4 r5 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1037 ns/op	        15.81 GFLOP/s	     16384 flops/call
+keel-gvt4 r5 bench BenchmarkTile64/4x16/neon/kc=128  	 1211032	       990.9 ns/op	        16.53 GFLOP/s	     16384 flops/call
+keel-gvt4 r6 bench BenchmarkFMAFamily/f32/fo         	   10000	    107621 ns/op	        87.69 GFLOP/s
+keel-gvt4 r6 bench BenchmarkFMAFamily/f32/x44        	   10000	    101265 ns/op	        82.84 GFLOP/s
+keel-gvt4 r6 bench BenchmarkFMAFamily/f32/shared     	    9042	    131368 ns/op	        63.86 GFLOP/s
+keel-gvt4 r6 bench BenchmarkFMAFamily/f64/fo         	   10000	    107744 ns/op	        43.79 GFLOP/s
+keel-gvt4 r6 bench BenchmarkFMAFamily/f64/x44        	   10000	    102138 ns/op	        41.07 GFLOP/s
+keel-gvt4 r6 bench BenchmarkFMAFamily/f64/shared     	    9162	    132676 ns/op	        31.61 GFLOP/s
+keel-gvt4 r6 bench BenchmarkKernel/8x8/neon/kc=128   	 2049234	       585.7 ns/op	        27.98 GFLOP/s	     16384 flops/call
+keel-gvt4 r6 bench BenchmarkKernel/4x16/neon/kc=128  	 2655038	       452.0 ns/op	        36.25 GFLOP/s	     16384 flops/call
+keel-gvt4 r6 bench BenchmarkKernel/3x24/neon/kc=128  	 2600479	       461.2 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r6 bench BenchmarkKernel/8x12/neon/kc=128  	 1775467	       675.8 ns/op	        36.37 GFLOP/s	     24576 flops/call
+keel-gvt4 r6 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1035 ns/op	        31.67 GFLOP/s	     32768 flops/call
+keel-gvt4 r6 bench BenchmarkKernel/4x32/neon/kc=128  	 1215416	       987.2 ns/op	        33.19 GFLOP/s	     32768 flops/call
+keel-gvt4 r6 bench BenchmarkPeak/neon                	   10000	    107595 ns/op	        87.71 GFLOP/s
+keel-gvt4 r6 bench BenchmarkFMARoof64/neon           	   10000	    107744 ns/op	        43.79 GFLOP/s
+keel-gvt4 r6 bench BenchmarkTile64/8x4/neon/kc=128   	 2048517	       585.8 ns/op	        13.98 GFLOP/s	      8192 flops/call
+keel-gvt4 r6 bench BenchmarkTile64/4x8/neon/kc=128   	 2655942	       451.8 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r6 bench BenchmarkTile64/3x12/neon/kc=128  	 2602160	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r6 bench BenchmarkTile64/8x6/neon/kc=128   	 1775530	       675.8 ns/op	        18.18 GFLOP/s	     12288 flops/call
+keel-gvt4 r6 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1036 ns/op	        15.82 GFLOP/s	     16384 flops/call
+keel-gvt4 r6 bench BenchmarkTile64/4x16/neon/kc=128  	 1215495	       987.2 ns/op	        16.60 GFLOP/s	     16384 flops/call
+keel-gvt4 r7 bench BenchmarkFMAFamily/f32/fo         	   10000	    107624 ns/op	        87.69 GFLOP/s
+keel-gvt4 r7 bench BenchmarkFMAFamily/f32/x44        	   10000	    101481 ns/op	        82.66 GFLOP/s
+keel-gvt4 r7 bench BenchmarkFMAFamily/f32/shared     	    8719	    132440 ns/op	        63.34 GFLOP/s
+keel-gvt4 r7 bench BenchmarkFMAFamily/f64/fo         	   10000	    107771 ns/op	        43.78 GFLOP/s
+keel-gvt4 r7 bench BenchmarkFMAFamily/f64/x44        	   10000	    101920 ns/op	        41.15 GFLOP/s
+keel-gvt4 r7 bench BenchmarkFMAFamily/f64/shared     	    9430	    132469 ns/op	        31.66 GFLOP/s
+keel-gvt4 r7 bench BenchmarkKernel/8x8/neon/kc=128   	 2048919	       585.7 ns/op	        27.98 GFLOP/s	     16384 flops/call
+keel-gvt4 r7 bench BenchmarkKernel/4x16/neon/kc=128  	 2654730	       452.0 ns/op	        36.25 GFLOP/s	     16384 flops/call
+keel-gvt4 r7 bench BenchmarkKernel/3x24/neon/kc=128  	 2601832	       461.3 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r7 bench BenchmarkKernel/8x12/neon/kc=128  	 1774320	       676.2 ns/op	        36.34 GFLOP/s	     24576 flops/call
+keel-gvt4 r7 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1038 ns/op	        31.56 GFLOP/s	     32768 flops/call
+keel-gvt4 r7 bench BenchmarkKernel/4x32/neon/kc=128  	 1215502	       987.3 ns/op	        33.19 GFLOP/s	     32768 flops/call
+keel-gvt4 r7 bench BenchmarkPeak/neon                	   10000	    107591 ns/op	        87.71 GFLOP/s
+keel-gvt4 r7 bench BenchmarkFMARoof64/neon           	   10000	    107771 ns/op	        43.78 GFLOP/s
+keel-gvt4 r7 bench BenchmarkTile64/8x4/neon/kc=128   	 2048818	       585.8 ns/op	        13.98 GFLOP/s	      8192 flops/call
+keel-gvt4 r7 bench BenchmarkTile64/4x8/neon/kc=128   	 2653550	       451.8 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r7 bench BenchmarkTile64/3x12/neon/kc=128  	 2601459	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r7 bench BenchmarkTile64/8x6/neon/kc=128   	 1775451	       675.7 ns/op	        18.18 GFLOP/s	     12288 flops/call
+keel-gvt4 r7 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1036 ns/op	        15.81 GFLOP/s	     16384 flops/call
+keel-gvt4 r7 bench BenchmarkTile64/4x16/neon/kc=128  	 1215512	       987.2 ns/op	        16.60 GFLOP/s	     16384 flops/call
+keel-gvt4 r8 bench BenchmarkFMAFamily/f32/fo         	   10000	    107595 ns/op	        87.71 GFLOP/s
+keel-gvt4 r8 bench BenchmarkFMAFamily/f32/x44        	   10000	    101304 ns/op	        82.81 GFLOP/s
+keel-gvt4 r8 bench BenchmarkFMAFamily/f32/shared     	    9220	    131735 ns/op	        63.68 GFLOP/s
+keel-gvt4 r8 bench BenchmarkFMAFamily/f64/fo         	   10000	    107771 ns/op	        43.78 GFLOP/s
+keel-gvt4 r8 bench BenchmarkFMAFamily/f64/x44        	   10000	    102111 ns/op	        41.08 GFLOP/s
+keel-gvt4 r8 bench BenchmarkFMAFamily/f64/shared     	    8952	    133288 ns/op	        31.47 GFLOP/s
+keel-gvt4 r8 bench BenchmarkKernel/8x8/neon/kc=128   	 2049054	       585.6 ns/op	        27.98 GFLOP/s	     16384 flops/call
+keel-gvt4 r8 bench BenchmarkKernel/4x16/neon/kc=128  	 2643096	       454.0 ns/op	        36.09 GFLOP/s	     16384 flops/call
+keel-gvt4 r8 bench BenchmarkKernel/3x24/neon/kc=128  	 2601300	       461.3 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r8 bench BenchmarkKernel/8x12/neon/kc=128  	 1774011	       675.9 ns/op	        36.36 GFLOP/s	     24576 flops/call
+keel-gvt4 r8 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1034 ns/op	        31.68 GFLOP/s	     32768 flops/call
+keel-gvt4 r8 bench BenchmarkKernel/4x32/neon/kc=128  	 1215436	       987.2 ns/op	        33.19 GFLOP/s	     32768 flops/call
+keel-gvt4 r8 bench BenchmarkPeak/neon                	   10000	    107592 ns/op	        87.71 GFLOP/s
+keel-gvt4 r8 bench BenchmarkFMARoof64/neon           	   10000	    107759 ns/op	        43.79 GFLOP/s
+keel-gvt4 r8 bench BenchmarkTile64/8x4/neon/kc=128   	 2048566	       585.7 ns/op	        13.99 GFLOP/s	      8192 flops/call
+keel-gvt4 r8 bench BenchmarkTile64/4x8/neon/kc=128   	 2646282	       452.7 ns/op	        18.10 GFLOP/s	      8192 flops/call
+keel-gvt4 r8 bench BenchmarkTile64/3x12/neon/kc=128  	 2601667	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r8 bench BenchmarkTile64/8x6/neon/kc=128   	 1775664	       675.7 ns/op	        18.18 GFLOP/s	     12288 flops/call
+keel-gvt4 r8 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1036 ns/op	        15.81 GFLOP/s	     16384 flops/call
+keel-gvt4 r8 bench BenchmarkTile64/4x16/neon/kc=128  	 1215462	       987.2 ns/op	        16.60 GFLOP/s	     16384 flops/call
+keel-gvt4 r9 bench BenchmarkFMAFamily/f32/fo         	   10000	    107593 ns/op	        87.71 GFLOP/s
+keel-gvt4 r9 bench BenchmarkFMAFamily/f32/x44        	   10000	    101500 ns/op	        82.65 GFLOP/s
+keel-gvt4 r9 bench BenchmarkFMAFamily/f32/shared     	    8490	    131169 ns/op	        63.95 GFLOP/s
+keel-gvt4 r9 bench BenchmarkFMAFamily/f64/fo         	   10000	    107765 ns/op	        43.79 GFLOP/s
+keel-gvt4 r9 bench BenchmarkFMAFamily/f64/x44        	   10000	    101853 ns/op	        41.18 GFLOP/s
+keel-gvt4 r9 bench BenchmarkFMAFamily/f64/shared     	    9345	    133624 ns/op	        31.39 GFLOP/s
+keel-gvt4 r9 bench BenchmarkKernel/8x8/neon/kc=128   	 2048817	       585.6 ns/op	        27.98 GFLOP/s	     16384 flops/call
+keel-gvt4 r9 bench BenchmarkKernel/4x16/neon/kc=128  	 2654796	       452.1 ns/op	        36.24 GFLOP/s	     16384 flops/call
+keel-gvt4 r9 bench BenchmarkKernel/3x24/neon/kc=128  	 2601937	       461.2 ns/op	        39.96 GFLOP/s	     18432 flops/call
+keel-gvt4 r9 bench BenchmarkKernel/8x12/neon/kc=128  	 1774048	       675.6 ns/op	        36.38 GFLOP/s	     24576 flops/call
+keel-gvt4 r9 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1034 ns/op	        31.68 GFLOP/s	     32768 flops/call
+keel-gvt4 r9 bench BenchmarkKernel/4x32/neon/kc=128  	 1215439	       987.2 ns/op	        33.19 GFLOP/s	     32768 flops/call
+keel-gvt4 r9 bench BenchmarkPeak/neon                	   10000	    107588 ns/op	        87.72 GFLOP/s
+keel-gvt4 r9 bench BenchmarkFMARoof64/neon           	   10000	    107768 ns/op	        43.78 GFLOP/s
+keel-gvt4 r9 bench BenchmarkTile64/8x4/neon/kc=128   	 2048845	       585.7 ns/op	        13.99 GFLOP/s	      8192 flops/call
+keel-gvt4 r9 bench BenchmarkTile64/4x8/neon/kc=128   	 2655243	       451.9 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r9 bench BenchmarkTile64/3x12/neon/kc=128  	 2601940	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r9 bench BenchmarkTile64/8x6/neon/kc=128   	 1776259	       675.9 ns/op	        18.18 GFLOP/s	     12288 flops/call
+keel-gvt4 r9 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1036 ns/op	        15.81 GFLOP/s	     16384 flops/call
+keel-gvt4 r9 bench BenchmarkTile64/4x16/neon/kc=128  	 1213660	       987.3 ns/op	        16.60 GFLOP/s	     16384 flops/call
+keel-gvt4 r10 bench BenchmarkFMAFamily/f32/fo         	   10000	    107595 ns/op	        87.71 GFLOP/s
+keel-gvt4 r10 bench BenchmarkFMAFamily/f32/x44        	   10000	    101072 ns/op	        83.00 GFLOP/s
+keel-gvt4 r10 bench BenchmarkFMAFamily/f32/shared     	    9290	    131676 ns/op	        63.71 GFLOP/s
+keel-gvt4 r10 bench BenchmarkFMAFamily/f64/fo         	   10000	    107741 ns/op	        43.80 GFLOP/s
+keel-gvt4 r10 bench BenchmarkFMAFamily/f64/x44        	   10000	    102156 ns/op	        41.06 GFLOP/s
+keel-gvt4 r10 bench BenchmarkFMAFamily/f64/shared     	    9384	    132411 ns/op	        31.68 GFLOP/s
+keel-gvt4 r10 bench BenchmarkKernel/8x8/neon/kc=128   	 2049225	       585.7 ns/op	        27.98 GFLOP/s	     16384 flops/call
+keel-gvt4 r10 bench BenchmarkKernel/4x16/neon/kc=128  	 2654394	       452.0 ns/op	        36.25 GFLOP/s	     16384 flops/call
+keel-gvt4 r10 bench BenchmarkKernel/3x24/neon/kc=128  	 2601320	       461.2 ns/op	        39.97 GFLOP/s	     18432 flops/call
+keel-gvt4 r10 bench BenchmarkKernel/8x12/neon/kc=128  	 1774570	       675.9 ns/op	        36.36 GFLOP/s	     24576 flops/call
+keel-gvt4 r10 bench BenchmarkKernel/8x16/neon/kc=128  	 1000000	      1034 ns/op	        31.68 GFLOP/s	     32768 flops/call
+keel-gvt4 r10 bench BenchmarkKernel/4x32/neon/kc=128  	 1215511	       987.2 ns/op	        33.19 GFLOP/s	     32768 flops/call
+keel-gvt4 r10 bench BenchmarkPeak/neon                	   10000	    107593 ns/op	        87.71 GFLOP/s
+keel-gvt4 r10 bench BenchmarkFMARoof64/neon           	   10000	    107770 ns/op	        43.78 GFLOP/s
+keel-gvt4 r10 bench BenchmarkTile64/8x4/neon/kc=128   	 2048486	       585.7 ns/op	        13.99 GFLOP/s	      8192 flops/call
+keel-gvt4 r10 bench BenchmarkTile64/4x8/neon/kc=128   	 2656284	       451.9 ns/op	        18.13 GFLOP/s	      8192 flops/call
+keel-gvt4 r10 bench BenchmarkTile64/3x12/neon/kc=128  	 2601985	       461.2 ns/op	        19.98 GFLOP/s	      9216 flops/call
+keel-gvt4 r10 bench BenchmarkTile64/8x6/neon/kc=128   	 1776370	       675.5 ns/op	        18.19 GFLOP/s	     12288 flops/call
+keel-gvt4 r10 bench BenchmarkTile64/8x8/neon/kc=128   	 1000000	      1036 ns/op	        15.81 GFLOP/s	     16384 flops/call
+keel-gvt4 r10 bench BenchmarkTile64/4x16/neon/kc=128  	 1215398	       987.2 ns/op	        16.60 GFLOP/s	     16384 flops/call
+keel-gvt5 r1 bench BenchmarkFMAFamily/f32/fo         	   13100	     91568 ns/op	       103.1 GFLOP/s
+keel-gvt5 r1 bench BenchmarkFMAFamily/f32/x44        	   13846	     86611 ns/op	        96.85 GFLOP/s
+keel-gvt5 r1 bench BenchmarkFMAFamily/f32/shared     	   10000	    111995 ns/op	        74.90 GFLOP/s
+keel-gvt5 r1 bench BenchmarkFMAFamily/f64/fo         	   13106	     91548 ns/op	        51.54 GFLOP/s
+keel-gvt5 r1 bench BenchmarkFMAFamily/f64/x44        	   14124	     84746 ns/op	        49.49 GFLOP/s
+keel-gvt5 r1 bench BenchmarkFMAFamily/f64/shared     	   10000	    111134 ns/op	        37.74 GFLOP/s
+keel-gvt5 r1 bench BenchmarkKernel/8x8/neon/kc=128   	 2420800	       495.7 ns/op	        33.05 GFLOP/s	     16384 flops/call
+keel-gvt5 r1 bench BenchmarkKernel/4x16/neon/kc=128  	 2913009	       411.1 ns/op	        39.85 GFLOP/s	     16384 flops/call
+keel-gvt5 r1 bench BenchmarkKernel/3x24/neon/kc=128  	 3114151	       385.4 ns/op	        47.83 GFLOP/s	     18432 flops/call
+keel-gvt5 r1 bench BenchmarkKernel/8x12/neon/kc=128  	 2002312	       599.3 ns/op	        41.01 GFLOP/s	     24576 flops/call
+keel-gvt5 r1 bench BenchmarkKernel/8x16/neon/kc=128  	 1426622	       841.2 ns/op	        38.95 GFLOP/s	     32768 flops/call
+keel-gvt5 r1 bench BenchmarkKernel/4x32/neon/kc=128  	 1429112	       839.7 ns/op	        39.03 GFLOP/s	     32768 flops/call
+keel-gvt5 r1 bench BenchmarkPeak/neon                	   13104	     91566 ns/op	       103.1 GFLOP/s
+keel-gvt5 r1 bench BenchmarkFMARoof64/neon           	   13105	     91563 ns/op	        51.53 GFLOP/s
+keel-gvt5 r1 bench BenchmarkTile64/8x4/neon/kc=128   	 2371176	       506.4 ns/op	        16.18 GFLOP/s	      8192 flops/call
+keel-gvt5 r1 bench BenchmarkTile64/4x8/neon/kc=128   	 2985685	       401.8 ns/op	        20.39 GFLOP/s	      8192 flops/call
+keel-gvt5 r1 bench BenchmarkTile64/3x12/neon/kc=128  	 3111589	       384.8 ns/op	        23.95 GFLOP/s	      9216 flops/call
+keel-gvt5 r1 bench BenchmarkTile64/8x6/neon/kc=128   	 2000272	       600.0 ns/op	        20.48 GFLOP/s	     12288 flops/call
+keel-gvt5 r1 bench BenchmarkTile64/8x8/neon/kc=128   	 1424007	       843.2 ns/op	        19.43 GFLOP/s	     16384 flops/call
+keel-gvt5 r1 bench BenchmarkTile64/4x16/neon/kc=128  	 1427437	       840.6 ns/op	        19.49 GFLOP/s	     16384 flops/call
+keel-gvt5 r2 bench BenchmarkFMAFamily/f32/fo         	   13102	     91562 ns/op	       103.1 GFLOP/s
+keel-gvt5 r2 bench BenchmarkFMAFamily/f32/x44        	   13885	     86575 ns/op	        96.89 GFLOP/s
+keel-gvt5 r2 bench BenchmarkFMAFamily/f32/shared     	   10000	    111694 ns/op	        75.10 GFLOP/s
+keel-gvt5 r2 bench BenchmarkFMAFamily/f64/fo         	   13105	     91546 ns/op	        51.54 GFLOP/s
+keel-gvt5 r2 bench BenchmarkFMAFamily/f64/x44        	   14125	     84923 ns/op	        49.39 GFLOP/s
+keel-gvt5 r2 bench BenchmarkFMAFamily/f64/shared     	   10000	    111002 ns/op	        37.79 GFLOP/s
+keel-gvt5 r2 bench BenchmarkKernel/8x8/neon/kc=128   	 2420581	       495.7 ns/op	        33.05 GFLOP/s	     16384 flops/call
+keel-gvt5 r2 bench BenchmarkKernel/4x16/neon/kc=128  	 2952882	       407.5 ns/op	        40.20 GFLOP/s	     16384 flops/call
+keel-gvt5 r2 bench BenchmarkKernel/3x24/neon/kc=128  	 3087238	       386.4 ns/op	        47.70 GFLOP/s	     18432 flops/call
+keel-gvt5 r2 bench BenchmarkKernel/8x12/neon/kc=128  	 2002063	       599.3 ns/op	        41.01 GFLOP/s	     24576 flops/call
+keel-gvt5 r2 bench BenchmarkKernel/8x16/neon/kc=128  	 1426670	       841.0 ns/op	        38.96 GFLOP/s	     32768 flops/call
+keel-gvt5 r2 bench BenchmarkKernel/4x32/neon/kc=128  	 1428668	       839.9 ns/op	        39.02 GFLOP/s	     32768 flops/call
+keel-gvt5 r2 bench BenchmarkPeak/neon                	   13101	     91599 ns/op	       103.0 GFLOP/s
+keel-gvt5 r2 bench BenchmarkFMARoof64/neon           	   13100	     91583 ns/op	        51.52 GFLOP/s
+keel-gvt5 r2 bench BenchmarkTile64/8x4/neon/kc=128   	 2358116	       508.2 ns/op	        16.12 GFLOP/s	      8192 flops/call
+keel-gvt5 r2 bench BenchmarkTile64/4x8/neon/kc=128   	 2999888	       400.4 ns/op	        20.46 GFLOP/s	      8192 flops/call
+keel-gvt5 r2 bench BenchmarkTile64/3x12/neon/kc=128  	 3072662	       385.4 ns/op	        23.92 GFLOP/s	      9216 flops/call
+keel-gvt5 r2 bench BenchmarkTile64/8x6/neon/kc=128   	 2002051	       599.7 ns/op	        20.49 GFLOP/s	     12288 flops/call
+keel-gvt5 r2 bench BenchmarkTile64/8x8/neon/kc=128   	 1423149	       843.4 ns/op	        19.43 GFLOP/s	     16384 flops/call
+keel-gvt5 r2 bench BenchmarkTile64/4x16/neon/kc=128  	 1427113	       840.5 ns/op	        19.49 GFLOP/s	     16384 flops/call
+keel-gvt5 r3 bench BenchmarkFMAFamily/f32/fo         	   13100	     91569 ns/op	       103.1 GFLOP/s
+keel-gvt5 r3 bench BenchmarkFMAFamily/f32/x44        	   13909	     86374 ns/op	        97.12 GFLOP/s
+keel-gvt5 r3 bench BenchmarkFMAFamily/f32/shared     	   10000	    111317 ns/op	        75.36 GFLOP/s
+keel-gvt5 r3 bench BenchmarkFMAFamily/f64/fo         	   13105	     91550 ns/op	        51.54 GFLOP/s
+keel-gvt5 r3 bench BenchmarkFMAFamily/f64/x44        	   14146	     84537 ns/op	        49.61 GFLOP/s
+keel-gvt5 r3 bench BenchmarkFMAFamily/f64/shared     	   10000	    111245 ns/op	        37.70 GFLOP/s
+keel-gvt5 r3 bench BenchmarkKernel/8x8/neon/kc=128   	 2421578	       495.6 ns/op	        33.06 GFLOP/s	     16384 flops/call
+keel-gvt5 r3 bench BenchmarkKernel/4x16/neon/kc=128  	 2936036	       411.9 ns/op	        39.78 GFLOP/s	     16384 flops/call
+keel-gvt5 r3 bench BenchmarkKernel/3x24/neon/kc=128  	 3119456	       386.9 ns/op	        47.64 GFLOP/s	     18432 flops/call
+keel-gvt5 r3 bench BenchmarkKernel/8x12/neon/kc=128  	 2002750	       599.3 ns/op	        41.01 GFLOP/s	     24576 flops/call
+keel-gvt5 r3 bench BenchmarkKernel/8x16/neon/kc=128  	 1426239	       841.3 ns/op	        38.95 GFLOP/s	     32768 flops/call
+keel-gvt5 r3 bench BenchmarkKernel/4x32/neon/kc=128  	 1429741	       839.9 ns/op	        39.02 GFLOP/s	     32768 flops/call
+keel-gvt5 r3 bench BenchmarkPeak/neon                	   13104	     91572 ns/op	       103.1 GFLOP/s
+keel-gvt5 r3 bench BenchmarkFMARoof64/neon           	   13104	     91558 ns/op	        51.54 GFLOP/s
+keel-gvt5 r3 bench BenchmarkTile64/8x4/neon/kc=128   	 2363748	       508.6 ns/op	        16.11 GFLOP/s	      8192 flops/call
+keel-gvt5 r3 bench BenchmarkTile64/4x8/neon/kc=128   	 3001134	       399.7 ns/op	        20.49 GFLOP/s	      8192 flops/call
+keel-gvt5 r3 bench BenchmarkTile64/3x12/neon/kc=128  	 3095612	       385.8 ns/op	        23.89 GFLOP/s	      9216 flops/call
+keel-gvt5 r3 bench BenchmarkTile64/8x6/neon/kc=128   	 1998622	       599.9 ns/op	        20.48 GFLOP/s	     12288 flops/call
+keel-gvt5 r3 bench BenchmarkTile64/8x8/neon/kc=128   	 1423698	       842.8 ns/op	        19.44 GFLOP/s	     16384 flops/call
+keel-gvt5 r3 bench BenchmarkTile64/4x16/neon/kc=128  	 1427500	       839.3 ns/op	        19.52 GFLOP/s	     16384 flops/call
+keel-gvt5 r4 bench BenchmarkFMAFamily/f32/fo         	   13100	     91578 ns/op	       103.1 GFLOP/s
+keel-gvt5 r4 bench BenchmarkFMAFamily/f32/x44        	   13872	     86475 ns/op	        97.01 GFLOP/s
+keel-gvt5 r4 bench BenchmarkFMAFamily/f32/shared     	   10000	    112346 ns/op	        74.67 GFLOP/s
+keel-gvt5 r4 bench BenchmarkFMAFamily/f64/fo         	   13105	     91570 ns/op	        51.53 GFLOP/s
+keel-gvt5 r4 bench BenchmarkFMAFamily/f64/x44        	   14146	     84902 ns/op	        49.40 GFLOP/s
+keel-gvt5 r4 bench BenchmarkFMAFamily/f64/shared     	   10000	    110839 ns/op	        37.84 GFLOP/s
+keel-gvt5 r4 bench BenchmarkKernel/8x8/neon/kc=128   	 2420846	       495.7 ns/op	        33.05 GFLOP/s	     16384 flops/call
+keel-gvt5 r4 bench BenchmarkKernel/4x16/neon/kc=128  	 2973446	       407.2 ns/op	        40.24 GFLOP/s	     16384 flops/call
+keel-gvt5 r4 bench BenchmarkKernel/3x24/neon/kc=128  	 3117790	       385.2 ns/op	        47.85 GFLOP/s	     18432 flops/call
+keel-gvt5 r4 bench BenchmarkKernel/8x12/neon/kc=128  	 2002041	       599.3 ns/op	        41.01 GFLOP/s	     24576 flops/call
+keel-gvt5 r4 bench BenchmarkKernel/8x16/neon/kc=128  	 1425968	       841.4 ns/op	        38.94 GFLOP/s	     32768 flops/call
+keel-gvt5 r4 bench BenchmarkKernel/4x32/neon/kc=128  	 1428667	       839.4 ns/op	        39.04 GFLOP/s	     32768 flops/call
+keel-gvt5 r4 bench BenchmarkPeak/neon                	   13099	     91575 ns/op	       103.1 GFLOP/s
+keel-gvt5 r4 bench BenchmarkFMARoof64/neon           	   13106	     91564 ns/op	        51.53 GFLOP/s
+keel-gvt5 r4 bench BenchmarkTile64/8x4/neon/kc=128   	 2360085	       506.8 ns/op	        16.16 GFLOP/s	      8192 flops/call
+keel-gvt5 r4 bench BenchmarkTile64/4x8/neon/kc=128   	 2997304	       400.1 ns/op	        20.48 GFLOP/s	      8192 flops/call
+keel-gvt5 r4 bench BenchmarkTile64/3x12/neon/kc=128  	 3114748	       385.4 ns/op	        23.91 GFLOP/s	      9216 flops/call
+keel-gvt5 r4 bench BenchmarkTile64/8x6/neon/kc=128   	 2000025	       599.4 ns/op	        20.50 GFLOP/s	     12288 flops/call
+keel-gvt5 r4 bench BenchmarkTile64/8x8/neon/kc=128   	 1423617	       842.8 ns/op	        19.44 GFLOP/s	     16384 flops/call
+keel-gvt5 r4 bench BenchmarkTile64/4x16/neon/kc=128  	 1421334	       838.8 ns/op	        19.53 GFLOP/s	     16384 flops/call
+keel-gvt5 r5 bench BenchmarkFMAFamily/f32/fo         	   13101	     91588 ns/op	       103.0 GFLOP/s
+keel-gvt5 r5 bench BenchmarkFMAFamily/f32/x44        	   13839	     86552 ns/op	        96.92 GFLOP/s
+keel-gvt5 r5 bench BenchmarkFMAFamily/f32/shared     	   10000	    112086 ns/op	        74.84 GFLOP/s
+keel-gvt5 r5 bench BenchmarkFMAFamily/f64/fo         	   13105	     91570 ns/op	        51.53 GFLOP/s
+keel-gvt5 r5 bench BenchmarkFMAFamily/f64/x44        	   14124	     84901 ns/op	        49.40 GFLOP/s
+keel-gvt5 r5 bench BenchmarkFMAFamily/f64/shared     	   10000	    111202 ns/op	        37.72 GFLOP/s
+keel-gvt5 r5 bench BenchmarkKernel/8x8/neon/kc=128   	 2421517	       495.7 ns/op	        33.05 GFLOP/s	     16384 flops/call
+keel-gvt5 r5 bench BenchmarkKernel/4x16/neon/kc=128  	 2918889	       412.0 ns/op	        39.77 GFLOP/s	     16384 flops/call
+keel-gvt5 r5 bench BenchmarkKernel/3x24/neon/kc=128  	 3121479	       388.2 ns/op	        47.48 GFLOP/s	     18432 flops/call
+keel-gvt5 r5 bench BenchmarkKernel/8x12/neon/kc=128  	 2002808	       599.3 ns/op	        41.01 GFLOP/s	     24576 flops/call
+keel-gvt5 r5 bench BenchmarkKernel/8x16/neon/kc=128  	 1426789	       841.2 ns/op	        38.95 GFLOP/s	     32768 flops/call
+keel-gvt5 r5 bench BenchmarkKernel/4x32/neon/kc=128  	 1430157	       839.3 ns/op	        39.04 GFLOP/s	     32768 flops/call
+keel-gvt5 r5 bench BenchmarkPeak/neon                	   13104	     91590 ns/op	       103.0 GFLOP/s
+keel-gvt5 r5 bench BenchmarkFMARoof64/neon           	   13104	     91577 ns/op	        51.53 GFLOP/s
+keel-gvt5 r5 bench BenchmarkTile64/8x4/neon/kc=128   	 2351800	       510.2 ns/op	        16.06 GFLOP/s	      8192 flops/call
+keel-gvt5 r5 bench BenchmarkTile64/4x8/neon/kc=128   	 3007340	       398.9 ns/op	        20.54 GFLOP/s	      8192 flops/call
+keel-gvt5 r5 bench BenchmarkTile64/3x12/neon/kc=128  	 3114613	       389.0 ns/op	        23.69 GFLOP/s	      9216 flops/call
+keel-gvt5 r5 bench BenchmarkTile64/8x6/neon/kc=128   	 1999927	       599.9 ns/op	        20.48 GFLOP/s	     12288 flops/call
+keel-gvt5 r5 bench BenchmarkTile64/8x8/neon/kc=128   	 1425081	       841.3 ns/op	        19.47 GFLOP/s	     16384 flops/call
+keel-gvt5 r5 bench BenchmarkTile64/4x16/neon/kc=128  	 1429104	       840.0 ns/op	        19.51 GFLOP/s	     16384 flops/call
+keel-gvt5 r6 bench BenchmarkFMAFamily/f32/fo         	   13101	     91586 ns/op	       103.0 GFLOP/s
+keel-gvt5 r6 bench BenchmarkFMAFamily/f32/x44        	   13864	     86258 ns/op	        97.25 GFLOP/s
+keel-gvt5 r6 bench BenchmarkFMAFamily/f32/shared     	   10000	    112411 ns/op	        74.62 GFLOP/s
+keel-gvt5 r6 bench BenchmarkFMAFamily/f64/fo         	   13104	     91573 ns/op	        51.53 GFLOP/s
+keel-gvt5 r6 bench BenchmarkFMAFamily/f64/x44        	   14145	     84932 ns/op	        49.38 GFLOP/s
+keel-gvt5 r6 bench BenchmarkFMAFamily/f64/shared     	   10000	    110666 ns/op	        37.90 GFLOP/s
+keel-gvt5 r6 bench BenchmarkKernel/8x8/neon/kc=128   	 2421223	       495.6 ns/op	        33.06 GFLOP/s	     16384 flops/call
+keel-gvt5 r6 bench BenchmarkKernel/4x16/neon/kc=128  	 2990948	       411.7 ns/op	        39.79 GFLOP/s	     16384 flops/call
+keel-gvt5 r6 bench BenchmarkKernel/3x24/neon/kc=128  	 3113173	       386.5 ns/op	        47.69 GFLOP/s	     18432 flops/call
+keel-gvt5 r6 bench BenchmarkKernel/8x12/neon/kc=128  	 2002236	       599.2 ns/op	        41.01 GFLOP/s	     24576 flops/call
+keel-gvt5 r6 bench BenchmarkKernel/8x16/neon/kc=128  	 1426179	       841.4 ns/op	        38.95 GFLOP/s	     32768 flops/call
+keel-gvt5 r6 bench BenchmarkKernel/4x32/neon/kc=128  	 1430635	       839.7 ns/op	        39.02 GFLOP/s	     32768 flops/call
+keel-gvt5 r6 bench BenchmarkPeak/neon                	   13104	     91580 ns/op	       103.0 GFLOP/s
+keel-gvt5 r6 bench BenchmarkFMARoof64/neon           	   13104	     91578 ns/op	        51.53 GFLOP/s
+keel-gvt5 r6 bench BenchmarkTile64/8x4/neon/kc=128   	 2368839	       508.5 ns/op	        16.11 GFLOP/s	      8192 flops/call
+keel-gvt5 r6 bench BenchmarkTile64/4x8/neon/kc=128   	 2988903	       401.7 ns/op	        20.39 GFLOP/s	      8192 flops/call
+keel-gvt5 r6 bench BenchmarkTile64/3x12/neon/kc=128  	 3114170	       386.2 ns/op	        23.86 GFLOP/s	      9216 flops/call
+keel-gvt5 r6 bench BenchmarkTile64/8x6/neon/kc=128   	 1986721	       604.0 ns/op	        20.35 GFLOP/s	     12288 flops/call
+keel-gvt5 r6 bench BenchmarkTile64/8x8/neon/kc=128   	 1425218	       841.5 ns/op	        19.47 GFLOP/s	     16384 flops/call
+keel-gvt5 r6 bench BenchmarkTile64/4x16/neon/kc=128  	 1430438	       839.3 ns/op	        19.52 GFLOP/s	     16384 flops/call
+keel-gvt5 r7 bench BenchmarkFMAFamily/f32/fo         	   13100	     91576 ns/op	       103.1 GFLOP/s
+keel-gvt5 r7 bench BenchmarkFMAFamily/f32/x44        	   13888	     86572 ns/op	        96.90 GFLOP/s
+keel-gvt5 r7 bench BenchmarkFMAFamily/f32/shared     	   10000	    111068 ns/op	        75.53 GFLOP/s
+keel-gvt5 r7 bench BenchmarkFMAFamily/f64/fo         	   13101	     91577 ns/op	        51.53 GFLOP/s
+keel-gvt5 r7 bench BenchmarkFMAFamily/f64/x44        	   14148	     84740 ns/op	        49.50 GFLOP/s
+keel-gvt5 r7 bench BenchmarkFMAFamily/f64/shared     	    9919	    111644 ns/op	        37.57 GFLOP/s
+keel-gvt5 r7 bench BenchmarkKernel/8x8/neon/kc=128   	 2420590	       495.6 ns/op	        33.06 GFLOP/s	     16384 flops/call
+keel-gvt5 r7 bench BenchmarkKernel/4x16/neon/kc=128  	 2953321	       411.2 ns/op	        39.84 GFLOP/s	     16384 flops/call
+keel-gvt5 r7 bench BenchmarkKernel/3x24/neon/kc=128  	 3109512	       387.0 ns/op	        47.63 GFLOP/s	     18432 flops/call
+keel-gvt5 r7 bench BenchmarkKernel/8x12/neon/kc=128  	 2002105	       599.3 ns/op	        41.01 GFLOP/s	     24576 flops/call
+keel-gvt5 r7 bench BenchmarkKernel/8x16/neon/kc=128  	 1426468	       841.6 ns/op	        38.94 GFLOP/s	     32768 flops/call
+keel-gvt5 r7 bench BenchmarkKernel/4x32/neon/kc=128  	 1430466	       838.9 ns/op	        39.06 GFLOP/s	     32768 flops/call
+keel-gvt5 r7 bench BenchmarkPeak/neon                	   13102	     91583 ns/op	       103.0 GFLOP/s
+keel-gvt5 r7 bench BenchmarkFMARoof64/neon           	   13102	     91568 ns/op	        51.53 GFLOP/s
+keel-gvt5 r7 bench BenchmarkTile64/8x4/neon/kc=128   	 2370283	       508.7 ns/op	        16.10 GFLOP/s	      8192 flops/call
+keel-gvt5 r7 bench BenchmarkTile64/4x8/neon/kc=128   	 3011748	       398.7 ns/op	        20.55 GFLOP/s	      8192 flops/call
+keel-gvt5 r7 bench BenchmarkTile64/3x12/neon/kc=128  	 3080634	       386.9 ns/op	        23.82 GFLOP/s	      9216 flops/call
+keel-gvt5 r7 bench BenchmarkTile64/8x6/neon/kc=128   	 2001068	       599.5 ns/op	        20.50 GFLOP/s	     12288 flops/call
+keel-gvt5 r7 bench BenchmarkTile64/8x8/neon/kc=128   	 1417430	       841.4 ns/op	        19.47 GFLOP/s	     16384 flops/call
+keel-gvt5 r7 bench BenchmarkTile64/4x16/neon/kc=128  	 1428489	       839.4 ns/op	        19.52 GFLOP/s	     16384 flops/call
+keel-gvt5 r8 bench BenchmarkFMAFamily/f32/fo         	   13100	     91573 ns/op	       103.1 GFLOP/s
+keel-gvt5 r8 bench BenchmarkFMAFamily/f32/x44        	   13863	     86225 ns/op	        97.29 GFLOP/s
+keel-gvt5 r8 bench BenchmarkFMAFamily/f32/shared     	   10000	    111879 ns/op	        74.98 GFLOP/s
+keel-gvt5 r8 bench BenchmarkFMAFamily/f64/fo         	   13104	     91564 ns/op	        51.53 GFLOP/s
+keel-gvt5 r8 bench BenchmarkFMAFamily/f64/x44        	   14139	     84807 ns/op	        49.46 GFLOP/s
+keel-gvt5 r8 bench BenchmarkFMAFamily/f64/shared     	   10000	    112507 ns/op	        37.28 GFLOP/s
+keel-gvt5 r8 bench BenchmarkKernel/8x8/neon/kc=128   	 2421205	       495.7 ns/op	        33.06 GFLOP/s	     16384 flops/call
+keel-gvt5 r8 bench BenchmarkKernel/4x16/neon/kc=128  	 2962629	       407.1 ns/op	        40.25 GFLOP/s	     16384 flops/call
+keel-gvt5 r8 bench BenchmarkKernel/3x24/neon/kc=128  	 3108447	       385.6 ns/op	        47.81 GFLOP/s	     18432 flops/call
+keel-gvt5 r8 bench BenchmarkKernel/8x12/neon/kc=128  	 2002262	       599.4 ns/op	        41.00 GFLOP/s	     24576 flops/call
+keel-gvt5 r8 bench BenchmarkKernel/8x16/neon/kc=128  	 1425966	       841.4 ns/op	        38.94 GFLOP/s	     32768 flops/call
+keel-gvt5 r8 bench BenchmarkKernel/4x32/neon/kc=128  	 1430056	       839.8 ns/op	        39.02 GFLOP/s	     32768 flops/call
+keel-gvt5 r8 bench BenchmarkPeak/neon                	   13105	     91558 ns/op	       103.1 GFLOP/s
+keel-gvt5 r8 bench BenchmarkFMARoof64/neon           	   13102	     91557 ns/op	        51.54 GFLOP/s
+keel-gvt5 r8 bench BenchmarkTile64/8x4/neon/kc=128   	 2389360	       507.7 ns/op	        16.14 GFLOP/s	      8192 flops/call
+keel-gvt5 r8 bench BenchmarkTile64/4x8/neon/kc=128   	 3000313	       400.7 ns/op	        20.45 GFLOP/s	      8192 flops/call
+keel-gvt5 r8 bench BenchmarkTile64/3x12/neon/kc=128  	 3115842	       389.2 ns/op	        23.68 GFLOP/s	      9216 flops/call
+keel-gvt5 r8 bench BenchmarkTile64/8x6/neon/kc=128   	 1999653	       600.0 ns/op	        20.48 GFLOP/s	     12288 flops/call
+keel-gvt5 r8 bench BenchmarkTile64/8x8/neon/kc=128   	 1423314	       841.2 ns/op	        19.48 GFLOP/s	     16384 flops/call
+keel-gvt5 r8 bench BenchmarkTile64/4x16/neon/kc=128  	 1431120	       839.8 ns/op	        19.51 GFLOP/s	     16384 flops/call
+keel-gvt5 r9 bench BenchmarkFMAFamily/f32/fo         	   13104	     91581 ns/op	       103.0 GFLOP/s
+keel-gvt5 r9 bench BenchmarkFMAFamily/f32/x44        	   13876	     86160 ns/op	        97.36 GFLOP/s
+keel-gvt5 r9 bench BenchmarkFMAFamily/f32/shared     	   10000	    112385 ns/op	        74.64 GFLOP/s
+keel-gvt5 r9 bench BenchmarkFMAFamily/f64/fo         	   13105	     91561 ns/op	        51.53 GFLOP/s
+keel-gvt5 r9 bench BenchmarkFMAFamily/f64/x44        	   14178	     84878 ns/op	        49.42 GFLOP/s
+keel-gvt5 r9 bench BenchmarkFMAFamily/f64/shared     	   10000	    111853 ns/op	        37.50 GFLOP/s
+keel-gvt5 r9 bench BenchmarkKernel/8x8/neon/kc=128   	 2421727	       495.6 ns/op	        33.06 GFLOP/s	     16384 flops/call
+keel-gvt5 r9 bench BenchmarkKernel/4x16/neon/kc=128  	 2922339	       412.2 ns/op	        39.75 GFLOP/s	     16384 flops/call
+keel-gvt5 r9 bench BenchmarkKernel/3x24/neon/kc=128  	 3114100	       386.5 ns/op	        47.68 GFLOP/s	     18432 flops/call
+keel-gvt5 r9 bench BenchmarkKernel/8x12/neon/kc=128  	 2002516	       599.1 ns/op	        41.02 GFLOP/s	     24576 flops/call
+keel-gvt5 r9 bench BenchmarkKernel/8x16/neon/kc=128  	 1426678	       841.1 ns/op	        38.96 GFLOP/s	     32768 flops/call
+keel-gvt5 r9 bench BenchmarkKernel/4x32/neon/kc=128  	 1430061	       839.3 ns/op	        39.04 GFLOP/s	     32768 flops/call
+keel-gvt5 r9 bench BenchmarkPeak/neon                	   13105	     91587 ns/op	       103.0 GFLOP/s
+keel-gvt5 r9 bench BenchmarkFMARoof64/neon           	   13104	     91578 ns/op	        51.53 GFLOP/s
+keel-gvt5 r9 bench BenchmarkTile64/8x4/neon/kc=128   	 2408647	       498.2 ns/op	        16.44 GFLOP/s	      8192 flops/call
+keel-gvt5 r9 bench BenchmarkTile64/4x8/neon/kc=128   	 3006448	       399.6 ns/op	        20.50 GFLOP/s	      8192 flops/call
+keel-gvt5 r9 bench BenchmarkTile64/3x12/neon/kc=128  	 3101754	       385.6 ns/op	        23.90 GFLOP/s	      9216 flops/call
+keel-gvt5 r9 bench BenchmarkTile64/8x6/neon/kc=128   	 2001100	       599.9 ns/op	        20.48 GFLOP/s	     12288 flops/call
+keel-gvt5 r9 bench BenchmarkTile64/8x8/neon/kc=128   	 1423644	       842.8 ns/op	        19.44 GFLOP/s	     16384 flops/call
+keel-gvt5 r9 bench BenchmarkTile64/4x16/neon/kc=128  	 1431570	       839.3 ns/op	        19.52 GFLOP/s	     16384 flops/call
+keel-gvt5 r10 bench BenchmarkFMAFamily/f32/fo         	   13104	     91561 ns/op	       103.1 GFLOP/s
+keel-gvt5 r10 bench BenchmarkFMAFamily/f32/x44        	   13902	     86575 ns/op	        96.89 GFLOP/s
+keel-gvt5 r10 bench BenchmarkFMAFamily/f32/shared     	   10000	    112179 ns/op	        74.78 GFLOP/s
+keel-gvt5 r10 bench BenchmarkFMAFamily/f64/fo         	   13104	     91563 ns/op	        51.53 GFLOP/s
+keel-gvt5 r10 bench BenchmarkFMAFamily/f64/x44        	   14134	     84812 ns/op	        49.45 GFLOP/s
+keel-gvt5 r10 bench BenchmarkFMAFamily/f64/shared     	   10000	    112229 ns/op	        37.37 GFLOP/s
+keel-gvt5 r10 bench BenchmarkKernel/8x8/neon/kc=128   	 2421295	       495.6 ns/op	        33.06 GFLOP/s	     16384 flops/call
+keel-gvt5 r10 bench BenchmarkKernel/4x16/neon/kc=128  	 2943907	       411.3 ns/op	        39.83 GFLOP/s	     16384 flops/call
+keel-gvt5 r10 bench BenchmarkKernel/3x24/neon/kc=128  	 3120775	       388.0 ns/op	        47.51 GFLOP/s	     18432 flops/call
+keel-gvt5 r10 bench BenchmarkKernel/8x12/neon/kc=128  	 2002837	       599.2 ns/op	        41.01 GFLOP/s	     24576 flops/call
+keel-gvt5 r10 bench BenchmarkKernel/8x16/neon/kc=128  	 1426257	       841.2 ns/op	        38.96 GFLOP/s	     32768 flops/call
+keel-gvt5 r10 bench BenchmarkKernel/4x32/neon/kc=128  	 1427932	       839.5 ns/op	        39.03 GFLOP/s	     32768 flops/call
+keel-gvt5 r10 bench BenchmarkPeak/neon                	   13104	     91574 ns/op	       103.1 GFLOP/s
+keel-gvt5 r10 bench BenchmarkFMARoof64/neon           	   13104	     91570 ns/op	        51.53 GFLOP/s
+keel-gvt5 r10 bench BenchmarkTile64/8x4/neon/kc=128   	 2363091	       508.4 ns/op	        16.11 GFLOP/s	      8192 flops/call
+keel-gvt5 r10 bench BenchmarkTile64/4x8/neon/kc=128   	 3001808	       400.0 ns/op	        20.48 GFLOP/s	      8192 flops/call
+keel-gvt5 r10 bench BenchmarkTile64/3x12/neon/kc=128  	 3112957	       389.1 ns/op	        23.68 GFLOP/s	      9216 flops/call
+keel-gvt5 r10 bench BenchmarkTile64/8x6/neon/kc=128   	 2001500	       599.6 ns/op	        20.49 GFLOP/s	     12288 flops/call
+keel-gvt5 r10 bench BenchmarkTile64/8x8/neon/kc=128   	 1423611	       843.0 ns/op	        19.43 GFLOP/s	     16384 flops/call
+keel-gvt5 r10 bench BenchmarkTile64/4x16/neon/kc=128  	 1427580	       840.1 ns/op	        19.50 GFLOP/s	     16384 flops/call
+== done 02:43:53
+== TEARDOWN 02:43:53
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0107783c1b8253d05...
+
+✅ Terminate request sent!
+   Instance: i-0107783c1b8253d05
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0a8b039513613a519...
+
+✅ Terminate request sent!
+   Instance: i-0a8b039513613a519
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0cba911bde8742eba...
+
+✅ Terminate request sent!
+   Instance: i-0cba911bde8742eba
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.145.0 → 0.146.0
+  https://github.com/spore-host/spawn/releases/tag/v0.146.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   fleet is down

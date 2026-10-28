@@ -123,6 +123,7 @@ GATE_PEAK_FUNC="avx512Peak"
 # still matches under a four-element pattern. The kc sweep is a deliberate one-off;
 # KERNEL.md §1 has the command.
 BENCH_FILTER='Peak|Kernel/.*/.*/kc=128'
+FAMILY="" # arm64 sets the ceiling family below; reset so an inherited value cannot arm it
 
 # KEEL_ELEM=f64 (#191) runs this same go/no-go at float64. Pre-registered 2026-10-26,
 # after the float64 peak was measured (janus 104.0-104.3 GFLOP/s, 0.500 of float32)
@@ -159,20 +160,21 @@ case "$KEEL_ARCH/$KEEL_ELEM" in
     BENCH_FILTER='FMARoof64|Tile64/.*/.*/kc=128' ;;
   arm64/f32)
     KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24" REF_FUNCS="Kernel8x12" ISA_TAG=neon
-    PEAK_FUNCS="neonPeak,scalarPeak" PEAK_IPF_CEILINGS="neonPeak:2.1875 scalarPeak:1.30"
+    PEAK_FUNCS="neonPeakTile,scalarPeak" PEAK_IPF_CEILINGS="neonPeakTile:1.333334 scalarPeak:1.30"
     SWEEP_BEST_IPF=4.111
     GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128 Kernel/3x24/neon/kc=128"
     GATE_REF_KERNEL="Kernel/8x12/neon/kc=128" GATE_PEAK="Peak/neon"
-    GATE_SHAPES="8x8:Kernel8x8 4x16:Kernel4x16 3x24:Kernel3x24" GATE_PEAK_FUNC="neonPeak" ;;
+    GATE_SHAPES="8x8:Kernel8x8 4x16:Kernel4x16 3x24:Kernel3x24" GATE_PEAK_FUNC="neonPeakTile"
+    FAMILY="FMAFamily/f32" BENCH_FILTER="$BENCH_FILTER|$FAMILY" ;;
   arm64/f64)
     KERN_FUNCS="KernelD8x4,KernelD4x8,KernelD3x12" REF_FUNCS="KernelD8x6" ISA_TAG=neon
-    PEAK_FUNCS="neonPeakD,scalarPeakD" PEAK_IPF_CEILINGS="neonPeakD:2.1875 scalarPeakD:1.30"
+    PEAK_FUNCS="neonPeakTileD,scalarPeakD" PEAK_IPF_CEILINGS="neonPeakTileD:1.333334 scalarPeakD:1.30"
     SWEEP_BEST_IPF=4.111
     KPFX="Tile64/" COVER_MARK=keel-kern64-backends-exercised
     GATE_KERNELS="Tile64/8x4/neon/kc=128 Tile64/4x8/neon/kc=128 Tile64/3x12/neon/kc=128"
     GATE_REF_KERNEL="Tile64/8x6/neon/kc=128" GATE_PEAK="FMARoof64/neon"
-    GATE_SHAPES="8x4:KernelD8x4 4x8:KernelD4x8 3x12:KernelD3x12" GATE_PEAK_FUNC="neonPeakD"
-    BENCH_FILTER='FMARoof64|Tile64/.*/.*/kc=128' ;;
+    GATE_SHAPES="8x4:KernelD8x4 4x8:KernelD4x8 3x12:KernelD3x12" GATE_PEAK_FUNC="neonPeakTileD"
+    FAMILY="FMAFamily/f64" BENCH_FILTER="FMARoof64|Tile64/.*/.*/kc=128|$FAMILY" ;;
   *) echo "gate-p2: KEEL_ARCH/KEEL_ELEM must be amd64|arm64 / f32|f64, not '$KEEL_ARCH/$KEEL_ELEM'" >&2; exit 2 ;;
 esac
 export KEEL_GOARCH="$KEEL_ARCH" # remote.sh cross-compiles every binary for this
@@ -500,6 +502,15 @@ else
     clock_post "$host" "$BENCHBIN" "$BENCHCSV" || continue
 
     info "[$host] peak   $(bench_describe "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
+    # arm64: the denominator is the family maximum (DESIGN.md P2, #198). A member that
+    # beats the neon row by more than 1% net of CI means the row is not a ceiling here.
+    for m in fo x44 shared; do
+      [[ -n "${FAMILY:-}" ]] || break
+      mlo="$(bench_ratio_lo "$FAMILY/$m" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
+      if [[ -z "$mlo" ]]; then unmeasured "[$host] $FAMILY/$m has no CI, so the denominator's maximality is unwitnessed"
+      elif awk -v r="$mlo" 'BEGIN{exit !(r > 1.01)}'; then fail "[$host] $FAMILY/$m beats $GATE_PEAK by $(awk -v r="$mlo" 'BEGIN{printf "%.1f", (r-1)*100}')% net of CI: the denominator is not the family maximum (#198)"
+      else info "[$host] family $m at $(awk -v r="$(bench_ratio "$FAMILY/$m" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)" 'BEGIN{printf "%.1f", r*100}')% of $GATE_PEAK"; fi
+    done
     # DESIGN.md's tile, printed on every host so the cost of the T10 register
     # ceiling is a number in the gate log rather than an assertion in a doc.
     if [[ -n "$(bench_stat "$GATE_REF_KERNEL" "$BENCHCSV" GFLOP/s)" ]]; then
