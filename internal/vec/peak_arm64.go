@@ -58,14 +58,11 @@ func vectorPeakKernels() []PeakKernel {
 	if !HasNEON() {
 		return nil
 	}
-	return []PeakKernel{{
-		Name:         BackendNEON,
-		Chains:       ChainsNEON,
-		Lanes:        4,
-		FlopsPerIter: ChainsNEON * 4 * 2,
-		Fused:        true,
-		Run:          neonPeak,
-	}}
+	// The canonical member of the NEON ceiling family (peak_family_arm64.go, #198), under
+	// the backend's name so every consumer of the "neon" row reads the family's maximum.
+	k := PeakFamilyNEON()[0]
+	k.Name = BackendNEON
+	return []PeakKernel{k}
 }
 
 // neonPeakD is neonPeak on Float64x2: ChainsNEON chains, accumulator as the
@@ -108,12 +105,7 @@ func vectorPeakKernels64() []PeakKernel64 {
 	if !HasNEON() {
 		return nil
 	}
-	return []PeakKernel64{{
-		Name:         BackendNEON,
-		Chains:       ChainsNEON,
-		Lanes:        2,
-		FlopsPerIter: ChainsNEON * 2 * 2,
-		Fused:        true,
-		Run:          neonPeakD,
-	}}
+	k := PeakFamilyNEON64()[0] // canonical member, as vectorPeakKernels
+	k.Name = BackendNEON
+	return []PeakKernel64{k}
 }

@@ -164,6 +164,13 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **The NEON FMA ceiling is now the maximum over a family of FMA-only loops** (#198, Scott's ruling (b)).
+  The `neon` rows of `BenchmarkPeak` and `BenchmarkFMARoof64` run the family's first member, FO's loop
+  (`neonPeakTile`, 24 insns for 18 FMAs). It is byte-identical to the loop that measured 1.28–1.89× the old
+  `neonPeak` on Neoverse V1–V3. New `BenchmarkFMAFamily` times every member, including x44 and the old
+  shared-multiplicand loop, so a gate can witness that the denominator is the family max. Every member keeps
+  the exact-witness contract, and a planted dropped FMA fails it. This changes every arm64 percent-of-peak
+  from the next measurement on.
 - **README: the 18 Neoverse rows' percentages are flagged as under review** (#198). The NEON peak they
   divide by reads 1.35× low on Neoverse-V2 at the exploration tier, and is unresolved on V1. The rates
   are unaffected, and no figure has changed pending a judged corrected peak.
