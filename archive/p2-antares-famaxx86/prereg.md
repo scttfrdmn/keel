@@ -22,3 +22,12 @@ Predicted:
 
 **REFUTED if** x44 beats `shared` by more than 2% (Strix Halo would then be Skylake-shaped and not
 c8a-shaped), if either element is RED, or if the classifier calls this host issue-bound.
+
+## Run 1 (1a6ca68): unmeasured, governor `powersave`
+
+Both elements are RED (f32 21/2/1, f64 20/2/1) and **measured nothing**: the only FAILs are §5 rule 5's
+governor check, and the floor is UNMEASURED for it. antares rebooted at 2026-10-29 03:44, and nothing on
+the host persists `performance` (there is no cpupower unit), so the reboot left the distribution default
+(`powersave`, amd_pstate active, EPP balance_performance). Everything below the timing held: both
+x44 audits at 1.1875 insns/FMA, register-only. Setting the governor is a host-wide change on a shared
+lab machine, so it waits on Scott. The predictions above are unchanged for run 2.
