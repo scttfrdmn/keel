@@ -196,6 +196,14 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **The AVX-512 FMA ceiling is now the family max: the `avx512` peak rows run x44** (#199, Scott's ruling (a);
+  DESIGN.md P2, 2026-10-28). x44 read 112.5% of the old `avx512Peak` on Skylake-SP and tied it on Zen 4/5. gate-p2/p3/p4's
+  amd64 arms audit `avx512PeakX44(D)` at 19/16 insns/FMA, and gate-p2 checks the family maximum per host on amd64 too.
+  This is stated before any amd64 gate runs it: the smaller peak IPF may move skx from the issue roofline to the flat
+  55% floor, and that is pre-registered in `archive/p2-amd64-family/prereg.md`.
+- **Fixed: `TestPeakCanonicalIsFamilyHead` panicked on CPUs without AVX-512.** It indexed an empty family, and that
+  made CI red on whichever hosted runner lacked AVX-512, intermittently since `29e412a` (#199). It now asserts that
+  no AVX-512 means an empty family and no `avx512` row.
 - **The README's Neoverse rows are re-derived in era `famax`, and the era closes** (#200, `archive/p5-arm64-famax/`).
   Judged r2 (`37d7c13`) was the first run against the 47.0 bar: 51 PASS / 2 FAIL, with all eight share rows passing
   (the tightest, V2 Strsm, at 49.8%) and the only FAILs criterion 9 on the stale rows. Every r2 prediction held. With

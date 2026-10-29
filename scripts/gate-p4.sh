@@ -100,12 +100,12 @@ P4_BACKENDS="avx512 scalar"
 # two independent statements of the property is what makes that visible.
 KERN_PKG="./internal/vec"
 KERN_FUNCS="Kernel2x32,Kernel4x32"
-PEAK_FUNCS="avx512Peak,avx2Peak,scalarPeak"
+PEAK_FUNCS="avx512PeakX44,avx2Peak,scalarPeak" # the avx512 canonical ceiling is x44 since #199
 # The amd64 peak ceilings (#145), audited on go1.27.1. Needed here and not only in
 # the arm64 branch below: carry_p2_properties runs this criterion on EVERY path, so
 # an amd64 gate-p4 would have hit the same unbound variable that killed the arm64
 # one on 2026-10-04.
-PEAK_IPF_CEILINGS="avx512Peak:2.25 avx2Peak:2.30 scalarPeak:1.15"
+PEAK_IPF_CEILINGS="avx512PeakX44:1.1875 avx2Peak:2.30 scalarPeak:1.15"
 SSADIR="build/ssa"
 
 # ------------------------------------------------------------- P4's own bar

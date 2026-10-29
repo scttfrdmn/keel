@@ -10,9 +10,11 @@ import "simd/archsimd"
 // The AVX-512 FMA-ceiling family (#199): peak_family_arm64.go's question asked of
 // avx512Peak, whose 12 FMAs all read one multiplicand and one addend register, the
 // shared-operand structure that made neonPeak under-read by 1.26-1.89x on Neoverse
-// (#198). Measured, not yet adopted: avx512Peak stays the canonical row until
-// BenchmarkFMAFamily shows a member beating it by more than 1% on a judged CPU, at
-// which point DESIGN.md P2's family-max rule extends to amd64.
+// (#198). ADOPTED 2026-10-28 (#199, Scott's ruling (a)): the exploration run
+// archive/avx512-family/ found x44 at 112.5% of avx512Peak on Skylake-SP and tied with it,
+// within 0.1%, on Zen 4 and Zen 5. So x44 is the canonical member: the "avx512" rows of
+// BenchmarkPeak and BenchmarkFMARoof64 run it, and DESIGN.md P2's family-max rule extends to
+// amd64.
 //
 // Every member keeps peak.go's contract (no memory in the steady-state loop, exact
 // Witness). x44 keeps avx512Peak's accumulator-as-multiplicand form, a = a*y + x,
@@ -24,15 +26,15 @@ import "simd/archsimd"
 // 4x32 (float32) or 4x16 (float64) kernel.
 const ChainsFO512 = 8
 
-// PeakFamilyAVX512 returns every member of the AVX-512 float32 ceiling family,
-// canonical (the shipped avx512Peak, "shared") first.
+// PeakFamilyAVX512 returns every member of the AVX-512 float32 ceiling family, canonical
+// member first: x44 since #199. "shared" is the old avx512Peak.
 func PeakFamilyAVX512() []PeakKernel {
 	if !HasAVX512() {
 		return nil
 	}
 	return []PeakKernel{
-		{Name: "shared", Chains: Chains512, Lanes: 16, FlopsPerIter: Chains512 * 16 * 2, Fused: true, Run: avx512Peak},
 		{Name: "x44", Chains: 16, Lanes: 16, FlopsPerIter: 16 * 16 * 2, Fused: true, Run: avx512PeakX44},
+		{Name: "shared", Chains: Chains512, Lanes: 16, FlopsPerIter: Chains512 * 16 * 2, Fused: true, Run: avx512Peak},
 		{Name: "fo", Chains: ChainsFO512, Lanes: 16, FlopsPerIter: ChainsFO512 * 16 * 2, Fused: true, Run: avx512PeakFO},
 	}
 }
@@ -43,8 +45,8 @@ func PeakFamilyAVX51264() []PeakKernel64 {
 		return nil
 	}
 	return []PeakKernel64{
-		{Name: "shared", Chains: Chains512, Lanes: 8, FlopsPerIter: Chains512 * 8 * 2, Fused: true, Run: avx512PeakD},
 		{Name: "x44", Chains: 16, Lanes: 8, FlopsPerIter: 16 * 8 * 2, Fused: true, Run: avx512PeakX44D},
+		{Name: "shared", Chains: Chains512, Lanes: 8, FlopsPerIter: Chains512 * 8 * 2, Fused: true, Run: avx512PeakD},
 		{Name: "fo", Chains: ChainsFO512, Lanes: 8, FlopsPerIter: ChainsFO512 * 8 * 2, Fused: true, Run: avx512PeakFOD},
 	}
 }

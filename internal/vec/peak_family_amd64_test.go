@@ -37,7 +37,22 @@ func TestPeakFamilyWitness(t *testing.T) {
 
 // TestPeakCanonicalIsFamilyHead pins the "avx512" rows to the family's first member, the
 // one gate-p2 checks against the rest.
+//
+// On a CPU without AVX-512 the family is empty and there is no avx512 row, and the test
+// asserts that those two agree. It used to index the empty family and panic, which is how
+// CI went red on whichever hosted runner lacked AVX-512 (#199).
 func TestPeakCanonicalIsFamilyHead(t *testing.T) {
+	if !HasAVX512() {
+		if n := len(PeakFamilyAVX512()) + len(PeakFamilyAVX51264()); n != 0 {
+			t.Errorf("no AVX-512 here, yet the families have %d members", n)
+		}
+		for _, k := range PeakKernels() {
+			if k.Name == BackendAVX512 {
+				t.Error("no AVX-512 here, yet PeakKernels has an avx512 row")
+			}
+		}
+		t.Skip("no AVX-512 on this CPU: the canonical-row check needs one")
+	}
 	if a, b := PeakKernels()[0], PeakFamilyAVX512()[0]; a.Name != BackendAVX512 || a.Chains != b.Chains || a.FlopsPerIter != b.FlopsPerIter {
 		t.Errorf("float32 avx512 row %+v is not family head %s", a, b.Name)
 	}

@@ -39,7 +39,7 @@ KERN_FUNCS="Kernel2x32,Kernel4x32"
 # DESIGN.md §4/P2's 12-accumulator tile. Audited for evidence, never shipped; see
 # criterion 2 above and docs/toolchain-notes.md T10.
 REF_FUNCS="Kernel6x32"
-PEAK_FUNCS="avx512Peak,avx2Peak,scalarPeak"
+PEAK_FUNCS="avx512PeakX44,avx2Peak,scalarPeak" # the avx512 canonical ceiling is the family max, x44, since #199
 # Recorded insns/FMA CEILINGS for the kernels that ARE the percent-of-peak
 # denominator (#145). One-sided on purpose -- see peak_ipf_verdicts in gate-lib.sh
 # for why a fatter loop is the dangerous direction and a leaner one is not.
@@ -50,7 +50,7 @@ PEAK_FUNCS="avx512Peak,avx2Peak,scalarPeak"
 # legitimately moves one of these reds this gate, which is the intended behaviour:
 # it is a published-number event (DESIGN.md §4/P2, docs/spill-report.md), and a
 # human re-types the constant with the new audit as its grounds.
-PEAK_IPF_CEILINGS="avx512Peak:2.25 avx2Peak:2.30 scalarPeak:1.15"
+PEAK_IPF_CEILINGS="avx512PeakX44:1.1875 avx2Peak:2.30 scalarPeak:1.15" # x44 19/16 (#199)
 PEAK_FLOOR=0.55
 # --- the amended throughput floor (DESIGN.md §4/P2, ruling on #19) -----------
 # An FMA-bound host is held to PEAK_FLOOR. An issue-bound host is held to
@@ -115,7 +115,7 @@ GATE_PEAK="Peak/avx512"
 # The shipped shapes the roofline classifies, as shape:function pairs: any number of
 # them (NEON ships three), each looked up by its own shape, never by position.
 GATE_SHAPES="2x32:Kernel2x32 4x32:Kernel4x32"
-GATE_PEAK_FUNC="avx512Peak"
+GATE_PEAK_FUNC="avx512PeakX44"
 # The gate runs exactly what it reads. `Peak|Kernel` also ran the kc=32/64/256/512
 # sweep — 20 sub-benchmarks per host, ~7 min each at -count=10, none of which any
 # threshold here looks at. Go applies each slash-separated pattern element at its
@@ -123,7 +123,9 @@ GATE_PEAK_FUNC="avx512Peak"
 # still matches under a four-element pattern. The kc sweep is a deliberate one-off;
 # KERNEL.md §1 has the command.
 BENCH_FILTER='Peak|Kernel/.*/.*/kc=128'
-FAMILY="" # arm64 sets the ceiling family below; reset so an inherited value cannot arm it
+# The ceiling family each run checks the canonical peak row against (DESIGN.md P2): amd64 since
+# #199, arm64 since #198. Set here, not inherited, so an exported value cannot arm or disarm it.
+FAMILY="FMAFamily/f32" BENCH_FILTER="$BENCH_FILTER|$FAMILY"
 
 # KEEL_ELEM=f64 (#191) runs this same go/no-go at float64. Pre-registered 2026-10-26,
 # after the float64 peak was measured (janus 104.0-104.3 GFLOP/s, 0.500 of float32)
@@ -154,12 +156,12 @@ case "$KEEL_ARCH/$KEEL_ELEM" in
   amd64/f32) ;;
   amd64/f64)
     KERN_FUNCS="KernelD2x16,KernelD4x16" REF_FUNCS="KernelD6x16"
-    PEAK_FUNCS="avx512PeakD,scalarPeakD" PEAK_IPF_CEILINGS="avx512PeakD:2.25 scalarPeakD:1.15"
+    PEAK_FUNCS="avx512PeakX44D,scalarPeakD" PEAK_IPF_CEILINGS="avx512PeakX44D:1.1875 scalarPeakD:1.15"
     KPFX="Tile64/" COVER_MARK=keel-kern64-backends-exercised
     GATE_KERNELS="Tile64/2x16/avx512/kc=128 Tile64/4x16/avx512/kc=128"
     GATE_REF_KERNEL="Tile64/6x16/avx512/kc=128" GATE_PEAK="FMARoof64/avx512"
-    GATE_SHAPES="2x16:KernelD2x16 4x16:KernelD4x16" GATE_PEAK_FUNC="avx512PeakD"
-    BENCH_FILTER='FMARoof64|Tile64/.*/.*/kc=128' ;;
+    GATE_SHAPES="2x16:KernelD2x16 4x16:KernelD4x16" GATE_PEAK_FUNC="avx512PeakX44D"
+    FAMILY="FMAFamily/f64" BENCH_FILTER="FMARoof64|Tile64/.*/.*/kc=128|$FAMILY" ;;
   arm64/f32)
     KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24,KernelPB5x16,KernelPB7x12" REF_FUNCS="Kernel8x12" ISA_TAG=neon
     PEAK_FUNCS="neonPeakTile,scalarPeak" PEAK_IPF_CEILINGS="neonPeakTile:1.333334 scalarPeak:1.30"

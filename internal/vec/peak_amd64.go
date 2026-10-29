@@ -77,14 +77,11 @@ func avx2Peak(iters int) float32 {
 func vectorPeakKernels() []PeakKernel {
 	var out []PeakKernel
 	if HasAVX512() {
-		out = append(out, PeakKernel{
-			Name:         BackendAVX512,
-			Chains:       Chains512,
-			Lanes:        16,
-			FlopsPerIter: Chains512 * 16 * 2,
-			Fused:        true,
-			Run:          avx512Peak,
-		})
+		// The canonical member of the AVX-512 ceiling family (peak_family_amd64.go, #199),
+		// under the backend's name, as vectorPeakKernels does on arm64.
+		k := PeakFamilyAVX512()[0]
+		k.Name = BackendAVX512
+		out = append(out, k)
 	}
 	if HasAVX2() {
 		out = append(out, PeakKernel{
@@ -135,12 +132,7 @@ func vectorPeakKernels64() []PeakKernel64 {
 	if !HasAVX512() {
 		return nil
 	}
-	return []PeakKernel64{{
-		Name:         BackendAVX512,
-		Chains:       Chains512,
-		Lanes:        Lanes64,
-		FlopsPerIter: Chains512 * Lanes64 * 2,
-		Fused:        true,
-		Run:          avx512PeakD,
-	}}
+	k := PeakFamilyAVX51264()[0] // canonical member, as vectorPeakKernels
+	k.Name = BackendAVX512
+	return []PeakKernel64{k}
 }

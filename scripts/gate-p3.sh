@@ -123,12 +123,12 @@ SWEEP_TRANS="NN NT TN TT"
 # makes that visible.
 KERN_PKG="./internal/vec"
 KERN_FUNCS="Kernel2x32,Kernel4x32"
-PEAK_FUNCS="avx512Peak,avx2Peak,scalarPeak"
+PEAK_FUNCS="avx512PeakX44,avx2Peak,scalarPeak" # the avx512 canonical ceiling is x44 since #199
 # Recorded insns/FMA ceilings for the percent-of-peak denominator (#145); see
 # peak_ipf_verdicts in gate-lib.sh for the one-sided rationale. Audited on go1.27.1
 # at 6855709. The arm64 set is overridden below, because a bar travels with its
 # derivation set and these are amd64 readings of amd64 kernels.
-PEAK_IPF_CEILINGS="avx512Peak:2.25 avx2Peak:2.30 scalarPeak:1.15"
+PEAK_IPF_CEILINGS="avx512PeakX44:1.1875 avx2Peak:2.30 scalarPeak:1.15"
 PEAK_FLOOR=0.55
 ROOF_FLOOR=0.90
 ISSUE_CONVERGE_MAX=1.10
@@ -136,7 +136,7 @@ ISSUE_MIX_SPREAD_MIN=1.25
 SWEEP_BEST_IPF=4.625
 ROOF_SHAPE_SLACK=1.05
 GATE_KERNELS="Kernel/2x32/avx512/kc=128 Kernel/4x32/avx512/kc=128"
-GATE_PEAK_FUNC="avx512Peak"
+GATE_PEAK_FUNC="avx512PeakX44"
 KERN_BENCH_FILTER='Peak|Kernel/.*/.*/kc=128'
 SSADIR="build/ssa"
 
