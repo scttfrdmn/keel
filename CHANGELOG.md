@@ -9,6 +9,9 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The judged amd64 P2 re-run is pre-registered** (#199, `archive/p2-amd64-anchor/prereg.md`). It predicts GREEN at
+  both elements on Skylake-SP, Zen 4 and Zen 5: skx issue-bound at 90–100% of its roofline via the anchor, and both Zens
+  FMA-bound at their old fractions. This follows the end-to-end exploration at `403aceb`, 0 FAIL at both elements.
 - **`BenchmarkCeiling` gains a family arm** (#200): every FMA-ceiling family member at the ceiling's thread counts, so a
   gate-p5 run witnesses that the canonical member is still the family maximum at 8 threads. It had only been checked
   at 1. `vec.PeakFamily()` returns the build's family on either architecture. No gate addresses these rows.
