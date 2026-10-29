@@ -55,7 +55,13 @@ teardown() {
   say "TEARDOWN (driver rc=$rc) — \$$RATE/hr"
   timeout 900 scripts/aws-fleet.sh down || echo "!! 'down' FAILED — read 'spawn list' below"
   say "teardown verification — the LAUNCHER's own list"
-  if timeout 300 spawn list --state running 2>&1 | grep -i 'keel-'; then
+  # An unreadable inventory is UNKNOWN, never "down": a reboot left this fleet billing ~2h40m
+  # behind a grep that matched nothing because 'spawn list' itself had failed (#199).
+  local inv
+  inv="$(timeout 300 spawn list --state running --output json 2>/dev/null || true)"
+  if ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"$inv"; then
+    echo "!! COULD NOT READ 'spawn list': fleet state UNKNOWN, assume it is BILLING. Check by hand."
+  elif jq -e 'any(.[]; .name | startswith("keel-"))' >/dev/null <<<"$inv"; then
     echo "!! A keel- INSTANCE IS STILL RUNNING AND BILLING. Terminate it by hand."
   else
     echo "   no keel- instance in 'spawn list --state running' — fleet is down"

@@ -9,6 +9,9 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The famaxx86 driver's teardown check fails closed** (#199). A dev-host reboot made `spawn list` unreadable, and the
+  check read "no `keel-` line" as "fleet is down" while three instances billed for about 2h40m. It now requires a readable
+  JSON inventory, the same test `aws-fleet.sh` applies, and reports UNKNOWN otherwise.
 - **amd64 measurement era `famaxx86` opened, and its gate-p5 runs pre-registered** (#199, DESIGN.md §5 rule 17,
   `archive/p5-amd64-famaxx86/`). It is amd64-scoped and provisional: `Ceiling/compute` and `Peak/avx512` now run x44, so
   ceil8's amd64 baselines and bar do not carry across. `CEIL_FRACTION` stays suspended for amd64 until the founding run types it.

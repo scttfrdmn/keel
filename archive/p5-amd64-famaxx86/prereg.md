@@ -18,3 +18,12 @@ are correctness-class, so nothing here is a verdict. Predicted:
   within 1%** on all three hosts;
 - at 8 threads, x44 reads **10–15% above `shared`** (the old `avx512Peak`) on Skylake-SP, against
   #199's single-thread +12.5%, and within 2% of it on Zen 4 and Zen 5.
+
+## Exploration attempt 1 (f2804ee): unmeasured, killed by a dev-host reboot
+
+The run reached gate-p5's `-race` step on era **famaxx86** (that prediction held) and was killed
+at 02:26Z when the dev host rebooted. It is `died`, with no verdict. Its teardown could not read
+`spawn list` while the host was shutting down, and the verification then printed "fleet is down"
+because grep found no `keel-` line. All three instances kept billing for about 2h40m (about
+$4.60) until they were torn down by hand. The driver now treats an unreadable inventory as
+UNKNOWN, and it was re-frozen for attempt 2. The predictions above are unchanged.
