@@ -39,7 +39,7 @@ KERN_FUNCS="Kernel2x32,Kernel4x32"
 # DESIGN.md §4/P2's 12-accumulator tile. Audited for evidence, never shipped; see
 # criterion 2 above and docs/toolchain-notes.md T10.
 REF_FUNCS="Kernel6x32"
-PEAK_FUNCS="avx512PeakX44,avx2Peak,scalarPeak" # the avx512 canonical ceiling is the family max, x44, since #199
+PEAK_FUNCS="avx512PeakX44,avx512Peak,avx2Peak,scalarPeak" # canonical x44 (#199); avx512Peak is the roofline anchor (anchor_mix)
 # Recorded insns/FMA CEILINGS for the kernels that ARE the percent-of-peak
 # denominator (#145). One-sided on purpose -- see peak_ipf_verdicts in gate-lib.sh
 # for why a fatter loop is the dangerous direction and a leaner one is not.
@@ -50,7 +50,8 @@ PEAK_FUNCS="avx512PeakX44,avx2Peak,scalarPeak" # the avx512 canonical ceiling is
 # legitimately moves one of these reds this gate, which is the intended behaviour:
 # it is a published-number event (DESIGN.md §4/P2, docs/spill-report.md), and a
 # human re-types the constant with the new audit as its grounds.
-PEAK_IPF_CEILINGS="avx512PeakX44:1.1875 avx2Peak:2.30 scalarPeak:1.15" # x44 19/16 (#199)
+PEAK_IPF_CEILINGS="avx512PeakX44:1.1875 avx512Peak:2.25 avx2Peak:2.30 scalarPeak:1.15" # x44 19/16 (#199)
+ANCHOR_FUNC="avx512Peak" ANCHOR_ROW="FMAFamily/f32/shared"
 PEAK_FLOOR=0.55
 # --- the amended throughput floor (DESIGN.md §4/P2, ruling on #19) -----------
 # An FMA-bound host is held to PEAK_FLOOR. An issue-bound host is held to
@@ -156,7 +157,8 @@ case "$KEEL_ARCH/$KEEL_ELEM" in
   amd64/f32) ;;
   amd64/f64)
     KERN_FUNCS="KernelD2x16,KernelD4x16" REF_FUNCS="KernelD6x16"
-    PEAK_FUNCS="avx512PeakX44D,scalarPeakD" PEAK_IPF_CEILINGS="avx512PeakX44D:1.1875 scalarPeakD:1.15"
+    PEAK_FUNCS="avx512PeakX44D,avx512PeakD,scalarPeakD" PEAK_IPF_CEILINGS="avx512PeakX44D:1.1875 avx512PeakD:2.25 scalarPeakD:1.15"
+    ANCHOR_FUNC="avx512PeakD" ANCHOR_ROW="FMAFamily/f64/shared"
     KPFX="Tile64/" COVER_MARK=keel-kern64-backends-exercised
     GATE_KERNELS="Tile64/2x16/avx512/kc=128 Tile64/4x16/avx512/kc=128"
     GATE_REF_KERNEL="Tile64/6x16/avx512/kc=128" GATE_PEAK="FMARoof64/avx512"
@@ -164,7 +166,8 @@ case "$KEEL_ARCH/$KEEL_ELEM" in
     FAMILY="FMAFamily/f64" BENCH_FILTER="FMARoof64|Tile64/.*/.*/kc=128|$FAMILY" ;;
   arm64/f32)
     KERN_FUNCS="Kernel8x8,Kernel4x16,Kernel3x24,KernelPB5x16,KernelPB7x12" REF_FUNCS="Kernel8x12" ISA_TAG=neon
-    PEAK_FUNCS="neonPeakTile,scalarPeak" PEAK_IPF_CEILINGS="neonPeakTile:1.333334 scalarPeak:1.30"
+    PEAK_FUNCS="neonPeakTile,neonPeak,scalarPeak" PEAK_IPF_CEILINGS="neonPeakTile:1.333334 neonPeak:2.1875 scalarPeak:1.30"
+    ANCHOR_FUNC="neonPeak" ANCHOR_ROW="FMAFamily/f32/shared"
     SWEEP_BEST_IPF=1.556
     GATE_KERNELS="Kernel/8x8/neon/kc=128 Kernel/4x16/neon/kc=128 Kernel/3x24/neon/kc=128 Kernel/5x16-pb/neon/kc=128 Kernel/7x12-pb/neon/kc=128"
     GATE_REF_KERNEL="Kernel/8x12/neon/kc=128" GATE_PEAK="Peak/neon"
@@ -172,7 +175,8 @@ case "$KEEL_ARCH/$KEEL_ELEM" in
     FAMILY="FMAFamily/f32" BENCH_FILTER="$BENCH_FILTER|$FAMILY" ;;
   arm64/f64)
     KERN_FUNCS="KernelD8x4,KernelD4x8,KernelD3x12,KernelDPB5x8,KernelDPB7x6" REF_FUNCS="KernelD8x6" ISA_TAG=neon
-    PEAK_FUNCS="neonPeakTileD,scalarPeakD" PEAK_IPF_CEILINGS="neonPeakTileD:1.333334 scalarPeakD:1.30"
+    PEAK_FUNCS="neonPeakTileD,neonPeakD,scalarPeakD" PEAK_IPF_CEILINGS="neonPeakTileD:1.333334 neonPeakD:2.1875 scalarPeakD:1.30"
+    ANCHOR_FUNC="neonPeakD" ANCHOR_ROW="FMAFamily/f64/shared"
     SWEEP_BEST_IPF=1.556
     KPFX="Tile64/" COVER_MARK=keel-kern64-backends-exercised
     GATE_KERNELS="Tile64/8x4/neon/kc=128 Tile64/4x8/neon/kc=128 Tile64/3x12/neon/kc=128 Tile64/5x8-pb/neon/kc=128 Tile64/7x6-pb/neon/kc=128"
@@ -560,16 +564,18 @@ else
         BEST_LO="$klo"; BEST_PT="$kpt"; BEST_HI="$khi"; BEST_ID="${kname##"$KPFX"}"; BEST_IPF="$kipf"
       fi
     done
-    # The peak kernel is always a ceiling mix, and its fraction is 1 by
-    # definition: it *is* the denominator. It is never the shape under test, so it
-    # can never be excluded below — which is what pins the ceiling from beneath
-    # and makes sandbagging an alternate shape break convergence instead of
-    # lowering the roofline.
-    #
-    # It carries no interval, and that is not an omission: f = 1 exactly, and the
-    # peak's own confidence interval is already inside every other mix's bounds,
-    # which are ratios against it. Giving it one would double-count the same noise.
-    [[ -n "$IPF_PEAK" ]] && MIXES="$MIXES $GATE_PEAK_FUNC|1.0:$IPF_PEAK"
+    # The ANCHOR is always a ceiling mix, which is what pins the ceiling from beneath and makes
+    # sandbagging an alternate shape break convergence instead of lowering the roofline. It is
+    # the family's highest-IPF member at its measured fraction, not the canonical peak, which
+    # is the family's fastest loop and so the one least limited by the front end (ruled
+    # 2026-10-28, #199; gate-lib's anchor_mix). Without it the pin is gone, so the floor is
+    # unmeasured here rather than judged on whatever mixes remain.
+    AMIX="$(anchor_mix "$ANCHOR_ROW" "$GATE_PEAK" "$BENCHCSV" "$AUDITPEAK" "$ANCHOR_FUNC")"
+    if [[ -z "$AMIX" ]]; then
+      unmeasured "[$host] the roofline anchor ($ANCHOR_ROW, audited as $ANCHOR_FUNC) is unmeasured, so the ceiling has no pin from beneath and this host's floor is not judged (#199)"
+      continue
+    fi
+    MIXES="$MIXES $AMIX"
 
     if [[ -z "$MEASURED" ]]; then
       info "[$host] no $ISA_TAG kernel sub-benchmark (CPU lacks it); not counted"

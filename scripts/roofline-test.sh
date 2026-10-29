@@ -562,6 +562,20 @@ main() {
     "0.000100 0.001" "" "0.000104 0.001"
 
   echo
+  echo "-- the roofline anchor, ruled 2026-10-28 on #199: skx's own exploration numbers (c98cd9f) --"
+  # The canonical peak under the family max is the family's fastest loop and so the one least
+  # front-end-limited. As a mix it diverges from every other loop and calls the host FMA-bound.
+  XWHY=diverge check "skx: the canonical peak as a mix reads FMA-bound" fma fail \
+    "0.425:0.426" 4.625 "0.324:6.25:0.323:0.325" "1.0:1.1875"
+  # The ruled set: the anchor (the old peak loop at its measured fraction) in its place.
+  XWHY=- check "skx: the anchor instead of the peak reads issue-bound" issue pass \
+    "0.425:0.426" 4.625 "0.324:6.25:0.323:0.325" "0.889:2.25:0.888:0.890"
+  # The anti-sandbag property the anchor has to keep: an alternate run at half its rate breaks
+  # convergence against the anchor instead of lowering the roofline.
+  XWHY=diverge check "skx: a sandbagged alternate cannot lower the anchored roofline" fma fail \
+    "0.425:0.426" 4.625 "0.162:6.25" "0.889:2.25:0.888:0.890"
+
+  echo
   if [[ "$FAILED" -eq 0 ]]; then
     echo "roofline controls: all pass"
   else

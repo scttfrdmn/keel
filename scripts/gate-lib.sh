@@ -66,6 +66,27 @@ audit_ipf() {
     }' "$2"
 }
 
+# anchor_mix ROW PEAKROW CSV AUDIT FUNC — the roofline's anti-sandbag pin as one ceiling mix,
+# "anchor|f:I:f_lo:f_hi", or nothing if either half is missing (the caller fails closed).
+#
+# Ruled 2026-10-28 on #199 (DESIGN.md P2): the canonical peak is NOT a ceiling mix. Since the
+# family-max denominator, it is the family's fastest loop, which is by construction the one
+# least limited by the front end, so it cannot witness an issue ceiling. On skx it read 1.19
+# while every other loop converged near 2.0. Its old role, pinning the ceiling from beneath so
+# a sandbagged alternate shape breaks convergence instead of lowering the roofline, passes to
+# the family's highest-IPF member (`shared`, the pre-family peak loop: register-only, audited,
+# and no kernel author's to tune) at its MEASURED fraction of the canonical peak. In corrected
+# units that is the same pin the old peak gave: 0.889 x 2.25 = 2.0 on skx, against 2.25 / 1.125.
+anchor_mix() {
+  local row="$1" peakrow="$2" csv="$3" audit="$4" fn="$5" f flo fhi ii
+  f="$(bench_ratio "$row" "$peakrow" "$csv" GFLOP/s)"
+  flo="$(bench_ratio_lo "$row" "$peakrow" "$csv" GFLOP/s)"
+  fhi="$(bench_ratio_hi "$row" "$peakrow" "$csv" GFLOP/s)"
+  ii="$(audit_ipf "$fn" "$audit")"
+  [[ -n "$f" && -n "$flo" && -n "$fhi" && -n "$ii" ]] || return 0
+  printf 'anchor|%s:%s:%s:%s' "$f" "$ii" "$flo" "$fhi"
+}
+
 # audit_ipf_tile TILE FILE — audit_ipf for a tile named by its MRxNR, empty TILE
 # meaning "no tile declared", which is not an error.
 audit_ipf_tile() {

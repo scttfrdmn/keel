@@ -196,6 +196,12 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **The roofline's anti-sandbag anchor is the family's highest-IPF member, not the canonical peak** (#199, Scott's
+  ruling; DESIGN.md P2). gate-p2 and gate-p3 now take it from `anchor_mix`: the old peak loop (`avx512Peak`,
+  `neonPeak`) at its measured fraction of the canonical peak. The pin keeps the same strength in corrected units, 2.0
+  on skx (= 2.25/1.125). On skx's own exploration numbers this restores the issue-bound reading, with 2x32 at 97.1% of
+  its roofline. The canonical-peak form calls skx FMA-bound at 42.5%. A sandbagged alternate still fails. Three new
+  roofline fixtures pin all three readings.
 - **The AVX-512 FMA ceiling is now the family max: the `avx512` peak rows run x44** (#199, Scott's ruling (a);
   DESIGN.md P2, 2026-10-28). x44 read 112.5% of the old `avx512Peak` on Skylake-SP and tied it on Zen 4/5. gate-p2/p3/p4's
   amd64 arms audit `avx512PeakX44(D)` at 19/16 insns/FMA, and gate-p2 checks the family maximum per host on amd64 too.
