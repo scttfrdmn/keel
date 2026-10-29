@@ -199,6 +199,10 @@ While the major version is 0, minor versions may contain breaking changes.
     `solveRight`, `trsmRight` and `gemm`).
 
 ### Changed
+- **The amd64 P2 go/no-go is GREEN on the family-max AVX-512 ceiling with the roofline anchor** (#199, judged
+  `ab83784`, `archive/p2-amd64-anchor/`). It ran at both elements on Skylake-SP, Zen 4 and Zen 5: f64 29/0/0, f32
+  30/0/0. skx is issue-bound at 96.8% of its 43.8% roofline. Zen 4 is at 96.4–96.8% of peak and Zen 5 at 64.8%. Every
+  pre-registered prediction held.
 - **The roofline's anti-sandbag anchor is the family's highest-IPF member, not the canonical peak** (#199, Scott's
   ruling; DESIGN.md P2). gate-p2 and gate-p3 now take it from `anchor_mix`: the old peak loop (`avx512Peak`,
   `neonPeak`) at its measured fraction of the canonical peak. The pin keeps the same strength in corrected units, 2.0
