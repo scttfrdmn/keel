@@ -60,3 +60,37 @@ judged-size rows.
   Apart from criterion 9 and its aggregates, nothing FAILs.
 **REFUTED if** gate-p3/p4 is RED, x44 loses its family max, skx's ceiling is outside 1518–1612,
 or any FAIL appears outside criterion 9.
+
+## r1: result (f18f110, `judged-r1-f18f110.log`)
+
+56 PASS / 3 FAIL / 1 UNMEASURED / 14 BASELINE / 4 REPORTED. It took 2h08m (about $51), and the
+fleet was verified down with a readable inventory. **No REFUTED condition fired.** Gate-p4
+GREEN (68/0/0), gate-p3 GREEN (56/0/0), `-race` clean on all three hosts, x44 the 8-thread family
+max everywhere (Zen 4 ties `shared` at 934.35 against 934.4), and **skx `Ceiling/compute` 1565.5**
+(band 1518–1612), with x44/shared = 1565/1391 = 1.125. Against the softer predictions:
+- **missed, rendering:** amd64 hosts are registry-governed, so the share rows render BASELINE
+  (candidate rows), not arm64's "NO FRACTION IN FORCE" PASS lines. The headline is UNMEASURED
+  because all three hosts are BASELINE. I predicted the arm64 rendering without reading this branch;
+- skx shares: Sgemm 29.0 ✓ and Ssymm 28.5 ✓ (band 27.0–29.5); **Ssyrk 30.4 ✗**, see below;
+- Zen shares within 1 point of ceil8: held on zen4 except Ssyrk (77.0 against 75.4). **Not held on
+  zen5:** Sgemm 49.0 (+1.4), Ssyrk 50.6 (+3.6), Ssymm 44.3 (−2.2, an 8-thread rate 4.2% below the
+  README, inside criterion 9's 5%);
+- 1-thread Sgemm: zen4 108.4 ✓, zen5 177.6 ✓, **skx 68.72 ✗** (band 64.3–68.3, so +3.6%);
+- criterion 9 FAILs on skx `Ceiling/compute` (1391 → 1565.5) ✓, and on the published peak
+  denominator (185.5 → 208.55, the same instrument change). **Unpredicted: Ssyrk is 5–7% above
+  the README on all three hosts.** The candidate cause is `4e8724c` (2026-10-24, about 2× on the
+  transposing pack). Ssyrk packs A untransposed as gemm's A operand, which is the branch that commit
+  sped up. It is UNCONFIRMED, with no A/B. Either way, the README regeneration over r1+r2 re-derives
+  these rows.
+
+## r2: predictions (written from r1, before r2)
+
+r2 is the second draw. The registry rows land over r1 + r2 by `host-baselines.tsv`'s rules, so
+r2 is **not yet judged against a bar** either. Predicted:
+- the same rendering: 14 BASELINE, the UNMEASURED headline, gate-p3/p4 GREEN, `-race` clean;
+- every share row reproduces r1 within README_TOL (5%), so **all 12 are admissible** at N=2. The
+  widest spread is under 2.6 points, as ceil8's amd64 pair was (2.56%);
+- skx `Ceiling/compute` within 0.5% of 1565.5, and x44 the family max on every host;
+- criterion 9 FAILs on the same set as r1, and nothing outside criterion 9 FAILs.
+**REFUTED if** a share row's cross-draw spread exceeds 5% (that row is inadmissible and cannot land),
+gate-p3/p4 is RED, or any FAIL appears outside criterion 9.

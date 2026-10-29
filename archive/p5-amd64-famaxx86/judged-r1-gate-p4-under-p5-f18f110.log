@@ -1,0 +1,146 @@
+== gate-p4: Level 2 + derived Level 3 ==
+        rev f18f110782006a78a7c8c00a524281fb7b11b1d7 tree=clean toolchain=go1.27.3 goexperiment=none
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- builds --
+  [32mPASS[0m  make build (GOEXPERIMENT=simd)
+  [32mPASS[0m  make stock (scalar path, no experiment)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd, linux/amd64)
+
+-- Level 2 and derived Level 3 vs the float64 oracle --
+        the local run exercises the scalar path only (darwin/arm64 has no archsimd);
+        every lattice below is audited from a host that ran it with avx512 live
+  [32mPASS[0m  [local darwin/arm64] all tests pass
+  [32mPASS[0m  [local, stock toolchain] all tests pass without GOEXPERIMENT=simd
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 36826 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+        [keel-zen5] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-zen5] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-zen4] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-zen4] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-skx] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-skx] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+  [32mPASS[0m  cross-compiled linux/amd64 test binary (root package: P4 routines vs oracle)
+        builder toolchain go1.27.3-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+        [keel-zen5] AMD EPYC 9R45 | instance=c8a.48xlarge | virt=guest | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | load1=0.00 load5=0.00 load15=0.22 runnable=1/2116 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=48K L3=32768K | spawn=i-0967faeb6665fd127:c8a.48xlarge:ondemand
+  [32mPASS[0m  [keel-zen5] the P4 lattices pass against the oracle
+        [keel-zen4] AMD EPYC 9R14 | instance=c7a.48xlarge | virt=guest | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | load1=0.00 load5=0.08 load15=0.52 runnable=1/2068 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=32K L3=32768K | spawn=i-0d3059376aafac8f7:c7a.48xlarge:ondemand
+  [32mPASS[0m  [keel-zen4] the P4 lattices pass against the oracle
+        [keel-skx] Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | instance=c5n.18xlarge | virt=guest | 72 cpus | 36 cores | smt=2 | 2 sockets | governor=absent | load1=0.07 load5=1.40 load15=1.33 runnable=1/821 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=32K L3=25344K | spawn=i-0f6e3a9b380124b02:c5n.18xlarge:ondemand
+  [32mPASS[0m  [keel-skx] the P4 lattices pass against the oracle
+  [32mPASS[0m  the lattices ran green with the avx512 microkernel live (target: keel-skx)
+
+-- lattice extent (criteria 1, 2, 3, 5 and 6: coverage is enforced, not trusted) --
+        P3's dispatched microkernel on this host: 2x32/avx512
+        Sgemv lattice: trans=N,T alpha=0,1,-0.75 beta=0,1,0.5 incx=1,2,-1 incy=1,2,-1 combos=162
+  [32mPASS[0m  Sgemv: every flag in this gate's statement of the lattice was swept
+  [32mPASS[0m  Sgemv: combination count matches the enumerated sets (162 = 162 over 5 dimensions)
+  [32mPASS[0m  Sgemv: every size this gate requires ran (1..17, 31/32/33, 63/64/65, 500)
+  [32mPASS[0m  Sgemv: every size declares its oracle verification mode (exact up to 65, >= 256 seeded exact entries above it)
+  [32mPASS[0m  Sgemv: differential across backends (avx2,avx512,scalar)
+  [32mPASS[0m  Sgemv: edge coverage beyond the lattice (rectangular,ldpad,zerodim,argpanic,nonfinite)
+  [32mPASS[0m  Sgemv: derived on the dispatched Level-1 backend (avx512), path=keel.Sgemv->internal/l1.Dot(row)
+        Sger lattice: alpha=0,1,-0.75 incx=1,2,-1 incy=1,2,-1 combos=27
+  [32mPASS[0m  Sger: every flag in this gate's statement of the lattice was swept
+  [32mPASS[0m  Sger: combination count matches the enumerated sets (27 = 27 over 3 dimensions)
+  [32mPASS[0m  Sger: every size this gate requires ran (1..17, 31/32/33, 63/64/65, 500)
+  [32mPASS[0m  Sger: every size declares its oracle verification mode (exact up to 65, >= 256 seeded exact entries above it)
+  [32mPASS[0m  Sger: differential across backends (avx2,avx512,scalar)
+  [32mPASS[0m  Sger: edge coverage beyond the lattice (ldpad,rectangular,zerodim,argpanic,nonfinite)
+  [32mPASS[0m  Sger: derived on the dispatched Level-1 backend (avx512), path=keel.Sger->internal/l1.Axpy(row)
+        Ssyrk lattice: uplo=U,L trans=N,T alpha=0,1,-0.75 beta=0,1,0.5 combos=36
+  [32mPASS[0m  Ssyrk: every flag in this gate's statement of the lattice was swept
+  [32mPASS[0m  Ssyrk: combination count matches the enumerated sets (36 = 36 over 4 dimensions)
+  [32mPASS[0m  Ssyrk: every size this gate requires ran (1..17, 31/32/33, 63/64/65, 500)
+  [32mPASS[0m  Ssyrk: every size declares its oracle verification mode (exact up to 65, >= 256 seeded exact entries above it)
+  [32mPASS[0m  Ssyrk: differential across backends (avx512,scalar)
+  [32mPASS[0m  Ssyrk: edge coverage beyond the lattice (untouched-triangle,rectangular,ldpad,zerodim,argpanic,nonfinite)
+  [32mPASS[0m  Ssyrk: derived on the same microkernel Sgemm dispatched (2x32/avx512), path=keel.Ssyrk->internal/block.Syrk->block.gemm(triMask)
+  [32mPASS[0m  Ssyrk: blocked with Sgemm's own parameters (kc=384 mc=144 nc=4096)
+        Ssymm lattice: side=L,R uplo=U,L alpha=0,1,-0.75 beta=0,1,0.5 combos=36
+  [32mPASS[0m  Ssymm: every flag in this gate's statement of the lattice was swept
+  [32mPASS[0m  Ssymm: combination count matches the enumerated sets (36 = 36 over 4 dimensions)
+  [32mPASS[0m  Ssymm: every size this gate requires ran (1..17, 31/32/33, 63/64/65, 500)
+  [32mPASS[0m  Ssymm: every size declares its oracle verification mode (exact up to 65, >= 256 seeded exact entries above it)
+  [32mPASS[0m  Ssymm: differential across backends (avx512,scalar)
+  [32mPASS[0m  Ssymm: edge coverage beyond the lattice (unreferenced-triangle,rectangular,ldpad,zerodim,argpanic,nonfinite)
+  [32mPASS[0m  Ssymm: derived on the same microkernel Sgemm dispatched (2x32/avx512), path=keel.Ssymm->internal/block.Symm->block.gemm(sym-pack)
+  [32mPASS[0m  Ssymm: blocked with Sgemm's own parameters (kc=384 mc=144 nc=4096)
+        Strsm lattice: side=L,R uplo=U,L trans=N,T diag=N,U alpha=0,1,-0.75 combos=48
+  [32mPASS[0m  Strsm: every flag in this gate's statement of the lattice was swept
+  [32mPASS[0m  Strsm: combination count matches the enumerated sets (48 = 48 over 5 dimensions)
+  [32mPASS[0m  Strsm: every size this gate requires ran (1..17, 31/32/33, 63/64/65, 500)
+  [32mPASS[0m  Strsm: every size declares its oracle verification mode (exact up to 65, >= 256 seeded exact entries above it)
+  [32mPASS[0m  Strsm: differential across backends (avx512,scalar)
+  [32mPASS[0m  Strsm: edge coverage beyond the lattice (unreferenced-triangle,unit-diagonal-ignored,rectangular,multi-block,ldpad,zerodim,argpanic,nonfinite)
+  [32mPASS[0m  Strsm: derived on the same microkernel Sgemm dispatched (2x32/avx512), path=keel.Strsm->internal/block.Trsm->block.gemm+unblocked
+  [32mPASS[0m  Strsm: blocked with Sgemm's own parameters (kc=384 mc=144 nc=4096)
+
+-- carried from P2 (criterion 4): the K-loop after triangular masking --
+        compile-time property, audited against the linux/amd64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.Kernel2x32: steady-state loop [70,430] 74 insns for 16 arith (4.62 per arith): 0 vector stack refs, 8 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.Kernel4x32: steady-state loop [101,341] 50 insns for 8 arith (6.25 per arith): 0 vector stack refs, 12 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  0 accumulator spills in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 calls in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 surviving bounds checks in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)
+
+-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --
+        the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that
+  [32mPASS[0m  avx512PeakX44 audits 1.187500 insns/FMA, at or under its recorded ceiling 1.1875
+  [32mPASS[0m  avx2Peak audits 2.300000 insns/FMA, at or under its recorded ceiling 2.30
+  [32mPASS[0m  scalarPeak audits 1.150000 insns/FMA, at or under its recorded ceiling 1.15
+        check_bce: 271 bounds check(s) across vec+kern+pack+block, all outside the K-loop (provenance; the criterion is the loop-body audit above)
+  [32mPASS[0m  check_bce output recorded as provenance
+
+-- Ssyrk vs Sgemm at 2048 (criterion 7): one invocation, both flop counts checked --
+        -count=10 -benchtime=1s; the bar counts as cleared only net of both confidence intervals
+  [32mPASS[0m  cross-compiled linux/amd64 bench binary (Sgemm + Ssyrk + peak)
+        [keel-zen5] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+  [32mPASS[0m  every shipped shape's recorded insns/FMA matches the audited object code (4x32/avx512=6.250 2x32/avx512=4.625)
+        [keel-zen5] peak series GFLOP/s: head 287.6, middle 288.05, tail 287.4 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-zen5] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.1594% against a 0.3730% floor, middle->tail +0.2438% against a 0.6637% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-zen5] flop counts checked: Sgemm 17179869184 = 2*m*n*k, Ssyrk 8594128896 = k*n*(n+1), both at n=2048 k=2048
+        [keel-zen5] Ssyrk 169.8 GFLOP/s +/- 0.0% [168.3, 169.9] D=inf (span 0.94% / interval 0.0000%), Sgemm 177 GFLOP/s +/- 0.1% [176.8, 177.1] D=3 (span 0.17% / interval 0.0565%), peak 288.1 GFLOP/s +/- 0.0% [287.6, 288.1] D=5 (span 0.17% / interval 0.0347%), one invocation
+        [keel-zen5] Ssyrk = 58.9% of measured peak (58.9% net of CI) — reported, not a P4 criterion
+        [keel-zen5] Sgemm = 61.4% of measured peak (61.4% net of CI) — reported, not a P4 criterion
+        [keel-zen5] criterion 7 interval [95.8%, 96.0%] about a raw 95.9%, bar 85.0%; observed CI Ssyrk +/- 0.0%, Sgemm +/- 0.1%; flip-headroom +6.03% symmetric CI
+  [32mPASS[0m  [keel-zen5] Ssyrk holds 95.9% of Sgemm's rate at n=2048, 95.8% net of CI (>= 85%)
+        [keel-zen4] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-zen4] peak series GFLOP/s: head 117, middle 117.1, tail 117.1 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-zen4] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.0741% against a 0.0815% floor, middle->tail +0.0426% against a 0.0911% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-zen4] flop counts checked: Sgemm 17179869184 = 2*m*n*k, Ssyrk 8594128896 = k*n*(n+1), both at n=2048 k=2048
+        [keel-zen4] Ssyrk 102.6 GFLOP/s +/- 0.0% [102.2, 102.7] D=inf (span 0.49% / interval 0.0000%), Sgemm 106.2 GFLOP/s +/- 0.1% [105.7, 106.2] D=5 (span 0.47% / interval 0.0942%), peak 117.1 GFLOP/s +/- 0.0% [117, 117.1] D=inf (span 0.09% / interval 0.0000%), one invocation
+        [keel-zen4] Ssyrk = 87.6% of measured peak (87.6% net of CI) — reported, not a P4 criterion
+        [keel-zen4] Sgemm = 90.7% of measured peak (90.6% net of CI) — reported, not a P4 criterion
+        [keel-zen4] criterion 7 interval [96.6%, 96.8%] about a raw 96.6%, bar 85.0%; observed CI Ssyrk +/- 0.0%, Sgemm +/- 0.1%; flip-headroom +6.39% symmetric CI
+  [32mPASS[0m  [keel-zen4] Ssyrk holds 96.6% of Sgemm's rate at n=2048, 96.6% net of CI (>= 85%)
+        [keel-skx] governor=none (no cpufreq interface — a virtualized guest does not own the knob)
+        [keel-skx] peak series GFLOP/s: head 208.8, middle 209.55, tail 208.85000000000002 (three invocations either side of the sweep; §5 rule 5's substitute instrument, no governor on this host)
+  [32mPASS[0m  [keel-skx] the peak series is bounded in every window and not ordered: neither of 2 adjacent steps resolves a decline above the resolution-plus-jitter floor its own intervals set (sec/op head->middle -0.3634% against a 0.3356% floor, middle->tail +0.3441% against a 0.4280% floor), so the windows are ties and a tie is not an order (#6, 2026-08-20)
+        [keel-skx] flop counts checked: Sgemm 17179869184 = 2*m*n*k, Ssyrk 8594128896 = k*n*(n+1), both at n=2048 k=2048
+        [keel-skx] Ssyrk 65.18 GFLOP/s +/- 1.1% [64.1, 65.33] D=1.414 (span 1.89% / interval 1.3348%), Sgemm 68.14 GFLOP/s +/- 0.1% [68.06, 68.22] D=1.143 (span 0.23% / interval 0.2055%), peak 209.6 GFLOP/s +/- 0.2% [209, 209.7] D=1.4 (span 0.33% / interval 0.2386%), one invocation
+        [keel-skx] Ssyrk = 31.1% of measured peak (30.7% net of CI) — reported, not a P4 criterion
+        [keel-skx] Sgemm = 32.5% of measured peak (32.4% net of CI) — reported, not a P4 criterion
+        [keel-skx] criterion 7 interval [94.4%, 96.0%] about a raw 95.7%, bar 85.0%; observed CI Ssyrk +/- 1.1%, Sgemm +/- 0.1%; flip-headroom +5.92% symmetric CI
+  [32mPASS[0m  [keel-skx] Ssyrk holds 95.7% of Sgemm's rate at n=2048, 94.4% net of CI (>= 85%)
+  [32mPASS[0m  every gate host cleared 85% of its own Sgemm (3/3)
+
+-- carried from P3 (criterion 8): the gate P4 edits the code of --
+        the Ssyrk/Sgemm ratio above is a ratio against a number P4 can move, so the
+        denominator's own bar is carried by running the gate that owns it — not by
+        restating a threshold in a second place
+        full output: build/gate-p3-under-p4-f18f110-20261029T083321Z.log (191 lines) — paste it verbatim into the umbrella issue beside this gate's own
+        56 PASS / 0 FAIL / 0 UNMEASURED / 0 BASELINE / 0 REPORTED, verdict: gate-p3: GREEN
+  [32mPASS[0m  gate-p3 is green on this commit (f18f110), so P4's denominator is still the Sgemm P3 measured
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p4 tally: 68 PASS / 0 FAIL / 0 UNMEASURED / 0 BASELINE / 0 REPORTED
+gate-p4: GREEN

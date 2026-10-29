@@ -14,6 +14,7 @@
 # gate-p5 defaults to amd64 already; exporting it anyway makes the era this run resolves a
 # property of the driver, not of the default (archive/p5-arm64-famax/ explains why).
 # Re-frozen for judged r1, after exploration attempt 2 at d14cee0; SELF below requires it.
+# Re-frozen for judged r2, after r1 at f18f110.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
