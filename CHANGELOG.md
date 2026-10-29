@@ -9,6 +9,8 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **An AVX2 float64 shim** (#192, `internal/vec/vec_avx2_f64.go`): the 256-bit `*256D` ops float64 Level 1 needs for parity
+  with float32's ladder. They are bit-exact with the float64 scalar spec on janus (`keel-backends64-exercised: scalar avx512 avx2`).
 - **Neoverse-V3 (Graviton5, c9g.48xlarge) gets README rows** (#196, `archive/p5-arm64-c9g/`), pooled over judged r1
   `f3bbe01` and r2 `e030cc1` on OpenBLAS 0.3.34 `neoversev2`. Sgemm 1T is 80.06 GFLOP/s, 77.6% of a 103.2 peak. Shares of
   the 824.2 GFLOP/s 8-thread ceiling are Sgemm 69.8, Ssyrk 73.0, Ssymm 69.5 and Strsm 47.9 (pooled), and keel/OpenBLAS is

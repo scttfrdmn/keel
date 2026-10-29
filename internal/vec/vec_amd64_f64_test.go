@@ -30,6 +30,27 @@ func init() {
 			HSum:      AVX512DHSum,
 		})
 	}
+	// The AVX2 rung (#192), registered as vec_amd64_test.go registers float32's.
+	if HasAVX2() {
+		backends64 = append(backends64, backend64{
+			name:      BackendAVX2,
+			Load:      AVX2DLoad,
+			LoadPart:  AVX2DLoadPart,
+			Store:     AVX2DStore,
+			StorePart: AVX2DStorePart,
+			Broadcast: AVX2DBroadcast,
+			Zero:      AVX2DZero,
+			Add:       AVX2DAdd,
+			Sub:       AVX2DSub,
+			Mul:       AVX2DMul,
+			Div:       AVX2DDiv,
+			MulAdd:    AVX2DMulAdd,
+			Max:       AVX2DMax,
+			Min:       AVX2DMin,
+			Abs:       AVX2DAbs,
+			HSum:      AVX2DHSum,
+		})
+	}
 }
 
 // TestAbsWithHoistedMask64 is TestAbsWithHoistedMask for AbsWith512D: the mask
@@ -44,6 +65,23 @@ func TestAbsWithHoistedMask64(t *testing.T) {
 		got := block64Of512(AbsWith512D(load512D(x), m))
 		if want := s.Abs(x); !sameBlock64(got, want) {
 			t.Errorf("AbsWith512D (hoisted mask) mismatch\n in:   %s\n got:  %s\n spec: %s",
+				fmtBlock64(x), fmtBlock64(got), fmtBlock64(want))
+		}
+	}
+}
+
+// TestAbsWithHoistedMask256D is TestAbsWithHoistedMask64 for AbsWith256D.
+func TestAbsWithHoistedMask256D(t *testing.T) {
+	if !HasAVX2() {
+		t.Skip("no AVX2+FMA on this CPU")
+	}
+	s := spec64()
+	m := AbsMask256D()
+	for _, x := range blockPool64() {
+		l, h := halves256D(x)
+		got := block64Of256(AbsWith256D(l, m), AbsWith256D(h, m))
+		if want := s.Abs(x); !sameBlock64(got, want) {
+			t.Errorf("AbsWith256D (hoisted mask) mismatch\n in:   %s\n got:  %s\n spec: %s",
 				fmtBlock64(x), fmtBlock64(got), fmtBlock64(want))
 		}
 	}

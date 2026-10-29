@@ -24,6 +24,11 @@ promised the type axis: *"do not cut it yet, and here is the map for when `#103`
 > invariant table (§4). **The type-mechanism choice (§1) is decided: code generation** (#190). Go
 > generics were built and refused (`696942a`/`709840d`); `tools/f64gen` writes `internal/pack64` and
 > `internal/block64` from the float32 sources, with `kern.Kernel64` as the seam.
+>
+> **Level 1, ruled 2026-10-29 (#192, Scott):** the unit-stride kernels are **generated too**, as `internal/l164`
+> from `internal/l1`, with f64gen renaming the `vec` ops to their `D` twins. The root `D*` routines are
+> **hand-written**: they are thin, and `Dnrm2` and the rotations differ algorithmically. A test pins each `S*` to its
+> `D*` twin. float64 Level 1 gets an **AVX2 rung** for parity (`*256D` shim), so its ladder equals float32's.
 
 **This doc does not decide that f64 gets built.** `#103` records float64 as a v0 non-goal
 (`DESIGN.md:13`, "Gonum owns it") and the finding that its real blocker is the *oracle*, not the
