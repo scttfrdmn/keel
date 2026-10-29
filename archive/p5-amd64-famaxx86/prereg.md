@@ -94,3 +94,25 @@ r2 is **not yet judged against a bar** either. Predicted:
 - criterion 9 FAILs on the same set as r1, and nothing outside criterion 9 FAILs.
 **REFUTED if** a share row's cross-draw spread exceeds 5% (that row is inadmissible and cannot land),
 gate-p3/p4 is RED, or any FAIL appears outside criterion 9.
+
+## r2: result (c0c373d, `judged-r2-c0c373d.log`)
+
+56 PASS / 3 FAIL / 1 UNMEASURED / 14 BASELINE / 4 REPORTED, the same tally as r1. It took 2h06m
+(about $51), and the fleet was verified down with a readable inventory. **REFUTED, on its first
+clause:** keel-zen5 `share/4x32/avx512/Ssymm` read 44.3 then 46.9, a **5.54%** cross-draw spread, which
+is past the 5% same-claim band, so that row is inadmissible. Beyond the prediction, keel-zen5
+`rate/Saxpy/n=1048576` spread **8.81%**. I also predicted 12 admissible share rows, and there are
+only 11 candidates: keel-zen5 Strsm was NOISE-LIMITED in both runs (8-thread interval about 9%), so the
+gate refused it before any bar. Everything else held: the rendering, gate-p3/p4 GREEN, `-race`
+clean, x44 the family max, skx `Ceiling/compute` 1565 (+0.0% on r1), and no FAIL outside
+criterion 9. Criterion 9 added one row that r1 did not have: skx Strsm/threads=8, at 269.5 against the
+README's 254.8.
+
+**Landed over N=2**, from the gate's own candidates and by ceil8's precedents: **27 of 29** rows.
+All of skx's and zen4's rows landed, plus 7 of zen5's 9. The two refused rows are named in zen5's
+grounds column, and they render `new` until a third draw settles them (#178). **Witness rows: skx and
+zen4 landed; zen5's is HELD.** These runs judged nothing (all BASELINE), so landing zen5's witness
+would turn its refused rows into an `owing` red that is not a regression. That is
+ceil8-amd64's precedent, quoted in `host-baselines.tsv`. All 27 drive `registered` through
+`baseline_state` with the gate's production arguments. zen5's three missing rows drive `new`, and a
+positive control (a missing row on skx, whose witness did land) drives `owing`. Era famaxx86 is closed.

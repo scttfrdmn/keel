@@ -149,7 +149,7 @@ is 'an unknown scope resolves nothing for amd64' "$(era_current "$T/led-scope-ty
 is 'the shipped ledger: amd64 is in famaxx86' "$(era_current scripts/measurement-eras.tsv amd64)" famaxx86
 is 'the shipped ledger: arm64 is in famax' "$(era_current scripts/measurement-eras.tsv arm64)" famax
 era_provisional scripts/measurement-eras.tsv famax && no 'famax read provisional after its transition archive landed' || ok 'famax is closed: its both-arms transition archive landed with its registrations'
-era_provisional scripts/measurement-eras.tsv famaxx86 && ok 'famaxx86 is provisional until its transition archive lands' || no 'famaxx86 read as landed'
+era_provisional scripts/measurement-eras.tsv famaxx86 && no 'famaxx86 read provisional after its transition archive landed' || ok 'famaxx86 is closed: its both-arms transition archive landed with its registrations'
 
 echo "-- era_provisional: a disclosure about the archive, never a permission --"
 # 6. `—` and empty both mean the both-arms transition archive has not landed. The empty

@@ -9,6 +9,14 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The README's amd64 rows are re-derived in era famaxx86** (#199, `archive/p5-amd64-famaxx86/`). The source is
+  judged r1 `f18f110` and r2 `c0c373d` on c5n.18xlarge, c7a.48xlarge and c8a.48xlarge. Skylake-SP's 8-thread ceiling reads
+  **1565** GFLOP/s (was 1391), so its shares fall to about 29% (Sgemm 1T 68.72 at 32.9% of 208.6). The under-review note is
+  removed. 27 of 29 baseline rows landed over N=2. keel-zen5 Ssymm (5.54% spread) and Saxpy (8.81%) are refused, and zen5's
+  witness row is held until a third draw. Era famaxx86 is closed.
+- **The README caption states the bar its judging logs state** (#199, `docs/rulings.md` 2026-10-29). Since `1d5b568` it
+  named 42.8% for all 20 pairs, while the logs judged 8 at 47.0% and 12 against registered baselines. `readme-numbers.sh`
+  now reads the bar from the logs. It also no longer counts a NOISE-LIMITED row as clearing a bar.
 - **The famaxx86 driver's teardown check fails closed** (#199). A dev-host reboot made `spawn list` unreadable, and the
   check read "no `keel-` line" as "fleet is down" while three instances billed for about 2h40m. It now requires a readable
   JSON inventory, the same test `aws-fleet.sh` applies, and reports UNKNOWN otherwise.

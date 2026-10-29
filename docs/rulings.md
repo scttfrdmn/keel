@@ -2312,3 +2312,23 @@ the archive. That is how the one owing arm64 row was landed, with its value reco
 gate's own estimator. And arm64 `Sscal` reads ~1.7x its registered baseline at every size on both
 Graviton hosts, with `neonScal` byte-identical between the revisions. Unexplained, recorded, not
 chased.
+
+## Credit claim: the README caption named a bar that judged none of its pairs (#199, 2026-10-29)
+
+**Claimed under `CLAUDE.md`'s published-evidence credit, +19 shell** (counter 19459 → 19478, booked in
+`docs/apparatus-ledger.md`). **The wrong published claim:** from `1d5b568` (2026-10-28) to this commit,
+the README caption read "the judged routines must reach 42.8% of each host's own measured 8-thread
+ceiling" over all **20 of 20** routine-host pairs. The logs that judged them say otherwise: **8** pairs were
+judged at **47.0%** (`archive/p5-arm64-famax/judged-r2-37d7c13.log`, `(>= 47.0%, the fleet bar`) and **12**
+against their own registered baselines (`archive/strsm-refresh-amd64-r2/gate-p5-amd64-strsm-r2-852ad55.log`,
+`this host's registered baseline`). **None was judged at 42.8.** To re-derive this, grep those two logs for
+`reaches .*(>= `. The cause: `readme-numbers.sh` hard-coded `CEIL_FRACTION=42.8`, and its read-back guard
+passed because `gate-p5.sh` still holds that line in ceil8's branch of the per-era case.
+
+**A second defect, caught before publication and so not part of the credit:** `vclass` recognised REPORTED
+only in its "NO FRACTION IN FORCE" form. The NOISE-LIMITED form fell to OTHER, and OTHER was counted as
+clearing the bars, so the famaxx86 regeneration first printed "9 of the 20 ... clear" with keel-zen5 Strsm,
+which nothing judged, among them. It now has its own clause, and an unclassifiable verdict aborts.
+
+**Positive control:** the fixed generator, run on the published caption's own four logs (strsm-refresh-amd64
+r1/r2 plus famax r1/r2), prints 47.0 together with the registered-baseline clause for the 3 amd64 hosts.
