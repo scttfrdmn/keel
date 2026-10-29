@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Command f64gen writes the float64 copy of keel's middle layer: internal/pack64
-// from internal/pack and internal/block64 from internal/block (#190).
+// from internal/pack and internal/block64 from internal/block (#190), and of its
+// Level-1 kernels, internal/l164 from internal/l1 (#192).
 //
 // # Why a generator, and why this one
 //
@@ -27,7 +28,14 @@
 //   - three kern selectors are renamed to their float64 twins (kernRenames), two
 //     are kept (MaxMR, MaxNR), and ANY other kern selector is an error: a new
 //     dependency of the middle on kern has to be decided, not carried across by
-//     a generator that happened to copy it.
+//     a generator that happened to copy it;
+//   - a vec op the Level-1 kernels call becomes its D twin (vecOps), the CPU
+//     probes are kept (vecKept), and any other vec selector is an error, by the
+//     same rule; math.Float32bits and Float32frombits take their float64 names.
+//
+// The kernels' lane counts are written in bytes for the reason the constants
+// below are (internal/l1, lanes512 = 64/unsafe.Sizeof(float32(0))), so every
+// slice bound halves at float64 with no rule here.
 //
 // Constants that are really bytes are stated in bytes in the float32 source, as
 // 64/unsafe.Sizeof(float32(0)), so the identifier rule carries them to float64
@@ -73,6 +81,7 @@ const module = "github.com/scttfrdmn/keel"
 var pkgs = []struct{ src, dst, name string }{
 	{"internal/pack", "internal/pack64", "pack64"},
 	{"internal/block", "internal/block64", "block64"},
+	{"internal/l1", "internal/l164", "l164"},
 }
 
 // importRenames maps a float32 package to its generated float64 copy. The import
@@ -87,6 +96,28 @@ var (
 	kernRenames = map[string]string{"Kernel": "Kernel64", "ScalarKernel": "ScalarKernel64", "ScalarTile": "ScalarTile64"}
 	kernKept    = map[string]bool{"MaxMR": true, "MaxNR": true}
 )
+
+// vecOps are the internal/vec ops the Level-1 kernels call that have a float64
+// twin, which is the op name plus D (vec_avx512_f64.go, vec_avx2_f64.go,
+// vec_neon_f64.go; #192). vecKept are the type-free ones used as they are. Any
+// other vec selector is an error, by kern's rule: a kernel's new dependency on the
+// shim is decided, not carried across.
+var (
+	vecOps  = map[string]bool{}
+	vecKept = map[string]bool{"HasAVX512": true, "HasAVX2": true, "HasNEON": true}
+)
+
+func init() {
+	for _, w := range []string{"512", "256", "128"} {
+		for _, op := range []string{"Zero", "Load", "LoadPart", "Store", "StorePart", "Broadcast",
+			"Add", "Mul", "Div", "FMA", "HSum", "Abs", "AbsMask", "AbsWith"} {
+			vecOps[op+w] = true
+		}
+	}
+}
+
+// mathRenames are the math functions whose name carries the element width.
+var mathRenames = map[string]string{"Float32bits": "Float64bits", "Float32frombits": "Float64frombits"}
 
 // varOverrides replaces a package-level var's initializer in a generated package,
 // for float64 tuning that differs from float32's. Keyed by generated package name.
@@ -217,6 +248,20 @@ func transform(path, rel, pkgName string, applied map[string]bool) ([]byte, erro
 				default:
 					bad = append(bad, fmt.Sprintf("%s: kern.%s has no float64 decision (add it to kernRenames or kernKept)", fset.Position(n.Pos()), n.Sel.Name))
 				}
+				return false
+			}
+			if x, ok := n.X.(*ast.Ident); ok && x.Name == "vec" {
+				switch {
+				case vecOps[n.Sel.Name]:
+					n.Sel.Name += "D"
+				case vecKept[n.Sel.Name]:
+				default:
+					bad = append(bad, fmt.Sprintf("%s: vec.%s has no float64 decision (add it to vecOps or vecKept)", fset.Position(n.Pos()), n.Sel.Name))
+				}
+				return false
+			}
+			if x, ok := n.X.(*ast.Ident); ok && x.Name == "math" && mathRenames[n.Sel.Name] != "" {
+				n.Sel.Name = mathRenames[n.Sel.Name]
 				return false
 			}
 		case *ast.Ident:

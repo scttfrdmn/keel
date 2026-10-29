@@ -135,3 +135,29 @@ func TestOverrideMustFindItsVar(t *testing.T) {
 		t.Fatalf("generate accepted an override with no var (err = %v)", err)
 	}
 }
+
+// TestVecSelectors pins the Level-1 rule (#192): a decided op takes its D twin, a CPU
+// probe is kept, and an undecided vec selector is refused rather than copied across.
+func TestVecSelectors(t *testing.T) {
+	dir := t.TempDir()
+	write := func(body string) string {
+		src := "// Copyright 2026 Scott Friedman\n// SPDX-License-Identifier: Apache-2.0\n\npackage l1\n\nimport (\n\t\"math\"\n\n\t\"github.com/scttfrdmn/keel/internal/vec\"\n)\n\n" + body
+		path := filepath.Join(dir, "x.go")
+		if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	got, err := transform(write("var _ = vec.Load512\nvar _ = vec.HasAVX2\nvar _ = math.Float32bits\n"), "internal/l1/x.go", "l164", map[string]bool{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"vec.Load512D", "vec.HasAVX2\n", "math.Float64bits"} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("output lacks %q:\n%s", want, got)
+		}
+	}
+	if _, err := transform(write("var _ = vec.Sub512\n"), "internal/l1/x.go", "l164", map[string]bool{}); err == nil || !strings.Contains(err.Error(), "vec.Sub512") {
+		t.Fatalf("transform accepted an undecided vec selector (err = %v)", err)
+	}
+}
