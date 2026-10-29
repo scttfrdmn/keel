@@ -307,6 +307,17 @@ func TestDRefsVsDD(t *testing.T) {
 		w, s := DotDD(n, x, 2, y, -3)
 		within(t, fmt.Sprintf("Ddot n=%d", n), []float64{g}, []float64{w}, []float64{s}, n, Tolerance64)
 
+		// The Level-1 references #192 added DD twins for.
+		g, _ = Dasum(n, x, 2)
+		w, s = AsumDD(n, x, 2)
+		within(t, fmt.Sprintf("Dasum n=%d", n), []float64{g}, []float64{w}, []float64{s}, n, Tolerance64)
+		g, _ = Dnrm2(n, x, 2)
+		w, s = Nrm2DD(n, x, 2)
+		within(t, fmt.Sprintf("Dnrm2 n=%d", n), []float64{g}, []float64{w}, []float64{s}, n, Tolerance64)
+		ao, _ := Daxpy(n, al, x, 2, y, -3)
+		aw, as := AxpyDD(n, al, x, 2, y, -3)
+		within(t, fmt.Sprintf("Daxpy n=%d", n), ao, aw, as, 1, Tolerance64)
+
 		// Gemv over an n×n A with a padded lda, both transposes.
 		a := vec64(r, n*(n+3))
 		for _, tr := range []bool{false, true} {

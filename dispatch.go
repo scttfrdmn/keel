@@ -9,6 +9,7 @@ import (
 
 	"github.com/scttfrdmn/keel/internal/kern"
 	"github.com/scttfrdmn/keel/internal/l1"
+	"github.com/scttfrdmn/keel/internal/l164"
 )
 
 // Backend selection, chosen once at init from runtime CPU feature detection.
@@ -75,28 +76,49 @@ var activeL1 = selectL1()
 
 func selectL1() l1.Kernels {
 	avail := l1.Backends() // widest first, scalar last
-	want, forced := os.LookupEnv(envForce)
-	if !forced || want == "" {
-		return avail[0]
+	names := make([]string, len(avail))
+	for i, b := range avail {
+		names[i] = b.Name
 	}
-	for _, b := range avail {
-		if b.Name == want {
-			return b
-		}
-	}
-	panic("keel: " + envForce + "=" + want + " is not available on this machine; have " +
-		joinNames(avail) + " (unset " + envForce + " to auto-select)")
+	return avail[l1Backend(names)]
 }
 
-func joinNames(bs []l1.Kernels) string {
-	s := ""
-	for i, b := range bs {
-		if i > 0 {
-			s += " "
-		}
-		s += b.Name
+// activeL164 is activeL1 at float64 (#192): the generated internal/l164 kernel
+// set, selected by the same KEEL_FORCE rule, so the two Level-1 paths cannot read
+// the variable differently. Its ladder is float32's (both have an AVX2 rung).
+var activeL164 = selectL164()
+
+func selectL164() l164.Kernels {
+	avail := l164.Backends()
+	names := make([]string, len(avail))
+	for i, b := range avail {
+		names[i] = b.Name
 	}
-	return s
+	return avail[l1Backend(names)]
+}
+
+// l1Backend resolves a Level-1 registry's backend names (widest first) to the
+// index KEEL_FORCE selects, or panics if it names one this machine cannot run.
+// Shared by both elements' Level 1, as kernBackend is by both Level 3s.
+func l1Backend(names []string) int {
+	want, forced := os.LookupEnv(envForce)
+	if !forced || want == "" {
+		return 0
+	}
+	for i, n := range names {
+		if n == want {
+			return i
+		}
+	}
+	all := ""
+	for i, n := range names {
+		if i > 0 {
+			all += " "
+		}
+		all += n
+	}
+	panic("keel: " + envForce + "=" + want + " is not available on this machine; have " +
+		all + " (unset " + envForce + " to auto-select)")
 }
 
 // ActiveL1Backend reports which Level-1 backend is dispatched to. Exported for
@@ -107,6 +129,10 @@ func ActiveL1Backend() string { return activeL1.Name }
 // AvailableL1Backends reports every Level-1 backend runnable here, widest
 // first. Same audience as ActiveL1Backend.
 func AvailableL1Backends() []string { return l1.Names() }
+
+// ActiveL164Backend reports which float64 Level-1 backend is dispatched to, as
+// ActiveL1Backend does for float32. Instrumentation, not API.
+func ActiveL164Backend() string { return activeL164.Name }
 
 // activeKern is the SGEMM microkernel every Level-3 routine blocks around. One
 // indirect call per MR×NR tile, which is thousands of FMAs at the sizes that

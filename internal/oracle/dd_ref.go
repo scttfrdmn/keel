@@ -125,3 +125,75 @@ func GemmEntryDD(transA, transB bool, i, j, k int, alpha float64, a []float64, l
 	}
 	return s.hi, scale
 }
+
+// AsumDD returns the double-double Σ|xᵢ|, rounded once, and that value as its
+// scale, in Dasum's convention (#192).
+func AsumDD(n int, x []float64, incX int) (val, scale float64) {
+	ix := Index(n, incX)
+	var s dd
+	for j := 0; j < n; j++ {
+		s = addF(s, math.Abs(x[ix+j*incX]))
+	}
+	return s.hi, s.hi
+}
+
+// Nrm2DD returns the double-double Euclidean norm, scaled by a power of two as
+// Dnrm2 is and for its reason: no wider exponent range exists, double-double
+// included. The sum of squares accumulates in dd with each square formed exactly
+// (twoProd), and the square root of the rounded sum adds at most an ulp, which is
+// far inside Tolerance64. NaN and Inf follow Dnrm2.
+func Nrm2DD(n int, x []float64, incX int) (val, scale float64) {
+	ix := Index(n, incX)
+	var m float64
+	nan := false
+	for j := 0; j < n; j++ {
+		v := math.Abs(x[ix+j*incX])
+		if v != v {
+			nan = true
+		} else if v > m {
+			m = v
+		}
+	}
+	switch {
+	case nan:
+		return math.NaN(), math.NaN()
+	case math.IsInf(m, 1):
+		return m, m
+	case m == 0:
+		return 0, 0
+	}
+	_, e := math.Frexp(m)
+	var s dd
+	for j := 0; j < n; j++ {
+		v := math.Ldexp(x[ix+j*incX], -e)
+		s = add(s, twoProd(v, v))
+	}
+	val = math.Ldexp(math.Sqrt(s.hi+s.lo), e)
+	return val, val
+}
+
+// AxpyDD returns y + alpha·x per element, each formed exactly in dd and rounded
+// once, with Daxpy's per-element scale |alpha·xⱼ| + |yⱼ|.
+func AxpyDD(n int, alpha float64, x []float64, incX int, y []float64, incY int) (out, scale []float64) {
+	ix, iy := Index(n, incX), Index(n, incY)
+	out = make([]float64, n)
+	scale = make([]float64, n)
+	for j := 0; j < n; j++ {
+		p := twoProd(alpha, x[ix+j*incX])
+		yj := y[iy+j*incY]
+		out[j] = addF(p, yj).hi
+		scale[j] = math.Abs(p.hi) + math.Abs(yj)
+	}
+	return out, scale
+}
+
+// RotDD returns the plane rotation of one pair, x' = c·x + s·y and y' = c·y − s·x,
+// each formed exactly in dd and rounded once, with the scales |c·x| + |s·y| and
+// |c·y| + |s·x|.
+func RotDD(x, y, c, s float64) (xr, yr, xs, ys float64) {
+	cx, sy := twoProd(c, x), twoProd(s, y)
+	cy, sx := twoProd(c, y), twoProd(s, x)
+	xr = add(cx, sy).hi
+	yr = add(cy, dd{-sx.hi, -sx.lo}).hi
+	return xr, yr, math.Abs(cx.hi) + math.Abs(sy.hi), math.Abs(cy.hi) + math.Abs(sx.hi)
+}
