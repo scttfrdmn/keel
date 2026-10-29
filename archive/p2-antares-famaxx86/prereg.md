@@ -31,3 +31,15 @@ the host persists `performance` (there is no cpupower unit), so the reboot left 
 (`powersave`, amd_pstate active, EPP balance_performance). Everything below the timing held: both
 x44 audits at 1.1875 insns/FMA, register-only. Setting the governor is a host-wide change on a shared
 lab machine, so it waits on Scott. The predictions above are unchanged for run 2.
+
+## Run 2 (be72f31): GREEN at both elements, every prediction held
+
+Governor set to `performance` on all 32 CPUs for the run (Scott's go, 2026-10-29) and **restored to
+`powersave`** in an EXIT trap afterwards, read back on all 32 (`p2-antares-r2-be72f31.log`).
+- **f32 24/0/0 GREEN**: 4x32/avx512 at **212.9 GFLOP/s = 64.8% of peak** (64.6% net), FMA-bound ✓ (band 60–68).
+  The family against `Peak/avx512` (x44): x44 99.9%, **shared 99.9%**, fo 90.1%. So x44 ties `shared` ✓,
+  and this is c8a-shaped, not Skylake-shaped;
+- **f64 23/0/0 GREEN**: 4x16 at **105.2 GFLOP/s = 64.1%** (61.7% net), FMA-bound, 0.7 points from f32 ✓;
+- the peaks, derived from rate ÷ fraction because the gate prints no GFLOP/s line for them: f32 ≈ 328.5, f64 ≈ 164.1.
+  f64 is half of f32 within 0.1% ✓. The f32 peak equals the old-ceiling ~328, as a tie predicts.
+A labelled lab row (consumer Zen 5, Strix Halo), not part of the citable set. No README row depends on it.

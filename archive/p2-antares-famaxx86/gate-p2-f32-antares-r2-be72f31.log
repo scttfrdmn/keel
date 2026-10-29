@@ -1,0 +1,96 @@
+== gate-p2: microkernel + spill audit (GO/NO-GO), amd64, element f32 ==
+        rev be72f31c16283020f529e24a26db0257b04b9dc6 tree=clean toolchain=go1.27.3 goexperiment=none
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- throughput verdict controls (scripts/roofline-test.sh) --
+  [32mPASS[0m  roofline verdict controls (79 fixtures, incl. padded/slow/sandbagged kernels)
+
+-- builds --
+  [32mPASS[0m  make build (GOEXPERIMENT=simd)
+  [32mPASS[0m  make stock (scalar path, no experiment)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd, linux/amd64)
+
+-- microkernel correctness (differential vs the scalar tile reference) --
+  [32mPASS[0m  [local darwin/arm64] kernel tests pass
+        [local darwin/arm64] keel-kern-backends-exercised: neon scalar
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 36343 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+  [32mPASS[0m  [antares.local] cpufreq governor is performance (§5 rule 5)
+        [antares.local] admission class: evidentiary (instance=none, virt=metal, spawn=none) — bare metal (no hypervisor flag) with governor=performance: a whole machine owns its socket more completely than any instance type can demonstrate
+  [32mPASS[0m  cross-compiled linux/amd64 kernel test binary
+        builder toolchain go1.27.3-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+        [antares.local] AMD RYZEN AI MAX+ 395 w/ Radeon 8060S | instance=none | virt=metal | 32 cpus | 16 cores | smt=2 | 1 sockets | governor=performance | load1=2.13 load5=2.36 load15=2.45 runnable=1/793 | tmux=yes | Linux 7.0.0-42-generic | L2=1024K L1d=48K L3=32768K | spawn=none
+  [32mPASS[0m  [antares.local] kernel tests pass
+        [antares.local] keel-kern-backends-exercised: avx512 scalar
+  [32mPASS[0m  kernel tests green with the avx512 tile exercised (target: antares.local)
+
+-- spill audit: steady-state K-loop of the shipped shapes (Kernel2x32,Kernel4x32) --
+        compile-time property, audited against the linux/amd64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.Kernel2x32: steady-state loop [70,430] 74 insns for 16 arith (4.62 per arith): 0 vector stack refs, 8 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.Kernel4x32: steady-state loop [101,341] 50 insns for 8 arith (6.25 per arith): 0 vector stack refs, 12 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  0 accumulator spills in the steady-state K-loop
+  [32mPASS[0m  0 calls in the steady-state K-loop (no write barrier, no runtime helper)
+  [32mPASS[0m  0 surviving bounds checks in the steady-state K-loop (panels are pre-sliced)
+        ssa.html archived: build/ssa/Kernel2x32.html (5072655 bytes; gitignored, see KERNEL.md)
+        ssa.html archived: build/ssa/Kernel4x32.html (4301288 bytes; gitignored, see KERNEL.md)
+
+-- SWEEP_BEST_IPF: reconciled against tools/shapegen's enumeration (#107) --
+  [32mPASS[0m  SWEEP_BEST_IPF=4.625 reconciles against shapegen -frontier: 4.625 from 2x32 u=4 broadcast, best of 36 emittable zero-spill shapes
+
+-- reference tile Kernel6x32: DESIGN.md's 12 accumulators, EVIDENCE ONLY --
+        expected to spill on go1.26.5 (T10, issue #18); this audit cannot fail the gate
+        github.com/scttfrdmn/keel/internal/vec.Kernel6x32: steady-state loop [152,1457] 219 insns for 48 arith (4.56 per arith): 44 vector stack refs, 45 reg copies, 24 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        spills as documented; the GFLOP/s cost of that is measured below
+
+-- kernel shaping: bounds checks outside the K-loop (provenance, not a check) --
+        the criterion is the loop-body check above; this is the whole-package count
+        check_bce: 168 bounds check(s) in ./internal/vec + ./internal/kern, all outside the K-loop
+          (prologue slices a[:kc*MR]/b[:kc*NR], the write-out's c[i*ldc:...], and the scalar reference)
+        internal/vec/peak_family_amd64.go:223:9: Found IsSliceInBounds
+        internal/vec/peak_family_amd64.go:224:9: Found IsSliceInBounds
+        internal/vec/peak_family_amd64.go:226:37: Found IsSliceInBounds
+        internal/vec/peak_family_amd64.go:226:72: Found IsSliceInBounds
+        internal/vec/peak_family_amd64.go:227:51: Found IsInBounds
+          ... 163 more; full output is in the gate log
+  [32mPASS[0m  check_bce output recorded as provenance
+
+-- peak kernels: no memory in the loop (issue #11, property 1) --
+        github.com/scttfrdmn/keel/internal/vec.avx512PeakX44: steady-state loop [388,490] 19 insns for 16 arith (1.19 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.avx512Peak: steady-state loop [264,355] 27 insns for 12 arith (2.25 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 12 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.avx2Peak: steady-state loop [220,291] 23 insns for 10 arith (2.30 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 10 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.scalarPeak: steady-state loop [136,235] 23 insns for 20 arith (1.15 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  every peak kernel's steady-state loop is register-only
+
+-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --
+        the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that
+  [32mPASS[0m  avx512PeakX44 audits 1.187500 insns/FMA, at or under its recorded ceiling 1.1875
+  [32mPASS[0m  avx512Peak audits 2.250000 insns/FMA, at or under its recorded ceiling 2.25
+  [32mPASS[0m  avx2Peak audits 2.300000 insns/FMA, at or under its recorded ceiling 2.30
+  [32mPASS[0m  scalarPeak audits 1.150000 insns/FMA, at or under its recorded ceiling 1.15
+
+-- microkernel vs measured peak (FMA-bound: >= 55%; issue-bound: >= 90% of roofline) --
+        -count=10 -benchtime=1s; numerator and denominator measured in the same run
+        audited insns/FMA: 2x32 4.625, 4x32 6.250, avx512PeakX44 1.188 (roofline inputs)
+  [32mPASS[0m  cross-compiled linux/amd64 bench binary
+        [antares.local] governor=performance
+        [antares.local] peak   328.4 GFLOP/s +/- 0.1% [323.8, 329.3] D=9.167 (span 1.67% / interval 0.1827%)
+        [antares.local] family fo at 90.1% of Peak/avx512
+        [antares.local] family x44 at 99.9% of Peak/avx512
+        [antares.local] family shared at 99.9% of Peak/avx512
+        [antares.local] 6x32/avx512/kc=128  182.3 GFLOP/s +/- 0.8% [180.7, 183.9] D=1.143 (span 1.75% / interval 1.5355%) = 55.5% of peak (spills; not shipped)
+        [antares.local] 2x32/avx512/kc=128 174.4 GFLOP/s +/- 0.1% [170.6, 174.5] D=39 (span 2.24% / interval 0.0573%) = 53.1% of peak, 53.0% net of CI
+        [antares.local] 4x32/avx512/kc=128 212.9 GFLOP/s +/- 0.2% [211.5, 213.4] D=2.375 (span 0.89% / interval 0.3757%) = 64.8% of peak, 64.6% net of CI
+        [antares.local] ceiling mixes converge (1.093x, interval [1.088x, 1.097x], over a 2.056x spread) but 4x32/avx512/kc=128 retires *above* the ceiling they set — attainment interval [164.4%, 165.7%] of a 39.3% roofline — so the issue-bound hypothesis is falsified by its own data -> fma-bound
+  [32mPASS[0m  [antares.local] FMA-bound: best shipped shape 4x32/avx512/kc=128 at 64.8% of measured peak, 64.6% net of CI (>= 55%)
+  [32mPASS[0m  every one of the 1 configured gate hosts cleared its floor (1/1), each under the performance governor asserted per host (§5 rule 5)
+
+-- stated assumptions (trusted, not verified; not verdicts) --
+        each line below is a precondition with no read-back mechanism, so it
+        carries no verdict. What the certificate asserts, it asserts ON these.
+          - the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+          - each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+
+gate-p2 tally: 24 PASS / 0 FAIL / 0 UNMEASURED / 0 BASELINE / 0 REPORTED
+gate-p2: GREEN
