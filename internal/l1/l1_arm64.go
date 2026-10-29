@@ -5,7 +5,11 @@
 
 package l1
 
-import "github.com/scttfrdmn/keel/internal/vec"
+import (
+	"unsafe"
+
+	"github.com/scttfrdmn/keel/internal/vec"
+)
 
 // NEON Level-1 kernels (#154), the L1 half of the arm64 port. This mirrors
 // l1_amd64.go over the 128-bit Float32x4 shim in internal/vec — the same shim
@@ -45,7 +49,7 @@ import "github.com/scttfrdmn/keel/internal/vec"
 //     (4 lanes x unroll=4) rather than 64.
 
 const (
-	lanes128 = 4
+	lanes128 = int(16 / unsafe.Sizeof(float32(0)))
 	// Elements consumed per unrolled iteration: four V-registers of four lanes.
 	step128 = lanes128 * unroll
 )
@@ -58,21 +62,21 @@ func neonDot(x, y []float32) float32 {
 	// Kept on arm64 for the same reason and confirmed clean by the spill audit —
 	// do not drop it without re-running it.
 	for len(x) > step128 && len(y) > step128 {
-		a0 = vec.FMA128(vec.Load128(x[0:4]), vec.Load128(y[0:4]), a0)
-		a1 = vec.FMA128(vec.Load128(x[4:8]), vec.Load128(y[4:8]), a1)
-		a2 = vec.FMA128(vec.Load128(x[8:12]), vec.Load128(y[8:12]), a2)
-		a3 = vec.FMA128(vec.Load128(x[12:16]), vec.Load128(y[12:16]), a3)
+		a0 = vec.FMA128(vec.Load128(x[0:lanes128]), vec.Load128(y[0:lanes128]), a0)
+		a1 = vec.FMA128(vec.Load128(x[lanes128:2*lanes128]), vec.Load128(y[lanes128:2*lanes128]), a1)
+		a2 = vec.FMA128(vec.Load128(x[2*lanes128:3*lanes128]), vec.Load128(y[2*lanes128:3*lanes128]), a2)
+		a3 = vec.FMA128(vec.Load128(x[3*lanes128:4*lanes128]), vec.Load128(y[3*lanes128:4*lanes128]), a3)
 		x, y = x[step128:], y[step128:]
 	}
 	if len(x) == step128 && len(y) == step128 {
-		a0 = vec.FMA128(vec.Load128(x[0:4]), vec.Load128(y[0:4]), a0)
-		a1 = vec.FMA128(vec.Load128(x[4:8]), vec.Load128(y[4:8]), a1)
-		a2 = vec.FMA128(vec.Load128(x[8:12]), vec.Load128(y[8:12]), a2)
-		a3 = vec.FMA128(vec.Load128(x[12:16]), vec.Load128(y[12:16]), a3)
+		a0 = vec.FMA128(vec.Load128(x[0:lanes128]), vec.Load128(y[0:lanes128]), a0)
+		a1 = vec.FMA128(vec.Load128(x[lanes128:2*lanes128]), vec.Load128(y[lanes128:2*lanes128]), a1)
+		a2 = vec.FMA128(vec.Load128(x[2*lanes128:3*lanes128]), vec.Load128(y[2*lanes128:3*lanes128]), a2)
+		a3 = vec.FMA128(vec.Load128(x[3*lanes128:4*lanes128]), vec.Load128(y[3*lanes128:4*lanes128]), a3)
 		x, y = x[:0], y[:0]
 	}
 	for len(x) >= lanes128 && len(y) >= lanes128 {
-		a0 = vec.FMA128(vec.Load128(x[0:4]), vec.Load128(y[0:4]), a0)
+		a0 = vec.FMA128(vec.Load128(x[0:lanes128]), vec.Load128(y[0:lanes128]), a0)
 		x, y = x[lanes128:], y[lanes128:]
 	}
 	if len(x) > 0 {
@@ -87,12 +91,12 @@ func neonAxpy(alpha float32, x, y []float32) {
 	y = y[:len(x)]
 	// Load-bearing len(y) conjunct, as in neonDot / avx512Axpy.
 	for len(x) > lanes128 && len(y) > lanes128 {
-		xs, ys := x[0:4], y[0:4]
+		xs, ys := x[0:lanes128], y[0:lanes128]
 		vec.Store128(ys, vec.FMA128(va, vec.Load128(xs), vec.Load128(ys)))
 		x, y = x[lanes128:], y[lanes128:]
 	}
 	if len(x) == lanes128 && len(y) == lanes128 {
-		xs, ys := x[0:4], y[0:4]
+		xs, ys := x[0:lanes128], y[0:lanes128]
 		vec.Store128(ys, vec.FMA128(va, vec.Load128(xs), vec.Load128(ys)))
 		return
 	}
@@ -104,12 +108,12 @@ func neonAxpy(alpha float32, x, y []float32) {
 func neonScal(alpha float32, x []float32) {
 	va := vec.Broadcast128(alpha) // hand-hoisted; see neonAxpy
 	for len(x) > lanes128 {
-		xs := x[0:4]
+		xs := x[0:lanes128]
 		vec.Store128(xs, vec.Mul128(va, vec.Load128(xs)))
 		x = x[lanes128:]
 	}
 	if len(x) == lanes128 {
-		xs := x[0:4]
+		xs := x[0:lanes128]
 		vec.Store128(xs, vec.Mul128(va, vec.Load128(xs)))
 		return
 	}
@@ -125,12 +129,12 @@ func neonScal(alpha float32, x []float32) {
 func neonScalDiv(alpha float32, x []float32) {
 	va := vec.Broadcast128(alpha) // hand-hoisted; see neonAxpy
 	for len(x) > lanes128 {
-		xs := x[0:4]
+		xs := x[0:lanes128]
 		vec.Store128(xs, vec.Div128(vec.Load128(xs), va))
 		x = x[lanes128:]
 	}
 	if len(x) == lanes128 {
-		xs := x[0:4]
+		xs := x[0:lanes128]
 		vec.Store128(xs, vec.Div128(vec.Load128(xs), va))
 		return
 	}
@@ -144,21 +148,21 @@ func neonAsum(x []float32) float32 {
 	// No hoisted mask: vec.Abs128 is a single VFABS, so unlike avx512Asum there is
 	// nothing loop-invariant to lift.
 	for len(x) > step128 {
-		a0 = vec.Add128(a0, vec.Abs128(vec.Load128(x[0:4])))
-		a1 = vec.Add128(a1, vec.Abs128(vec.Load128(x[4:8])))
-		a2 = vec.Add128(a2, vec.Abs128(vec.Load128(x[8:12])))
-		a3 = vec.Add128(a3, vec.Abs128(vec.Load128(x[12:16])))
+		a0 = vec.Add128(a0, vec.Abs128(vec.Load128(x[0:lanes128])))
+		a1 = vec.Add128(a1, vec.Abs128(vec.Load128(x[lanes128:2*lanes128])))
+		a2 = vec.Add128(a2, vec.Abs128(vec.Load128(x[2*lanes128:3*lanes128])))
+		a3 = vec.Add128(a3, vec.Abs128(vec.Load128(x[3*lanes128:4*lanes128])))
 		x = x[step128:]
 	}
 	if len(x) == step128 {
-		a0 = vec.Add128(a0, vec.Abs128(vec.Load128(x[0:4])))
-		a1 = vec.Add128(a1, vec.Abs128(vec.Load128(x[4:8])))
-		a2 = vec.Add128(a2, vec.Abs128(vec.Load128(x[8:12])))
-		a3 = vec.Add128(a3, vec.Abs128(vec.Load128(x[12:16])))
+		a0 = vec.Add128(a0, vec.Abs128(vec.Load128(x[0:lanes128])))
+		a1 = vec.Add128(a1, vec.Abs128(vec.Load128(x[lanes128:2*lanes128])))
+		a2 = vec.Add128(a2, vec.Abs128(vec.Load128(x[2*lanes128:3*lanes128])))
+		a3 = vec.Add128(a3, vec.Abs128(vec.Load128(x[3*lanes128:4*lanes128])))
 		x = x[:0]
 	}
 	for len(x) >= lanes128 {
-		a0 = vec.Add128(a0, vec.Abs128(vec.Load128(x[0:4])))
+		a0 = vec.Add128(a0, vec.Abs128(vec.Load128(x[0:lanes128])))
 		x = x[lanes128:]
 	}
 	if len(x) > 0 {
@@ -170,10 +174,10 @@ func neonAsum(x []float32) float32 {
 func neonSumSq(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero128(), vec.Zero128(), vec.Zero128(), vec.Zero128()
 	for len(x) > step128 {
-		v0 := vec.Load128(x[0:4])
-		v1 := vec.Load128(x[4:8])
-		v2 := vec.Load128(x[8:12])
-		v3 := vec.Load128(x[12:16])
+		v0 := vec.Load128(x[0:lanes128])
+		v1 := vec.Load128(x[lanes128 : 2*lanes128])
+		v2 := vec.Load128(x[2*lanes128 : 3*lanes128])
+		v3 := vec.Load128(x[3*lanes128 : 4*lanes128])
 		a0 = vec.FMA128(v0, v0, a0)
 		a1 = vec.FMA128(v1, v1, a1)
 		a2 = vec.FMA128(v2, v2, a2)
@@ -181,10 +185,10 @@ func neonSumSq(x []float32) float32 {
 		x = x[step128:]
 	}
 	if len(x) == step128 {
-		v0 := vec.Load128(x[0:4])
-		v1 := vec.Load128(x[4:8])
-		v2 := vec.Load128(x[8:12])
-		v3 := vec.Load128(x[12:16])
+		v0 := vec.Load128(x[0:lanes128])
+		v1 := vec.Load128(x[lanes128 : 2*lanes128])
+		v2 := vec.Load128(x[2*lanes128 : 3*lanes128])
+		v3 := vec.Load128(x[3*lanes128 : 4*lanes128])
 		a0 = vec.FMA128(v0, v0, a0)
 		a1 = vec.FMA128(v1, v1, a1)
 		a2 = vec.FMA128(v2, v2, a2)
@@ -192,7 +196,7 @@ func neonSumSq(x []float32) float32 {
 		x = x[:0]
 	}
 	for len(x) >= lanes128 {
-		v := vec.Load128(x[0:4])
+		v := vec.Load128(x[0:lanes128])
 		a0 = vec.FMA128(v, v, a0)
 		x = x[lanes128:]
 	}

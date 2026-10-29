@@ -5,7 +5,11 @@
 
 package l1
 
-import "github.com/scttfrdmn/keel/internal/vec"
+import (
+	"unsafe"
+
+	"github.com/scttfrdmn/keel/internal/vec"
+)
 
 // Vector Level-1 kernels, over the internal/vec hot layer. No archsimd import
 // here: the shim owns every simd import (CLAUDE.md), and vec's exported type
@@ -144,8 +148,8 @@ import "github.com/scttfrdmn/keel/internal/vec"
 //     len(x) above. Worse: Axpy 15 -> 24. The conjunct is load-bearing.
 
 const (
-	lanes512 = 16
-	lanes256 = 8
+	lanes512 = int(64 / unsafe.Sizeof(float32(0)))
+	lanes256 = int(32 / unsafe.Sizeof(float32(0)))
 	// Elements consumed per unrolled iteration.
 	step512 = lanes512 * unroll
 	step256 = lanes256 * unroll
@@ -161,21 +165,21 @@ func avx512Dot(x, y []float32) float32 {
 	// instructions per iteration (T19). Not separately measured here, but the
 	// shape is identical — do not simplify without re-running spill-audit.
 	for len(x) > step512 && len(y) > step512 {
-		a0 = vec.FMA512(vec.Load512(x[0:16]), vec.Load512(y[0:16]), a0)
-		a1 = vec.FMA512(vec.Load512(x[16:32]), vec.Load512(y[16:32]), a1)
-		a2 = vec.FMA512(vec.Load512(x[32:48]), vec.Load512(y[32:48]), a2)
-		a3 = vec.FMA512(vec.Load512(x[48:64]), vec.Load512(y[48:64]), a3)
+		a0 = vec.FMA512(vec.Load512(x[0:lanes512]), vec.Load512(y[0:lanes512]), a0)
+		a1 = vec.FMA512(vec.Load512(x[lanes512:2*lanes512]), vec.Load512(y[lanes512:2*lanes512]), a1)
+		a2 = vec.FMA512(vec.Load512(x[2*lanes512:3*lanes512]), vec.Load512(y[2*lanes512:3*lanes512]), a2)
+		a3 = vec.FMA512(vec.Load512(x[3*lanes512:4*lanes512]), vec.Load512(y[3*lanes512:4*lanes512]), a3)
 		x, y = x[step512:], y[step512:]
 	}
 	if len(x) == step512 && len(y) == step512 {
-		a0 = vec.FMA512(vec.Load512(x[0:16]), vec.Load512(y[0:16]), a0)
-		a1 = vec.FMA512(vec.Load512(x[16:32]), vec.Load512(y[16:32]), a1)
-		a2 = vec.FMA512(vec.Load512(x[32:48]), vec.Load512(y[32:48]), a2)
-		a3 = vec.FMA512(vec.Load512(x[48:64]), vec.Load512(y[48:64]), a3)
+		a0 = vec.FMA512(vec.Load512(x[0:lanes512]), vec.Load512(y[0:lanes512]), a0)
+		a1 = vec.FMA512(vec.Load512(x[lanes512:2*lanes512]), vec.Load512(y[lanes512:2*lanes512]), a1)
+		a2 = vec.FMA512(vec.Load512(x[2*lanes512:3*lanes512]), vec.Load512(y[2*lanes512:3*lanes512]), a2)
+		a3 = vec.FMA512(vec.Load512(x[3*lanes512:4*lanes512]), vec.Load512(y[3*lanes512:4*lanes512]), a3)
 		x, y = x[:0], y[:0]
 	}
 	for len(x) >= lanes512 && len(y) >= lanes512 {
-		a0 = vec.FMA512(vec.Load512(x[0:16]), vec.Load512(y[0:16]), a0)
+		a0 = vec.FMA512(vec.Load512(x[0:lanes512]), vec.Load512(y[0:lanes512]), a0)
 		x, y = x[lanes512:], y[lanes512:]
 	}
 	if len(x) > 0 {
@@ -193,12 +197,12 @@ func avx512Axpy(alpha float32, x, y []float32) {
 	// loop from 15 instructions to 24 (T19). It is not a defensive check and
 	// deleting it is not a cleanup.
 	for len(x) > lanes512 && len(y) > lanes512 {
-		xs, ys := x[0:16], y[0:16]
+		xs, ys := x[0:lanes512], y[0:lanes512]
 		vec.Store512(ys, vec.FMA512(va, vec.Load512(xs), vec.Load512(ys)))
 		x, y = x[lanes512:], y[lanes512:]
 	}
 	if len(x) == lanes512 && len(y) == lanes512 {
-		xs, ys := x[0:16], y[0:16]
+		xs, ys := x[0:lanes512], y[0:lanes512]
 		vec.Store512(ys, vec.FMA512(va, vec.Load512(xs), vec.Load512(ys)))
 		return
 	}
@@ -210,12 +214,12 @@ func avx512Axpy(alpha float32, x, y []float32) {
 func avx512Scal(alpha float32, x []float32) {
 	va := vec.Broadcast512(alpha)
 	for len(x) > lanes512 {
-		xs := x[0:16]
+		xs := x[0:lanes512]
 		vec.Store512(xs, vec.Mul512(va, vec.Load512(xs)))
 		x = x[lanes512:]
 	}
 	if len(x) == lanes512 {
-		xs := x[0:16]
+		xs := x[0:lanes512]
 		vec.Store512(xs, vec.Mul512(va, vec.Load512(xs)))
 		return
 	}
@@ -230,12 +234,12 @@ func avx512Scal(alpha float32, x []float32) {
 func avx512ScalDiv(alpha float32, x []float32) {
 	va := vec.Broadcast512(alpha)
 	for len(x) > lanes512 {
-		xs := x[0:16]
+		xs := x[0:lanes512]
 		vec.Store512(xs, vec.Div512(vec.Load512(xs), va))
 		x = x[lanes512:]
 	}
 	if len(x) == lanes512 {
-		xs := x[0:16]
+		xs := x[0:lanes512]
 		vec.Store512(xs, vec.Div512(vec.Load512(xs), va))
 		return
 	}
@@ -251,21 +255,21 @@ func avx512Asum(x []float32) float32 {
 	// alpha's broadcast already is in Axpy and Scal. Retires with #54.
 	m := vec.AbsMask512()
 	for len(x) > step512 {
-		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
-		a1 = vec.Add512(a1, vec.AbsWith512(vec.Load512(x[16:32]), m))
-		a2 = vec.Add512(a2, vec.AbsWith512(vec.Load512(x[32:48]), m))
-		a3 = vec.Add512(a3, vec.AbsWith512(vec.Load512(x[48:64]), m))
+		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:lanes512]), m))
+		a1 = vec.Add512(a1, vec.AbsWith512(vec.Load512(x[lanes512:2*lanes512]), m))
+		a2 = vec.Add512(a2, vec.AbsWith512(vec.Load512(x[2*lanes512:3*lanes512]), m))
+		a3 = vec.Add512(a3, vec.AbsWith512(vec.Load512(x[3*lanes512:4*lanes512]), m))
 		x = x[step512:]
 	}
 	if len(x) == step512 {
-		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
-		a1 = vec.Add512(a1, vec.AbsWith512(vec.Load512(x[16:32]), m))
-		a2 = vec.Add512(a2, vec.AbsWith512(vec.Load512(x[32:48]), m))
-		a3 = vec.Add512(a3, vec.AbsWith512(vec.Load512(x[48:64]), m))
+		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:lanes512]), m))
+		a1 = vec.Add512(a1, vec.AbsWith512(vec.Load512(x[lanes512:2*lanes512]), m))
+		a2 = vec.Add512(a2, vec.AbsWith512(vec.Load512(x[2*lanes512:3*lanes512]), m))
+		a3 = vec.Add512(a3, vec.AbsWith512(vec.Load512(x[3*lanes512:4*lanes512]), m))
 		x = x[:0]
 	}
 	for len(x) >= lanes512 {
-		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:16]), m))
+		a0 = vec.Add512(a0, vec.AbsWith512(vec.Load512(x[0:lanes512]), m))
 		x = x[lanes512:]
 	}
 	if len(x) > 0 {
@@ -277,10 +281,10 @@ func avx512Asum(x []float32) float32 {
 func avx512SumSq(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero512(), vec.Zero512(), vec.Zero512(), vec.Zero512()
 	for len(x) > step512 {
-		v0 := vec.Load512(x[0:16])
-		v1 := vec.Load512(x[16:32])
-		v2 := vec.Load512(x[32:48])
-		v3 := vec.Load512(x[48:64])
+		v0 := vec.Load512(x[0:lanes512])
+		v1 := vec.Load512(x[lanes512 : 2*lanes512])
+		v2 := vec.Load512(x[2*lanes512 : 3*lanes512])
+		v3 := vec.Load512(x[3*lanes512 : 4*lanes512])
 		a0 = vec.FMA512(v0, v0, a0)
 		a1 = vec.FMA512(v1, v1, a1)
 		a2 = vec.FMA512(v2, v2, a2)
@@ -288,10 +292,10 @@ func avx512SumSq(x []float32) float32 {
 		x = x[step512:]
 	}
 	if len(x) == step512 {
-		v0 := vec.Load512(x[0:16])
-		v1 := vec.Load512(x[16:32])
-		v2 := vec.Load512(x[32:48])
-		v3 := vec.Load512(x[48:64])
+		v0 := vec.Load512(x[0:lanes512])
+		v1 := vec.Load512(x[lanes512 : 2*lanes512])
+		v2 := vec.Load512(x[2*lanes512 : 3*lanes512])
+		v3 := vec.Load512(x[3*lanes512 : 4*lanes512])
 		a0 = vec.FMA512(v0, v0, a0)
 		a1 = vec.FMA512(v1, v1, a1)
 		a2 = vec.FMA512(v2, v2, a2)
@@ -299,7 +303,7 @@ func avx512SumSq(x []float32) float32 {
 		x = x[:0]
 	}
 	for len(x) >= lanes512 {
-		v := vec.Load512(x[0:16])
+		v := vec.Load512(x[0:lanes512])
 		a0 = vec.FMA512(v, v, a0)
 		x = x[lanes512:]
 	}
@@ -318,21 +322,21 @@ func avx2Dot(x, y []float32) float32 {
 	// Load-bearing len(y) conjunct, as in avx512Dot — see avx512Axpy for the
 	// measurement it rests on.
 	for len(x) > step256 && len(y) > step256 {
-		a0 = vec.FMA256(vec.Load256(x[0:8]), vec.Load256(y[0:8]), a0)
-		a1 = vec.FMA256(vec.Load256(x[8:16]), vec.Load256(y[8:16]), a1)
-		a2 = vec.FMA256(vec.Load256(x[16:24]), vec.Load256(y[16:24]), a2)
-		a3 = vec.FMA256(vec.Load256(x[24:32]), vec.Load256(y[24:32]), a3)
+		a0 = vec.FMA256(vec.Load256(x[0:lanes256]), vec.Load256(y[0:lanes256]), a0)
+		a1 = vec.FMA256(vec.Load256(x[lanes256:2*lanes256]), vec.Load256(y[lanes256:2*lanes256]), a1)
+		a2 = vec.FMA256(vec.Load256(x[2*lanes256:3*lanes256]), vec.Load256(y[2*lanes256:3*lanes256]), a2)
+		a3 = vec.FMA256(vec.Load256(x[3*lanes256:4*lanes256]), vec.Load256(y[3*lanes256:4*lanes256]), a3)
 		x, y = x[step256:], y[step256:]
 	}
 	if len(x) == step256 && len(y) == step256 {
-		a0 = vec.FMA256(vec.Load256(x[0:8]), vec.Load256(y[0:8]), a0)
-		a1 = vec.FMA256(vec.Load256(x[8:16]), vec.Load256(y[8:16]), a1)
-		a2 = vec.FMA256(vec.Load256(x[16:24]), vec.Load256(y[16:24]), a2)
-		a3 = vec.FMA256(vec.Load256(x[24:32]), vec.Load256(y[24:32]), a3)
+		a0 = vec.FMA256(vec.Load256(x[0:lanes256]), vec.Load256(y[0:lanes256]), a0)
+		a1 = vec.FMA256(vec.Load256(x[lanes256:2*lanes256]), vec.Load256(y[lanes256:2*lanes256]), a1)
+		a2 = vec.FMA256(vec.Load256(x[2*lanes256:3*lanes256]), vec.Load256(y[2*lanes256:3*lanes256]), a2)
+		a3 = vec.FMA256(vec.Load256(x[3*lanes256:4*lanes256]), vec.Load256(y[3*lanes256:4*lanes256]), a3)
 		x, y = x[:0], y[:0]
 	}
 	for len(x) >= lanes256 && len(y) >= lanes256 {
-		a0 = vec.FMA256(vec.Load256(x[0:8]), vec.Load256(y[0:8]), a0)
+		a0 = vec.FMA256(vec.Load256(x[0:lanes256]), vec.Load256(y[0:lanes256]), a0)
 		x, y = x[lanes256:], y[lanes256:]
 	}
 	if len(x) > 0 {
@@ -346,12 +350,12 @@ func avx2Axpy(alpha float32, x, y []float32) {
 	y = y[:len(x)]
 	// Load-bearing len(y) conjunct, as in avx512Axpy.
 	for len(x) > lanes256 && len(y) > lanes256 {
-		xs, ys := x[0:8], y[0:8]
+		xs, ys := x[0:lanes256], y[0:lanes256]
 		vec.Store256(ys, vec.FMA256(va, vec.Load256(xs), vec.Load256(ys)))
 		x, y = x[lanes256:], y[lanes256:]
 	}
 	if len(x) == lanes256 && len(y) == lanes256 {
-		xs, ys := x[0:8], y[0:8]
+		xs, ys := x[0:lanes256], y[0:lanes256]
 		vec.Store256(ys, vec.FMA256(va, vec.Load256(xs), vec.Load256(ys)))
 		return
 	}
@@ -363,12 +367,12 @@ func avx2Axpy(alpha float32, x, y []float32) {
 func avx2Scal(alpha float32, x []float32) {
 	va := vec.Broadcast256(alpha)
 	for len(x) > lanes256 {
-		xs := x[0:8]
+		xs := x[0:lanes256]
 		vec.Store256(xs, vec.Mul256(va, vec.Load256(xs)))
 		x = x[lanes256:]
 	}
 	if len(x) == lanes256 {
-		xs := x[0:8]
+		xs := x[0:lanes256]
 		vec.Store256(xs, vec.Mul256(va, vec.Load256(xs)))
 		return
 	}
@@ -381,12 +385,12 @@ func avx2Scal(alpha float32, x []float32) {
 func avx2ScalDiv(alpha float32, x []float32) {
 	va := vec.Broadcast256(alpha)
 	for len(x) > lanes256 {
-		xs := x[0:8]
+		xs := x[0:lanes256]
 		vec.Store256(xs, vec.Div256(vec.Load256(xs), va))
 		x = x[lanes256:]
 	}
 	if len(x) == lanes256 {
-		xs := x[0:8]
+		xs := x[0:lanes256]
 		vec.Store256(xs, vec.Div256(vec.Load256(xs), va))
 		return
 	}
@@ -399,21 +403,21 @@ func avx2Asum(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero256(), vec.Zero256(), vec.Zero256(), vec.Zero256()
 	m := vec.AbsMask256() // hoisted by hand; see avx512Asum
 	for len(x) > step256 {
-		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:8]), m))
-		a1 = vec.Add256(a1, vec.AbsWith256(vec.Load256(x[8:16]), m))
-		a2 = vec.Add256(a2, vec.AbsWith256(vec.Load256(x[16:24]), m))
-		a3 = vec.Add256(a3, vec.AbsWith256(vec.Load256(x[24:32]), m))
+		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:lanes256]), m))
+		a1 = vec.Add256(a1, vec.AbsWith256(vec.Load256(x[lanes256:2*lanes256]), m))
+		a2 = vec.Add256(a2, vec.AbsWith256(vec.Load256(x[2*lanes256:3*lanes256]), m))
+		a3 = vec.Add256(a3, vec.AbsWith256(vec.Load256(x[3*lanes256:4*lanes256]), m))
 		x = x[step256:]
 	}
 	if len(x) == step256 {
-		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:8]), m))
-		a1 = vec.Add256(a1, vec.AbsWith256(vec.Load256(x[8:16]), m))
-		a2 = vec.Add256(a2, vec.AbsWith256(vec.Load256(x[16:24]), m))
-		a3 = vec.Add256(a3, vec.AbsWith256(vec.Load256(x[24:32]), m))
+		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:lanes256]), m))
+		a1 = vec.Add256(a1, vec.AbsWith256(vec.Load256(x[lanes256:2*lanes256]), m))
+		a2 = vec.Add256(a2, vec.AbsWith256(vec.Load256(x[2*lanes256:3*lanes256]), m))
+		a3 = vec.Add256(a3, vec.AbsWith256(vec.Load256(x[3*lanes256:4*lanes256]), m))
 		x = x[:0]
 	}
 	for len(x) >= lanes256 {
-		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:8]), m))
+		a0 = vec.Add256(a0, vec.AbsWith256(vec.Load256(x[0:lanes256]), m))
 		x = x[lanes256:]
 	}
 	if len(x) > 0 {
@@ -425,10 +429,10 @@ func avx2Asum(x []float32) float32 {
 func avx2SumSq(x []float32) float32 {
 	a0, a1, a2, a3 := vec.Zero256(), vec.Zero256(), vec.Zero256(), vec.Zero256()
 	for len(x) > step256 {
-		v0 := vec.Load256(x[0:8])
-		v1 := vec.Load256(x[8:16])
-		v2 := vec.Load256(x[16:24])
-		v3 := vec.Load256(x[24:32])
+		v0 := vec.Load256(x[0:lanes256])
+		v1 := vec.Load256(x[lanes256 : 2*lanes256])
+		v2 := vec.Load256(x[2*lanes256 : 3*lanes256])
+		v3 := vec.Load256(x[3*lanes256 : 4*lanes256])
 		a0 = vec.FMA256(v0, v0, a0)
 		a1 = vec.FMA256(v1, v1, a1)
 		a2 = vec.FMA256(v2, v2, a2)
@@ -436,10 +440,10 @@ func avx2SumSq(x []float32) float32 {
 		x = x[step256:]
 	}
 	if len(x) == step256 {
-		v0 := vec.Load256(x[0:8])
-		v1 := vec.Load256(x[8:16])
-		v2 := vec.Load256(x[16:24])
-		v3 := vec.Load256(x[24:32])
+		v0 := vec.Load256(x[0:lanes256])
+		v1 := vec.Load256(x[lanes256 : 2*lanes256])
+		v2 := vec.Load256(x[2*lanes256 : 3*lanes256])
+		v3 := vec.Load256(x[3*lanes256 : 4*lanes256])
 		a0 = vec.FMA256(v0, v0, a0)
 		a1 = vec.FMA256(v1, v1, a1)
 		a2 = vec.FMA256(v2, v2, a2)
@@ -447,7 +451,7 @@ func avx2SumSq(x []float32) float32 {
 		x = x[:0]
 	}
 	for len(x) >= lanes256 {
-		v := vec.Load256(x[0:8])
+		v := vec.Load256(x[0:lanes256])
 		a0 = vec.FMA256(v, v, a0)
 		x = x[lanes256:]
 	}

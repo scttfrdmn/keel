@@ -30,7 +30,10 @@
 // vector path or writing a scalar path nobody would ship.
 package l1
 
-import "math"
+import (
+	"math"
+	"unsafe"
+)
 
 // Kernels is one backend's unit-stride Level-1 loop set. Every field is
 // mandatory; a nil op is a registration bug, not a fallback.
@@ -213,7 +216,7 @@ func scalarSumSq(x []float32) float32 {
 // vec.ScalarAbs: -0 becomes +0 and NaN keeps its payload. Written out here so
 // this package does not depend on the shim for one scalar operation.
 func absf32(v float32) float32 {
-	return math.Float32frombits(math.Float32bits(v) &^ (1 << 31))
+	return math.Float32frombits(math.Float32bits(v) &^ (1 << (8*unsafe.Sizeof(v) - 1)))
 }
 
 // Iamax returns the index of the first element of greatest magnitude, or -1
