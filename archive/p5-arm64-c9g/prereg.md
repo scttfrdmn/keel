@@ -21,3 +21,29 @@ the best shipped f32 shape. #196's probe (c9g.4xlarge, n=2048, 1 thread): keel S
 - every routine row is produced at 1 and 8 threads. The only UNMEASURED is the correctness-class admission;
 - **fo is the 8-thread family max within 1%**. On V2, x44 came within 97%;
 - gate-p3's keel/OpenBLAS ratio is REPORTED, not judged (NEON against an SVE reference), at **0.85–0.95** at 2048³.
+
+## Exploration pass: result (be72f31, `exploration-be72f31.log`)
+
+34 PASS / 0 FAIL / 1 UNMEASURED / 2 BASELINE. 57m, about $0.70, and the fleet was verified down with a readable
+inventory. **Every prediction held:**
+- `corename=neoversev2` on OpenBLAS 0.3.34 ✓;
+- era famax ✓, and the dispatch marker reads `5x16-pb/neon` ✓;
+- all 8 routine rows were produced, 10 draws each ✓. The one UNMEASURED is the correctness-class admission ✓.
+  Gate-p4 is GREEN underneath (61/0/0), and gate-p3 has 0 FAIL;
+- at 8 threads, **fo is the family max**: 823.35 GFLOP/s against x44 786.65 (95.5%) and shared 601.3 ✓;
+- keel/OpenBLAS = 77.67 / 86.59 = **0.897** at 2048³ ✓ (band 0.85–0.95). It is REPORTED, and the line counts
+  0 judged hosts only because a correctness-class host has no judgeable reading.
+The two BASELINEs are V3's first sight in famax: 24 L1 rows, and no README row for Neoverse-V3. gate-p3's
+`peak/5x16-pb/neon/kc=128` reads 81.3% of peak, matching PB P2's 81.3% net.
+
+## Judged r1: predictions (written from the exploration, before r1)
+
+**r1 is V3's founding run in famax**, on c9g.48xlarge ($8.35/hr). Predicted:
+- era famax, corename `neoversev2`, dispatch `5x16-pb/neon`;
+- **0 FAIL**: V3 has no README rows, so criterion 9 renders BASELINE and not FAIL. The share, L1 and peak rows
+  all render BASELINE. The headline is UNMEASURED because the one host is BASELINE (famaxx86's r1 rendering);
+- gate-p4 and gate-p3 underneath **GREEN**, and `-race` clean;
+- fo the 8-thread family max within 1%;
+- 1-thread Sgemm (n=4096) within 8% of the exploration's 80.1: **73.7–86.5 GFLOP/s**. gate-p3's keel/OpenBLAS
+  REPORTED on 1 host at **0.85–0.95**, and its peak row at 80–83% of peak.
+**REFUTED if** any FAIL appears, gate-p3/p4 is RED, the corename is not `neoversev2`, or fo loses the family max.
