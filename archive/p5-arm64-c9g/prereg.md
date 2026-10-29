@@ -47,3 +47,22 @@ The two BASELINEs are V3's first sight in famax: 24 L1 rows, and no README row f
 - 1-thread Sgemm (n=4096) within 8% of the exploration's 80.1: **73.7–86.5 GFLOP/s**. gate-p3's keel/OpenBLAS
   REPORTED on 1 host at **0.85–0.95**, and its peak row at 80–83% of peak.
 **REFUTED if** any FAIL appears, gate-p3/p4 is RED, the corename is not `neoversev2`, or fo loses the family max.
+
+## r1: result (f3bbe01, `judged-r1-f3bbe01.log`)
+
+34 PASS / **0 FAIL** / 1 UNMEASURED / 6 BASELINE. It took 1h01m (about $8.50), and the fleet was verified down
+with a readable inventory. **Every prediction held:** corename `neoversev2` (MAX_THREADS=192) ✓; dispatch
+`5x16-pb/neon` ✓; gate-p4 GREEN (61/0/0) and gate-p3 24/0/0 ✓; `-race` clean ✓; fo the 8-thread family max at 824.05
+against x44 785.15 (95.3%) ✓; Sgemm 1T **80.07** (band 73.7–86.5) ✓; keel/OpenBLAS 77.18 / 86.75 = **0.890** ✓;
+gate-p3 peak row 81.2% ✓. The share rows (net of both intervals) are Sgemm 69.8, Ssyrk 73.0, Ssymm 69.5 and
+**Strsm 47.4**. The 8-thread ceiling is 824.3 GFLOP/s. The rates reproduce the 4xlarge exploration to about 0.1%.
+
+## r2: predictions (written from r1, before r2)
+
+r2 is the second draw. Nothing is judged against a bar until the rows land over r1 + r2. Predicted:
+- the same tally, **34/0/1/6**, with gate-p3/p4 GREEN and `-race` clean;
+- Sgemm 1T within 1% of 80.07, and the ceiling within 0.5% of 824.3;
+- **all 4 share rows and the peak row admissible**, each cross-draw spread under 2%;
+- **at most 2 of the 24 L1 rows refused** at the 5% band. famax's V1/V2 pair refused none (widest 3.52%); ceil8
+  refused V1 Sdot at 7.19%.
+**REFUTED if** any FAIL appears, a share or peak row spreads past 5%, or more than 2 L1 rows are refused.

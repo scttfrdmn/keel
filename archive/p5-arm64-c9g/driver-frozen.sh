@@ -14,6 +14,7 @@
 # KEEL_OPENBLAS_VERSION=v0.3.34 by Scott's 2026-10-27 ruling on #196: the reference is the newest
 # OpenBLAS whose detection names the core, and 0.3.29 picks generic armv8sve on V3.
 # Re-frozen for judged r1, after the exploration pass at be72f31; SELF below requires it.
+# Re-frozen for judged r2, after r1 at f3bbe01.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
