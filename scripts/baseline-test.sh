@@ -146,9 +146,10 @@ printf 'typoera\t2026-10-28\tDESIGN.md §5 rule 17\t—\ta typo in the scope\tar
 is 'an unknown scope resolves nothing for arm64' "$(era_current "$T/led-scope-typo.tsv" arm64)" ''
 is 'an unknown scope resolves nothing for amd64' "$(era_current "$T/led-scope-typo.tsv" amd64)" ''
 # 5e. The shipped ledger, read as the gates read it.
-is 'the shipped ledger: amd64 is in ceil8' "$(era_current scripts/measurement-eras.tsv amd64)" ceil8
+is 'the shipped ledger: amd64 is in famaxx86' "$(era_current scripts/measurement-eras.tsv amd64)" famaxx86
 is 'the shipped ledger: arm64 is in famax' "$(era_current scripts/measurement-eras.tsv arm64)" famax
 era_provisional scripts/measurement-eras.tsv famax && no 'famax read provisional after its transition archive landed' || ok 'famax is closed: its both-arms transition archive landed with its registrations'
+era_provisional scripts/measurement-eras.tsv famaxx86 && ok 'famaxx86 is provisional until its transition archive lands' || no 'famaxx86 read as landed'
 
 echo "-- era_provisional: a disclosure about the archive, never a permission --"
 # 6. `—` and empty both mean the both-arms transition archive has not landed. The empty

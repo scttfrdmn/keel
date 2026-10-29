@@ -9,6 +9,9 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **amd64 measurement era `famaxx86` opened, and its gate-p5 runs pre-registered** (#199, DESIGN.md §5 rule 17,
+  `archive/p5-amd64-famaxx86/`). It is amd64-scoped and provisional: `Ceiling/compute` and `Peak/avx512` now run x44, so
+  ceil8's amd64 baselines and bar do not carry across. `CEIL_FRACTION` stays suspended for amd64 until the founding run types it.
 - **The judged amd64 P2 re-run is pre-registered** (#199, `archive/p2-amd64-anchor/prereg.md`). It predicts GREEN at
   both elements on Skylake-SP, Zen 4 and Zen 5: skx issue-bound at 90–100% of its roofline via the anchor, and both Zens
   FMA-bound at their old fractions. This follows the end-to-end exploration at `403aceb`, 0 FAIL at both elements.
