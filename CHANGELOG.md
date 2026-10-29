@@ -9,6 +9,8 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **c9g (Neoverse-V3) gets its own gate-p5 campaign in era famax** (#196, `archive/p5-arm64-c9g/`), on OpenBLAS v0.3.34 per
+  the 2026-10-27 ruling. V3 is registry-governed, so its founding and confirmation runs render BASELINE and its rows land over N=2.
 - **The README's amd64 rows are re-derived in era famaxx86** (#199, `archive/p5-amd64-famaxx86/`). The source is
   judged r1 `f18f110` and r2 `c0c373d` on c5n.18xlarge, c7a.48xlarge and c8a.48xlarge. Skylake-SP's 8-thread ceiling reads
   **1565** GFLOP/s (was 1391), so its shares fall to about 29% (Sgemm 1T 68.72 at 32.9% of 208.6). The under-review note is
