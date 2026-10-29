@@ -2332,3 +2332,14 @@ which nothing judged, among them. It now has its own clause, and an unclassifiab
 
 **Positive control:** the fixed generator, run on the published caption's own four logs (strsm-refresh-amd64
 r1/r2 plus famax r1/r2), prints 47.0 together with the registered-baseline clause for the 3 amd64 hosts.
+
+## Credit claim: the caption said one era over runs from two (#196, 2026-10-29)
+
+**Claimed under the published-evidence credit, +4 shell** (counter 19478 → 19482). **The wrong published claim:**
+`7979e7e`'s README reads "every sample a host contributed across the 4 archived runs of one era". Those 4 runs are
+2 in famaxx86 (amd64) and 2 in famax (arm64), and each host pools only its own era's 2. So the sentence put
+**4 of 4** pooled runs in a single era, where there are two. To re-derive it, read column 2 of the
+`scripts/readme-archives.tsv` rows that README pools. **Caught before publication, not part of the credit:**
+adding c9g put 4 V3 pairs in famax beside 11 amd64 pairs in famaxx86, and the caption named one era, read off the
+first log, for all 15. Each BASELINE pair's era is now read off its own verdict line, so the clause reads
+"famaxx86 (11) and famax (4)".

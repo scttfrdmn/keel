@@ -9,6 +9,13 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Neoverse-V3 (Graviton5, c9g.48xlarge) gets README rows** (#196, `archive/p5-arm64-c9g/`), pooled over judged r1
+  `f3bbe01` and r2 `e030cc1` on OpenBLAS 0.3.34 `neoversev2`. Sgemm 1T is 80.06 GFLOP/s, 77.6% of a 103.2 peak. Shares of
+  the 824.2 GFLOP/s 8-thread ceiling are Sgemm 69.8, Ssyrk 73.0, Ssymm 69.5 and Strsm 47.9 (pooled), and keel/OpenBLAS is
+  0.890 at 2048³. 25 baseline rows landed. 4 L1 rows are refused, up to a 14.2% spread on Saxpy n=65536, and V3's
+  witness row is held until a third draw.
+- **The README caption names each recorded pair's own era** (#196). It named the first log's era for all of them, and its
+  pooling sentence said the runs were "of one era" when they span two.
 - **c9g (Neoverse-V3) gets its own gate-p5 campaign in era famax** (#196, `archive/p5-arm64-c9g/`), on OpenBLAS v0.3.34 per
   the 2026-10-27 ruling. V3 is registry-governed, so its founding and confirmation runs render BASELINE and its rows land over N=2.
 - **The README's amd64 rows are re-derived in era famaxx86** (#199, `archive/p5-amd64-famaxx86/`). The source is

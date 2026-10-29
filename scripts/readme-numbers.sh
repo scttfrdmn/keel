@@ -288,6 +288,8 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       }
       vc = vd[host, r, FILENAME] = vclass(line, rest)
       if (vc == "PASS" || vc == "FAIL") { hasjudged[FILENAME] = 1; judgedBy[host, FILENAME] = 1 }
+      # Each recorded pair names its own era, so a page spanning two architectures says both (#196).
+      if (vc == "BASELINE" && match(rest, /in era [a-z0-9]+/)) her[host] = substr(rest, RSTART + 7, RLENGTH - 7)
       # The fleet bar AS THE JUDGING LOG STATES IT. The caption named the constant in this script,
       # CEIL_FRACTION, which read 42.8 after era famax judged arm64 at 47.0 (#199).
       if ((vc == "PASS" || vc == "FAIL") && match(rest, /\(>= [0-9.]+%, the fleet bar/)) { b = substr(rest, RSTART + 4); sub(/%.*/, "", b); lfb[FILENAME] = b }
@@ -480,7 +482,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
         # is counted apart from it, because the two have different causes and a reader owed
         # the reason cannot get it from a merged count: BASELINE means this silicon had no
         # reference artifact in the era, REPORTED means the bar itself did not exist yet.
-        if (verdict[h, r] == "BASELINE") nb++
+        if (verdict[h, r] == "BASELINE") { nb++; if (!((her[h] == "" ? era : her[h]) in nbe)) nbo[++nbn] = (her[h] == "" ? era : her[h]); nbe[(her[h] == "" ? era : her[h])]++ }
         if (verdict[h, r] == "REPORTED") nu++
         if (verdict[h, r] == "NOISY") nn++
         if (verdict[h, r] == "OTHER") { printf "readme-numbers: [%s] %s carries a verdict this caption cannot classify, so it is not counted as clearing anything\n", h, r > "/dev/stderr"; exit 3 }
@@ -566,7 +568,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # measured, and the generator refuses two covering the same host rather than averaging them.
       vprov = "The verdicts below are the judged run'"'"'s alone — a verdict belongs to the gate that rendered it and two cannot be averaged."
       if (njf > 1) vprov = sprintf("A gate-p5 run measures one GOARCH, so no single run can judge this table: the rates pool every archive named above, while each host takes its verdicts from the first of the %d judged runs named for that host. Two judged runs that grade one row differently are refused rather than averaged, because a verdict belongs to the gate that rendered it.", njf)
-      printf "All %d rows are one pooled `benchstat` estimator per cell, not a median of per-run medians: every sample a host contributed across the %d archived runs of one era is pooled into a single population, and the median and 95%% CI printed beside it are both read off that one population — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N, counting archives. Because the point and the interval come from the same estimator, every published value lies inside its own CI; the percent-of-peak denominator is pooled the same way, so the 1-thread and 8-thread rows for a routine are a ratio of like estimators. Rows from different CPUs are not comparable, because the peaks differ. %s\n\n", \
+      printf "All %d rows are one pooled `benchstat` estimator per cell, not a median of per-run medians: every sample a host contributed across its own era'"'"'s archived runs (%d runs in all here) is pooled into a single population, and the median and 95%% CI printed beside it are both read off that one population — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N, counting archives. Because the point and the interval come from the same estimator, every published value lies inside its own CI; the percent-of-peak denominator is pooled the same way, so the 1-thread and 8-thread rows for a routine are a ratio of like estimators. Rows from different CPUs are not comparable, because the peaks differ. %s\n\n", \
         nrowall, nf, (jrev == "" ? "unrecorded" : jrev), others, src, (nsz == "" ? "4096" : nsz), \
         (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host"), vprov > "/dev/stderr"
     }
@@ -630,6 +632,8 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
     # ONE SPELLING OF EACH UNJUDGED DISCLOSURE, shared by every branch that can reach it.
     # The era is read off the log rather than named here: a generator that hardcodes the
     # era would keep publishing "pinned8" into the era after it.
+    eras = ""; for (k = 1; k <= nbn; k++) eras = eras (k == 1 ? "" : (k == nbn ? " and " : ", ")) (nbn == 1 ? nbo[k] : sprintf("%s (%d)", nbo[k], nbe[nbo[k]]))
+    if (nbn > 0) era = eras
     bc = (nb == 0 ? "" : sprintf(" A further %d of those pairs %s RECORDED as a candidate baseline in era %s and judged by nothing, so those rows are published as measurements and not as passes (#6).", nb, (nb == 1 ? "is" : "are"), (era == "" ? "the one this log names no id for" : era)))
     # Second unjudged class, second sentence: these rows ran BEFORE the bars existed, so no
     # verdict is available to publish at any strictness. Saying so is not optional -- their

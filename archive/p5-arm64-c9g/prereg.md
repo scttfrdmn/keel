@@ -66,3 +66,18 @@ r2 is the second draw. Nothing is judged against a bar until the rows land over 
 - **at most 2 of the 24 L1 rows refused** at the 5% band. famax's V1/V2 pair refused none (widest 3.52%); ceil8
   refused V1 Sdot at 7.19%.
 **REFUTED if** any FAIL appears, a share or peak row spreads past 5%, or more than 2 L1 rows are refused.
+
+## r2: result (e030cc1, `judged-r2-e030cc1.log`)
+
+34/0/1/6, the same tally. It took 59m (about $8.20), and the fleet was verified down with a readable inventory.
+**REFUTED, on its L1 clause:** I predicted at most 2 of 24 L1 rows refused, and 4 are:
+`rate/Saxpy/n=65536` 11.23 then 13.09 (**14.21%**), `rate/Saxpy/n=256` 7.12%, `rate/Sasum/n=65536` 5.49%, and
+`rate/Sasum/n=4096` 5.39%. Everything else held: all 4 share rows within 0.55% (Sgemm 69.8/69.9, Ssyrk 73.0/72.6,
+Ssymm 69.5/69.7, Strsm 47.4/47.5), the peak row 81.2/81.3, Sgemm 1T 80.005 (r1 80.07), the ceiling 824.05,
+gate-p3/p4 GREEN, and `-race` clean.
+
+**Landed over N=2:** **25 rows**: 4 share, 20 L1 and `peak/5x16-pb/neon/kc=128` at 81.25. All drive
+`registered`, the 4 refused rows drive `new`, and a V2 positive control drives `owing`. **V3's witness row is HELD**,
+by the famaxx86 precedent: these runs judged nothing, and a landed witness would make the 4 refused rows an
+`owing` red that is not a regression. A third draw settles them. **README:** 9 Neoverse-V3 rows, pooled over r1 + r2.
+Sgemm 1T is 80.06 at 77.6% of a 103.2 GFLOP/s peak, and the 8-thread ceiling is 824.2.

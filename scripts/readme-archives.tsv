@@ -70,3 +70,5 @@ Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	f18f110	archive/p5-amd64-
 AMD EPYC 9R45	famaxx86	c0c373d	archive/p5-amd64-famaxx86/judged-r2-c0c373d.log	archive/p5-amd64-famaxx86/bench-gate-p5-c0c373d-keel-zen5-20261029T092111Z-1.txt	canonical	amd64
 AMD EPYC 9R14	famaxx86	c0c373d	archive/p5-amd64-famaxx86/judged-r2-c0c373d.log	archive/p5-amd64-famaxx86/bench-gate-p5-c0c373d-keel-zen4-20261029T092111Z-2.txt	canonical	amd64
 Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	c0c373d	archive/p5-amd64-famaxx86/judged-r2-c0c373d.log	archive/p5-amd64-famaxx86/bench-gate-p5-c0c373d-keel-skx-20261029T092111Z-3.txt	canonical	amd64
+Neoverse-V3	famax	f3bbe01	archive/p5-arm64-c9g/judged-r1-f3bbe01.log	archive/p5-arm64-c9g/bench-gate-p5-f3bbe01-keel-gvt5-20261029T172030Z-1.txt	canonical	arm64
+Neoverse-V3	famax	e030cc1	archive/p5-arm64-c9g/judged-r2-e030cc1.log	archive/p5-arm64-c9g/bench-gate-p5-e030cc1-keel-gvt5-20261029T182344Z-1.txt	canonical	arm64
