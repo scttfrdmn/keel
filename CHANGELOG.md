@@ -34,6 +34,12 @@ While the major version is 0, minor versions may contain breaking changes.
   accounting). They are named so that no float32 gate's `-bench` filter selects them. `vec.PeakFamily64` is exported for them.
 
 ### Fixed
+- **Four gate workloads ran on lab hosts over bare ssh, outside pueue** (Scott, 2026-10-29). Two of them were measurements: gate-p3's OpenBLAS
+  coretype sweep and its reference run. The other two were heavy unmeasured work: the native OpenBLAS harness build, and gate-p5's whole-suite
+  `-race`. All four now go through `remote_run`, which hands a host-side command to `remote_exec`'s supervision with a named group. That is
+  the `measured` or `build` pueue group on a lab host, and #62's tmux elsewhere. The command itself is unchanged: no taskset pin is added to a
+  run that never had one, so no instrument moved. Exercised on janus: `exit 7` returns 7 from both groups, with the `keel-queue:` provenance
+  line. remote-exec-test, fakessh-test and detach-test are green.
 - **`WorkersLastCall` was blind to float64** (#193). The generated `block64` kept its own worker counter, so every float64 call left
   `keel.WorkersLastCall()` at 0, and every float64 benchmark row declared `workers=0`. That is the defect gate-p5's placement criterion
   exists to catch. Both nests now share one counter in `internal/par`. `TestP5Determinism64` pins it (a planted per-package counter

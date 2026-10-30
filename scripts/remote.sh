@@ -1718,6 +1718,28 @@ REMOTE_EXEC_SEQ=0
 # facts and only the first is a claim about keel.
 remote_vanished() { [[ "$REMOTE_STATE" == vanished ]]; }
 
+# remote_run HOST GROUP CMD — run a shell command ON the host through remote_exec's queue:
+# pueue's GROUP (measured | build) on a lab host, #62's tmux supervision elsewhere. For the
+# work a gate does on the host itself rather than with a binary it ships — a native build,
+# the -race run, the OpenBLAS harness. Those went over bare ssh, OUTSIDE the queue, and on a
+# shared lab host that is the interference pueue exists to prevent (Scott, 2026-10-29).
+# CMD runs exactly as given: GROUP is named, not inferred from -test.bench, so no taskset
+# pin is added to a command that never had one (a pin would change its instrument).
+remote_run() {
+  local host="$1" group="$2" cmd="$3" d f rc=0
+  d="$(mktemp -d)"
+  f="$d/keel-cmd-$$-$RANDOM.sh"
+  printf '#!/usr/bin/env bash\n%s\n' "$cmd" >"$f"
+  chmod +x "$f"
+  KEEL_REMOTE_GROUP="$group" remote_exec "$host" "$f" || rc=$?
+  # remote_exec removes its runner, log and status file but not the shipped executable; a
+  # one-off command script has no reuse, so it goes too.
+  # shellcheck disable=SC2029  # client-side expansion of a client-side path is intended
+  ssh "${KEEL_SSH_OPTS[@]}" "$host" "rm -f '$KEEL_REMOTE_DIR/$(basename "$f")'" >/dev/null 2>&1 || true
+  rm -rf "$d"
+  return "$rc"
+}
+
 remote_exec() {
   local host="$1" bin="$2"; shift 2
   local base; base="$(basename "$bin")"
@@ -1809,6 +1831,8 @@ EOF
   # learned this above).
   local group="build"
   if [[ "$wants_bench" -eq 1 ]]; then group="measured"; fi
+  # A caller that measures without passing -test.bench names its group (remote_run).
+  [[ -z "${KEEL_REMOTE_GROUP:-}" ]] || group="$KEEL_REMOTE_GROUP"
   local label="keel/$id"
 
   # ONE launch that also decides the mechanism on the far side, cheapest-safe first:

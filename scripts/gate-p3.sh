@@ -465,7 +465,10 @@ ob_coretype_sweep() {
   # shellcheck disable=SC2087  # unquoted EOF on purpose: the candidate list, the
   # remote dir, the benchmark name and $BFLAGS are this gate's own values and must
   # expand here. Everything the remote shell owns is escaped as \$.
-  ssh "${KEEL_SCP_OPTS[@]}" "$host" 'bash -s' 2>/dev/null <<EOF
+  # Through the host's queue (remote_run, measured: this is benchmarking). The queue's own
+  # keel-queue: provenance line and blank lines are not coretype rows, so they are dropped.
+  local cmd
+  cmd="$(cat <<EOF
 cd '$OPENBLAS_REMOTE_DIR' || exit 1
 case "\$(uname -m)" in
   aarch64|arm64) cts='$OPENBLAS_CORETYPES_ARM64' ;;
@@ -492,6 +495,8 @@ for ct in \$cts; do
   printf '%s %s %s\n' "\$ct" "\${core:--}" "\${best:-norow}"
 done
 EOF
+)"
+  remote_run "$host" measured "$cmd" 2>/dev/null | grep -vE '^(keel-queue:|$)'
 }
 
 echo "== gate-p3: packing + blocking -> full Sgemm =="
@@ -1448,7 +1453,7 @@ else
       continue
     fi
     # shellcheck disable=SC2029  # client-side expansion of a client-side path
-    if ! ssh "${KEEL_SSH_OPTS[@]}" "$host" \
+    if ! remote_run "$host" build \
          "cd '$OPENBLAS_REMOTE_DIR' && GOEXPERIMENT=simd CGO_ENABLED=1 go test -c -tags openblas -o bench-ob.test ./bench" >"$LOG" 2>&1; then
       fail "[$host] native build of the openblas-tagged bench harness failed"
       sed 's/^/        /' "$LOG" | tail -30
@@ -1593,7 +1598,7 @@ else
     # question about a window the judged run does not occupy (§5 rule 5 as amended 2026-08-16).
     clock_head "$host" "@$OPENBLAS_REMOTE_DIR/bench-ob.test" || continue
     # shellcheck disable=SC2029  # client-side expansion of a client-side path
-    if ! ssh "${KEEL_SSH_OPTS[@]}" "$host" \
+    if ! remote_run "$host" measured \
          "cd '$OPENBLAS_REMOTE_DIR' && env ${OBENV[*]} ./bench-ob.test$OBARGS" >"$BENCHLOG" 2>&1; then
       unmeasured "[$host] the openblas-tagged benchmark run failed, so this host has no reference reading"
       sed 's/^/        /' "$BENCHLOG" | tail -30

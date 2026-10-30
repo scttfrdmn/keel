@@ -992,7 +992,9 @@ else
     # GOMAXPROCS(0) that is also the widest pool this host can produce.
     # shellcheck disable=SC2029  # client-side expansion of a client-side path is intended
     NRC=0
-    ssh "${KEEL_SSH_OPTS[@]}" "$host" \
+    # Through the host's build queue (remote_run): unmeasured, but a whole-suite -race run is
+    # heavy, and on a shared lab host it ran over bare ssh, outside pueue, until 2026-10-29.
+    remote_run "$host" build \
       "cd '$P5_REMOTE_SRC' && GOEXPERIMENT=simd CGO_ENABLED=1 go test -race -count=1 -timeout 30m ./... 2>&1" >"$LOG" 2>&1 || NRC=$?
     race_verdict "[$host, vector path live, $hgo, GOMAXPROCS at the host default]" "$NRC" "$LOG"
     # An `[[ ... ]] && x` here would be the loop body's last command, and a false
