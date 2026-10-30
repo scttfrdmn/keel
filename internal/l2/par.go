@@ -1,7 +1,7 @@
 // Copyright 2026 Scott Friedman
 // SPDX-License-Identifier: Apache-2.0
 
-package keel
+package l2
 
 import (
 	"github.com/scttfrdmn/keel/internal/block"
@@ -18,13 +18,13 @@ import (
 // The serial call is the same function body over the whole range, not a second
 // loop, so there is no serial twin for the parallel one to drift from.
 
-// l2Grain is how many element updates of A one worker must have before a Level-2
+// Grain is how many element updates of A one worker must have before a Level-2
 // call starts it (Ssyr2 updates each element twice): a call with fewer than
-// 2·l2Grain runs serially in the calling goroutine, with no goroutine and no
+// 2·Grain runs serially in the calling goroutine, with no goroutine and no
 // atomic.
 //
 // A minimum per WORKER rather than a size cutoff, so the width grows with the work
-// instead of jumping from one to GOMAXPROCS at a single n: 3·l2Grain gets three
+// instead of jumping from one to GOMAXPROCS at a single n: 3·Grain gets three
 // workers at GOMAXPROCS=8.
 //
 // MEASURED 2026-10-24 on ONE host — orion, M4 Pro 10P+4E, NEON, its measured pueue
@@ -41,36 +41,36 @@ import (
 // memory system's to give: at 4096² and 8 workers SgemvN is 3.6x and SgemvT 2.3x.
 // A host with a different goroutine-start cost or cache would place it elsewhere,
 // as MB's comment says of MB.
-var l2Grain = 1 << 17
+var Grain = 1 << 17
 
-// l2Cols is the alignment unit of a column split: gemvTrans cuts y at multiples
+// Cols is the alignment unit of a column split: gemvTrans cuts y at multiples
 // of 16 floats. Not for the bits — every Axpy backend does the same operation on
 // every element whatever its position (an FMA in each vector lane, the masked
 // tail included; one compiled scalar statement on the scalar path), so an offset
 // subrange returns the same bits as the whole — but so that every worker but the
 // last runs whole 512-bit vectors, and pays no masked tail on each of A's m rows.
-const l2Cols = 16
+const Cols = 16
 
-// l2Workers is the worker count for a Level-2 call over work elements of A whose
+// workers is the worker count for a Level-2 call over work elements of A whose
 // output splits into at most units independent pieces.
-func l2Workers(work, units int) int {
+func workers(work, units int) int {
 	w := par.Workers(units)
-	if c := work / l2Grain; c < w {
+	if c := work / Grain; c < w {
 		w = c
 	}
 	return max(w, 1)
 }
 
-// l2Split runs fn over a partition of [0, axis) into contiguous ranges, in
+// split runs fn over a partition of [0, axis) into contiguous ranges, in
 // parallel when the work is large enough, and records the width it used.
 //
 // align > 1 cuts at multiples of align (the last range takes the remainder).
 // cost, when non-nil, gives row i's share of the work, and the cuts then balance
 // cost rather than rows — the triangular routines' rows run from 1 to n elements,
 // and an equal row split would hand one worker three times another's share.
-func l2Split(axis, work, align int, cost func(i int) int, fn func(lo, hi int)) {
+func split(axis, work, align int, cost func(i int) int, fn func(lo, hi int)) {
 	units := (axis + align - 1) / align
-	w := l2Workers(work, units)
+	w := workers(work, units)
 	if w == 1 {
 		fn(0, axis)
 		block.NoteWorkers(1)

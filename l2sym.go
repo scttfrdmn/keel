@@ -3,6 +3,8 @@
 
 package keel
 
+import "github.com/scttfrdmn/keel/internal/l2"
+
 // The triangular and symmetric Level-2 routines. Every one is a loop over A's
 // rows, each row being a contiguous run of row-major storage, so the work goes
 // through the active Level-1 backend's Dot and Axpy, which is where the vector
@@ -14,21 +16,9 @@ package keel
 //     far end, as in reference BLAS. A zero stride panics.
 //   - alpha == 0 returns without reading x or y (Ssymv still applies beta to y).
 //   - No row is skipped because its scale is zero. Reference SSYR and SSYR2 skip
-//     such rows; keel computes them, for the reason gemvTrans gives.
+//     such rows; keel computes them, for the reason internal/l2's gemvTrans gives.
 //   - Triangular A: the other triangle is never read, and with Unit neither is the
 //     diagonal, which is taken to be 1.
-
-// scatter writes a contiguous buffer back into a strided vector. With inc == 1,
-// gather returned v itself, so there is nothing to do.
-func scatter(n int, src, v []float32, inc int) {
-	if inc == 1 {
-		return
-	}
-	iv := offset(n, inc)
-	for j := 0; j < n; j++ {
-		v[iv+j*inc] = src[j]
-	}
-}
 
 // Strmv computes x = op(A)·x for A n×n triangular, stored in the triangle ul names.
 func Strmv(ul Uplo, tA Transpose, d Diag, n int, a []float32, lda int, x []float32, incX int) {
@@ -40,60 +30,7 @@ func Strmv(ul Uplo, tA Transpose, d Diag, n int, a []float32, lda int, x []float
 	}
 	checkMatrix("Strmv", "a", n, n, a, lda)
 	checkVector("Strmv", "x", n, x, incX)
-	if n == 0 {
-		return
-	}
-	xs := gather(n, x, incX) // read-only here: results go to out, written back at the end
-	out := make([]float32, n)
-	if !trans {
-		// Row i writes out[i] only, from a read-only xs (l2par.go).
-		l2Split(n, n*(n+1)/2, 1, triCost(lower, n), func(r0, r1 int) {
-			for i := r0; i < r1; i++ {
-				row := a[i*lda : i*lda+n]
-				lo, hi := i+1, n // the strict part of row i that is stored
-				if lower {
-					lo, hi = 0, i
-				}
-				diag := xs[i]
-				if !unit {
-					diag *= row[i]
-				}
-				out[i] += diag + activeL1.Dot(row[lo:hi], xs[lo:hi])
-			}
-		})
-	} else {
-		// Row i of A is column i of Aᵀ: it scatters x_i into out[lo:hi], so a row split
-		// would race. Columns of out instead, as gemvTrans splits y: a worker owning
-		// [c0, c1) walks every row in order and applies only that row's diagonal term
-		// (if i is its own) and the part of its axpy inside [c0, c1). Each out[j] then
-		// takes its terms in exactly the serial order, so the result is bit-identical.
-		// Column j's work is the stored part of column j: rows 0..j of an upper
-		// triangle, j..n-1 of a lower one, which is triCost of the other triangle.
-		l2Split(n, n*(n+1)/2, 1, triCost(!lower, n), func(c0, c1 int) {
-			for i := 0; i < n; i++ {
-				row := a[i*lda : i*lda+n]
-				lo, hi := i+1, n
-				if lower {
-					lo, hi = 0, i
-				}
-				if c0 <= i && i < c1 {
-					diag := xs[i]
-					if !unit {
-						diag *= row[i]
-					}
-					out[i] += diag
-				}
-				if lo, hi := max(lo, c0), min(hi, c1); lo < hi {
-					activeL1.Axpy(xs[i], row[lo:hi], out[lo:hi])
-				}
-			}
-		})
-	}
-	if incX == 1 {
-		copy(x[:n], out)
-		return
-	}
-	scatter(n, out, x, incX)
+	l2.Trmv(activeL1, lower, trans, unit, n, a, lda, x, incX)
 }
 
 // Strsv solves op(A)·x = b for A n×n triangular, stored in the triangle ul names,
@@ -110,43 +47,7 @@ func Strsv(ul Uplo, tA Transpose, d Diag, n int, a []float32, lda int, x []float
 	}
 	checkMatrix("Strsv", "a", n, n, a, lda)
 	checkVector("Strsv", "x", n, x, incX)
-	if n == 0 {
-		return
-	}
-	xs := gather(n, x, incX)
-	// op(A) is lower when A is lower and not transposed, or upper and transposed.
-	// A lower op(A) is solved top to bottom, an upper one bottom to top.
-	forward := lower != trans
-	for step := 0; step < n; step++ {
-		i := step
-		if !forward {
-			i = n - 1 - step
-		}
-		row := a[i*lda : i*lda+n]
-		if !trans {
-			// Row i of op(A) is row i of A: subtract the solved part, then divide.
-			lo, hi := 0, i
-			if !lower {
-				lo, hi = i+1, n
-			}
-			xs[i] -= activeL1.Dot(row[lo:hi], xs[lo:hi])
-			if !unit {
-				xs[i] /= row[i]
-			}
-		} else {
-			// op(A) = Aᵀ: once x_i is final, row i of A is column i of op(A), and it
-			// updates every unsolved element at once.
-			if !unit {
-				xs[i] /= row[i]
-			}
-			lo, hi := i+1, n
-			if lower {
-				lo, hi = 0, i
-			}
-			activeL1.Axpy(-xs[i], row[lo:hi], xs[lo:hi])
-		}
-	}
-	scatter(n, xs, x, incX)
+	l2.Trsv(activeL1, lower, trans, unit, n, a, lda, x, incX)
 }
 
 // Ssymv computes y = alpha·A·x + beta·y for A n×n symmetric, stored in the triangle
@@ -159,37 +60,7 @@ func Ssymv(ul Uplo, n int, alpha float32, a []float32, lda int, x []float32, inc
 	checkMatrix("Ssymv", "a", n, n, a, lda)
 	checkVector("Ssymv", "x", n, x, incX)
 	checkVector("Ssymv", "y", n, y, incY)
-	if n == 0 {
-		return
-	}
-	if alpha == 0 {
-		scaleStrided(beta, n, y, incY)
-		return
-	}
-	xs := gather(n, x, incX)
-	t := make([]float32, n)
-	for i := 0; i < n; i++ {
-		row := a[i*lda : i*lda+n]
-		// Row i holds A[i, j] for the stored j, and by symmetry A[j, i] too: the
-		// stored part with the diagonal is a dot into t_i, and the strict part also
-		// scatters x_i into t_j.
-		lo, hi := i, n
-		slo, shi := i+1, n
-		if lower {
-			lo, hi = 0, i+1
-			slo, shi = 0, i
-		}
-		t[i] += activeL1.Dot(row[lo:hi], xs[lo:hi])
-		activeL1.Axpy(xs[i], row[slo:shi], t[slo:shi])
-	}
-	iy := offset(n, incY)
-	for i := 0; i < n; i++ {
-		v := alpha * t[i]
-		if beta != 0 {
-			v += beta * y[iy+i*incY]
-		}
-		y[iy+i*incY] = v
-	}
+	l2.Symv(activeL1, lower, n, alpha, a, lda, x, incX, beta, y, incY)
 }
 
 // Ssyr computes A += alpha·x·xᵀ on the triangle of the n×n symmetric A that ul
@@ -201,20 +72,7 @@ func Ssyr(ul Uplo, n int, alpha float32, x []float32, incX int, a []float32, lda
 	}
 	checkVector("Ssyr", "x", n, x, incX)
 	checkMatrix("Ssyr", "a", n, n, a, lda)
-	if n == 0 || alpha == 0 {
-		return
-	}
-	xs := gather(n, x, incX)
-	// Row i of A is written by one Axpy and nothing else (l2par.go).
-	l2Split(n, n*(n+1)/2, 1, triCost(lower, n), func(r0, r1 int) {
-		for i := r0; i < r1; i++ {
-			lo, hi := i, n
-			if lower {
-				lo, hi = 0, i+1
-			}
-			activeL1.Axpy(alpha*xs[i], xs[lo:hi], a[i*lda+lo:i*lda+hi])
-		}
-	})
+	l2.Syr(activeL1, lower, n, alpha, x, incX, a, lda)
 }
 
 // Ssyr2 computes A += alpha·(x·yᵀ + y·xᵀ) on the triangle of the n×n symmetric A
@@ -227,20 +85,5 @@ func Ssyr2(ul Uplo, n int, alpha float32, x []float32, incX int, y []float32, in
 	checkVector("Ssyr2", "x", n, x, incX)
 	checkVector("Ssyr2", "y", n, y, incY)
 	checkMatrix("Ssyr2", "a", n, n, a, lda)
-	if n == 0 || alpha == 0 {
-		return
-	}
-	xs, ys := gather(n, x, incX), gather(n, y, incY)
-	// As Ssyr: row i of A is written by its two Axpys, in this order, and nothing else.
-	l2Split(n, 2*(n*(n+1)/2), 1, triCost(lower, n), func(r0, r1 int) {
-		for i := r0; i < r1; i++ {
-			lo, hi := i, n
-			if lower {
-				lo, hi = 0, i+1
-			}
-			r := a[i*lda+lo : i*lda+hi]
-			activeL1.Axpy(alpha*xs[i], ys[lo:hi], r)
-			activeL1.Axpy(alpha*ys[i], xs[lo:hi], r)
-		}
-	})
+	l2.Syr2(activeL1, lower, n, alpha, x, incX, y, incY, a, lda)
 }

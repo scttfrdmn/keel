@@ -9,6 +9,7 @@ import (
 
 	"github.com/scttfrdmn/keel/internal/block"
 	"github.com/scttfrdmn/keel/internal/l1"
+	"github.com/scttfrdmn/keel/internal/l2"
 )
 
 // Level 1 — Phase P1.
@@ -421,81 +422,7 @@ func Sgemv(tA Transpose, m, n int, alpha float32, a []float32, lda int, x []floa
 	}
 	checkVector("Sgemv", "x", inner, x, incX)
 	checkVector("Sgemv", "y", rows, y, incY)
-	if rows == 0 {
-		return
-	}
-	if inner == 0 || alpha == 0 {
-		scaleStrided(beta, rows, y, incY)
-		return
-	}
-	if trans {
-		gemvTrans(m, n, alpha, a, lda, x, incX, beta, y, incY)
-		return
-	}
-	xs := gather(inner, x, incX)
-	iy := offset(rows, incY)
-	// Rows of y, each one Dot: a worker owns its y[i] outright (l2par.go).
-	l2Split(m, m*n, 1, nil, func(lo, hi int) {
-		for i := lo; i < hi; i++ {
-			d := alpha * activeL1.Dot(a[i*lda:i*lda+n], xs)
-			switch beta {
-			case 0:
-				y[iy+i*incY] = d
-			case 1:
-				y[iy+i*incY] += d
-			default:
-				y[iy+i*incY] = d + beta*y[iy+i*incY]
-			}
-		}
-	})
-}
-
-// gemvTrans is Sgemv's y = alpha·Aᵀ·x + beta·y, split out because its shape is the
-// other one: the output is as long as a row of A, so beta is applied to the whole
-// of y up front and each row of A then contributes an axpy.
-//
-// That ordering is why beta is not folded in afterwards: y = beta·y first means
-// the accumulation runs on the final destination and beta == 0 never reads y,
-// which is the case a caller relies on when y is uninitialized.
-func gemvTrans(m, n int, alpha float32, a []float32, lda int, x []float32, incX int,
-	beta float32, y []float32, incY int) {
-
-	ys, scattered := y, false
-	if incY != 1 {
-		// n accumulations per element would each pay the stride; one gather and one
-		// scatter pay it twice in total.
-		ys, scattered = make([]float32, n), true
-		if beta != 0 {
-			iy := offset(n, incY)
-			for j := 0; j < n; j++ {
-				ys[j] = y[iy+j*incY]
-			}
-		}
-	}
-	ix := offset(m, incX)
-	// Columns of y, not rows of A: a worker runs every row's axpy restricted to its
-	// own [c0, c1), so each element still takes its rows in order 0..m-1 and no
-	// partial sums are ever combined. A row split would need exactly that reduction,
-	// and a reduction's order is what would move with GOMAXPROCS.
-	l2Split(n, m*n, l2Cols, nil, func(c0, c1 int) {
-		yr := ys[c0:c1]
-		scaleStrided(beta, c1-c0, yr, 1)
-		for i := 0; i < m; i++ {
-			// No `if s != 0` guard, deliberately. Skipping a zero row scale would
-			// be free and would change the answer: 0·Inf is NaN, so a guard makes y
-			// depend on which of two mathematically equal formulations ran.
-			// Reference SGER has such a guard and reference SGEMV does not; keel
-			// takes the unguarded rule for both, because it is the one a float64
-			// oracle can check element by element (see internal/oracle.GemvEntry).
-			activeL1.Axpy(alpha*x[ix+i*incX], a[i*lda+c0:i*lda+c1], yr)
-		}
-	})
-	if scattered {
-		iy := offset(n, incY)
-		for j := 0; j < n; j++ {
-			y[iy+j*incY] = ys[j]
-		}
-	}
+	l2.Gemv(activeL1, trans, m, n, alpha, a, lda, x, incX, beta, y, incY)
 }
 
 // Sger computes A += alpha·x·yᵀ for A m×n row-major, x m long and y n long.
@@ -504,7 +431,7 @@ func gemvTrans(m, n int, alpha float32, a []float32, lda int, x []float32, incX 
 // same reason.
 //
 // Reference SGER additionally skips a row whose scale is zero; keel does not. See
-// gemvTrans for why not.
+// internal/l2's gemvTrans for why not.
 func Sger(m, n int, alpha float32, x []float32, incX int, y []float32, incY int, a []float32, lda int) {
 	if m < 0 || n < 0 {
 		panic("keel: Sger: negative dimension")
@@ -512,52 +439,7 @@ func Sger(m, n int, alpha float32, x []float32, incX int, y []float32, incY int,
 	checkVector("Sger", "x", m, x, incX)
 	checkVector("Sger", "y", n, y, incY)
 	checkMatrix("Sger", "a", m, n, a, lda)
-	if m == 0 || n == 0 || alpha == 0 {
-		return
-	}
-	ys := gather(n, y, incY)
-	ix := offset(m, incX)
-	// Rows of A, each written by one Axpy (l2par.go).
-	l2Split(m, m*n, 1, nil, func(lo, hi int) {
-		for i := lo; i < hi; i++ {
-			activeL1.Axpy(alpha*x[ix+i*incX], ys, a[i*lda:i*lda+n])
-		}
-	})
-}
-
-// gather returns n elements of a strided BLAS vector as a contiguous slice,
-// returning v itself when the stride is already one so the common case allocates
-// nothing.
-func gather(n int, v []float32, inc int) []float32 {
-	if inc == 1 {
-		return v[:n]
-	}
-	out := make([]float32, n)
-	iv := offset(n, inc)
-	for j := 0; j < n; j++ {
-		out[j] = v[iv+j*inc]
-	}
-	return out
-}
-
-// scaleStrided applies y = beta·y to n elements of a strided vector, in the same
-// three variants as internal/block's C scaling and for the same reason: beta == 0
-// must write zeros without reading y, so that an uninitialized destination is
-// legal.
-func scaleStrided(beta float32, n int, y []float32, inc int) {
-	if beta == 1 {
-		return
-	}
-	iy := offset(n, inc)
-	if beta == 0 {
-		for j := 0; j < n; j++ {
-			y[iy+j*inc] = 0
-		}
-		return
-	}
-	for j := 0; j < n; j++ {
-		y[iy+j*inc] *= beta
-	}
+	l2.Ger(activeL1, m, n, alpha, x, incX, y, incY, a, lda)
 }
 
 // Level 3 — Phases P3 (Sgemm) and P4 (derived).

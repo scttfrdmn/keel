@@ -3,6 +3,8 @@
 
 package keel
 
+import "github.com/scttfrdmn/keel/internal/l2"
+
 // Banded and packed storage, in gonum's row-major conventions (not reference
 // BLAS's column-major ones). In every one of these formats the stored part of each
 // row of A is contiguous, so the algorithms are written once, over a row-segment
@@ -19,140 +21,6 @@ package keel
 // backend, as for the dense triangular and symmetric routines (l2sym.go), whose
 // conventions these share: negative strides allowed, alpha == 0 does not read the
 // vectors, no zero-scale row is skipped, and with Unit the diagonal is not read.
-
-// rowSeg returns the stored part of row i: s[j] is A[i, lo+j]. It always includes
-// the diagonal, which is s[0] for an upper and s[len(s)-1] for a lower triangle.
-type rowSeg func(i int) (lo int, s []float32)
-
-func bandSeg(lower bool, n, k int, a []float32, lda int) rowSeg {
-	if lower {
-		return func(i int) (int, []float32) {
-			l := max(0, k-i) // positions before l lie left of column 0
-			return i - k + l, a[i*lda+l : i*lda+k+1]
-		}
-	}
-	return func(i int) (int, []float32) {
-		return i, a[i*lda : i*lda+min(k+1, n-i)]
-	}
-}
-
-func packedSeg(lower bool, n int, ap []float32) rowSeg {
-	if lower {
-		return func(i int) (int, []float32) {
-			o := i * (i + 1) / 2
-			return 0, ap[o : o+i+1]
-		}
-	}
-	return func(i int) (int, []float32) {
-		o := i*n - i*(i-1)/2
-		return i, ap[o : o+n-i]
-	}
-}
-
-// strict splits a row segment into the diagonal element and the off-diagonal part,
-// returning that part with the column it starts at.
-func strict(lower bool, i, lo int, s []float32) (diag float32, slo int, off []float32) {
-	if lower {
-		return s[len(s)-1], lo, s[:len(s)-1]
-	}
-	return s[0], i + 1, s[1:]
-}
-
-// triMV computes x = op(A)·x for triangular A given by seg.
-func triMV(seg rowSeg, lower, trans, unit bool, n int, x []float32, incX int) {
-	xs := gather(n, x, incX) // read-only; results go to out
-	out := make([]float32, n)
-	for i := 0; i < n; i++ {
-		lo, s := seg(i)
-		d, slo, off := strict(lower, i, lo, s)
-		dv := xs[i]
-		if !unit {
-			dv *= d
-		}
-		if !trans {
-			out[i] += dv + activeL1.Dot(off, xs[slo:slo+len(off)])
-		} else {
-			out[i] += dv
-			activeL1.Axpy(xs[i], off, out[slo:slo+len(off)])
-		}
-	}
-	if incX == 1 {
-		copy(x[:n], out)
-		return
-	}
-	scatter(n, out, x, incX)
-}
-
-// triSV solves op(A)·x = b for triangular A given by seg, overwriting b. As Strsv:
-// it divides rather than multiplying by a reciprocal, and skips no zero multiplier.
-func triSV(seg rowSeg, lower, trans, unit bool, n int, x []float32, incX int) {
-	xs := gather(n, x, incX)
-	forward := lower != trans
-	for step := 0; step < n; step++ {
-		i := step
-		if !forward {
-			i = n - 1 - step
-		}
-		lo, s := seg(i)
-		d, slo, off := strict(lower, i, lo, s)
-		if !trans {
-			xs[i] -= activeL1.Dot(off, xs[slo:slo+len(off)])
-			if !unit {
-				xs[i] /= d
-			}
-		} else {
-			if !unit {
-				xs[i] /= d
-			}
-			activeL1.Axpy(-xs[i], off, xs[slo:slo+len(off)])
-		}
-	}
-	scatter(n, xs, x, incX)
-}
-
-// symMV computes y = alpha·A·x + beta·y for symmetric A given by seg. beta == 0
-// does not read y.
-func symMV(seg rowSeg, lower bool, n int, alpha float32, x []float32, incX int, beta float32, y []float32, incY int) {
-	if alpha == 0 {
-		scaleStrided(beta, n, y, incY)
-		return
-	}
-	xs := gather(n, x, incX)
-	t := make([]float32, n)
-	for i := 0; i < n; i++ {
-		lo, s := seg(i)
-		_, slo, off := strict(lower, i, lo, s)
-		t[i] += activeL1.Dot(s, xs[lo:lo+len(s)])
-		activeL1.Axpy(xs[i], off, t[slo:slo+len(off)])
-	}
-	iy := offset(n, incY)
-	for i := 0; i < n; i++ {
-		v := alpha * t[i]
-		if beta != 0 {
-			v += beta * y[iy+i*incY]
-		}
-		y[iy+i*incY] = v
-	}
-}
-
-// symR computes A += alpha·x·xᵀ, and symR2 A += alpha·(x·yᵀ + y·xᵀ), on the stored
-// triangle given by seg.
-func symR(seg rowSeg, n int, alpha float32, x []float32, incX int) {
-	xs := gather(n, x, incX)
-	for i := 0; i < n; i++ {
-		lo, s := seg(i)
-		activeL1.Axpy(alpha*xs[i], xs[lo:lo+len(s)], s)
-	}
-}
-
-func symR2(seg rowSeg, n int, alpha float32, x []float32, incX int, y []float32, incY int) {
-	xs, ys := gather(n, x, incX), gather(n, y, incY)
-	for i := 0; i < n; i++ {
-		lo, s := seg(i)
-		activeL1.Axpy(alpha*xs[i], ys[lo:lo+len(s)], s)
-		activeL1.Axpy(alpha*ys[i], xs[lo:lo+len(s)], s)
-	}
-}
 
 // checkBand panics unless a holds an n-row band with k off-diagonals at stride lda.
 func checkBand(fn string, n, k int, a []float32, lda int) {
@@ -188,7 +56,7 @@ func Stbmv(ul Uplo, tA Transpose, d Diag, n, k int, a []float32, lda int, x []fl
 	checkBand("Stbmv", n, k, a, lda)
 	checkVector("Stbmv", "x", n, x, incX)
 	if n > 0 {
-		triMV(bandSeg(lower, n, k, a, lda), lower, trans, unit, n, x, incX)
+		l2.Tbmv(activeL1, lower, trans, unit, n, k, a, lda, x, incX)
 	}
 }
 
@@ -199,7 +67,7 @@ func Stbsv(ul Uplo, tA Transpose, d Diag, n, k int, a []float32, lda int, x []fl
 	checkBand("Stbsv", n, k, a, lda)
 	checkVector("Stbsv", "x", n, x, incX)
 	if n > 0 {
-		triSV(bandSeg(lower, n, k, a, lda), lower, trans, unit, n, x, incX)
+		l2.Tbsv(activeL1, lower, trans, unit, n, k, a, lda, x, incX)
 	}
 }
 
@@ -212,7 +80,7 @@ func Ssbmv(ul Uplo, n, k int, alpha float32, a []float32, lda int, x []float32, 
 	checkVector("Ssbmv", "x", n, x, incX)
 	checkVector("Ssbmv", "y", n, y, incY)
 	if n > 0 {
-		symMV(bandSeg(lower, n, k, a, lda), lower, n, alpha, x, incX, beta, y, incY)
+		l2.Sbmv(activeL1, lower, n, k, alpha, a, lda, x, incX, beta, y, incY)
 	}
 }
 
@@ -223,7 +91,7 @@ func Stpmv(ul Uplo, tA Transpose, d Diag, n int, ap []float32, x []float32, incX
 	checkPacked("Stpmv", n, ap)
 	checkVector("Stpmv", "x", n, x, incX)
 	if n > 0 {
-		triMV(packedSeg(lower, n, ap), lower, trans, unit, n, x, incX)
+		l2.Tpmv(activeL1, lower, trans, unit, n, ap, x, incX)
 	}
 }
 
@@ -235,7 +103,7 @@ func Stpsv(ul Uplo, tA Transpose, d Diag, n int, ap []float32, x []float32, incX
 	checkPacked("Stpsv", n, ap)
 	checkVector("Stpsv", "x", n, x, incX)
 	if n > 0 {
-		triSV(packedSeg(lower, n, ap), lower, trans, unit, n, x, incX)
+		l2.Tpsv(activeL1, lower, trans, unit, n, ap, x, incX)
 	}
 }
 
@@ -248,7 +116,7 @@ func Sspmv(ul Uplo, n int, alpha float32, ap []float32, x []float32, incX int, b
 	checkVector("Sspmv", "x", n, x, incX)
 	checkVector("Sspmv", "y", n, y, incY)
 	if n > 0 {
-		symMV(packedSeg(lower, n, ap), lower, n, alpha, x, incX, beta, y, incY)
+		l2.Spmv(activeL1, lower, n, alpha, ap, x, incX, beta, y, incY)
 	}
 }
 
@@ -259,7 +127,7 @@ func Sspr(ul Uplo, n int, alpha float32, x []float32, incX int, ap []float32) {
 	checkVector("Sspr", "x", n, x, incX)
 	checkPacked("Sspr", n, ap)
 	if n > 0 && alpha != 0 {
-		symR(packedSeg(lower, n, ap), n, alpha, x, incX)
+		l2.Spr(activeL1, lower, n, alpha, x, incX, ap)
 	}
 }
 
@@ -272,7 +140,7 @@ func Sspr2(ul Uplo, n int, alpha float32, x []float32, incX int, y []float32, in
 	checkVector("Sspr2", "y", n, y, incY)
 	checkPacked("Sspr2", n, ap)
 	if n > 0 && alpha != 0 {
-		symR2(packedSeg(lower, n, ap), n, alpha, x, incX, y, incY)
+		l2.Spr2(activeL1, lower, n, alpha, x, incX, y, incY, ap)
 	}
 }
 
@@ -304,35 +172,7 @@ func Sgbmv(tA Transpose, m, n, kL, kU int, alpha float32, a []float32, lda int, 
 	}
 	checkVector("Sgbmv", "x", inner, x, incX)
 	checkVector("Sgbmv", "y", rows, y, incY)
-	if rows == 0 {
-		return
-	}
-	if inner == 0 || alpha == 0 {
-		scaleStrided(beta, rows, y, incY)
-		return
-	}
-	xs := gather(inner, x, incX)
-	t := make([]float32, rows)
-	nCol := kL + kU + 1
-	for i := 0; i < rowsA; i++ {
-		l := max(0, kL-i)      // first band position inside column 0
-		u := min(nCol, n+kL-i) // one past the last inside column n-1
-		off := i - kL + l      // the dense column band position l maps to
-		seg := a[i*lda+l : i*lda+u]
-		if !trans {
-			t[i] = activeL1.Dot(seg, xs[off:off+u-l])
-		} else {
-			activeL1.Axpy(xs[i], seg, t[off:off+u-l])
-		}
-	}
-	iy := offset(rows, incY)
-	for i := 0; i < rows; i++ {
-		v := alpha * t[i]
-		if beta != 0 {
-			v += beta * y[iy+i*incY]
-		}
-		y[iy+i*incY] = v
-	}
+	l2.Gbmv(activeL1, trans, m, n, kL, kU, alpha, a, lda, x, incX, beta, y, incY)
 }
 
 // Sdsdot returns alpha + x·y, with the dot product and the add accumulated in

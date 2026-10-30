@@ -8,6 +8,8 @@ import (
 	"math"
 	"math/rand"
 	"testing"
+
+	"github.com/scttfrdmn/keel/internal/l2"
 )
 
 // l2parCase is one call of a parallel Level-2 routine. run builds its inputs from
@@ -15,7 +17,7 @@ import (
 // worker that wrote outside its range shows up as a bit difference too.
 type l2parCase struct {
 	name string
-	work int // elements of A updated, the quantity l2Grain divides
+	work int // elements of A updated, the quantity l2.Grain divides
 	run  func() []float32
 }
 
@@ -111,8 +113,8 @@ var l2parProcs = []int{2, 3, 5, 8, 16}
 func TestL2ParDeterminism(t *testing.T) {
 	for _, sh := range []struct{ m, n, inc int }{{2053, 2051, 1}, {2051, 2053, -3}, {1031, 2053, 2}} {
 		for _, c := range l2parCases(sh.m, sh.n, sh.inc) {
-			if c.work < l2parProcs[len(l2parProcs)-1]*l2Grain || sh.n < 16*l2Cols {
-				t.Fatalf("%s: fixture too small to need %d workers at l2Grain=%d", c.name, l2parProcs[len(l2parProcs)-1], l2Grain)
+			if c.work < l2parProcs[len(l2parProcs)-1]*l2.Grain || sh.n < 16*l2.Cols {
+				t.Fatalf("%s: fixture too small to need %d workers at l2.Grain=%d", c.name, l2parProcs[len(l2parProcs)-1], l2.Grain)
 			}
 			var serial []float32
 			withProcs(1, func() { serial = c.run() })
@@ -137,13 +139,13 @@ func TestL2ParDeterminism(t *testing.T) {
 	}
 }
 
-// TestL2ParThreshold pins the threshold's form: below 2·l2Grain elements a call is
-// serial at any GOMAXPROCS, and above it the width is the work over l2Grain, not
+// TestL2ParThreshold pins the threshold's form: below 2·l2.Grain elements a call is
+// serial at any GOMAXPROCS, and above it the width is the work over l2.Grain, not
 // a jump to GOMAXPROCS.
 func TestL2ParThreshold(t *testing.T) {
 	small := l2parCases(37, 41, -2)
-	// 64 rows of just over 3·l2Grain/64 columns: three grains of work, room for 64.
-	mid := l2parCases(64, 3*l2Grain/64+1, 1)
+	// 64 rows of just over 3·l2.Grain/64 columns: three grains of work, room for 64.
+	mid := l2parCases(64, 3*l2.Grain/64+1, 1)
 	for _, tc := range []struct {
 		cases []l2parCase
 		want  int

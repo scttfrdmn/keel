@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// BenchmarkL2Par is the sweep l2Grain was chosen by. Vary the thread count with
+// BenchmarkL2Par is the sweep l2.Grain was chosen by. Vary the thread count with
 // -cpu, never by setting GOMAXPROCS around a cached run: GOMAXPROCS is not in the
 // test cache key, and -cpu is what a benchmark's name records.
 //
