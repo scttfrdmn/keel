@@ -187,7 +187,7 @@ p4_verify_line() {
   marker_all p4-verify "$1" | awk -v r="routine=$2" -v s="size=$3" '{
     rok = 0; sok = 0
     for (i = 1; i <= NF; i++) { if ($i == r) rok = 1; if ($i == s) sok = 1 }
-    if (rok && sok) { print; exit }
+    if (rok && sok && !hit) { print; hit = 1 }
   }'
 }
 

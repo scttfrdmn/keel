@@ -34,6 +34,10 @@ While the major version is 0, minor versions may contain breaking changes.
   accounting). They are named so that no float32 gate's `-bench` filter selects them. `vec.PeakFamily64` is exported for them.
 
 ### Fixed
+- **`marker_row` and gate-p4's `p4_verify_line` could kill a gate with SIGPIPE** (#193). Their awk printed the first match and `exit`ed,
+  so the `marker_all` feeding it died writing to a closed pipe. `pipefail` turned that into exit 141 and `set -e` stopped the gate. It is
+  size-dependent: janus's float64 gate-p4 was green, while pollux's arm64 one died after the Dgemv extent with no verdict. Both now read all
+  of their input and print the first match. Reproduced with a 2 MB marker log (rc=141 before, 0 after); net 0 lines.
 - **Four gate workloads ran on lab hosts over bare ssh, outside pueue** (Scott, 2026-10-29). Two of them were measurements: gate-p3's OpenBLAS
   coretype sweep and its reference run. The other two were heavy unmeasured work: the native OpenBLAS harness build, and gate-p5's whole-suite
   `-race`. All four now go through `remote_run`, which hands a host-side command to `remote_exec`'s supervision with a named group. That is

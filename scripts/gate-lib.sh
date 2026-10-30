@@ -327,7 +327,7 @@ assert_kern_audit_drift() {
 # which is how a divergence starts.
 marker_row() {
   marker_all "$1" "$2" | awk -v want="$3=$4" '{
-    for (i = 1; i <= NF; i++) if ($i == want) { print; exit }
+    if (!hit) for (i = 1; i <= NF; i++) if ($i == want) { print; hit = 1; break }
   }'
 }
 
