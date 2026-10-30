@@ -1,17 +1,22 @@
 // Copyright 2026 Scott Friedman
 // SPDX-License-Identifier: Apache-2.0
 
-// Package gonumblas makes keel a drop-in float32 BLAS for Gonum.
+// Package gonumblas makes keel a drop-in float32 and float64 BLAS for Gonum.
 //
 //	import (
 //		"gonum.org/v1/gonum/blas/blas32"
+//		"gonum.org/v1/gonum/blas/blas64"
 //		"github.com/scttfrdmn/keel/gonumblas"
 //	)
 //
-//	func init() { blas32.Use(gonumblas.Implementation{}) }
+//	func init() {
+//		blas32.Use(gonumblas.Implementation{})
+//		blas64.Use(gonumblas.Implementation{})
+//	}
 //
 // Implementation satisfies gonum's blas.Float32, and every one of its 35 routines
-// runs in keel. gonum's own implementation is still embedded, for the five
+// runs in keel. It satisfies blas.Float64 too, and 34 of those 35 run in keel; see
+// gonumblas64.go for the float64 half, which follows everything below at float64. gonum's own implementation is still embedded, for the five
 // translations below and for any routine a future gonum adds. Both libraries use
 // row-major storage with explicit leading dimensions, so arguments pass through
 // unchanged; that includes gonum's row-major band and packed layouts, which keel

@@ -141,23 +141,31 @@ statement. `DESIGN.md` §1–2 carries the design rationale behind it.
 
 ## Using keel from Gonum
 
-keel is a drop-in float32 BLAS for [Gonum](https://www.gonum.org/). One line at
-start-up routes every `blas32` call through it:
+keel is a drop-in BLAS for [Gonum](https://www.gonum.org/), at float32 and, since #192,
+at float64. One line at start-up routes every `blas32` (or `blas64`) call through it:
 
 ```go
 import (
 	"gonum.org/v1/gonum/blas/blas32"
+	"gonum.org/v1/gonum/blas/blas64"
 	"github.com/scttfrdmn/keel/gonumblas"
 )
 
-func init() { blas32.Use(gonumblas.Implementation{}) }
+func init() {
+	blas32.Use(gonumblas.Implementation{})
+	blas64.Use(gonumblas.Implementation{})
+}
 ```
 
-All 35 `blas.Float32` routines run in keel. Where keel and Gonum differ on an edge
+All 35 `blas.Float32` routines run in keel, and 34 of the 35 `blas.Float64` routines do. The 35th is
+`Dsdot`, which takes float32 vectors and has no keel twin, so it stays Gonum's. The float64 routines
+are tested to the same three-check standard as float32. **Their performance is not yet gated or
+published** (#193), so no float64 number appears in this README. Where keel and Gonum differ on an edge
 case of the interface's contract (a negative stride on `Sscal`, an empty `Sgemv`), the
 adapter hands that call to Gonum, so code written against Gonum keeps its behaviour.
 Where Gonum is wrong, the adapter keeps keel's answer: `Ssyrk` at `beta = 0`
-([gonum#2129](https://github.com/gonum/gonum/issues/2129)), and `Sdsdot`, which Gonum
+([gonum#2129](https://github.com/gonum/gonum/issues/2129)), `Sger` and `Dger` with a negative
+stride on amd64 ([gonum#2105](https://github.com/gonum/gonum/issues/2105)), and `Sdsdot`, which Gonum
 rounds twice and which returns 0 rather than `alpha` when `n = 0`
 ([gonum#2130](https://github.com/gonum/gonum/issues/2130)). Results agree with Gonum within keel's
 tolerance model rather than bit-for-bit, because keel's kernels sum in a different

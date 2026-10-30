@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **`gonumblas` is a drop-in float64 BLAS too** (#192): `blas64.Use(gonumblas.Implementation{})`. 34 of `blas.Float64`'s 35
+  routines run in keel; `Dsdot` (float32 inputs) has no keel twin and stays Gonum's. The five float32 translations apply at
+  float64, and `Dger` keeps keel's answer at every stride (gonum#2105). `TestRoutesToKeel64` proves 10 routines reach keel bit for
+  bit, on inputs where keel and Gonum differ; a planted gonum-routed `Dgemm` fails it. Float64 performance is not yet gated or
+  published (#193).
 - **float64 Level 3: `Dgemm Dsyrk Dsymm Dtrsm Dtrmm Dsyr2k`** (#192). They are thin wrappers over the generated `internal/block64`
   around `activeKern64`, with Dtrsm's diagonal solves through `activeL164`.
   - **Tested on §5 rule 1's three checks** for every registered float64 microkernel, pre-broadcast ones included: the
