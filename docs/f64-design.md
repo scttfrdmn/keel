@@ -29,6 +29,10 @@ promised the type axis: *"do not cut it yet, and here is the map for when `#103`
 > from `internal/l1`, with f64gen renaming the `vec` ops to their `D` twins. The root `D*` routines are
 > **hand-written**: they are thin, and `Dnrm2` and the rotations differ algorithmically. A test pins each `S*` to its
 > `D*` twin. float64 Level 1 gets an **AVX2 rung** for parity (`*256D` shim), so its ladder equals float32's.
+>
+> **Level 2, ruled 2026-10-29 (#192, Scott):** Level 2 is algorithm, not a thin wrapper, so its float32 bodies moved
+> into `internal/l2` behind an `l1.Kernels` parameter, and `internal/l264` is **generated** from it. The root `S*` and
+> `D*` keep the checks and the contracts. The move was A/B-witnessed (`archive/l2-move-ab/`).
 
 **This doc does not decide that f64 gets built.** `#103` records float64 as a v0 non-goal
 (`DESIGN.md:13`, "Gonum owns it") and the finding that its real blocker is the *oracle*, not the

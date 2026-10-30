@@ -9,6 +9,19 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **float64 Level 2: `Dgemv Dger Dtrmv Dtrsv Dsymv Dsyr Dsyr2 Dgbmv Dsbmv Dspmv Dspr Dspr2 Dtbmv Dtbsv Dtpmv Dtpsv`**
+  (#192). They run on `internal/l264`, which f64gen generates from `internal/l2`.
+  - **Tested on §5 rule 1's three checks:** the definition-order references (`Dgemv`, `Dtrsm`, `Dsyrk`/`Dsyr2k` at k=1, `Dger`)
+    under `PeerTolerance64`; double-double under `Tolerance64` (`GemvDD`, `GemmEntryDD`, and a backward-error check for the
+    solves); and Gonum native float64. Green on arm64 and on janus under avx512, avx2 and scalar.
+  - The Gonum arm compares `Dger` only at positive strides, because gonum's amd64 `f64.Ger` has the gonum/gonum#2105 defect
+    `Sger` has. Measured natively on janus: a negative incY is a silent no-op, and a negative incX reads past x.
+  - float64 Level 2 parallelizes at float32's element grain, unmeasured at float64.
+
+### Changed
+- **The float32 Level-2 bodies moved into `internal/l2`** (#192), behind an `l1.Kernels` parameter, so float64 can be generated
+  from them. A/B on orion's measured slot: 27 of 28 `BenchmarkL2Par` rows within 0.986–1.020. The 28th is bimodal in both arms
+  (`archive/l2-move-ab/`).
 - **float64 Level 1: `Ddot Daxpy Dscal Dasum Dnrm2 Idamax Dcopy Dswap Drot Drotg Drotm Drotmg`** (#192). They dispatch through
   `internal/l164` with float32's ladder (avx512, avx2, scalar; neon, scalar), and `ActiveL164Backend` reports which.
   - **`Dnrm2`** keeps `Snrm2`'s inspect-the-result design: it accepts the unguarded sum of squares when `s >= n·2^-1022` and

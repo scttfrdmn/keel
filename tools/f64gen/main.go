@@ -3,7 +3,8 @@
 
 // Command f64gen writes the float64 copy of keel's middle layer: internal/pack64
 // from internal/pack and internal/block64 from internal/block (#190), and of its
-// Level-1 kernels, internal/l164 from internal/l1 (#192).
+// Level-1 kernels and Level-2 bodies, internal/l164 from internal/l1 and
+// internal/l264 from internal/l2 (#192).
 //
 // # Why a generator, and why this one
 //
@@ -82,12 +83,14 @@ var pkgs = []struct{ src, dst, name string }{
 	{"internal/pack", "internal/pack64", "pack64"},
 	{"internal/block", "internal/block64", "block64"},
 	{"internal/l1", "internal/l164", "l164"},
+	{"internal/l2", "internal/l264", "l264"},
 }
 
 // importRenames maps a float32 package to its generated float64 copy. The import
 // keeps its original name, so `pack.APanels` in block stays `pack.APanels`.
 var importRenames = map[string]string{
 	module + "/internal/pack": module + "/internal/pack64",
+	module + "/internal/l1":   module + "/internal/l164",
 }
 
 // kernRenames are the kern identifiers that have a float64 twin (internal/kern/
