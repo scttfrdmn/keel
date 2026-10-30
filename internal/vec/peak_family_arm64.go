@@ -295,3 +295,5 @@ func neonPeakTileD(kc int, a, b, c []float64, ldc int) {
 }
 
 func peakFamily() []PeakKernel { return PeakFamilyNEON() }
+
+func peakFamily64() []PeakKernel64 { return PeakFamilyNEON64() }

@@ -14,3 +14,5 @@ func vectorPeakKernels() []PeakKernel { return nil }
 func vectorPeakKernels64() []PeakKernel64 { return nil }
 
 func peakFamily() []PeakKernel { return nil }
+
+func peakFamily64() []PeakKernel64 { return nil }

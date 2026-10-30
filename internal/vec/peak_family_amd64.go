@@ -295,3 +295,5 @@ func avx512PeakTileD(kc int, a, b, c []float64, ldc int) {
 }
 
 func peakFamily() []PeakKernel { return PeakFamilyAVX512() }
+
+func peakFamily64() []PeakKernel64 { return PeakFamilyAVX51264() }

@@ -287,3 +287,7 @@ func peakFill64(n int) []float64 {
 // being measured, that the canonical ceiling is the family's maximum (BenchmarkCeiling's
 // family arm, #200).
 func PeakFamily() []PeakKernel { return peakFamily() }
+
+// PeakFamily64 is PeakFamily for the float64 ceilings (#193): this build's float64 FMA
+// family, canonical member first, or nothing where none exists.
+func PeakFamily64() []PeakKernel64 { return peakFamily64() }

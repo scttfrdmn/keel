@@ -356,3 +356,55 @@ func TestDtrsmDtrsvDivide(t *testing.T) {
 		})
 	})
 }
+
+// TestP5Determinism64 is TestP5Determinism at float64 for the six Level-3 routines:
+// the parallel nest returns the serial nest's bits at every thread count, and the
+// call really used that many workers. The worker assertion is what would have caught
+// #193's first defect: block64 kept its own counter, so WorkersLastCall read 0 after
+// every float64 call. The shapes are TestP5Determinism's (p5M, p5N, p5K), so each
+// thread count partitions fully.
+func TestP5Determinism64(t *testing.T) {
+	r := rand.New(rand.NewSource(109))
+	// p5N and p5K, float32's: n = 64 left Dtrmm's column split at 4 workers under the
+	// stock build's narrower scalar kernel, a shape too narrow to partition 8 ways.
+	const m, n, k = p5M, p5N, p5K
+	a := randVals64(r, max(m, k)*max(m, k))
+	b := randVals64(r, max(m, k)*max(n, k))
+	c0 := randVals64(r, m*m)
+	tri := append([]float64(nil), a[:m*m]...)
+	for i := 0; i < m; i++ {
+		tri[i*m+i] = 4
+	}
+	runs := []struct {
+		name string
+		run  func(out []float64)
+	}{
+		{"Dgemm", func(out []float64) { Dgemm(NoTrans, NoTrans, m, n, k, 1.5, a, k, b, n, 0.5, out, n) }},
+		{"Dsyrk", func(out []float64) { Dsyrk(Lower, NoTrans, m, k, 1.5, a, k, 0.5, out, m) }},
+		{"Dsyr2k", func(out []float64) { Dsyr2k(Upper, NoTrans, m, k, 1.5, a, k, b, k, 0.5, out, m) }},
+		{"Dsymm", func(out []float64) { Dsymm(Left, Lower, m, n, 1.5, tri, m, b, n, 0.5, out, n) }},
+		{"Dtrmm", func(out []float64) { Dtrmm(Left, Upper, NoTrans, NonUnit, m, n, 1.5, tri, m, out, n) }},
+		{"Dtrsm", func(out []float64) { Dtrsm(Left, Lower, NoTrans, NonUnit, m, n, 1.5, tri, m, out, n) }},
+	}
+	for _, rr := range runs {
+		serial := append([]float64(nil), c0...)
+		withProcs(1, func() { rr.run(serial) })
+		for _, procs := range p5Threads {
+			got := append([]float64(nil), c0...)
+			var workers int
+			withProcs(procs, func() {
+				rr.run(got)
+				workers = WorkersLastCall()
+			})
+			if workers != procs {
+				t.Errorf("%s at %d threads: WorkersLastCall = %d, want %d", rr.name, procs, workers, procs)
+			}
+			for i := range got {
+				if math.Float64bits(got[i]) != math.Float64bits(serial[i]) {
+					t.Errorf("%s at %d threads: element %d differs from the serial nest (%v vs %v)", rr.name, procs, i, got[i], serial[i])
+					break
+				}
+			}
+		}
+	}
+}

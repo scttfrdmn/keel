@@ -108,7 +108,6 @@ package block64
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/scttfrdmn/keel/internal/kern"
 	pack "github.com/scttfrdmn/keel/internal/pack64"
@@ -247,7 +246,8 @@ func apxGet(n int) *apBuf {
 
 // workersLast records how many workers the most recently completed Level-3 call
 // distributed work to. See WorkersLastCall for what it is for and what it is not.
-var workersLast atomic.Int64
+// It points at par's one counter so the generated float64 nest shares it (#193).
+var workersLast = &par.WorkersLast
 
 // beginCall resets the worker accounting for one public Level-3 call.
 func beginCall() { workersLast.Store(0) }

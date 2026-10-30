@@ -9,6 +9,15 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The float64 measurement instruments for #193**: `BenchmarkWideRoof64` (float64 FMA ceilings and family at 1 and 8 threads,
+  BenchmarkCeiling's method) and `BenchmarkLevel3F64` (Dgemm, Dsyrk, Dsymm and Dtrsm at n=4096, 1 and 8 threads, BenchmarkScale's
+  accounting). They are named so that no float32 gate's `-bench` filter selects them. `vec.PeakFamily64` is exported for them.
+
+### Fixed
+- **`WorkersLastCall` was blind to float64** (#193). The generated `block64` kept its own worker counter, so every float64 call left
+  `keel.WorkersLastCall()` at 0, and every float64 benchmark row declared `workers=0`. That is the defect gate-p5's placement criterion
+  exists to catch. Both nests now share one counter in `internal/par`. `TestP5Determinism64` pins it (a planted per-package counter
+  fails it in 18 of 18 cases) along with float64's serial-equals-parallel bits at 1, 3 and 8 threads.
 - **`gonumblas` is a drop-in float64 BLAS too** (#192): `blas64.Use(gonumblas.Implementation{})`. 34 of `blas.Float64`'s 35
   routines run in keel; `Dsdot` (float32 inputs) has no keel twin and stays Gonum's. The five float32 translations apply at
   float64, and `Dger` keeps keel's answer at every stride (gonum#2105). `TestRoutesToKeel64` proves 10 routines reach keel bit for

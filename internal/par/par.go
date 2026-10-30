@@ -58,6 +58,16 @@ import (
 	"sync/atomic"
 )
 
+// WorkersLast is the process's one record of how many workers the most recently
+// completed Level-3 (or parallel Level-2) call used, for keel.WorkersLastCall.
+// It lives here, in the type-free package, because the nest exists twice:
+// internal/block and the internal/block64 that tools/f64gen generates from it each
+// point their accounting at this one counter, so a float64 call is visible to the
+// benchmark harness exactly as a float32 one is (#193: with a counter per package,
+// every float64 row declared workers=0). Instrumentation, not state: see
+// block.WorkersLastCall.
+var WorkersLast atomic.Int64
+
 // Workers reports how many goroutines Run will use for n independent units of
 // work: GOMAXPROCS(0), capped by the work there is to do.
 //
