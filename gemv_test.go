@@ -70,7 +70,7 @@ func TestSgemvSweep(t *testing.T) {
 	c.dim("incy", intSet(p4Incs)...)
 	// Recorded before forEachBackend swaps the dispatch state, so the marker
 	// describes what a caller gets rather than whichever backend the loop ended on.
-	c.l2config("keel.Sgemv->internal/l1.Dot(row) | l1.Axpy(row) when transposed")
+	c.l2config("keel.Sgemv->internal/l2.Gemv->l1.Dot(row) | l1.Axpy(row) when transposed")
 
 	forEachBackend(t, func(t *testing.T) {
 		c.backend(ActiveL1Backend())
@@ -268,7 +268,7 @@ func TestSgerSweep(t *testing.T) {
 	c.dim("alpha", f32set(p4Alphas)...)
 	c.dim("incx", intSet(p4Incs)...)
 	c.dim("incy", intSet(p4Incs)...)
-	c.l2config("keel.Sger->internal/l1.Axpy(row)")
+	c.l2config("keel.Sger->internal/l2.Ger->l1.Axpy(row)")
 
 	forEachBackend(t, func(t *testing.T) {
 		c.backend(ActiveL1Backend())

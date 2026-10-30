@@ -124,6 +124,15 @@ func provenance() {
 			"insns-per-fma="+strconv.FormatFloat(keel.ActiveKernInsnsPerFMA(), 'f', 3, 64),
 			"("+keel.ActiveKernClassEvidence()+")")
 		fmt.Println("keel-bench-kern-audit:", strings.Join(keel.KernelAudits(), " "))
+		// The float64 microkernel (#193), on the same class: lines of their own, so
+		// every float32 line above stays byte-identical and the float32 gates, which
+		// read keel-bench-kern: and its siblings by exact key, never see these.
+		fmt.Println("keel-bench-kern64:", keel.ActiveKern64Tile()+"/"+keel.ActiveKern64Backend(),
+			"(available: "+strings.Join(keel.AvailableKernels64(), " ")+")")
+		fmt.Println("keel-bench-kern64-class:", keel.ActiveKernClass(),
+			"insns-per-fma="+strconv.FormatFloat(keel.ActiveKern64InsnsPerFMA(), 'f', 3, 64),
+			"("+keel.ActiveKernClassEvidence()+")")
+		fmt.Println("keel-bench-kern64-audit:", strings.Join(keel.KernelAudits64(), " "))
 		fmt.Println("keel-bench-openblas:", openblasProvenance)
 	})
 }

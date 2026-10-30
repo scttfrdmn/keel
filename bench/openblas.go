@@ -30,7 +30,7 @@
 // cblas.h in the default include path, RHEL's openblas-devel puts it under
 // /usr/include/openblas, and Homebrew puts it in its own prefix. Two of those
 // three need a -I that is wrong on the other two. The ABI, by contrast, is stable
-// and tiny — three functions, all with C-integer arguments in an LP64 build, which
+// and tiny — a handful of functions, all with C-integer arguments in an LP64 build, which
 // is what every distribution package is. Declaring them here makes the harness
 // build wherever the *library* is, which is the thing that actually has to be
 // true.
@@ -54,6 +54,9 @@ enum { keelCblasRowMajor = 101, keelCblasNoTrans = 111 };
 void cblas_sgemm(int order, int transa, int transb, int m, int n, int k,
                  float alpha, const float *a, int lda, const float *b, int ldb,
                  float beta, float *c, int ldc);
+void cblas_dgemm(int order, int transa, int transb, int m, int n, int k,
+                 double alpha, const double *a, int lda, const double *b, int ldb,
+                 double beta, double *c, int ldc);
 int openblas_get_num_threads(void);
 int openblas_get_num_procs(void);
 char *openblas_get_config(void);
@@ -103,4 +106,16 @@ func openblasSgemm(m, n, k int, alpha float32, a []float32, lda int,
 		C.float(alpha), (*C.float)(unsafe.Pointer(&a[0])), C.int(lda),
 		(*C.float)(unsafe.Pointer(&b[0])), C.int(ldb),
 		C.float(beta), (*C.float)(unsafe.Pointer(&c[0])), C.int(ldc))
+}
+
+// openblasDgemm is openblasSgemm at float64, for #193's float64 reference: the same
+// untransposed row-major square product, through cblas_dgemm.
+func openblasDgemm(m, n, k int, alpha float64, a []float64, lda int,
+	b []float64, ldb int, beta float64, c []float64, ldc int) {
+
+	C.cblas_dgemm(C.keelCblasRowMajor, C.keelCblasNoTrans, C.keelCblasNoTrans,
+		C.int(m), C.int(n), C.int(k),
+		C.double(alpha), (*C.double)(unsafe.Pointer(&a[0])), C.int(lda),
+		(*C.double)(unsafe.Pointer(&b[0])), C.int(ldb),
+		C.double(beta), (*C.double)(unsafe.Pointer(&c[0])), C.int(ldc))
 }

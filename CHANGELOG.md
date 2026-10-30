@@ -9,6 +9,16 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The rest of the float64 gate instruments** (#193, Stage A):
+  - **References:** an OpenBLAS DGEMM reference (`cblas_dgemm`, `BenchmarkOpenBLAS64`), `BenchmarkDgemm`/`BenchmarkDsyrk` at n up to 2048,
+    and `BenchmarkLevel1F64`.
+  - **Provenance:** `keel-bench-kern64` lines (the float32 lines are unchanged).
+  - **Coverage markers:** the float64 sweep (`dgemm_test.go`, `keel-dgemm-*`), the float64 P4 sweeps (`gemv64_test.go`, `tri64_test.go`, `keel-p4-*`
+    for the D routines) and the float64 P5 tests (`p5_64_test.go`). The P5 tests reuse float32's per-routine keys, and add `keel-p5-dispatch64`.
+  - The three ports came from their float32 files by a one-off rename, and they share the float32 sweep extent so neither can cover less.
+  - New reporters: `KernChain64`, `L164Chain`, `AvailableKernels64`, `KernelAudits64`, `ActiveKern64InsnsPerFMA`.
+  - **Positive controls:** a Dgemm that ignores alpha fails the float64 sweep.
+- The P4 config markers for `Sgemv`/`Sger` named `internal/l1` as the path. Since `eefa858` it is `internal/l2`, and they now say so.
 - **The float64 measurement instruments for #193**: `BenchmarkWideRoof64` (float64 FMA ceilings and family at 1 and 8 threads,
   BenchmarkCeiling's method) and `BenchmarkLevel3F64` (Dgemm, Dsyrk, Dsymm and Dtrsm at n=4096, 1 and 8 threads, BenchmarkScale's
   accounting). They are named so that no float32 gate's `-bench` filter selects them. `vec.PeakFamily64` is exported for them.

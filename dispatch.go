@@ -70,6 +70,28 @@ func KernChain() []string {
 	return append(chain, kern.Scalar)
 }
 
+// KernChain64 is KernChain for the float64 microkernels (#193): derived from
+// kern.Kernels64() in the same way, so it cannot advertise a rung with no kernel.
+func KernChain64() []string {
+	seen := map[string]bool{}
+	chain := []string{}
+	for _, k := range kern.Kernels64() {
+		if k.Name != kern.Scalar && !seen[k.Name] {
+			seen[k.Name] = true
+			chain = append(chain, k.Name)
+		}
+	}
+	return append(chain, kern.Scalar)
+}
+
+// L164Chain is L1Chain for float64 Level 1: the same ladder, by the 2026-10-29
+// parity ruling (docs/f64-design.md: float64 Level 1 has the AVX2 rung). It is a
+// declaration, and TestP5DispatchD holds it to what internal/l164 can actually run.
+func L164Chain() []string { return L1Chain() }
+
+// AvailableL164Backends is AvailableL1Backends for float64 Level 1.
+func AvailableL164Backends() []string { return l164.Names() }
+
 // activeL1 is the Level-1 kernel set every public L1 routine calls through.
 // One indirect call per routine invocation, outside every loop.
 var activeL1 = selectL1()
@@ -337,6 +359,34 @@ func AvailableKernels() []string {
 func KernelAudits() []string {
 	var out []string
 	for _, k := range kern.Kernels() {
+		if k.InsnsPerFMA > 0 {
+			out = append(out, k.ID()+"="+strconv.FormatFloat(k.InsnsPerFMA, 'f', 3, 64))
+		}
+	}
+	return out
+}
+
+// The float64 twins of the reporters above (#193), for the float64 gates: the
+// float64 microkernel's audited insns/FMA, every float64 kernel's ID, and every
+// audited float64 shape. Instrumentation, not API.
+
+// ActiveKern64InsnsPerFMA is ActiveKernInsnsPerFMA for the float64 microkernel.
+func ActiveKern64InsnsPerFMA() float64 { return activeKern64.InsnsPerFMA }
+
+// AvailableKernels64 is AvailableKernels for the float64 microkernels.
+func AvailableKernels64() []string {
+	ks := kern.Kernels64()
+	out := make([]string, len(ks))
+	for i, k := range ks {
+		out[i] = k.ID()
+	}
+	return out
+}
+
+// KernelAudits64 is KernelAudits for the float64 microkernels.
+func KernelAudits64() []string {
+	var out []string
+	for _, k := range kern.Kernels64() {
 		if k.InsnsPerFMA > 0 {
 			out = append(out, k.ID()+"="+strconv.FormatFloat(k.InsnsPerFMA, 'f', 3, 64))
 		}

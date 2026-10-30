@@ -170,3 +170,83 @@ func BenchmarkLevel3F64(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkDgemm and BenchmarkDsyrk are BenchmarkSgemm and BenchmarkSsyrk at float64,
+// for gate-p3/p4's KEEL_ELEM=f64 arms: the same sizes, operation and data shape, so
+// the float64 percent-of-peak and Dsyrk/Dgemm criteria divide like their float32
+// twins. Rows "Dgemm/n=N" and "Dsyrk/n=N" match no float32 filter ('Sgemm', 'Ssyrk').
+func BenchmarkDgemm(b *testing.B) {
+	provenance()
+	for _, n := range gemmSizes {
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			a, bm, c := makeMat64(n, n), makeMat64(n, n), makeMat64(n, n)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				keel.Dgemm(keel.NoTrans, keel.NoTrans, n, n, n, 1, a, n, bm, n, 0, c, n)
+			}
+			rateWork(b, gemmWork(n))
+		})
+	}
+}
+
+func BenchmarkDsyrk(b *testing.B) {
+	provenance()
+	for _, n := range gemmSizes {
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			a, c := makeMat64(n, n), makeMat64(n, n)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				keel.Dsyrk(keel.Lower, keel.NoTrans, n, n, 1, a, n, 0, c, n)
+			}
+			rateWork(b, syrkWork(n))
+		})
+	}
+}
+
+var sink64 float64
+
+func makeVec64(n int) []float64 {
+	v := make([]float64, n)
+	for i := range v {
+		v[i] = float64(i%17) - 8
+	}
+	return v
+}
+
+// BenchmarkLevel1F64 is the BenchmarkL1S* set at float64: the same sizes, flops per
+// element and access pattern, with bytes counted at 8 per element. Rows are
+// "Level1F64/<Ddot|Daxpy|Dscal|Dasum|Dnrm2|Idamax>/n=N"; "Level1F64" does not contain
+// "L1", so no float32 gate selects them.
+func BenchmarkLevel1F64(b *testing.B) {
+	provenance()
+	type op struct {
+		name         string
+		bytesPerElem int
+		flopsPerElem float64 // 0: no flop rate (Idamax compares, it does no arithmetic)
+		run          func(n int, x, y []float64)
+	}
+	ops := []op{
+		{"Ddot", 16, 2, func(n int, x, y []float64) { sink64 = keel.Ddot(n, x, 1, y, 1) }},
+		{"Daxpy", 24, 2, func(n int, x, y []float64) { keel.Daxpy(n, 1.0000001, x, 1, y, 1) }},
+		{"Dscal", 16, 1, func(n int, x, _ []float64) { keel.Dscal(n, 1.0000001, x, 1) }},
+		{"Dasum", 8, 1, func(n int, x, _ []float64) { sink64 = keel.Dasum(n, x, 1) }},
+		{"Dnrm2", 8, 2, func(n int, x, _ []float64) { sink64 = keel.Dnrm2(n, x, 1) }},
+		{"Idamax", 8, 0, func(n int, x, _ []float64) { sinkI = keel.Idamax(n, x, 1) }},
+	}
+	for _, o := range ops {
+		b.Run(o.name, func(b *testing.B) {
+			for _, n := range sizes {
+				x, y := makeVec64(n), makeVec64(n)
+				b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+					b.SetBytes(int64(o.bytesPerElem * n))
+					for i := 0; i < b.N; i++ {
+						o.run(n, x, y)
+					}
+					if o.flopsPerElem > 0 {
+						rate(b, n, o.flopsPerElem)
+					}
+				})
+			}
+		})
+	}
+}

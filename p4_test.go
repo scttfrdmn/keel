@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/scttfrdmn/keel/internal/block"
+	"github.com/scttfrdmn/keel/internal/block64"
 )
 
 // Coverage recording for P4's five routines, and the markers scripts/gate-p4.sh
@@ -323,4 +324,34 @@ func diagFlag(unit bool) Diag {
 		return Unit
 	}
 	return NonUnit
+}
+
+// l3config64 and l2config64 are l3config and l2config for the float64 routines
+// (#193): the float64 microkernel and blocking, and the float64 Level-1 backend.
+func (c *p4cov) l3config64(path string) {
+	kc, mc, nc := block64.Params(activeKern64)
+	c.config = fmt.Sprintf("kern=%s kc=%d mc=%d nc=%d path=%s",
+		ActiveKern64Tile()+"/"+ActiveKern64Backend(), kc, mc, nc, path)
+}
+
+func (c *p4cov) l2config64(path string) {
+	c.config = fmt.Sprintf("l1=%s path=%s", ActiveL164Backend(), path)
+}
+
+// The float64 twins of p4Alphas, p4Betas, f32str and f32set, for the float64 P4
+// sweeps (gemv64_test.go, tri64_test.go). The lattice values are float32's, so the
+// two P4 markers declare the same alpha and beta sets.
+var (
+	p4Alphas64 = []float64{0, 1, -0.75}
+	p4Betas64  = []float64{0, 1, 0.5}
+)
+
+func f64str(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
+
+func f64set(vs []float64) []string {
+	out := make([]string, len(vs))
+	for i, v := range vs {
+		out[i] = f64str(v)
+	}
+	return out
 }

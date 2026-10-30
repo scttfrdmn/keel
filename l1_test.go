@@ -161,8 +161,9 @@ func TestMain(m *testing.M) {
 	fmt.Println("keel-l1-available:", strings.Join(AvailableL1Backends(), " "))
 	fmt.Println("keel-l1-active:", ActiveL1Backend())
 	fmt.Println("keel-l1-backends-exercised:", strings.Join(ran, " "))
-	printGemmMarkers() // P3's coverage markers; see gemm_test.go
-	printP4Markers()   // P4's, for the five Level-2/3 routines; see p4_test.go
+	printGemmMarkers()  // P3's coverage markers; see gemm_test.go
+	printDgemmMarkers() // their float64 twins (keel-dgemm-*), dgemm_test.go, #193
+	printP4Markers()    // P4's, for the five Level-2/3 routines; see p4_test.go
 	os.Exit(code)
 }
 

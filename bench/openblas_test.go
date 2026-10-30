@@ -50,3 +50,21 @@ func BenchmarkOpenBLAS(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkOpenBLAS64 is BenchmarkOpenBLAS at float64 (#193): BenchmarkDgemm's
+// operation through cblas_dgemm, argument for argument, so gate-p3's KEEL_ELEM=f64
+// arm divides one median by the other exactly as the float32 criterion does. Rows
+// "OpenBLAS64/n=N" match no float32 filter, which needs "OpenBLAS/".
+func BenchmarkOpenBLAS64(b *testing.B) {
+	provenance()
+	for _, n := range gemmSizes {
+		b.Run(fmt.Sprint("n=", n), func(b *testing.B) {
+			a, bm, c := makeMat64(n, n), makeMat64(n, n), makeMat64(n, n)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				openblasDgemm(n, n, n, 1, a, n, bm, n, 0, c, n)
+			}
+			rateWork(b, gemmWork(n))
+		})
+	}
+}
