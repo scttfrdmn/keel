@@ -87,13 +87,31 @@ anchor_mix() {
   printf 'anchor|%s:%s:%s:%s' "$f" "$ii" "$flo" "$fhi"
 }
 
+# kern_key — the provenance marker naming the dispatched microkernel at this element:
+# bench-kern at float32, bench-kern64 at KEEL_ELEM=f64 (#193). Its -class and -audit
+# siblings are this plus the suffix.
+kern_key() {
+  if [[ "${KEEL_ELEM:-f32}" == f64 ]]; then printf 'bench-kern64'; else printf 'bench-kern'; fi
+}
+
+# reg_file NAME — the registry file a gate at this element reads: NAME.tsv at
+# float32, NAME-f64.tsv at KEEL_ELEM=f64. float64's registry state lives in files of
+# its own, so no float32 era, baseline or witness can be read or spent by a float64
+# run (Scott, 2026-10-29, #193).
+reg_file() {
+  if [[ "${KEEL_ELEM:-f32}" == f64 ]]; then printf '%s-f64.tsv' "$1"; else printf '%s.tsv' "$1"; fi
+}
+
 # audit_ipf_tile TILE FILE — audit_ipf for a tile named by its MRxNR, empty TILE
 # meaning "no tile declared", which is not an error.
+# At KEEL_ELEM=f64 the functions are the float64 kernels, KernelD<tile> (#193).
 audit_ipf_tile() {
   [[ -n "$1" ]] || return 0
+  local d=""
+  [[ "${KEEL_ELEM:-f32}" == f64 ]] && d=D
   case "$1" in
-    *-pb) audit_ipf "KernelPB${1%-pb}" "$2" ;; # a pre-broadcast tile's function (#198)
-    *) audit_ipf "Kernel$1" "$2" ;;
+    *-pb) audit_ipf "Kernel${d}PB${1%-pb}" "$2" ;; # a pre-broadcast tile's function (#198)
+    *) audit_ipf "Kernel$d$1" "$2" ;;
   esac
 }
 
@@ -281,7 +299,7 @@ gate_tmpdir() {
 # printing the second when every host did print it is #32/#33's misattribution.
 assert_kern_audit_drift() {
   local log="$1" auditfile="$2" host="$3" extra="$4" kaudit bad="" pair rtile rval raud
-  kaudit="$(marker bench-kern-audit "$log")"
+  kaudit="$(marker "$(kern_key)-audit" "$log")"
   [[ -z "$DRIFT_CHECKED" && -n "$kaudit" ]] || return 0
   DRIFT_CHECKED="$host"
   for pair in $kaudit; do
@@ -344,9 +362,9 @@ flops_expect() {
   local m n k
   m="$(field m "$2")"; n="$(field n "$2")"; k="$(field k "$2")"
   case "$1" in
-    Sgemm|Ssymm) awk -v m="$m" -v n="$n" -v k="$k" 'BEGIN { if (m == "" || n == "" || k == "") exit; printf "%.0f", 2 * m * n * k }' ;;
-    Ssyrk)       awk -v n="$n" -v k="$k" 'BEGIN { if (n == "" || k == "") exit; printf "%.0f", k * n * (n + 1) }' ;;
-    Strsm)       awk -v m="$m" -v n="$n" 'BEGIN { if (m == "" || n == "") exit; printf "%.0f", n * m * (m + 1) }' ;;
+    [SD]gemm|[SD]symm) awk -v m="$m" -v n="$n" -v k="$k" 'BEGIN { if (m == "" || n == "" || k == "") exit; printf "%.0f", 2 * m * n * k }' ;;
+    [SD]syrk)       awk -v n="$n" -v k="$k" 'BEGIN { if (n == "" || k == "") exit; printf "%.0f", k * n * (n + 1) }' ;;
+    [SD]trsm)       awk -v m="$m" -v n="$n" 'BEGIN { if (m == "" || n == "") exit; printf "%.0f", n * m * (m + 1) }' ;;
   esac
 }
 
@@ -356,9 +374,9 @@ flops_expect() {
 # still has to say what it now believes.
 flops_formula() {
   case "$1" in
-    Sgemm|Ssymm) printf '2*m*n*k' ;;
-    Ssyrk)       printf 'k*n*(n+1)' ;;
-    Strsm)       printf 'n*m*(m+1)' ;;
+    [SD]gemm|[SD]symm) printf '2*m*n*k' ;; # the D routines do the same arithmetic (#193)
+    [SD]syrk)       printf 'k*n*(n+1)' ;;
+    [SD]trsm)       printf 'n*m*(m+1)' ;;
   esac
 }
 
@@ -700,6 +718,7 @@ carry_p2_properties() {
   # Every package a derived routine can live in, so a bounds check introduced by an index
   # expression shows up as provenance even where it is outside the K-loop the criterion covers.
   BCE_PKGS="$KERN_PKG ./internal/kern ./internal/pack ./internal/block"
+  [[ "${KEEL_ELEM:-f32}" == f64 ]] && BCE_PKGS="$KERN_PKG ./internal/kern ./internal/pack64 ./internal/block64"
   # shellcheck disable=SC2086 # BCE_PKGS is a deliberate list of package patterns, not one word
   if GOEXPERIMENT=simd GOOS=linux GOARCH="${KEEL_GOARCH:-amd64}" \
        go build -gcflags='-d=ssa/check_bce' $BCE_PKGS 2>"$LOG"; then

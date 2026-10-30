@@ -183,14 +183,14 @@ fi
 # baseline to the instrument that produced it, so a changed instrument renders BASELINE
 # fleet-wide once instead of booking the methodology delta against each host as drift
 # (ruled 2026-08-21, #6).
-BASELINE_REGISTRY="$BASELINE_DIR/host-baselines.tsv"
-BASELINE_WITNESS="$BASELINE_DIR/judged-runs.tsv"
-BASELINE_ERAS="$BASELINE_DIR/measurement-eras.tsv"
+BASELINE_REGISTRY="$BASELINE_DIR/$(reg_file host-baselines)"
+BASELINE_WITNESS="$BASELINE_DIR/$(reg_file judged-runs)"
+BASELINE_ERAS="$BASELINE_DIR/$(reg_file measurement-eras)"
 # The README's sample provenance (#165). NOT under $BASELINE_DIR: the instrument-exercise seam
 # substitutes the three baseline artifacts to drive the BASELINE-REGISTERED class, and this file
 # feeds criterion 9's reference interval instead -- a different criterion, not part of that
 # exercise, so putting it behind the same knob would widen the seam for no gain.
-README_ARCHIVES=scripts/readme-archives.tsv
+README_ARCHIVES="scripts/$(reg_file readme-archives)"
 P5_REV="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 # RUN-STAMPED, not merely rev-stamped, because baseline_candidate APPENDS. Two runs at one
 # rev piled into one file with nothing in it to tell a clean run's rows from a contaminated
@@ -253,6 +253,22 @@ P5_L1="Sdot Saxpy Sscal Sasum Snrm2 Isamax"
 # Must match bench/bench_test.go's `sizes`. Stated rather than derived, and a mismatch announces
 # itself: a size this gate asks for that the binary does not emit is printed as absent.
 P5_L1_SIZES="256 4096 65536 1048576"
+# KEEL_ELEM=f64 (#193, Scott's rulings 2026-10-29): the same gate over the D routines. The rows are
+# float64's instruments (Level3F64, FMARoof64, WideRoof64, Level1F64), the markers float64's
+# (keel-dgemm-active, keel-l164-active, keel-bench-kern64, keel-p5-dispatch64; determinism and
+# no-state keep their keys, read per routine=), and the registries the -f64.tsv files (reg_file),
+# whose era f64init carries no CEIL_FRACTION, so every float64 share is founded, not judged, until
+# typed. Exported, so the gate-p4 and gate-p3 this runs judge the same element.
+KEEL_ELEM="${KEEL_ELEM:-f32}"
+export KEEL_ELEM
+P5_SCALE_PFX="Scale" P5_PEAK_PFX="Peak" P5_COMPUTE_PFX="Ceiling/compute" P5_L1_PFX="L1"
+P5_SWEEP_KEY=sgemm P5_L1_KEY=l1-active P5_DISPATCH_KEY=p5-dispatch
+if [[ "$KEEL_ELEM" == f64 ]]; then
+  P5_JUDGED="Dgemm Dsyrk Dsymm Dtrsm"
+  P5_L1="Ddot Daxpy Dscal Dasum Dnrm2 Idamax"
+  P5_SCALE_PFX="Level3F64" P5_PEAK_PFX="FMARoof64" P5_COMPUTE_PFX="WideRoof64" P5_L1_PFX="Level1F64/"
+  P5_SWEEP_KEY=dgemm P5_L1_KEY=l164-active P5_DISPATCH_KEY=p5-dispatch64
+fi
 # This criterion's birthday, passed to baseline_state so a host registered BEFORE the criterion
 # existed renders first-sight instead of owing a row it could not have registered (#169). A date
 # and not a boolean: it must stay true for hosts that register later, and those DO owe a row.
@@ -324,7 +340,7 @@ witness_once() {
 }
 
 # Benchmark row names. The thread count is IN THE NAME (criterion 2).
-scale_name() { printf 'Scale/%s/n=%d/threads=%d' "$1" "$P5_SIZE" "$2"; }
+scale_name() { printf '%s/%s/n=%d/threads=%d' "$P5_SCALE_PFX" "$1" "$P5_SIZE" "$2"; }
 # GATE_PEAK is refined per host from the sweep's active-kernel marker (#155 unit 2) in the throughput
 # loop (:929). But the PREAMBLE peak-substitute clock (clock_head, governor-LESS hosts) reads it BEFORE
 # that loop runs — the old comment here claimed "no host uses it before the loop", which was false for
@@ -334,14 +350,14 @@ scale_name() { printf 'Scale/%s/n=%d/threads=%d' "$1" "$P5_SIZE" "$2"; }
 # amd64 fleet by the #160 reader audit: the only GATE_PEAK reads before :929 are clock_head (which
 # early-returns on `performance`, never touching it) and compute_name (not executed until the loop).
 case "${KEEL_GOARCH:-amd64}" in
-  amd64) GATE_PEAK="Peak/avx512" ;;
-  arm64) GATE_PEAK="Peak/neon" ;;
+  amd64) GATE_PEAK="$P5_PEAK_PFX/avx512" ;;
+  arm64) GATE_PEAK="$P5_PEAK_PFX/neon" ;;
   *)     GATE_PEAK="" ;;
 esac
 # The ceiling's own rows (ruling on #6). compute_name's width tracks GATE_PEAK's so the
 # two peaks can never be read from different kernels; stream_name's patterns are the
 # read-only and read-modify-write halves of the bandwidth bracket.
-compute_name() { printf 'Ceiling/compute/%s/threads=%d' "${GATE_PEAK#Peak/}" "$1"; }
+compute_name() { printf '%s/%s/threads=%d' "$P5_COMPUTE_PFX" "${GATE_PEAK#"$P5_PEAK_PFX"/}" "$1"; }
 stream_name()  { printf 'Ceiling/stream/%s/threads=%d' "$1" "$2"; }
 # A PUBLISHED ROW NAMES ITS OWN BENCHMARK, and criterion 9 resolves that name here (#113).
 # It called scale_name directly, so a ceiling row resolved to `Scale/Ceiling/compute/n=...`,
@@ -366,6 +382,7 @@ row_name() {
 # every BenchmarkL1*/n=* beneath it -- which is what the rows below read. The split-on-'|'-first
 # rule above is why this is one alternative and not `L1/n=...`.
 P5_BENCH_FILTER='Scale|Peak|Ceiling|L1'
+[[ "$KEEL_ELEM" == f64 ]] && P5_BENCH_FILTER='Level3F64|FMARoof64|WideRoof64|Level1F64'
 
 # The thread counts the determinism test must cover; 3 is there because a
 # row-partition off-by-one hides at every power of two (criterion 5).
@@ -674,7 +691,7 @@ else
       fail "[$host] the full test suite passes with the vector backend live"
       sed 's/^/        /' "$LOG" | tail -60
     fi
-    active="$(marker sgemm-active "$LOG")"
+    active="$(marker "$P5_SWEEP_KEY-active" "$LOG")"
     # A VECTOR backend ran green = the dispatched microkernel is not scalar (#155 unit 2). On
     # amd64 that is */avx512 exactly as before; on arm64 it is */neon. The backend word is kept
     # for the audit line so it names what actually ran.
@@ -689,8 +706,8 @@ else
       FOK=0
       KEEL_REMOTE_ENV="KEEL_FORCE=$want" remote_exec "$host" "$BIN" \
         -test.v -test.run 'TestKeelForce|TestBackend|TestDispatch' >"$LOG" 2>&1 || FOK=$?
-      got="$(marker l1-active "$LOG")"
-      gotk="$(marker sgemm-active "$LOG")"
+      got="$(marker "$P5_L1_KEY" "$LOG")"
+      gotk="$(marker "$P5_SWEEP_KEY-active" "$LOG")"
       # Failure states told apart because they have different causes, and a red
       # that names the wrong one is as untrustworthy as a green that does (issue
       # #32's lesson, applied to a correctness check).
@@ -790,9 +807,9 @@ else
   # Both chains are checked, because the #40 ruling is precisely that there are
   # two of them. A single `chain=` field would make the Level-3 narrowing
   # unstateable, and an unstateable ruling is one the next session re-litigates.
-  dc="$(marker p5-dispatch "$SWEEPLOG")"
+  dc="$(marker "$P5_DISPATCH_KEY" "$SWEEPLOG")"
   if [[ -z "$dc" ]]; then
-    fail "no keel-p5-dispatch marker, so the library never stated the chains it selects from"
+    fail "no keel-$P5_DISPATCH_KEY marker, so the library never stated the chains it selects from"
   else
     gl1="$(field l1 "$dc")"
     gk="$(field kern "$dc")"
@@ -1125,9 +1142,9 @@ else
     # GATE_PEAK wants only the backend, because a Peak row is named for the backend; a judged
     # baseline wants the whole thing, because a baseline is a claim about a kernel (#167/#177).
     # Both come from one read, so they cannot name different kernels.
-    HOST_KERN="$(marker bench-kern "$BENCHLOG" | awk '{print $1}')"
+    HOST_KERN="$(marker "$(kern_key)" "$BENCHLOG" | awk '{print $1}')"
     _pk="${HOST_KERN##*/}"
-    [[ -n "$_pk" ]] && GATE_PEAK="Peak/$_pk"
+    [[ -n "$_pk" ]] && GATE_PEAK="$P5_PEAK_PFX/$_pk"
     # The raw samples, kept (#110). Printed because a verdict that cannot be
     # recomputed from the numbers it was derived from is a verdict standing on a
     # log line — which is the state every judged run before this one is in, and
@@ -1644,12 +1661,12 @@ else
       # the consumer's spelling is the one that resolves. Scaled to GB/s for the printed line
       # because a raw B/s reading renders as 3.89815e+09, which no reader compares by eye.
       case "$lr" in
-        Isamax) lmetric="B/s"; lscale=1000000000; lunit="GB/s" ;;
+        Isamax|Idamax) lmetric="B/s"; lscale=1000000000; lunit="GB/s" ;;
         *)      lmetric="GFLOP/s"; lscale=1; lunit="GFLOP/s" ;;
       esac
       lline=""
       for ln in $P5_L1_SIZES; do
-        lrow="L1$lr/n=$ln"
+        lrow="$P5_L1_PFX$lr/n=$ln"
         read -r lmed _lci llo lhi _ _ <<<"$(bench_stat "$lrow" "$BENCHCSV" "$lmetric")" || :
         if [[ -z "${lmed:-}" || "$lmed" == inf ]]; then L1_ABSENT="$L1_ABSENT $lrow"; continue; fi
         L1_SEEN=$((L1_SEEN + 1))
@@ -1754,7 +1771,12 @@ else
     #
     # Checked against the judged sweep, which since 2026-08-17 is the only pass there
     # is: a README row and the verdict now describe the same regime.
-    if [[ ! -r README.md ]]; then
+    if [[ "$KEEL_ELEM" == f64 ]]; then
+      # Guarded by ruling, and stated rather than skipped (#193, 2026-10-29): no float64 row is
+      # published until float64's founding pair lands, so there is nothing for criterion 9 to
+      # re-measure, and an absent comparison must never read as a passed one.
+      unmeasured "[$host] criterion 9 at float64: no float64 README row is published yet (#193), so there is nothing to re-measure — unmeasured, not passed"
+    elif [[ ! -r README.md ]]; then
       fail "README.md is missing, and DESIGN.md §4/P5 asks for it with honest numbers in it"
     else
       # hcpu is resolved once per host above, with the derivation-set membership and the

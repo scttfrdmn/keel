@@ -150,6 +150,15 @@ is 'the shipped ledger: amd64 is in famaxx86' "$(era_current scripts/measurement
 is 'the shipped ledger: arm64 is in famax' "$(era_current scripts/measurement-eras.tsv arm64)" famax
 era_provisional scripts/measurement-eras.tsv famax && no 'famax read provisional after its transition archive landed' || ok 'famax is closed: its both-arms transition archive landed with its registrations'
 era_provisional scripts/measurement-eras.tsv famaxx86 && no 'famaxx86 read provisional after its transition archive landed' || ok 'famaxx86 is closed: its both-arms transition archive landed with its registrations'
+# 5f. float64's own ledger (#193, Scott 2026-10-29): separate files, so neither element's
+#     state can reach the other.
+is 'the float64 ledger: amd64 is in f64init' "$(era_current scripts/measurement-eras-f64.tsv amd64)" f64init
+is 'the float64 ledger: arm64 is in f64init' "$(era_current scripts/measurement-eras-f64.tsv arm64)" f64init
+era_provisional scripts/measurement-eras-f64.tsv f64init && ok 'f64init is provisional until its founding pair lands' || no 'f64init read as landed'
+is 'reg_file at float32 names the float32 registry' "$(KEEL_ELEM=f32 reg_file judged-runs)" judged-runs.tsv
+is 'reg_file unset is float32' "$(unset KEEL_ELEM; reg_file judged-runs)" judged-runs.tsv
+is 'reg_file at float64 names the float64 registry' "$(KEEL_ELEM=f64 reg_file judged-runs)" judged-runs-f64.tsv
+is 'no float32 witness row is in the float64 witness file' "$(grep -vc '^#' scripts/judged-runs-f64.tsv)" 0
 
 echo "-- era_provisional: a disclosure about the archive, never a permission --"
 # 6. `—` and empty both mean the both-arms transition archive has not landed. The empty
@@ -492,7 +501,7 @@ is 'and each resolves exactly two canonical archives' \
 # 36k. And the gate reads the manifest rather than a list. Keyed to the awk field test, not to the
 #      comment above it, so rewording does not disarm it.
 is 'gate-p5 sources the reference corpus from the manifest (#165)' \
-   "$(/usr/bin/grep -c '^README_ARCHIVES=scripts/readme-archives.tsv' scripts/gate-p5.sh)" '1'
+   "$(/usr/bin/grep -c '^README_ARCHIVES="scripts/$(reg_file readme-archives)"$' scripts/gate-p5.sh)" '1'
 is 'and no hardcoded pinned8 archive list survives in readme_ref_archives' \
    "$(/usr/bin/awk '/^readme_ref_archives\(\)/,/^}/' scripts/gate-p5.sh | /usr/bin/grep -c 'archive/pinned8/bench-gate-p5')" '0'
 # 36l. THE PUBLISHED ARTIFACT, not the generator: every rate row carries an interval and its point

@@ -9,6 +9,16 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **The float64 performance gates: `KEEL_ELEM=f64` in gate-p3, gate-p4 and gate-p5** (#193, Stage B). One element block per gate, following
+  gate-p2's pattern. It switches the kernel/peak/anchor sets (gate-p2's float64 ones), the benchmark rows (Dgemm, OpenBLAS64, Tile64, FMARoof64,
+  Level3F64, WideRoof64, Level1F64) and the parsed markers (keel-dgemm-*, keel-l164-active, keel-bench-kern64, keel-p5-dispatch64). Every
+  threshold stays shared.
+  - **Separate registries:** float64 reads `measurement-eras-f64.tsv`, `host-baselines-f64.tsv`, `judged-runs-f64.tsv` and
+    `readme-archives-f64.tsv` (Scott, 2026-10-29). Era `f64init` is provisional and carries no `CEIL_FRACTION`, so every float64 share
+    is founded, not judged, until it is typed.
+  - **README criterion 9 at float64** is a stated UNMEASURED until float64 rows are published.
+  - **`TestMain`** also prints `keel-l164-active`.
+  - Unset, every gate is float32 exactly as before: 155 ok in baseline-test, the roofline controls pass, and shellcheck counts are unchanged.
 - **The rest of the float64 gate instruments** (#193, Stage A):
   - **References:** an OpenBLAS DGEMM reference (`cblas_dgemm`, `BenchmarkOpenBLAS64`), `BenchmarkDgemm`/`BenchmarkDsyrk` at n up to 2048,
     and `BenchmarkLevel1F64`.

@@ -1,0 +1,6 @@
+# Copyright 2026 Scott Friedman
+# SPDX-License-Identifier: Apache-2.0
+#
+# readme-archives-f64.tsv — readme-archives.tsv for float64 (#193): the same columns and rules, in a file of its own
+# so a float64 run can neither spend nor be judged by float32 state (Scott, 2026-10-29). Read
+# readme-archives.tsv's header for the columns. Empty until float64's founding pair lands.

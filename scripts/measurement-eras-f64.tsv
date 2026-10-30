@@ -1,0 +1,12 @@
+# Copyright 2026 Scott Friedman
+# SPDX-License-Identifier: Apache-2.0
+#
+# measurement-eras-f64.tsv — measurement-eras.tsv for float64 (#193). Scott ruled 2026-10-29 that
+# float64 registry state lives in its own files, so no float32 era, key or lookup can be touched
+# by a float64 run. The columns, the rules (DESIGN.md §5 rule 17) and era_current are
+# measurement-eras.tsv's; read that file's header for them. KEEL_ELEM=f64 points the gates here.
+#
+# f64init is float64's founding era: the instrument is the family-max float64 ceiling
+# (FMARoof64 at 1 thread, WideRoof64 at 8) and the dispatched float64 microkernel. It is
+# provisional until its founding and confirmation runs land.
+f64init	2026-10-29	DESIGN.md §1 (2026-10-25: no float64 target before a float64 peak is measured) + Scott's 2026-10-29 rulings on #193	—	float64 has no prior era: FMARoof64/WideRoof64 on the family-max float64 ceiling, the float64 microkernels, KEEL_ELEM=f64 in gate-p3/p4/p5	all

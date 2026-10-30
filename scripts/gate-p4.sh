@@ -63,11 +63,11 @@ P4_DERIVED_L3="Ssyrk Ssymm Strsm"
 #            (unit, gathered, and BLAS's backwards vector)
 lattice_req() {
   case "$1" in
-    Sgemv) printf '%s\n' "trans:N,T" "alpha:@scalar" "beta:@scalar" "incx:@stride" "incy:@stride" ;;
-    Sger)  printf '%s\n' "alpha:@scalar" "incx:@stride" "incy:@stride" ;;
-    Ssyrk) printf '%s\n' "uplo:U,L" "trans:N,T" "alpha:@scalar" "beta:@scalar" ;;
-    Ssymm) printf '%s\n' "side:L,R" "uplo:U,L" "alpha:@scalar" "beta:@scalar" ;;
-    Strsm) printf '%s\n' "side:L,R" "uplo:U,L" "trans:N,T" "diag:N,U" "alpha:@scalar" ;;
+    [SD]gemv) printf '%s\n' "trans:N,T" "alpha:@scalar" "beta:@scalar" "incx:@stride" "incy:@stride" ;;
+    [SD]ger)  printf '%s\n' "alpha:@scalar" "incx:@stride" "incy:@stride" ;;
+    [SD]syrk) printf '%s\n' "uplo:U,L" "trans:N,T" "alpha:@scalar" "beta:@scalar" ;;
+    [SD]symm) printf '%s\n' "side:L,R" "uplo:U,L" "alpha:@scalar" "beta:@scalar" ;;
+    [SD]trsm) printf '%s\n' "side:L,R" "uplo:U,L" "trans:N,T" "diag:N,U" "alpha:@scalar" ;;
   esac
 }
 
@@ -76,10 +76,10 @@ lattice_req() {
 # oracle comparison cannot see it.
 extra_req() {
   case "$1" in
-    Sgemv|Sger) printf '%s\n' ldpad zerodim argpanic nonfinite ;;
-    Ssyrk)      printf '%s\n' ldpad zerodim argpanic nonfinite untouched-triangle ;;
-    Ssymm)      printf '%s\n' ldpad zerodim argpanic nonfinite unreferenced-triangle ;;
-    Strsm)      printf '%s\n' ldpad zerodim argpanic nonfinite unreferenced-triangle unit-diagonal-ignored ;;
+    [SD]gemv|[SD]ger) printf '%s\n' ldpad zerodim argpanic nonfinite ;;
+    [SD]syrk)      printf '%s\n' ldpad zerodim argpanic nonfinite untouched-triangle ;;
+    [SD]symm)      printf '%s\n' ldpad zerodim argpanic nonfinite unreferenced-triangle ;;
+    [SD]trsm)      printf '%s\n' ldpad zerodim argpanic nonfinite unreferenced-triangle unit-diagonal-ignored ;;
   esac
 }
 
@@ -139,6 +139,30 @@ if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   PEAK_FUNCS="neonPeakTile,scalarPeak"
   GATE_PEAK="Peak/neon"
   P4_BENCH_FILTER='(Peak|Sgemm|Ssyrk)/(neon|n=2048)'
+fi
+# KEEL_ELEM=f64 (#193): the same gate over the D routines, with gate-p2's float64 kernel and peak
+# sets, the float64 bench rows (Dgemm, Dsyrk, FMARoof64) and the float64 markers (keel-dgemm-*,
+# keel-l164-active, keel-p4-* for routine=D…). Exported, so the gate-p3 this delegates to judges
+# the same element. SYRK_FLOOR is a ratio of two rates and stays shared.
+KEEL_ELEM="${KEEL_ELEM:-f32}"
+export KEEL_ELEM
+P4_SWEEP_KEY=sgemm P4_L1_KEY=l1-active P4_GEMM=Sgemm P4_SYRK=Ssyrk
+case "${KEEL_GOARCH:-amd64}/$KEEL_ELEM" in
+  */f32) ;;
+  amd64/f64)
+    KERN_FUNCS="KernelD2x16,KernelD4x16"
+    PEAK_FUNCS="avx512PeakX44D,scalarPeakD" PEAK_IPF_CEILINGS="avx512PeakX44D:1.1875 scalarPeakD:1.15"
+    GATE_PEAK="FMARoof64/avx512" P4_BENCH_FILTER='(FMARoof64|Dgemm|Dsyrk)/(avx512|n=2048)' ;;
+  arm64/f64)
+    KERN_FUNCS="KernelD8x4,KernelD4x8,KernelD3x12,KernelDPB5x8,KernelDPB7x6"
+    PEAK_FUNCS="neonPeakTileD,scalarPeakD" PEAK_IPF_CEILINGS="neonPeakTileD:1.333334 scalarPeakD:1.30"
+    GATE_PEAK="FMARoof64/neon" P4_BENCH_FILTER='(FMARoof64|Dgemm|Dsyrk)/(neon|n=2048)' ;;
+  *) echo "gate-p4: KEEL_GOARCH/KEEL_ELEM must be amd64|arm64 / f32|f64, not '${KEEL_GOARCH:-amd64}/$KEEL_ELEM'" >&2; exit 2 ;;
+esac
+if [[ "$KEEL_ELEM" == f64 ]]; then
+  P4_ROUTINES="Dgemv Dger Dsyrk Dsymm Dtrsm" P4_DERIVED_L3="Dsyrk Dsymm Dtrsm"
+  GATE_SGEMM="Dgemm/n=2048" GATE_SSYRK="Dsyrk/n=2048"
+  P4_SWEEP_KEY=dgemm P4_L1_KEY=l164-active P4_GEMM=Dgemm P4_SYRK=Dsyrk
 fi
 # The delegated P3 gate's full output. build/ is gitignored; the path is printed
 # because CLAUDE.md wants gate output verbatim in the umbrella issue.
@@ -316,7 +340,7 @@ else
       fail "[$host] the P4 lattices pass against the oracle"
       sed 's/^/        /' "$LOG" | tail -60
     fi
-    active="$(marker sgemm-active "$LOG")"
+    active="$(marker "$P4_SWEEP_KEY-active" "$LOG")"
     # #158: green on a VECTOR backend (arch-agnostic), not literally avx512. On amd64 active is
     # `*/avx512` or `*/scalar` (no avx2 microkernel, #40), so `!= */scalar` is byte-identical in
     # effect, and VECTOR_BACKEND derives "avx512" so the pass line renders unchanged; on arm64 it
@@ -342,11 +366,11 @@ echo "-- lattice extent (criteria 1, 2, 3, 5 and 6: coverage is enforced, not tr
 if [[ ! -s "$SWEEPLOG" ]]; then
   unmeasured "no $([[ "${KEEL_GOARCH:-amd64}" == arm64 ]] && echo neon || echo avx512) lattice log to audit, so every routine's coverage is unmeasured"
 else
-  L3_KERN="$(marker sgemm-active "$SWEEPLOG")"
-  L3_CFG="$(marker sgemm-config "$SWEEPLOG")"
-  L1_ACTIVE="$(marker l1-active "$SWEEPLOG")"
-  info "P3's dispatched microkernel on this host: ${L3_KERN:-<no keel-sgemm-active marker>}"
-  [[ -n "$L3_KERN" ]] || unmeasured "no keel-sgemm-active marker in the lattice log, so the derived routines' shape cannot be compared against Sgemm's (criterion 5)"
+  L3_KERN="$(marker "$P4_SWEEP_KEY-active" "$SWEEPLOG")"
+  L3_CFG="$(marker "$P4_SWEEP_KEY-config" "$SWEEPLOG")"
+  L1_ACTIVE="$(marker "$P4_L1_KEY" "$SWEEPLOG")"
+  info "P3's dispatched microkernel on this host: ${L3_KERN:-<no keel-$P4_SWEEP_KEY-active marker>}"
+  [[ -n "$L3_KERN" ]] || unmeasured "no keel-$P4_SWEEP_KEY-active marker in the lattice log, so the derived routines' shape cannot be compared against Sgemm's (criterion 5)"
 
   for r in $P4_ROUTINES; do
     # ---- the flag lattice (criterion 1)
@@ -591,10 +615,10 @@ else
 
     # ---- the numerator, checked (criterion 7)
     FBAD=""; SGD=""; SYD=""
-    for r in Sgemm Ssyrk; do
+    for r in "$P4_GEMM" "$P4_SYRK"; do
       case "$r" in
-        Sgemm) want_name="$GATE_SGEMM" ;;
-        Ssyrk) want_name="$GATE_SSYRK" ;;
+        "$P4_GEMM") want_name="$GATE_SGEMM" ;;
+        "$P4_SYRK") want_name="$GATE_SSYRK" ;;
       esac
       fl="$(marker_row bench-flops "$BENCHLOG" name "$want_name")"
       if [[ -z "$fl" ]]; then
@@ -612,7 +636,7 @@ else
       elif [[ "$gf" != "$wf" ]]; then
         FBAD="$FBAD ${r}(declares formula=$gf, this gate's is $wf)"
       fi
-      if [[ "$r" == Sgemm ]]; then SGD="$fl"; else SYD="$fl"; fi
+      if [[ "$r" == "$P4_GEMM" ]]; then SGD="$fl"; else SYD="$fl"; fi
     done
     if [[ -n "$FBAD" ]]; then
       fail "[$host] the ratio's flop counts do not check out:$FBAD — Ssyrk does about half of Sgemm's arithmetic, so a wrong count moves this ratio by 2x and the bar would be cleared by a routine that did not clear it"
@@ -680,7 +704,7 @@ else
         ;;
     esac
   done < <(hosts_lines)
-  [[ -n "$DRIFT_CHECKED" ]] || unmeasured "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA are unchecked against the object code — unmeasured, not drifted"
+  [[ -n "$DRIFT_CHECKED" ]] || unmeasured "no host reported keel-$(kern_key)-audit, so the registry's recorded insns/FMA are unchecked against the object code — unmeasured, not drifted"
   # The aggregate inherits the three states, in the order that keeps a real miss
   # from hiding behind a noisy host: one host below the bar is a red whatever the
   # others did, and only when nothing is below the bar does indeterminacy become

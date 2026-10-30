@@ -172,9 +172,9 @@ if [[ -n "${KEEL_INSTRUMENT_BASELINE_DIR:-}" ]]; then
   fi
   P3_BASELINE_DIR="$KEEL_INSTRUMENT_BASELINE_DIR"
 fi
-P3_BASELINE_REGISTRY="$P3_BASELINE_DIR/host-baselines.tsv"
-P3_BASELINE_WITNESS="$P3_BASELINE_DIR/judged-runs.tsv"
-P3_BASELINE_ERAS="$P3_BASELINE_DIR/measurement-eras.tsv"
+P3_BASELINE_REGISTRY="$P3_BASELINE_DIR/$(reg_file host-baselines)"
+P3_BASELINE_WITNESS="$P3_BASELINE_DIR/$(reg_file judged-runs)"
+P3_BASELINE_ERAS="$P3_BASELINE_DIR/$(reg_file measurement-eras)"
 P3_ERA="$(era_current "$P3_BASELINE_ERAS" "${KEEL_GOARCH:-amd64}")" # eras are per-arch (§5 rule 17, #200)
 # ---- THE FOUR PIECES OF STATE THIS GATE LACKED, so it can PROPOSE a candidate row (#178)
 #
@@ -280,6 +280,42 @@ if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   # shapegen -frontier -arch arm64 on every run (#107's mint check), never trusted. #156.
   # 1.556 since #198 put the pre-broadcast form in the arm64 space: 4x20/8, tied by the dispatched 5x16/8.
   SWEEP_BEST_IPF_ARM64=1.556
+fi
+# KEEL_ELEM=f64 (#193, Scott's ruling 2026-10-29) runs this same gate at float64, as gate-p2's
+# KEEL_ELEM does: the kernel, peak and anchor sets are gate-p2's float64 ones, and the bench rows,
+# markers and registry files are float64's (Dgemm, OpenBLAS64, Tile64, FMARoof64, keel-dgemm-*,
+# keel-bench-kern64, the -f64.tsv registries). Every threshold stays shared, by gate-p2's
+# 2026-10-26 pre-registration that they are type-neutral.
+KEEL_ELEM="${KEEL_ELEM:-f32}"
+export KEEL_ELEM
+KPFX="Kernel/" P3_SWEEP_KEY=sgemm P3_PACK_KEY=pack P3_IPF_TILES="2x32 4x32"
+case "${KEEL_GOARCH:-amd64}/$KEEL_ELEM" in
+  */f32) ;;
+  amd64/f64)
+    KERN_FUNCS="KernelD2x16,KernelD4x16"
+    PEAK_FUNCS="avx512PeakX44D,avx512PeakD,scalarPeakD"
+    PEAK_IPF_CEILINGS="avx512PeakX44D:1.1875 avx512PeakD:2.25 scalarPeakD:1.15"
+    ANCHOR_FUNC="avx512PeakD"
+    GATE_KERNELS="Tile64/2x16/avx512/kc=128 Tile64/4x16/avx512/kc=128"
+    GATE_PEAK_FUNC="avx512PeakX44D" GATE_PEAK="FMARoof64/avx512" P3_IPF_TILES="2x16 4x16"
+    SGEMM_BENCH_FILTER='(FMARoof64|Dgemm|OpenBLAS64)/(avx512|n=2048)' ;;
+  arm64/f64)
+    KERN_FUNCS="KernelD8x4,KernelD4x8,KernelD3x12,KernelDPB5x8,KernelDPB7x6"
+    PEAK_FUNCS="neonPeakTileD,neonPeakD,scalarPeakD"
+    PEAK_IPF_CEILINGS="neonPeakTileD:1.333334 neonPeakD:2.1875 scalarPeakD:1.30"
+    ANCHOR_FUNC="neonPeakD"
+    GATE_KERNELS="Tile64/8x4/neon/kc=128 Tile64/4x8/neon/kc=128 Tile64/3x12/neon/kc=128 Tile64/5x8-pb/neon/kc=128 Tile64/7x6-pb/neon/kc=128"
+    GATE_PEAK_FUNC="neonPeakTileD" GATE_PEAK="FMARoof64/neon"
+    SGEMM_BENCH_FILTER='(FMARoof64|Dgemm|OpenBLAS64)/(neon|n=2048)' ;;
+  *) echo "gate-p3: KEEL_GOARCH/KEEL_ELEM must be amd64|arm64 / f32|f64, not '${KEEL_GOARCH:-amd64}/$KEEL_ELEM'" >&2; exit 2 ;;
+esac
+if [[ "$KEEL_ELEM" == f64 ]]; then
+  ANCHOR_ROW="FMAFamily/f64/shared"
+  KERN_BENCH_FILTER='FMARoof64|Tile64/.*/.*/kc=128|FMAFamily/f64/shared'
+  GATE_SGEMM="Dgemm/n=2048" GATE_OPENBLAS="OpenBLAS64/n=2048" SGEMM_SHAPE_FILTER='Dgemm/n=2048'
+  KPFX="Tile64/" P3_SWEEP_KEY=dgemm P3_PACK_KEY=pack64
+  # float64's own criterion birthday: a peak/* key here is first sight in f64init, never owing.
+  P3_PEAK_CRIT_SINCE="2026-10-29"
 fi
 OPENBLAS_REMOTE_DIR="${KEEL_OPENBLAS_DIR:-/tmp/keel-openblas-src}"
 
@@ -596,8 +632,8 @@ SCALAR_FORCED=""
 # all, which is a capability witness rather than a second marker: gemmRunners()
 # appends one runner per kern.Kernels() entry (gemm_test.go:96-106) and
 # vectorKernels() returns nil unless vec.HasAVX512() (internal/kern/kern_amd64.go
-# :34-37), so `avx512` cannot appear in keel-sgemm-backends-exercised on a host
-# that lacks it. There is no keel-sgemm-available marker and I am not inferring
+# :34-37), so `avx512` cannot appear in keel-$P3_SWEEP_KEY-backends-exercised on a host
+# that lacks it. There is no keel-$P3_SWEEP_KEY-available marker and I am not inferring
 # one -- the same check that caught an invented marker name in gate-p2.
 AVX512_SEEN=0
 # N_FORCED counts hosts that attempted the KEEL_FORCE=scalar run; N_FORCED_OK how
@@ -623,9 +659,9 @@ else
       fail "[$host] Sgemm sweep passes"
       sed 's/^/        /' "$LOG" | tail -40
     fi
-    backends="$(marker sgemm-backends-exercised "$LOG")"
+    backends="$(marker "$P3_SWEEP_KEY-backends-exercised" "$LOG")"
     if [[ -z "$backends" ]]; then
-      unmeasured "[$host] no keel-sgemm-backends-exercised marker, so what this host exercised cannot be read: coverage unknown is coverage unestablished"
+      unmeasured "[$host] no keel-$P3_SWEEP_KEY-backends-exercised marker, so what this host exercised cannot be read: coverage unknown is coverage unestablished"
     else
       info "[$host] backends exercised: $backends"
     fi
@@ -697,19 +733,19 @@ if [[ ! -s "$SWEEPLOG" && "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
 elif [[ ! -s "$SWEEPLOG" ]]; then
   unmeasured "no avx512 sweep log to audit, so the sweep's extent is unmeasured rather than short"
 else
-  cfg="$(marker sgemm-config "$SWEEPLOG")"
+  cfg="$(marker "$P3_SWEEP_KEY-config" "$SWEEPLOG")"
   if [[ -z "$cfg" ]]; then
-    unmeasured "no keel-sgemm-config marker (blocking params, edge strategy, beta variants, packing backend), so what the sweep configured cannot be read"
+    unmeasured "no keel-$P3_SWEEP_KEY-config marker (blocking params, edge strategy, beta variants, packing backend), so what the sweep configured cannot be read"
   else
     info "config: $cfg"
     for k in mr nr kc mc nc edge beta-variants pack; do
-      [[ -n "$(field "$k" "$cfg")" ]] || unmeasured "keel-sgemm-config is missing $k=, so that part of the configuration cannot be read"
+      [[ -n "$(field "$k" "$cfg")" ]] || unmeasured "keel-$P3_SWEEP_KEY-config is missing $k=, so that part of the configuration cannot be read"
     done
   fi
 
-  sizes="$(marker sgemm-sizes-exercised "$SWEEPLOG")"
+  sizes="$(marker "$P3_SWEEP_KEY-sizes-exercised" "$SWEEPLOG")"
   if [[ -z "$sizes" ]]; then
-    unmeasured "no keel-sgemm-sizes-exercised marker, so the sizes the sweep ran cannot be read"
+    unmeasured "no keel-$P3_SWEEP_KEY-sizes-exercised marker, so the sizes the sweep ran cannot be read"
   else
     MISSING=""
     for n in $SWEEP_SIZES; do
@@ -722,9 +758,9 @@ else
     fi
   fi
 
-  combos="$(marker sgemm-combos-exercised "$SWEEPLOG")"
+  combos="$(marker "$P3_SWEEP_KEY-combos-exercised" "$SWEEPLOG")"
   if [[ -z "$combos" ]]; then
-    unmeasured "no keel-sgemm-combos-exercised marker, so the transpose combinations the sweep ran cannot be read"
+    unmeasured "no keel-$P3_SWEEP_KEY-combos-exercised marker, so the transpose combinations the sweep ran cannot be read"
   else
     info "combinations: $combos"
     trans="$(field trans "$combos")"
@@ -767,14 +803,14 @@ else
         fail "combination count $ncombo does not match the enumerated sets ($expect): the marker claims combinations it did not run"
       fi
     else
-      unmeasured "keel-sgemm-combos-exercised has no combos= count, so its enumeration cannot be checked against what it ran"
+      unmeasured "keel-$P3_SWEEP_KEY-combos-exercised has no combos= count, so its enumeration cannot be checked against what it ran"
     fi
   fi
 
   # Per-size oracle verification mode (criterion 2).
   VMISS=""; VBAD=""
   for n in $SWEEP_SIZES; do
-    line="$(marker_row sgemm-verify "$SWEEPLOG" size "$n")"
+    line="$(marker_row "$P3_SWEEP_KEY-verify" "$SWEEPLOG" size "$n")"
     if [[ -z "$line" ]]; then
       VMISS="$VMISS $n"
       continue
@@ -797,9 +833,9 @@ else
   done
   if [[ -z "$VMISS" && -z "$VBAD" ]]; then
     pass "every size declares its oracle verification mode: exact up to $SWEEP_EXACT_MAX, >= $SWEEP_SAMPLE_MIN seeded exact entries above it"
-    marker_all sgemm-verify "$SWEEPLOG" | tail -6 | sed 's/^/        /'
+    marker_all "$P3_SWEEP_KEY-verify" "$SWEEPLOG" | tail -6 | sed 's/^/        /'
   else
-    [[ -n "$VMISS" ]] && unmeasured "no keel-sgemm-verify line for size(s):$VMISS — how those sizes were verified cannot be read"
+    [[ -n "$VMISS" ]] && unmeasured "no keel-$P3_SWEEP_KEY-verify line for size(s):$VMISS — how those sizes were verified cannot be read"
     [[ -n "$VBAD" ]] && fail "oracle verification too weak for size(s):$VBAD"
   fi
 
@@ -807,7 +843,7 @@ else
   # is how a caller passes a submatrix, a zero dimension is the empty product, and
   # the argument checks are what stands between a bad ld and an out-of-bounds
   # write. Adding checks a gate's phase implies is allowed; removing them is not.
-  extras="$(marker sgemm-extra-exercised "$SWEEPLOG")"
+  extras="$(marker "$P3_SWEEP_KEY-extra-exercised" "$SWEEPLOG")"
   EMISS=""
   for e in ldpad zerodim argpanic; do
     [[ " $extras " == *" $e "* ]] || EMISS="$EMISS $e"
@@ -815,14 +851,14 @@ else
   if [[ -z "$EMISS" ]]; then
     pass "edge coverage beyond the sweep: $extras"
   else
-    fail "keel-sgemm-extra-exercised is missing:$EMISS"
+    fail "keel-$P3_SWEEP_KEY-extra-exercised is missing:$EMISS"
   fi
 
-  packm="$(marker pack-combos-exercised "$SWEEPLOG")"
+  packm="$(marker "$P3_PACK_KEY-combos-exercised" "$SWEEPLOG")"
   if [[ -n "$packm" ]]; then
     pass "packing differential-tested against its scalar reference ($packm)"
   else
-    unmeasured "no keel-pack-combos-exercised marker, so whether packing is differential-tested cannot be read"
+    unmeasured "no keel-$P3_PACK_KEY-combos-exercised marker, so whether packing is differential-tested cannot be read"
   fi
 fi
 
@@ -834,9 +870,9 @@ carry_p2_properties P3 "packing and blocking"
 # (SWEEP_BEST_IPF_ARM64, shim form) that the NEON shapes actually execute — judged, not reported,
 # and against its own ISA's bar rather than a borrowed one.
 if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
-  reconcile_sweep_best_ipf "$SWEEP_BEST_IPF_ARM64" "$LOG" arm64
+  reconcile_sweep_best_ipf "$SWEEP_BEST_IPF_ARM64" "$LOG" arm64 "$KEEL_ELEM"
 else
-  reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG"
+  reconcile_sweep_best_ipf "$SWEEP_BEST_IPF" "$LOG" "" "$KEEL_ELEM"
 fi
 
 # ------------------------------------------ the throughput sentinel (P2, #19)
@@ -849,11 +885,12 @@ else
   # shellcheck disable=SC2001  # prefixing every line; not a scalar substitution
   sed 's/^/        /' <<<"$RTLOG"
 fi
-IPF_2x32="$(audit_ipf_tile 2x32 "$AUDITKERN")"
-IPF_4x32="$(audit_ipf_tile 4x32 "$AUDITKERN")"
+read -r IPF_TA IPF_TB <<<"$P3_IPF_TILES"
+IPF_2x32="$(audit_ipf_tile "$IPF_TA" "$AUDITKERN")"
+IPF_4x32="$(audit_ipf_tile "$IPF_TB" "$AUDITKERN")"
 IPF_PEAK="$(audit_ipf "$GATE_PEAK_FUNC" "$AUDITPEAK")"
 if [[ -n "$IPF_2x32" && -n "$IPF_4x32" && -n "$IPF_PEAK" ]]; then
-  info "audited insns/FMA: 2x32 $(printf '%.3f' "$IPF_2x32"), 4x32 $(printf '%.3f' "$IPF_4x32"), $GATE_PEAK_FUNC $(printf '%.3f' "$IPF_PEAK")"
+  info "audited insns/FMA: $IPF_TA $(printf '%.3f' "$IPF_2x32"), $IPF_TB $(printf '%.3f' "$IPF_4x32"), $GATE_PEAK_FUNC $(printf '%.3f' "$IPF_PEAK")"
 elif [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
   # #155 (2026-09-16): the sentinel audits the amd64 avx512 tiles (2x32, 4x32); arm64's kernel is
   # 4x16/neon and this audit's consumer — the issue-bound classification that amends the OpenBLAS
@@ -933,9 +970,9 @@ else
 
     # The shape this host's library actually dispatches to, and the class it chose
     # under, from the very run being judged.
-    hkern="$(marker bench-kern "$BENCHLOG")"; hkern="${hkern%% *}"
+    hkern="$(marker "$(kern_key)" "$BENCHLOG")"; hkern="${hkern%% *}"
     htile="${hkern%%/*}"
-    hclassline="$(marker bench-kern-class "$BENCHLOG")"
+    hclassline="$(marker "$(kern_key)-class" "$BENCHLOG")"
     hclass="${hclassline%% *}"
 
     ACT_LO=""; ACT_PT=""; ACT_HI=""; ACT_ID=""; ACT_IPF=""
@@ -949,10 +986,10 @@ else
       # fraction bounded below but not above cannot take part in a ceiling.
       khi="$(bench_ratio_hi "$kname" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
       if [[ -z "$klo" || -z "$khi" ]]; then
-        info "[$host] ${kname##Kernel/}: no CI, not counted"
+        info "[$host] ${kname##"$KPFX"}: no CI, not counted"
         continue
       fi
-      kid="${kname##Kernel/}"
+      kid="${kname##"$KPFX"}"
       kipf="$(audit_ipf_tile "${kid%%/*}" "$AUDITKERN")"
       [[ -n "$kipf" ]] && MIXES="$MIXES $kid|$kpt:$kipf:$klo:$khi"
       if [[ "${kid%%/*}" == "$htile" ]]; then
@@ -1098,7 +1135,7 @@ else
     # Printing the ratio alone made #141 reconstruct the numerator and denominator
     # from tracked samples after the fact, and reconstruction is what happens when
     # disclosure fails: neither term appeared in any log this gate wrote (e5aa85c).
-    info "[$host] the ratio's two terms, same invocation: $ACT_ID $(bench_stat "Kernel/$ACT_ID" "$BENCHCSV" GFLOP/s | cut -d' ' -f1) GFLOP/s over $GATE_PEAK $(bench_stat "$GATE_PEAK" "$BENCHCSV" GFLOP/s | cut -d' ' -f1) GFLOP/s"
+    info "[$host] the ratio's two terms, same invocation: $ACT_ID $(bench_stat "$KPFX$ACT_ID" "$BENCHCSV" GFLOP/s | cut -d' ' -f1) GFLOP/s over $GATE_PEAK $(bench_stat "$GATE_PEAK" "$BENCHCSV" GFLOP/s | cut -d' ' -f1) GFLOP/s"
     # The spread and its interval are PRINTED here, not just consumed. This gate
     # used to discard both (`_CSPREAD _MSPREAD`), and on 2026-08-15 that cost a
     # day: janus reclassified fma-bound with why=diverge, four verdicts moved, and
@@ -1124,7 +1161,7 @@ else
     # noisy one — which is exactly what happened on 2026-08-15, down to the log line
     # dispatching the operator to repair a fingerprint that was right.
     if [[ -z "$hclass" ]]; then
-      unmeasured "[$host] no keel-bench-kern-class marker, so the classification the shape was chosen by cannot be read"
+      unmeasured "[$host] no keel-$(kern_key)-class marker, so the classification the shape was chosen by cannot be read"
     elif [[ "$CLASS" == indeterminate ]]; then
       unmeasured "[$host] classification indeterminate this run (why=$WHY), so this gate's arm of the comparison cannot decide and the library's ${hclass}-bound fingerprint is neither confirmed nor contradicted — ${hclassline#* }"
     elif [[ "$hclass" == "$CLASS" ]]; then
@@ -1211,7 +1248,7 @@ else
   done <<<"$CLASSIFY"
   # No host produced the marker at all: the ranking's inputs are then unverified,
   # which is a failure to check rather than a check that passed.
-  [[ -n "$DRIFT_CHECKED" ]] || unmeasured "no host reported keel-bench-kern-audit, so the registry's recorded insns/FMA are unchecked against the object code — unmeasured, not drifted"
+  [[ -n "$DRIFT_CHECKED" ]] || unmeasured "no host reported keel-$(kern_key)-audit, so the registry's recorded insns/FMA are unchecked against the object code — unmeasured, not drifted"
 fi
 
 # ----------------------------------------------- Sgemm at 2048^3 vs OpenBLAS
@@ -1298,8 +1335,8 @@ if [[ -n "$HOSTS" ]]; then
     # interval before this fails. That makes it insensitive to the frequency drift
     # between two adjacent runs, at the cost of not seeing a small regression — the
     # same-invocation check above is what sees those.
-    hclass="$(marker bench-kern-class "$BENCHLOG")"; hclass="${hclass%% *}"
-    hkern="$(marker bench-kern "$BENCHLOG")"; hkern="${hkern%% *}"
+    hclass="$(marker "$(kern_key)-class" "$BENCHLOG")"; hclass="${hclass%% *}"
+    hkern="$(marker "$(kern_key)" "$BENCHLOG")"; hkern="${hkern%% *}"
     alt="$(other_class "$hclass")"
     if [[ -z "$alt" ]]; then
       fail "[$host] the bench run reports kernel class '${hclass:-<none>}', which is not a class this gate knows, so the shape choice cannot be cross-checked at 2048^3"
@@ -1308,7 +1345,7 @@ if [[ -n "$HOSTS" ]]; then
       unmeasured "[$host] the KEEL_KERN_CLASS=$alt Sgemm run failed, so the shape choice is uncorroborated at 2048^3 — unmeasured, not refuted (the no-interval branch below already says so)"
       sed 's/^/        /' "$ALTLOG" | tail -20
     else
-      altkern="$(marker bench-kern "$ALTLOG")"; altkern="${altkern%% *}"
+      altkern="$(marker "$(kern_key)" "$ALTLOG")"; altkern="${altkern%% *}"
       bench_csv "$ALTLOG" >"$ALTCSV" 2>"$LOG" || true
       [[ -s "$LOG" ]] && sed 's/^/        benchci: /' "$LOG"
       altlo="$(bench_gflops_lo "$GATE_SGEMM" "$ALTCSV")"
@@ -1655,7 +1692,7 @@ else
     # "4x32/avx512 (available: ...)" -> Kernel4x32; audited, not assumed, because a
     # roofline built from the wrong shape's instruction count is the hole the shape
     # guard exists to close.
-    obkern="$(marker bench-kern "$BENCHLOG")"; obkern="${obkern%% *}"
+    obkern="$(marker "$(kern_key)" "$BENCHLOG")"; obkern="${obkern%% *}"
     obtile="${obkern%%/*}"
     i_active="$(audit_ipf_tile "$obtile" "$AUDITKERN")"
     ob_rate="$(bench_gflops "$GATE_OPENBLAS" "$BENCHCSV")"
