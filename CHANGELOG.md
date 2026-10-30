@@ -9,6 +9,14 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **float64 Level 3: `Dgemm Dsyrk Dsymm Dtrsm Dtrmm Dsyr2k`** (#192). They are thin wrappers over the generated `internal/block64`
+  around `activeKern64`, with Dtrsm's diagonal solves through `activeL164`.
+  - **Tested on §5 rule 1's three checks** for every registered float64 microkernel, pre-broadcast ones included: the
+    definition-order references under `PeerTolerance64`; double-double `GemmDD`/`GemmEntryDD` on logical dense operands under
+    `Tolerance64`, reaching k = 768 past block64's KC = 512, with a backward-error arm for Dtrsm; and Gonum native float64.
+  - `TestDtrsmDtrsvDivide` pins the exact divide, because a planted reciprocal passed every tolerance-based check. It is also the
+    only check of `l164`'s ScalDiv, since f64gen does not carry `internal/l1`'s tests.
+  - Green on arm64 and on janus under avx512, avx2 and scalar.
 - **float64 Level 2: `Dgemv Dger Dtrmv Dtrsv Dsymv Dsyr Dsyr2 Dgbmv Dsbmv Dspmv Dspr Dspr2 Dtbmv Dtbsv Dtpmv Dtpsv`**
   (#192). They run on `internal/l264`, which f64gen generates from `internal/l2`.
   - **Tested on §5 rule 1's three checks:** the definition-order references (`Dgemv`, `Dtrsm`, `Dsyrk`/`Dsyr2k` at k=1, `Dger`)
