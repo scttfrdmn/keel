@@ -164,9 +164,12 @@ func TestRoutesToKeel64(t *testing.T) {
 		return func() []float64 { c := append([]float64(nil), src...); f(c); return c }
 	}
 	ps := []probe{
-		{"Ddot", func() []float64 { return []float64{k.Ddot(n, x, 1, y, 1)} },
-			func() []float64 { return []float64{keel.Ddot(n, x, 1, y, 1)} },
-			func() []float64 { return []float64{g.Ddot(n, x, 1, y, 1)} }},
+		// Strided: at unit stride keel's scalar Ddot and gonum's amd64 assembly sum in
+		// the same order and agree to the bit (CI's scalar paths found it), so that
+		// probe cannot tell them apart. At stride 2 their orders differ on every path.
+		{"Ddot", func() []float64 { return []float64{k.Ddot(n/2, x, 2, y, 2)} },
+			func() []float64 { return []float64{keel.Ddot(n/2, x, 2, y, 2)} },
+			func() []float64 { return []float64{g.Ddot(n/2, x, 2, y, 2)} }},
 		{"Dasum", func() []float64 { return []float64{k.Dasum(n, x, 1)} },
 			func() []float64 { return []float64{keel.Dasum(n, x, 1)} },
 			func() []float64 { return []float64{g.Dasum(n, x, 1)} }},
