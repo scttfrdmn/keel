@@ -2264,8 +2264,8 @@ unstable *rows* change between runs while the unstable *tier* does not. The thre
 README_TOL, the project's same-claim band, which predates every row involved (#163, 2026-09-15).
 
 **The ruling.** On amd64 the L1 criterion judges n=1048576 and REPORTS n=256, 4096 and 65536;
-their readings are printed and compared with nothing. arm64 judges all four sizes, because its
-founding pair spreads at most 2.21% on all 47 rows. A reported row proposes no candidate, since a
+their readings are printed and compared with nothing. arm64 judged all four sizes, because its
+founding pair spread at most 2.21% on all 47 rows (superseded 2026-10-31 by the #202 ruling below). A reported row proposes no candidate, since a
 row for a tier nothing judges would be landed and then read by nothing.
 
 **What this does not settle, found while landing it.** The 18 n=1048576 rows were NOT landed, and
@@ -2274,6 +2274,34 @@ would fail against their own founding run** (zen4 Sasum, zen5 Sdot, zen5 Saxpy).
 CI-disjointness with no margin, and within-run intervals are narrower than between-run drift: zen4
 Sasum's interval is 24.50–24.51 while zen5 Sdot drifts 4.24% between runs. #180 is the same
 mechanism on arm64. That is a question about the bar, not the tier, and it is not ruled here.
+
+## The arm64 judged L1 tier follows amd64's (#202, ruled 2026-10-31)
+
+**Scott, verbatim:** "arm64 should judge only the largest Level-1 size, as amd64 does." This is
+option (a) on #202.
+
+**The premise it replaces was measured on two hosts.** #179 let arm64 judge every size because the
+V1/V2 founding pair stayed under 2.21% (3.52% at famax). The third arm64 host refuted that. Founding-pair
+spreads (|Δ| / max, from the archived `baseline-candidates-*.tsv`, column 4):
+
+| host | element | n=256 | n=4096 | n=65536 | n=1048576 |
+|---|---|---|---|---|---|
+| V1/V2 (famax) | float32 | 2.06% | 1.23% | 3.52% | 1.77% |
+| V3 (famax) | float32 | 7.12% | 5.39% | **14.21%** | 1.07% |
+| V1/V2/V3 (f64init) | float64 | **15.14%** | 10.26% | 5.85% | 5.86% |
+
+**What it does.** gate-p5's arm64 branch sets `P5_L1_JUDGED="1048576"`. The smaller tiers are
+REPORTED with an arm64 justification of their own, because the shared sentence quoted amd64's null
+pairs. A reported row proposes no candidate and never reaches `baseline_state`.
+
+**What it releases, and what it does not:**
+- V3's float32 famax witness lands in `judged-runs.tsv`: all four of its refused rows were small-tier.
+- V3's float64 witness stays held: `rate/Dnrm2/n=1048576` (5.86%) is in the kept tier.
+- Zen 5's holds are untouched: a share row and a judged-tier row.
+
+**The small-tier arm64 rows stay in the registries, unread** (50 float32 famax, 51 float64 f64init).
+They are the founding pairs' record, and a later ruling that restored the tier would need them.
+Deleting them would destroy evidence to save lines that nothing reads.
 
 ## The L1 bar takes criterion 9's whole rule, on the admission statistic (#179/#180, ruled 2026-10-21)
 

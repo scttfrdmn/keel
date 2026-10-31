@@ -477,7 +477,7 @@ require_disk() {
     # failure mode, reintroduced by #84's fix. Driving the unreadable branch on purpose
     # is what caught it; the ok and low branches passed either way.
     avail=""; mnt=""
-    read -r avail mnt < <(df -Pk "$p" 2>/dev/null | awk 'NR==2 { print $(NF-2), $NF }') || true
+    read -r avail mnt < <(df -Pk "$p" 2>/dev/null | awk 'NR==2 { for (k = NF; k > 1 && $k !~ /^[0-9]+%$/; k--); m = $(k+1); for (i = k+2; i <= NF; i++) m = m " " $i; print $(k-1), m }') || true
     if [[ -z "$avail" || -z "$mnt" ]]; then
       DISK_STATE=unreadable
       unmeasured "free space behind $p ($label) is unreadable, so \"the harness can write\" stays an unchecked precondition: unreadable is not an exemption, and a volume that fills mid-run arrives as a FAIL about keel's build (#84)"

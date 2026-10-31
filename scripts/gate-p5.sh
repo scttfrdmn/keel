@@ -420,7 +420,9 @@ case "${KEEL_GOARCH:-amd64}" in
     P5_KERN_CHAIN="neon,scalar"
     P5_FORCED="scalar"
     P5_L1_ONLY=""
-    P5_L1_JUDGED="$P5_L1_SIZES" ;;
+    # #202, ruled 2026-10-31: as amd64 (#179); the founding-pair spreads are in docs/rulings.md.
+    P5_L1_JUDGED="1048576"
+    P5_L1_WHY="on arm64 the founding pairs spread them up to 14.21% (float32) and 15.14% (float64) between runs on Neoverse-V3, where n=1048576 stayed under 1.1% at float32 and refused one float64 row at 5.86% (#202)" ;;
   *)
     P5_L1_CHAIN="avx512,avx2,scalar"
     P5_KERN_CHAIN="avx512,scalar"
@@ -428,12 +430,10 @@ case "${KEEL_GOARCH:-amd64}" in
     # Backends that are Level 1 only: forcing one must produce that L1 backend and a
     # *scalar* microkernel, with the library saying so.
     P5_L1_ONLY="avx2"
-    # #179, ruled 2026-10-21: amd64 JUDGES only n=1048576 and REPORTS the smaller tiers. Two
-    # same-code null pairs (c30/c30b, refresh r1/r2) put the worst between-run spread at 62.6%
-    # (n=256, 6/18 rows over README_TOL), 70.7% (n=4096), 7.1% (n=65536) and 4.2% (n=1048576,
-    # 0/18). A per-row list was tested and refused: built from one pair, it missed 3-4 of the
-    # other pair's unstable rows. arm64 keeps all four (founding pair <=2.21% on all 47 rows).
-    P5_L1_JUDGED="1048576" ;;
+    # #179, ruled 2026-10-21: JUDGE only n=1048576, REPORT the smaller tiers (null pairs: 62.6%,
+    # 70.7%, 7.1%, 4.2% by size; a per-row list was tested and refused). docs/rulings.md has both.
+    P5_L1_JUDGED="1048576"
+    P5_L1_WHY="on this ISA two same-code null pairs spread them up to 70.7% between runs, where n=1048576 stayed under 4.2% (#179)" ;;
 esac
 
 # The FALLBACK band for criterion 9, applied only when a published rate's REFERENCE interval is
@@ -1755,7 +1755,7 @@ else
       # then first sight. A missing row is named in every branch, because 24-of-24 and 20-of-24
       # are different claims and only one of them is full coverage.
       l1cov="$L1_SEEN of $L1_WANT routine-size rows${L1_ABSENT:+, absent:$L1_ABSENT}${L1_RPT:+; $(wc -w <<<"$L1_RPT" | tr -d ' ') reported, not judged}"
-      [[ -n "$L1_RPT" ]] && reported "[$host] L1 rows below the judged tier ($P5_L1_JUDGED) are printed above and not compared: on this ISA two same-code null pairs spread them up to 70.7% between runs, where n=1048576 stayed under 4.2% (#179):$L1_RPT"
+      [[ -n "$L1_RPT" ]] && reported "[$host] L1 rows below the judged tier ($P5_L1_JUDGED) are printed above and not compared: $P5_L1_WHY:$L1_RPT"
       if [[ -n "$L1_REGRESSED" ]]; then
         fail "[$host] L1 regression, whole interval below the registered baseline:$L1_REGRESSED ($l1cov; $L1_HELD held, $L1_NEW first-sight)"
       elif [[ -n "$L1_OWING" ]]; then

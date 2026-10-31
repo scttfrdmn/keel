@@ -78,3 +78,4 @@ Neoverse-V2	famax	085f23e	2026-10-28	keel-gvt4	archive/p5-arm64-famax/bench-gate
 Neoverse-V1	famax	085f23e	2026-10-28	keel-gvt3	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt3-20261028T193133Z-2.txt
 AMD EPYC 9R14	famaxx86	f18f110	2026-10-29	keel-zen4	archive/p5-amd64-famaxx86/bench-gate-p5-f18f110-keel-zen4-20261029T071104Z-2.txt
 Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	f18f110	2026-10-29	keel-skx	archive/p5-amd64-famaxx86/bench-gate-p5-f18f110-keel-skx-20261029T071104Z-3.txt
+Neoverse-V3	famax	f3bbe01	2026-10-29	keel-gvt5	archive/p5-arm64-c9g/bench-gate-p5-f3bbe01-keel-gvt5-20261029T172030Z-1.txt

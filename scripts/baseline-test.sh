@@ -541,11 +541,11 @@ is 'and a cell the manifest does not cover aborts rather than defaulting' \
 is 'the deleted log-derived stores stay deleted' \
    "$(/usr/bin/sed 's/#.*$//' scripts/readme-numbers.sh \
       | /usr/bin/grep -cE '(^|[^A-Za-z0-9_])(est\(|an = MEDN|bn8|cn = MEDN|c8 =|p8 =)')" '0'
-# 36p. #179's judged tier, ruled 2026-10-21. arm64 judges every size; amd64 judges n=1048576
-#      only, because two same-code null pairs spread its smaller tiers up to 70.7% between runs.
+# 36p. The judged L1 tier: n=1048576 only on both arches (#179 amd64, 2026-10-21; #202 arm64,
+#      2026-10-31). The smaller tiers spread up to 70.7% (amd64) and 15.14% (Neoverse-V3) between runs.
 #      Keyed to each arch branch's own assignment, so moving the line between branches reds it.
-is 'arm64 judges all four L1 sizes (#179)' \
-   "$(/usr/bin/awk '/^  arm64\)/,/;;/' scripts/gate-p5.sh | /usr/bin/grep -c 'P5_L1_JUDGED="\$P5_L1_SIZES"')" '1'
+is 'arm64 judges n=1048576 only, as amd64 does (#202, ruled 2026-10-31)' \
+   "$(/usr/bin/awk '/^  arm64\)/,/;;/' scripts/gate-p5.sh | /usr/bin/grep -c 'P5_L1_JUDGED="1048576"')" '1'
 is 'amd64 judges n=1048576 only (#179)' \
    "$(/usr/bin/awk '/^  \*\)/,/^esac/' scripts/gate-p5.sh | /usr/bin/grep -c 'P5_L1_JUDGED="1048576"')" '1'
 # 36q. A reported-tier row must never reach baseline_state: if it did, it would propose a

@@ -43,6 +43,10 @@ While the major version is 0, minor versions may contain breaking changes.
   accounting). They are named so that no float32 gate's `-bench` filter selects them. `vec.PeakFamily64` is exported for them.
 
 ### Fixed
+- **The disk-headroom precondition misread a mount point with a space** (`remote.sh`). `df -P`'s fields were taken from the right
+  (`$(NF-2)`, `$NF`), so `/Volumes/External HD` gave `32%` as the free space, and bash died on the arithmetic. The capacity column
+  is now the anchor. Found while replaying the gate from a worktree on that volume. Checked on a spaced mount, the system volume and
+  a Linux `/`; net 0 lines.
 - **`marker_row` and gate-p4's `p4_verify_line` could kill a gate with SIGPIPE** (#193). Their awk printed the first match and `exit`ed,
   so the `marker_all` feeding it died writing to a closed pipe. `pipefail` turned that into exit 141 and `set -e` stopped the gate. It is
   size-dependent: janus's float64 gate-p4 was green, while pollux's arm64 one died after the Dgemv extent with no verdict. Both now read all
@@ -80,6 +84,11 @@ While the major version is 0, minor versions may contain breaking changes.
   - float64 Level 2 parallelizes at float32's element grain, unmeasured at float64.
 
 ### Changed
+- **arm64 judges only n=1048576 in Level 1, as amd64 does** (#202, Scott, 2026-10-31). The smaller sizes are REPORTED with an
+  arm64 justification. Neoverse-V3's founding pairs spread them up to 14.21% (float32) and 15.14% (float64), and the shared
+  sentence had quoted amd64's float32 null pairs. V3's float32 famax witness lands, because all four of its refused rows were
+  small-tier. Its float64 witness stays held (Dnrm2 n=1048576, 5.86%). The fixture re-pins, and a planted reversion turns it red.
+  The amd64 float32 replay is byte-identical, and the V3 replay changes only the L1 lines.
 - **The float32 Level-2 bodies moved into `internal/l2`** (#192), behind an `l1.Kernels` parameter, so float64 can be generated
   from them. A/B on orion's measured slot: 27 of 28 `BenchmarkL2Par` rows within 0.986–1.020. The 28th is bimodal in both arms
   (`archive/l2-move-ab/`).
