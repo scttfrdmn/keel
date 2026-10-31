@@ -499,7 +499,7 @@ EOF
   remote_run "$host" measured "$cmd" 2>/dev/null | grep -vE '^(keel-queue:|$)'
 }
 
-echo "== gate-p3: packing + blocking -> full Sgemm =="
+echo "== gate-p3: packing + blocking -> full ${GATE_SGEMM%%/*} =="
 gate_provenance   # what was measured (#68)
 echo
 
@@ -544,7 +544,7 @@ AUDITPEAK="$BINDIR/audit-peak.log"
 
 # ------------------------------------------------------- Sgemm vs the oracle
 echo
-echo "-- Sgemm vs the float64 oracle: size sweep x transpose x alpha x beta --"
+echo "-- ${GATE_SGEMM%%/*} vs the float64 oracle: size sweep x transpose x alpha x beta --"
 # CORRECTED 2026-10-03 (#172's neighbour): this read "the local run exercises the
 # scalar path only (darwin/arm64 has no archsimd)", which was true on go1.26 and has
 # been false since go1.27 shipped arm64 archsimd. The dev host runs REAL NEON --
@@ -647,21 +647,21 @@ AVX512_SEEN=0
 N_FORCED=0
 N_FORCED_OK=0
 if [[ -z "$HOSTS" ]]; then
-  unmeasured "P3 needs an amd64 host to execute the AVX-512 Sgemm and none is configured, so the vector Sgemm is unmeasured on real silicon"
+  unmeasured "P3 needs an amd64 host to execute the AVX-512 ${GATE_SGEMM%%/*} and none is configured, so the vector ${GATE_SGEMM%%/*} is unmeasured on real silicon"
 else
   remote_build_test_or_fail . "$BIN" "$LOG" \
-    "cross-compiled linux/amd64 test binary (root package: Sgemm vs oracle)" \
-    "cross-compile of linux/amd64 test binary"
+    "cross-compiled linux/${KEEL_GOARCH:-amd64} test binary (root package: ${GATE_SGEMM%%/*} vs oracle)" \
+    "cross-compile of linux/${KEEL_GOARCH:-amd64} test binary"
   while read -r host; do
     probe_or_unmeasured "$host" || continue
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
     if [[ "$OK" -eq 0 ]]; then
-      pass "[$host] Sgemm sweep passes"
+      pass "[$host] ${GATE_SGEMM%%/*} sweep passes"
     elif remote_vanished; then
-      unmeasured "[$host] the Sgemm sweep did not finish (#62), so this host says nothing about the sweep either way"
+      unmeasured "[$host] the ${GATE_SGEMM%%/*} sweep did not finish (#62), so this host says nothing about the sweep either way"
     else
-      fail "[$host] Sgemm sweep passes"
+      fail "[$host] ${GATE_SGEMM%%/*} sweep passes"
       sed 's/^/        /' "$LOG" | tail -40
     fi
     backends="$(marker "$P3_SWEEP_KEY-backends-exercised" "$LOG")"
@@ -700,18 +700,18 @@ else
   # of hosts with no AVX-512 read as a FAIL saying no target ran it green, which is
   # an assertion about keel made from the absence of a measurement.
   if [[ -n "$AVX512_GREEN" ]]; then
-    pass "the sweep ran green with the avx512 Sgemm live (target: $AVX512_GREEN)"
+    pass "the sweep ran green with the avx512 ${GATE_SGEMM%%/*} live (target: $AVX512_GREEN)"
   elif [[ "$AVX512_SEEN" -gt 0 ]]; then
-    fail "no target ran the Sgemm sweep green with the avx512 backend, though $AVX512_SEEN host(s) exercised it"
+    fail "no target ran the ${GATE_SGEMM%%/*} sweep green with the avx512 backend, though $AVX512_SEEN host(s) exercised it"
   elif [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
     # #155 (2026-09-16): the avx512 Sgemm sweep is amd64's kernel; arm64 dispatches NEON and its
     # sweep coverage is criterion 5b's NEON frontier (#156), so this avx512-specific aggregate is
     # N/A here, not UNMEASURED (which would falsely redden a healthy arm64 run). Same arch-gate the
     # OpenBLAS floor and 5b already take. amd64 BYTE-UNCHANGED: this arm cannot fire when KEEL_GOARCH
     # is unset, so the else below renders verbatim as before.
-    info "avx512 Sgemm sweep: N/A on arm64 (NEON is the dispatched kernel; sweep coverage is 5b's NEON frontier, #156) — not unmeasured (#155)"
+    info "avx512 ${GATE_SGEMM%%/*} sweep: N/A on arm64 (NEON is the dispatched kernel; sweep coverage is 5b's NEON frontier, #156) — not unmeasured (#155)"
   else
-    unmeasured "no host exercised the avx512 Sgemm at all, so whether the sweep passes with it live is unmeasured rather than short: there was no host to ask"
+    unmeasured "no host exercised the avx512 ${GATE_SGEMM%%/*} at all, so whether the sweep passes with it live is unmeasured rather than short: there was no host to ask"
   fi
   # The old form failed only when NO host proved the fallback. Failing when any
   # host that tried it failed adds no criterion -- the per-host FAIL above already
@@ -930,7 +930,7 @@ if [[ -z "$SENTINELS" ]]; then
 else
   info "judged as sentinels: $(tr '\n' ' ' <<<"$SENTINELS")"
   if ! remote_build_test ./bench "$KERNBIN" >"$LOG" 2>&1; then
-    fail "cross-compile of the linux/amd64 bench binary (kernel benchmarks)"
+    fail "cross-compile of the linux/${KEEL_GOARCH:-amd64} bench binary (kernel benchmarks)"
     sed 's/^/        /' "$LOG" | tail -20
   fi
   while read -r host; do
@@ -1023,7 +1023,7 @@ else
     # Not the fastest one on the shelf: with a per-host choice those are different
     # claims, and the one P3's numbers rest on is the dispatched shape.
     if [[ -z "$ACT_LO" ]]; then
-      fail "[$host] Sgemm dispatches to ${hkern:-an unreported shape}, which this gate did not benchmark ($GATE_KERNELS): the shipped kernel would go unjudged"
+      fail "[$host] ${GATE_SGEMM%%/*} dispatches to ${hkern:-an unreported shape}, which this gate did not benchmark ($GATE_KERNELS): the shipped kernel would go unjudged"
       continue
     fi
     if [[ "$ACT_ID" != "$BEST_ID" ]]; then
@@ -1274,18 +1274,18 @@ fi
 # person to edit this section will be reading this file, not the tracker: an
 # issue nobody is pointed to is a debt with no address.
 echo
-echo "-- Sgemm at 2048^3: percent of measured peak, and >= 60% of single-thread OpenBLAS --"
+echo "-- ${GATE_SGEMM%%/*} at 2048^3: percent of measured peak, and >= 60% of single-thread OpenBLAS --"
 info "-count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME; the bar counts as cleared only net of both confidence intervals"
-info "each host is also run once more with KEEL_KERN_CLASS pinned to the other class (criterion 5b), which is where the extra Sgemm time goes"
+info "each host is also run once more with KEEL_KERN_CLASS pinned to the other class (criterion 5b), which is where the extra ${GATE_SGEMM%%/*} time goes"
 
 if [[ -n "$HOSTS" ]]; then
   remote_build_test_or_fail ./bench "$BENCHBIN" "$LOG" \
-    "cross-compiled linux/amd64 bench binary (Sgemm + peak)" \
-    "cross-compile of linux/amd64 bench binary"
+    "cross-compiled linux/${KEEL_GOARCH:-amd64} bench binary (${GATE_SGEMM%%/*} + peak)" \
+    "cross-compile of linux/${KEEL_GOARCH:-amd64} bench binary"
   while read -r host; do
     if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" \
          -test.bench="$SGEMM_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
-      unmeasured "[$host] the Sgemm benchmark run failed, so this host's rates are unmeasured"
+      unmeasured "[$host] the ${GATE_SGEMM%%/*} benchmark run failed, so this host's rates are unmeasured"
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
@@ -1294,9 +1294,9 @@ if [[ -n "$HOSTS" ]]; then
     # Both, declared together: the percent-of-peak line, the retention line and the
     # 5b comparison all read the peak, and an absent peak used to degrade silently
     # into a missing info line rather than into a verdict.
-    require_bench "[$host] the blocked Sgemm's inputs" \
+    require_bench "[$host] the blocked ${GATE_SGEMM%%/*}'s inputs" \
       "$BENCHLOG" "$BENCHCSV" GFLOP/s "$GATE_SGEMM" "$GATE_PEAK" || continue
-    info "[$host] Sgemm 2048^3 $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s), peak $(bench_describe "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
+    info "[$host] ${GATE_SGEMM%%/*} 2048^3 $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s), peak $(bench_describe "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
     pk="$(bench_ratio "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
     pklo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
     if [[ -n "$pk" ]]; then
@@ -1347,7 +1347,7 @@ if [[ -n "$HOSTS" ]]; then
       fail "[$host] the bench run reports kernel class '${hclass:-<none>}', which is not a class this gate knows, so the shape choice cannot be cross-checked at 2048^3"
     elif ! KEEL_REMOTE_ENV="GOMAXPROCS=1 KEEL_KERN_CLASS=$alt" remote_exec "$host" "$BENCHBIN" \
            "${BFLAGS[@]}" -test.bench="$SGEMM_SHAPE_FILTER" >"$ALTLOG" 2>&1; then
-      unmeasured "[$host] the KEEL_KERN_CLASS=$alt Sgemm run failed, so the shape choice is uncorroborated at 2048^3 — unmeasured, not refuted (the no-interval branch below already says so)"
+      unmeasured "[$host] the KEEL_KERN_CLASS=$alt ${GATE_SGEMM%%/*} run failed, so the shape choice is uncorroborated at 2048^3 — unmeasured, not refuted (the no-interval branch below already says so)"
       sed 's/^/        /' "$ALTLOG" | tail -20
     else
       altkern="$(marker "$(kern_key)" "$ALTLOG")"; altkern="${altkern%% *}"
@@ -1359,7 +1359,7 @@ if [[ -n "$HOSTS" ]]; then
       if [[ -z "$altkern" || "$altkern" == "$hkern" ]]; then
         info "[$host] KEEL_KERN_CLASS=$alt selects ${altkern:-the same shape} too, so both classes agree here and there is nothing to compare"
       elif [[ -z "$altlo" || -z "$disppt" ]]; then
-        unmeasured "[$host] the KEEL_KERN_CLASS=$alt run established no bounded Sgemm rate, so the shape choice is unmeasured at 2048^3 rather than confirmed"
+        unmeasured "[$host] the KEEL_KERN_CLASS=$alt run established no bounded ${GATE_SGEMM%%/*} rate, so the shape choice is unmeasured at 2048^3 rather than confirmed"
       elif awk -v a="$altlo" -v b="$disppt" 'BEGIN{exit !(a > b)}'; then
         fail "[$host] at 2048^3 the passed-over $altkern beats the dispatched $hkern: $(printf '%.1f' "$altpt") GFLOP/s, $(printf '%.1f' "$altlo") net of CI, against $(printf '%.1f' "$disppt")"
       else
@@ -1767,7 +1767,7 @@ else
       # host is already indeterminate, and reporting that instead would say "re-measure"
       # about a host no re-measurement makes judgeable.
       if ! adm_judgeable "$host" "$GOV_PROV" \
-           "Sgemm at 2048^3 reads ${rptpc}% of plain OpenBLAS, ${rlopc}% net of CI, under an indeterminate classification whose candidates split $NCLEAR clear / $NMISS miss"; then
+           "${GATE_SGEMM%%/*} at 2048^3 reads ${rptpc}% of plain OpenBLAS, ${rlopc}% net of CI, under an indeterminate classification whose candidates split $NCLEAR clear / $NMISS miss"; then
         OB_NOTADM=$((OB_NOTADM + 1))
         continue
       fi
@@ -1777,11 +1777,11 @@ else
       # turn an UNMEASURED into a PASS.
       COLLAPSE="$(p3_collapse "$NCAND" "$NCLEAR" "$NMISS")"
       if [[ "$COLLAPSE" == pass ]]; then
-        pass "[$host] Sgemm at 2048^3 clears the 60% bar under BOTH candidate denominators, so the undecidable classification does not change the verdict (why=agree-anyway; class=indeterminate, both branches printed above, each judged net of CI)"
+        pass "[$host] ${GATE_SGEMM%%/*} at 2048^3 clears the 60% bar under BOTH candidate denominators, so the undecidable classification does not change the verdict (why=agree-anyway; class=indeterminate, both branches printed above, each judged net of CI)"
         OB_CLEARED=$((OB_CLEARED + 1))
       elif [[ "$COLLAPSE" == fail ]]; then
         OB_MISSED=$((OB_MISSED + 1))
-        fail "[$host] Sgemm at 2048^3 misses the 60% bar under BOTH candidate denominators, so the undecidable classification does not change the verdict (why=agree-anyway; class=indeterminate, both branches printed above, each judged net of CI) — the classification is not what is wrong here"
+        fail "[$host] ${GATE_SGEMM%%/*} at 2048^3 misses the 60% bar under BOTH candidate denominators, so the undecidable classification does not change the verdict (why=agree-anyway; class=indeterminate, both branches printed above, each judged net of CI) — the classification is not what is wrong here"
       else
         OB_INDET=$((OB_INDET + 1))
         unmeasured "[$host] classification indeterminate this run and the two candidate denominators DISAGREE (why=split: $NCLEAR clear, $NMISS miss, $((NCAND - NCLEAR - NMISS)) unbounded), so criterion 6 has no denominator on this host — keel measured $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s) here and that reading is not in question; the gate declines to pick a denominator by noise"
@@ -1803,7 +1803,7 @@ else
     else
       roofstr="roofline n/a (why=$obwhy) against a $(printf '%.2f' "${peak_rate:-0}") GFLOP/s peak"
     fi
-    info "[$host] denominator: $obsrc $(printf '%.2f' "$obdenom") GFLOP/s (why=$obwhy, class=$obclass, Sgemm ran ${obkern:-unknown} at $(printf '%.3f' "${i_active:-0}") insns/FMA, $roofstr)"
+    info "[$host] denominator: $obsrc $(printf '%.2f' "$obdenom") GFLOP/s (why=$obwhy, class=$obclass, ${GATE_SGEMM%%/*} ran ${obkern:-unknown} at $(printf '%.3f' "${i_active:-0}") insns/FMA, $roofstr)"
 
     # Net of CI, in the same conservative direction as everything else here. Against
     # the roofline cap that is keel_lo/(roof · peak_hi) = pklo/roof; $rlo remains a
@@ -1814,7 +1814,7 @@ else
       pklo="$(bench_ratio_lo "$GATE_SGEMM" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
       alo="$(p3_ratio_lo roofline "$rlo" "$pklo" "$obroof")"
       if [[ -z "$alo" ]]; then
-        unmeasured "[$host] no bounded Sgemm/peak ratio, so the amended denominator cannot be bounded either; that is a failure to measure, not a pass"
+        unmeasured "[$host] no bounded ${GATE_SGEMM%%/*}/peak ratio, so the amended denominator cannot be bounded either; that is a failure to measure, not a pass"
         continue
       fi
       apt="$(awk -v k="$(bench_gflops "$GATE_SGEMM" "$BENCHCSV")" -v d="$obdenom" 'BEGIN{printf "%.4f", k / d}')"
@@ -1832,7 +1832,7 @@ else
     # the number this whole gate exists for, so it is stated on every host; what the class
     # decides is whether 60% is a bar this host's silicon can be held to.
     if ! adm_judgeable "$host" "$GOV_PROV" \
-         "Sgemm at 2048^3 reads ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (plain OpenBLAS ${rptpc}%, ${rlopc}%)"; then
+         "${GATE_SGEMM%%/*} at 2048^3 reads ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (plain OpenBLAS ${rptpc}%, ${rlopc}%)"; then
       OB_NOTADM=$((OB_NOTADM + 1))
       continue
     fi
@@ -1848,16 +1848,16 @@ else
     # and an OpenBLAS re-tune of its Graviton kernel would move the ratio for reasons that are not
     # keel's. amd64 is byte-unchanged: this branch is inert when KEEL_GOARCH is unset.
     if [[ "${KEEL_GOARCH:-amd64}" == arm64 ]]; then
-      reported "[$host] Sgemm at 2048^3 reads ${aptpc}% of its swept OpenBLAS reference, ${alopc}% net of CI — REPORTED, not judged against OPENBLAS_FLOOR=$OPENBLAS_FLOOR: on arm64 that reference is an SVE kernel and keel is NEON (archsimd has no SVE, #162), so the >= 60% bar (amd64/AVX-512-derived) is a foreign-reference category error here (#155). The ratio is the finding, not a keel FAIL; a bar travels with its derivation set."
+      reported "[$host] ${GATE_SGEMM%%/*} at 2048^3 reads ${aptpc}% of its swept OpenBLAS reference, ${alopc}% net of CI — REPORTED, not judged against OPENBLAS_FLOOR=$OPENBLAS_FLOOR: on arm64 that reference is an SVE kernel and keel is NEON (archsimd has no SVE, #162), so the >= 60% bar (amd64/AVX-512-derived) is a foreign-reference category error here (#155). The ratio is the finding, not a keel FAIL; a bar travels with its derivation set."
       OB_REPORTED=$((OB_REPORTED + 1))
       continue
     fi
     if awk -v r="$alo" -v f="$OPENBLAS_FLOOR" 'BEGIN{exit !(r >= f)}'; then
-      pass "[$host] Sgemm at 2048^3 is ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (>= 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
+      pass "[$host] ${GATE_SGEMM%%/*} at 2048^3 is ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (>= 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
       OB_CLEARED=$((OB_CLEARED + 1))
     else
       OB_MISSED=$((OB_MISSED + 1))
-      fail "[$host] Sgemm at 2048^3 is only ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (< 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
+      fail "[$host] ${GATE_SGEMM%%/*} at 2048^3 is only ${aptpc}% of its $obsrc denominator, ${alopc}% net of CI (< 60%; plain OpenBLAS ${rptpc}%, ${rlopc}% net of CI)"
     fi
   done < <(hosts_lines)
   # Three-way over coverage state, the same shape as criterion 5b's aggregate and for
@@ -1883,7 +1883,7 @@ else
     # (a lab Mac: instance=none virt=guest -> correctness -> OB_NOTADM above, never reaching
     # REPORTED) was absent from the only fleet line this arch prints. Byte-unchanged where coverage
     # is complete -- fleet_shortfall is empty when j >= n -- so the v0.2.0 arm64 wording is intact.
-    reported "the keel/OpenBLAS ratio is REPORTED on all $OB_REPORTED arm64 host(s), not judged against the 60% floor: NEON vs an SVE reference (#155/#162). The per-host ratios are printed above and carry to the certificate as the finding, not scored as a keel FAIL.$(fleet_shortfall "$NHOSTS" "$OB_REPORTED")"
+    reported "the keel/OpenBLAS ratio is REPORTED on all $OB_REPORTED arm64 host(s), not judged against the 60% floor: NEON vs an SVE reference (#155/#162). The per-host ratios are printed above and carry to the certificate as the finding, not scored as a keel FAIL.$(fs="$(fleet_shortfall "$NHOSTS" "$OB_REPORTED")"; echo "${fs/the UNMEASURED lines above/the UNMEASURED and correctness-class lines above}")"
   else
   case "$(fleet_coverage "$NHOSTS" "$OB_MEASURED" "$OB_CLEARED" "$OB_MISSED" "$OB_INDET")" in
   unmeasured)

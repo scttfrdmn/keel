@@ -326,8 +326,8 @@ if [[ -z "$HOSTS" ]]; then
   fi
 else
   remote_build_test_or_fail . "$BIN" "$LOG" \
-    "cross-compiled linux/amd64 test binary (root package: P4 routines vs oracle)" \
-    "cross-compile of linux/amd64 test binary"
+    "cross-compiled linux/${KEEL_GOARCH:-amd64} test binary (root package: P4 routines vs oracle)" \
+    "cross-compile of linux/${KEEL_GOARCH:-amd64} test binary"
   while read -r host; do
     probe_or_unmeasured "$host" || continue
     OK=0
@@ -370,7 +370,7 @@ else
   L3_CFG="$(marker "$P4_SWEEP_KEY-config" "$SWEEPLOG")"
   L1_ACTIVE="$(marker "$P4_L1_KEY" "$SWEEPLOG")"
   info "P3's dispatched microkernel on this host: ${L3_KERN:-<no keel-$P4_SWEEP_KEY-active marker>}"
-  [[ -n "$L3_KERN" ]] || unmeasured "no keel-$P4_SWEEP_KEY-active marker in the lattice log, so the derived routines' shape cannot be compared against Sgemm's (criterion 5)"
+  [[ -n "$L3_KERN" ]] || unmeasured "no keel-$P4_SWEEP_KEY-active marker in the lattice log, so the derived routines' shape cannot be compared against $P4_GEMM's (criterion 5)"
 
   for r in $P4_ROUTINES; do
     # ---- the flag lattice (criterion 1)
@@ -518,9 +518,9 @@ else
       if [[ -z "$rk" ]]; then
         unmeasured "$r: keel-p4-config has no kern=, so this gate cannot tell a blocked derivation from a reimplementation"
       elif [[ -n "$L3_KERN" && "$rk" != "$L3_KERN" ]]; then
-        fail "$r: runs microkernel $rk where Sgemm in the same run dispatched $L3_KERN — a second kernel family, or a shape chosen by something other than the classification P3's gate checks"
+        fail "$r: runs microkernel $rk where $P4_GEMM in the same run dispatched $L3_KERN — a second kernel family, or a shape chosen by something other than the classification P3's gate checks"
       else
-        pass "$r: derived on the same microkernel Sgemm dispatched ($rk), path=$(field path "$cfg")"
+        pass "$r: derived on the same microkernel $P4_GEMM dispatched ($rk), path=$(field path "$cfg")"
       fi
       PBAD=""
       for p in kc mc nc; do
@@ -528,13 +528,13 @@ else
         if [[ -z "$rv" ]]; then
           PBAD="$PBAD ${p}(absent)"
         elif [[ -n "$sv" && "$rv" != "$sv" ]]; then
-          PBAD="$PBAD ${p}($rv vs Sgemm's $sv)"
+          PBAD="$PBAD ${p}($rv vs $P4_GEMM's $sv)"
         fi
       done
       if [[ -z "$PBAD" ]]; then
-        pass "$r: blocked with Sgemm's own parameters (kc=$(field kc "$cfg") mc=$(field mc "$cfg") nc=$(field nc "$cfg"))"
+        pass "$r: blocked with $P4_GEMM's own parameters (kc=$(field kc "$cfg") mc=$(field mc "$cfg") nc=$(field nc "$cfg"))"
       else
-        fail "$r: blocking parameters differ from Sgemm's or are unreported:$PBAD — P5 tunes one set of parameters, not four"
+        fail "$r: blocking parameters differ from $P4_GEMM's or are unreported:$PBAD — P5 tunes one set of parameters, not four"
       fi
     else
       rl1="$(field l1 "$cfg")"
@@ -553,7 +553,7 @@ carry_p2_properties P4 "triangular masking"
 
 # ------------------------------------- Ssyrk >= 85% of Sgemm at the same size
 echo
-echo "-- Ssyrk vs Sgemm at 2048 (criterion 7): one invocation, both flop counts checked --"
+echo "-- $P4_SYRK vs $P4_GEMM at 2048 (criterion 7): one invocation, both flop counts checked --"
 info "-count=$KEEL_BENCH_COUNT -benchtime=$KEEL_BENCH_TIME; the bar counts as cleared only net of both confidence intervals"
 
 BFLAGS=()
@@ -567,11 +567,11 @@ SYRK_MISSED=0
 SYRK_INDET=0
 NHOSTS="$(sed '/^[[:space:]]*$/d' <<<"$HOSTS" | grep -c . || true)"
 if [[ -z "$HOSTS" ]]; then
-  unmeasured "no execution hosts, so the Ssyrk/Sgemm ratio cannot be evaluated: unmeasured, not missed"
+  unmeasured "no execution hosts, so the $P4_SYRK/$P4_GEMM ratio cannot be evaluated: unmeasured, not missed"
 else
   remote_build_test_or_fail ./bench "$BENCHBIN" "$LOG" \
-    "cross-compiled linux/amd64 bench binary (Sgemm + Ssyrk + peak)" \
-    "cross-compile of linux/amd64 bench binary"
+    "cross-compiled linux/${KEEL_GOARCH:-amd64} bench binary ($P4_GEMM + $P4_SYRK + peak)" \
+    "cross-compile of linux/${KEEL_GOARCH:-amd64} bench binary"
   DRIFT_CHECKED=""
   while read -r host; do
     # Re-read at the moment of measurement, not merely in the preamble: a governor
@@ -584,7 +584,7 @@ else
     clock_head "$host" "$BENCHBIN" || continue
     if ! KEEL_REMOTE_ENV="GOMAXPROCS=1" remote_exec "$host" "$BENCHBIN" "${BFLAGS[@]}" \
          -test.bench="$P4_BENCH_FILTER" >"$BENCHLOG" 2>&1; then
-      unmeasured "[$host] the Ssyrk/Sgemm benchmark run failed, so this host's ratio is unmeasured"
+      unmeasured "[$host] the $P4_SYRK/$P4_GEMM benchmark run failed, so this host's ratio is unmeasured"
       sed 's/^/        /' "$BENCHLOG" | tail -20
       continue
     fi
@@ -605,7 +605,7 @@ else
     # All three declared before any is read. Peak is in the list because the
     # provenance lines below divide by it, and an absent peak used to degrade into a
     # missing info line rather than into a verdict (DESIGN.md §5 rule 6).
-    require_bench "[$host] the Ssyrk/Sgemm ratio's inputs" \
+    require_bench "[$host] the $P4_SYRK/$P4_GEMM ratio's inputs" \
       "$BENCHLOG" "$BENCHCSV" GFLOP/s "$GATE_SSYRK" "$GATE_SGEMM" "$GATE_PEAK" || continue
     # Before any criterion divides by a rate: on a host with no governor, the clock this
     # sweep ran on is established here or not at all (§5 rule 5 as amended 2026-08-16). After require_bench
@@ -639,7 +639,7 @@ else
       if [[ "$r" == "$P4_GEMM" ]]; then SGD="$fl"; else SYD="$fl"; fi
     done
     if [[ -n "$FBAD" ]]; then
-      fail "[$host] the ratio's flop counts do not check out:$FBAD — Ssyrk does about half of Sgemm's arithmetic, so a wrong count moves this ratio by 2x and the bar would be cleared by a routine that did not clear it"
+      fail "[$host] the ratio's flop counts do not check out:$FBAD — $P4_SYRK does about half of $P4_GEMM's arithmetic, so a wrong count moves this ratio by 2x and the bar would be cleared by a routine that did not clear it"
       continue
     fi
     # "at same size", checked rather than assumed: two rates measured at two sizes
@@ -647,11 +647,11 @@ else
     gm="$(field m "$SGD")"; gn="$(field n "$SGD")"; gk="$(field k "$SGD")"
     sn="$(field n "$SYD")"; sk="$(field k "$SYD")"
     if [[ "$gm" != "$gn" || "$gn" != "$gk" || "$sn" != "$gn" || "$sk" != "$gk" ]]; then
-      fail "[$host] the two benchmarks are not at the same size: Sgemm m=$gm n=$gn k=$gk against Ssyrk n=$sn k=$sk"
+      fail "[$host] the two benchmarks are not at the same size: $P4_GEMM m=$gm n=$gn k=$gk against $P4_SYRK n=$sn k=$sk"
       continue
     fi
-    info "[$host] flop counts checked: Sgemm $(field flops "$SGD") = 2*m*n*k, Ssyrk $(field flops "$SYD") = k*n*(n+1), both at n=$gn k=$gk"
-    info "[$host] Ssyrk $(bench_describe "$GATE_SSYRK" "$BENCHCSV" GFLOP/s), Sgemm $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s), peak $(bench_describe "$GATE_PEAK" "$BENCHCSV" GFLOP/s), one invocation"
+    info "[$host] flop counts checked: $P4_GEMM $(field flops "$SGD") = 2*m*n*k, $P4_SYRK $(field flops "$SYD") = k*n*(n+1), both at n=$gn k=$gk"
+    info "[$host] $P4_SYRK $(bench_describe "$GATE_SSYRK" "$BENCHCSV" GFLOP/s), $P4_GEMM $(bench_describe "$GATE_SGEMM" "$BENCHCSV" GFLOP/s), peak $(bench_describe "$GATE_PEAK" "$BENCHCSV" GFLOP/s), one invocation"
     for r in "$GATE_SSYRK" "$GATE_SGEMM"; do
       rp="$(bench_ratio "$r" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
       rpl="$(bench_ratio_lo "$r" "$GATE_PEAK" "$BENCHCSV" GFLOP/s)"
@@ -663,7 +663,7 @@ else
     spt="$(bench_ratio "$GATE_SSYRK" "$GATE_SGEMM" "$BENCHCSV" GFLOP/s)"
     grade="$(bench_ratio_grade "$GATE_SSYRK" "$GATE_SGEMM" "$BENCHCSV" GFLOP/s "$SYRK_FLOOR")"
     if [[ -z "$grade" || "$grade" == unbounded ]]; then
-      unmeasured "[$host] no bounded Ssyrk/Sgemm ratio: benchstat established no confidence interval, which is a failure to measure rather than a pass"
+      unmeasured "[$host] no bounded $P4_SYRK/$P4_GEMM ratio: benchstat established no confidence interval, which is a failure to measure rather than a pass"
       continue
     fi
     SYRK_MEASURED=$((SYRK_MEASURED + 1))
@@ -678,7 +678,7 @@ else
     hr="$(bench_ratio_headroom "$spt" "$SYRK_FLOOR")"
     sci="$(bench_stat "$GATE_SSYRK" "$BENCHCSV" GFLOP/s | awk '{ if ($2 == "inf") print "unbounded"; else printf "%.1f%%", $2*100 }')"
     gci="$(bench_stat "$GATE_SGEMM" "$BENCHCSV" GFLOP/s | awk '{ if ($2 == "inf") print "unbounded"; else printf "%.1f%%", $2*100 }')"
-    info "[$host] criterion 7 interval [${slopc}%, ${shipc}%] about a raw ${sptpc}%, bar $(awk -v f="$SYRK_FLOOR" 'BEGIN{printf "%.1f", f*100}')%; observed CI Ssyrk +/- ${sci}, Sgemm +/- ${gci}; flip-headroom $(awk -v v="$hr" 'BEGIN{printf "%+.2f", v*100}')% symmetric CI"
+    info "[$host] criterion 7 interval [${slopc}%, ${shipc}%] about a raw ${sptpc}%, bar $(awk -v f="$SYRK_FLOOR" 'BEGIN{printf "%.1f", f*100}')%; observed CI $P4_SYRK +/- ${sci}, $P4_GEMM +/- ${gci}; flip-headroom $(awk -v v="$hr" 'BEGIN{printf "%+.2f", v*100}')% symmetric CI"
     # T21: benchstat's CI is an integer percent, so "+/- 0.0%" means "under 0.5%",
     # not "zero". If the headroom is smaller than that rounding, a PASS computed
     # from a 0.0% arm is inside the formatting's own uncertainty and the interval
@@ -690,15 +690,15 @@ else
     fi
     case "$grade" in
       pass)
-        pass "[$host] Ssyrk holds ${sptpc}% of Sgemm's rate at n=$gn, ${slopc}% net of CI (>= 85%)"
+        pass "[$host] $P4_SYRK holds ${sptpc}% of $P4_GEMM's rate at n=$gn, ${slopc}% net of CI (>= 85%)"
         SYRK_CLEARED=$((SYRK_CLEARED + 1))
         ;;
       fail)
-        fail "[$host] Ssyrk holds only ${sptpc}% of Sgemm's rate at n=$gn, and the whole interval [${slopc}%, ${shipc}%] is below 85%: the triangular derivation is losing more than its masked half"
+        fail "[$host] $P4_SYRK holds only ${sptpc}% of $P4_GEMM's rate at n=$gn, and the whole interval [${slopc}%, ${shipc}%] is below 85%: the triangular derivation is losing more than its masked half"
         SYRK_MISSED=$((SYRK_MISSED + 1))
         ;;
       *)
-        unmeasured "[$host] Ssyrk's interval [${slopc}%, ${shipc}%] straddles the 85% bar (raw ${sptpc}%), so this reading cannot decide the criterion in either direction — it is not evidence that Ssyrk is too slow, and it is not a pass"
+        unmeasured "[$host] $P4_SYRK's interval [${slopc}%, ${shipc}%] straddles the 85% bar (raw ${sptpc}%), so this reading cannot decide the criterion in either direction — it is not evidence that $P4_SYRK is too slow, and it is not a pass"
         info "  remedy, in order: DESIGN.md §4's one immediate re-run with both outputs archived; and if this host is CHRONICALLY indeterminate here, raise KEEL_BENCH_COUNT for this criterion on this host. The bar does not move and the raw ratio is not graded in place of the bound — a true-below ratio would clear on a lucky draw (#67)."
         SYRK_INDET=$((SYRK_INDET + 1))
         ;;
@@ -715,13 +715,13 @@ else
   # of NHOSTS and these lines would read fleet-wide over a proper subset. gate-p2's 5b and
   # gate-p3's criterion 6 append the same clause; this is the aggregate that never got it.
   if [[ "$SYRK_MEASURED" -eq 0 ]]; then
-    unmeasured "no host produced a bounded Ssyrk/Sgemm ratio at all, so criterion 7 is unmeasured rather than missed"
+    unmeasured "no host produced a bounded $P4_SYRK/$P4_GEMM ratio at all, so criterion 7 is unmeasured rather than missed"
   elif [[ "$SYRK_MISSED" -gt 0 ]]; then
-    fail "$SYRK_MISSED of $NHOSTS gate hosts are below the bar with the whole interval ($SYRK_CLEARED cleared, $SYRK_INDET undecidable); the criterion is per host, on the host's own Sgemm$(fleet_shortfall "$NHOSTS" "$SYRK_MEASURED")"
+    fail "$SYRK_MISSED of $NHOSTS gate hosts are below the bar with the whole interval ($SYRK_CLEARED cleared, $SYRK_INDET undecidable); the criterion is per host, on the host's own $P4_GEMM$(fleet_shortfall "$NHOSTS" "$SYRK_MEASURED")"
   elif [[ "$SYRK_INDET" -gt 0 ]]; then
     unmeasured "$SYRK_INDET of $NHOSTS gate hosts produced an interval straddling the bar and none produced one below it ($SYRK_CLEARED cleared): criterion 7 is undecided on this run, which is not the same as missed, and the gate stays not-green until a re-run or a higher -count settles it (#67)$(fleet_shortfall "$NHOSTS" "$SYRK_MEASURED")"
   elif [[ "$SYRK_CLEARED" -eq "$NHOSTS" ]]; then
-    pass "every gate host cleared 85% of its own Sgemm ($SYRK_CLEARED/$NHOSTS)$(fleet_shortfall "$NHOSTS" "$SYRK_MEASURED")"
+    pass "every gate host cleared 85% of its own $P4_GEMM ($SYRK_CLEARED/$NHOSTS)$(fleet_shortfall "$NHOSTS" "$SYRK_MEASURED")"
   else
     unmeasured "$SYRK_CLEARED of $NHOSTS gate hosts cleared the bar and the rest produced no verdict at all, so the host count and the verdict count disagree: criterion 7 covered fewer hosts than this gate believes it has"
   fi
@@ -730,7 +730,7 @@ fi
 # ------------------------------------------- P3's gate, carried forward whole
 echo
 echo "-- carried from P3 (criterion 8): the gate P4 edits the code of --"
-info "the Ssyrk/Sgemm ratio above is a ratio against a number P4 can move, so the"
+info "the $P4_SYRK/$P4_GEMM ratio above is a ratio against a number P4 can move, so the"
 info "denominator's own bar is carried by running the gate that owns it — not by"
 info "restating a threshold in a second place"
 if [[ "$TREE_CLEAN" -eq 0 ]]; then
@@ -774,9 +774,9 @@ else
   # status because they are two independent witnesses of the same claim, and a
   # delegate that exits 0 having printed nothing has not certified anything.
   if [[ "$P3RC" -eq 0 && "$P3V" == *GREEN* ]]; then
-    pass "gate-p3 is green on this commit ($(git rev-parse --short HEAD)), so P4's denominator is still the Sgemm P3 measured"
+    pass "gate-p3 is green on this commit ($(git rev-parse --short HEAD)), so P4's denominator is still the $P4_GEMM P3 measured"
   elif [[ "$P3RC" -eq 1 && "$P3V" == *RED* ]]; then
-    fail "gate-p3 is RED on this commit (exit $P3RC), so nothing above that divides by Sgemm means what it says"
+    fail "gate-p3 is RED on this commit (exit $P3RC), so nothing above that divides by $P4_GEMM means what it says"
     printf '%s\n' "$P3_STRIP" | grep -E '^  (FAIL|UNMEASURED)  ' | sed 's/^/        /' | head -20
     info "  DESIGN.md §4's one-re-run allowance applies to a failing THROUGHPUT SENTINEL reading inside that gate exactly as it does when it is run directly: one immediate re-run, both outputs archived, never for a correctness criterion"
   else

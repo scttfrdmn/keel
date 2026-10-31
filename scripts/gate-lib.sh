@@ -696,7 +696,7 @@ reconcile_sweep_best_ipf() {
 carry_p2_properties() {
   echo
   echo "-- carried from P2 (criterion 4): the K-loop after $2 --"
-  info "compile-time property, audited against the linux/amd64 object code the hosts run"
+  info "compile-time property, audited against the linux/${KEEL_GOARCH:-amd64} object code the hosts run"
   if GOEXPERIMENT=simd go run ./internal/spill/cmd/spill-audit \
        -goarch "${KEEL_GOARCH:-amd64}" -pkg "$KERN_PKG" -func "$KERN_FUNCS" -mode spill -ssa "$SSADIR" >"$AUDITKERN" 2>&1; then
     sed 's/^/        /' "$AUDITKERN"
