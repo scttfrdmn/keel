@@ -41,6 +41,10 @@ While the major version is 0, minor versions may contain breaking changes.
 - **The float64 measurement instruments for #193**: `BenchmarkWideRoof64` (float64 FMA ceilings and family at 1 and 8 threads,
   BenchmarkCeiling's method) and `BenchmarkLevel3F64` (Dgemm, Dsyrk, Dsymm and Dtrsm at n=4096, 1 and 8 threads, BenchmarkScale's
   accounting). They are named so that no float32 gate's `-bench` filter selects them. `vec.PeakFamily64` is exported for them.
+- **Invariant I2 is checked at float64** (#135, `internal/pack64/part_test.go`): the generated `BPanelsPart` must match the
+  generated serial pack bit for bit over every contiguous partition, and must panic on a range outside the block. f64gen copies
+  no tests, so until now nothing held the range form to the serial one. A planted one-element bump on partitioned calls turns
+  it red. `docs/generic-middle.md` now records the type axis as done by code generation, with a float64 check beside each invariant.
 
 ### Fixed
 - **`marker_row` and gate-p4's `p4_verify_line` could kill a gate with SIGPIPE** (#193). Their awk printed the first match and `exit`ed,
