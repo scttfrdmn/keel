@@ -18,6 +18,7 @@
 # earlier arm64 reference to stay comparable with.
 # Re-frozen for judged r1, after the exploration pass at e3bf0b2. The judged tier's TTL is 5h: the
 # arm64 exploration took 3h04m of its 4h, and judged runs have taken their exploration's time +0-5%.
+# Re-frozen for judged r2, after r1 at 63cffc9.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 

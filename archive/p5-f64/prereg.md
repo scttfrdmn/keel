@@ -121,3 +121,63 @@ Nothing is judged against a float64 bar. Predicted:
 - **1-thread Dgemm within 6% of half** the judged 1-thread Sgemm: Zen 5 88.8, Zen 4 54.2, skx 34.4,
   V3 40.0, V2 32.7, V1 29.3. Exploration put Zen 5 and Zen 4 at 86.7 and 53.5.
 - **Duration:** amd64 about 2h35m and arm64 about 3h10m, both inside 5h.
+
+## r1: result (63cffc9, `judged-r1-{amd64,arm64}-63cffc9.log`)
+
+- **amd64:** 56 PASS / 0 FAIL / 4 UNMEASURED / 13 BASELINE / 5 REPORTED, 2h39m (about $64).
+- **arm64:** 59 PASS / 0 FAIL / 3 UNMEASURED / 7 BASELINE / 0 REPORTED, 3h12m (about $60).
+
+Both fleets were verified down with a readable inventory. **Every numeric prediction held:**
+
+| | Zen 5 | Zen 4 | skx | V3 | V2 | V1 |
+|---|---|---|---|---|---|---|
+| 1T FMARoof64 (±2%) | 143.55 | 58.55 | 104.7 | 51.60 | 42.22 | 39.08 |
+| 8T ceiling, % of 8×1T (±3 pts of f32) | 99.7 (100.0) | 99.8 (99.7) | 93.4 (93.5) | 99.9 (99.8) | 99.9 (99.9) | 88.1 (89.2) |
+| 8T Dgemm, % of 8×1T (±3 pts of f32) | 49.5 (49.1) | 74.1 (74.9) | 27.4 (27.3) | 69.9 (69.8) | 63.4 (64.9) | 64.8 (64.6) |
+| 1T Dgemm (±6% of half Sgemm) | 86.2 (88.8) | 53.78 (54.2) | 34.86 (34.4) | 39.82 (40.0) | 31.85 (32.7) | 30.24 (29.3) |
+
+Also held:
+- gate-p4 is GREEN on both architectures (67/0/0 each);
+- amd64 gate-p3 is GREEN (55/0/0). arm64 gate-p3 has only BASELINE (the kernel rows: V1 86.2%, V2
+  81.3%, V3 81.3% of peak) and REPORTED (keel/OpenBLAS V1 76.6%, V2 94.2%, V3 93.2%);
+- `-race` is clean on all six hosts, and both durations were as predicted.
+
+**The rendering follows the float32 derivation sets, as predicted only in outline:**
+- amd64 and V3 are registry-governed, so their shares render BASELINE;
+- V1 and V2 are `CEIL_DERIVED_FROM`, so theirs render "NO FRACTION IN FORCE" PASS lines.
+
+amd64's headline is UNMEASURED because all three hosts are BASELINE.
+
+**Not predicted:**
+- **Zen 4 Dsyrk and Dtrsm are NOISE-LIMITED, REPORTED** (3.70 and 4.20 points lost to the
+  intervals, against a 2.6-point margin). Zen 4's 8-thread ceiling took one low draw: 433.1 against
+  467.4, a 7.45% span at D=87, where exploration read ±0.5%. These two rows are not candidates.
+- **Three float32 labels in float64 output** (wording only, no verdict depends on them):
+  - the arm64 share lines quote float32's fraction history ("44.2 was typed 2026-08-22…");
+  - gate-p3's keel/OpenBLAS lines say "Sgemm at 2048^3";
+  - the exploration's "UNMEASURED lines above" pointer.
+  Recorded on #193.
+
+**Candidates (single draws, `*-candidates-63cffc9-*.tsv` here):**
+- amd64: 10 share rows (Zen 5 4, skx 4, Zen 4 2) and 18 L1 rates;
+- arm64: V3's 4 share rows and 72 L1 rates (24 per host);
+- 3 gate-p3 kernel rows.
+
+## r2: predictions (written from r1, before r2)
+
+r2 is the second draw, on the same fleets and the same frozen driver. Rows land over r1 + r2 by
+`host-baselines.tsv`'s rules, so r2 is not judged against a bar either. Predicted:
+- **The same rendering:** gate-p3 and gate-p4 GREEN on amd64, gate-p4 GREEN on arm64, `-race`
+  clean. No FAIL anywhere. The only UNMEASURED lines are criterion 9 and amd64's all-BASELINE
+  headline.
+- **Every r1 share candidate reproduces within 5%**, so all 14 are admissible at N=2. The widest
+  spread is under 3 points, as at famaxx86, where the one refusal was 5.54%.
+- **8T ceiling within 1% of r1** on every host.
+- **Zen 4's two NOISE-LIMITED rows:** no prediction. r1's cause is one ceiling draw, and one draw
+  is not a property of the host. If r2 reads them clean, they still have no second draw, and they
+  render `new` until a third settles them.
+- **L1 rates:** no prediction per row. famaxx86's zen5 Saxpy spread 8.81% at n=1048576, so some
+  L1 refusals are expected. Each is named at landing.
+
+**REFUTED if** a share candidate's cross-draw spread exceeds 5%, gate-p3/p4 is RED, or any FAIL
+appears.
