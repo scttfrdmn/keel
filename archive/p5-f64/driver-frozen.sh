@@ -16,6 +16,8 @@
 # arm64 uses OpenBLAS v0.3.34 on all three Graviton generations: Scott's 2026-10-27 ruling on #196
 # made the reference the newest OpenBLAS whose detection names the core, and float64 has no
 # earlier arm64 reference to stay comparable with.
+# Re-frozen for judged r1, after the exploration pass at e3bf0b2. The judged tier's TTL is 5h: the
+# arm64 exploration took 3h04m of its 4h, and judged runs have taken their exploration's time +0-5%.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -38,7 +40,7 @@ amd64/judged)
   KEEL_FLEET="skx:c5n.18xlarge:Intel Skylake-SP
 zen4:c7a.48xlarge:AMD EPYC Genoa
 zen5:c8a.48xlarge:AMD EPYC Turin"
-  RATE="24.09" ;;
+  RATE="24.09"; KEEL_FLEET_TTL=5h ;;
 arm64/explore)
   KEEL_FLEET="gvt3:c7g.4xlarge:Neoverse-V1
 gvt4:c8g.4xlarge:Neoverse-V2
@@ -48,7 +50,7 @@ arm64/judged)
   KEEL_FLEET="gvt3:c7g.16xlarge:Neoverse-V1
 gvt4:c8g.48xlarge:Neoverse-V2
 gvt5:c9g.48xlarge:Neoverse-V3"
-  RATE="18.70" ;;
+  RATE="18.70"; KEEL_FLEET_TTL=5h ;;
 *) echo "!! ARCH must be amd64 or arm64 and TIER explore or judged" >&2; exit 2 ;;
 esac
 export KEEL_FLEET KEEL_GOARCH="$ARCH"
