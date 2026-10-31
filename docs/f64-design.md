@@ -244,10 +244,9 @@ re-run, not inherited.
 
 ## 5. What this doc does NOT decide (§5 rule 12)
 
-- **Whether f64 is built at all.** `#103` records it a non-goal past v0.1.0; this is the design
-  *if* it is pursued (post-freeze attention item), not a decision to pursue. The strong argument
-  against — a float64 keel competes with Gonum on Gonum's ground while the f32 gap it exists for
-  stays open (`README`, `#103` §4) — is unrebutted here.
+- **Whether f64 is built at all** — decided outside this doc: Scott ruled 2026-10-25 that v0.3 is
+  float64 (`#103`, `DESIGN.md` non-goals amendment), and it shipped at parity in `#192`/`#193`. The
+  argument against it (`#103` §4) was answered by that ruling, not rebutted here.
 - **The type mechanism** (generics vs codegen). Deferred to the build unit, decided against a real
   f64 kernel per `#135` criterion 4 — there is one existing type-axis consumer, and a lift needs two.
 - **The sweep's actual tile winner.** §2 is a falsifiable prediction; a predicted-fit tile that
