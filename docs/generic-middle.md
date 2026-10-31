@@ -21,17 +21,18 @@ twins: `internal/vec` (the shim), `internal/kern` (the microkernels), `internal/
 So `#135` is mostly **not a refactor**. Cutting a seam that is already cut, twice, is how the second
 cutter makes a better copy instead of lifting — the exact failure `#135` exists to prevent. The
 deliverable is this document: the seam and its contract named, the determinism invariants that were
-expensive to establish written down with their checks, and the one axis that is *not* yet
-generic — the element type — designed but **deferred to its real consumer**, because lifting it now
-would be speculative generality with no second caller to keep it honest (`#135` acceptance
-criterion 4).
+expensive to establish written down with their checks, and the one axis that was *not* yet
+generic — the element type — designed but **deferred to its real consumer**, because lifting it then
+would have been speculative generality with no second caller to keep it honest (`#135` acceptance
+criterion 4). That consumer has since arrived: the type axis is **done, by code generation**
+(`77f0459`), after Go generics were built and refused (`709840d`); see §The element-type axis.
 
 Two axes, two very different states:
 
 | axis | consumer | state | this doc |
 |---|---|---|---|
 | **ISA** (avx512 → +NEON) | `#136` arm64 | seam **cut**, 2 existing consumers (avx512, scalar) | document + audit it holds a third |
-| **element type** (f32 → +f64) | `#103` float64 | seam **not cut**, 1 existing consumer (f32) | design, then **defer the lift** |
+| **element type** (f32 → +f64) | `#103` float64 | **done by generation** (`77f0459`): f32 source canonical, f64 copy generated | record the mechanism, check each invariant at f64 |
 
 ## The seam: `kern.Kernel`, and what crosses it
 
@@ -89,49 +90,50 @@ this doc's audit says the *middle* needs nothing. Grep of `internal/{block,pack,
 behind the seam, not in the middle. So the ISA port adds files in three packages and edits none in
 the other four.
 
-## The element-type axis (f64): designed, deferred
+## The element-type axis (f64): done by code generation
 
-This axis is **not** cut. `float32` appears in the middle's signatures 12× in `block.go`, 8× in
-`pack.go`, and throughout `par` and the `Fn` signature. float64 needs the same nest over
-`[]float64`, a different microkernel family, and a different shim element type.
+Deferred at `b71ba0b` for want of a second consumer, and decided by Scott's ruling in `#190`. The
+generator landed with the hand-written `ScalarKernel64` as its float64 consumer; the vector float64
+kernels followed a day later (`aa6c78a`, `be5238f`, `#191`). Of the three mechanisms the doc laid out, **Go type parameters** were built in full and refused on
+object-code identity (`709840d`; the evidence is in §Refusal register), **two hand-maintained copies**
+were rejected on their face, and **code generation** shipped: `tools/f64gen` writes `internal/pack64`
+and `internal/block64` from `internal/pack` and `internal/block` (`77f0459`), and later
+`internal/l164` and `internal/l264` from `internal/l1` and `internal/l2` (`9ef368a`, `4781a3b`,
+`#192`). The float32 source stays the only source. The transform renames the identifier `float32`, the package and the `pack`
+import, and maps three `kern` selectors to hand-written twins in `kern64.go`; any other `kern`
+selector is an error, so a new dependency of the middle must be decided rather than copied. The
+generator is a Go program, not shell, so it costs the apparatus budget nothing.
 
-Three ways to cut it, recorded so the decision is made once with the tradeoffs visible — but **not
-taken here**:
+**Held by:** `TestGeneratedIsCurrent` (`tools/f64gen/gen_test.go`) fails `go test ./...` on a stale
+or orphaned copy, and `TestDriftCheckCanFail` shows a one-token source change is seen. **Float32 did
+not move:** object code is instruction-identical before and after for `panels`, `depthPanel`,
+`solveRight`, `trsmRight` and `gemm` on amd64 and arm64 (`77f0459`), and normalized `objdump` of
+`internal/l1` is identical on linux/amd64, linux/arm64 and darwin/arm64, with a planted-difference
+control (`57e2202`). The one lift that did change float32 object code, Level 2's bodies moving into
+`internal/l2` behind an `l1.Kernels` parameter (`eefa858`), was measured instead: 27 of 28
+`BenchmarkL2Par` rows within 0.986–1.020, the 28th bimodal in both arms, over 7 of the 16 moved
+routines (`22daa94`). README rows that moved in `#198`/`#199`/`#200` moved because the peak
+denominator was redefined, not because of this axis.
 
-1. **Go type parameters** — `Gemm[T float32 | float64](kn Kernel[T], …)`, packing and blocking
-   generic over `T`. Cleanest source, one nest. Risks: `simd/archsimd` is not generic over element
-   type, so `Fn` cannot be; the type parameter stops at the seam and the kernel table must be
-   per-`T` anyway. And generic code has its own codegen questions on `GOEXPERIMENT=simd` that are
-   themselves unmeasured.
-2. **Code generation** — one templated nest emitted per type. No generics risk; two compiled copies
-   that cannot silently share a bug. Cost: a generator in `scripts/`, which the apparatus budget
-   counts.
-3. **Two hand-maintained copies** — rejected on its face by the same rule that motivates `#135`: the
-   second copy diverges.
-
-**Why defer rather than decide:** acceptance criterion 4 — every lift justified by two *existing*
-consumers. There is one f32 consumer of the type axis. Lifting the nest to `[T]` now, with no f64
-kernel to hand it a `float64`, is generality justified by an anticipated consumer, which is the
-thing the criterion forbids. The mechanism is chosen in `#103`, against a real `float64` microkernel
-that exercises it — the same discipline that had the ISA axis proven by scalar+avx512 before arm64
-arrives. **This doc's decision on the type axis is: do not cut it yet, and here is the map for when
-`#103` does.**
+**f64gen copies no tests.** Each float64 check below is hand-written (or a hand port of the float32
+file), so a float32 invariant check does not reach float64 by generation and is listed separately.
 
 ## The determinism invariants, enumerated, each with its check
 
 These were expensive to establish and are load-bearing for every published number. A refactor that
 reorders any of them changes results while the tests still pass — *unless* the invariant has a check
-that pins the order itself. Each row names the check, or names the gap.
+that pins the order itself. Each row names the check, or names the gap; the last column is the
+float64 check over the generated copy (see §The element-type axis for why it is separate).
 
-| # | invariant | where | check |
-|---|---|---|---|
-| I1 | **Parallel nest is bit-identical to the serial nest at every thread count.** The `pc` (K-depth) loop stays serial; parallelism is a *spatial* partition of the `ic` loop over disjoint C rows — no lock, no reduction, no reassociation. | `block.go:75-96` | **`TestP5Determinism`** (`p5_test.go:205`, gate-p5 criterion 5): runs serial then every `p5Threads`, asserts bit-identical via `firstBitDiff` on `Float32bits`, **and** asserts `workers==procs` so agreement cannot come from an arm that never partitioned. |
-| I2 | **The parallel B-pack equals the serial pack, byte for byte, whatever order the ranges run.** Packing copies and scales rather than reduces, so disjoint ranges need no ordering. | `pack.go:159-161` | **`TestBPanelsPartIsTheSerialPack`** (`pack_test.go:422`). |
-| I3 | **`GOMAXPROCS=1` uses no goroutine, atomic, or scheduling** — the exact serial nest every published number was taken on. | `block.go:94`, `par.go` | **`TestRunSerialUsesNoGoroutine`** (`par_test.go:119`). |
-| I4 | **k-major packed layout with `alpha` folded into A** (`a[p*MR+i]`, `b[p*NR+j]`; `alpha·A` not `alpha·C`, so it survives `beta≠0`). | `pack.go:4-29` | GEMM oracle differential (`gemm_test.go`) over `alpha,beta` combinations; the kernel↔scalar-tile diff (`kern_test.go`). |
-| I5 | **VOID since `4d38e95` (#181).** Was: Trsm's block interchange is bit-identical to the un-interchanged solve. `solveRight` is now `solveLeft` on a transpose, held to `oracle.Tolerance`. | `tri.go` | `TestSolveRightMatchesOracle` (tolerance); the bit-identity test is retired. |
-| I6 | **Every shim op equals its scalar twin** — the shim is the executable spec. | `internal/vec` | differential tests (`vec_diff_test.go`). |
-| I7 | **The microkernel spill frontier** — ≤8 accumulators, no calls in the K-loop, `InsnsPerFMA` matching the audit. | `kern`, `internal/spill` | the spill audit (gate criterion 4) + the `InsnsPerFMA` recompute-and-compare. |
+| # | invariant | where | check | float64 check |
+|---|---|---|---|---|
+| I1 | **Parallel nest is bit-identical to the serial nest at every thread count.** The `pc` (K-depth) loop stays serial; parallelism is a *spatial* partition of the `ic` loop over disjoint C rows — no lock, no reduction, no reassociation. | `block.go:75-96` | **`TestP5Determinism`** (`p5_test.go:205`, gate-p5 criterion 5): runs serial then every `p5Threads`, asserts bit-identical via `firstBitDiff` on `Float32bits`, **and** asserts `workers==procs` so agreement cannot come from an arm that never partitioned. | **`TestP5Determinism64`** (`l3_64_test.go:366`) and **`TestP5DeterminismD`** (`p5_64_test.go:145`), both bit-identical with the `workers==procs` control; **`TestF64NestParallelIsSerial`** (`internal/block64/f64_test.go:168`) at the nest. |
+| I2 | **The parallel B-pack equals the serial pack, byte for byte, whatever order the ranges run.** Packing copies and scales rather than reduces, so disjoint ranges need no ordering. | `pack.go:159-161` | **`TestBPanelsPartIsTheSerialPack`** (`pack_test.go:422`). | **`TestBPanelsPartIsTheSerialPack`** (`internal/pack64/part_test.go`, `#135`) on `Float64bits`, with its range-rejection sibling. Positive control: a one-element bump on partitioned calls turns it red. |
+| I3 | **`GOMAXPROCS=1` uses no goroutine, atomic, or scheduling** — the exact serial nest every published number was taken on. | `block.go:94`, `par.go` | **`TestRunSerialUsesNoGoroutine`** (`par_test.go:119`). | The same check: `internal/par` is not generated, and `internal/block64` calls it (`par.Serial`, `par.Run`) from the same generated lines. |
+| I4 | **k-major packed layout with `alpha` folded into A** (`a[p*MR+i]`, `b[p*NR+j]`; `alpha·A` not `alpha·C`, so it survives `beta≠0`). | `pack.go:4-29` | GEMM oracle differential (`gemm_test.go`) over `alpha,beta` combinations; the kernel↔scalar-tile diff (`kern_test.go`). | The `dgemm_test.go`, `l3_64_test.go` and `tri64_test.go` oracle sweeps; `TestScalarTile64MatchesScalarTile` and `TestVectorAgainstScalarTile64` (`internal/kern`). |
+| I5 | **VOID since `4d38e95` (#181).** Was: Trsm's block interchange is bit-identical to the un-interchanged solve. `solveRight` is now `solveLeft` on a transpose, held to `oracle.Tolerance`. | `tri.go` | `TestSolveRightMatchesOracle` (tolerance); the bit-identity test is retired. | VOID at f64 too. `TestF64NestTrsm` (`internal/block64/f64_test.go:411`) and `TestDtrsmSweep`, both tolerance. There is no nest-level twin of `TestSolveRightMatchesOracle`; the routine sweep covers the solve. |
+| I6 | **Every shim op equals its scalar twin** — the shim is the executable spec. | `internal/vec` | differential tests (`vec_diff_test.go`). | `vec_diff64_test.go` (`TestDiff64*`, `TestSpec64MulAddIsFused`). |
+| I7 | **The microkernel spill frontier** — ≤8 accumulators, no calls in the K-loop, `InsnsPerFMA` matching the audit. | `kern`, `internal/spill` | the spill audit (gate criterion 4) + the `InsnsPerFMA` recompute-and-compare. | gate-p2 at `KEEL_ELEM=f64` audits the `KernelD*` set per arch (`scripts/gate-p2.sh:157-185`); `TestF64RegisterCopiesAreCounted` (`internal/spill`). |
 
 **Stated gaps, not papered over (criterion 2):**
 
@@ -145,6 +147,8 @@ that pins the order itself. Each row names the check, or names the gap.
 - **G2 — nothing pins the blocking params as host-tuned rather than ISA-branched.** They are `var`,
   so there is no branch for a check to catch; the guard is the code review that refuses a
   `switch isa`, not an assertion. Stated so the absence is deliberate.
+- **G1 and G2 hold at float64 unchanged.** The generated nest inlines the same scalar add-back and
+  reads the same `var` blocking params, so the same absence applies to both copies.
 
 **I1 is the preservation requirement `#135` names in its own words:** *bit-identical output where the
 invariants promise bit-identical output*. The refactor's exit criterion is I1–I7 re-run with
@@ -193,12 +197,25 @@ Recorded here and at each site, naming why the cases are lookalikes rather than 
 2. Lifts are justified by the **two existing** consumers only. On the ISA axis that is
    avx512+scalar, and the audit above shows the lift is already done — so the ISA-axis code change
    is expected to be **near-empty**: at most, moving a stray constant behind the seam if the port
-   surfaces one, and adding the NEON files `#136` owns. On the type axis there is no second consumer,
-   so no lift (criterion 4).
+   surfaces one, and adding the NEON files `#136` owns. On the type axis the second consumer is the
+   float64 kernel family, and the lift is code generation (`77f0459`), not a shared function.
 3. **Fixture each caller's shape, not just the shared function** (criterion 6): when a lift does
    happen, build the arm at each existing caller (avx512, scalar) handing the *same* situation as
    different tuples, not just a test over the lifted function — a latent divergence hides in the
    caller shapes, not the callee.
+   **Across element types this does not apply:** generation leaves no function shared by f32 and
+   f64, so each type has its own compiled copy and its own callers. Within one type, the lifts that
+   did happen take a backend value, and each is tested through its public caller rather than on
+   its own. `l1.Kernels` (`57e2202`) is tested by the per-backend loops that swap the package-level
+   `activeL1` (`forEachBackend`, `l1_test.go:138`; `TestBackendsAgree`, `:484`) and `activeL164`
+   (`forEachBackend64`, `l1_64_test.go:104`; `TestBackendsAgree64`, `:286`), which keep the public
+   routine's checks, stride split and rescue in the tested path. `l2.<Name>(kn, …)` (`eefa858`;
+   16 call sites in `keel.go`/`l2band.go`/`l2sym.go`, and 16 of `l264.<Name>` in `l2_64.go`) is
+   tested by the public-routine tests. **Coverage stated (§5 rule 12):** only
+   `Sgemv`/`Sger`/`Dgemv`/`Dger` iterate every backend in-process (`gemv_test.go`,
+   `gemv64_test.go`). The other 14 entry points per type run on the dispatched backend only: CI's
+   `ubuntu-latest` default leg (whatever it dispatches, reported, not judged), its
+   `ubuntu-24.04-arm` NEON leg, and its `KEEL_FORCE=scalar` leg (`.github/workflows/ci.yml`).
 4. Re-verify I1–I7 after, before/after shown. No published number moves; if one moves, stop and
    explain first (criterion 8).
 5. `make stock` still builds the scalar path on a stock toolchain; `make build` still cross-builds
@@ -207,7 +224,8 @@ Recorded here and at each site, naming why the cases are lookalikes rather than 
 ## What this doc does not decide (§5 rule 12)
 
 - **NEON's MR×NR** — `#136`'s sweep, re-derived against 128-bit lanes, not scaled from avx512.
-- **The f64 type mechanism** (generics vs codegen) — `#103`, decided against a real f64 kernel.
+- ~~**The f64 type mechanism**~~ — decided since: code generation (`77f0459`), generics refused
+  (`709840d`).
 - **macOS placement law** — `#138`; the M-series has no `cpufreq` and no affinity mask, so it is a
   characterization host, not a judged one, and that is orthogonal to the seam.
 - **The serial B-pack Amdahl term** — `#65`. It is invariant I-adjacent (its determinism is
