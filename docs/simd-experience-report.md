@@ -22,7 +22,7 @@ the T17 quotation, and the Graviton4 "half of V1" reference, which the judged ru
 [keel](https://github.com/scttfrdmn/keel) implements every routine in Gonum's `blas.Float32` and 34 of 35 in `blas.Float64`.
 It's written against `simd/archsimd`, with AVX-512/AVX2 kernels on amd64 and NEON kernels on
 arm64. All of its SIMD code is in one package, and each vector op has a scalar twin that it's tested
-against. Since amd64 GA moved to Go 1.28 (golang/go#78979), this report is about what to settle
+against. Since amd64 GA moved to Go 1.28 here, this report is about what to settle
 before then. Issues that are already tracked are linked, not argued again.
 
 Three tiers of evidence, and each number says which it is. **Judged**: keel's release gate on
@@ -59,7 +59,7 @@ Skylake-X (lab), that pack ran 2.2× (2×32 kernel) and 3.3× (4×32) slower tha
 Clearing at every AVX Level-1 exit cost more than it saved. `Sgemv` got 5–7% slower at 64²–256²,
 `Sdot` 3% slower at n=256, and large n gained nothing. A `VZEROUPPER` before every return would
 therefore slow down short vector calls. What we needed was one at the transition into SSE code.
-golang/go#78979 floated removing `ClearAVXUpperBits` or keeping it only under the experiment. For us
+This issue floated removing `ClearAVXUpperBits` (2026-05-01) or keeping it only under the experiment. For us
 it's load-bearing today. The data is on golang/go#80835 (the boundary sub-case).
 
 ### 2. `MulAdd` should accumulate in place on amd64, as planned on this thread
