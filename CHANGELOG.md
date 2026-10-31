@@ -47,6 +47,10 @@ While the major version is 0, minor versions may contain breaking changes.
   it red. `docs/generic-middle.md` now records the type axis as done by code generation, with a float64 check beside each invariant.
 
 ### Fixed
+- **Float64 gate output no longer carries float32 labels** (#204). gate-p3/p4 name the routine from the element block (Dgemm,
+  Dsyrk); gate-p5's fraction-history and T8/T1 sentences say float64 never had either, and amd64's L1 justification names its
+  float32 evidence. Cross-compile labels name the arm64 build. The arm64 OpenBLAS fleet line points at the correctness-class lines.
+  float32 output on amd64 is byte-identical by replay; net 0 lines.
 - **The disk-headroom precondition misread a mount point with a space** (`remote.sh`). `df -P`'s fields were taken from the right
   (`$(NF-2)`, `$NF`), so `/Volumes/External HD` gave `32%` as the free space, and bash died on the arithmetic. The capacity column
   is now the anchor. Found while replaying the gate from a worktree on that volume. Checked on a spaced mount, the system volume and

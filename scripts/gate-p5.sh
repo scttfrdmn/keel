@@ -433,7 +433,7 @@ case "${KEEL_GOARCH:-amd64}" in
     # #179, ruled 2026-10-21: JUDGE only n=1048576, REPORT the smaller tiers (null pairs: 62.6%,
     # 70.7%, 7.1%, 4.2% by size; a per-row list was tested and refused). docs/rulings.md has both.
     P5_L1_JUDGED="1048576"
-    P5_L1_WHY="on this ISA two same-code null pairs spread them up to 70.7% between runs, where n=1048576 stayed under 4.2% (#179)" ;;
+    P5_L1_WHY="on this ISA two same-code null pairs spread them up to 70.7% between runs, where n=1048576 stayed under 4.2% (#179)$(if [[ "$KEEL_ELEM" == f64 ]]; then echo " -- float32 null pairs; float64 follows the same tier"; fi)" ;;
 esac
 
 # The FALLBACK band for criterion 9, applied only when a published rate's REFERENCE interval is
@@ -678,8 +678,8 @@ if [[ -z "$HOSTS" ]]; then
   unmeasured "P5 needs an execution host with $P5_THREADS cores to exercise the vector paths and none is configured, so they are unmeasured on real silicon"
 else
   remote_build_test_or_fail . "$BIN" "$LOG" \
-    "cross-compiled linux/amd64 test binary (root package: parallel correctness)" \
-    "cross-compile of the linux/amd64 test binary"
+    "cross-compiled linux/${KEEL_GOARCH:-amd64} test binary (root package: parallel correctness)" \
+    "cross-compile of the linux/${KEEL_GOARCH:-amd64} test binary"
   while read -r host; do
     OK=0
     remote_exec "$host" "$BIN" -test.v >"$LOG" 2>&1 || OK=$?
@@ -1026,9 +1026,9 @@ if [[ -n "$CEIL_FRACTION" ]]; then
   info "  PRE-REGISTERED FOR THE CONFIRMATION RUN, so it can fail. keel-gvt4 Strsm is tightest at EXACTLY the margin (45.4 against 42.8), so a >5.73% fall in its 8-thread rate flips it with no change to the nest, as would a >6.07% rise in that host's measured ceiling. The two sensitivities differ because a share is a RATIO and quoting one for the other is #110's units error in miniature. Nothing else is close: the second-tightest row is keel-gvt4 Ssymm at 53.0, needing a 19.2% fall, and keel-gvt3 Strsm at 61.2 needs 30.1%"
   fi
 else
-  info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). This branch has now fired FOUR times, every one of them for the same reason in a different dress -- a bar whose reference artifact was produced by an instrument the judging run does not use: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor; at the pinned8 boundary, where 57.8 could not be inherited; at the 2026-08-22 spread amendment, which retired 51.0 because its rows' eight cores were confined to one cache domain; and now at era $P5_ERA's boundary (2026-10-05, #177), which retires 44.2 because Strsm JOINED this class and every judged baseline gained the dispatched microkernel in its key -- all eight arm64 references were measured on 8x8/neon, two promotions behind what this run dispatches"
+  info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). $(if [[ "$KEEL_ELEM" == f64 ]]; then echo "No fraction has ever been typed at float64: era $P5_ERA is its first, so there is no float64 history to retire (#193)"; else echo "This branch has now fired FOUR times, every one of them for the same reason in a different dress -- a bar whose reference artifact was produced by an instrument the judging run does not use: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor; at the pinned8 boundary, where 57.8 could not be inherited; at the 2026-08-22 spread amendment, which retired 51.0 because its rows' eight cores were confined to one cache domain; and now at era $P5_ERA's boundary (2026-10-05, #177), which retires 44.2 because Strsm JOINED this class and every judged baseline gained the dispatched microkernel in its key -- all eight arm64 references were measured on 8x8/neon, two promotions behind what this run dispatches"; fi)"
 fi
-info "judged by NO SECOND CRITERION: the Strsm T8/T1 ratio is retired as of 2026-10-05 (#177) and Strsm is in the class above. The work split and its falsified Amdahl ceiling are still printed per host, as evidence and never as a bar (#37/#89)"
+info "judged by NO SECOND CRITERION: $(if [[ "$KEEL_ELEM" == f64 ]]; then echo "float64 never had a Dtrsm T8/T1 ratio (#193), and Dtrsm is in the class above."; else echo "the Strsm T8/T1 ratio is retired as of 2026-10-05 (#177) and Strsm is in the class above."; fi) The work split and its falsified Amdahl ceiling are still printed per host, as evidence and never as a bar (#37/#89)"
 
 # The class's own controls, in the log that publishes the class's verdicts (#6). The
 # registry ships with no data rows, so this run can reach `owing` and `new` and cannot
@@ -1100,8 +1100,8 @@ if [[ -z "$HOSTS" ]]; then
   unmeasured "no execution hosts, so the scaling criterion cannot be evaluated: unmeasured, not missed"
 else
   remote_build_test_or_fail ./bench "$BENCHBIN" "$LOG" \
-    "cross-compiled linux/amd64 bench binary (Scale + Peak)" \
-    "cross-compile of the linux/amd64 bench binary"
+    "cross-compiled linux/${KEEL_GOARCH:-amd64} bench binary (Scale + Peak)" \
+    "cross-compile of the linux/${KEEL_GOARCH:-amd64} bench binary"
   while read -r host; do
     # Re-read at the moment of measurement, not only in the preamble: a governor
     # that changed in between belongs to a machine somebody started using.
@@ -1595,7 +1595,7 @@ else
         # Measured, reported, and the input to setting the bar rather than a bar itself. Named
         # as unjudged so no reader can mistake a silent pass for cleared coverage — this class
         # HAS no fraction in force right now.
-        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, NO FRACTION IN FORCE in era $P5_ERA (#6, #177): 44.2 was typed 2026-08-22 and is retired at the 2026-10-05 boundary, where Strsm joined this class and every judged baseline gained the dispatched kernel ($HOST_KERN here) in its key. This reading is an input to re-deriving the fraction; neither 44.2, nor the suspended 51.0 before it, nor the retired ${SCALE_FLOOR_RETIRED}x floor is applied"
+        pass "[$host] $r reaches ${frac}% of this host's measured ${P5_THREADS}-thread ceiling ($CEIL8P GFLOP/s), scaling ${pt}x / ${lo}x net of CI — measured and REPORTED, NO FRACTION IN FORCE in era $P5_ERA $(if [[ "$KEEL_ELEM" == f64 ]]; then echo "(#6, #193): no fraction has ever been typed at float64, so this reading is an input to deriving the first one; the retired ${SCALE_FLOOR_RETIRED}x floor is not applied"; else echo "(#6, #177): 44.2 was typed 2026-08-22 and is retired at the 2026-10-05 boundary, where Strsm joined this class and every judged baseline gained the dispatched kernel ($HOST_KERN here) in its key. This reading is an input to re-deriving the fraction; neither 44.2, nor the suspended 51.0 before it, nor the retired ${SCALE_FLOOR_RETIRED}x floor is applied"; fi)"
       # $ratio, not the rendered $frac (#143), and 100* because $ratio is a fraction
       # and every bar here is in points — a substitution without it fails everything.
       elif awk -v v="$ratio" -v f="$BBAR" 'BEGIN{exit !(100*v >= f)}'; then
