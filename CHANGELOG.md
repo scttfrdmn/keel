@@ -8,6 +8,13 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-31
+float64 at parity with float32: every D routine, the `blas.Float64` Gonum adapter, and float64 performance gated,
+founded and published. **The float64 numbers rest on judged `gate-p5` runs at `63cffc9` and `d1be420`, the founding pair
+(`archive/p5-f64/`), not on a run at this tag.** gate-p5's criterion 9 at float64 is witnessed by replay only. The
+float32 numbers are still the v0.2.0 certification's and the famax/famaxx86 eras' (`archive/cert-v0.2.0/` and the
+README caption). This is not a re-certification of either.
+
 ### Added
 - **Float64 rates are published, and gate-p5 re-measures them** (#203). README gains a `keel-numbers-f64` block: Dgemm, Dsyrk, Dsymm and
   Dtrsm at 1 and 8 threads plus `Ceiling/compute` for the six judged CPUs, 54 rows pooled over era `f64init`'s r1+r2 (12 rows in

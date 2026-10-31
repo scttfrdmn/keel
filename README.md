@@ -7,11 +7,11 @@ A pure-Go float32 BLAS subset built on Go's experimental SIMD support
 and parallelize on the caller's `GOMAXPROCS` — no cgo, no background
 threads, deploys as a normal Go module.
 
-**Status: v0.2.4.** keel implements every routine in Gonum's `blas.Float32` interface,
-with parallel Level 2 ([release notes](../../releases/tag/v0.2.4)). The gated core (Levels 1 and 3, all six
+**Status: v0.3.0.** keel implements every routine in Gonum's `blas.Float32` and `blas.Float64`
+interfaces, with float64 performance gated and published ([release notes](../../releases/tag/v0.3.0)). The gated core (Levels 1 and 3, all six
 phase gates P0–P5 green) was certified on amd64 and arm64 by judged `gate-p5` runs on
 AWS at v0.2.0, with the certified rev named in its
-[release notes](../../releases/tag/v0.2.0). v0.2.3 and v0.2.4 are not re-certifications. Major is
+[release notes](../../releases/tag/v0.2.0). v0.2.3, v0.2.4 and v0.3.0 are not re-certifications; v0.3.0's float64 rows rest on their own founding pair (`archive/p5-f64/`). Major is
 still 0, so a minor bump may break the API. What keel does not do — and which parts of that are scheduled,
 open or parked — is stated once, in
 [Capabilities & limits](https://scttfrdmn.github.io/keel/limits/).
