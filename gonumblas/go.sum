@@ -1,2 +1,4 @@
+github.com/scttfrdmn/keel v0.3.0 h1:8XQDE3x1bfQjgXIfkSvF9GvBxI98A5XtuYuFWH23lyk=
+github.com/scttfrdmn/keel v0.3.0/go.mod h1:hky9u8kGbs9NjhlcOg33gToxP6P9ZCZk1Ocgy5xXmIA=
 gonum.org/v1/gonum v0.17.0 h1:VbpOemQlsSMrYmn7T2OUvQ4dqxQXU+ouZFQsZOx50z4=
 gonum.org/v1/gonum v0.17.0/go.mod h1:El3tOrEuMpv2UdMrbNlKEh9vd86bmQ6vqIcDwxEOc1E=

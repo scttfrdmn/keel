@@ -8,6 +8,13 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **`gonumblas` is consumable on its own** (#195). It requires keel `v0.3.0`, the first release cut after it moved into its own
+  module, and the development `replace => ../` is gone. Checked from the public proxy: `v0.3.0`'s module zip has no `gonumblas/`
+  directory, so the import is no longer ambiguous. It is tagged `gonumblas/v0.1.0`. `make test` and CI's gonumblas legs now build
+  against the published keel, not the working tree. A change spanning both modules uses a local `go work init . ./gonumblas`,
+  and `go.work` is now gitignored so one cannot be committed by accident.
+
 ## [0.3.0] - 2026-10-31
 float64 at parity with float32: every D routine, the `blas.Float64` Gonum adapter, and float64 performance gated,
 founded and published. **The float64 numbers rest on judged `gate-p5` runs at `63cffc9` and `d1be420`, the founding pair

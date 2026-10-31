@@ -59,3 +59,7 @@ __pycache__/
 # dirty tree -- so one of these aborted an arm64 campaign mid-launch on 2026-10-04
 # while every "tree clean" check that session had filtered it out of the output.
 .DS_Store
+
+# A local go.work joins the two modules for a co-change (go work init . ./gonumblas); never committed (#195).
+go.work
+go.work.sum
