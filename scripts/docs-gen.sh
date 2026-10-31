@@ -33,9 +33,6 @@
 # describing it from memory.
 set -euo pipefail
 
-README_BEGIN='<!-- keel-numbers: begin -->'
-README_END='<!-- keel-numbers: end -->'
-
 SITE="doc-site"
 RECORDS="$SITE/records"
 
@@ -101,12 +98,13 @@ numbers_rev() {
 # behind in README would be the caption drift this pair of scripts exists to end, moved
 # one file out instead of removed.
 numbers_caption() {
-  awk -v b='<!-- keel-caption: begin -->' -v e='<!-- keel-caption: end -->' '
+  awk -v b="<!-- keel-caption$SFX: begin -->" -v e="<!-- keel-caption$SFX: end -->" '
     index($0, e) { inb = 0 } inb { print } index($0, b) { inb = 1 }' README.md
 }
 
-gen_numbers() {
-  [[ -r README.md ]] || die "README.md is unreadable, and it is the only source of the published rates"
+# read_block SFX: every check below, for one block, into the caller's block/rev/caption/nrows/nmodels.
+read_block() {
+  SFX="$1" README_BEGIN="<!-- keel-numbers$1: begin -->" README_END="<!-- keel-numbers$1: end -->"
   grep -qF "$README_BEGIN" README.md || die "README.md has no '$README_BEGIN' marker"
   grep -qF "$README_END" README.md   || die "README.md has no '$README_END' marker"
 
@@ -115,7 +113,6 @@ gen_numbers() {
   el="$(grep -nF "$README_END" README.md | head -1 | cut -d: -f1)"
   [[ "$bl" -lt "$el" ]] || die "README.md's keel-numbers markers are in the wrong order (begin at line $bl, end at line $el)"
 
-  local block
   block="$(numbers_block)"
   [[ -n "$block" ]] || die "README.md's keel-numbers block is empty"
 
@@ -141,7 +138,6 @@ gen_numbers() {
   [[ -z "$bad" ]] || die "the keel-numbers table has row(s) whose cell count differs from the header's $((cells - 2)):
 $bad"
 
-  local rev nrows nmodels denom caption
   rev="$(numbers_rev)"
   [[ -n "$rev" ]] || die "no 'rev \`<sha>\`' in README.md's provenance sentence after the block; the page has no run to date itself by"
   caption="$(numbers_caption)"
@@ -153,6 +149,18 @@ $bad"
   # onto the separator row and report `---` as a CPU model.
   nrows="$((rows - 2))"
   nmodels="$(awk -F'|' '/^\|/ { n++; if (n > 2) { gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2 } }' <<<"$block" | sort -u | grep -c . || true)"
+}
+
+gen_numbers() {
+  [[ -r README.md ]] || die "README.md is unreadable, and it is the only source of the published rates"
+  local block rev nrows nmodels denom caption f64=""
+  # The float64 block is optional, since a README may predate it; once its marker is present it
+  # takes every check the float32 block takes, and the page carries it as a second section.
+  if grep -qF '<!-- keel-numbers-f64: begin -->' README.md; then
+    read_block -f64
+    f64="$(printf "## Float64 rates\n\n%s rows over %s CPU models, at revision \`%s\`.\n\n%s\n\n%s" "$nrows" "$nmodels" "$rev" "$caption" "$block")"
+  fi
+  read_block ""
 
   # Which denominator these rows carry is read off the block rather than assumed.
   # The percentages are currently against keel's own measured microkernel peak,
@@ -196,8 +204,9 @@ result."
     echo "[How these numbers are measured](records/methodology.md)"
     echo
     echo "$block"
+    [[ -z "$f64" ]] || printf '\n%s\n' "$f64"
   } > "$SITE/numbers.md"
-  note "extracted $SITE/numbers.md ($nrows rows, $nmodels CPU models, rev $rev)"
+  note "extracted $SITE/numbers.md ($nrows rows, $nmodels CPU models, rev $rev${f64:+; and a float64 section})"
 }
 
 # --------------------------------------------- extraction 2: the methodology

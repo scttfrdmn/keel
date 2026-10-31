@@ -92,7 +92,7 @@ All 54 rows are one pooled `benchstat` estimator per cell, not a median of per-r
 
 The 8-thread rows divide by 8x the 1-thread peak, which no host can reach: the clock drops with core count, so that share is a floor on how well the nest did and not a score. The bar below divides by a ceiling measured at 8 threads on the host itself, where the droop is inside the reading.
 
-Derived from the table above, so pooled over the era's archives rather than read off the judged run alone, as a share of each host's own 8-thread ceiling: AMD EPYC 9R45 33.7-50.5%; AMD EPYC 9R14 50.3-77.0%; Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz 17.1-30.4%; Neoverse-V2 49.8-67.5%; Neoverse-V1 51.6-74.3%; Neoverse-V3 47.4-72.6%. Those ceilings are 99.8%, 99.8%, 93.8%, 99.9%, 89.0% and 99.8% of 8x each host's own 1-thread peak -- a different factor per host, which is why the retired 6.0x cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).
+As the run that supplies each host its verdicts printed them, net of CI -- the reading a bar compares, not a ratio of the medians above -- as a share of each host's own 8-thread ceiling: AMD EPYC 9R45 33.3-50.6%; AMD EPYC 9R14 49.9-77.0%; Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz 16.9-30.4%; Neoverse-V2 49.8-67.5%; Neoverse-V1 51.6-74.3%; Neoverse-V3 47.4-73.0%. Those ceilings are 99.8%, 99.8%, 93.8%, 99.9%, 89.1% and 99.8% of 8x each host's own 1-thread peak -- a different factor per host, which is why the retired 6.0x cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).
 
 8 of the 24 routine-host pairs those 48 routine rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: the judged routines must reach 47.0% of each host's own measured 8-thread ceiling (#6), and Strsm's own >= x T8/T1 floor is RETIRED (#177, 2026-10-05): it was the same quantity the 6.0x cross-host floor was retired for, and it reddened a microkernel that improved both of its arms. A further 15 of those pairs are RECORDED as a candidate baseline in era famaxx86 (11) and famax (4) and judged by nothing, so those rows are published as measurements and not as passes (#6). A further 1 pair was NOISE-LIMITED: its own intervals cost more than the margin every bar is set by, so no bar could decide it and it carries no verdict (§5 rule 19). The 6.0x cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.
 <!-- keel-caption: end -->
@@ -118,6 +118,85 @@ now measured rather than set, because the AWS fleet that replaced these three
 desktops exposes no boost knob at all — so this handicap is disclosed rather than
 removed, and these percentages stay a floor on the parallel nest's efficiency and
 not an estimate of it.
+
+### Float64 rates
+
+`Dgemm`, `Dsyrk`, `Dsymm` and `Dtrsm` are measured by the same gate under `KEEL_ELEM=f64`
+(#193), which re-measures this second table on each host by the same rule. Its denominator is
+the 1-thread `FMARoof64` peak — `BenchmarkPeak`'s float64 twin — measured on the same host, so
+its percentages are a float64 kernel against a float64 ceiling and are not comparable with the
+float32 table's. Table and caption are written by `KEEL_ELEM=f64 scripts/readme-numbers.sh`.
+
+<!-- keel-numbers-f64: begin -->
+| CPU | benchmark | threads | GFLOP/s | denominator |
+| --- | --- | --- | --- | --- |
+| AMD EPYC 9R45 | Dgemm | 1 | 86.65 | 60.3% of 143.8 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [86.22, 87.28] |
+| AMD EPYC 9R45 | Dgemm | 8 | 567.6 | 49.3% of 1150.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [564.4, 574] |
+| AMD EPYC 9R45 | Dsyrk | 1 | 83.33 | 57.9% of 143.8 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [82.77, 83.79] |
+| AMD EPYC 9R45 | Dsyrk | 8 | 588.8 | 51.2% of 1150.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [587.6, 608] |
+| AMD EPYC 9R45 | Dsymm | 1 | 85.59 | 59.5% of 143.8 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [85.12, 85.96] |
+| AMD EPYC 9R45 | Dsymm | 8 | 562.5 | 48.9% of 1150.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [561.4, 566.8] |
+| AMD EPYC 9R45 | Dtrsm | 1 | 50.93 | 35.4% of 143.8 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [50.8, 51.06] |
+| AMD EPYC 9R45 | Dtrsm | 8 | 476.5 | 41.4% of 1150.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [468.8, 491.1] |
+| AMD EPYC 9R45 | Ceiling/compute | 8 | 1145 | 99.5% of 1150.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1144, 1146] |
+| AMD EPYC 9R14 | Dgemm | 1 | 53.72 | 91.8% of 58.53 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [53.63, 53.78] |
+| AMD EPYC 9R14 | Dgemm | 8 | 346.6 | 74.0% of 468.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [344.6, 347.5] |
+| AMD EPYC 9R14 | Dsyrk | 1 | 52.6 | 89.9% of 58.53 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [52.36, 52.87] |
+| AMD EPYC 9R14 | Dsyrk | 8 | 368.9 | 78.8% of 468.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [364.2, 373.8] |
+| AMD EPYC 9R14 | Dsymm | 1 | 51.37 | 87.8% of 58.53 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [51.35, 51.38] |
+| AMD EPYC 9R14 | Dsymm | 8 | 341 | 72.8% of 468.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [340.1, 343.7] |
+| AMD EPYC 9R14 | Dtrsm | 1 | 33.86 | 57.8% of 58.53 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [33.74, 33.91] |
+| AMD EPYC 9R14 | Dtrsm | 8 | 264.9 | 56.6% of 468.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [259.6, 269.7] |
+| AMD EPYC 9R14 | Ceiling/compute | 8 | 467.1 | 99.8% of 468.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [466.4, 467.4] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Dgemm | 1 | 33.83 | 32.4% of 104.4 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [33.74, 34.82] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Dgemm | 8 | 226.2 | 27.1% of 835.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [220.9, 229.1] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Dsyrk | 1 | 33.52 | 32.1% of 104.4 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [33.48, 34.3] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Dsyrk | 8 | 240.2 | 28.8% of 835.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [237.2, 244.3] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Dsymm | 1 | 33.58 | 32.2% of 104.4 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [33.45, 34.6] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Dsymm | 8 | 223.9 | 26.8% of 835.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [219, 226.8] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Dtrsm | 1 | 18.12 | 17.4% of 104.4 GFLOP/s, the 1-thread FMARoof64/avx512 peak; pooled benchstat over N=2 archives, CI [18.01, 18.19] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Dtrsm | 8 | 130.8 | 15.7% of 835.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [130.3, 131.8] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ceiling/compute | 8 | 782.7 | 93.7% of 835.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [782.5, 782.9] |
+| Neoverse-V3 | Dgemm | 1 | 39.92 | 77.4% of 51.6 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [39.82, 40] |
+| Neoverse-V3 | Dgemm | 8 | 288.4 | 69.9% of 412.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [288.3, 288.5] |
+| Neoverse-V3 | Dsyrk | 1 | 39.45 | 76.4% of 51.6 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [39.37, 39.48] |
+| Neoverse-V3 | Dsyrk | 8 | 308.4 | 74.7% of 412.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [308.1, 308.4] |
+| Neoverse-V3 | Dsymm | 1 | 39.86 | 77.2% of 51.6 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [39.7, 39.91] |
+| Neoverse-V3 | Dsymm | 8 | 287.8 | 69.7% of 412.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [287.6, 287.9] |
+| Neoverse-V3 | Dtrsm | 1 | 30.24 | 58.6% of 51.6 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [30, 30.31] |
+| Neoverse-V3 | Dtrsm | 8 | 226.1 | 54.8% of 412.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [225.6, 226.3] |
+| Neoverse-V3 | Ceiling/compute | 8 | 412.1 | 99.8% of 412.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [412, 412.3] |
+| Neoverse-V2 | Dgemm | 1 | 31.84 | 75.4% of 42.22 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [31.82, 31.87] |
+| Neoverse-V2 | Dgemm | 8 | 214.1 | 63.4% of 337.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [214, 214.3] |
+| Neoverse-V2 | Dsyrk | 1 | 31.41 | 74.4% of 42.22 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [31.37, 31.43] |
+| Neoverse-V2 | Dsyrk | 8 | 227.3 | 67.3% of 337.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [227.2, 227.5] |
+| Neoverse-V2 | Dsymm | 1 | 31.71 | 75.1% of 42.22 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [31.69, 31.73] |
+| Neoverse-V2 | Dsymm | 8 | 213.6 | 63.2% of 337.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [213.4, 213.7] |
+| Neoverse-V2 | Dtrsm | 1 | 24.48 | 58.0% of 42.22 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [24.45, 24.56] |
+| Neoverse-V2 | Dtrsm | 8 | 182.9 | 54.1% of 337.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [182.7, 183.1] |
+| Neoverse-V2 | Ceiling/compute | 8 | 337.4 | 99.9% of 337.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [337.4, 337.5] |
+| Neoverse-V1 | Dgemm | 1 | 30.23 | 77.4% of 39.06 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [30.21, 30.26] |
+| Neoverse-V1 | Dgemm | 8 | 201.9 | 64.6% of 312.5 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [201.5, 202.5] |
+| Neoverse-V1 | Dsyrk | 1 | 29.44 | 75.4% of 39.06 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [29.39, 29.47] |
+| Neoverse-V1 | Dsyrk | 8 | 212.6 | 68.0% of 312.5 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [212.5, 212.7] |
+| Neoverse-V1 | Dsymm | 1 | 30.09 | 77.0% of 39.06 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [30.06, 30.1] |
+| Neoverse-V1 | Dsymm | 8 | 201.2 | 64.4% of 312.5 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [200.7, 201.7] |
+| Neoverse-V1 | Dtrsm | 1 | 20.62 | 52.8% of 39.06 GFLOP/s, the 1-thread FMARoof64/neon peak; pooled benchstat over N=2 archives, CI [20.56, 20.65] |
+| Neoverse-V1 | Dtrsm | 8 | 155.3 | 49.7% of 312.5 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [155, 155.6] |
+| Neoverse-V1 | Ceiling/compute | 8 | 278.2 | 89.0% of 312.5 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [275.4, 280.2] |
+<!-- keel-numbers-f64: end -->
+
+<!-- keel-caption-f64: begin -->
+All 54 rows are one pooled `benchstat` estimator per cell, not a median of per-run medians: every sample a host contributed across its own era's archived runs (4 runs in all here) is pooled into a single population, and the median and 95% CI printed beside it are both read off that one population — `scripts/gate-p5.sh` at rev `d1be420` (the last run named, which dates this page; none of these runs judged a row) and `63cffc9`, `d1be420`, `63cffc9`, logs in `archive/p5-f64/judged-r2-arm64-d1be420.log`, `archive/p5-f64/judged-r1-amd64-63cffc9.log`, `archive/p5-f64/judged-r2-amd64-d1be420.log`, `archive/p5-f64/judged-r1-arm64-63cffc9.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `absent` governor on every host. Each cell names its own N, counting archives. Because the point and the interval come from the same estimator, every published value lies inside its own CI; the percent-of-peak denominator is pooled the same way, so the 1-thread and 8-thread rows for a routine are a ratio of like estimators. Rows from different CPUs are not comparable, because the peaks differ. No run named here judged a row -- none prints a PASS or FAIL against a bar in force -- so each host takes its verdict class, and the shares quoted below, from the first of these runs named for it.
+
+The 8-thread rows divide by 8x the 1-thread peak, which no host can reach: the clock drops with core count, so that share is a floor on how well the nest did and not a score. The bar below divides by a ceiling measured at 8 threads on the host itself, where the droop is inside the reading.
+
+As the run that supplies each host its verdicts printed them, net of CI -- the reading a bar compares, not a ratio of the medians above -- as a share of each host's own 8-thread ceiling: AMD EPYC 9R45 39.9-49.6%; AMD EPYC 9R14 52.2-76.0%; Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz 16.8-31.0%; Neoverse-V3 54.3-74.6%; Neoverse-V2 54.0-67.3%; Neoverse-V1 55.9-76.5%. Those ceilings are 99.5%, 99.8%, 93.7%, 99.8%, 99.9% and 89.0% of 8x each host's own 1-thread peak -- a different factor per host. The ceilings' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names.
+
+NONE of the 24 routine-host pairs those 48 routine rows form was judged: era f64init has typed no fraction for scripts/gate-p5.sh to enforce (the judged routines are reported against each host's own measured 8-thread ceiling with no fraction in force (#6); Dtrsm is in that class with the other three and has never had a T8/T1 floor), so every number above is a measurement and not a pass, and the absence of a shortfall below is not a pass. A further 14 of those pairs are RECORDED as a candidate baseline in era f64init and judged by nothing, so those rows are published as measurements and not as passes (#6). A further 8 pairs were measured under no bar at all -- their gate lines read PASS only because NO FRACTION IN FORCE left nothing to fail -- so they are REPORTED and carry no verdict. A further 2 pairs were NOISE-LIMITED: their own intervals cost more than the margin every bar is set by, so no bar could decide them and they carry no verdict (§5 rule 19).
+
+As of this caption, `scripts/host-baselines-f64.tsv` registers a share baseline in era f64init for 13 of those 24 pairs (AMD EPYC 9R45 3 of 4; AMD EPYC 9R14 2 of 4; Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz 4 of 4; Neoverse-V3 4 of 4; Neoverse-V2 0 of 4; Neoverse-V1 0 of 4) and none for the other 11.
+<!-- keel-caption-f64: end -->
 
 ## Why
 Go has excellent float64 numerics (Gonum) and no maintained fast float32
@@ -159,8 +238,8 @@ func init() {
 
 All 35 `blas.Float32` routines run in keel, and 34 of the 35 `blas.Float64` routines do. The 35th is
 `Dsdot`, which takes float32 vectors and has no keel twin, so it stays Gonum's. The float64 routines
-are tested to the same three-check standard as float32. **Their performance is not yet gated or
-published** (#193), so no float64 number appears in this README. Where keel and Gonum differ on an edge
+are tested to the same three-check standard as float32, and their performance is gated and
+published, in [Float64 rates](#float64-rates) (#193, #203). Where keel and Gonum differ on an edge
 case of the interface's contract (a negative stride on `Sscal`, an empty `Sgemv`), the
 adapter hands that call to Gonum, so code written against Gonum keeps its behaviour.
 Where Gonum is wrong, the adapter keeps keel's answer: `Ssyrk` at `beta = 0`

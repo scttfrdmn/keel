@@ -34,10 +34,13 @@
 #   scripts/readme-numbers.sh build/gate-p5-<rev>.log -n   print the block, touch nothing
 set -euo pipefail
 
-NUM_BEGIN='<!-- keel-numbers: begin -->'
-NUM_END='<!-- keel-numbers: end -->'
-CAP_BEGIN='<!-- keel-caption: begin -->'
-CAP_END='<!-- keel-caption: end -->'
+# KEEL_ELEM=f64 (#203) writes the float64 block: its own markers, routines, row families and -f64
+# registries, so a float64 row can neither be looked up as a float32 one nor pool float32 archives.
+S=""; [[ "${KEEL_ELEM:-f32}" == f64 ]] && S=-f64
+NUM_BEGIN="<!-- keel-numbers$S: begin -->"
+NUM_END="<!-- keel-numbers$S: end -->"
+CAP_BEGIN="<!-- keel-caption$S: begin -->"
+CAP_END="<!-- keel-caption$S: end -->"
 
 # Kept in step with gate-p5.sh by the check at the bottom of this script, not by
 # being remembered: a floor that drifts from the gate's would publish a disclosure
@@ -79,7 +82,10 @@ CAP_END='<!-- keel-caption: end -->'
 # as a live comparison.
 CEIL_FRACTION=42.8
 SCALE_FLOOR_RETIRED=6.0
-ROUTINES='Sgemm Ssyrk Ssymm Strsm'
+ROUTINES='Sgemm Ssyrk Ssymm Strsm' FAM='Scale Peak Ceiling/compute'
+CF_LINE="CEIL_FRACTION=$CEIL_FRACTION"
+# Era f64init types no fraction, and gate-p5 resolves an era its case does not name to an empty bar.
+[[ -n "$S" ]] && { CEIL_FRACTION=""; CF_LINE='  *) CEIL_FRACTION="" ;;'; ROUTINES='Dgemm Dsyrk Dsymm Dtrsm' FAM='Level3F64 FMARoof64 WideRoof64'; }
 
 die() { echo "readme-numbers: $*" >&2; exit 1; }
 
@@ -100,9 +106,9 @@ for l in "${LOGS[@]}"; do [[ -r "$l" ]] || die "cannot read $l"; done
 # is read back too, because the caption names it as retired: if it were deleted from
 # the gate, or worse revived there as a live comparison, this disclosure would be
 # describing the wrong one of two 6.0s.
-for pair in "CEIL_FRACTION=$CEIL_FRACTION" "SCALE_FLOOR_RETIRED=$SCALE_FLOOR_RETIRED"; do
-  grep -qxF "${pair%%=*}=${pair#*=}" scripts/gate-p5.sh \
-    || die "${pair%%=*} here is ${pair#*=} but scripts/gate-p5.sh disagrees; the disclosure would name a bar the gate does not enforce"
+for pair in "$CF_LINE" "SCALE_FLOOR_RETIRED=$SCALE_FLOOR_RETIRED"; do
+  grep -qxF "$pair" scripts/gate-p5.sh \
+    || die "'$pair' is not a line of scripts/gate-p5.sh; the disclosure would name a bar the gate does not enforce"
 done
 
 # ---- ONE POOLED ESTIMATOR PER CELL (#165, landed 2026-10-11; narrative in CHANGELOG.md)
@@ -120,13 +126,13 @@ done
 # than falling back to the log-derived median, because a table mixing two estimators is the defect.
 POOLED="$(mktemp)"
 if ! bash scripts/readme-pooled.sh > "$POOLED" 2>/dev/null || [[ ! -s "$POOLED" ]]; then
-  die "could not build the pooled estimator table from scripts/readme-archives.tsv; refusing to publish a log-derived table"
+  die "could not build the pooled estimator table from scripts/readme-archives$S.tsv; refusing to publish a log-derived table"
 fi
 
-BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
-         -v retired="$SCALE_FLOOR_RETIRED" -v pooled="$POOLED" '
+BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v fam="$FAM" -v elem="$S" \
+         -v retired="$SCALE_FLOOR_RETIRED" -v pooled="$POOLED" -v reg="scripts/host-baselines$S.tsv" '
   function strip(s) { gsub(/\033\[[0-9;]*m/, "", s); return s }
-  BEGIN { loadpooled() }
+  BEGIN { loadpooled(); split(fam, FAM, " ") }
   function bn(p) { sub(/^.*\//, "", p); return p }
   # The pooled estimator, loaded once, keyed (cpu, benchmark name as benchci prints it).
   function loadpooled(   L, F) {
@@ -141,7 +147,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
   # there is no branch here that can return a log-derived number.
   function pget(h, nm) {
     if (!((h, nm) in PM)) {
-      printf "readme-numbers: cpu_model [%s] has no pooled estimator for %s; scripts/readme-archives.tsv does not cover this cell\n", h, nm > "/dev/stderr"
+      printf "readme-numbers: cpu_model [%s] has no pooled estimator for %s; scripts/readme-archives%s.tsv does not cover this cell\n", h, nm, elem > "/dev/stderr"
       exit 4
     }
     return PM[h, nm]
@@ -320,11 +326,12 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
     # Backend is [a-z0-9]+ not the literal avx512 (#163, 2026-09-16): the gate prints the ACTIVE
     # single-thread peak, which is avx512 on amd64 and neon on arm64 -- hardcoding avx512 made this
     # generator unable to read the peak on an arm64 run (no measured single-thread peak). Parse fix only.
-    if (match(rest, /% of 8x the single-thread [a-z0-9]+ peak \([0-9.]+ GFLOP\/s\)/)) {
+    # A float64 log names the row family too (`FMARoof64/avx512`, #203); bk keeps the backend alone.
+    if (match(rest, /% of 8x the single-thread [A-Za-z0-9\/]+ peak \([0-9.]+ GFLOP\/s\)/)) {
       r = rest; sub(/:.*$/, "", r)
       pc = rest; sub(/^.*: /, "", pc); sub(/%.*$/, "", pc)
       pk = rest; sub(/^.*peak \(/, "", pk); sub(/ GFLOP.*$/, "", pk)
-      bk = rest; sub(/^.*single-thread /, "", bk); sub(/ peak.*$/, "", bk)
+      bk = rest; sub(/^.*single-thread /, "", bk); sub(/ peak.*$/, "", bk); sub(/^.*\//, "", bk)
       pkbk[host, FILENAME] = bk  # backend name for the row caption (avx512 on amd64, neon on arm64), #163
       # Four printings of one measurement are ONE witness (DESIGN.md §5 rule 10), so
       # they are used as a consistency check and never as corroboration. Scoped to the file
@@ -406,10 +413,14 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
     # #163 (2026-09-16): a host no log JUDGED -- first-sight silicon whose reading is RECORDED as a
     # candidate baseline -- has exactly one verdict to take, BASELINE, so taking it is not averaging
     # two judged verdicts. The `!in` guard leaves every host already sourced above untouched.
-    for (kk in vd)  { split(kk, K, SUBSEP); if (!((K[1], K[2]) in verdict)) verdict[K[1], K[2]] = vd[kk] }
-    for (kk in frr) { split(kk, K, SUBSEP); if (!((K[1], K[2]) in fr1))     fr1[K[1], K[2]]     = frr[kk] }
-    for (kk in ptr) { split(kk, K, SUBSEP); if (!((K[1], K[2]) in pt1))     pt1[K[1], K[2]]     = ptr[kk] }
-    for (kk in cir) { split(kk, K, SUBSEP); if (!((K[1], K[2]) in ci1))     ci1[K[1], K[2]]     = cir[kk] }
+    # BY ARGUMENT ORDER, the first log named wins, verdict and figures together (#203): this read
+    # `for (kk in vd)`, the awk hash order, and the float64 r1/r2 disagree on 3 rows (zen4 Dsyrk/Dtrsm,
+    # zen5 Dtrsm), so which verdict printed was the hash order choice, not the operator choice.
+    for (q = 1; q <= nf; q++) for (kk in vd) {
+      split(kk, K, SUBSEP); if (K[3] != flist[q] || ((K[1], K[2]) in verdict)) continue
+      verdict[K[1], K[2]] = vd[kk]; if (kk in frr) fr1[K[1], K[2]] = frr[kk]
+      if (kk in ptr) pt1[K[1], K[2]] = ptr[kk]; if (kk in cir) ci1[K[1], K[2]] = cir[kk]
+    }
 
     # One fleet bar in words, from the logs that judged against it; two distinct ones would be
     # two sentences this caption has no way to write, so that refuses rather than picking one.
@@ -432,6 +443,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # avx512 on amd64 (the default keeps amd64 byte-unchanged), neon on arm64. Constant per host.
       pkbname = "avx512"
       for (pq = 1; pq <= nf; pq++) if ((h, flist[pq]) in pkbk) { pkbname = pkbk[h, flist[pq]]; break }
+      pkdesc = (elem == "" ? pkbname " microkernel" : FAM[2] "/" pkbname)
       for (j = 1; j <= n; j++) {
         r = R[j]
         a = med(one, h SUBSEP r); b = med(eight, h SUBSEP r)
@@ -462,10 +474,10 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
         # comes from the pool rather than a draw counter -- so est(), an, bn8, cn, c8 and p8 were
         # deleted as dead stores rather than left looking live. Control on that deletion: the
         # generated block is byte-identical across it, which a prune of a live store would not be.
-        pn1 = "Scale/" r "/n=4096/threads=1"; pn8 = "Scale/" r "/n=4096/threads=8"
-        pa = pget(model[h], pn1); pb = pget(model[h], pn8); pp1 = pget(model[h], "Peak/" pkbname); pp8 = pp1 * 8
-        printf "| %s | %s | 1 | %.4g | %.1f%% of %.4g GFLOP/s, the 1-thread %s microkernel peak; %s |\n", \
-          model[h], r, pa, (pa + 0) / pp1 * 100, pp1, pkbname, pest(model[h], pn1)
+        pn1 = FAM[1] "/" r "/n=4096/threads=1"; pn8 = FAM[1] "/" r "/n=4096/threads=8"
+        pa = pget(model[h], pn1); pb = pget(model[h], pn8); pp1 = pget(model[h], FAM[2] "/" pkbname); pp8 = pp1 * 8
+        printf "| %s | %s | 1 | %.4g | %.1f%% of %.4g GFLOP/s, the 1-thread %s peak; %s |\n", \
+          model[h], r, pa, (pa + 0) / pp1 * 100, pp1, pkdesc, pest(model[h], pn1)
         printf "| %s | %s | 8 | %.4g | %.1f%% of %.1f GFLOP/s, that same peak x 8 cores; %s |\n", \
           model[h], r, pb, (pb + 0) / pp8 * 100, pp8, pest(model[h], pn8)
 
@@ -509,10 +521,10 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # for. Emitted after this host'"'"'s routines, so "that same peak" has a referent above it.
       hce = med(ceil8, h)
       if (hce == "") { printf "readme-numbers: [%s] has no measured 8-thread ceiling in these logs, so the denominator its shares divide by cannot be published as a re-measured row (#113)\n", h > "/dev/stderr"; exit 3 }
-      pnc = "Ceiling/compute/" pkbname "/threads=8"
-      phc = pget(model[h], pnc); pcp1 = pget(model[h], "Peak/" pkbname); pcp8 = pcp1 * 8
+      pnc = FAM[3] "/" pkbname "/threads=8"
+      phc = pget(model[h], pnc); pcp1 = pget(model[h], FAM[2] "/" pkbname); pcp8 = pcp1 * 8
       printf "| %s | Ceiling/compute | 8 | %.4g | %.1f%% of %.1f GFLOP/s, that same peak x 8 cores; %s |\n", \
-        model[h], phc, (phc + 0) / pcp8 * 100, pcp8, pest(model[h], pnc)
+        model[h], phc, (phc + 0) / pcp8 * 100, pcp8, pest(model[h], pnc); gpr[h] = sprintf("%.1f%%", (phc + 0) / pcp8 * 100)
     }
     # The caption, derived from the same parse that produced the rows above it.
     printf "\n%s\n", "CAPTION:" > "/dev/stderr"
@@ -567,9 +579,10 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # forces, since a gate-p5 run measures one GOARCH -- each owns the verdicts for the hosts it
       # measured, and the generator refuses two covering the same host rather than averaging them.
       vprov = "The verdicts below are the judged run'"'"'s alone — a verdict belongs to the gate that rendered it and two cannot be averaged."
+      if (njf == 0) vprov = "No run named here judged a row -- none prints a PASS or FAIL against a bar in force -- so each host takes its verdict class, and the shares quoted below, from the first of these runs named for it."
       if (njf > 1) vprov = sprintf("A gate-p5 run measures one GOARCH, so no single run can judge this table: the rates pool every archive named above, while each host takes its verdicts from the first of the %d judged runs named for that host. Two judged runs that grade one row differently are refused rather than averaged, because a verdict belongs to the gate that rendered it.", njf)
-      printf "All %d rows are one pooled `benchstat` estimator per cell, not a median of per-run medians: every sample a host contributed across its own era'"'"'s archived runs (%d runs in all here) is pooled into a single population, and the median and 95%% CI printed beside it are both read off that one population — `scripts/gate-p5.sh` at rev `%s` (the judged run, which dates this page) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N, counting archives. Because the point and the interval come from the same estimator, every published value lies inside its own CI; the percent-of-peak denominator is pooled the same way, so the 1-thread and 8-thread rows for a routine are a ratio of like estimators. Rows from different CPUs are not comparable, because the peaks differ. %s\n\n", \
-        nrowall, nf, (jrev == "" ? "unrecorded" : jrev), others, src, (nsz == "" ? "4096" : nsz), \
+      printf "All %d rows are one pooled `benchstat` estimator per cell, not a median of per-run medians: every sample a host contributed across its own era'"'"'s archived runs (%d runs in all here) is pooled into a single population, and the median and 95%% CI printed beside it are both read off that one population — `scripts/gate-p5.sh` at rev `%s` (%s) and %s, logs in %s — at n=%s square, `GOMAXPROCS` pinned to the threads column, %s. Each cell names its own N, counting archives. Because the point and the interval come from the same estimator, every published value lies inside its own CI; the percent-of-peak denominator is pooled the same way, so the 1-thread and 8-thread rows for a routine are a ratio of like estimators. Rows from different CPUs are not comparable, because the peaks differ. %s\n\n", \
+        nrowall, nf, (jrev == "" ? "unrecorded" : jrev), (njf == 0 ? "the last run named, which dates this page; none of these runs judged a row" : "the judged run, which dates this page"), others, src, (nsz == "" ? "4096" : nsz), \
         (g == "" ? "governor unrecorded" : g == "mixed" ? "governors differing between hosts (see the log)" : "`" g "` governor on every host"), vprov > "/dev/stderr"
     }
     # THE COLUMN DENOMINATOR IS NOT THE CRITERION DENOMINATOR, and after #6 that has
@@ -607,14 +620,17 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
         cl = cl (cl == "" ? "" : "; ") sprintf("%s %.1f-%.1f%%", model[h], lo, hi)
         # %.1f since #113 put this quantity in the table too: at %.0f the caption said "100%"
         # three lines under a row saying 99.8% -- caption-vs-table drift, by rounding.
-        gp = gp (gp == "" ? "" : ", ") sprintf("%.1f%%", 100 * hc / (8 * hp))
+        gp = gp (gp == "" ? "" : ", ") gpr[h]  # the table row'"'"'s own figure (#203): a median of log ceilings read 99.4% under a 99.5% row
       }
       sub(/, ([^,]*)$/, " and&", gp); sub(/ and, /, " and ", gp)
+      # WHERE THE SHARES COME FROM, said rather than misnamed (#203): each host takes them from the
+      # run that supplies its verdicts, net of CI. This said "Derived from the table above, so pooled",
+      # which they are not -- 9R45 Strsm printed 33.7% where the table gives 847.2 / 2294 = 36.9% --
+      # and, read in hash order, 2 of 6 float32 ranges (9R14, V3) joined readings from two runs.
       if (cl != "")
-        # "In the judged run", not "this run": these shares are the readings the bar compared
-        # against, so they come from one archive while the table above pools every archive.
-        # Under pooling "this run" has no referent, and the shares would read as medians.
-        printf "Derived from the table above, so pooled over the era'"'"'s archives rather than read off the judged run alone, as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host, which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings'"'"' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).\n\n", (nt == "" ? "8" : nt), cl, gp, retired > "/dev/stderr"
+        printf "As the run that supplies each host its verdicts printed them, net of CI -- the reading a bar compares, not a ratio of the medians above -- as a share of each host'"'"'s own %s-thread ceiling: %s. Those ceilings are %s of 8x each host'"'"'s own 1-thread peak -- a different factor per host%s. The ceilings'"'"' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names%s.\n\n", (nt == "" ? "8" : nt), cl, gp, \
+          (elem == "" ? sprintf(", which is why the retired %sx cross-host ratio could rank a host that kept more of its own silicon below one that kept less", retired) : ""), \
+          (elem == "" ? " -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed)" : "") > "/dev/stderr"
     }
     # The bars in words, not as a ">= %s" with a hole in it. Either may be deferred to
     # its own measurement and both have been, at different times and for the same
@@ -622,13 +638,17 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
     jb = (cf == "" \
       ? sprintf("the judged routines are reported against each host'"'"'s own measured %s-thread ceiling with no fraction in force (#6)", (nt == "" ? "8" : nt)) \
       : sprintf("the judged routines must reach %s%% of each host'"'"'s own measured %s-thread ceiling (#6)", cf, (nt == "" ? "8" : nt)))
-    if (nrb > 0) jb = jb sprintf(", or, on the %d %s with a landed registry row, %s own registered baseline less the same margin (scripts/host-baselines.tsv)", nrb, (nrb == 1 ? "host" : "hosts"), (nrb == 1 ? "its" : "their"))
+    if (nrb > 0) jb = jb sprintf(", or, on the %d %s with a landed registry row, %s own registered baseline less the same margin (scripts/host-baselines%s.tsv)", nrb, (nrb == 1 ? "host" : "hosts"), (nrb == 1 ? "its" : "their"), elem)
     # The second bar'"'"'s sentence is a RETIREMENT and no longer a hole: Strsm was judged
     # against its own 1-thread rate from #37 until 2026-10-05, when #177 retired that ratio and
     # moved the routine into the sentence above. Kept as a named disclosure rather than deleted,
     # because every published row this caption has ever governed was judged under two bars and a
     # reader comparing against an older README is owed the reason one of them is gone.
     tb = sprintf("Strsm'"'"'s own >= x T8/T1 floor is RETIRED (#177, 2026-10-05): it was the same quantity the %sx cross-host floor was retired for, and it reddened a microkernel that improved both of its arms", retired)
+    # Float64 has no such history (#203): no T8/T1 floor or cross-host ratio ever judged a float64 row.
+    rt = sprintf(" The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.", retired)
+    wu = "that run predates the bars it would be judged by, which were derived from it"
+    if (elem != "") { tb = "Dtrsm is in that class with the other three and has never had a T8/T1 floor"; rt = ""; wu = "their gate lines read PASS only because NO FRACTION IN FORCE left nothing to fail" }
     # ONE SPELLING OF EACH UNJUDGED DISCLOSURE, shared by every branch that can reach it.
     # The era is read off the log rather than named here: a generator that hardcodes the
     # era would keep publishing "pinned8" into the era after it.
@@ -639,7 +659,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
     # verdict is available to publish at any strictness. Saying so is not optional -- their
     # gate lines are prefixed PASS, and that prefix is what made this caption claim they
     # cleared bars derived from them.
-    bc = bc (nu == 0 ? "" : sprintf(" A further %d %s measured under no bar at all -- that run predates the bars it would be judged by, which were derived from it -- so %s no verdict.", nu, (nu == 1 ? "pair was" : "pairs were"), (nu == 1 ? "it is REPORTED and carries" : "they are REPORTED and carry")))
+    bc = bc (nu == 0 ? "" : sprintf(" A further %d %s measured under no bar at all -- %s -- so %s no verdict.", nu, (nu == 1 ? "pair was" : "pairs were"), wu, (nu == 1 ? "it is REPORTED and carries" : "they are REPORTED and carry")))
     bc = bc (nn == 0 ? "" : sprintf(" A further %d %s NOISE-LIMITED: %s own intervals cost more than the margin every bar is set by, so no bar could decide %s and %s no verdict (§5 rule 19).", nn, (nn == 1 ? "pair was" : "pairs were"), (nn == 1 ? "its" : "their"), (nn == 1 ? "it" : "them"), (nn == 1 ? "it carries" : "they carry")))
     if (cf == "" && ns > 0) {
       # The log disagrees with this tree about whether a bar exists. The constants readback
@@ -664,7 +684,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # a BASELINE verdict line can be parsed: those lines carry no scaling clause, so this
       # program refuses the whole log, which is the blocker on regenerating the README as
       # medians over this era (#6). Found 2026-08-22 by driving this branch, not by reading it.
-      printf "NONE of the %d routine-host pairs those %d routine rows form was judged: the one bar scripts/gate-p5.sh would enforce is suspended for re-derivation from this era (%s; %s), so every number above is REPORTED and the absence of a shortfall below is not a pass. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
+      printf "NONE of the %d routine-host pairs those %d routine rows form was judged: %s (%s; %s), so every number above is %s and the absence of a shortfall below is not a pass.%s%s\n", nr, nrow, (elem == "" ? "the one bar scripts/gate-p5.sh would enforce is suspended for re-derivation from this era" : "era " era " has typed no fraction for scripts/gate-p5.sh to enforce"), jb, tb, (elem == "" ? "REPORTED" : "a measurement and not a pass,"), (elem == "" ? "" : bc), rt > "/dev/stderr"
     } else if (ns == 0 && nr - nb - nu - nn == 0) {
       # NOTHING WAS JUDGED, yet bars are in force in this tree -- so the branch above cannot
       # fire and the "N of M clear" branches would headline "0 of the 12 pairs clear the bars",
@@ -672,9 +692,9 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # an untested population is not a result, and printing it as one is the same false
       # attribution this commit removes, one branch over. Reachable with the founding run as
       # sole input, which is exactly how it was found.
-      printf "NONE of the %d routine-host pairs those %d routine rows form was judged against the bars scripts/gate-p5.sh now enforces (%s; %s), so no number above is a pass and the absence of a shortfall is not one either.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, bc, retired > "/dev/stderr"
+      printf "NONE of the %d routine-host pairs those %d routine rows form was judged against the bars scripts/gate-p5.sh now enforces (%s; %s), so no number above is a pass and the absence of a shortfall is not one either.%s%s\n", nr, nrow, jb, tb, bc, rt > "/dev/stderr"
     } else if (ns == 0 && nb == 0 && nu == 0 && nn == 0) {
-      printf "Every one of the %d routine-host pairs those %d routine rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s. The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr, nrow, jb, tb, retired > "/dev/stderr"
+      printf "Every one of the %d routine-host pairs those %d routine rows form clears the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s.%s\n", nr, nrow, jb, tb, rt > "/dev/stderr"
     } else if (ns == 0) {
       # EVERY JUDGED PAIR CLEARED, and some pairs were not judged at all. "Every one of the
       # N pairs clears the bars" over a population containing BASELINE rows is the vacuous
@@ -682,7 +702,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
       # So the judged count is the subject and the recorded count is named beside it, in
       # the SAME words the shortfall branch below uses, because two spellings of one
       # disclosure is the drift this whole script exists to end.
-      printf "%d of the %d routine-host pairs those %d routine rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s.%s The %sx cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.\n", nr - nb - nu - nn, nr, nrow, jb, tb, bc, retired > "/dev/stderr"
+      printf "%d of the %d routine-host pairs those %d routine rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: %s, and %s.%s%s\n", nr - nb - nu - nn, nr, nrow, jb, tb, bc, rt > "/dev/stderr"
     } else {
       # nr, not nr - nb: "the N pairs those M routine rows form" is a structural claim about the
       # table -- 24 routine rows form 12 pairs however many of them anything judged -- so subtracting
@@ -694,6 +714,16 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" \
         printf "%d of the judged routines %s short of %s own host'"'"'s ceiling: %s. ", ns, (ns == 1 ? "falls" : "fall"), (ns == 1 ? "its" : "their"), s > "/dev/stderr"
       }
       print "These are published shortfalls against bars checked on every gate run, not regressions against an earlier reading." > "/dev/stderr"
+    }
+    # #203: the registry as it stands, read from it -- a founding run log predates its own rows landing.
+    if (elem != "") {
+      rs = ""; nreg = 0
+      for (i = 1; i <= nh; i++) {
+        h = order[i]; rc = 0
+        while ((getline L < reg) > 0) { split(L, F, "\t"); for (j = 1; j <= n; j++) if (F[1] == model[h] && F[3] == era && F[2] ~ ("^share/.*/" R[j] "$")) rc++ }
+        close(reg); nreg += rc; rs = rs (i == 1 ? "" : "; ") sprintf("%s %d of %d", model[h], rc, n)
+      }
+      printf "\nAs of this caption, `%s` registers a share baseline in era %s for %d of those %d pairs (%s) and none for the other %d.\n", reg, era, nreg, nr, rs, nr - nreg > "/dev/stderr"
     }
   }
 ' "${LOGS[@]}" 2>build/.readme-numbers.cap)" || { cat build/.readme-numbers.cap >&2; die "the logs did not yield a complete block; README.md is untouched"; }
@@ -709,9 +739,9 @@ CAPTION="$(awk 'f {print} /^CAPTION:$/ {f=1}' build/.readme-numbers.cap)"
 # Fails closed -- an unreadable HEAD says so rather than saying nobody left.
 models() { awk -F' *\\| *' '/^\| .* \| [0-9]+ \| /{print $2}' | sort -u; }
 if OLD_README="$(git show HEAD:README.md 2>/dev/null)" && [[ -n "$OLD_README" ]]; then
-  GONE="$(comm -23 <(printf '%s\n' "$OLD_README" | models) <(printf '%s\n' "$BLOCK" | models) \
+  GONE="$(comm -23 <(printf '%s\n' "$OLD_README" | awk -v b="$NUM_BEGIN" -v e="$NUM_END" 'index($0, e) {f = 0} f; index($0, b) {f = 1}' | models) <(printf '%s\n' "$BLOCK" | models) \
     | awk '{s = s (NR > 1 ? "; " : "") $0} END {printf "%s", s}')"
-  [[ -z "$GONE" ]] || CAPTION="$CAPTION"$'\n\n'"In the previously published block and not in this one: $GONE. A host with no archive in an era cannot be a median over it, so it leaves the table rather than being marked inside it; the era's stated exclusions are in \`scripts/measurement-eras.tsv\`."
+  [[ -z "$GONE" ]] || CAPTION="$CAPTION"$'\n\n'"In the previously published block and not in this one: $GONE. A host with no archive in an era cannot be a median over it, so it leaves the table rather than being marked inside it; the era's stated exclusions are in \`scripts/measurement-eras$S.tsv\`."
 else
   CAPTION="$CAPTION"$'\n\n'"Whether a host left the block since the last published one is undetermined here: \`git show HEAD:README.md\` was unreadable."
 fi

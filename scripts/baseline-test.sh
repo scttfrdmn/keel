@@ -456,8 +456,8 @@ echo "-- readme-archives.tsv: the README's sample provenance (#165) --"
 #      source paths; this is the same check for the artifact added by #165, driven here because
 #      gate-p5 runs this file and nothing runs a docs-only sweep on every push.
 MAN=scripts/readme-archives.tsv
-is 'every manifest path exists and is tracked' \
-   "$(awk -F'\t' '!/^#/ && $1!="cpu_model" && NF>=5 {print $4"\n"$5}' "$MAN" | sort -u \
+is 'every manifest path exists and is tracked, float64 manifest included (#203)' \
+   "$(awk -F'\t' '!/^#/ && $1!="cpu_model" && NF>=5 {print $4"\n"$5}' "$MAN" scripts/readme-archives-f64.tsv | sort -u \
       | while read -r f; do git ls-files --error-unmatch "$f" >/dev/null 2>&1 || echo BAD; done | grep -c BAD)" '0'
 # 36h. A (cpu, era) whose only rows are `superseded` would publish nothing while looking
 #      provisioned. Asserted as a count of offending keys so the message names the real failure
@@ -495,6 +495,9 @@ is 'the superseded pinned8 take is still listed rather than deleted' \
 is 'all five published hosts resolve a reference-interval corpus' \
    "$(awk -F'\t' -v e=ceil8 '!/^#/ && $1!="cpu_model" && NF>=6 && $2==e && $6=="canonical" {print $1}' \
       scripts/readme-archives.tsv | sort -u | grep -c .)" '5'
+is 'and the six float64 hosts resolve two canonical f64init archives each (#203)' \
+   "$(awk -F'\t' '!/^#/ && NF>=6 && $2=="f64init" && $6=="canonical" {n[$1]++} END {for (k in n) if (n[k]==2) g++; print g+0}' \
+      scripts/readme-archives-f64.tsv)" '6'
 is 'and each resolves exactly two canonical archives' \
    "$(awk -F'\t' -v e=ceil8 '!/^#/ && $1!="cpu_model" && NF>=6 && $2==e && $6=="canonical" {n[$1]++}
        END {bad=0; for (k in n) if (n[k]!=2) bad++; print bad}' scripts/readme-archives.tsv)" '0'
@@ -523,7 +526,7 @@ is 'every published rate row carries a CI and its point lies inside it (#165)' \
 #      the first time it fires. The invariants are that the bracket contains its own median and
 #      that nothing published as `pooled` is in fact a single draw.
 is 'the pooled estimator brackets its own median, and no row is a lone draw' \
-   "$(bash scripts/readme-pooled.sh | /usr/bin/awk -F'\t' '
+   "$({ bash scripts/readme-pooled.sh; KEEL_ELEM=f64 bash scripts/readme-pooled.sh; } | /usr/bin/awk -F'\t' '
         {n++; if ($3+0 < $4+0 || $3+0 > $5+0) bad++; if ($6+0 < 2) few++}
         END {printf "%s, %d unbracketed, %d singletons", (n > 0 ? "rows" : "EMPTY"), bad+0, few+0}')" \
    'rows, 0 unbracketed, 0 singletons'

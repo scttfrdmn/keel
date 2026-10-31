@@ -3,4 +3,17 @@
 #
 # readme-archives-f64.tsv — readme-archives.tsv for float64 (#193): the same columns and rules, in a file of its own
 # so a float64 run can neither spend nor be judged by float32 state (Scott, 2026-10-29). Read
-# readme-archives.tsv's header for the columns. Empty until float64's founding pair lands.
+# readme-archives.tsv's header for the columns. Founded 2026-10-31 by era f64init's pair (r1 63cffc9,
+# r2 d1be420, archive/p5-f64/), which README.md's keel-numbers-f64 block pools (#203).
+AMD EPYC 9R45	f64init	63cffc9	archive/p5-f64/judged-r1-amd64-63cffc9.log	archive/p5-f64/bench-gate-p5-63cffc9-keel-zen5-20261031T002513Z-1.txt	canonical	amd64
+AMD EPYC 9R14	f64init	63cffc9	archive/p5-f64/judged-r1-amd64-63cffc9.log	archive/p5-f64/bench-gate-p5-63cffc9-keel-zen4-20261031T002513Z-2.txt	canonical	amd64
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	f64init	63cffc9	archive/p5-f64/judged-r1-amd64-63cffc9.log	archive/p5-f64/bench-gate-p5-63cffc9-keel-skx-20261031T002513Z-3.txt	canonical	amd64
+Neoverse-V3	f64init	63cffc9	archive/p5-f64/judged-r1-arm64-63cffc9.log	archive/p5-f64/bench-gate-p5-63cffc9-keel-gvt5-20261031T031121Z-1.txt	canonical	arm64
+Neoverse-V2	f64init	63cffc9	archive/p5-f64/judged-r1-arm64-63cffc9.log	archive/p5-f64/bench-gate-p5-63cffc9-keel-gvt4-20261031T031121Z-2.txt	canonical	arm64
+Neoverse-V1	f64init	63cffc9	archive/p5-f64/judged-r1-arm64-63cffc9.log	archive/p5-f64/bench-gate-p5-63cffc9-keel-gvt3-20261031T031121Z-3.txt	canonical	arm64
+AMD EPYC 9R45	f64init	d1be420	archive/p5-f64/judged-r2-amd64-d1be420.log	archive/p5-f64/bench-gate-p5-d1be420-keel-zen5-20261031T062156Z-1.txt	canonical	amd64
+AMD EPYC 9R14	f64init	d1be420	archive/p5-f64/judged-r2-amd64-d1be420.log	archive/p5-f64/bench-gate-p5-d1be420-keel-zen4-20261031T062156Z-2.txt	canonical	amd64
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	f64init	d1be420	archive/p5-f64/judged-r2-amd64-d1be420.log	archive/p5-f64/bench-gate-p5-d1be420-keel-skx-20261031T062156Z-3.txt	canonical	amd64
+Neoverse-V3	f64init	d1be420	archive/p5-f64/judged-r2-arm64-d1be420.log	archive/p5-f64/bench-gate-p5-d1be420-keel-gvt5-20261031T090510Z-1.txt	canonical	arm64
+Neoverse-V2	f64init	d1be420	archive/p5-f64/judged-r2-arm64-d1be420.log	archive/p5-f64/bench-gate-p5-d1be420-keel-gvt4-20261031T090510Z-2.txt	canonical	arm64
+Neoverse-V1	f64init	d1be420	archive/p5-f64/judged-r2-arm64-d1be420.log	archive/p5-f64/bench-gate-p5-d1be420-keel-gvt3-20261031T090510Z-3.txt	canonical	arm64
