@@ -1,0 +1,4 @@
+# candidate rows proposed by gate-p5; landing them is a reviewed commit act (#6)
+Neoverse-V3	f64init	d1be420	2026-10-31	keel-gvt5	build/bench-gate-p5-d1be420-keel-gvt5-20261031T090510Z-1.txt
+Neoverse-V2	f64init	d1be420	2026-10-31	keel-gvt4	build/bench-gate-p5-d1be420-keel-gvt4-20261031T090510Z-2.txt
+Neoverse-V1	f64init	d1be420	2026-10-31	keel-gvt3	build/bench-gate-p5-d1be420-keel-gvt3-20261031T090510Z-3.txt

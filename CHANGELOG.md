@@ -9,6 +9,15 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Float64 performance baselines, founded and landed: era `f64init` is closed** (#193, `archive/p5-f64/`). An exploration pass
+  and two judged draws ran on both architectures: c5n.18xlarge, c7a.48xlarge and c8a.48xlarge, then c7g.16xlarge, c8g.48xlarge and
+  c9g.48xlarge. There was no FAIL in any run, gate-p3/p4 were GREEN under every gate-p5, and `-race` was clean on all six CPUs.
+  - **Measured float64 performance tracks float32's** at equal instance size: the 8-thread GEMM share of 8x the 1-thread peak is
+    within 1.5 points of float32's on every judged CPU.
+  - **102 rows land** in `host-baselines-f64.tsv` (13 share, 86 L1 rate, 3 gate-p3 kernel) as medians of N=2. Witnesses land for
+    skx, V2 and V1, and are held for Zen 5, Zen 4 and V3, whose refused or single-draw rows are named.
+  - `baseline-test.sh` re-pins its two float64 asserts (f64init closed; every float64 registry row in a float64 era) and stays
+    at 155 ok.
 - **The float64 performance gates: `KEEL_ELEM=f64` in gate-p3, gate-p4 and gate-p5** (#193, Stage B). One element block per gate, following
   gate-p2's pattern. It switches the kernel/peak/anchor sets (gate-p2's float64 ones), the benchmark rows (Dgemm, OpenBLAS64, Tile64, FMARoof64,
   Level3F64, WideRoof64, Level1F64) and the parsed markers (keel-dgemm-*, keel-l164-active, keel-bench-kern64, keel-p5-dispatch64). Every

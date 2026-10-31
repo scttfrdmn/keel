@@ -154,11 +154,11 @@ era_provisional scripts/measurement-eras.tsv famaxx86 && no 'famaxx86 read provi
 #     state can reach the other.
 is 'the float64 ledger: amd64 is in f64init' "$(era_current scripts/measurement-eras-f64.tsv amd64)" f64init
 is 'the float64 ledger: arm64 is in f64init' "$(era_current scripts/measurement-eras-f64.tsv arm64)" f64init
-era_provisional scripts/measurement-eras-f64.tsv f64init && ok 'f64init is provisional until its founding pair lands' || no 'f64init read as landed'
+era_provisional scripts/measurement-eras-f64.tsv f64init && no 'f64init read provisional after its founding pair landed' || ok 'f64init is closed: its founding pair landed with its registry rows (#193, archive/p5-f64/)'
 is 'reg_file at float32 names the float32 registry' "$(KEEL_ELEM=f32 reg_file judged-runs)" judged-runs.tsv
 is 'reg_file unset is float32' "$(unset KEEL_ELEM; reg_file judged-runs)" judged-runs.tsv
 is 'reg_file at float64 names the float64 registry' "$(KEEL_ELEM=f64 reg_file judged-runs)" judged-runs-f64.tsv
-is 'no float32 witness row is in the float64 witness file' "$(grep -vc '^#' scripts/judged-runs-f64.tsv)" 0
+is 'every float64 registry row is in float64 era f64init, none in a float32 era' "$(awk -F'\t' 'FNR == 1 { c = (FILENAME ~ /judged/) ? 2 : 3 } !/^#/ && NF && $c != "f64init"' scripts/judged-runs-f64.tsv scripts/host-baselines-f64.tsv | wc -l | tr -d ' ')" 0
 
 echo "-- era_provisional: a disclosure about the archive, never a permission --"
 # 6. `—` and empty both mean the both-arms transition archive has not landed. The empty

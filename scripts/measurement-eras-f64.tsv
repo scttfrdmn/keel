@@ -9,4 +9,4 @@
 # f64init is float64's founding era: the instrument is the family-max float64 ceiling
 # (FMARoof64 at 1 thread, WideRoof64 at 8) and the dispatched float64 microkernel. It is
 # provisional until its founding and confirmation runs land.
-f64init	2026-10-29	DESIGN.md §1 (2026-10-25: no float64 target before a float64 peak is measured) + Scott's 2026-10-29 rulings on #193	—	float64 has no prior era: FMARoof64/WideRoof64 on the family-max float64 ceiling, the float64 microkernels, KEEL_ELEM=f64 in gate-p3/p4/p5	all
+f64init	2026-10-29	DESIGN.md §1 (2026-10-25: no float64 target before a float64 peak is measured) + Scott's 2026-10-29 rulings on #193	no old arm (float64's first era: no float64 instrument preceded it); new arm: archive/p5-f64/ (founding run r1 63cffc9 and confirmation run r2 d1be420 on both architectures, judged fleets c5n.18xlarge/c7a.48xlarge/c8a.48xlarge and c7g.16xlarge/c8g.48xlarge/c9g.48xlarge)	float64 has no prior era: FMARoof64/WideRoof64 on the family-max float64 ceiling, the float64 microkernels, KEEL_ELEM=f64 in gate-p3/p4/p5	all

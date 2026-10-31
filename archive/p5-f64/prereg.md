@@ -181,3 +181,53 @@ r2 is the second draw, on the same fleets and the same frozen driver. Rows land 
 
 **REFUTED if** a share candidate's cross-draw spread exceeds 5%, gate-p3/p4 is RED, or any FAIL
 appears.
+
+## r2: result (d1be420, `judged-r2-{amd64,arm64}-d1be420.log`)
+
+- **amd64:** 56 PASS / 0 FAIL / 4 UNMEASURED / 14 BASELINE / 4 REPORTED, 2h37m (about $63).
+- **arm64:** 59 PASS / 0 FAIL / 3 UNMEASURED / 7 BASELINE / 0 REPORTED, 3h10m (about $59).
+
+Both fleets were verified down with a readable inventory. **Not REFUTED:** every share candidate
+present in both draws agrees within 5%, gate-p3 and gate-p4 repeat r1 exactly (amd64 55/0/0 and
+67/0/0, arm64 gate-p4 67/0/0), and no FAIL appears anywhere.
+
+Against the finer predictions:
+- **Share spreads:** 13 share candidates have both draws. The widest is skx Dsymm, 28.8 → 27.8
+  (**3.47%**, 1.0 point), then skx Dgemm 3.44% and Zen 5 Dsyrk 3.13%. My "under 3 points" holds in
+  points; in percent, three rows exceed 3.
+- **"All 14 admissible" missed:**
+  - Zen 5 Dtrsm was a candidate in r1 and NOISE-LIMITED in r2, as famaxx86's float32 Strsm was on
+    the same host.
+  - Zen 4 Dsyrk and Dtrsm read clean in r2, so they have one draw each.
+- **8-thread ceilings:** within 0.2% of r1 on five hosts. **V1 moved +1.74%** (275.4 → 280.2), which
+  misses the 1% clause.
+- **gate-p3 kernel rows:** identical in both draws (V1 86.2, V2 81.3, V3 81.3).
+- **L1 rates:** 86 of 90 settle. The four refusals are all V3: Daxpy n=256 15.14%, Daxpy n=4096
+  10.26%, Dnrm2 n=1048576 5.86% and Dasum n=65536 5.85%. V3's float32 L1 refused four rows too,
+  Saxpy among them (famax, #196).
+
+## Landed over N=2
+
+From the gate's own candidates, by the famaxx86 and famax-V3 precedent, **102 rows land** in
+`scripts/host-baselines-f64.tsv`:
+- 13 share rows;
+- 86 L1 rates;
+- 3 gate-p3 kernel (`peak/`) rows.
+
+Each value is the median of its two draws, with both draws and their spread in the grounds column,
+and both archived sources named. **Witness rows** in `scripts/judged-runs-f64.tsv`:
+- **Landed:** skx, V2 and V1, whose every candidate settled.
+- **Held:** Zen 5, Zen 4 and V3, each with refused or single-draw rows, which are named in that
+  host's rows. These runs judged nothing (all BASELINE), so a landed witness would turn those rows
+  into an `owing` red that is not a regression.
+
+**Exercised with the gate's own reader:**
+- `baseline_state`, with each criterion's production arguments, reads `registered` for all 102 rows
+  and `new` for the 7 refused or unsettled ones;
+- a positive control (a missing row on skx, whose witness landed) reads `owing`;
+- V1's share reads `fleet` (derivation set);
+- float32's famaxx86 state is unchanged.
+
+**f64init is closed.** Its transition column names this archive, and it has no old arm because no
+float64 instrument preceded it. README criterion 9 stays guarded at float64: no float64 README row
+is published yet, and publishing them is the next step.
