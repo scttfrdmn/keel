@@ -1,0 +1,357 @@
+
+========== preflight (c5n.18xlarge, tag=r1, TTL=4h, rate=$3.89/hr)  (21:28:06Z) ==========
+   HEAD=d587114, tree clean, KEEL_GOARCH=amd64
+
+========== co-tenant census at launch  (21:28:06Z) ==========
+   Searching all AWS regions...
+   
+   Instance ID          Name                                       Type           State    IAM Role                 AZ          Age   TTL Left  Public IP       Spot
+   i-09d497decdcb67696  aws-realign-one-cpu-20261031T202334Z-5fd6  c8gd.16xlarge  running  spawn-instance-a737a843  us-east-1b  1h4m  10h55m    100.31.201.129  ✓
+
+========== launch  (21:28:24Z) ==========
+  region us-east-1, TTL 4h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$15.55 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.2s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.1s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.6s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (282ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (1.6s)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.5s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0b4c4b71020a1ab34
+  Public IP    3.84.254.87
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-skx
+
+🌍 DNS: keel-skx.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-skx.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  skx  c5n.18xlarge  (Intel Skylake-SP, amd64, AMI ami-0d6dd9e8265d48906, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-skx cloud-init settled
+  keel-skx has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-skx             c5n.18xlarge     3.84.254.87      on-demand  4h       2026-10-31T21:28:48Z
+
+  1 instance(s) billing. 'down' terminates every one.
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-skx             c5n.18xlarge     3.84.254.87      on-demand  4h       2026-10-31T21:28:48Z
+
+  1 instance(s) billing. 'down' terminates every one.
+
+========== retention decompose — product is the archive  (21:30:29Z) ==========
+== retention (decompose) — issue #26. Not a gate: this certifies nothing. ==
+
+built linux/amd64 internal/block test binary (static)
+methodology: -count=10 -benchtime=1s, GOMAXPROCS=1, benchstat medians
+
+-- keel-skx --
+        Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | instance=c5n.18xlarge | virt=guest | 72 cpus | 36 cores | smt=2 | 2 sockets | governor=absent | load1=0.18 load5=0.10 load15=0.04 runnable=1/848 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=32K L3=25344K | spawn=i-0b4c4b71020a1ab34:c5n.18xlarge:ondemand
+        samples this host produced: 10 rows x 36 benchmarks
+        keel-nest-plan: name=4x32/avx512/n=1024 kc=384 mc=144 nc=1024 mr=4 nr=32 blocks=24 apacks=24 bpacks=3 calls=24576 depths=256:8192,384:16384 padwaste=0.0000
+        keel-nest-plan: name=4x32/avx512/n=2048 kc=384 mc=144 nc=2048 mr=4 nr=32 blocks=90 apacks=90 bpacks=6 calls=196608 depths=128:32768,384:163840 padwaste=0.0000
+        keel-nest-plan: name=2x32/avx512/n=1024 kc=384 mc=144 nc=1024 mr=2 nr=32 blocks=24 apacks=24 bpacks=3 calls=49152 depths=256:16384,384:32768 padwaste=0.0000
+        keel-nest-plan: name=2x32/avx512/n=2048 kc=384 mc=144 nc=2048 mr=2 nr=32 blocks=90 apacks=90 bpacks=6 calls=393216 depths=128:65536,384:327680 padwaste=0.0000
+  Nest/2x32/avx512/n=1024
+        blocked            70.8 GFLOP/s   70.78 GFLOP/s +/- 0.2% [68.05, 70.94] D=10.7 (span 4.08% / interval 0.3815%)
+        no-pack            77.6 GFLOP/s   77.62 GFLOP/s +/- 0.1% [77.31, 77.77] D=2.421 (span 0.59% / interval 0.2448%)
+        denominators, per call at kc=384 and over the nest's own call multiset:
+          ctiles=1         84.5 GFLOP/s   84.53 GFLOP/s +/- 0.1% [84.39, 84.72] D=1.5 (span 0.39% / interval 0.2602%)
+          ctiles=8         84.5 GFLOP/s   84.47 GFLOP/s +/- 0.2% [84.24, 84.56] D=1.391 (span 0.38% / interval 0.2723%)
+          kernel-calls     85.3 GFLOP/s   85.28 GFLOP/s +/- 0.2% [85.04, 85.49] D=1.154 (span 0.53% / interval 0.4573%)
+          ctiles=8/ctiles=1 99.9% (99.5% net of both CIs)
+          — above 100% means the historical one-C-tile measurement is not a ceiling.
+          ctiles=* and kernel-calls are NOT comparable to each other: the first two
+          are per-call rates over 2*MR*NR*kc, kernel-calls is a whole-GEMM rate over
+          2mnk. Only the ctiles ratio answers the dependency question, and only
+          kernel-calls is a denominator for retention.
+        retention   83.0% of the kernel calls it makes (82.6% net of both CIs)
+          with packing removed: 91.0% (90.7% net of both CIs)
+          the 17.0 points it gives up split into
+            packing + residual  +8.0  (both, since nest-no-pack drops both)
+            the loop nest       +9.0  (macro loops, beta pass, real C, fringe tile)
+          parts of the blocked time: nest-no-pack 91.2%  pack-a 3.8%  pack-b 1.5%  residual 3.5%
+          (residual is a point estimate with no interval — a difference of four
+           medians. It holds what nest-no-pack drops by construction: the
+           pack/kernel cache interference, and gemm's three per-call allocations.
+           See internal/block/nest_bench_test.go.)
+  [33mWARN[0m  [keel-skx] Nest/2x32/avx512/n=1024/full-transB: no kernel sub-benchmark ran, so retention has no denominator this run
+  Nest/2x32/avx512/n=2048
+        blocked            68.3 GFLOP/s   68.31 GFLOP/s +/- 0.3% [68.05, 68.41] D=1.286 (span 0.53% / interval 0.4099%)
+        no-pack            72.8 GFLOP/s   72.8 GFLOP/s +/- 0.3% [72.5, 72.92] D=1.2 (span 0.58% / interval 0.4808%)
+        denominators, per call at kc=384 and over the nest's own call multiset:
+          ctiles=1         84.6 GFLOP/s   84.57 GFLOP/s +/- 0.2% [84.35, 84.65] D=1.154 (span 0.35% / interval 0.3074%)
+          ctiles=8         84.4 GFLOP/s   84.43 GFLOP/s +/- 0.2% [84.25, 84.61] D=1.44 (span 0.43% / interval 0.2961%)
+          kernel-calls     84.7 GFLOP/s   84.74 GFLOP/s +/- 0.2% [84.56, 84.88] D=1.185 (span 0.38% / interval 0.3186%)
+          ctiles=8/ctiles=1 99.8% (99.6% net of both CIs)
+          — above 100% means the historical one-C-tile measurement is not a ceiling.
+          ctiles=* and kernel-calls are NOT comparable to each other: the first two
+          are per-call rates over 2*MR*NR*kc, kernel-calls is a whole-GEMM rate over
+          2mnk. Only the ctiles ratio answers the dependency question, and only
+          kernel-calls is a denominator for retention.
+        retention   80.6% of the kernel calls it makes (80.2% net of both CIs)
+          with packing removed: 85.9% (85.5% net of both CIs)
+          the 19.4 points it gives up split into
+            packing + residual  +5.3  (both, since nest-no-pack drops both)
+            the loop nest       +14.1  (macro loops, beta pass, real C, fringe tile)
+          parts of the blocked time: nest-no-pack 93.8%  pack-a 1.9%  pack-b 1.1%  residual 3.2%
+          (residual is a point estimate with no interval — a difference of four
+           medians. It holds what nest-no-pack drops by construction: the
+           pack/kernel cache interference, and gemm's three per-call allocations.
+           See internal/block/nest_bench_test.go.)
+  [33mWARN[0m  [keel-skx] Nest/2x32/avx512/n=2048/full-transB: no kernel sub-benchmark ran, so retention has no denominator this run
+  Nest/4x32/avx512/n=1024
+        blocked            61.2 GFLOP/s   61.25 GFLOP/s +/- 0.8% [60.77, 61.37] D=1.071 (span 0.98% / interval 0.9144%)
+        no-pack            65.4 GFLOP/s   65.38 GFLOP/s +/- 0.1% [65.24, 65.5] D=2.364 (span 0.40% / interval 0.1683%)
+        denominators, per call at kc=384 and over the nest's own call multiset:
+          ctiles=1         69.0 GFLOP/s   68.95 GFLOP/s +/- 0.2% [68.8, 69.05] D=1.316 (span 0.36% / interval 0.2755%)
+          ctiles=8         68.9 GFLOP/s   68.93 GFLOP/s +/- 0.1% [68.77, 69.04] D=2.455 (span 0.39% / interval 0.1596%)
+          kernel-calls     68.8 GFLOP/s   68.84 GFLOP/s +/- 0.1% [68.77, 68.94] D=1.308 (span 0.25% / interval 0.1888%)
+          ctiles=8/ctiles=1 100.0% (99.7% net of both CIs)
+          — above 100% means the historical one-C-tile measurement is not a ceiling.
+          ctiles=* and kernel-calls are NOT comparable to each other: the first two
+          are per-call rates over 2*MR*NR*kc, kernel-calls is a whole-GEMM rate over
+          2mnk. Only the ctiles ratio answers the dependency question, and only
+          kernel-calls is a denominator for retention.
+        retention   89.0% of the kernel calls it makes (88.2% net of both CIs)
+          with packing removed: 95.0% (94.7% net of both CIs)
+          the 11.0 points it gives up split into
+            packing + residual  +6.0  (both, since nest-no-pack drops both)
+            the loop nest       +5.0  (macro loops, beta pass, real C, fringe tile)
+          parts of the blocked time: nest-no-pack 93.7%  pack-a 2.1%  pack-b 1.3%  residual 2.9%
+          (residual is a point estimate with no interval — a difference of four
+           medians. It holds what nest-no-pack drops by construction: the
+           pack/kernel cache interference, and gemm's three per-call allocations.
+           See internal/block/nest_bench_test.go.)
+  [33mWARN[0m  [keel-skx] Nest/4x32/avx512/n=1024/full-transB: no kernel sub-benchmark ran, so retention has no denominator this run
+  Nest/4x32/avx512/n=2048
+        blocked            60.9 GFLOP/s   60.95 GFLOP/s +/- 0.3% [60.86, 61.14] D=1.333 (span 0.46% / interval 0.3446%)
+        no-pack            63.8 GFLOP/s   63.84 GFLOP/s +/- 0.2% [63.31, 63.98] D=2.792 (span 1.05% / interval 0.3760%)
+        denominators, per call at kc=384 and over the nest's own call multiset:
+          ctiles=1         69.0 GFLOP/s   68.97 GFLOP/s +/- 0.1% [68.79, 69.05] D=1.733 (span 0.38% / interval 0.2175%)
+          ctiles=8         69.0 GFLOP/s   68.97 GFLOP/s +/- 0.1% [68.85, 69.05] D=1.667 (span 0.29% / interval 0.1740%)
+          kernel-calls     68.8 GFLOP/s   68.83 GFLOP/s +/- 0.3% [68.45, 68.95] D=1.724 (span 0.73% / interval 0.4213%)
+          ctiles=8/ctiles=1 100.0% (99.8% net of both CIs)
+          — above 100% means the historical one-C-tile measurement is not a ceiling.
+          ctiles=* and kernel-calls are NOT comparable to each other: the first two
+          are per-call rates over 2*MR*NR*kc, kernel-calls is a whole-GEMM rate over
+          2mnk. Only the ctiles ratio answers the dependency question, and only
+          kernel-calls is a denominator for retention.
+        retention   88.5% of the kernel calls it makes (88.3% net of both CIs)
+          with packing removed: 92.7% (92.4% net of both CIs)
+          the 11.5 points it gives up split into
+            packing + residual  +4.2  (both, since nest-no-pack drops both)
+            the loop nest       +7.3  (macro loops, beta pass, real C, fringe tile)
+          parts of the blocked time: nest-no-pack 95.5%  pack-a 1.1%  pack-b 1.0%  residual 2.4%
+          (residual is a point estimate with no interval — a difference of four
+           medians. It holds what nest-no-pack drops by construction: the
+           pack/kernel cache interference, and gemm's three per-call allocations.
+           See internal/block/nest_bench_test.go.)
+  [33mWARN[0m  [keel-skx] Nest/4x32/avx512/n=2048/full-transB: no kernel sub-benchmark ran, so retention has no denominator this run
+
+done. Numbers above are this host set at this commit; nothing here is a criterion.
+
+========== retention feed  (21:40:11Z) ==========
+== retention (feed) — issue #26. Not a gate: this certifies nothing. ==
+
+built linux/amd64 internal/block test binary (static)
+methodology: -count=10 -benchtime=1s, GOMAXPROCS=1, benchstat medians
+
+-- keel-skx --
+        Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | instance=c5n.18xlarge | virt=guest | 72 cpus | 36 cores | smt=2 | 2 sockets | governor=absent | load1=1.05 load5=0.98 load15=0.55 runnable=1/817 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=32K L3=25344K | spawn=i-0b4c4b71020a1ab34:c5n.18xlarge:ondemand
+        samples this host produced: 10 rows x 48 benchmarks
+        keel-feed-panels: name=4x32/avx512/kc=128 reused-panel-bytes=18432 rotating-c-bytes=6144 real-panel-bytes=1122304 calls=524288
+        keel-feed-panels: name=4x32/avx512/kc=256 reused-panel-bytes=36864 rotating-c-bytes=6144 real-panel-bytes=2244608 calls=262144
+        keel-feed-panels: name=4x32/avx512/kc=384 reused-panel-bytes=55296 rotating-c-bytes=6144 real-panel-bytes=3366912 calls=196608
+        keel-feed-panels: name=4x32/avx512/kc=512 reused-panel-bytes=73728 rotating-c-bytes=6144 real-panel-bytes=4489216 calls=131072
+        keel-feed-panels: name=2x32/avx512/kc=128 reused-panel-bytes=17408 rotating-c-bytes=3072 real-panel-bytes=1122304 calls=1048576
+        keel-feed-panels: name=2x32/avx512/kc=256 reused-panel-bytes=34816 rotating-c-bytes=3072 real-panel-bytes=2244608 calls=524288
+        keel-feed-panels: name=2x32/avx512/kc=384 reused-panel-bytes=52224 rotating-c-bytes=3072 real-panel-bytes=3366912 calls=393216
+        keel-feed-panels: name=2x32/avx512/kc=512 reused-panel-bytes=69632 rotating-c-bytes=3072 real-panel-bytes=4489216 calls=262144
+  Feed/2x32/avx512
+        per-call cost of each arm, ns/call. Every arm makes the same calls at the same
+        depths. worst-ci is the widest of the six arms' intervals; floor is that same
+        bound in ns, and it is what a step has to clear to be a term rather than noise.
+        benchstat rounds the percent to an integer, so a printed 0% only says 'under
+        0.5%' and the floor takes it as (p+0.5)% of the arm it belongs to (T21).
+        kc        calls     loops    cold-c  cold-pan   no-pack      full  worst-ci    floor
+        128      185.10    186.25    219.35    200.70    244.05    262.60      0.3%     2.10
+        256      367.00    370.85    404.40    403.45    433.50    466.55      0.4%     3.64
+        384      495.15    498.30    531.55    566.30    578.60    617.60      0.3%     4.94
+        512      736.15    740.80    774.35    842.45    836.05    890.70      0.4%     6.97
+        
+        the single-variable steps between them, each in ns per call. A * marks a step
+        smaller than its own row's floor: measured, but not resolved by this run.
+        kc     macro-loops    C-traffic   panel-feed       rest       pack        total
+        128         +1.15*      +33.10       +14.45     +10.25     +18.55       +77.50 
+        256         +3.85       +33.55       +32.60      -3.50*    +33.05       +99.55 
+        384         +3.15*      +33.25       +68.00     -20.95     +39.00      +122.45 
+        512         +4.65*      +33.55      +101.65     -39.95     +54.65      +154.55 
+        
+        which term curves (the question #48 exists to ask):
+          C traffic   +33.10 -> +33.55 -> +33.25 -> +33.55
+                      spread 0.45 ns over kc=128..512, 1% of its own mean
+                      predicted FLAT. Total C traffic is m*n*4*ceil(k/KC), which scales exactly like
+                      the call count, so per call it is a constant and adds nothing to the KC slope.
+          panel feed  +14.45 -> +32.60 -> +68.00 -> +101.65
+                      spread 87.20 ns over kc=128..512, 161% of its own mean
+                      predicted to CURVE, and this is the surviving form of the feed hypothesis.
+                      Total panel bytes are (m/MR)(n/NR)*k*(MR+NR)*4 — KC-INDEPENDENT — so a
+                      constant-rate per-byte tax adds nothing either. Only the level those bytes
+                      come from can, which is a threshold, hence a curve rather than a slope.
+                      READ THIS AGAINST reused-panel-bytes IN THE keel-feed-panels LINES ABOVE, and
+                      against this host's L1d in the provenance line: where the reused pair does not
+                      fit L1d, both arms feed from L2 and this step is a difference of locality
+                      within one level, not of level. It is a measurement of feed cost only at the
+                      KC where the premise holds.
+          pack        +18.55 -> +33.05 -> +39.00 -> +54.65
+                      spread 36.10 ns over kc=128..512, 99% of its own mean
+                      KC-proportional by construction: total pack work is KC-independent and the
+                      call count falls as 1/KC, so this column must rise roughly linearly and its
+                      slope means nothing. Its INTERCEPT is the finding — pack's per-row loop setup
+                      count is ceil(k/KC)*m, which scales like the call count, and that constant is
+                      the term separating the sweep's slope from the decomposition's per-call cost.
+                      least squares: +0.0893 ns per KC unit, intercept +7.75 ns, worst residual 3.03 ns
+                      the intercept is the bridge term, and it is +7.75 ns per call against a mean row floor
+                      of 4.41 ns, so it is resolved and is the number #26 asked for.
+          rest        +10.25 -> -3.50* -> -20.95 -> -39.95
+                      SUB-ADDITIVE by up to 39.95 ns: C traffic and panel feed overlap in
+                      time, so each isolated step above is an UPPER BOUND on its term.
+        
+        the same steps as whole-GEMM totals: this point's per-call cost times its own
+        exact call count, in ms of one GEMM, with each term's share of full. Nothing is
+        fitted; this is the per-call table times an integer. A * still marks a step
+        below its row's noise floor, and a share computed from one means little.
+        kc         calls      C-traffic     panel-feed           pack        full
+        128      1048576  34.71 (12.6%)   15.15 (5.5%)   19.45 (7.1%)       275.4
+        256       524288   17.59 (7.2%)   17.09 (7.0%)   17.33 (7.1%)       244.6
+        384       393216   13.07 (5.4%)  26.74 (11.0%)   15.34 (6.3%)       242.9
+        512       262144    8.79 (3.8%)  26.65 (11.4%)   14.33 (6.1%)       233.5
+          C total     34.71 -> 8.79 ms, x3.95 over the grid; predicted x4.00,
+                      which is the call-count ratio this run reported, not a constant.
+          pack total  19.45 -> 14.33 ms, spread 5.12 ms over the grid;
+                      predicted FLAT, and a spread here is the residual model error.
+          feed total  15.15 -> 26.65 ms, worst 26.74 ms at kc=384 (11.0% of full);
+                      the KC to distrust is that one, not necessarily the last.
+  Feed/4x32/avx512
+        per-call cost of each arm, ns/call. Every arm makes the same calls at the same
+        depths. worst-ci is the widest of the six arms' intervals; floor is that same
+        bound in ns, and it is what a step has to clear to be a term rather than noise.
+        benchstat rounds the percent to an integer, so a printed 0% only says 'under
+        0.5%' and the floor takes it as (p+0.5)% of the arm it belongs to (T21).
+        kc        calls     loops    cold-c  cold-pan   no-pack      full  worst-ci    floor
+        128      483.60    484.70    532.80    500.25    552.70    587.30      0.6%     6.46
+        256      955.70    958.30   1009.00    982.25   1043.00   1095.00      0.3%     8.34
+        384     1268.00   1272.50   1322.00   1298.00   1364.50   1432.50      0.5%    14.33
+        512     1894.00   1897.50   1948.00   1935.00   2010.50   2105.00      0.3%    16.84
+        
+        the single-variable steps between them, each in ns per call. A * marks a step
+        smaller than its own row's floor: measured, but not resolved by this run.
+        kc     macro-loops    C-traffic   panel-feed       rest       pack        total
+        128         +1.10*      +48.10       +15.55      +4.35*    +34.60      +103.70 
+        256         +2.60*      +50.70       +23.95     +10.05     +52.00      +139.30 
+        384         +4.50*      +49.50       +25.50     +17.00     +68.00      +164.50 
+        512         +3.50*      +50.50       +37.50     +25.00     +94.50      +211.00 
+        
+        which term curves (the question #48 exists to ask):
+          C traffic   +48.10 -> +50.70 -> +49.50 -> +50.50
+                      spread 2.60 ns over kc=128..512, 5% of its own mean
+                      predicted FLAT. Total C traffic is m*n*4*ceil(k/KC), which scales exactly like
+                      the call count, so per call it is a constant and adds nothing to the KC slope.
+          panel feed  +15.55 -> +23.95 -> +25.50 -> +37.50
+                      spread 21.95 ns over kc=128..512, 86% of its own mean
+                      predicted to CURVE, and this is the surviving form of the feed hypothesis.
+                      Total panel bytes are (m/MR)(n/NR)*k*(MR+NR)*4 — KC-INDEPENDENT — so a
+                      constant-rate per-byte tax adds nothing either. Only the level those bytes
+                      come from can, which is a threshold, hence a curve rather than a slope.
+                      READ THIS AGAINST reused-panel-bytes IN THE keel-feed-panels LINES ABOVE, and
+                      against this host's L1d in the provenance line: where the reused pair does not
+                      fit L1d, both arms feed from L2 and this step is a difference of locality
+                      within one level, not of level. It is a measurement of feed cost only at the
+                      KC where the premise holds.
+          pack        +34.60 -> +52.00 -> +68.00 -> +94.50
+                      spread 59.90 ns over kc=128..512, 96% of its own mean
+                      KC-proportional by construction: total pack work is KC-independent and the
+                      call count falls as 1/KC, so this column must rise roughly linearly and its
+                      slope means nothing. Its INTERCEPT is the finding — pack's per-row loop setup
+                      count is ceil(k/KC)*m, which scales like the call count, and that constant is
+                      the term separating the sweep's slope from the decomposition's per-call cost.
+                      least squares: +0.1529 ns per KC unit, intercept +13.35 ns, worst residual 4.06 ns
+                      the intercept is the bridge term, and it is +13.35 ns per call against a mean row floor
+                      of 11.49 ns, so it is resolved and is the number #26 asked for.
+          rest        +4.35* -> +10.05 -> +17.00 -> +25.00
+                      up to +25.00 ns of the nest that no isolated step accounts for: the
+                      beta pass, the fringe branch, the mask checks, and any super-additive
+                      interaction, which would make the steps above LOWER bounds.
+        
+        the same steps as whole-GEMM totals: this point's per-call cost times its own
+        exact call count, in ms of one GEMM, with each term's share of full. Nothing is
+        fitted; this is the per-call table times an integer. A * still marks a step
+        below its row's noise floor, and a share computed from one means little.
+        kc         calls      C-traffic     panel-feed           pack        full
+        128       524288   25.22 (8.2%)    8.15 (2.6%)   18.14 (5.9%)       307.9
+        256       262144   13.29 (4.6%)    6.28 (2.2%)   13.63 (4.7%)       287.0
+        384       196608    9.73 (3.5%)    5.01 (1.8%)   13.37 (4.7%)       281.6
+        512       131072    6.62 (2.4%)    4.92 (1.8%)   12.39 (4.5%)       275.9
+          C total     25.22 -> 6.62 ms, x3.81 over the grid; predicted x4.00,
+                      which is the call-count ratio this run reported, not a constant.
+          pack total  18.14 -> 12.39 ms, spread 5.75 ms over the grid;
+                      predicted FLAT, and a spread here is the residual model error.
+          feed total  8.15 -> 4.92 ms, worst 8.15 ms at kc=128 (2.6% of full);
+                      the KC to distrust is that one, not necessarily the last.
+
+done. Numbers above are this host set at this commit; nothing here is a criterion.
+
+========== decompose exited 0, feed exited 0  (21:57:08Z) ==========
+
+========== TEARDOWN (driver rc=0) — $3.89/hr  (21:57:08Z) ==========
+  terminating keel-skx
+Looking up instance keel-skx...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0b4c4b71020a1ab34...
+
+✅ Terminate request sent!
+   Instance: i-0b4c4b71020a1ab34
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.152.0 → 0.153.0
+  https://github.com/spore-host/spawn/releases/tag/v0.153.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+
+========== teardown verification — the LAUNCHER's own list  (21:57:35Z) ==========
+   no keel- instance in 'spawn list --state running' — fleet is down
