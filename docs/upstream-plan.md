@@ -952,6 +952,23 @@ figure carried from a plan is a figure nobody checked:
   improvement percentage are different quantities, and this charter figure is
   neither.
 
+## CL 2 and CL 3 yield to go1.29 (ruled 2026-10-31)
+
+**The 2026-10-01 escalation trigger above fired, and nothing read it for a month.** On 2026-10-31,
+CL 803220 was still `NEW` with one patchset, last touched by keel's own D2 post on 2026-09-04, and
+no CL from Goetz existed. Scott's ruling on the reopened decision is **yield**:
+- **CL 2 (#126).** D2 bounds it at ≤13.5% on Sasum, and keel already works around the missed hoist
+  (#54).
+- **CL 3 (#125).** Its broadcast half was overtaken upstream. Its anchor-NOP half measured +1–2.6%
+  on NEON with the NOPs removed by hand (`archive/neon-raw/`).
+
+Both move to milestone `upstream-go1.29`. Their evidence stays on the upstream threads, and Go
+1.28's upstream attention is CL 1 (824624) alone.
+
+**What failed was the reading, not the trigger.** The trigger was stated with a date and a
+condition, and it was right. But nothing scheduled its read, and the CL watch reads only CL 1. A
+dated trigger needs a reader on its date.
+
 ## The discipline every item inherits
 
 1. **Search the tracker first, always** — including before asking a question, not
