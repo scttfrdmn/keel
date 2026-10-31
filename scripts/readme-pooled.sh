@@ -8,7 +8,7 @@
 # in each published host's POOLED canonical sample archives, keyed by the benchmark name exactly
 # as tools/benchci prints it, so the caller looks a cell up by constructing that name.
 #
-# THE CORPUS IS THE ONE THE GATE USES. scripts/readme-archives.tsv names it, keyed (cpu_model,
+# THE CORPUS IS THE ONE THE GATE USES. scripts/readme-archives.tsv (-f64.tsv at KEEL_ELEM=f64) names it, keyed (cpu_model,
 # era) with a `status` column, and gate-p5.sh readme_ref_archives reads the same rows for
 # criterion 9 reference interval. Published and compared are therefore the same number computed
 # the same way, which is what #165 asked for. A `superseded` row is never pooled: era pinned8
@@ -25,11 +25,11 @@ source scripts/bench.sh
 # shellcheck source=scripts/gate-lib.sh
 source scripts/gate-lib.sh
 
-MAN=scripts/readme-archives.tsv
+MAN="scripts/$(reg_file readme-archives)" ERAS="scripts/$(reg_file measurement-eras)"
 [[ -r "$MAN" ]] || { echo "readme-pooled: cannot read $MAN" >&2; exit 2; }
-ERA_AMD64="${1:-$(era_current scripts/measurement-eras.tsv amd64)}"
-ERA_ARM64="${1:-$(era_current scripts/measurement-eras.tsv arm64)}"
-[[ -n "$ERA_AMD64" && -n "$ERA_ARM64" ]] || { echo "readme-pooled: an architecture resolves no era from scripts/measurement-eras.tsv" >&2; exit 2; }
+ERA_AMD64="${1:-$(era_current "$ERAS" amd64)}"
+ERA_ARM64="${1:-$(era_current "$ERAS" arm64)}"
+[[ -n "$ERA_AMD64" && -n "$ERA_ARM64" ]] || { echo "readme-pooled: an architecture resolves no era from $ERAS" >&2; exit 2; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT

@@ -2371,3 +2371,27 @@ r1/r2 plus famax r1/r2), prints 47.0 together with the registered-baseline claus
 adding c9g put 4 V3 pairs in famax beside 11 amd64 pairs in famaxx86, and the caption named one era, read off the
 first log, for all 15. Each BASELINE pair's era is now read off its own verdict line, so the clause reads
 "famaxx86 (11) and famax (4)".
+
+## Credit claim: the caption's per-host shares were neither table-derived nor one run's (#203, 2026-10-31)
+
+**Claimed under the published-evidence credit, +59 shell** (counter 19624 → 19683; +58 in the branch, +1 at merge review). **The wrong published claim:** since
+`955d55e` the float32 caption has read "Derived from the table above, so pooled over the era's archives rather than read off
+the judged run alone", above a per-host range of shares. **6 of 6** published ranges (12 of 12 endpoints) differ from what the
+table yields: AMD EPYC 9R45 printed 33.7-50.5%, where its 8-thread rows over its `Ceiling/compute` row give 36.9-50.7%
+(Strsm 847.2 / 2294). They are gate readings net of CI, one run's. And for the 4 hosts no log judged, the run was picked in
+awk hash order, array by array, so **2 of 6** ranges (since `7979e7e`) joined two runs: AMD EPYC 9R14 50.3-77.0% (Strsm
+from r2 `c0c373d`, Ssyrk from r1 `f18f110`) and Neoverse-V3 47.4-72.6% (Strsm from r1 `f3bbe01`, Ssyrk from r2 `e030cc1`).
+To re-derive, grep `S[a-z]+ reaches` in the famaxx86 and c9g judged logs. Now each host's shares come from the first run named
+for it, and the sentence says so. Regenerated, 4 ranges change and the 54 rows are byte-identical.
+
+**Two more, found at merge review (+1 line).** (1) The float32 caption's judged-branch sentence, "The verdicts below are
+the judged run's alone", has been false for **4 of 6** hosts since `7979e7e`/`72ab328`: the judged run (famax r2 `37d7c13`) judged
+only V1 and V2, and the three amd64 hosts and V3 take theirs from the first run named for them. It now says so. (2) The new float64
+caption said each host takes its verdicts "from the first of these runs named for it", but its log list moved the dating log
+to the front, so for arm64 it named r2 (`d1be420`) first while the verdicts came from r1 (`63cffc9`). When no run judges, the
+list is now in argument order. Re-derive (1) from which hosts `judged-r2-37d7c13.log` names, and (2) by running the generator
+with the four float64 logs in both orders.
+
+**Not part of the credit:** the float64 block, criterion 9's lifted guard, and criterion 9 reading the README figure. Before
+this, a +20% planted 9R45 Dgemm/8, with its CI moved to match, passed every check in a replay. A gate verdict is not a
+published claim (the 2026-10-21 precedent), so that fix rides on this credit rather than earning one.

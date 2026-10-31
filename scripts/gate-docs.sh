@@ -171,6 +171,9 @@ fixture() {
     synthetic)     fixture_good | sed 's/measured in the same run/measured in the same run [synthetic]/' ;;
     no-rev)        fixture_good | sed 's/at rev `abc1234`, //' ;;
     no-caption)    fixture_good | grep -v 'keel-caption: ' ;;
+    good-f64)      fixture_good; fixture_good | sed -n '/keel-numbers: begin/,$p' \
+                     | sed -E -e 's/keel-(numbers|caption):/keel-\1-f64:/' -e 's/Sgemm/Dgemm/' -e 's/abc1234/def5678/' ;;
+    f64-ragged)    fixture good-f64 | sed 's/^| Some CPU | Dgemm | 1 | 100 |.*/| Some CPU | Dgemm | 1 | 100 |/' ;;
     *)             echo "unknown fixture: $1" >&2; return 1 ;;
   esac
 }
@@ -221,8 +224,17 @@ stage_extraction() {
     return
   fi
 
-  local case_ rejected=0
-  for case_ in no-begin no-end reversed empty-block no-table no-separator ragged-row synthetic no-rev no-caption; do
+  # The second block (#203) is optional, but a present one is held to every check the first is.
+  fixture good-f64 > "$t/README.md"
+  if "$t/scripts/docs-gen.sh" >/dev/null 2>&1 && grep -q '^## Float64 rates' "$t/doc-site/numbers.md" &&
+     grep -q '| Some CPU | Dgemm | 1 | 100 |' "$t/doc-site/numbers.md" && grep -q 'def5678' "$t/doc-site/numbers.md"; then
+    pass "a second, float64 block: accepted, and the page carries it as its own section with its row and rev"
+  else
+    fail "a well-formed float64 block was rejected, or left off the page"
+  fi
+
+  local case_ rejected=0 cases=(no-begin no-end reversed empty-block no-table no-separator ragged-row synthetic no-rev no-caption f64-ragged)
+  for case_ in "${cases[@]}"; do
     rm -f "$t/doc-site/numbers.md"
     fixture "$case_" > "$t/README.md"
     rc=0
@@ -239,7 +251,8 @@ stage_extraction() {
       info "$case_ -> $(grep '^docs-gen:' <<<"$out" | tail -1 | cut -c11-)"
     fi
   done
-  [[ "$rejected" -eq 9 ]] && pass "all 9 malformed inputs rejected, with no page written"
+  # Counted off the list: this read `-eq 9` over ten cases, so its pass never printed (#203).
+  [[ "$rejected" -eq "${#cases[@]}" ]] && pass "all ${#cases[@]} malformed inputs rejected, with no page written"
 
   # The methodology extraction, same treatment: two ways for section 5 to not be
   # section 5, both of which would otherwise emit a plausible-looking page.

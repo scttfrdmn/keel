@@ -444,8 +444,10 @@ esac
 # comparing intervals instead of points. Still narrower than any optimistic rounding, so once the
 # intervals miss it stays a "same claim" test.
 README_TOL=0.05
-README_BEGIN='<!-- keel-numbers: begin -->'
-README_END='<!-- keel-numbers: end -->'
+# At KEEL_ELEM=f64 criterion 9 re-measures README's float64 block, which has markers of its own (#203).
+README_SFX=""; [[ "$KEEL_ELEM" == f64 ]] && README_SFX=-f64
+README_BEGIN="<!-- keel-numbers$README_SFX: begin -->"
+README_END="<!-- keel-numbers$README_SFX: end -->"
 
 # The canonical era-pinned8 SAMPLE archives criterion 9 reads to build a published rate's REFERENCE
 # CI at gate time (#163; provenance documented in #165). A gate-side READ ONLY — the README's
@@ -1374,7 +1376,7 @@ else
       # it over-estimates the ceiling, and says so.
       m8="$(bench_gflops "$many" "$BENCHCSV")"
       if [[ -n "$m8" ]]; then
-        info "[$host] $r: $(awk -v a="$m8" -v b="$PEAK1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread ${GATE_PEAK#Peak/} peak ($PEAK1 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count"
+        info "[$host] $r: $(awk -v a="$m8" -v b="$PEAK1" -v t="$P5_THREADS" 'BEGIN{printf "%.1f", 100*a/(b*t)}')% of ${P5_THREADS}x the single-thread ${GATE_PEAK#"$P5_PEAK_PFX"/} peak ($PEAK1 GFLOP/s) — reported, not a criterion, and that denominator ignores the clock's drop with core count"
       fi
 
       # Admission after the reading and before either bar (#104), the order p2 and p3 use:
@@ -1772,13 +1774,9 @@ else
     # ---- the README's published numbers, against this run (criterion 9)
     #
     # Checked against the judged sweep, which since 2026-08-17 is the only pass there
-    # is: a README row and the verdict now describe the same regime.
-    if [[ "$KEEL_ELEM" == f64 ]]; then
-      # Guarded by ruling, and stated rather than skipped (#193, 2026-10-29): no float64 row is
-      # published until float64's founding pair lands, so there is nothing for criterion 9 to
-      # re-measure, and an absent comparison must never read as a passed one.
-      unmeasured "[$host] criterion 9 at float64: no float64 README row is published yet (#193), so there is nothing to re-measure — unmeasured, not passed"
-    elif [[ ! -r README.md ]]; then
+    # is: a README row and the verdict now describe the same regime. At float64 the block is the
+    # keel-numbers-f64 one (README_BEGIN), published by #203, which lifted the #193 guard here.
+    if [[ ! -r README.md ]]; then
       fail "README.md is missing, and DESIGN.md §4/P5 asks for it with honest numbers in it"
     else
       # hcpu is resolved once per host above, with the derivation-set membership and the
@@ -1861,12 +1859,17 @@ else
           [[ -n "$REFCSV" ]] && { read -r _ _ rlo rhi _ _ <<<"$(bench_stat "$rname" "$REFCSV" GFLOP/s)" || :; }
           if [[ -z "$mgf" ]]; then
             RBADN="$RBADN ${rben}/threads=${rthr}(published, but this gate measured no such row)"
-          elif ! awk -v a="$rgf" -v b="$mgf" -v t="$README_TOL" -v rlo="$rlo" -v rhi="$rhi" -v mlo="$mlo" -v mhi="$mhi" 'BEGIN{
-                 # consistent: reference and run intervals overlap (rhi >= mlo && rlo <= mhi)
-                 if (mlo != "inf" && mhi != "inf" && rlo != "" && rhi != "" && rlo != "inf" && rhi != "inf" && rhi+0 >= mlo+0 && rlo+0 <= mhi+0) exit 0
-                 # disjoint, unbounded, or no reference: the README_TOL band still binds
-                 d=(a-b)/b; if (d<0) d=-d; exit !(d <= t) }'; then
-            RBADN="$RBADN ${rben}/threads=${rthr}(README $rgf ref CI [$rlo, $rhi] disjoint from run $mgf CI [$mlo, $mhi] and past ${README_TOL})"
+          elif ! rmiss="$(awk -v a="$rgf" -v b="$mgf" -v t="$README_TOL" -v rlo="$rlo" -v rhi="$rhi" -v mlo="$mlo" -v mhi="$mhi" 'BEGIN{
+                 # consistent: reference and run intervals overlap (rhi >= mlo && rlo <= mhi) AND the
+                 # README figure sits in its reference CI, to half its last printed digit (#203): the
+                 # overlap alone never read the README, so a +20% planted 9R45 Dgemm/8 passed here
+                 ov = (mlo != "inf" && mhi != "inf" && rlo != "" && rhi != "" && rlo != "inf" && rhi != "inf" && rhi+0 >= mlo+0 && rlo+0 <= mhi+0)
+                 h = index(a, ".") ? 0.5 * 10^-(length(a) - index(a, ".")) : 0.5
+                 if (ov && a+0 >= rlo-h && a+0 <= rhi+h) exit 0
+                 # disjoint, unbounded, no reference, or a README figure off its own: the README_TOL band binds
+                 d=(a-b)/b; if (d<0) d=-d; if (d <= t) exit 0; print (ov ? "outside" : "disjoint"); exit 1 }')"; then
+            if [[ "$rmiss" == outside ]]; then RBADN="$RBADN ${rben}/threads=${rthr}(README $rgf outside its own reference CI [$rlo, $rhi], run $mgf CI [$mlo, $mhi], and past ${README_TOL})"
+            else RBADN="$RBADN ${rben}/threads=${rthr}(README $rgf ref CI [$rlo, $rhi] disjoint from run $mgf CI [$mlo, $mhi] and past ${README_TOL})"; fi
           fi
         done <<<"$RROWS"
         [[ -n "$REFCSV" ]] && rm -f "$REFCSV"
@@ -2104,9 +2107,9 @@ if [[ -r README.md ]]; then
   if ! grep -qF "$README_BEGIN" README.md || ! grep -qF "$README_END" README.md; then
     unmeasured "README.md has no \`keel-numbers\` block ($README_BEGIN ... $README_END), so there is nothing for this gate to re-measure and the criterion is unmeasured rather than met"
   fi
-  STRAY="$(awk -v b="$README_BEGIN" -v e="$README_END" '
-    index($0, b) { inb = 1 }
-    index($0, e) { inb = 0; next }
+  STRAY="$(awk '
+    /<!-- keel-numbers(-f64)?: begin -->/ { inb = 1 }  # either element block (#203)
+    /<!-- keel-numbers(-f64)?: end -->/ { inb = 0; next }
     !inb && /GFLOP\/s/ { print FNR ": " $0 }' README.md)"
   if ! grep -q 'GFLOP/s' README.md; then
     # No verdict, deliberately: a check with nothing to check has no colour, and
@@ -2114,7 +2117,7 @@ if [[ -r README.md ]]; then
     # not yet have the content to have.
     info "README.md publishes no rate anywhere, so the stray-number scan has nothing to scan; the missing-block failure above is the one that binds"
   elif [[ -z "$STRAY" ]]; then
-    pass "every GFLOP/s figure in README.md sits inside the block this gate re-measures"
+    pass "every GFLOP/s figure in README.md sits inside a block gate-p5 re-measures (keel-numbers, or keel-numbers-f64 at KEEL_ELEM=f64)"
   else
     fail "README.md states a rate outside the re-measured block, which makes it a claim rather than a measurement (§7 rule 7):"
     sed 's/^/        /' <<<"$STRAY" | head -10

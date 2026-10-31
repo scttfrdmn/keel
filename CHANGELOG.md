@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Added
+- **Float64 rates are published, and gate-p5 re-measures them** (#203). README gains a `keel-numbers-f64` block: Dgemm, Dsyrk, Dsymm and
+  Dtrsm at 1 and 8 threads plus `Ceiling/compute` for the six judged CPUs, 54 rows pooled over era `f64init`'s r1+r2 (12 rows in
+  `readme-archives-f64.tsv`), each over the 1-thread `FMARoof64` peak. `KEEL_ELEM=f64 scripts/readme-numbers.sh` writes it; its caption says
+  nothing was judged (no fraction is typed) and which pairs `host-baselines-f64.tsv` now registers (13 of 24). Criterion 9's float64 guard is
+  lifted: at `KEEL_ELEM=f64` it reads the float64 block, and the stray-rate scan accepts both blocks. The numbers page renders both.
 - **Float64 performance baselines, founded and landed: era `f64init` is closed** (#193, `archive/p5-f64/`). An exploration pass
   and two judged draws ran on both architectures: c5n.18xlarge, c7a.48xlarge and c8a.48xlarge, then c7g.16xlarge, c8g.48xlarge and
   c9g.48xlarge. There was no FAIL in any run, gate-p3/p4 were GREEN under every gate-p5, and `-race` was clean on all six CPUs.
@@ -51,6 +56,12 @@ While the major version is 0, minor versions may contain breaking changes.
   Dsyrk); gate-p5's fraction-history and T8/T1 sentences say float64 never had either, and amd64's L1 justification names its
   float32 evidence. Cross-compile labels name the arm64 build. The arm64 OpenBLAS fleet line points at the correctness-class lines.
   float32 output on amd64 is byte-identical by replay; net 0 lines.
+- **The README caption's per-host shares were neither "derived from the table" nor one run's** (#203). All 6 published ranges differ from the
+  table (9R45 Strsm read 33.7% against 847.2 / 2294 = 36.9%), and for hosts no log judged they were picked in awk hash order, so 2 of 6
+  (9R14 50.3-77.0%, V3 47.4-72.6%) joined two runs' readings. They now come from the first run named for each host, and the sentence says so.
+- **Criterion 9 never read the README figure when the intervals overlapped** (#203): a +20% planted 9R45 Dgemm/8 with its CI moved to match
+  passed. A row must now also sit inside its reference CI, to half its last printed digit. gate-p5 also printed `FMARoof64/avx512` for the
+  float64 peak's backend, and gate-docs' "all N malformed inputs rejected" never printed (it checked `-eq 9` over ten cases).
 - **The disk-headroom precondition misread a mount point with a space** (`remote.sh`). `df -P`'s fields were taken from the right
   (`$(NF-2)`, `$NF`), so `/Volumes/External HD` gave `32%` as the free space, and bash died on the arithmetic. The capacity column
   is now the anchor. Found while replaying the gate from a worktree on that volume. Checked on a spaced mount, the system volume and
