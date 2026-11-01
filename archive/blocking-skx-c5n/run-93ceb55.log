@@ -1,0 +1,162 @@
+
+========== preflight (c5n.18xlarge, tag=s1, TTL=3h, rate=$3.89/hr)  (21:36:47Z) ==========
+   HEAD=93ceb55, tree clean, KEEL_GOARCH=amd64
+
+========== co-tenant census at launch  (21:36:47Z) ==========
+   Searching all AWS regions...
+   
+   Instance ID          Name                                      Type          State    IAM Role                 AZ                Age    TTL Left  Public IP       Spot
+   i-0ff7fa3d024f2cad8  burroughs-g1089-g5                        c9g.16xlarge  running  spored-instance-profile  us-west-2b        59s    7h59m     35.92.227.110   
+   i-018e01265012a825a  burroughs-g1089-g4                        c8g.16xlarge  running  spored-instance-profile  us-west-2b        36m    7h23m     44.250.35.168   
+   i-0120120f82d2e8b5d  aws-realign-one-pb-20261101T203106Z-2a84  g7e.8xlarge   running  spawn-instance-a737a843  us-west-2-lax-1b  1h5m   4h54m     15.253.27.164   
+   i-037d356f349c60d96  burroughs-g1089                           c7g.16xlarge  running  spored-instance-profile  us-west-2b        2h13m  5h46m     54.200.183.231  
+   
+   A newer version of spawn is available: 0.152.0 → 0.153.0
+     https://github.com/spore-host/spawn/releases/tag/v0.153.0
+
+========== launch  (21:37:05Z) ==========
+  region us-east-1, TTL 3h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$11.66 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.1s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (629ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (1.7s)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.5s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0755422ead4600062
+  Public IP    44.201.136.114
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-skx
+
+🌍 DNS: keel-skx.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-skx.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.152.0 → 0.153.0
+  https://github.com/spore-host/spawn/releases/tag/v0.153.0
+  skx  c5n.18xlarge  (Intel Skylake-SP, amd64, AMI ami-0d6dd9e8265d48906, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-skx cloud-init settled
+  keel-skx has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-skx             c5n.18xlarge     44.201.136.114   on-demand  3h       2026-11-01T21:37:29Z
+
+  1 instance(s) billing. 'down' terminates every one.
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-skx             c5n.18xlarge     44.201.136.114   on-demand  3h       2026-11-01T21:37:29Z
+
+  1 instance(s) billing. 'down' terminates every one.
+
+========== retention sweep (KC 256,320,384,448,512,640,768 x MC 72,144,288 x NC 2048, count 10) — product is the archive  (21:39:10Z) ==========
+== retention (sweep) — issue #26. Not a gate: this certifies nothing. ==
+
+built linux/amd64 internal/block test binary (static)
+methodology: -count=10 -benchtime=1s, GOMAXPROCS=1, benchstat medians
+             full methodology, and still not a tuner: a winning point becomes a default
+             only through kern.Class (#24), never by being the top row here
+             grid override requested: KEEL_BLOCKING_KC=256,320,384,448,512,640,768 KEEL_BLOCKING_MC=72,144,288 KEEL_BLOCKING_NC=2048
+
+-- keel-skx --
+        Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | instance=c5n.18xlarge | virt=guest | 72 cpus | 36 cores | smt=2 | 2 sockets | governor=absent | load1=0.18 load5=0.10 load15=0.04 runnable=1/857 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=32K L3=25344K | spawn=i-0755422ead4600062:c5n.18xlarge:ondemand
+        samples this host produced: 10 rows x 42 benchmarks
+        [keel-skx] shipped point: kc=384/mc=144/nc=4096 (internal/block/block.go). NC>=n collapses to one point at n=2048,
+                so the marked row is the shipped KC/MC at the grid's largest NC (2048).
+         1.     73.2 GFLOP/s  Blocking/2x32/avx512/kc=768/mc=288/nc=2048
+         2.     72.7 GFLOP/s  Blocking/2x32/avx512/kc=512/mc=288/nc=2048
+         3.     72.3 GFLOP/s  Blocking/2x32/avx512/kc=768/mc=144/nc=2048
+         4.     72.2 GFLOP/s  Blocking/2x32/avx512/kc=640/mc=288/nc=2048
+         5.     71.2 GFLOP/s  Blocking/2x32/avx512/kc=512/mc=144/nc=2048
+         6.     71.2 GFLOP/s  Blocking/2x32/avx512/kc=448/mc=288/nc=2048
+         7.     71.1 GFLOP/s  Blocking/2x32/avx512/kc=640/mc=144/nc=2048
+         8.     69.9 GFLOP/s  Blocking/2x32/avx512/kc=256/mc=288/nc=2048
+         9.     69.9 GFLOP/s  Blocking/2x32/avx512/kc=448/mc=144/nc=2048
+        10.     69.7 GFLOP/s  Blocking/2x32/avx512/kc=384/mc=288/nc=2048
+        11.     69.6 GFLOP/s  Blocking/2x32/avx512/kc=768/mc=72/nc=2048
+        12.     68.9 GFLOP/s  Blocking/2x32/avx512/kc=256/mc=144/nc=2048
+        13.     68.5 GFLOP/s  Blocking/2x32/avx512/kc=320/mc=288/nc=2048
+        14.     68.5 GFLOP/s  Blocking/2x32/avx512/kc=640/mc=72/nc=2048
+        15.     68.5 GFLOP/s  Blocking/2x32/avx512/kc=512/mc=72/nc=2048
+        16.     68.4 GFLOP/s  Blocking/2x32/avx512/kc=384/mc=144/nc=2048  <- shipped KC/MC
+        17.     67.3 GFLOP/s  Blocking/2x32/avx512/kc=448/mc=72/nc=2048
+        18.     67.3 GFLOP/s  Blocking/2x32/avx512/kc=320/mc=144/nc=2048
+        19.     67.1 GFLOP/s  Blocking/2x32/avx512/kc=256/mc=72/nc=2048
+        20.     66.1 GFLOP/s  Blocking/2x32/avx512/kc=384/mc=72/nc=2048
+        21.     65.0 GFLOP/s  Blocking/2x32/avx512/kc=320/mc=72/nc=2048
+        22.     63.0 GFLOP/s  Blocking/4x32/avx512/kc=768/mc=288/nc=2048
+        23.     62.8 GFLOP/s  Blocking/4x32/avx512/kc=768/mc=144/nc=2048
+        24.     62.7 GFLOP/s  Blocking/4x32/avx512/kc=512/mc=288/nc=2048
+        25.     62.4 GFLOP/s  Blocking/4x32/avx512/kc=640/mc=288/nc=2048
+        26.     62.4 GFLOP/s  Blocking/4x32/avx512/kc=512/mc=144/nc=2048
+        27.     62.2 GFLOP/s  Blocking/4x32/avx512/kc=768/mc=72/nc=2048
+        28.     62.2 GFLOP/s  Blocking/4x32/avx512/kc=640/mc=144/nc=2048
+        29.     62.0 GFLOP/s  Blocking/4x32/avx512/kc=448/mc=288/nc=2048
+        30.     61.9 GFLOP/s  Blocking/4x32/avx512/kc=512/mc=72/nc=2048
+        31.     61.6 GFLOP/s  Blocking/4x32/avx512/kc=448/mc=144/nc=2048
+        32.     61.6 GFLOP/s  Blocking/4x32/avx512/kc=640/mc=72/nc=2048
+        33.     61.3 GFLOP/s  Blocking/4x32/avx512/kc=384/mc=288/nc=2048
+        34.     61.1 GFLOP/s  Blocking/4x32/avx512/kc=448/mc=72/nc=2048
+        35.     61.0 GFLOP/s  Blocking/4x32/avx512/kc=384/mc=144/nc=2048  <- shipped KC/MC
+        36.     60.8 GFLOP/s  Blocking/4x32/avx512/kc=320/mc=288/nc=2048
+        37.     60.5 GFLOP/s  Blocking/4x32/avx512/kc=384/mc=72/nc=2048
+        38.     60.5 GFLOP/s  Blocking/4x32/avx512/kc=320/mc=144/nc=2048
+        39.     60.1 GFLOP/s  Blocking/4x32/avx512/kc=256/mc=288/nc=2048
+        40.     60.0 GFLOP/s  Blocking/4x32/avx512/kc=320/mc=72/nc=2048
+        41.     59.9 GFLOP/s  Blocking/4x32/avx512/kc=256/mc=144/nc=2048
+        42.     59.4 GFLOP/s  Blocking/4x32/avx512/kc=256/mc=72/nc=2048
+
+done. Numbers above are this host set at this commit; nothing here is a criterion.
+
+========== sweep exited 0  (21:55:16Z) ==========
+
+========== TEARDOWN (driver rc=0) — $3.89/hr  (21:55:16Z) ==========
+  terminating keel-skx
+Looking up instance keel-skx...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0755422ead4600062...
+
+✅ Terminate request sent!
+   Instance: i-0755422ead4600062
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.152.0 → 0.153.0
+  https://github.com/spore-host/spawn/releases/tag/v0.153.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+
+========== teardown verification — the LAUNCHER's own list  (21:55:45Z) ==========
+   no keel- instance in 'spawn list --state running' — fleet is down
