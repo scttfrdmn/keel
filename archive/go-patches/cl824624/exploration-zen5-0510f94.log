@@ -1,0 +1,341 @@
+== build 22:18:07 keel 0510f94
+   stock: go version go1.27.3 darwin/arm64
+   base: go version go1.28-devel_0d37007fda Sat Oct 24 13:26:20 2026 -0700 darwin/arm64, seeds 1 2 3 4 5 6 7 8
+   cl: go version go1.28-devel_7745cfc920 Sat Oct 24 22:51:56 2026 -0700 darwin/arm64, seeds 1 2 3 4 5 6 7 8
+== launch 22:18:09
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$0.86 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.1s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (288ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (630ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0559c9ff78e185f3e
+  Public IP    35.153.200.211
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-zen5
+
+🌍 DNS: keel-zen5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-zen5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.152.0 → 0.154.0
+  https://github.com/spore-host/spawn/releases/tag/v0.154.0
+  zen5  c8a.2xlarge  (AMD EPYC Turin, amd64, AMI ami-0d6dd9e8265d48906, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-zen5 cloud-init settled
+  keel-zen5 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-zen5            c8a.2xlarge      35.153.200.211   on-demand  2h       2026-11-01T22:18:36Z
+
+  1 instance(s) billing. 'down' terminates every one.
+== keel-zen5 read-back
+model name	: AMD EPYC 9R45
+8
+ 22:19:47 up 1 min,  1 user,  load average: 0.22, 0.06, 0.02
+r1 stock BenchmarkKernel/4x32/avx512/kc=128         	 6872220	       174.3 ns/op	       188.0 GFLOP/s	     32768 flops/call
+r1 stock BenchmarkKernel/2x32/avx512/kc=128         	11216480	       107.0 ns/op	       153.2 GFLOP/s	     16384 flops/call
+r1 stock BenchmarkPeak/avx512                       	   10000	    116409 ns/op	       288.2 GFLOP/s
+r1 base-s1 BenchmarkKernel/4x32/avx512/kc=128         	 6594495	       181.7 ns/op	       180.4 GFLOP/s	     32768 flops/call
+r1 base-s1 BenchmarkKernel/2x32/avx512/kc=128         	11235963	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r1 base-s1 BenchmarkPeak/avx512                       	   10000	    116367 ns/op	       288.3 GFLOP/s
+r1 cl-s1 BenchmarkKernel/4x32/avx512/kc=128         	 8481267	       136.6 ns/op	       239.9 GFLOP/s	     32768 flops/call
+r1 cl-s1 BenchmarkKernel/2x32/avx512/kc=128         	11182824	       107.3 ns/op	       152.7 GFLOP/s	     16384 flops/call
+r1 cl-s1 BenchmarkPeak/avx512                       	   10000	    116383 ns/op	       288.3 GFLOP/s
+r1 base-s2 BenchmarkKernel/4x32/avx512/kc=128         	 6584676	       181.9 ns/op	       180.1 GFLOP/s	     32768 flops/call
+r1 base-s2 BenchmarkKernel/2x32/avx512/kc=128         	11232264	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r1 base-s2 BenchmarkPeak/avx512                       	   10000	    116370 ns/op	       288.3 GFLOP/s
+r1 cl-s2 BenchmarkKernel/4x32/avx512/kc=128         	 8284773	       144.6 ns/op	       226.6 GFLOP/s	     32768 flops/call
+r1 cl-s2 BenchmarkKernel/2x32/avx512/kc=128         	11182076	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r1 cl-s2 BenchmarkPeak/avx512                       	   10000	    116341 ns/op	       288.4 GFLOP/s
+r1 base-s3 BenchmarkKernel/4x32/avx512/kc=128         	 6880546	       174.0 ns/op	       188.3 GFLOP/s	     32768 flops/call
+r1 base-s3 BenchmarkKernel/2x32/avx512/kc=128         	11230260	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r1 base-s3 BenchmarkPeak/avx512                       	   10000	    116375 ns/op	       288.3 GFLOP/s
+r1 cl-s3 BenchmarkKernel/4x32/avx512/kc=128         	 8845796	       135.4 ns/op	       242.0 GFLOP/s	     32768 flops/call
+r1 cl-s3 BenchmarkKernel/2x32/avx512/kc=128         	11177998	       107.4 ns/op	       152.5 GFLOP/s	     16384 flops/call
+r1 cl-s3 BenchmarkPeak/avx512                       	   10000	    116383 ns/op	       288.3 GFLOP/s
+r1 base-s4 BenchmarkKernel/4x32/avx512/kc=128         	 6589485	       181.6 ns/op	       180.4 GFLOP/s	     32768 flops/call
+r1 base-s4 BenchmarkKernel/2x32/avx512/kc=128         	11229970	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r1 base-s4 BenchmarkPeak/avx512                       	   10000	    116386 ns/op	       288.3 GFLOP/s
+r1 cl-s4 BenchmarkKernel/4x32/avx512/kc=128         	 8728129	       138.3 ns/op	       237.0 GFLOP/s	     32768 flops/call
+r1 cl-s4 BenchmarkKernel/2x32/avx512/kc=128         	11181320	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r1 cl-s4 BenchmarkPeak/avx512                       	   10000	    116361 ns/op	       288.4 GFLOP/s
+r1 base-s5 BenchmarkKernel/4x32/avx512/kc=128         	 6891850	       173.8 ns/op	       188.6 GFLOP/s	     32768 flops/call
+r1 base-s5 BenchmarkKernel/2x32/avx512/kc=128         	11235202	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r1 base-s5 BenchmarkPeak/avx512                       	   10000	    116380 ns/op	       288.3 GFLOP/s
+r1 cl-s5 BenchmarkKernel/4x32/avx512/kc=128         	 8838932	       135.4 ns/op	       242.0 GFLOP/s	     32768 flops/call
+r1 cl-s5 BenchmarkKernel/2x32/avx512/kc=128         	11168685	       107.3 ns/op	       152.7 GFLOP/s	     16384 flops/call
+r1 cl-s5 BenchmarkPeak/avx512                       	   10000	    116405 ns/op	       288.3 GFLOP/s
+r1 base-s6 BenchmarkKernel/4x32/avx512/kc=128         	 6891735	       173.8 ns/op	       188.6 GFLOP/s	     32768 flops/call
+r1 base-s6 BenchmarkKernel/2x32/avx512/kc=128         	11228802	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r1 base-s6 BenchmarkPeak/avx512                       	   10000	    116403 ns/op	       288.3 GFLOP/s
+r1 cl-s6 BenchmarkKernel/4x32/avx512/kc=128         	 8771396	       135.4 ns/op	       241.9 GFLOP/s	     32768 flops/call
+r1 cl-s6 BenchmarkKernel/2x32/avx512/kc=128         	11164840	       107.4 ns/op	       152.5 GFLOP/s	     16384 flops/call
+r1 cl-s6 BenchmarkPeak/avx512                       	   10000	    116453 ns/op	       288.1 GFLOP/s
+r1 base-s7 BenchmarkKernel/4x32/avx512/kc=128         	 6667742	       179.8 ns/op	       182.2 GFLOP/s	     32768 flops/call
+r1 base-s7 BenchmarkKernel/2x32/avx512/kc=128         	11234917	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r1 base-s7 BenchmarkPeak/avx512                       	   10000	    116418 ns/op	       288.2 GFLOP/s
+r1 cl-s7 BenchmarkKernel/4x32/avx512/kc=128         	 8790283	       136.1 ns/op	       240.7 GFLOP/s	     32768 flops/call
+r1 cl-s7 BenchmarkKernel/2x32/avx512/kc=128         	11183234	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r1 cl-s7 BenchmarkPeak/avx512                       	   10000	    116392 ns/op	       288.3 GFLOP/s
+r1 base-s8 BenchmarkKernel/4x32/avx512/kc=128         	 6588604	       181.8 ns/op	       180.3 GFLOP/s	     32768 flops/call
+r1 base-s8 BenchmarkKernel/2x32/avx512/kc=128         	11228696	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r1 base-s8 BenchmarkPeak/avx512                       	   10000	    116411 ns/op	       288.2 GFLOP/s
+r1 cl-s8 BenchmarkKernel/4x32/avx512/kc=128         	 8284626	       144.6 ns/op	       226.6 GFLOP/s	     32768 flops/call
+r1 cl-s8 BenchmarkKernel/2x32/avx512/kc=128         	11184152	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r1 cl-s8 BenchmarkPeak/avx512                       	   10000	    116440 ns/op	       288.2 GFLOP/s
+r2 stock BenchmarkKernel/4x32/avx512/kc=128         	 6874738	       174.2 ns/op	       188.1 GFLOP/s	     32768 flops/call
+r2 stock BenchmarkKernel/2x32/avx512/kc=128         	11219852	       107.0 ns/op	       153.2 GFLOP/s	     16384 flops/call
+r2 stock BenchmarkPeak/avx512                       	   10000	    116477 ns/op	       288.1 GFLOP/s
+r2 cl-s1 BenchmarkKernel/4x32/avx512/kc=128         	 8465113	       136.6 ns/op	       239.9 GFLOP/s	     32768 flops/call
+r2 cl-s1 BenchmarkKernel/2x32/avx512/kc=128         	11192164	       107.3 ns/op	       152.7 GFLOP/s	     16384 flops/call
+r2 cl-s1 BenchmarkPeak/avx512                       	   10000	    116428 ns/op	       288.2 GFLOP/s
+r2 base-s1 BenchmarkKernel/4x32/avx512/kc=128         	 6594284	       181.6 ns/op	       180.4 GFLOP/s	     32768 flops/call
+r2 base-s1 BenchmarkKernel/2x32/avx512/kc=128         	11231028	       106.8 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r2 base-s1 BenchmarkPeak/avx512                       	   10000	    116436 ns/op	       288.2 GFLOP/s
+r2 cl-s2 BenchmarkKernel/4x32/avx512/kc=128         	 7808286	       153.5 ns/op	       213.4 GFLOP/s	     32768 flops/call
+r2 cl-s2 BenchmarkKernel/2x32/avx512/kc=128         	11176605	       107.4 ns/op	       152.5 GFLOP/s	     16384 flops/call
+r2 cl-s2 BenchmarkPeak/avx512                       	   10000	    116434 ns/op	       288.2 GFLOP/s
+r2 base-s2 BenchmarkKernel/4x32/avx512/kc=128         	 6881360	       174.0 ns/op	       188.3 GFLOP/s	     32768 flops/call
+r2 base-s2 BenchmarkKernel/2x32/avx512/kc=128         	11236852	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r2 base-s2 BenchmarkPeak/avx512                       	   10000	    116437 ns/op	       288.2 GFLOP/s
+r2 cl-s3 BenchmarkKernel/4x32/avx512/kc=128         	 8845816	       135.4 ns/op	       241.9 GFLOP/s	     32768 flops/call
+r2 cl-s3 BenchmarkKernel/2x32/avx512/kc=128         	11184508	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r2 cl-s3 BenchmarkPeak/avx512                       	   10000	    116433 ns/op	       288.2 GFLOP/s
+r2 base-s3 BenchmarkKernel/4x32/avx512/kc=128         	 6873042	       174.0 ns/op	       188.3 GFLOP/s	     32768 flops/call
+r2 base-s3 BenchmarkKernel/2x32/avx512/kc=128         	11229086	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r2 base-s3 BenchmarkPeak/avx512                       	   10000	    116409 ns/op	       288.2 GFLOP/s
+r2 cl-s4 BenchmarkKernel/4x32/avx512/kc=128         	 8757844	       137.1 ns/op	       239.0 GFLOP/s	     32768 flops/call
+r2 cl-s4 BenchmarkKernel/2x32/avx512/kc=128         	11189240	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r2 cl-s4 BenchmarkPeak/avx512                       	   10000	    116429 ns/op	       288.2 GFLOP/s
+r2 base-s4 BenchmarkKernel/4x32/avx512/kc=128         	 6596023	       181.6 ns/op	       180.4 GFLOP/s	     32768 flops/call
+r2 base-s4 BenchmarkKernel/2x32/avx512/kc=128         	11220019	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r2 base-s4 BenchmarkPeak/avx512                       	   10000	    116447 ns/op	       288.2 GFLOP/s
+r2 cl-s5 BenchmarkKernel/4x32/avx512/kc=128         	 8831772	       135.5 ns/op	       241.8 GFLOP/s	     32768 flops/call
+r2 cl-s5 BenchmarkKernel/2x32/avx512/kc=128         	11175136	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r2 cl-s5 BenchmarkPeak/avx512                       	   10000	    116452 ns/op	       288.1 GFLOP/s
+r2 base-s5 BenchmarkKernel/4x32/avx512/kc=128         	 6891588	       173.9 ns/op	       188.5 GFLOP/s	     32768 flops/call
+r2 base-s5 BenchmarkKernel/2x32/avx512/kc=128         	11242140	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r2 base-s5 BenchmarkPeak/avx512                       	   10000	    116472 ns/op	       288.1 GFLOP/s
+r2 cl-s6 BenchmarkKernel/4x32/avx512/kc=128         	 8837176	       135.5 ns/op	       241.8 GFLOP/s	     32768 flops/call
+r2 cl-s6 BenchmarkKernel/2x32/avx512/kc=128         	11175868	       107.4 ns/op	       152.5 GFLOP/s	     16384 flops/call
+r2 cl-s6 BenchmarkPeak/avx512                       	   10000	    116535 ns/op	       287.9 GFLOP/s
+r2 base-s6 BenchmarkKernel/4x32/avx512/kc=128         	 6887157	       173.9 ns/op	       188.4 GFLOP/s	     32768 flops/call
+r2 base-s6 BenchmarkKernel/2x32/avx512/kc=128         	11216836	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r2 base-s6 BenchmarkPeak/avx512                       	   10000	    116533 ns/op	       287.9 GFLOP/s
+r2 cl-s7 BenchmarkKernel/4x32/avx512/kc=128         	 8798023	       136.2 ns/op	       240.6 GFLOP/s	     32768 flops/call
+r2 cl-s7 BenchmarkKernel/2x32/avx512/kc=128         	11175698	       107.4 ns/op	       152.5 GFLOP/s	     16384 flops/call
+r2 cl-s7 BenchmarkPeak/avx512                       	   10000	    116520 ns/op	       288.0 GFLOP/s
+r2 base-s7 BenchmarkKernel/4x32/avx512/kc=128         	 6647329	       179.9 ns/op	       182.1 GFLOP/s	     32768 flops/call
+r2 base-s7 BenchmarkKernel/2x32/avx512/kc=128         	11230321	       107.0 ns/op	       153.2 GFLOP/s	     16384 flops/call
+r2 base-s7 BenchmarkPeak/avx512                       	   10000	    116540 ns/op	       287.9 GFLOP/s
+r2 cl-s8 BenchmarkKernel/4x32/avx512/kc=128         	 8277768	       144.5 ns/op	       226.7 GFLOP/s	     32768 flops/call
+r2 cl-s8 BenchmarkKernel/2x32/avx512/kc=128         	11185482	       107.3 ns/op	       152.7 GFLOP/s	     16384 flops/call
+r2 cl-s8 BenchmarkPeak/avx512                       	   10000	    116458 ns/op	       288.1 GFLOP/s
+r2 base-s8 BenchmarkKernel/4x32/avx512/kc=128         	 6592892	       181.6 ns/op	       180.5 GFLOP/s	     32768 flops/call
+r2 base-s8 BenchmarkKernel/2x32/avx512/kc=128         	11235118	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r2 base-s8 BenchmarkPeak/avx512                       	   10000	    116447 ns/op	       288.2 GFLOP/s
+r3 stock BenchmarkKernel/4x32/avx512/kc=128         	 6879066	       174.2 ns/op	       188.1 GFLOP/s	     32768 flops/call
+r3 stock BenchmarkKernel/2x32/avx512/kc=128         	11219936	       106.9 ns/op	       153.2 GFLOP/s	     16384 flops/call
+r3 stock BenchmarkPeak/avx512                       	   10000	    116459 ns/op	       288.1 GFLOP/s
+r3 base-s1 BenchmarkKernel/4x32/avx512/kc=128         	 6595795	       181.7 ns/op	       180.4 GFLOP/s	     32768 flops/call
+r3 base-s1 BenchmarkKernel/2x32/avx512/kc=128         	11240734	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r3 base-s1 BenchmarkPeak/avx512                       	   10000	    116438 ns/op	       288.2 GFLOP/s
+r3 cl-s1 BenchmarkKernel/4x32/avx512/kc=128         	 8755212	       137.1 ns/op	       239.0 GFLOP/s	     32768 flops/call
+r3 cl-s1 BenchmarkKernel/2x32/avx512/kc=128         	11179729	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r3 cl-s1 BenchmarkPeak/avx512                       	   10000	    116453 ns/op	       288.1 GFLOP/s
+r3 base-s2 BenchmarkKernel/4x32/avx512/kc=128         	 6886461	       174.0 ns/op	       188.3 GFLOP/s	     32768 flops/call
+r3 base-s2 BenchmarkKernel/2x32/avx512/kc=128         	11238502	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r3 base-s2 BenchmarkPeak/avx512                       	   10000	    116464 ns/op	       288.1 GFLOP/s
+r3 cl-s2 BenchmarkKernel/4x32/avx512/kc=128         	 7815703	       153.5 ns/op	       213.5 GFLOP/s	     32768 flops/call
+r3 cl-s2 BenchmarkKernel/2x32/avx512/kc=128         	11175650	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r3 cl-s2 BenchmarkPeak/avx512                       	   10000	    116467 ns/op	       288.1 GFLOP/s
+r3 base-s3 BenchmarkKernel/4x32/avx512/kc=128         	 6884324	       174.5 ns/op	       187.8 GFLOP/s	     32768 flops/call
+r3 base-s3 BenchmarkKernel/2x32/avx512/kc=128         	11238205	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r3 base-s3 BenchmarkPeak/avx512                       	   10000	    116459 ns/op	       288.1 GFLOP/s
+r3 cl-s3 BenchmarkKernel/4x32/avx512/kc=128         	 8553285	       140.1 ns/op	       233.9 GFLOP/s	     32768 flops/call
+r3 cl-s3 BenchmarkKernel/2x32/avx512/kc=128         	11175976	       107.3 ns/op	       152.7 GFLOP/s	     16384 flops/call
+r3 cl-s3 BenchmarkPeak/avx512                       	   10000	    116416 ns/op	       288.2 GFLOP/s
+r3 base-s4 BenchmarkKernel/4x32/avx512/kc=128         	 6596830	       181.6 ns/op	       180.5 GFLOP/s	     32768 flops/call
+r3 base-s4 BenchmarkKernel/2x32/avx512/kc=128         	11233993	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r3 base-s4 BenchmarkPeak/avx512                       	   10000	    116430 ns/op	       288.2 GFLOP/s
+r3 cl-s4 BenchmarkKernel/4x32/avx512/kc=128         	 8716010	       137.3 ns/op	       238.6 GFLOP/s	     32768 flops/call
+r3 cl-s4 BenchmarkKernel/2x32/avx512/kc=128         	11172528	       107.3 ns/op	       152.7 GFLOP/s	     16384 flops/call
+r3 cl-s4 BenchmarkPeak/avx512                       	   10000	    116430 ns/op	       288.2 GFLOP/s
+r3 base-s5 BenchmarkKernel/4x32/avx512/kc=128         	 6895332	       173.8 ns/op	       188.5 GFLOP/s	     32768 flops/call
+r3 base-s5 BenchmarkKernel/2x32/avx512/kc=128         	11241524	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r3 base-s5 BenchmarkPeak/avx512                       	   10000	    116458 ns/op	       288.1 GFLOP/s
+r3 cl-s5 BenchmarkKernel/4x32/avx512/kc=128         	 8556782	       139.9 ns/op	       234.3 GFLOP/s	     32768 flops/call
+r3 cl-s5 BenchmarkKernel/2x32/avx512/kc=128         	11179578	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r3 cl-s5 BenchmarkPeak/avx512                       	   10000	    116453 ns/op	       288.1 GFLOP/s
+r3 base-s6 BenchmarkKernel/4x32/avx512/kc=128         	 6592602	       176.1 ns/op	       186.0 GFLOP/s	     32768 flops/call
+r3 base-s6 BenchmarkKernel/2x32/avx512/kc=128         	11240851	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r3 base-s6 BenchmarkPeak/avx512                       	   10000	    116447 ns/op	       288.2 GFLOP/s
+r3 cl-s6 BenchmarkKernel/4x32/avx512/kc=128         	 8850901	       135.3 ns/op	       242.1 GFLOP/s	     32768 flops/call
+r3 cl-s6 BenchmarkKernel/2x32/avx512/kc=128         	11184778	       107.3 ns/op	       152.7 GFLOP/s	     16384 flops/call
+r3 cl-s6 BenchmarkPeak/avx512                       	   10000	    116462 ns/op	       288.1 GFLOP/s
+r3 base-s7 BenchmarkKernel/4x32/avx512/kc=128         	 6640381	       179.8 ns/op	       182.3 GFLOP/s	     32768 flops/call
+r3 base-s7 BenchmarkKernel/2x32/avx512/kc=128         	11237976	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r3 base-s7 BenchmarkPeak/avx512                       	   10000	    116447 ns/op	       288.2 GFLOP/s
+r3 cl-s7 BenchmarkKernel/4x32/avx512/kc=128         	 8718192	       136.0 ns/op	       240.9 GFLOP/s	     32768 flops/call
+r3 cl-s7 BenchmarkKernel/2x32/avx512/kc=128         	11174570	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r3 cl-s7 BenchmarkPeak/avx512                       	   10000	    116480 ns/op	       288.1 GFLOP/s
+r3 base-s8 BenchmarkKernel/4x32/avx512/kc=128         	 6594705	       181.7 ns/op	       180.4 GFLOP/s	     32768 flops/call
+r3 base-s8 BenchmarkKernel/2x32/avx512/kc=128         	11233807	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r3 base-s8 BenchmarkPeak/avx512                       	   10000	    116411 ns/op	       288.2 GFLOP/s
+r3 cl-s8 BenchmarkKernel/4x32/avx512/kc=128         	 8285950	       144.5 ns/op	       226.7 GFLOP/s	     32768 flops/call
+r3 cl-s8 BenchmarkKernel/2x32/avx512/kc=128         	11171114	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r3 cl-s8 BenchmarkPeak/avx512                       	   10000	    116428 ns/op	       288.2 GFLOP/s
+r4 stock BenchmarkKernel/4x32/avx512/kc=128         	 6877281	       174.2 ns/op	       188.1 GFLOP/s	     32768 flops/call
+r4 stock BenchmarkKernel/2x32/avx512/kc=128         	11217290	       107.0 ns/op	       153.2 GFLOP/s	     16384 flops/call
+r4 stock BenchmarkPeak/avx512                       	   10000	    116487 ns/op	       288.1 GFLOP/s
+r4 cl-s1 BenchmarkKernel/4x32/avx512/kc=128         	 8807684	       136.6 ns/op	       239.8 GFLOP/s	     32768 flops/call
+r4 cl-s1 BenchmarkKernel/2x32/avx512/kc=128         	11180054	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r4 cl-s1 BenchmarkPeak/avx512                       	   10000	    116434 ns/op	       288.2 GFLOP/s
+r4 base-s1 BenchmarkKernel/4x32/avx512/kc=128         	 6591932	       181.7 ns/op	       180.3 GFLOP/s	     32768 flops/call
+r4 base-s1 BenchmarkKernel/2x32/avx512/kc=128         	11229487	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r4 base-s1 BenchmarkPeak/avx512                       	   10000	    116432 ns/op	       288.2 GFLOP/s
+r4 cl-s2 BenchmarkKernel/4x32/avx512/kc=128         	 7806716	       153.6 ns/op	       213.3 GFLOP/s	     32768 flops/call
+r4 cl-s2 BenchmarkKernel/2x32/avx512/kc=128         	11176448	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r4 cl-s2 BenchmarkPeak/avx512                       	   10000	    116439 ns/op	       288.2 GFLOP/s
+r4 base-s2 BenchmarkKernel/4x32/avx512/kc=128         	 6885296	       174.0 ns/op	       188.3 GFLOP/s	     32768 flops/call
+r4 base-s2 BenchmarkKernel/2x32/avx512/kc=128         	11232182	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r4 base-s2 BenchmarkPeak/avx512                       	   10000	    116445 ns/op	       288.2 GFLOP/s
+r4 cl-s3 BenchmarkKernel/4x32/avx512/kc=128         	 8851042	       135.4 ns/op	       242.1 GFLOP/s	     32768 flops/call
+r4 cl-s3 BenchmarkKernel/2x32/avx512/kc=128         	11178709	       107.4 ns/op	       152.5 GFLOP/s	     16384 flops/call
+r4 cl-s3 BenchmarkPeak/avx512                       	   10000	    116449 ns/op	       288.1 GFLOP/s
+r4 base-s3 BenchmarkKernel/4x32/avx512/kc=128         	 6875916	       174.0 ns/op	       188.3 GFLOP/s	     32768 flops/call
+r4 base-s3 BenchmarkKernel/2x32/avx512/kc=128         	11232409	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r4 base-s3 BenchmarkPeak/avx512                       	   10000	    116431 ns/op	       288.2 GFLOP/s
+r4 cl-s4 BenchmarkKernel/4x32/avx512/kc=128         	 8727487	       137.6 ns/op	       238.2 GFLOP/s	     32768 flops/call
+r4 cl-s4 BenchmarkKernel/2x32/avx512/kc=128         	11158971	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r4 cl-s4 BenchmarkPeak/avx512                       	   10000	    116429 ns/op	       288.2 GFLOP/s
+r4 base-s4 BenchmarkKernel/4x32/avx512/kc=128         	 6700238	       173.8 ns/op	       188.5 GFLOP/s	     32768 flops/call
+r4 base-s4 BenchmarkKernel/2x32/avx512/kc=128         	11233309	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r4 base-s4 BenchmarkPeak/avx512                       	   10000	    116448 ns/op	       288.1 GFLOP/s
+r4 cl-s5 BenchmarkKernel/4x32/avx512/kc=128         	 8550030	       140.0 ns/op	       234.1 GFLOP/s	     32768 flops/call
+r4 cl-s5 BenchmarkKernel/2x32/avx512/kc=128         	11185599	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r4 cl-s5 BenchmarkPeak/avx512                       	   10000	    116456 ns/op	       288.1 GFLOP/s
+r4 base-s5 BenchmarkKernel/4x32/avx512/kc=128         	 6886578	       173.8 ns/op	       188.5 GFLOP/s	     32768 flops/call
+r4 base-s5 BenchmarkKernel/2x32/avx512/kc=128         	11229708	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r4 base-s5 BenchmarkPeak/avx512                       	   10000	    116483 ns/op	       288.1 GFLOP/s
+r4 cl-s6 BenchmarkKernel/4x32/avx512/kc=128         	 8838072	       135.5 ns/op	       241.9 GFLOP/s	     32768 flops/call
+r4 cl-s6 BenchmarkKernel/2x32/avx512/kc=128         	11176256	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r4 cl-s6 BenchmarkPeak/avx512                       	   10000	    116407 ns/op	       288.3 GFLOP/s
+r4 base-s6 BenchmarkKernel/4x32/avx512/kc=128         	 6892365	       173.8 ns/op	       188.5 GFLOP/s	     32768 flops/call
+r4 base-s6 BenchmarkKernel/2x32/avx512/kc=128         	11232074	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r4 base-s6 BenchmarkPeak/avx512                       	   10000	    116436 ns/op	       288.2 GFLOP/s
+r4 cl-s7 BenchmarkKernel/4x32/avx512/kc=128         	 8808672	       136.1 ns/op	       240.8 GFLOP/s	     32768 flops/call
+r4 cl-s7 BenchmarkKernel/2x32/avx512/kc=128         	11168766	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r4 cl-s7 BenchmarkPeak/avx512                       	   10000	    116459 ns/op	       288.1 GFLOP/s
+r4 base-s7 BenchmarkKernel/4x32/avx512/kc=128         	 6651705	       179.9 ns/op	       182.2 GFLOP/s	     32768 flops/call
+r4 base-s7 BenchmarkKernel/2x32/avx512/kc=128         	11232117	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r4 base-s7 BenchmarkPeak/avx512                       	   10000	    116483 ns/op	       288.1 GFLOP/s
+r4 cl-s8 BenchmarkKernel/4x32/avx512/kc=128         	 8285554	       144.6 ns/op	       226.6 GFLOP/s	     32768 flops/call
+r4 cl-s8 BenchmarkKernel/2x32/avx512/kc=128         	11172936	       107.4 ns/op	       152.5 GFLOP/s	     16384 flops/call
+r4 cl-s8 BenchmarkPeak/avx512                       	   10000	    116443 ns/op	       288.2 GFLOP/s
+r4 base-s8 BenchmarkKernel/4x32/avx512/kc=128         	 6592148	       181.7 ns/op	       180.3 GFLOP/s	     32768 flops/call
+r4 base-s8 BenchmarkKernel/2x32/avx512/kc=128         	11235896	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r4 base-s8 BenchmarkPeak/avx512                       	   10000	    116409 ns/op	       288.2 GFLOP/s
+r5 stock BenchmarkKernel/4x32/avx512/kc=128         	 6874585	       174.2 ns/op	       188.1 GFLOP/s	     32768 flops/call
+r5 stock BenchmarkKernel/2x32/avx512/kc=128         	11213870	       107.0 ns/op	       153.1 GFLOP/s	     16384 flops/call
+r5 stock BenchmarkPeak/avx512                       	   10000	    116451 ns/op	       288.1 GFLOP/s
+r5 base-s1 BenchmarkKernel/4x32/avx512/kc=128         	 6870522	       181.8 ns/op	       180.2 GFLOP/s	     32768 flops/call
+r5 base-s1 BenchmarkKernel/2x32/avx512/kc=128         	11233214	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r5 base-s1 BenchmarkPeak/avx512                       	   10000	    116440 ns/op	       288.2 GFLOP/s
+r5 cl-s1 BenchmarkKernel/4x32/avx512/kc=128         	 8774895	       136.7 ns/op	       239.7 GFLOP/s	     32768 flops/call
+r5 cl-s1 BenchmarkKernel/2x32/avx512/kc=128         	11159073	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r5 cl-s1 BenchmarkPeak/avx512                       	   10000	    116411 ns/op	       288.2 GFLOP/s
+r5 base-s2 BenchmarkKernel/4x32/avx512/kc=128         	 6876319	       174.0 ns/op	       188.4 GFLOP/s	     32768 flops/call
+r5 base-s2 BenchmarkKernel/2x32/avx512/kc=128         	11230756	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r5 base-s2 BenchmarkPeak/avx512                       	   10000	    116413 ns/op	       288.2 GFLOP/s
+r5 cl-s2 BenchmarkKernel/4x32/avx512/kc=128         	 7806004	       153.6 ns/op	       213.4 GFLOP/s	     32768 flops/call
+r5 cl-s2 BenchmarkKernel/2x32/avx512/kc=128         	11165256	       107.5 ns/op	       152.4 GFLOP/s	     16384 flops/call
+r5 cl-s2 BenchmarkPeak/avx512                       	   10000	    116498 ns/op	       288.0 GFLOP/s
+r5 base-s3 BenchmarkKernel/4x32/avx512/kc=128         	 6878886	       174.2 ns/op	       188.1 GFLOP/s	     32768 flops/call
+r5 base-s3 BenchmarkKernel/2x32/avx512/kc=128         	11214420	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r5 base-s3 BenchmarkPeak/avx512                       	   10000	    116537 ns/op	       287.9 GFLOP/s
+r5 cl-s3 BenchmarkKernel/4x32/avx512/kc=128         	 8806045	       135.9 ns/op	       241.1 GFLOP/s	     32768 flops/call
+r5 cl-s3 BenchmarkKernel/2x32/avx512/kc=128         	11131219	       107.7 ns/op	       152.2 GFLOP/s	     16384 flops/call
+r5 cl-s3 BenchmarkPeak/avx512                       	   10000	    116454 ns/op	       288.1 GFLOP/s
+r5 base-s4 BenchmarkKernel/4x32/avx512/kc=128         	 6578096	       181.8 ns/op	       180.2 GFLOP/s	     32768 flops/call
+r5 base-s4 BenchmarkKernel/2x32/avx512/kc=128         	11224278	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r5 base-s4 BenchmarkPeak/avx512                       	   10000	    116427 ns/op	       288.2 GFLOP/s
+r5 cl-s4 BenchmarkKernel/4x32/avx512/kc=128         	 8714830	       137.5 ns/op	       238.4 GFLOP/s	     32768 flops/call
+r5 cl-s4 BenchmarkKernel/2x32/avx512/kc=128         	11178386	       107.5 ns/op	       152.4 GFLOP/s	     16384 flops/call
+r5 cl-s4 BenchmarkPeak/avx512                       	   10000	    116905 ns/op	       287.0 GFLOP/s
+r5 base-s5 BenchmarkKernel/4x32/avx512/kc=128         	 6856161	       174.6 ns/op	       187.7 GFLOP/s	     32768 flops/call
+r5 base-s5 BenchmarkKernel/2x32/avx512/kc=128         	11177436	       107.3 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r5 base-s5 BenchmarkPeak/avx512                       	   10000	    116898 ns/op	       287.0 GFLOP/s
+r5 cl-s5 BenchmarkKernel/4x32/avx512/kc=128         	 8521344	       136.9 ns/op	       239.3 GFLOP/s	     32768 flops/call
+r5 cl-s5 BenchmarkKernel/2x32/avx512/kc=128         	11116477	       107.9 ns/op	       151.9 GFLOP/s	     16384 flops/call
+r5 cl-s5 BenchmarkPeak/avx512                       	   10000	    116918 ns/op	       287.0 GFLOP/s
+r5 base-s6 BenchmarkKernel/4x32/avx512/kc=128         	 6552948	       182.5 ns/op	       179.5 GFLOP/s	     32768 flops/call
+r5 base-s6 BenchmarkKernel/2x32/avx512/kc=128         	11184973	       107.3 ns/op	       152.7 GFLOP/s	     16384 flops/call
+r5 base-s6 BenchmarkPeak/avx512                       	   10000	    116910 ns/op	       287.0 GFLOP/s
+r5 cl-s6 BenchmarkKernel/4x32/avx512/kc=128         	 8806891	       135.7 ns/op	       241.5 GFLOP/s	     32768 flops/call
+r5 cl-s6 BenchmarkKernel/2x32/avx512/kc=128         	11175793	       107.4 ns/op	       152.5 GFLOP/s	     16384 flops/call
+r5 cl-s6 BenchmarkPeak/avx512                       	   10000	    116526 ns/op	       288.0 GFLOP/s
+r5 base-s7 BenchmarkKernel/4x32/avx512/kc=128         	 6661100	       179.7 ns/op	       182.4 GFLOP/s	     32768 flops/call
+r5 base-s7 BenchmarkKernel/2x32/avx512/kc=128         	11233666	       106.9 ns/op	       153.3 GFLOP/s	     16384 flops/call
+r5 base-s7 BenchmarkPeak/avx512                       	   10000	    116523 ns/op	       288.0 GFLOP/s
+r5 cl-s7 BenchmarkKernel/4x32/avx512/kc=128         	 8726929	       136.1 ns/op	       240.7 GFLOP/s	     32768 flops/call
+r5 cl-s7 BenchmarkKernel/2x32/avx512/kc=128         	11173368	       107.4 ns/op	       152.6 GFLOP/s	     16384 flops/call
+r5 cl-s7 BenchmarkPeak/avx512                       	   10000	    116538 ns/op	       287.9 GFLOP/s
+r5 base-s8 BenchmarkKernel/4x32/avx512/kc=128         	 6892251	       173.8 ns/op	       188.5 GFLOP/s	     32768 flops/call
+r5 base-s8 BenchmarkKernel/2x32/avx512/kc=128         	11236840	       106.8 ns/op	       153.4 GFLOP/s	     16384 flops/call
+r5 base-s8 BenchmarkPeak/avx512                       	   10000	    116482 ns/op	       288.1 GFLOP/s
+r5 cl-s8 BenchmarkKernel/4x32/avx512/kc=128         	 8286271	       144.7 ns/op	       226.5 GFLOP/s	     32768 flops/call
+r5 cl-s8 BenchmarkKernel/2x32/avx512/kc=128         	11162689	       107.6 ns/op	       152.3 GFLOP/s	     16384 flops/call
+r5 cl-s8 BenchmarkPeak/avx512                       	   10000	    116617 ns/op	       287.7 GFLOP/s
+== done 22:25:37
+== TEARDOWN 22:25:37
+  terminating keel-zen5
+Looking up instance keel-zen5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0559c9ff78e185f3e...
+
+✅ Terminate request sent!
+   Instance: i-0559c9ff78e185f3e
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.152.0 → 0.154.0
+  https://github.com/spore-host/spawn/releases/tag/v0.154.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   no keel- instance running — fleet is down

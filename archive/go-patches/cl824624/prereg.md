@@ -46,3 +46,36 @@ K-loop):
 measurable rate effect on Zen 5, and the 65% would not be this defect's.
 
 These are patched-toolchain experiment numbers and never a published row (#197 guardrail).
+
+## Result (`0510f94`, `exploration-zen5-0510f94.log`)
+
+One c8a.2xlarge (read back as `AMD EPYC 9R45`, 8 cores, load 0.22 at start). It took 7m28s, and the
+fleet was verified down by a readable inventory. There are 255 benchmark rows, 5 rounds × 17 binaries
+× 3 benchmarks. **Not refuted; three predictions held, one split, one missed.**
+
+| GFLOP/s, median of seed medians | stock | base | cl | cl/base |
+|---|---|---|---|---|
+| Kernel 4x32/kc=128 | 188.1 | 185.3 (seeds 180.4–188.5) | **239.6** (213.4–241.9) | **+29.3%** |
+| Kernel 2x32/kc=128 | 153.2 | 153.4 | 152.6 | −0.5% |
+| Peak/avx512 | 288.1 | 288.2 | 288.2 | +0.0% |
+| 4x32 as % of its arm's peak | 65.3% | 64.3% | **83.1%** | |
+
+1. ✓ **4x32 gains +29.3%** (predicted ≥15%). PS2's Gerrit figure, 64.3 → 78.6%, is exceeded:
+   **83.1%** here.
+2. **Split.** Base's seed spread is 4.49% ✓. **cl's is 13.4% ✗**, because seeds 2 and 8 read 213.4 and
+   226.6 against 238–242 for the rest. Separation holds ✓: cl's slowest seed, 213.4, beats base's
+   fastest, 188.5. Rates sit on discrete levels: base at 180 / 182 / 188, and cl at 213 / 227 / 234 /
+   239 / 242. That is placement modes, not noise, and seed 2 switched mode between rounds. **With the
+   copies gone, the kernel is three times as sensitive to layout**, which is consistent with a loop
+   now limited by the front end rather than by copies.
+3. ✓ **Stock reads 65.3%**, matching P2's judged figure exactly.
+4. ✗ **2x32 does not move:** −0.5%, although its 8 copies are gone too (74 → 58 insns). So copies are
+   not 2x32's limit on Zen 5. Its 16 FMAs per iteration carry 8 broadcasts, against 4 in 4x32.
+5. ✓ **Peak/avx512 is unchanged**, so every percent-of-peak above shares one denominator.
+
+**What it attributes:** about half of Zen 5's kernel gap to Zen 4 (65.3 → 83.1, against Zen 4's 96.5)
+is golang/go#80829's accumulator copies, removed by CL 824624 PS2. The remaining ~17 points are not
+copies.
+
+**Not settled here:** 4x32 is dispatched on Zen 5, and 2x32 only on the issue class. This run is one
+host on the exploration tier, single-threaded, and makes no claim about the nest.
