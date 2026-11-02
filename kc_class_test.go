@@ -10,15 +10,15 @@ import (
 	"github.com/scttfrdmn/keel/internal/kern"
 )
 
-// TestIssueClassKC pins the class-keyed depth block: issueClassKC on an issue-bound host,
-// the shipped default everywhere else. Run it under KEEL_KERN_CLASS=issue and =fma to cover
+// TestIssueClassKC pins the class-keyed depth block: block.KCDeep is issueClassKC on an
+// issue-bound host and off (0) everywhere else, and block.KC is never touched. Run it under KEEL_KERN_CLASS=issue and =fma to cover
 // both branches on one machine.
 func TestIssueClassKC(t *testing.T) {
-	want := 384
+	want := 0
 	if activeKernClass == kern.ClassIssue {
 		want = issueClassKC
 	}
-	if block.KC != want {
-		t.Fatalf("class %s: block.KC = %d, want %d", activeKernClass, block.KC, want)
+	if block.KCDeep != want || block.KC != 384 {
+		t.Fatalf("class %s: block.KCDeep = %d (want %d), block.KC = %d (want 384)", activeKernClass, block.KCDeep, want, block.KC)
 	}
 }

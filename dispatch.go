@@ -162,20 +162,21 @@ func ActiveL164Backend() string { return activeL164.Name }
 // matter and is why the shape can be a runtime value at all.
 var activeKern = selectKern()
 
-// issueClassKC is the float32 nest's depth block on an issue-bound host (the Skylake-X /
-// Cascade Lake / Cooper Lake class that kern.Preferred dispatches 2x32 for). Measured on
-// c5n.18xlarge with intervals: kc=1024 beats the shipped 384 by 7.2% at 1 thread and 5.4% at
-// 8 threads, net of both CIs (archive/blocking-skx-ab/). The surface was still rising at the
-// grid's edge, so 1024 is the best measured point, not a measured optimum. MC stays 144: at 8
-// threads a larger MC starves the ic partition. Keyed to the class dispatch already computes,
-// as KCPB is keyed to the kernel family, so FMA-class hosts keep block.KC unchanged.
+// issueClassKC is the float32 nest's depth block for full-height calls on an issue-bound host
+// (the Skylake-X / Cascade Lake / Cooper Lake class that kern.Preferred dispatches 2x32 for).
+// Measured on c5n.18xlarge with intervals: kc=1024 beats the shipped 384 by 7.2% at 1 thread
+// and 5.4% at 8 threads, net of both CIs (archive/blocking-skx-ab/). The surface was still
+// rising at the grid's edge, so 1024 is the best measured point, not a measured optimum. It
+// is set as block.KCDeep, not block.KC, because applied everywhere it cost Strsm's thin rank
+// updates 6-10% (archive/blocking-skx-ab-b/). Keyed to the class dispatch already computes,
+// so FMA-class hosts are unchanged.
 const issueClassKC = 1024
 
 var _ = applyClassBlocking()
 
 func applyClassBlocking() bool {
 	if activeKernClass == kern.ClassIssue {
-		block.KC = issueClassKC
+		block.KCDeep = issueClassKC
 	}
 	return true
 }
