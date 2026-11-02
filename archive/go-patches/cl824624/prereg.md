@@ -79,3 +79,9 @@ copies.
 
 **Not settled here:** 4x32 is dispatched on Zen 5, and 2x32 only on the issue class. This run is one
 host on the exploration tier, single-threaded, and makes no claim about the nest.
+
+**VOID (2026-11-02), by `archive/kernel4x32-strict/`:** the sentence above that the copy-free loop's
+layout sensitivity is "consistent with a loop now limited by the front end rather than by copies".
+Removing 10 more instructions per iteration did not move the kernel under either toolchain, so Zen 5's
+4x32 is not front-end bound. The measured figures above stand (+29.3%, 83.1% of peak, the 13.4%
+seed spread). Only that reading of them is withdrawn.
