@@ -27,3 +27,37 @@ the published share is computed from.
 
 **If it holds, shipping still needs** the CHANGELOG, and **a judged amd64 gate-p5 pair**, because the
 README's Skylake-SP rows move. That is a cost decision for Scott, not part of this run.
+
+## Result (`9784cd8`, `run-9784cd8.log`, `benchci-{old,new}.csv`): not shippable as built
+
+One c5n.18xlarge (Xeon Platinum 8124M), masked to cores 0–7 of socket 0. It took 15m08s, and the fleet
+was verified down by a readable inventory. There are 320 rows. The branch's Level-3 suite exited 0 on
+the host.
+
+| row (n=4096) | old GFLOP/s [CI] | new GFLOP/s [CI] | new/old, range net of both CIs |
+|---|---|---|---|
+| Sgemm 1T | 66.91 [65.73, 67.63] | 73.62 [72.52, 74.36] | **+10.0%** [+7.2%, +13.1%] |
+| Sgemm 8T | 453.90 [444.30, 454.40] | 494.40 [492.30, 496.80] | **+8.9%** [+8.3%, +11.8%] |
+| Ssymm 1T | 65.91 | 72.91 | +10.6% [+7.5%, +13.6%] |
+| Ssymm 8T | 446.35 | 490.30 | +9.9% [+9.2%, +12.4%] |
+| Ssyrk 1T | 66.00 | 74.57 | +13.0% [+8.1%, +15.7%] |
+| Ssyrk 8T | 475.85 | 527.35 | +10.8% [+10.6%, +12.0%] |
+| **Strsm 1T** | 38.31 | 35.94 | **−6.2%** [−7.4%, −4.0%] |
+| **Strsm 8T** | 285.15 | 256.60 | **−10.0%** [−10.9%, −9.2%] |
+
+1. ✓ **Correctness.**
+2. ✗ (in the good direction) **Sgemm, Ssymm and Ssyrk** gain +8.9% to +13.0%, above the predicted
+   +4–9% (1T) and +3–7% (8T).
+3. ✗ **Strsm regresses:** −6.2% and −10.0%, against a predicted 0 to +5%.
+4. ✗ **A row regresses**, beyond its interval.
+
+The refutation clause did not fire: Sgemm 8T beats old by at least 8.3% net of CIs. But a 10%
+regression on a published row means **this change does not ship**.
+
+**Why Strsm regresses, and why my prediction was wrong about it.** The prediction assumed Strsm does
+not use the nest's KC. Its diagonal blocks (`MB = 64`) indeed do not. But its rank updates go through
+the same nest as thin GEMMs, with M = MB = 64 rows (`internal/block/tri.go`). Each packed B panel of
+KC × NC is then reused by only 64 rows, so raising KC from 384 to 1024 makes the B pack and its trip
+through the cache dominate. The full-height Sgemm/Ssymm/Ssyrk (m = 4096) amortize it; Strsm's rank
+updates cannot. The next step is to keep the larger KC for full-height GEMMs only, so the Trsm path
+keeps the shipped KC, and to re-measure all eight rows.
