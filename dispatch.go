@@ -175,7 +175,8 @@ const issueClassKC = 1024
 var _ = applyClassBlocking()
 
 func applyClassBlocking() bool {
-	if activeKernClass == kern.ClassIssue {
+	// EXPERIMENT (archive/blocking-avx512-b/): every AVX-512 host, not only the issue class.
+	if activeKern.Name == kern.AVX512 {
 		block.KCDeep = issueClassKC
 	}
 	return true

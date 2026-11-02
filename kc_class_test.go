@@ -15,7 +15,7 @@ import (
 // both branches on one machine.
 func TestIssueClassKC(t *testing.T) {
 	want := 0
-	if activeKernClass == kern.ClassIssue {
+	if activeKern.Name == kern.AVX512 {
 		want = issueClassKC
 	}
 	if block.KCDeep != want || block.KC != 384 {
