@@ -36,3 +36,40 @@ including the float64 Level-3 sweeps under the forced issue class.
 
 **REFUTED for shipping if** no candidate gives Dgemm 8T a gain net of both intervals, or the chosen
 candidate regresses any row beyond its interval.
+
+## Result (`c5bcd48`, `run-c5bcd48.log`, `benchci-*.csv`): REFUTED for shipping
+
+One c5n.18xlarge (Xeon Platinum 8124M). It took 37m42s, and the fleet was verified down by a readable
+inventory. There are 640 stage-A and 384 stage-B rows. The branch's float64 Level-3 suite exited 0 on
+the host.
+
+**Stage A, 2x16 at 2048³, GFLOP/s** (mc = 144 / 288):
+
+| KC | 1T | 8T |
+|---|---|---|
+| 512 (shipped) | **33.94** / 33.56 | **219.20** / 215.45 |
+| 768 | 34.22 / 34.07 | 218.50 / 216.30 |
+| 1024 | 34.32 / **34.67** | 216.80 / 216.40 |
+| 1536 | 33.76 / 34.18 | 209.35 / 194.40 |
+
+**Stage B, published rows (n=4096), new/old with the range net of both intervals:**
+
+| row | KC 768 | KC 1024 | KC 1536 |
+|---|---|---|---|
+| Dgemm 1T | +1.2% [−2.7, +3.7] | +2.3% [−2.1, +7.7] | +3.3% [−1.5, +7.2] |
+| Dgemm 8T | +1.3% [−1.8, +2.4] | +0.9% [−1.5, +2.6] | +1.3% [−2.2, +2.2] |
+| Dsymm 1T / 8T | −1.4% / +1.6% | −1.2% / +1.4% | +2.4% / +1.1% |
+| Dsyrk 1T / 8T | +2.5% / +1.7% | +3.0% / +1.2% | +3.3% / +0.2% |
+| Dtrsm 1T / 8T | +1.4% / −0.5% | +0.1% / −0.5% | −0.3% / −0.4% |
+
+1. ✓ **Correctness.**
+2. ✗ **The best 1T point is +2.2% (+1.6% net)**, against at least 4% predicted, though it is at KC ≥ 1024.
+3. ✓ **At 8T, MC=144 ≥ MC=288 at the best KC.** The best 8T point is the shipped one.
+4. ✗ **The medians gain +0.2% to +3.3%, and not one is net of both intervals.**
+5. ✓ **Dtrsm is flat** with every candidate.
+
+**REFUTED for shipping, on its own clause:** no candidate gives Dgemm 8T a gain net of both intervals.
+Float64's shipped KC=512 is already at or near Skylake-SP's optimum: at 8 threads it is the best grid
+point, and kc=1536 loses 4.5%. The float32 KCDeep win does not transfer, and this run does not
+establish why. Branch `exp-skx-kc64` is kept as the record and not merged. The README's float64 rows are
+untouched.
