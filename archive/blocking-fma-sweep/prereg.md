@@ -32,3 +32,47 @@ Two placement facts are disclosed:
 **REFUTED for shipping on a host if** no point beats shipped at 8T net of both intervals. A host where
 some point does beat shipped would go to stage B (the published rows at n=4096, as in
 `blocking-skx-ab-b/`) before anything ships. Prediction 1 failing is that case.
+
+## Result (`3e8c29f`, `run-3e8c29f.log`; `benchci-<host>-{1,8}t.csv` are `tools/benchci` over each point's 12 samples)
+
+There were four hosts:
+- c8a.2xlarge, AMD EPYC 9R45 (Zen 5);
+- c7a.2xlarge, AMD EPYC 9R14 (Zen 4);
+- c7i.4xlarge, Xeon Platinum 8488C (SPR);
+- c8i.4xlarge, Xeon 6975P-C (GNR).
+
+The run took 24m46s and produced 2880 rows. The fleet was verified down by a readable inventory.
+
+**4x32 (dispatched): deeper KC at the shipped MC=144, against shipped kc=384/mc=144.** Each cell is
+the change in the median, with its range net of both CIs.
+
+| host | 1T kc=512 | 1T kc=1024 | 8T kc=512 | 8T kc=1024 |
+|---|---|---|---|---|
+| Zen 5 | +0.7% [+0.5, +0.8] | +1.3% [+1.1, +1.6] | +1.7% [+1.1, +2.4] | +0.1% [−0.3, +0.9] |
+| Zen 4 | +1.1% [+0.8, +1.2] | +0.9% [+0.7, +1.5] | +1.7% [+1.0, +2.7] | +1.1% [+0.7, +1.8] |
+| **SPR** | +6.0% [+5.3, +6.7] | **+11.2%** [+10.2, +11.6] | +6.1% [+5.1, +6.8] | **+11.9%** [+11.1, +12.7] |
+| GNR | +1.9% [−7.3, +11.3] | +3.3% [−7.1, +7.4] | +0.8% [−0.9, +2.3] | +2.3% [−1.2, +3.5] |
+
+1. **Split.**
+   - ✓ Zen 5 and Zen 4: no point beats shipped by more than 2% at 8T.
+   - ✗ SPR: the best 8T point is kc=1024/mc=72, at **+12.7% (+12.0% net)**. The surface still rises
+     at the grid's edge, KC = 1024.
+   - ✗ GNR: the best 8T point is kc=256/mc=144, at +6.1% (+4.3% net). This is not credible as a
+     lever. The GNR surface is non-monotone, kc=256 loses elsewhere, and GNR's 1T intervals are
+     ±8–10%. That host was noisy, so its reading is **inconclusive**, not a finding.
+2. **Split.**
+   - ✓ Zen 5 and Zen 4: the best 1T point is within 1.3%.
+   - ✗ SPR: +11.7% at 1T (kc=1024/mc=288).
+
+   My mechanism was wrong. SPR runs 4x32 at only about 35% of its vector peak, which is
+   Skylake-SP's regime, not Zen's. The "FMA class" label groups SPR with Zen on kernel *shape*. That
+   says nothing about how SPR responds to blocking.
+3. **Split.**
+   - ✓ SPR: −4.1%.
+   - ✗ Zen 5: −0.8%.
+   - ✗ Zen 4: −0.7%.
+   - ✗ GNR: −1.1%, within noise.
+
+**Not refuted for shipping on SPR.** SPR goes to stage B: the published rows at n=4096 with
+KCDeep = 1024, as in `blocking-skx-ab-b/`. SPR is not a README host, so no published row moves.
+Zen 5 and Zen 4 are refuted for shipping. GNR needs a quieter re-measure before it reads either way.
