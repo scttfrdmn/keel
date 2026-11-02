@@ -72,7 +72,12 @@ func referenceTiles() []Kernel {
 	if !vec.HasAVX512() {
 		return nil
 	}
-	return []Kernel{ReferenceTile}
+	// Experimental (branch exp-wide-tiles): the two shapes above 8 accumulators that compile
+	// spill-free under CL 824624 PS2 (archive/shapegen-ps2/). Measured, never shipped, and
+	// carrying no InsnsPerFMA, for the same reason as ReferenceTile.
+	return []Kernel{ReferenceTile,
+		{Name: AVX512, MR: 5, NR: 32, Unroll: 1, Fn: vec.Kernel5x32},
+		{Name: AVX512, MR: 3, NR: 64, Unroll: 1, Fn: vec.Kernel3x64}}
 }
 
 // vectorKernels64 is vectorKernels at float64 (#191): the float32 shapes at half
