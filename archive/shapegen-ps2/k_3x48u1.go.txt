@@ -1,0 +1,48 @@
+// Copyright 2026 Scott Friedman
+// SPDX-License-Identifier: Apache-2.0
+
+//go:build goexperiment.simd && amd64
+
+package vec
+
+import "simd/archsimd"
+
+// Kernel3x48 is a generated candidate: 3x48 u=1 broadcast.
+//
+// Emitted by tools/shapegen. Not a shipped kernel; see KERNEL.md.
+func Kernel3x48(kc int, a, b, c []float32, ldc int) {
+	var (
+		c0v0, c0v1, c0v2 archsimd.Float32x16
+		c1v0, c1v1, c1v2 archsimd.Float32x16
+		c2v0, c2v1, c2v2 archsimd.Float32x16
+	)
+	var b0, b1, b2, av archsimd.Float32x16
+
+	ap := a[:kc*3]
+	bp := b[:kc*48]
+
+	for len(ap) >= 3 && len(bp) >= 48 {
+		b0, b1, b2 = archsimd.LoadFloat32x16(bp[0:16]), archsimd.LoadFloat32x16(bp[16:32]), archsimd.LoadFloat32x16(bp[32:48])
+		av = archsimd.BroadcastFloat32x16(ap[0])
+		c0v0, c0v1, c0v2 = av.MulAdd(b0, c0v0), av.MulAdd(b1, c0v1), av.MulAdd(b2, c0v2)
+		av = archsimd.BroadcastFloat32x16(ap[1])
+		c1v0, c1v1, c1v2 = av.MulAdd(b0, c1v0), av.MulAdd(b1, c1v1), av.MulAdd(b2, c1v2)
+		av = archsimd.BroadcastFloat32x16(ap[2])
+		c2v0, c2v1, c2v2 = av.MulAdd(b0, c2v0), av.MulAdd(b1, c2v1), av.MulAdd(b2, c2v2)
+		ap, bp = ap[3:], bp[48:]
+	}
+
+	r := c[0*ldc : 0*ldc+48]
+	archsimd.LoadFloat32x16(r[0:16]).Add(c0v0).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c0v1).Store(r[16:32])
+	archsimd.LoadFloat32x16(r[32:48]).Add(c0v2).Store(r[32:48])
+	r = c[1*ldc : 1*ldc+48]
+	archsimd.LoadFloat32x16(r[0:16]).Add(c1v0).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c1v1).Store(r[16:32])
+	archsimd.LoadFloat32x16(r[32:48]).Add(c1v2).Store(r[32:48])
+	r = c[2*ldc : 2*ldc+48]
+	archsimd.LoadFloat32x16(r[0:16]).Add(c2v0).Store(r[0:16])
+	archsimd.LoadFloat32x16(r[16:32]).Add(c2v1).Store(r[16:32])
+	archsimd.LoadFloat32x16(r[32:48]).Add(c2v2).Store(r[32:48])
+	archsimd.ClearAVXUpperBits()
+}

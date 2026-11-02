@@ -1,0 +1,169 @@
+shapegen sweep: 140 shapes (128 broadcast, 12 permute), uarch skylake-x (width 4, 2 FMA ports, 4-cycle latency)
+objective: cycles = max(insns/width, FMAs/ports, (FMAs/chains)*latency); dependency-bound iff chains < ports*latency = 8
+
+shape                 insns  nops   FMAs chains  spills insns/FMA        bound flops/cyc
+1x16 u=1 broadcast       22     0      1      1       0   22.000        issue      5.82
+1x16 u=2 broadcast       26     0      2      1       0   13.000   dependency      8.00
+1x16 u=4 broadcast       34     0      4      1       0    8.500   dependency      8.00
+1x16 u=8 broadcast       50     0      8      1       0    6.250   dependency      8.00
+1x32 u=1 broadcast       24     0      2      2       0   12.000        issue     10.67
+1x32 u=2 broadcast       30     0      4      2       0    7.500   dependency     16.00
+1x32 u=4 broadcast       42     0      8      2       0    5.250   dependency     16.00
+1x32 u=8 broadcast       66     0     16      2       0    4.125   dependency     16.00
+1x48 u=1 broadcast       26     0      3      3       0    8.667        issue     14.77
+1x48 u=2 broadcast       34     0      6      3       0    5.667        issue     22.59
+1x48 u=4 broadcast       50     0     12      3       0    4.167   dependency     24.00
+1x48 u=8 broadcast       82     0     24      3       0    3.417   dependency     24.00
+1x64 u=1 broadcast       28     0      4      4       0    7.000        issue     18.29
+1x64 u=2 broadcast       38     0      8      4       0    4.750        issue     26.95
+1x64 u=4 broadcast       58     0     16      4       0    3.625   dependency     32.00
+1x64 u=8 broadcast       98     0     32      4       0    3.062   dependency     32.00
+2x16 u=1 broadcast       25     0      2      2       0   12.500        issue     10.24
+2x16 u=2 broadcast       32     0      4      2       0    8.000        issue     16.00
+2x16 u=4 broadcast       46     0      8      2       0    5.750   dependency     16.00
+2x16 u=8 broadcast       80     0     16      2       6    5.000   dependency     16.00
+2x32 u=1 broadcast       28     0      4      4       0    7.000        issue     18.29
+2x32 u=2 broadcast       38     0      8      4       0    4.750        issue     26.95
+2x32 u=4 broadcast       58     0     16      4       0    3.625   dependency     32.00
+2x32 u=8 broadcast      108     0     32      4      10    3.375   dependency     32.00
+2x48 u=1 broadcast       31     0      6      6       0    5.167        issue     24.77
+2x48 u=2 broadcast       44     0     12      6       0    3.667        issue     34.91
+2x48 u=4 broadcast       70     0     24      6       0    2.917        issue     43.89
+2x48 u=8 broadcast      136     0     48      6      14    2.833        issue     45.18
+2x64 u=1 broadcast       34     0      8      8       0    4.250        issue     30.12
+2x64 u=2 broadcast       50     0     16      8       0    3.125        issue     40.96
+2x64 u=4 broadcast       85     0     32      8       2    2.656        issue     48.19
+2x64 u=8 broadcast      167     0     64      8      18    2.609        issue     49.05
+3x16 u=1 broadcast       28     0      3      3       0    9.333        issue     13.71
+3x16 u=2 broadcast       38     0      6      3       0    6.333        issue     20.21
+3x16 u=4 broadcast       58     0     12      3       0    4.833   dependency     24.00
+3x16 u=8 broadcast      122     0     24      3      24    5.083   dependency     24.00
+3x32 u=1 broadcast       32     0      6      6       0    5.333        issue     24.00
+3x32 u=2 broadcast       46     0     12      6       0    3.833        issue     33.39
+3x32 u=4 broadcast       80     0     24      6       6    3.333        issue     38.40
+3x32 u=8 broadcast      160     0     48      6      30    3.333        issue     38.40
+3x48 u=1 broadcast       36     0      9      9       0    4.000        issue     32.00
+3x48 u=2 broadcast       54     0     18      9       0    3.000        issue     42.67
+3x48 u=4 broadcast      105     0     36      9      12    2.917        issue     43.89
+3x48 u=8 broadcast      207     0     72      9      36    2.875        issue     44.52
+3x64 u=1 broadcast       40     0     12     12       0    3.333        issue     38.40
+3x64 u=2 broadcast       71     0     24     12       6    2.958        issue     43.27
+3x64 u=4 broadcast      130     0     48     12      18    2.708        issue     47.26
+3x64 u=8 broadcast      254     0     96     12      42    2.646        issue     48.38
+4x16 u=1 broadcast       31     0      4      4       0    7.750        issue     16.52
+4x16 u=2 broadcast       44     0      8      4       0    5.500        issue     23.27
+4x16 u=4 broadcast       80     0     16      4      10    5.000        issue     25.60
+4x16 u=8 broadcast      164     0     32      4      42    5.125        issue     24.98
+4x32 u=1 broadcast       36     0      8      8       0    4.500        issue     28.44
+4x32 u=2 broadcast       56     0     16      8       2    3.500        issue     36.57
+4x32 u=4 broadcast      109     0     32      8      18    3.406        issue     37.58
+4x32 u=8 broadcast      219     0     64      8      50    3.422        issue     37.41
+4x48 u=1 broadcast       43     0     12     12       2    3.583        issue     35.72
+4x48 u=2 broadcast       81     0     24     12      10    3.375        issue     37.93
+4x48 u=4 broadcast      146     0     48     12      26    3.042        issue     42.08
+4x48 u=8 broadcast      285     0     96     12      58    2.969        issue     43.12
+4x64 u=1 broadcast       65     0     16     16      10    4.062        issue     31.51
+4x64 u=2 broadcast      105     0     32     16      18    3.281        issue     39.01
+4x64 u=4 broadcast      185     0     64     16      34    2.891        issue     44.28
+4x64 u=8 broadcast      345     0    128     16      66    2.695        issue     47.49
+5x16 u=1 broadcast       34     0      5      5       0    6.800        issue     18.82
+5x16 u=2 broadcast       50     0     10      5       0    5.000        issue     25.60
+5x16 u=4 broadcast      102     0     20      5      20    5.100        issue     25.10
+5x16 u=8 broadcast      206     0     40      5      60    5.150        issue     24.85
+5x32 u=1 broadcast       40     0     10     10       0    4.000        issue     32.00
+5x32 u=2 broadcast       77     0     20     10      10    3.850        issue     33.25
+5x32 u=4 broadcast      144     0     40     10      30    3.600        issue     35.56
+5x32 u=8 broadcast      283     0     80     10      70    3.538        issue     36.18
+5x48 u=1 broadcast       65     0     15     15      10    4.333        issue     29.54
+5x48 u=2 broadcast      108     0     30     15      20    3.600        issue     35.56
+5x48 u=4 broadcast      194     0     60     15      40    3.233        issue     39.59
+5x48 u=8 broadcast      366     0    120     15      80    3.050        issue     41.97
+5x64 u=1 broadcast       87     0     20     20      20    4.350        issue     29.43
+5x64 u=2 broadcast      136     0     40     20      30    3.400        issue     37.65
+5x64 u=4 broadcast      234     0     80     20      50    2.925        issue     43.76
+5x64 u=8 broadcast      430     0    160     20      90    2.688        issue     47.63
+6x16 u=1 broadcast       37     0      6      6       0    6.167        issue     20.76
+6x16 u=2 broadcast       62     0     12      6       6    5.167        issue     24.77
+6x16 u=4 broadcast      124     0     24      6      30    5.167        issue     24.77
+6x16 u=8 broadcast      248     0     48      6      78    5.167        issue     24.77
+6x32 u=1 broadcast       53     0     12     12       6    4.417        issue     28.98
+6x32 u=2 broadcast      100     0     24     12      18    4.167        issue     30.72
+6x32 u=4 broadcast      182     0     48     12      42    3.792        issue     33.76
+6x32 u=8 broadcast      347     0     96     12      90    3.615        issue     35.41
+6x48 u=1 broadcast       84     0     18     18      18    4.667        issue     27.43
+6x48 u=2 broadcast      135     0     36     18      30    3.750        issue     34.13
+6x48 u=4 broadcast      235     0     72     18      54    3.264        issue     39.22
+6x48 u=8 broadcast      439     0    144     18     102    3.049        issue     41.99
+6x64 u=1 broadcast      108     0     24     24      30    4.500        issue     28.44
+6x64 u=2 broadcast      180     0     48     24      50    3.750        issue     34.13
+6x64 u=4 broadcast      300     0     96     24      74    3.125        issue     40.96
+6x64 u=8 broadcast      540     0    192     24     122    2.812        issue     45.51
+7x16 u=1 broadcast       40     0      7      7       0    5.714        issue     22.40
+7x16 u=2 broadcast       80     0     14      7      12    5.714        issue     22.40
+7x16 u=4 broadcast      149     0     28      7      40    5.321        issue     24.05
+7x16 u=8 broadcast      301     0     56      7      96    5.375        issue     23.81
+7x32 u=1 broadcast       71     0     14     14      12    5.071        issue     25.24
+7x32 u=2 broadcast      122     0     28     14      26    4.357        issue     29.38
+7x32 u=4 broadcast      222     0     56     14      54    3.964        issue     32.29
+7x32 u=8 broadcast      422     0    112     14     110    3.768        issue     33.97
+7x48 u=1 broadcast      102     0     21     21      26    4.857        issue     26.35
+7x48 u=2 broadcast      166     0     42     21      42    3.952        issue     32.39
+7x48 u=4 broadcast      288     0     84     21      70    3.429        issue     37.33
+7x48 u=8 broadcast      528     0    168     21     126    3.143        issue     40.73
+7x64 u=1 broadcast      135     0     28     28      40    4.821        issue     26.55
+7x64 u=2 broadcast      227     0     56     28      72    4.054        issue     31.58
+7x64 u=4 broadcast      387     0    112     28     114    3.455        issue     37.04
+7x64 u=8 broadcast      696     0    224     28     194    3.107        issue     41.20
+8x16 u=1 broadcast       45     0      8      8       2    5.625        issue     22.76
+8x16 u=2 broadcast       95     0     16      8      18    5.938        issue     21.56
+8x16 u=4 broadcast      180     0     32      8      50    5.625        issue     22.76
+8x16 u=8 broadcast      349     0     64      8     114    5.453        issue     23.47
+8x32 u=1 broadcast       87     0     16     16      18    5.438        issue     23.54
+8x32 u=2 broadcast      142     0     32     16      34    4.438        issue     28.85
+8x32 u=4 broadcast      258     0     64     16      66    4.031        issue     31.75
+8x32 u=8 broadcast      491     0    128     16     130    3.836        issue     33.37
+8x48 u=1 broadcast      121     0     24     24      34    5.042        issue     25.39
+8x48 u=2 broadcast      205     0     48     24      60    4.271        issue     29.97
+8x48 u=4 broadcast      344     0     96     24      92    3.583        issue     35.72
+8x48 u=8 broadcast      620     0    192     24     156    3.229        issue     39.64
+8x64 u=1 broadcast      168     0     32     32      58    5.250        issue     24.38
+8x64 u=2 broadcast      279     0     64     32     102    4.359        issue     29.36
+8x64 u=4 broadcast      481     0    128     32     164    3.758        issue     34.06
+8x64 u=8 broadcast      875     0    256     32     284    3.418        issue     37.45
+2x16 u=8 permute         70     0     16      2       8    4.375   dependency     16.00
+2x32 u=8 permute        102     0     32      4      13    3.188   dependency     32.00
+2x48 u=8 permute        135     0     48      6      20    2.812        issue     45.51
+2x64 u=8 permute        167     0     64      8      26    2.609        issue     49.05
+4x16 u=4 permute         72     0     16      4      12    4.500        issue     28.44
+4x32 u=4 permute        109     0     32      8      24    3.406        issue     37.58
+4x48 u=4 permute        146     0     48     12      37    3.042        issue     42.08
+4x64 u=4 permute        184     0     64     16      48    2.875        issue     44.52
+8x16 u=2 permute         82     0     16      8      20    5.125        issue     24.98
+8x32 u=2 permute        136     0     32     16      44    4.250        issue     30.12
+8x48 u=2 permute        200     0     48     24      73    4.167        issue     30.72
+8x64 u=2 permute        281     0     64     32     116    4.391        issue     29.15
+
+broadcast: 128 shapes, 43 zero-spill
+  old objective (insns/FMA only):      2x48 u=4 broadcast at 2.917 insns/FMA
+    issue 70/4=17.50  port 24/2=12.00  chain (24/6)*4=16.00  -> issue at 17.50 cycles
+  corrected objective (chain-aware):   2x48 u=4 broadcast at 43.89 flops/cycle
+    issue 70/4=17.50  port 24/2=12.00  chain (24/6)*4=16.00  -> issue at 17.50 cycles
+  ceiling: 43.89 flops/cycle is 69% of this uarch's 64 (2 ports x 32 flops).
+    0 of the 70 instructions are anchor NOPs, which Report.Insns counts; without them
+    17.50 cycles, 43.89 flops/cycle, 69%, issue-bound.
+    crossover: the chain term takes over below W*L/A = 2.67 insns/FMA; this shape is at 2.917.
+  the two objectives agree on this form's optimum
+
+permute: 12 shapes, 0 zero-spill
+  none can be, and the constraints that exclude them are arithmetic rather than empirical:
+  one 16-lane A-window load is in bounds only when MR*U >= 16 and covers every index the
+  body needs only when MR*U <= 16, so MR*U == 16 — and the form hoists one index vector
+  per row per k-step, putting exactly 16 of them live at once against the 15 SIMD values
+  go1.26.x offers (T10). Emittable and in-budget are mutually exclusive under the shipped
+  A-panel layout, so this form has no zero-spill shape at all.
+  This is what retired gate-p2's SWEEP_BEST_IPF=4.438, which docs/spill-report.md:206
+  attributed to `2x64 u=2` in this form: that shape guarantees only 4 A floats, so whatever
+  kernel produced 4.438 did not read its A panel the way the shipped kernels read theirs.
+  Ruled 2026-08-18 (#107): the threshold is now 4.625, the best figure an emittable
+  zero-spill shape reaches, and both gates reconcile it against -frontier rather than
+  reading it. See #107.
