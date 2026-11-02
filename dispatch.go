@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/scttfrdmn/keel/internal/block"
+	"github.com/scttfrdmn/keel/internal/block64"
 	"github.com/scttfrdmn/keel/internal/kern"
 	"github.com/scttfrdmn/keel/internal/l1"
 	"github.com/scttfrdmn/keel/internal/l164"
@@ -172,11 +173,17 @@ var activeKern = selectKern()
 // so FMA-class hosts are unchanged.
 const issueClassKC = 1024
 
+// issueClassKC64 is issueClassKC for the float64 nest (block64), set the same way and for the
+// same reason. Experiment branch exp-skx-kc64: the value is chosen by the stage-A/B run in
+// archive/blocking-skx-ab-f64/ before this ships.
+const issueClassKC64 = 1024
+
 var _ = applyClassBlocking()
 
 func applyClassBlocking() bool {
 	if activeKernClass == kern.ClassIssue {
 		block.KCDeep = issueClassKC
+		block64.KCDeep = issueClassKC64
 	}
 	return true
 }

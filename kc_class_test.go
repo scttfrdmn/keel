@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/scttfrdmn/keel/internal/block"
+	"github.com/scttfrdmn/keel/internal/block64"
 	"github.com/scttfrdmn/keel/internal/kern"
 )
 
@@ -20,5 +21,16 @@ func TestIssueClassKC(t *testing.T) {
 	}
 	if block.KCDeep != want || block.KC != 384 {
 		t.Fatalf("class %s: block.KCDeep = %d (want %d), block.KC = %d (want 384)", activeKernClass, block.KCDeep, want, block.KC)
+	}
+}
+
+// TestIssueClassKC64 is TestIssueClassKC for the float64 nest.
+func TestIssueClassKC64(t *testing.T) {
+	want := 0
+	if activeKernClass == kern.ClassIssue {
+		want = issueClassKC64
+	}
+	if block64.KCDeep != want || block64.KC != 512 {
+		t.Fatalf("class %s: block64.KCDeep = %d (want %d), block64.KC = %d (want 512)", activeKernClass, block64.KCDeep, want, block64.KC)
 	}
 }
