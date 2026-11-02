@@ -969,6 +969,22 @@ Both move to milestone `upstream-go1.29`. Their evidence stays on the upstream t
 condition, and it was right. But nothing scheduled its read, and the CL watch reads only CL 1. A
 dated trigger needs a reader on its date.
 
+## CL 1's measured consequence for keel, and a hold on further CL traffic (2026-11-02)
+
+**On a patched toolchain, CL 824624 PS2 is worth far more to keel than its copy count suggests.** It
+removes the shipped 4x32 kernel's accumulator copies: +29.3% on Zen 5 (`archive/go-patches/cl824624/`).
+It also moves the spill-free tile frontier from 8 accumulators to 12 (`archive/shapegen-ps2/`). Under
+PS2 the 12-accumulator 3x64 tile, which spills on go1.27, is the best SGEMM shape on four of five x86
+µarchs, through the blocked GEMM at 1 and 8 threads. Against the shipped stock configuration it is
++26–55% (`archive/wide-tiles-nest/`); Zen 4 is the exception. An issue-width model fitted along the
+way was refuted and withdrawn (`archive/kernel4x32-strict/`).
+
+The CL thread carries the Zen 5 measurements, as messages 14 and 15 (2026-11-01 and 02).
+
+**Ruled by Scott on 2026-11-02: no more CL 824624 traffic until a reviewer replies.** The cross-µarch
+follow-up is drafted and held in #205, which is also the shipping plan. Shipping waits on a go1.28
+toolchain that carries the CL. Nothing changes for go1.27 users.
+
 ## The discipline every item inherits
 
 1. **Search the tracker first, always** — including before asking a question, not
