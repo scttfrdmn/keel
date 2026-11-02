@@ -1413,6 +1413,11 @@ func benchKernels(b *testing.B) []kern.Kernel {
 		if k.ALanes > 1 && k.Name != kern.Scalar {
 			out = append(out, k)
 		}
+		// Experimental wide tile (branch exp-wide-tiles, archive/shapegen-ps2/): 3x64 through
+		// the nest, so its blocked GEMM is timed beside 4x32 from one binary and one process.
+		if k.MR == 3 && k.NR == 64 && k.Name == kern.AVX512 {
+			out = append(out, k)
+		}
 	}
 	if len(out) == 0 {
 		b.Skip("no vector microkernel on this build (simd/archsimd is amd64-only, T1); " +
