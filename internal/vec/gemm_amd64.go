@@ -189,7 +189,10 @@ func Kernel4x32(kc int, a, b, c []float32, ldc int) {
 	ap := a[:kc*4]
 	bp := b[:kc*32]
 
-	for len(ap) >= 4 && len(bp) >= 32 {
+	// Strict guards (T19): with len > width, a reslice never leaves an empty slice, so it
+	// compiles to a plain pointer add instead of a branchless capacity guard. A strict guard
+	// also stops one k-step early, so the last step is peeled and runs once below.
+	for len(ap) > 4 && len(bp) > 32 {
 		bl, bh = archsimd.LoadFloat32x16(bp[0:16]), archsimd.LoadFloat32x16(bp[16:32])
 		av = archsimd.BroadcastFloat32x16(ap[0])
 		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
@@ -200,6 +203,17 @@ func Kernel4x32(kc int, a, b, c []float32, ldc int) {
 		av = archsimd.BroadcastFloat32x16(ap[3])
 		c3l, c3h = av.MulAdd(bl, c3l), av.MulAdd(bh, c3h)
 		ap, bp = ap[4:], bp[32:]
+	}
+	if len(ap) >= 4 && len(bp) >= 32 {
+		bl, bh = archsimd.LoadFloat32x16(bp[0:16]), archsimd.LoadFloat32x16(bp[16:32])
+		av = archsimd.BroadcastFloat32x16(ap[0])
+		c0l, c0h = av.MulAdd(bl, c0l), av.MulAdd(bh, c0h)
+		av = archsimd.BroadcastFloat32x16(ap[1])
+		c1l, c1h = av.MulAdd(bl, c1l), av.MulAdd(bh, c1h)
+		av = archsimd.BroadcastFloat32x16(ap[2])
+		c2l, c2h = av.MulAdd(bl, c2l), av.MulAdd(bh, c2h)
+		av = archsimd.BroadcastFloat32x16(ap[3])
+		c3l, c3h = av.MulAdd(bl, c3l), av.MulAdd(bh, c3h)
 	}
 
 	r := c[0*ldc : 0*ldc+32]
