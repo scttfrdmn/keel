@@ -1,0 +1,406 @@
+== built 18:09:12 new 94e4dcf, old b5ed22d, go1.27.3
+== launch 18:09:12
+  region us-east-1, TTL 3h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$11.66 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.1s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (297ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (2.6s)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (13.5s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-07cd8995cd1f78e84
+  Public IP    52.7.16.201
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-skx
+
+🌍 DNS: keel-skx.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-skx.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+A newer version of spawn is available: 0.152.0 → 0.154.0
+  https://github.com/spore-host/spawn/releases/tag/v0.154.0
+  skx  c5n.18xlarge  (Intel Skylake-SP, amd64, AMI ami-0d6dd9e8265d48906, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-skx cloud-init settled
+  keel-skx has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-skx             c5n.18xlarge     52.7.16.201      on-demand  3h       2026-11-02T18:09:41Z
+
+  1 instance(s) billing. 'down' terminates every one.
+model name	: Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz
+72
+ 18:11:05 up 1 min,  1 user,  load average: 0.25, 0.11, 0.04
+   mask (socket 0, one thread per physical core): 0,1,2,3,4,5,6,7
+== correctness on the instance (branch), 18:11:11
+         1 PASS
+   rc=0
+old s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2100443915 ns/op	        65.44 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2056043086 ns/op	        66.85 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2113610459 ns/op	        65.03 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2049082450 ns/op	        67.07 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1997554360 ns/op	        68.80 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 312772780 ns/op	       439.4 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 309354147 ns/op	       444.3 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 310431616 ns/op	       442.7 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 309524577 ns/op	       444.0 GFLOP/s
+old s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 309052786 ns/op	       444.7 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1061434560 ns/op	        64.76 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1060273953 ns/op	        64.83 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1059297338 ns/op	        64.89 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1058684436 ns/op	        64.93 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1058078058 ns/op	        64.96 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144534115 ns/op	       475.6 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144796423 ns/op	       474.7 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144965996 ns/op	       474.2 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144850336 ns/op	       474.5 GFLOP/s
+old s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144641451 ns/op	       475.2 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2089839414 ns/op	        65.77 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2086432650 ns/op	        65.87 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2083776784 ns/op	        65.96 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2095068169 ns/op	        65.60 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2018241787 ns/op	        68.10 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 313025818 ns/op	       439.1 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 321946861 ns/op	       426.9 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 314102680 ns/op	       437.6 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 314415064 ns/op	       437.1 GFLOP/s
+old s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 313901454 ns/op	       437.8 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1866891246 ns/op	        36.82 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1806257651 ns/op	        38.06 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1771937748 ns/op	        38.79 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1802467138 ns/op	        38.14 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1781589695 ns/op	        38.58 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 243305959 ns/op	       282.5 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 245020325 ns/op	       280.5 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 243678428 ns/op	       282.1 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 247291042 ns/op	       278.0 GFLOP/s
+old s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 243257089 ns/op	       282.6 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1911619713 ns/op	        71.90 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1855091186 ns/op	        74.09 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1831804360 ns/op	        75.03 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1861644974 ns/op	        73.83 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1855101278 ns/op	        74.09 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 285645534 ns/op	       481.2 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 278896667 ns/op	       492.8 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 279155020 ns/op	       492.3 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 279213938 ns/op	       492.2 GFLOP/s
+new s1 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 279184428 ns/op	       492.3 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 925069336 ns/op	        74.30 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 956173440 ns/op	        71.89 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 954740127 ns/op	        72.00 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 960362228 ns/op	        71.57 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 973366184 ns/op	        70.62 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 131055582 ns/op	       524.5 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 131153828 ns/op	       524.1 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130998456 ns/op	       524.7 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130812507 ns/op	       525.5 GFLOP/s
+new s1 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130900115 ns/op	       525.1 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1874342103 ns/op	        73.33 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1872056251 ns/op	        73.42 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1869351267 ns/op	        73.52 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1816255689 ns/op	        75.67 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1814604856 ns/op	        75.74 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 281959592 ns/op	       487.4 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 280178406 ns/op	       490.5 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 280831964 ns/op	       489.4 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 280389384 ns/op	       490.2 GFLOP/s
+new s1 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 280850092 ns/op	       489.4 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1834394912 ns/op	        37.47 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1798379089 ns/op	        38.22 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1853069191 ns/op	        37.09 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1796336722 ns/op	        38.27 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1791685216 ns/op	        38.36 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 241483197 ns/op	       284.6 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 241095925 ns/op	       285.1 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 241145987 ns/op	       285.0 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 244703438 ns/op	       280.9 GFLOP/s
+new s1 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 243661626 ns/op	       282.1 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1891294296 ns/op	        72.68 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1787171914 ns/op	        76.90 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1846732226 ns/op	        74.43 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1875718829 ns/op	        73.28 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1785760102 ns/op	        76.97 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 277943965 ns/op	       494.5 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 284554181 ns/op	       483.0 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 277568012 ns/op	       495.2 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 277481751 ns/op	       495.3 GFLOP/s
+new s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 277464370 ns/op	       495.3 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 947650028 ns/op	        72.53 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 945604990 ns/op	        72.69 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 919242426 ns/op	        74.78 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 923047107 ns/op	        74.47 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 921719336 ns/op	        74.58 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 129824814 ns/op	       529.5 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 129482909 ns/op	       530.9 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 129804052 ns/op	       529.5 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130395496 ns/op	       527.1 GFLOP/s
+new s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 131101249 ns/op	       524.3 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1834740772 ns/op	        74.91 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1832709279 ns/op	        74.99 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1888720460 ns/op	        72.77 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1894960840 ns/op	        72.53 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1835784870 ns/op	        74.87 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 278473984 ns/op	       493.5 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 281977302 ns/op	       487.4 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 279116490 ns/op	       492.4 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 278468802 ns/op	       493.6 GFLOP/s
+new s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 278841116 ns/op	       492.9 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1807162061 ns/op	        38.04 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1800394580 ns/op	        38.18 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1783212278 ns/op	        38.55 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1802995605 ns/op	        38.12 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1779743327 ns/op	        38.62 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 242742266 ns/op	       283.2 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240683782 ns/op	       285.6 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 241883062 ns/op	       284.2 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240784605 ns/op	       285.5 GFLOP/s
+new s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240864413 ns/op	       285.4 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2046848547 ns/op	        67.15 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2084883448 ns/op	        65.92 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2057359050 ns/op	        66.80 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1997757396 ns/op	        68.80 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1998909049 ns/op	        68.76 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 308823825 ns/op	       445.0 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 301790068 ns/op	       455.4 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 302243024 ns/op	       454.7 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 308778125 ns/op	       445.1 GFLOP/s
+old s2 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 308284238 ns/op	       445.8 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1064028396 ns/op	        64.60 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1059491812 ns/op	        64.88 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1062843036 ns/op	        64.67 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1059711853 ns/op	        64.86 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1029373061 ns/op	        66.78 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 145212052 ns/op	       473.4 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144766830 ns/op	       474.8 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144318643 ns/op	       476.3 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144681965 ns/op	       475.1 GFLOP/s
+old s2 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144459107 ns/op	       475.8 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2081726438 ns/op	        66.02 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2028564651 ns/op	        67.75 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2026287461 ns/op	        67.83 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2100604084 ns/op	        65.43 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2025353951 ns/op	        67.86 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 311310528 ns/op	       441.5 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 311403627 ns/op	       441.4 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 311528833 ns/op	       441.2 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 311268472 ns/op	       441.5 GFLOP/s
+old s2 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 311372900 ns/op	       441.4 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1852062487 ns/op	        37.11 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1770551682 ns/op	        38.82 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1785748835 ns/op	        38.49 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1789483041 ns/op	        38.41 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1762945632 ns/op	        38.99 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239452171 ns/op	       287.1 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239482157 ns/op	       287.0 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 242042334 ns/op	       284.0 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 238799373 ns/op	       287.8 GFLOP/s
+old s2 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239062654 ns/op	       287.5 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2040563749 ns/op	        67.36 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2019746742 ns/op	        68.05 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2049719922 ns/op	        67.05 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1997870154 ns/op	        68.79 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2057449250 ns/op	        66.80 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 301897162 ns/op	       455.3 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 302154612 ns/op	       454.9 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 302117946 ns/op	       454.9 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 302317023 ns/op	       454.6 GFLOP/s
+old s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 302216602 ns/op	       454.8 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1027847051 ns/op	        66.88 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1025892002 ns/op	        67.00 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1032056468 ns/op	        66.60 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1055943533 ns/op	        65.10 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1029608695 ns/op	        66.76 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 144092383 ns/op	       477.0 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143455146 ns/op	       479.1 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143973510 ns/op	       477.4 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143784186 ns/op	       478.1 GFLOP/s
+old s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143668280 ns/op	       478.4 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2084045088 ns/op	        65.95 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2087787706 ns/op	        65.83 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2017740873 ns/op	        68.12 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2091051805 ns/op	        65.73 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2027487517 ns/op	        67.79 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 305986976 ns/op	       449.2 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 307669542 ns/op	       446.7 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 306815774 ns/op	       448.0 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 306036987 ns/op	       449.1 GFLOP/s
+old s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 306182698 ns/op	       448.9 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1828730072 ns/op	        37.59 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1794169483 ns/op	        38.31 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1775790909 ns/op	        38.71 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1764893173 ns/op	        38.95 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1780177383 ns/op	        38.61 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 241361034 ns/op	       284.8 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 243919083 ns/op	       281.8 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 246291887 ns/op	       279.1 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239887162 ns/op	       286.5 GFLOP/s
+old s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240210521 ns/op	       286.2 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1904483415 ns/op	        72.17 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1861044422 ns/op	        73.85 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1852144873 ns/op	        74.21 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1829192279 ns/op	        75.14 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1865938264 ns/op	        73.66 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 284245896 ns/op	       483.5 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 276402995 ns/op	       497.2 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 277151203 ns/op	       495.9 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 276358884 ns/op	       497.3 GFLOP/s
+new s3 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 277653848 ns/op	       495.0 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 953525046 ns/op	        72.09 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 915500170 ns/op	        75.08 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 949048862 ns/op	        72.43 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 959494658 ns/op	        71.64 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 958843126 ns/op	        71.69 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 129099828 ns/op	       532.4 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 129218802 ns/op	       531.9 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130474159 ns/op	       526.8 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130261563 ns/op	       527.7 GFLOP/s
+new s3 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 131683104 ns/op	       522.0 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1820773555 ns/op	        75.48 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1838738266 ns/op	        74.75 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1812850262 ns/op	        75.81 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1818550282 ns/op	        75.58 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1876975265 ns/op	        73.22 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 280737362 ns/op	       489.6 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 279271486 ns/op	       492.1 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 279040590 ns/op	       492.5 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 282230203 ns/op	       487.0 GFLOP/s
+new s3 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 279716776 ns/op	       491.4 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1805855904 ns/op	        38.06 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1756308136 ns/op	        39.14 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1759391012 ns/op	        39.07 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1759527358 ns/op	        39.07 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1763961795 ns/op	        38.97 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240913874 ns/op	       285.3 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 244686712 ns/op	       280.9 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 244032569 ns/op	       281.7 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 242487034 ns/op	       283.5 GFLOP/s
+new s3 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 241389184 ns/op	       284.8 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1892522233 ns/op	        72.63 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1851731255 ns/op	        74.22 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1848816951 ns/op	        74.34 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1816393331 ns/op	        75.67 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1848576665 ns/op	        74.35 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 285573792 ns/op	       481.3 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 279337309 ns/op	       492.0 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 278886900 ns/op	       492.8 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 276873763 ns/op	       496.4 GFLOP/s
+new s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 275678428 ns/op	       498.5 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 961233320 ns/op	        71.51 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 919460736 ns/op	        74.76 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 951799956 ns/op	        72.22 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 923331680 ns/op	        74.44 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       2	 951601586 ns/op	        72.23 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130917380 ns/op	       525.0 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130136247 ns/op	       528.2 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 130183643 ns/op	       528.0 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 129927359 ns/op	       529.0 GFLOP/s
+new s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       8	 129808438 ns/op	       529.5 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1827727964 ns/op	        75.20 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1895339063 ns/op	        72.52 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1892997441 ns/op	        72.60 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1837975216 ns/op	        74.78 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	1831595931 ns/op	        75.04 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 278224012 ns/op	       494.0 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 277870162 ns/op	       494.6 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 278445430 ns/op	       493.6 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 278155408 ns/op	       494.1 GFLOP/s
+new s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 280814537 ns/op	       489.4 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1800282853 ns/op	        38.18 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1786358369 ns/op	        38.48 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1766192155 ns/op	        38.92 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1761716123 ns/op	        39.02 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1769641800 ns/op	        38.84 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240265200 ns/op	       286.1 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239934691 ns/op	       286.5 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240129539 ns/op	       286.2 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240445828 ns/op	       285.9 GFLOP/s
+new s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240695635 ns/op	       285.6 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2036414699 ns/op	        67.49 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	1990046785 ns/op	        69.06 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2050478125 ns/op	        67.03 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2049687722 ns/op	        67.05 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=1-8         	       1	2110281045 ns/op	        65.13 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 303126842 ns/op	       453.4 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 302853308 ns/op	       453.8 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 303128633 ns/op	       453.4 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 303078562 ns/op	       453.5 GFLOP/s
+old s4 BenchmarkScale/Sgemm/n=4096/threads=8-8         	       4	 303155626 ns/op	       453.4 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1058877648 ns/op	        64.92 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1025503696 ns/op	        67.03 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1031620631 ns/op	        66.63 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1058477418 ns/op	        64.94 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=1-8         	       1	1059925760 ns/op	        64.85 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143592914 ns/op	       478.7 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143655087 ns/op	       478.5 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143779686 ns/op	       478.1 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143549920 ns/op	       478.8 GFLOP/s
+old s4 BenchmarkScale/Ssyrk/n=4096/threads=8-8         	       7	 143634771 ns/op	       478.5 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2090883360 ns/op	        65.73 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2088493951 ns/op	        65.81 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2086344295 ns/op	        65.88 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2024528197 ns/op	        67.89 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=1-8         	       1	2084717883 ns/op	        65.93 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 307285436 ns/op	       447.3 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 307140438 ns/op	       447.5 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 307057770 ns/op	       447.6 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 307579710 ns/op	       446.8 GFLOP/s
+old s4 BenchmarkScale/Ssymm/n=4096/threads=8-8         	       4	 307265032 ns/op	       447.3 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1836358530 ns/op	        37.43 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1789275939 ns/op	        38.42 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1789518652 ns/op	        38.41 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1780628399 ns/op	        38.60 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=1-8         	       1	1770430810 ns/op	        38.83 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239209455 ns/op	       287.3 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239701602 ns/op	       286.8 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239541329 ns/op	       286.9 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 239075728 ns/op	       287.5 GFLOP/s
+old s4 BenchmarkScale/Strsm/n=4096/threads=8-8         	       5	 240197658 ns/op	       286.2 GFLOP/s
+== done 18:24:27
+== TEARDOWN 18:24:27
+  terminating keel-skx
+Looking up instance keel-skx...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-07cd8995cd1f78e84...
+
+✅ Terminate request sent!
+   Instance: i-07cd8995cd1f78e84
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+
+A newer version of spawn is available: 0.152.0 → 0.154.0
+  https://github.com/spore-host/spawn/releases/tag/v0.154.0
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   no keel- instance running — fleet is down

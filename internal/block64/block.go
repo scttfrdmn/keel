@@ -138,6 +138,14 @@ var (
 	KCPB = 256
 
 	MCPB = 72
+
+	// KCDeep, when positive, replaces KC for calls that are full-height in both m and n (at
+	// least one MC block each). Thin calls keep KC: Trsm's rank updates are MB-row (left) or
+	// MB-column (right) GEMMs, whose packed KC×NC B panel is reused by too few rows to pay
+	// for a deeper one. Zero, the default, means off. The root package sets it on
+	// issue-bound hosts (archive/blocking-skx-ab-b/: KC=1024 everywhere lifted Sgemm/Ssymm/
+	// Ssyrk 9-13% on Skylake-SP but cost Strsm 6-10%).
+	KCDeep = 0
 )
 
 // Params reports the blocking parameters actually in force for kn: the vars
@@ -162,6 +170,9 @@ func Params(kn kern.Kernel64) (kc, mc, nc int) {
 // block structure than the whole would not be a decomposition of anything.
 func plan(kn kern.Kernel64, m, n, k int) (kc, mc, nc int) {
 	kc, mc, nc = Params(kn)
+	if KCDeep > 0 && kn.ALanes <= 1 && m >= mc && n >= mc {
+		kc = KCDeep
+	}
 	if kc > k {
 		kc = k
 	}
