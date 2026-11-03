@@ -27,7 +27,8 @@ While the major version is 0, minor versions may contain breaking changes.
     four FMA-class CPUs:
     - Sapphire Rapids: Sgemm/Ssyrk/Ssymm +5–11%;
     - Zen 5 and Zen 4: +0–6%, with Ssyrk 1T the largest;
-    - Granite Rapids: −0.7% to +4%;
+    - Granite Rapids: −0.7% to +4% on the c8i.4xlarge. A quieter full-size re-measure (`archive/gnr-quiet/`) reads
+      +1.8% to +3.5%, with Strsm flat;
     - Strsm flat everywhere.
 
     No row regresses beyond its CI.
