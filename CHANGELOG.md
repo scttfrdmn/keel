@@ -9,13 +9,31 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
-- **Issue-bound hosts block full-height GEMMs at KC=1024** (#26, #142). This is the Skylake-X / Cascade Lake / Cooper Lake class
-  that dispatches 2x32. `block.KCDeep` replaces KC only for calls full-height in both m and n (at least one MC block each).
-  Strsm's thin rank updates (MB = 64 rows) keep KC=384, because applying 1024 everywhere cost Strsm 6–10%. FMA-class hosts
-  (Zen, Sapphire/Granite Rapids, every arm64) are unchanged. Measured on c5n.18xlarge, net of both intervals, on the published
-  n=4096 rows: Sgemm +10.6% (1T) and +8.9% (8T), Ssymm +13.5% / +10.7%, Ssyrk +11.4% / +10.7%, Strsm flat. Staged in
-  `archive/blocking-skx-ab/`, `-ab-b/` and `-ab-c/`. `TestPlanKCDeep` and `TestIssueClassKC` pin the rule; planted violations
-  turn each red. The README's Skylake-SP rows are re-derived by a judged pair.
+- **Every AVX-512 host blocks full-height float32 GEMMs at KC=1024** (#26, #142).
+  - **The rule.** `block.KCDeep` replaces KC only for calls that are full-height in both m and n
+    (at least one MC block each). Strsm's thin rank updates (MB = 64 rows) keep KC=384, because
+    applying 1024 everywhere cost Strsm 6–10%. Every arm64 host and float64 are unchanged.
+  - **Issue class (Skylake-SP, c5n.18xlarge).** Measured first, net of both intervals, on the
+    published n=4096 rows:
+    - Sgemm +10.6% (1T) and +8.9% (8T);
+    - Ssymm +13.5% / +10.7%;
+    - Ssyrk +11.4% / +10.7%;
+    - Strsm flat.
+
+    Staged in `archive/blocking-skx-ab/`, `-ab-b/` and `-ab-c/`.
+  - **Widened to the FMA class.** `archive/blocking-fma-sweep/` found Sapphire Rapids had the same
+    lever, +11.9% at 8T. archsimd cannot tell SPR from Zen, so the rule is keyed to the dispatched
+    AVX-512 backend, not the class. `archive/blocking-avx512-b/` measured the published rows on all
+    four FMA-class CPUs:
+    - Sapphire Rapids: Sgemm/Ssyrk/Ssymm +5–11%;
+    - Zen 5 and Zen 4: +0–6%, with Ssyrk 1T the largest;
+    - Granite Rapids: −0.7% to +4%;
+    - Strsm flat everywhere.
+
+    No row regresses beyond its CI.
+  - **Pinned by** `TestPlanKCDeep` and `TestAVX512KC`. Planted violations turn each red.
+  - **README.** The Skylake-SP rows were re-derived by a judged pair. The Zen 5 and Zen 4 rows are
+    re-derived by a second pair.
 - **`gonumblas` is consumable on its own** (#195). It requires keel `v0.3.0`, the first release cut after it moved into its own
   module, and the development `replace => ../` is gone. Checked from the public proxy: `v0.3.0`'s module zip has no `gonumblas/`
   directory, so the import is no longer ambiguous. It is tagged `gonumblas/v0.1.0`. `make test` and CI's gonumblas legs now build

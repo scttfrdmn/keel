@@ -162,22 +162,25 @@ func ActiveL164Backend() string { return activeL164.Name }
 // matter and is why the shape can be a runtime value at all.
 var activeKern = selectKern()
 
-// issueClassKC is the float32 nest's depth block for full-height calls on an issue-bound host
-// (the Skylake-X / Cascade Lake / Cooper Lake class that kern.Preferred dispatches 2x32 for).
-// Measured on c5n.18xlarge with intervals: kc=1024 beats the shipped 384 by 7.2% at 1 thread
-// and 5.4% at 8 threads, net of both CIs (archive/blocking-skx-ab/). The surface was still
-// rising at the grid's edge, so 1024 is the best measured point, not a measured optimum. It
-// is set as block.KCDeep, not block.KC, because applied everywhere it cost Strsm's thin rank
-// updates 6-10% (archive/blocking-skx-ab-b/). Keyed to the class dispatch already computes,
-// so FMA-class hosts are unchanged.
-const issueClassKC = 1024
+// avx512KC is the float32 nest's depth block for full-height calls on every AVX-512 host.
+// First measured on the issue class: on c5n.18xlarge, kc=1024 beats the shipped 384 by 7.2% at 1T
+// and 5.4% at 8T, net of both CIs (archive/blocking-skx-ab/).
+// Then on the FMA class: on Sapphire Rapids, +11.9% at 8T (archive/blocking-fma-sweep/).
+// On the published n=4096 rows (archive/blocking-avx512-b/), no row on Zen 5, Zen 4, SPR or GNR
+// regresses beyond its CI. SPR's Sgemm/Ssyrk/Ssymm gain 5-11%, and Zen's gain 0-6%.
+// 1024 is the best measured point, not a measured optimum: the surface still rose at the
+// grid's edge on Skylake-SP and SPR.
+// It is set as block.KCDeep, not block.KC, because applied everywhere it cost Strsm's thin
+// rank updates 6-10% (archive/blocking-skx-ab-b/).
+// It is keyed to the dispatched kernel's backend, not the class: archsimd exposes features,
+// not CPU identity, and SPR shares the FMA class with Zen.
+const avx512KC = 1024
 
-var _ = applyClassBlocking()
+var _ = applyBackendBlocking()
 
-func applyClassBlocking() bool {
-	// EXPERIMENT (archive/blocking-avx512-b/): every AVX-512 host, not only the issue class.
+func applyBackendBlocking() bool {
 	if activeKern.Name == kern.AVX512 {
-		block.KCDeep = issueClassKC
+		block.KCDeep = avx512KC
 	}
 	return true
 }
