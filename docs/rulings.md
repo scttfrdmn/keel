@@ -2414,3 +2414,16 @@ Zen 4 Ssyrk, it exits and leaves README.md untouched.
 **Not claimed as a published-evidence credit.** No published row was wrong before this. The
 generator refused to publish rather than publishing something false. The +9 lines of shell are paid
 by the library change in the same campaign (`7b6f612`, KCDeep on every AVX-512 host).
+
+## go1.27.0 did not open an era: pinned8 spans the compiler change (#118, ruled 2026-11-03)
+
+**Ruling (Scott, 2026-11-03, in session):** exit (a), "+ rule for go1.28".
+
+`pinned8` spans go1.26.5 → go1.27.0, disclosed, and nothing is re-adjudicated. The ruling costs no
+live verdict. Every era read today was founded and judged on one toolchain, go1.27.3, by each judged
+log's `builder toolchain` line: famax (`085f23e`, `37d7c13`, `f3bbe01`, `e030cc1`), famaxx86
+(`f18f110`, `c0c373d`, `35fcb89`, `35c2894`) and f64init (`63cffc9`). The boundary therefore reaches
+only the closed pinned8 era and the v0.1.0 certificate.
+
+The forward rule for go1.28 is drafted on #118 as a §5 rule 17 sub-clause, and is **not landed**
+pending review.
