@@ -385,6 +385,14 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v fam="$FAM" -v ele
       # Only a second JUDGED log competes. A REPORTED or BASELINE reading of the same row is not a
       # rival verdict but a statement that nothing judged it there -- the pre-bars take-four run
       # reads REPORTED on rows the confirmation run grades PASS, which is chronology, not conflict.
+      # NOISE-LIMITED IS NOT A RIVAL (ruled 2026-11-03 on #142): it is the gate saying no bar could
+      # decide the row in that run, so the verdict of the owning log stands and the split is named in
+      # the caption rather than refused. First hit: Zen 4 Strsm, PASS in one run of a same-tree
+      # pair and NOISE-LIMITED in the other (archive/p5-zen-kcdeep/).
+      if ((K[1] in jfh) && K[3] != jfh[K[1]] && ((K[1], K[3]) in judgedBy) && ((K[1], K[2], jfh[K[1]]) in vd) && vd[K[1], K[2], jfh[K[1]]] != vd[kk] && (vd[kk] == "NOISY" || vd[K[1], K[2], jfh[K[1]]] == "NOISY")) {
+        nsplit = nsplit sprintf(" %s %s reads %s in %s, which owns its verdict, and NOISE-LIMITED in %s.", K[1], K[2], (vd[kk] == "NOISY" ? vd[K[1], K[2], jfh[K[1]]] : "NOISE-LIMITED"), bn(jfh[K[1]]), bn(K[3]))
+        continue
+      }
       if ((K[1] in jfh) && K[3] != jfh[K[1]] && ((K[1], K[3]) in judgedBy) && ((K[1], K[2], jfh[K[1]]) in vd) && vd[K[1], K[2], jfh[K[1]]] != vd[kk]) {
         printf "readme-numbers: [%s] %s reads %s in %s but %s in %s; two judged logs disagree about one row, so its verdict has no provenance\n", \
           K[1], K[2], vd[K[1], K[2], jfh[K[1]]], bn(jfh[K[1]]), vd[kk], bn(K[3]) > "/dev/stderr"
@@ -662,6 +670,7 @@ BLOCK="$(awk -v routines="$ROUTINES" -v cf="$CEIL_FRACTION" -v fam="$FAM" -v ele
     # cleared bars derived from them.
     bc = bc (nu == 0 ? "" : sprintf(" A further %d %s measured under no bar at all -- %s -- so %s no verdict.", nu, (nu == 1 ? "pair was" : "pairs were"), wu, (nu == 1 ? "it is REPORTED and carries" : "they are REPORTED and carry")))
     bc = bc (nn == 0 ? "" : sprintf(" A further %d %s NOISE-LIMITED: %s own intervals cost more than the margin every bar is set by, so no bar could decide %s and %s no verdict (§5 rule 19).", nn, (nn == 1 ? "pair was" : "pairs were"), (nn == 1 ? "its" : "their"), (nn == 1 ? "it" : "them"), (nn == 1 ? "it carries" : "they carry")))
+    bc = bc (nsplit == "" ? "" : " A second judged log of the same tree could not decide a row its owning log judged:" nsplit)
     if (cf == "" && ns > 0) {
       # The log disagrees with this tree about whether a bar exists. The constants readback
       # above compares this script with gate-p5.sh and cannot see this: the rows come from a

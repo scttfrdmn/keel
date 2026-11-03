@@ -32,8 +32,14 @@ While the major version is 0, minor versions may contain breaking changes.
 
     No row regresses beyond its CI.
   - **Pinned by** `TestPlanKCDeep` and `TestAVX512KC`. Planted violations turn each red.
-  - **README.** The Skylake-SP rows were re-derived by a judged pair. The Zen 5 and Zen 4 rows are
-    re-derived by a second pair.
+  - **README.** The Skylake-SP rows were re-derived by a judged pair, and the Zen 5 and Zen 4 rows by a
+    second (`archive/p5-zen-kcdeep/`, r2 and r3).
+    - Zen 5 Sgemm 8T is now 1212 GFLOP/s (was 1127).
+    - Zen 4 Sgemm 8T is now 743.7 (was 701).
+    - The 8T rows gained 2–4 points more than the 2xlarge stage B predicted. The cause is unattributed.
+    - The five moved Zen share baselines are re-landed.
+- **`readme-numbers.sh`: a NOISE-LIMITED reading in a second judged log no longer blocks publication** (#142, ruled 2026-11-03).
+  The owning log's verdict stands, and the caption names the split. A PASS-against-FAIL split still refuses.
 - **`gonumblas` is consumable on its own** (#195). It requires keel `v0.3.0`, the first release cut after it moved into its own
   module, and the development `replace => ../` is gone. Checked from the public proxy: `v0.3.0`'s module zip has no `gonumblas/`
   directory, so the import is no longer ambiguous. It is tagged `gonumblas/v0.1.0`. `make test` and CI's gonumblas legs now build

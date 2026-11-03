@@ -2395,3 +2395,22 @@ with the four float64 logs in both orders.
 **Not part of the credit:** the float64 block, criterion 9's lifted guard, and criterion 9 reading the README figure. Before
 this, a +20% planted 9R45 Dgemm/8, with its CI moved to match, passed every check in a replay. A gate verdict is not a
 published claim (the 2026-10-21 precedent), so that fix rides on this credit rather than earning one.
+
+## A NOISE-LIMITED reading is not a rival verdict for the README generator (#142, ruled 2026-11-03)
+
+**Ruling (Scott, 2026-11-03, in session):** "No: exempt NOISY."
+
+`readme-numbers.sh` refuses two judged logs that grade one row differently. The Zen judged pair at
+`35c2894` (`archive/p5-zen-kcdeep/`) read Zen 4 Strsm as PASS (50.6%) in r2 and as NOISE-LIMITED
+REPORTED (47.3%) in r3. In r3 the intervals cost 4.30 points against the 2.6-point margin. That was
+the first such split in any pair. The check's own comment already said a REPORTED reading "is not a
+rival verdict but a statement that nothing judged it there". The code compared the classes raw, so
+it refused.
+
+A NOISY reading now yields to the owning (first-named) log's verdict. The caption names the split, so
+the r3 reading stays visible. A PASS-against-FAIL split still refuses: planted in a copy of r3 as
+Zen 4 Ssyrk, it exits and leaves README.md untouched.
+
+**Not claimed as a published-evidence credit.** No published row was wrong before this. The
+generator refused to publish rather than publishing something false. The +9 lines of shell are paid
+by the library change in the same campaign (`7b6f612`, KCDeep on every AVX-512 host).
