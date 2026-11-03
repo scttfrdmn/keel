@@ -168,8 +168,9 @@ var activeKern = selectKern()
 // Then on the FMA class: on Sapphire Rapids, +11.9% at 8T (archive/blocking-fma-sweep/).
 // On the published n=4096 rows (archive/blocking-avx512-b/), no row on Zen 5, Zen 4, SPR or GNR
 // regresses beyond its CI. SPR's Sgemm/Ssyrk/Ssymm gain 5-11%, and Zen's gain 0-6%.
-// 1024 is the best measured point, not a measured optimum: the surface still rose at the
-// grid's edge on Skylake-SP and SPR.
+// On SPR's published n=4096 rows, 1024 is a measured optimum: 1536 and 2048 tie it within CI,
+// and 3072 loses 3% at 8T (archive/spr-kc-probe/). The n=2048 sweeps' "still rising at 1024"
+// was a property of that size. On the other hosts 1024 is the best point measured, not an optimum.
 // It is set as block.KCDeep, not block.KC, because applied everywhere it cost Strsm's thin
 // rank updates 6-10% (archive/blocking-skx-ab-b/).
 // It is keyed to the dispatched kernel's backend, not the class: archsimd exposes features,
