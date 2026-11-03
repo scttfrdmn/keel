@@ -36,7 +36,9 @@ While the major version is 0, minor versions may contain breaking changes.
     second (`archive/p5-zen-kcdeep/`, r2 and r3).
     - Zen 5 Sgemm 8T is now 1212 GFLOP/s (was 1127).
     - Zen 4 Sgemm 8T is now 743.7 (was 701).
-    - The 8T rows gained 2–4 points more than the 2xlarge stage B predicted. The cause is unattributed.
+    - The 8T rows gained 2–4 points more than the 2xlarge stage B predicted. The cause is placement
+      (`archive/kcdeep-placement-ab/`): with gate-p5's one-core-per-L3-domain mask, KCDeep adds 6.4–8.2%,
+      against 1.0–4.0% with 8 cores in one domain. Library drift since the README's rev is excluded on every row.
     - The five moved Zen share baselines are re-landed.
 - **`readme-numbers.sh`: a NOISE-LIMITED reading in a second judged log no longer blocks publication** (#142, ruled 2026-11-03).
   The owning log's verdict stands, and the caption names the split. A PASS-against-FAIL split still refuses.
