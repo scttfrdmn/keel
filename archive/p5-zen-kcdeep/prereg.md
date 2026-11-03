@@ -40,3 +40,54 @@ stage B delta, not the delta's own CI.
 - gate-p3 or gate-p4 is RED;
 - a FAIL appears anywhere other than a criterion-9 Ssyrk 1T row;
 - a Zen Sgemm, Ssyrk or Ssymm rate falls more than 3% below the README.
+
+## Result (`35c2894`, `judged-r{1,2,3}-35c2894.log`): refuted on the 8-thread bands, in the good direction
+
+Three runs on one c8a.48xlarge (EPYC 9R45) and one c7a.48xlarge (EPYC 9R14). Both were masked to 8
+cores over 8 of the node's 12 cache domains (mask 0,8,…,56). Each fleet was verified down by a
+readable inventory.
+
+**r1 is set aside, not counted.** Its gate-p3 died at the dev host with "No space left on device".
+The internal disk filled transiently: keel's `build/` was 0.9 GB, and the space went to other
+projects' scratch. So gate-p4 rendered **1 UNMEASURED and is RED**, with 0 FAIL. Its remote samples
+are intact: they match r2 within 0.6% on every row except Strsm 8T, which is noise-limited. They are
+archived. But a run without green sub-gates is not a README source, so r3 was run on the same frozen
+tree.
+
+**r2 and r3:**
+- gate-p4 65/0/0 GREEN on both, with gate-p3 GREEN underneath; `-race` clean.
+- The only FAILs are the two criterion-9 lines, one per host.
+- Tallies: r2 55 PASS / 2 FAIL / 2 BASELINE / 2 REPORTED; r3 54 / 2 / 2 / 3.
+
+**r2 rates against the README** (r3 within 0.6% except Strsm 8T):
+
+| row | Zen 5 | Zen 4 |
+|---|---|---|
+| Sgemm 1T / 8T | +2.9% ✓ / **+7.6%** ✗ | +2.4% ✓ / **+6.2%** ✗ |
+| Ssyrk 1T / 8T | **+9.2%** ✗ / **+8.2%** ✗ | +3.1% ✓ / +5.6% ✓ |
+| Ssymm 1T / 8T | +2.8% ✓ / **+7.2%** ✗ | +2.7% ✓ / **+5.8%** ✗ |
+| Strsm 1T / 8T | −0.8% ✓ / +1.3% ✓ | +0.6% ✓ / −0.7% ✓ |
+
+1. ✗ **r1 only** (the disk); r2 and r3 ✓.
+2. ✗ **Six rate bands are exceeded, every one upward.** Five of them are 8T rows. The 8T gain on the
+   judged size is 2–4 points above the 2xlarge stage-B delta.
+   - **Unattributed.** A plausible mechanism is the mask: each of the 8 threads owns a separate L3
+     domain here, while the 2xlarge's 8 cores shared theirs. A deeper KC then pays more per thread.
+   - Second candidate: the README's denominator is `f18f110`/`c0c373d`, so the delta also carries
+     every library change since.
+   - Separating the two would take a 48xlarge A/B of `9bf3bdc` against `35c2894`.
+3. ✓ **Shares.** Every judged share passes its registered baseline: Zen 5 Sgemm 52.8% against 48.70%,
+   Zen 4 Sgemm 78.9% against 74.65%.
+4. ✗ **Criterion 9 fails on more rows than predicted:**
+   - Zen 5: Sgemm 8T, Ssyrk 1T and 8T, Ssymm 8T;
+   - Zen 4: Sgemm 8T, Ssymm 8T.
+5. ✓ **Reproduction.** r3 reproduces r2 within 5% on every share.
+
+**REFUTED** under the pre-registered clause ("a FAIL anywhere other than a criterion-9 Ssyrk 1T row"),
+in the good direction: no row regressed.
+
+**The README is not regenerated yet.** `readme-numbers.sh` refuses the pair on one row: Zen 4 Strsm
+reads PASS (50.6%) in r2 and NOISE-LIMITED REPORTED (47.3%, the intervals costing 4.30 points) in r3.
+Every other verdict agrees. No earlier pair produced PASS-against-NOISY on one row. The generator's
+comment says a REPORTED reading "is not a rival verdict", but its code treats this one as rival. The
+publication rule is put to Scott on #142, not resolved here.

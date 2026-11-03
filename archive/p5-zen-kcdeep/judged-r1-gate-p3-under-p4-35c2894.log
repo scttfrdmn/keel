@@ -1,0 +1,103 @@
+== gate-p3: packing + blocking -> full Sgemm ==
+        rev 35c28947e0f7bee7be768dde36ac86067ba42923 tree=clean toolchain=go1.27.3 goexperiment=none
+
+  [32mPASS[0m  no stray git worktrees (this repo is the only registered checkout)
+-- builds --
+  [32mPASS[0m  make build (GOEXPERIMENT=simd)
+  [32mPASS[0m  make stock (scalar path, no experiment)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd)
+  [32mPASS[0m  go vet (GOEXPERIMENT=simd, linux/amd64)
+
+-- Sgemm vs the float64 oracle: size sweep x transpose x alpha x beta --
+        the local run exercises this host's NEON path (go1.27 ships arm64 archsimd);
+        the sweep's extent is audited below from a host that ran it with avx512 live
+  [32mPASS[0m  [local darwin/arm64] all tests pass
+  [32mPASS[0m  [local, stock toolchain] all tests pass without GOEXPERIMENT=simd
+        assumed, unverifiable: the configured host set is the fleet this gate is meant to measure: .keel-hosts (or $KEEL_REMOTE_HOSTS) is the only statement of that intent, so there is no second source to check it against
+        assumed, unverifiable: each name reaches the machine it is meant to reach: every witness of a host's identity — cpuinfo, the CPU model that enters the record, the hostname itself — is reported BY the host under test, so a name pointed at the wrong machine reports consistently about the wrong machine
+        disk headroom: 7789 MiB free on /System/Volumes/Data (scratch (mktemp -d)), floor 512 MiB
+        [keel-zen5] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-zen5] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-zen5] admission class: evidentiary (instance=c8a.48xlarge, virt=guest, spawn=i-0456f56a1f2da1fa1:c8a.48xlarge:ondemand) — c8a.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c8a.48xlarge on-demand (i-0456f56a1f2da1fa1)
+        [keel-zen4] no cpufreq interface at all, so §5 rule 5's governor instrument does not exist on this host rather than having failed on it — the usual reason is a virtualized guest, which does not own the knob. Stability is established here by its ruled substitute instead: BenchmarkPeak at the head, middle and tail of the sweep, judged after the sweep runs
+          [keel-zen4] separate from 'present and unreadable' by ruling: that is a defect on a host that has the knob, this is a host that has none
+        [keel-zen4] admission class: evidentiary (instance=c7a.48xlarge, virt=guest, spawn=i-04b07c3ed31c717d9:c7a.48xlarge:ondemand) — c7a.48xlarge is admitted to the evidentiary class by KEEL_EVIDENTIARY_SIZES, whose members are full-size types added one justifying read-back at a time, and the launcher independently records this host as c7a.48xlarge on-demand (i-04b07c3ed31c717d9)
+  [32mPASS[0m  cross-compiled linux/amd64 test binary (root package: Sgemm vs oracle)
+        builder toolchain go1.27.3-X:simd flags=[-buildmode=exe -compiler=gc -trimpath=true], read off keel.test and not off this shell's go
+        [keel-zen5] AMD EPYC 9R45 | instance=c8a.48xlarge | virt=guest | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | load1=0.01 load5=0.15 load15=0.44 runnable=1/2122 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=48K L3=32768K | spawn=i-0456f56a1f2da1fa1:c8a.48xlarge:ondemand
+  [32mPASS[0m  [keel-zen5] Sgemm sweep passes
+        [keel-zen5] backends exercised: avx512 scalar
+  [32mPASS[0m  [keel-zen5] KEEL_FORCE=scalar: the sweep passes with dispatch overridden
+        [keel-zen4] AMD EPYC 9R14 | instance=c7a.48xlarge | virt=guest | 192 cpus | 192 cores | smt=1 | 2 sockets | governor=absent | load1=0.01 load5=0.49 load15=1.03 runnable=1/2085 | tmux=yes | Linux 7.0.0-1014-aws | L2=1024K L1d=32K L3=32768K | spawn=i-04b07c3ed31c717d9:c7a.48xlarge:ondemand
+  [32mPASS[0m  [keel-zen4] Sgemm sweep passes
+        [keel-zen4] backends exercised: avx512 scalar
+  [32mPASS[0m  [keel-zen4] KEEL_FORCE=scalar: the sweep passes with dispatch overridden
+  [32mPASS[0m  the sweep ran green with the avx512 Sgemm live (target: keel-zen4)
+  [32mPASS[0m  every host that attempted it proved the scalar fallback under KEEL_FORCE=scalar (2/2)
+
+-- sweep extent (criteria 1 and 2: coverage is enforced, not trusted) --
+        config: mr=4 nr=32 kc=384 mc=144 nc=4096 edge=zero-padded-panels+temp-tile beta-variants=3 pack=go-copy+scalar-transpose
+  [32mPASS[0m  every size in DESIGN.md §4/P3's sweep ran (1..17, 63, 64, 65, 500, 1000, 2048)
+        combinations: trans=NN,NT,TN,TT alpha=0,1,-0.75 beta=0,1,0.5 combos=36
+  [32mPASS[0m  transpose lattice complete (NN NT TN TT)
+  [32mPASS[0m  alpha covers 0, 1 and a general value (0,1,-0.75)
+  [32mPASS[0m  beta covers 0, 1 and a general value (0,1,0.5)
+  [32mPASS[0m  combination count matches the enumerated sets (36 = 36)
+  [32mPASS[0m  every size declares its oracle verification mode: exact up to 65, >= 256 seeded exact entries above it
+        size=63 mode=exact n=3969
+        size=64 mode=exact n=4096
+        size=65 mode=exact n=4225
+        size=500 mode=sampled n=256 seed=0x6b33
+        size=1000 mode=sampled n=256 seed=0x6b33
+        size=2048 mode=sampled n=256 seed=0x6b33
+  [32mPASS[0m  edge coverage beyond the sweep: rectangular ldpad zerodim argpanic nonfinite
+  [32mPASS[0m  packing differential-tested against its scalar reference (operands=A,B trans=false,true alpha=1,general ragged=full,partial combos=420)
+
+-- carried from P2 (criterion 4): the K-loop after packing and blocking --
+        compile-time property, audited against the linux/amd64 object code the hosts run
+        github.com/scttfrdmn/keel/internal/vec.Kernel2x32: steady-state loop [70,430] 74 insns for 16 arith (4.62 per arith): 0 vector stack refs, 8 reg copies, 8 broadcasts, 8 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+        github.com/scttfrdmn/keel/internal/vec.Kernel4x32: steady-state loop [101,341] 50 insns for 8 arith (6.25 per arith): 0 vector stack refs, 12 reg copies, 4 broadcasts, 2 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+  [32mPASS[0m  0 accumulator spills in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 calls in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  0 surviving bounds checks in the steady-state K-loop (P2 property held)
+  [32mPASS[0m  every peak kernel's steady-state loop is still register-only (the denominator is still a ceiling)
+
+-- peak kernels: insns/FMA at or under its recorded ceiling (#145) --
+        the denominator's OWN instruction count. Inflating it lowers measured peak and so RAISES every percent-of-peak figure; the chain-independence and no-memory checks cannot see that
+  [32mPASS[0m  avx512PeakX44 audits 1.187500 insns/FMA, at or under its recorded ceiling 1.1875
+  [32mPASS[0m  avx512Peak audits 2.250000 insns/FMA, at or under its recorded ceiling 2.25
+  [32mPASS[0m  avx2Peak audits 2.300000 insns/FMA, at or under its recorded ceiling 2.30
+  [32mPASS[0m  scalarPeak audits 1.150000 insns/FMA, at or under its recorded ceiling 1.15
+        check_bce: 277 bounds check(s) across vec+kern+pack+block, all outside the K-loop (provenance; the criterion is the loop-body audit above)
+  [32mPASS[0m  check_bce output recorded as provenance
+  [32mPASS[0m  SWEEP_BEST_IPF=4.625 reconciles against shapegen -frontier: 4.625 from 2x32 u=4 broadcast, best of 36 emittable zero-spill shapes
+
+-- throughput sentinel (criteria 5 and 5b): P2's floor re-run on the dispatched shape --
+  [32mPASS[0m  roofline verdict controls (79 fixtures)
+        audited insns/FMA: 2x32 4.625, 4x32 6.250, avx512PeakX44 1.188
+        sentinel declaration: every fleet host and nothing else ($KEEL_SENTINEL_OUT_OF_FLEET unset)
+        note: .keel-sentinel exists (mtime 2026-08-11T19:50:40Z) and is NOT read — retired as a selection input (#146)
+        judged as sentinels: keel-zen5 keel-zen4 
+  [32mPASS[0m  every shipped shape's recorded insns/FMA matches the audited object code (4x32/avx512=6.250 2x32/avx512=4.625)
+        [keel-zen5] the ratio's two terms, same invocation: 4x32/avx512/kc=128 187.5 GFLOP/s over Peak/avx512 287.4 GFLOP/s
+        [keel-zen5] ceiling spread 1.098x, interval [1.081x, 1.106x] against the 1.10 bar, over a 2.056x insns/FMA spread -> fma-bound (why=falsifiedanyway)
+        [keel-zen5] attainment 164.1%..166.9% of the 39.4% roofline (a whole interval above 100% falsifies the ceiling; one that crosses it cannot decide)
+  [32mPASS[0m  [keel-zen5] the library's fma-bound classification matches this gate's measured verdict — insns-per-fma=6.250 (avx512 with vbmi2+vpopcntdq (Ice Lake / Zen 4 or later))
+  [32mPASS[0m  [keel-zen5] no other shipped shape beats the dispatched 4x32/avx512/kc=128 here (same invocation, net of CI)
+  [32mPASS[0m  [keel-zen5] sentinel: dispatched 4x32/avx512/kc=128 holds P2's floor — 65.2% of peak, 64.6% net of CI, fma-bound (>= 55%)
+        [keel-zen4] the ratio's two terms, same invocation: 4x32/avx512/kc=128 113 GFLOP/s over Peak/avx512 117 GFLOP/s
+        [keel-zen4] ceiling spread 1.920x, interval [1.908x, 1.936x] against the 1.10 bar, over a 2.056x insns/FMA spread -> fma-bound (why=diverge)
+  [32mPASS[0m  [keel-zen4] the library's fma-bound classification matches this gate's measured verdict — insns-per-fma=6.250 (avx512 with vbmi2+vpopcntdq (Ice Lake / Zen 4 or later))
+  [32mPASS[0m  [keel-zen4] no other shipped shape beats the dispatched 4x32/avx512/kc=128 here (same invocation, net of CI)
+  [32mPASS[0m  [keel-zen4] sentinel: dispatched 4x32/avx512/kc=128 holds P2's floor — 96.6% of peak, 96.4% net of CI, fma-bound (>= 55%)
+
+-- Sgemm at 2048^3: percent of measured peak, and >= 60% of single-thread OpenBLAS --
+        -count=10 -benchtime=1s; the bar counts as cleared only net of both confidence intervals
+        each host is also run once more with KEEL_KERN_CLASS pinned to the other class (criterion 5b), which is where the extra Sgemm time goes
+  [32mPASS[0m  cross-compiled linux/amd64 bench binary (Sgemm + peak)
+        [keel-zen5] Sgemm 2048^3 178.4 GFLOP/s +/- 1.0% [176, 178.7] D=1.35 (span 1.51% / interval 1.1208%), peak 287.3 GFLOP/s +/- 0.0% [286.7, 287.3] D=6 (span 0.21% / interval 0.0348%)
+        [keel-zen5] = 62.1% of measured peak (61.5% net of CI) — reported, not a P3 criterion
+        [keel-zen5] retention: the blocked loop nest keeps 95% of its own 4x32/avx512/kc=128 microkernel (62.1% of peak blocked vs 65.2% unblocked; point estimates from two invocations) — reported, never judged; P5 baseline for #26
+  [32mPASS[0m  [keel-zen5] the dispatched 4x32/avx512 is no slower than 2x32/avx512 at 2048^3 (178.4 vs 135.1 GFLOP/s, 134.1 net of CI; separate invocations)
+scripts/gate-p3.sh: line 1292: /var/folders/nn/qc8dm2b954jbyvcwk0v79ync0000gn/T/tmp.TZZBYa0vbD/bench.csv: No space left on device
+scripts/remote.sh: line 271: printf: write error: No space left on device
