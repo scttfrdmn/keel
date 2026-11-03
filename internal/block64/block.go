@@ -142,9 +142,11 @@ var (
 	// KCDeep, when positive, replaces KC for calls that are full-height in both m and n (at
 	// least one MC block each). Thin calls keep KC: Trsm's rank updates are MB-row (left) or
 	// MB-column (right) GEMMs, whose packed KC×NC B panel is reused by too few rows to pay
-	// for a deeper one. Zero, the default, means off. The root package sets it on
-	// issue-bound hosts (archive/blocking-skx-ab-b/: KC=1024 everywhere lifted Sgemm/Ssymm/
-	// Ssyrk 9-13% on Skylake-SP but cost Strsm 6-10%).
+	// for a deeper one. Zero, the default, means off. The root package sets
+	// internal/block's to 1024 on every AVX-512 host (archive/blocking-skx-ab-b/: KC=1024
+	// everywhere lifted Sgemm/Ssymm/Ssyrk 9-13% on Skylake-SP but cost Strsm 6-10%;
+	// archive/blocking-avx512-b/ for the FMA class). internal/block64's stays 0: its
+	// Skylake-SP twin gained nothing net of CI (archive/blocking-skx-ab-f64/).
 	KCDeep = 0
 )
 
