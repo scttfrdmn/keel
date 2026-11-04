@@ -1,0 +1,5 @@
+KernelQ5x16Ctl: steady-state loop [148,1140] 249 insns for 160 arith (1.56 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+KernelQ5x16NA: steady-state loop [208,1016] 203 insns for 160 arith (1.27 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+KernelQ5x16NB: steady-state loop [196,1040] 212 insns for 160 arith (1.32 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+KernelQ5x16FO: steady-state loop [256,916] 166 insns for 160 arith (1.04 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
+KernelPB5x16: steady-state loop [148,1140] 249 insns for 160 arith (1.56 per arith): 0 vector stack refs, 0 reg copies, 0 broadcasts, 0 anchor nops, 0 calls, 0 bounds-check exits, 0 other mem refs
