@@ -9,6 +9,9 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **A Go minor bump opens a measurement era** (DESIGN.md §5 rule 17, ruled 2026-11-03, #118). It opens one with a real
+  both-arms archive whenever one keel revision builds under both toolchains. A patch release opens none and is disclosed.
+  `pinned8` spans go1.26.5 → go1.27.0 by ruling.
 - **Every AVX-512 host blocks full-height float32 GEMMs at KC=1024** (#26, #142).
   - **The rule.** `block.KCDeep` replaces KC only for calls that are full-height in both m and n
     (at least one MC block each). Strsm's thin rank updates (MB = 64 rows) keep KC=384, because

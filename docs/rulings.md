@@ -2425,5 +2425,5 @@ log's `builder toolchain` line: famax (`085f23e`, `37d7c13`, `f3bbe01`, `e030cc1
 (`f18f110`, `c0c373d`, `35fcb89`, `35c2894`) and f64init (`63cffc9`). The boundary therefore reaches
 only the closed pinned8 era and the v0.1.0 certificate.
 
-The forward rule for go1.28 is drafted on #118 as a §5 rule 17 sub-clause, and is **not landed**
-pending review.
+The forward rule for go1.28, drafted on #118, was approved by Scott the same day ("118 clause
+approved") and landed as a §5 rule 17 sub-clause: a toolchain change is an instrument change.
