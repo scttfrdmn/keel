@@ -198,6 +198,34 @@ func wholeTiles(v, blk int) int {
 	return (v / blk) * blk
 }
 
+// balanceMC shrinks one call's MC so its ic units come in whole rounds of w workers (#206).
+//
+// The units are MC-row blocks claimed dynamically per (jc, pc) panel, so the panel ends when
+// the last round ends. At n=4096 with MC=70 (5-row tiles), 59 units over 8 workers leave the
+// last round 3 of 8 busy, an efficiency of 59/64. Halving MC to 35 (118 units, 118/120) lifted
+// 8-thread Sgemm and Ssymm by 6.5% and 6.3% on Neoverse V2 (archive/v3-load/), against a
+// predicted 6.6%. Halving also cost V3 1-3% at one thread, so the fix rounds the unit count up
+// to the next multiple of w instead, which shrinks MC as little as that allows.
+//
+// Only a call with more units than workers changes. At w <= 1, which includes every
+// single-thread path, MC is returned untouched, so serial results and timings are unchanged.
+// A call with fewer units than workers is left alone too: re-blocking it would change its
+// parallelism, not just its tail, and that is a different change from the one measured.
+// Re-blocking rows never changes a result. Each C element accumulates over the same kc blocks
+// in the same order whatever MC is.
+func balanceMC(m, mc, mr, w int) int {
+	nic := (m + mc - 1) / mc
+	if w <= 1 || nic <= w || nic%w == 0 {
+		return mc
+	}
+	target := (nic + w - 1) / w * w
+	rows := (m + target - 1) / target
+	if b := (rows + mr - 1) / mr * mr; b < mc {
+		return b
+	}
+	return mc
+}
+
 // split says whether one nest call may hand its ic loop to the worker pool.
 //
 // It is a parameter rather than a global because the one caller that must decline
@@ -352,6 +380,9 @@ func gemm(kn kern.Kernel64, transA, transB bool, m, n, k int, alpha float64, a [
 
 	mr, nr := kn.MR, kn.NR
 	kc, mc, nc := plan(kn, m, n, k)
+	if sp == splitIC {
+		mc = balanceMC(m, mc, mr, par.Workers((m+mc-1)/mc))
+	}
 
 	alen := pack.ALen(mr, mc, kc)
 	bp := make([]float64, pack.BLen(nr, nc, kc))
