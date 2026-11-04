@@ -51,3 +51,49 @@ c7i.48xlarge.
 its CI on at least five of the seven hosts. Six of these hosts carry README rows, so shipping is
 followed by judged pairs before any README number moves. **REFUTED** if prediction 2 fails, which
 voids the run, or if no host's Sgemm 8T gains net of CI.
+
+## Result (`7e3f860`, `run-7e3f860.log`; `benchci-<host>-{O,N}.csv` over each arm's 20 samples): large 8T gains, but the ship rule fails on Ssyrk
+
+There were seven hosts, with masks as in the driver: spread on Zen, packed elsewhere. The run took
+19m09s and produced 2240 rows. The fleet was verified down by a readable inventory. Every host's
+three correctness suites exited rc=0.
+
+**8T, N/O** (% median [range net of both CIs]):
+
+| host | Sgemm | Ssymm | Ssyrk | Strsm |
+|---|---|---|---|---|
+| V1 | +1.6 [+1.1, +1.9] | +1.7 [+1.3, +2.2] | +0.3 [−0.1, +1.0] | +0.6 |
+| V2 | **+6.7** [+6.5, +6.9] | **+6.7** [+6.6, +6.8] | **−0.4 [−0.5, −0.3]** | −0.1 |
+| V3 | **+7.3** [+7.2, +7.4] | **+7.3** [+7.1, +7.5] | −0.3 [−0.4, −0.0] | +0.3 |
+| Zen 5 | **+9.1** [+7.1, +10.5] | **+8.5** [+6.3, +10.6] | −0.6 [−5.1, +3.4] | +3.3 [−2.6, +11.8] |
+| Zen 4 | **+9.7** [+5.2, +12.7] | **+10.7** [+8.5, +11.6] | +0.1 | +0.3 |
+| Skylake-SP | **+11.4** [+9.7, +12.6] | **+10.3** [+9.0, +11.2] | −0.1 | −0.0 |
+| SPR | **+5.9** [+4.3, +6.8] | **+6.5** [+5.6, +7.6] | −0.4 [−1.0, +0.0] | +0.1 |
+
+1. ✓ **Correctness:** 21 of 21 rc=0.
+2. ✓ **The 1T identity control holds.** Every one of the 28 1T rows has a net range containing zero.
+   The arms differ only in the change.
+3. **arm64, 1 of 3 in band.**
+   - V2 is +6.7% ✓.
+   - V3 is +7.3%, 0.3 above the band, in the good direction.
+   - **V1 is only +1.6–1.7% ✗.** V1's 8T rows gain far less than the round model's +7.8% ceiling.
+     This is **unattributed**. A plausible reading is that V1's 8T is bound by something other than
+     the partition tail, but nothing here measures that.
+4. ✓ **amd64, all within one point of band.** The Sgemm/Ssymm gains are:
+   - Zen 5: +9.1 / +8.5;
+   - Zen 4: +9.7 / +10.7;
+   - Skylake-SP: +11.4 / +10.3, with Sgemm 0.4 above the band;
+   - SPR: +5.9 / +6.5.
+
+   **#206's amd64 prediction holds.** The 8T tail was costing amd64 6–11%.
+5. ✓ **Ssyrk** is within [−0.6%, +0.3%] on every host.
+6. **Strsm, 6 of 7.** Zen 5 Strsm 8T reads +3.3%, but its net range [−2.6, +11.8] is noise-limited
+   and straddles zero.
+
+**The ship rule fails as written.** Sgemm 8T gains net of CI on 7 of 7 hosts. But **V2 Ssyrk 8T
+regresses beyond its CI: −0.4% [−0.5, −0.3]**. V3 Ssyrk 8T sits at the edge, at [−0.4, −0.0].
+
+The round model was pre-registered as not describing Ssyrk, whose units are triangular, and the
+change does not help it on any host. So the honest form of the change scopes it to the calls the
+model describes. That is a stage C to measure, as `blocking-skx-ab-c/` was for KCDeep, not a relaxed
+rule. Nothing ships from this run.
