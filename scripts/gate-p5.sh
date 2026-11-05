@@ -214,7 +214,11 @@ P5_ERA="$(era_current "$BASELINE_ERAS" "${KEEL_GOARCH:-amd64}")" # eras are per-
 # judged rows net of both intervals (keel-gvt4 Strsm, 49.6) less BASELINE_MARGIN, so 47.0.
 case "$P5_ERA" in
   "$CEIL_FRACTION_ERA") ;;
-  famax) CEIL_FRACTION=47.0 CEIL_FRACTION_ERA=famax ;;
+  # RETIRED 2026-11-05 for per-host baselines (Scott's ruling on #206): one fraction across every
+  # routine is set by Strsm, which the balanced partition does not move, so a regression of V2
+  # Sgemm back to the unbalanced 64.8% would clear 47.0 by 17.8 points. Both Graviton models leave
+  # the derivation set and are judged by their own registered rows, as V3 and every amd64 host are.
+  famax) CEIL_FRACTION="" CEIL_DERIVED_FROM="" CEIL_NONE_WHY="judged per host: era famax's fleet bar (47.0%, typed 2026-10-28) is RETIRED for per-host baselines (ruled 2026-11-05, #206), because a fleet fraction is set by Strsm and cannot see a GEMM-shaped regression. Every host here is judged by its own registered row in scripts/host-baselines.tsv, less BASELINE_MARGIN" ;;
   *) CEIL_FRACTION="" ;;
 esac
 
@@ -1027,6 +1031,8 @@ if [[ -n "$CEIL_FRACTION" ]]; then
   info "  WHAT THE SET CANNOT SEE, stated inside it (§5 rule 12): NO amd64 silicon derived this bar and no Intel or AMD row is in it, so it is a two-host, one-ISA, one-microkernel (3x24/neon) derivation. The eight rows span 45.4-79.3%, so one fleet bar is set by the weakest host AND its weakest routine, and keel-gvt3 clears it by 18.4 to 36.5 points — per-host convergence is the option named at CEIL_DERIVED_FROM. The bar therefore binds the two Graviton models ONLY; every amd64 host is registry-governed and renders BASELINE once in this era, which is what #155 ruling 2 requires of a bar that would otherwise travel across ISAs"
   info "  PRE-REGISTERED FOR THE CONFIRMATION RUN, so it can fail. keel-gvt4 Strsm is tightest at EXACTLY the margin (45.4 against 42.8), so a >5.73% fall in its 8-thread rate flips it with no change to the nest, as would a >6.07% rise in that host's measured ceiling. The two sensitivities differ because a share is a RATIO and quoting one for the other is #110's units error in miniature. Nothing else is close: the second-tightest row is keel-gvt4 Ssymm at 53.0, needing a 19.2% fall, and keel-gvt3 Strsm at 61.2 needs 30.1%"
   fi
+elif [[ -n "${CEIL_NONE_WHY:-}" ]]; then
+  info "$CEIL_NONE_WHY"
 else
   info "measured and reported against each host's own ${P5_THREADS}-thread ceiling, fraction deferred to this measurement: $P5_JUDGED — the ${SCALE_FLOOR_RETIRED}x cross-host floor is RETIRED (#6, 2026-08-20) and this class has NO FRACTION IN FORCE. A bar cannot be pre-typed from the run whose own rows are its formula's inputs, so this run REPORTS, a reviewed commit types the value from these rows with its derivation, and the next run is the first judged (ruled 2026-08-21, #6; §5 rule 17(d)). $(if [[ "$KEEL_ELEM" == f64 ]]; then echo "No fraction has ever been typed at float64: era $P5_ERA is its first, so there is no float64 history to retire (#193)"; else echo "This branch has now fired FOUR times, every one of them for the same reason in a different dress -- a bar whose reference artifact was produced by an instrument the judging run does not use: at the retirement of the ${SCALE_FLOOR_RETIRED}x floor; at the pinned8 boundary, where 57.8 could not be inherited; at the 2026-08-22 spread amendment, which retired 51.0 because its rows' eight cores were confined to one cache domain; and now at era $P5_ERA's boundary (2026-10-05, #177), which retires 44.2 because Strsm JOINED this class and every judged baseline gained the dispatched microkernel in its key -- all eight arm64 references were measured on 8x8/neon, two promotions behind what this run dispatches"; fi)"
 fi

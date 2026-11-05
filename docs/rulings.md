@@ -2427,3 +2427,33 @@ only the closed pinned8 era and the v0.1.0 certificate.
 
 The forward rule for go1.28, drafted on #118, was approved by Scott the same day ("118 clause
 approved") and landed as a §5 rule 17 sub-clause: a toolchain change is an instrument change.
+
+## famax's fleet bar is retired for per-host baselines on Neoverse V1/V2 (#206, ruled 2026-11-05)
+
+**Ruling (Scott, 2026-11-05, in session):** "switch them to per-host baselines".
+
+**Why the fleet bar could not be fixed by retyping it.** Recomputed by the precedent construction on
+the balanced-partition pair (`e37aa43`, `archive/p5-balanced/`), the bar is the lowest of the eight
+V1/V2 rows less the margin: V2 Strsm 49.6 − 2.6 = **47.0, unchanged**. One fraction across every
+routine is set by Strsm, which the balanced partition does not move. So a regression of V2 Sgemm to
+its pre-balanced 64.8% would clear it by 17.8 points, and any bar above 64.8 would fail Strsm on
+every run.
+
+**What changed:**
+- In era famax, `CEIL_FRACTION` and `CEIL_DERIVED_FROM` are empty, and gate-p5 says why in the
+  criterion's preamble.
+- Both Graviton models carry eight `share/5x16-pb/neon/*` rows each, the medians of the pair.
+- Their famax witness rows (`085f23e`) already existed, so nothing new is spent.
+
+**Witness**, from the gate's own `baseline_state` and bar arithmetic on the real registry:
+- All eight rows read `registered`. Under the old derivation set they read `conflict`, which is
+  why the set had to empty.
+- **V2's pre-balanced Sgemm (64.8) and Ssymm (64.5) fail their new bars (66.8 and 66.5),** and the
+  post-balanced r2 readings clear every bar.
+
+**Stated limits:**
+- **V1's balanced gain (about +1%) is below the margin,** so a V1 regression of that size is not
+  detectable by any bar with this margin.
+- **V2 Strsm's bar moves from 47.0 to 46.6.** Its registered median is 49.20, from r1 49.6 and r2
+  48.8. That is looser by 0.4 points, and it is the cost of judging each row by its own median
+  rather than by the fleet's argmin.

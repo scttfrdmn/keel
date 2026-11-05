@@ -9,6 +9,11 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **Neoverse V1/V2 are judged by per-host baselines** (#206, ruled 2026-11-05). Era famax's fleet bar (47.0%) is
+  retired. It was set by Strsm and could not see a GEMM regression: V2 Sgemm back at its pre-balanced 64.8% would
+  have passed it. Eight registered rows per host, from the balanced pair `e37aa43`, now catch exactly that.
+  The witness drives the gate's classifier on the real registry. V2 Strsm's bar loosens 47.0 → 46.6, disclosed in
+  `docs/rulings.md`.
 - **The parallel nest balances its row partition to the worker count** (#206). At 8 threads and n=4096 the
   ic loop's MC-row blocks left the last round part-empty: 59 blocks over 8 workers on arm64, and 29 on amd64.
   - **The rule:** a split rectangular call now shrinks MC, in whole tiles and by at most half, to the largest
