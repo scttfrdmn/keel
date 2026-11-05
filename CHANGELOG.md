@@ -9,6 +9,18 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **The parallel nest balances its row partition to the worker count** (#206). At 8 threads and n=4096 the
+  ic loop's MC-row blocks left the last round part-empty: 59 blocks over 8 workers on arm64, and 29 on amd64.
+  - **The rule:** a split rectangular call now shrinks MC, in whole tiles and by at most half, to the largest
+    block within 1 point of the best round efficiency. Syrk/Syr2k and every single-thread path are unchanged.
+  - **Measured** (`archive/balanced-ic/`, `-c/`), 8T Sgemm/Ssymm on seven judged-size hosts:
+    - Neoverse V2 +6.8%, V3 +7.2–7.3%;
+    - Zen 5 +7.4–7.6%, Zen 4 +9.4–10.3%;
+    - Skylake-SP +9.8–10.1%, SPR +6.3–7.0%;
+    - Neoverse V1 +0.8–1.0%.
+
+    1T rows are an identity control (27 of 28 within CI), Ssyrk is unchanged, and Strsm is flat.
+  - **Tests:** `TestBalanceMC` and `TestCallMCScope` pin the rule. The README rows are re-derived by judged pairs.
 - **A Go minor bump opens a measurement era** (DESIGN.md §5 rule 17, ruled 2026-11-03, #118). It opens one with a real
   both-arms archive whenever one keel revision builds under both toolchains. A patch release opens none and is disclosed.
   `pinned8` spans go1.26.5 → go1.27.0 by ruling.
