@@ -3,7 +3,10 @@
 
 package block
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 // TestBalanceMC pins #206's rule against hand-computed cases. The round efficiency
 // (m/b)/(w*rounds) of each expected block is in its comment.
@@ -24,6 +27,26 @@ func TestBalanceMC(t *testing.T) {
 		}
 		if got%c.mr != 0 || got > c.mc || got < c.mc/2 {
 			t.Errorf("balanceMC(m=%d, mc=%d, mr=%d, w=%d) = %d: not whole tiles in [mc/2, mc]", c.m, c.mc, c.mr, c.w, got)
+		}
+	}
+}
+
+// TestCallMCScope pins the scope (archive/balanced-ic/): only a split call with no triangular
+// mask is re-blocked. Syrk/Syr2k (masked) and Trsm's rank updates (noSplit) keep the shipped MC.
+func TestCallMCScope(t *testing.T) {
+	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(8))
+	for _, c := range []struct {
+		name string
+		tri  triMask
+		sp   split
+		want int
+	}{
+		{"rectangular, split", triMask{}, splitIC, 65},
+		{"masked, split", triMask{on: true, lower: true}, splitIC, 70},
+		{"rectangular, noSplit", triMask{}, noSplit, 70},
+	} {
+		if got := callMC(4096, 70, 5, c.tri, c.sp); got != c.want {
+			t.Errorf("%s: callMC(4096, 70, 5) = %d, want %d", c.name, got, c.want)
 		}
 	}
 }

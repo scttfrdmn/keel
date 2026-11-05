@@ -207,12 +207,25 @@ func wholeTiles(v, blk int) int {
 // mc/2, since the measured halving bounds what a smaller block is known to cost. The choice is
 // the largest block within one point of the best efficiency.
 //
-// Only a call with more units than workers changes. At w <= 1, which includes every
+// Only a rectangular call (no triangular mask) with more units than workers changes. A masked
+// call's units carry triangle-shaped work, which the round model does not describe. Applied to
+// them it gained nothing on any of seven hosts and cost V2's Ssyrk 0.4% at 8 threads, beyond its
+// CI (archive/balanced-ic/), so Syrk and Syr2k keep the shipped MC.
+//
+// Within the scope: At w <= 1, which includes every
 // single-thread path, MC is returned untouched, so serial results and timings are unchanged.
 // A call with fewer units than workers is left alone too: re-blocking it would change its
 // parallelism, not just its tail, and that is a different change from the one measured.
 // Re-blocking rows never changes a result. Each C element accumulates over the same kc blocks
 // in the same order whatever MC is.
+// callMC is the MC one call runs at: balanced for a split rectangular call, unchanged otherwise.
+func callMC(m, mc, mr int, tri triMask, sp split) int {
+	if sp != splitIC || tri.on {
+		return mc
+	}
+	return balanceMC(m, mc, mr, par.Workers((m+mc-1)/mc))
+}
+
 func balanceMC(m, mc, mr, w int) int {
 	if w <= 1 || (m+mc-1)/mc <= w {
 		return mc
@@ -387,9 +400,7 @@ func gemm(kn kern.Kernel, transA, transB bool, m, n, k int, alpha float32, a []f
 
 	mr, nr := kn.MR, kn.NR
 	kc, mc, nc := plan(kn, m, n, k)
-	if sp == splitIC {
-		mc = balanceMC(m, mc, mr, par.Workers((m+mc-1)/mc))
-	}
+	mc = callMC(m, mc, mr, tri, sp)
 
 	alen := pack.ALen(mr, mc, kc)
 	bp := make([]float32, pack.BLen(nr, nc, kc))

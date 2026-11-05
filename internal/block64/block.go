@@ -198,30 +198,55 @@ func wholeTiles(v, blk int) int {
 	return (v / blk) * blk
 }
 
-// balanceMC shrinks one call's MC so its ic units come in whole rounds of w workers (#206).
+// balanceMC shrinks one call's MC so its ic units fill whole rounds of w workers (#206).
 //
 // The units are MC-row blocks claimed dynamically per (jc, pc) panel, so the panel ends when
 // the last round ends. At n=4096 with MC=70 (5-row tiles), 59 units over 8 workers leave the
-// last round 3 of 8 busy, an efficiency of 59/64. Halving MC to 35 (118 units, 118/120) lifted
-// 8-thread Sgemm and Ssymm by 6.5% and 6.3% on Neoverse V2 (archive/v3-load/), against a
-// predicted 6.6%. Halving also cost V3 1-3% at one thread, so the fix rounds the unit count up
-// to the next multiple of w instead, which shrinks MC as little as that allows.
+// last round 3 of 8 busy, an efficiency of 59/64. Halving MC to 35 lifted 8-thread Sgemm and
+// Ssymm by 6.5% and 6.3% on Neoverse V2 (archive/v3-load/), against a predicted 6.6%. Halving
+// also cost V3 1-3% at one thread, so this shrinks MC as little as the balance allows.
 //
-// Only a call with more units than workers changes. At w <= 1, which includes every
+// The objective is the round efficiency (m/b) / (w * rounds), with b the block in rows. A unit
+// COUNT that is a multiple of w is not enough: rounding rows up to whole tiles can leave a
+// one-row last unit that fills a round of its own. Candidates are whole tiles from mc down to
+// mc/2, since the measured halving bounds what a smaller block is known to cost. The choice is
+// the largest block within one point of the best efficiency.
+//
+// Only a rectangular call (no triangular mask) with more units than workers changes. A masked
+// call's units carry triangle-shaped work, which the round model does not describe. Applied to
+// them it gained nothing on any of seven hosts and cost V2's Ssyrk 0.4% at 8 threads, beyond its
+// CI (archive/balanced-ic/), so Syrk and Syr2k keep the shipped MC.
+//
+// Within the scope: At w <= 1, which includes every
 // single-thread path, MC is returned untouched, so serial results and timings are unchanged.
 // A call with fewer units than workers is left alone too: re-blocking it would change its
 // parallelism, not just its tail, and that is a different change from the one measured.
 // Re-blocking rows never changes a result. Each C element accumulates over the same kc blocks
 // in the same order whatever MC is.
-func balanceMC(m, mc, mr, w int) int {
-	nic := (m + mc - 1) / mc
-	if w <= 1 || nic <= w || nic%w == 0 {
+// callMC is the MC one call runs at: balanced for a split rectangular call, unchanged otherwise.
+func callMC(m, mc, mr int, tri triMask, sp split) int {
+	if sp != splitIC || tri.on {
 		return mc
 	}
-	target := (nic + w - 1) / w * w
-	rows := (m + target - 1) / target
-	if b := (rows + mr - 1) / mr * mr; b < mc {
-		return b
+	return balanceMC(m, mc, mr, par.Workers((m+mc-1)/mc))
+}
+
+func balanceMC(m, mc, mr, w int) int {
+	if w <= 1 || (m+mc-1)/mc <= w {
+		return mc
+	}
+	eff := func(b int) float64 {
+		rounds := ((m+b-1)/b + w - 1) / w
+		return float64(m) / float64(b) / float64(rounds*w)
+	}
+	best := eff(mc)
+	for b := mc - mr; b >= mc/2 && b >= mr; b -= mr {
+		best = max(best, eff(b))
+	}
+	for b := mc; b >= mc/2 && b >= mr; b -= mr {
+		if eff(b) >= best-0.01 {
+			return b
+		}
 	}
 	return mc
 }
@@ -380,9 +405,7 @@ func gemm(kn kern.Kernel64, transA, transB bool, m, n, k int, alpha float64, a [
 
 	mr, nr := kn.MR, kn.NR
 	kc, mc, nc := plan(kn, m, n, k)
-	if sp == splitIC {
-		mc = balanceMC(m, mc, mr, par.Workers((m+mc-1)/mc))
-	}
+	mc = callMC(m, mc, mr, tri, sp)
 
 	alen := pack.ALen(mr, mc, kc)
 	bp := make([]float64, pack.BLen(nr, nc, kc))
