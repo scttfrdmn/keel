@@ -20,7 +20,9 @@ While the major version is 0, minor versions may contain breaking changes.
     - Neoverse V1 +0.8–1.0%.
 
     1T rows are an identity control (27 of 28 within CI), Ssyrk is unchanged, and Strsm is flat.
-  - **Tests:** `TestBalanceMC` and `TestCallMCScope` pin the rule. The README rows are re-derived by judged pairs.
+  - **Tests:** `TestBalanceMC` and `TestCallMCScope` pin the rule.
+  - **README:** the rows are re-derived by judged pairs on all six hosts (`archive/p5-balanced/`, `e37aa43`), and the seven
+    moved share baselines are re-landed.
 - **A Go minor bump opens a measurement era** (DESIGN.md §5 rule 17, ruled 2026-11-03, #118). It opens one with a real
   both-arms archive whenever one keel revision builds under both toolchains. A patch release opens none and is disclosed.
   `pinned8` spans go1.26.5 → go1.27.0 by ruling.

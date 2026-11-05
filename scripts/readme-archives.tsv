@@ -60,21 +60,33 @@ Neoverse-V1	ceil8	3745b72	archive/strsm-refresh-arm64-r1/gate-p5-arm64-strsm-r1-
 Neoverse-V2	ceil8	3745b72	archive/strsm-refresh-arm64-r1/gate-p5-arm64-strsm-r1-3745b72.log	archive/strsm-refresh-arm64-r1/bench-gate-p5-3745b72-keel-gvt4-20261012T005051Z-1.txt	canonical	arm64
 Neoverse-V1	ceil8	5948dda	archive/strsm-refresh-arm64-r2/gate-p5-arm64-strsm-r2-5948dda.log	archive/strsm-refresh-arm64-r2/bench-gate-p5-5948dda-keel-gvt3-20261012T173742Z-2.txt	canonical	arm64
 Neoverse-V2	ceil8	5948dda	archive/strsm-refresh-arm64-r2/gate-p5-arm64-strsm-r2-5948dda.log	archive/strsm-refresh-arm64-r2/bench-gate-p5-5948dda-keel-gvt4-20261012T173742Z-1.txt	canonical	arm64
-Neoverse-V2	famax	085f23e	archive/p5-arm64-famax/judged-r1-085f23e.log	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt4-20261028T193133Z-1.txt	canonical	arm64
-Neoverse-V1	famax	085f23e	archive/p5-arm64-famax/judged-r1-085f23e.log	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt3-20261028T193133Z-2.txt	canonical	arm64
-Neoverse-V2	famax	37d7c13	archive/p5-arm64-famax/judged-r2-37d7c13.log	archive/p5-arm64-famax/bench-gate-p5-37d7c13-keel-gvt4-20261028T212326Z-1.txt	canonical	arm64
-Neoverse-V1	famax	37d7c13	archive/p5-arm64-famax/judged-r2-37d7c13.log	archive/p5-arm64-famax/bench-gate-p5-37d7c13-keel-gvt3-20261028T212326Z-2.txt	canonical	arm64
+Neoverse-V2	famax	085f23e	archive/p5-arm64-famax/judged-r1-085f23e.log	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt4-20261028T193133Z-1.txt	superseded	arm64
+Neoverse-V1	famax	085f23e	archive/p5-arm64-famax/judged-r1-085f23e.log	archive/p5-arm64-famax/bench-gate-p5-085f23e-keel-gvt3-20261028T193133Z-2.txt	superseded	arm64
+Neoverse-V2	famax	37d7c13	archive/p5-arm64-famax/judged-r2-37d7c13.log	archive/p5-arm64-famax/bench-gate-p5-37d7c13-keel-gvt4-20261028T212326Z-1.txt	superseded	arm64
+Neoverse-V1	famax	37d7c13	archive/p5-arm64-famax/judged-r2-37d7c13.log	archive/p5-arm64-famax/bench-gate-p5-37d7c13-keel-gvt3-20261028T212326Z-2.txt	superseded	arm64
 AMD EPYC 9R45	famaxx86	f18f110	archive/p5-amd64-famaxx86/judged-r1-f18f110.log	archive/p5-amd64-famaxx86/bench-gate-p5-f18f110-keel-zen5-20261029T071104Z-1.txt	superseded	amd64
 AMD EPYC 9R14	famaxx86	f18f110	archive/p5-amd64-famaxx86/judged-r1-f18f110.log	archive/p5-amd64-famaxx86/bench-gate-p5-f18f110-keel-zen4-20261029T071104Z-2.txt	superseded	amd64
 Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	f18f110	archive/p5-amd64-famaxx86/judged-r1-f18f110.log	archive/p5-amd64-famaxx86/bench-gate-p5-f18f110-keel-skx-20261029T071104Z-3.txt	superseded	amd64
 AMD EPYC 9R45	famaxx86	c0c373d	archive/p5-amd64-famaxx86/judged-r2-c0c373d.log	archive/p5-amd64-famaxx86/bench-gate-p5-c0c373d-keel-zen5-20261029T092111Z-1.txt	superseded	amd64
 AMD EPYC 9R14	famaxx86	c0c373d	archive/p5-amd64-famaxx86/judged-r2-c0c373d.log	archive/p5-amd64-famaxx86/bench-gate-p5-c0c373d-keel-zen4-20261029T092111Z-2.txt	superseded	amd64
 Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	c0c373d	archive/p5-amd64-famaxx86/judged-r2-c0c373d.log	archive/p5-amd64-famaxx86/bench-gate-p5-c0c373d-keel-skx-20261029T092111Z-3.txt	superseded	amd64
-Neoverse-V3	famax	f3bbe01	archive/p5-arm64-c9g/judged-r1-f3bbe01.log	archive/p5-arm64-c9g/bench-gate-p5-f3bbe01-keel-gvt5-20261029T172030Z-1.txt	canonical	arm64
-Neoverse-V3	famax	e030cc1	archive/p5-arm64-c9g/judged-r2-e030cc1.log	archive/p5-arm64-c9g/bench-gate-p5-e030cc1-keel-gvt5-20261029T182344Z-1.txt	canonical	arm64
-Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	35fcb89	archive/p5-skx-kcdeep/judged-r1-35fcb89.log	archive/p5-skx-kcdeep/bench-gate-p5-35fcb89-keel-skx-20261102T183649Z-1.txt	canonical	amd64
-Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	35fcb89	archive/p5-skx-kcdeep/judged-r2-35fcb89.log	archive/p5-skx-kcdeep/bench-gate-p5-35fcb89-keel-skx-20261102T195021Z-1.txt	canonical	amd64
-AMD EPYC 9R45	famaxx86	35c2894	archive/p5-zen-kcdeep/judged-r2-35c2894.log	archive/p5-zen-kcdeep/bench-gate-p5-35c2894-keel-zen5-20261103T015128Z-1.txt	canonical	amd64
-AMD EPYC 9R14	famaxx86	35c2894	archive/p5-zen-kcdeep/judged-r2-35c2894.log	archive/p5-zen-kcdeep/bench-gate-p5-35c2894-keel-zen4-20261103T015128Z-2.txt	canonical	amd64
-AMD EPYC 9R45	famaxx86	35c2894	archive/p5-zen-kcdeep/judged-r3-35c2894.log	archive/p5-zen-kcdeep/bench-gate-p5-35c2894-keel-zen5-20261103T034848Z-1.txt	canonical	amd64
-AMD EPYC 9R14	famaxx86	35c2894	archive/p5-zen-kcdeep/judged-r3-35c2894.log	archive/p5-zen-kcdeep/bench-gate-p5-35c2894-keel-zen4-20261103T034848Z-2.txt	canonical	amd64
+Neoverse-V3	famax	f3bbe01	archive/p5-arm64-c9g/judged-r1-f3bbe01.log	archive/p5-arm64-c9g/bench-gate-p5-f3bbe01-keel-gvt5-20261029T172030Z-1.txt	superseded	arm64
+Neoverse-V3	famax	e030cc1	archive/p5-arm64-c9g/judged-r2-e030cc1.log	archive/p5-arm64-c9g/bench-gate-p5-e030cc1-keel-gvt5-20261029T182344Z-1.txt	superseded	arm64
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	35fcb89	archive/p5-skx-kcdeep/judged-r1-35fcb89.log	archive/p5-skx-kcdeep/bench-gate-p5-35fcb89-keel-skx-20261102T183649Z-1.txt	superseded	amd64
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	35fcb89	archive/p5-skx-kcdeep/judged-r2-35fcb89.log	archive/p5-skx-kcdeep/bench-gate-p5-35fcb89-keel-skx-20261102T195021Z-1.txt	superseded	amd64
+AMD EPYC 9R45	famaxx86	35c2894	archive/p5-zen-kcdeep/judged-r2-35c2894.log	archive/p5-zen-kcdeep/bench-gate-p5-35c2894-keel-zen5-20261103T015128Z-1.txt	superseded	amd64
+AMD EPYC 9R14	famaxx86	35c2894	archive/p5-zen-kcdeep/judged-r2-35c2894.log	archive/p5-zen-kcdeep/bench-gate-p5-35c2894-keel-zen4-20261103T015128Z-2.txt	superseded	amd64
+AMD EPYC 9R45	famaxx86	35c2894	archive/p5-zen-kcdeep/judged-r3-35c2894.log	archive/p5-zen-kcdeep/bench-gate-p5-35c2894-keel-zen5-20261103T034848Z-1.txt	superseded	amd64
+AMD EPYC 9R14	famaxx86	35c2894	archive/p5-zen-kcdeep/judged-r3-35c2894.log	archive/p5-zen-kcdeep/bench-gate-p5-35c2894-keel-zen4-20261103T034848Z-2.txt	superseded	amd64
+Neoverse-V1	famax	e37aa43	archive/p5-balanced/judged-arm64-r1-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-gvt3-20261105T084630Z-2.txt	canonical	arm64
+Neoverse-V1	famax	e37aa43	archive/p5-balanced/judged-arm64-r2-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-gvt3-20261105T110633Z-2.txt	canonical	arm64
+Neoverse-V2	famax	e37aa43	archive/p5-balanced/judged-arm64-r1-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-gvt4-20261105T084630Z-1.txt	canonical	arm64
+Neoverse-V2	famax	e37aa43	archive/p5-balanced/judged-arm64-r2-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-gvt4-20261105T110633Z-1.txt	canonical	arm64
+Neoverse-V3	famax	e37aa43	archive/p5-balanced/judged-c9g-r1-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-gvt5-20261105T132319Z-1.txt	canonical	arm64
+Neoverse-V3	famax	e37aa43	archive/p5-balanced/judged-c9g-r2-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-gvt5-20261105T143659Z-1.txt	canonical	arm64
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	e37aa43	archive/p5-balanced/judged-amd64-r1-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-skx-20261105T031233Z-3.txt	canonical	amd64
+Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz	famaxx86	e37aa43	archive/p5-balanced/judged-amd64-r2-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-skx-20261105T055940Z-3.txt	canonical	amd64
+AMD EPYC 9R14	famaxx86	e37aa43	archive/p5-balanced/judged-amd64-r1-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-zen4-20261105T031233Z-2.txt	canonical	amd64
+AMD EPYC 9R14	famaxx86	e37aa43	archive/p5-balanced/judged-amd64-r2-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-zen4-20261105T055940Z-2.txt	canonical	amd64
+AMD EPYC 9R45	famaxx86	e37aa43	archive/p5-balanced/judged-amd64-r1-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-zen5-20261105T031233Z-1.txt	canonical	amd64
+AMD EPYC 9R45	famaxx86	e37aa43	archive/p5-balanced/judged-amd64-r2-e37aa43.log	archive/p5-balanced/bench-gate-p5-e37aa43-keel-zen5-20261105T055940Z-1.txt	canonical	amd64

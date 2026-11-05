@@ -31,70 +31,70 @@ model, never by hostname.
 <!-- keel-numbers: begin -->
 | CPU | benchmark | threads | GFLOP/s | denominator |
 | --- | --- | --- | --- | --- |
-| AMD EPYC 9R45 | Sgemm | 1 | 183.2 | 63.8% of 287.3 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [183, 183.3] |
-| AMD EPYC 9R45 | Sgemm | 8 | 1212 | 52.7% of 2298.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1210, 1213] |
-| AMD EPYC 9R45 | Ssyrk | 1 | 173.2 | 60.3% of 287.3 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [173, 173.5] |
-| AMD EPYC 9R45 | Ssyrk | 8 | 1258 | 54.7% of 2298.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1253, 1258] |
-| AMD EPYC 9R45 | Ssymm | 1 | 172.8 | 60.1% of 287.3 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [172.4, 173] |
-| AMD EPYC 9R45 | Ssymm | 8 | 1153 | 50.2% of 2298.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1151, 1154] |
-| AMD EPYC 9R45 | Strsm | 1 | 125.5 | 43.7% of 287.3 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [125.3, 125.6] |
-| AMD EPYC 9R45 | Strsm | 8 | 846.2 | 36.8% of 2298.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [810.4, 883.6] |
-| AMD EPYC 9R45 | Ceiling/compute | 8 | 2292 | 99.7% of 2298.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [2292, 2293] |
-| AMD EPYC 9R14 | Sgemm | 1 | 111.2 | 95.0% of 117.1 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [110.9, 111.3] |
-| AMD EPYC 9R14 | Sgemm | 8 | 743.7 | 79.4% of 936.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [742, 744.7] |
-| AMD EPYC 9R14 | Ssyrk | 1 | 105.6 | 90.2% of 117.1 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [105.4, 105.7] |
-| AMD EPYC 9R14 | Ssyrk | 8 | 771 | 82.3% of 936.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [769.6, 772] |
-| AMD EPYC 9R14 | Ssymm | 1 | 107 | 91.4% of 117.1 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [107, 107.2] |
-| AMD EPYC 9R14 | Ssymm | 8 | 724.8 | 77.4% of 936.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [724.5, 725.2] |
-| AMD EPYC 9R14 | Strsm | 1 | 74.97 | 64.0% of 117.1 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [74.78, 75.09] |
-| AMD EPYC 9R14 | Strsm | 8 | 487.3 | 52.0% of 936.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [470.2, 504.1] |
-| AMD EPYC 9R14 | Ceiling/compute | 8 | 934.8 | 99.8% of 936.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [934, 935.3] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Sgemm | 1 | 76.4 | 36.6% of 208.8 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [74.2, 77.34] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Sgemm | 8 | 497.7 | 29.8% of 1670.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [497.2, 498.1] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ssyrk | 1 | 74.78 | 35.8% of 208.8 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [72.26, 74.89] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ssyrk | 8 | 524.7 | 31.4% of 1670.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [524.4, 524.9] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ssymm | 1 | 74.17 | 35.5% of 208.8 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [72.74, 75.77] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ssymm | 8 | 488.5 | 29.2% of 1670.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [488.1, 488.9] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Strsm | 1 | 38.55 | 18.5% of 208.8 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [38, 38.65] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Strsm | 8 | 268.7 | 16.1% of 1670.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [267.1, 269.2] |
-| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ceiling/compute | 8 | 1565 | 93.7% of 1670.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1565, 1565] |
-| Neoverse-V2 | Sgemm | 1 | 65.39 | 77.5% of 84.42 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [65.33, 65.44] |
-| Neoverse-V2 | Sgemm | 8 | 438.4 | 64.9% of 675.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [438.3, 438.5] |
-| Neoverse-V2 | Ssyrk | 1 | 63.09 | 74.7% of 84.42 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [62.82, 63.16] |
-| Neoverse-V2 | Ssyrk | 8 | 457.6 | 67.8% of 675.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [456.8, 457.9] |
-| Neoverse-V2 | Ssymm | 1 | 64.98 | 77.0% of 84.42 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [64.9, 65.02] |
-| Neoverse-V2 | Ssymm | 8 | 435.9 | 64.6% of 675.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [435.8, 436.3] |
-| Neoverse-V2 | Strsm | 1 | 49.48 | 58.6% of 84.42 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [49.32, 49.55] |
-| Neoverse-V2 | Strsm | 8 | 337.3 | 49.9% of 675.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [336.2, 337.8] |
-| Neoverse-V2 | Ceiling/compute | 8 | 674.8 | 99.9% of 675.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [674.7, 674.8] |
-| Neoverse-V1 | Sgemm | 1 | 58.78 | 75.2% of 78.16 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [58.58, 59.09] |
-| Neoverse-V1 | Sgemm | 8 | 404.5 | 64.7% of 625.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [404, 405.1] |
-| Neoverse-V1 | Ssyrk | 1 | 56.75 | 72.6% of 78.16 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [56.72, 56.82] |
-| Neoverse-V1 | Ssyrk | 8 | 415.1 | 66.4% of 625.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [414.9, 415.2] |
-| Neoverse-V1 | Ssymm | 1 | 58.11 | 74.3% of 78.16 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [58.06, 58.16] |
-| Neoverse-V1 | Ssymm | 8 | 402.6 | 64.4% of 625.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [401.8, 403.4] |
-| Neoverse-V1 | Strsm | 1 | 42.95 | 55.0% of 78.16 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [42.87, 43.15] |
-| Neoverse-V1 | Strsm | 8 | 289.6 | 46.3% of 625.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [289.4, 290.1] |
-| Neoverse-V1 | Ceiling/compute | 8 | 556.9 | 89.1% of 625.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [555, 558] |
-| Neoverse-V3 | Sgemm | 1 | 80.06 | 77.6% of 103.2 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [79.89, 80.1] |
-| Neoverse-V3 | Sgemm | 8 | 576.3 | 69.8% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [576.1, 576.7] |
-| Neoverse-V3 | Ssyrk | 1 | 76.93 | 74.5% of 103.2 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [76.79, 77.03] |
-| Neoverse-V3 | Ssyrk | 8 | 602.7 | 73.0% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [602.2, 602.8] |
-| Neoverse-V3 | Ssymm | 1 | 79.54 | 77.1% of 103.2 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [79.31, 79.61] |
-| Neoverse-V3 | Ssymm | 8 | 573.8 | 69.5% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [573.4, 574.9] |
-| Neoverse-V3 | Strsm | 1 | 60.32 | 58.4% of 103.2 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [60, 60.53] |
-| Neoverse-V3 | Strsm | 8 | 395.6 | 47.9% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [393.8, 397.1] |
-| Neoverse-V3 | Ceiling/compute | 8 | 824.2 | 99.8% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [824, 824.3] |
+| AMD EPYC 9R45 | Sgemm | 1 | 182.6 | 63.5% of 287.5 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [181.8, 183] |
+| AMD EPYC 9R45 | Sgemm | 8 | 1331 | 57.9% of 2300.0 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1330, 1332] |
+| AMD EPYC 9R45 | Ssyrk | 1 | 172.8 | 60.1% of 287.5 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [171.6, 173] |
+| AMD EPYC 9R45 | Ssyrk | 8 | 1256 | 54.6% of 2300.0 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1254, 1257] |
+| AMD EPYC 9R45 | Ssymm | 1 | 172.1 | 59.9% of 287.5 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [171.7, 172.2] |
+| AMD EPYC 9R45 | Ssymm | 8 | 1266 | 55.0% of 2300.0 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1265, 1266] |
+| AMD EPYC 9R45 | Strsm | 1 | 125.2 | 43.5% of 287.5 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [125, 125.3] |
+| AMD EPYC 9R45 | Strsm | 8 | 829 | 36.0% of 2300.0 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [797.2, 876.2] |
+| AMD EPYC 9R45 | Ceiling/compute | 8 | 2294 | 99.8% of 2300.0 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [2294, 2295] |
+| AMD EPYC 9R14 | Sgemm | 1 | 110.8 | 94.7% of 117 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [110.7, 111.1] |
+| AMD EPYC 9R14 | Sgemm | 8 | 813.2 | 86.8% of 936.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [809.1, 814.3] |
+| AMD EPYC 9R14 | Ssyrk | 1 | 105.3 | 90.0% of 117 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [105.1, 105.8] |
+| AMD EPYC 9R14 | Ssyrk | 8 | 767.6 | 82.0% of 936.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [765.5, 768.7] |
+| AMD EPYC 9R14 | Ssymm | 1 | 107 | 91.4% of 117 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [106.9, 107] |
+| AMD EPYC 9R14 | Ssymm | 8 | 798.5 | 85.3% of 936.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [798, 799.9] |
+| AMD EPYC 9R14 | Strsm | 1 | 75.08 | 64.1% of 117 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [74.98, 75.14] |
+| AMD EPYC 9R14 | Strsm | 8 | 488.6 | 52.2% of 936.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [480.7, 507.2] |
+| AMD EPYC 9R14 | Ceiling/compute | 8 | 933.7 | 99.7% of 936.4 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [933.4, 934.1] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Sgemm | 1 | 74.34 | 35.6% of 208.6 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [73.54, 77.42] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Sgemm | 8 | 549 | 32.9% of 1668.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [548.8, 549.6] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ssyrk | 1 | 72.48 | 34.7% of 208.6 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [72.22, 74.86] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ssyrk | 8 | 523.6 | 31.4% of 1668.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [522.9, 525] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ssymm | 1 | 72.71 | 34.9% of 208.6 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [72.52, 73.11] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ssymm | 8 | 535.4 | 32.1% of 1668.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [534.9, 536.3] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Strsm | 1 | 38.16 | 18.3% of 208.6 GFLOP/s, the 1-thread avx512 microkernel peak; pooled benchstat over N=2 archives, CI [37.94, 38.88] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Strsm | 8 | 267.9 | 16.1% of 1668.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [266.6, 268.7] |
+| Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz | Ceiling/compute | 8 | 1565 | 93.8% of 1668.8 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [1564, 1566] |
+| Neoverse-V2 | Sgemm | 1 | 65.48 | 77.6% of 84.41 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [65.36, 65.62] |
+| Neoverse-V2 | Sgemm | 8 | 469.1 | 69.5% of 675.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [469, 469.4] |
+| Neoverse-V2 | Ssyrk | 1 | 63.28 | 75.0% of 84.41 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [63.23, 63.32] |
+| Neoverse-V2 | Ssyrk | 8 | 458.2 | 67.9% of 675.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [458.1, 458.4] |
+| Neoverse-V2 | Ssymm | 1 | 65.12 | 77.1% of 84.41 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [65.01, 65.18] |
+| Neoverse-V2 | Ssymm | 8 | 466.9 | 69.1% of 675.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [466.7, 467] |
+| Neoverse-V2 | Strsm | 1 | 49.55 | 58.7% of 84.41 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [49.33, 49.66] |
+| Neoverse-V2 | Strsm | 8 | 335.8 | 49.7% of 675.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [335.1, 336.7] |
+| Neoverse-V2 | Ceiling/compute | 8 | 675 | 100.0% of 675.3 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [674.9, 675] |
+| Neoverse-V1 | Sgemm | 1 | 58.92 | 75.4% of 78.15 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [58.79, 59.11] |
+| Neoverse-V1 | Sgemm | 8 | 410.8 | 65.7% of 625.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [410.4, 411.5] |
+| Neoverse-V1 | Ssyrk | 1 | 56.85 | 72.7% of 78.15 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [56.81, 56.98] |
+| Neoverse-V1 | Ssyrk | 8 | 414.9 | 66.4% of 625.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [414.7, 415] |
+| Neoverse-V1 | Ssymm | 1 | 58.27 | 74.6% of 78.15 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [58.05, 58.36] |
+| Neoverse-V1 | Ssymm | 8 | 409.9 | 65.6% of 625.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [409, 410.5] |
+| Neoverse-V1 | Strsm | 1 | 43.11 | 55.2% of 78.15 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [42.96, 43.16] |
+| Neoverse-V1 | Strsm | 8 | 290 | 46.4% of 625.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [289.5, 290.2] |
+| Neoverse-V1 | Ceiling/compute | 8 | 555.8 | 88.9% of 625.2 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [553.3, 558.6] |
+| Neoverse-V3 | Sgemm | 1 | 79.58 | 77.1% of 103.2 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [79.52, 79.7] |
+| Neoverse-V3 | Sgemm | 8 | 618 | 74.9% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [617.9, 618.2] |
+| Neoverse-V3 | Ssyrk | 1 | 76.69 | 74.3% of 103.2 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [76.61, 76.81] |
+| Neoverse-V3 | Ssyrk | 8 | 602.2 | 72.9% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [601.8, 602.6] |
+| Neoverse-V3 | Ssymm | 1 | 79.3 | 76.8% of 103.2 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [79.19, 79.45] |
+| Neoverse-V3 | Ssymm | 8 | 615.5 | 74.6% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [614.7, 616.8] |
+| Neoverse-V3 | Strsm | 1 | 60.63 | 58.7% of 103.2 GFLOP/s, the 1-thread neon microkernel peak; pooled benchstat over N=2 archives, CI [60.41, 60.69] |
+| Neoverse-V3 | Strsm | 8 | 393.5 | 47.7% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [392, 395.8] |
+| Neoverse-V3 | Ceiling/compute | 8 | 824.2 | 99.8% of 825.6 GFLOP/s, that same peak x 8 cores; pooled benchstat over N=2 archives, CI [823.8, 824.2] |
 <!-- keel-numbers: end -->
 
 <!-- keel-caption: begin -->
-All 54 rows are one pooled `benchstat` estimator per cell, not a median of per-run medians: every sample a host contributed across its own era's archived runs (8 runs in all here) is pooled into a single population, and the median and 95% CI printed beside it are both read off that one population — `scripts/gate-p5.sh` at rev `f18f110` (the judged run, which dates this page) and `f18f110`, `f18f110`, `f18f110`, `085f23e`, `37d7c13`, `f3bbe01`, `e030cc1`, logs in `archive/p5-zen-kcdeep/judged-r2-35c2894.log`, `archive/p5-zen-kcdeep/judged-r3-35c2894.log`, `archive/p5-skx-kcdeep/judged-r1-35fcb89.log`, `archive/p5-skx-kcdeep/judged-r2-35fcb89.log`, `archive/p5-arm64-famax/judged-r1-085f23e.log`, `archive/p5-arm64-famax/judged-r2-37d7c13.log`, `archive/p5-arm64-c9g/judged-r1-f3bbe01.log`, `archive/p5-arm64-c9g/judged-r2-e030cc1.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `absent` governor on every host. Each cell names its own N, counting archives. Because the point and the interval come from the same estimator, every published value lies inside its own CI; the percent-of-peak denominator is pooled the same way, so the 1-thread and 8-thread rows for a routine are a ratio of like estimators. Rows from different CPUs are not comparable, because the peaks differ. A gate-p5 run measures one GOARCH, so no single run can judge this table: the rates pool every archive named above, while each host takes its verdicts from the first of the 5 judged runs named for that host. Two judged runs that grade one row differently are refused rather than averaged, because a verdict belongs to the gate that rendered it.
+All 54 rows are one pooled `benchstat` estimator per cell, not a median of per-run medians: every sample a host contributed across its own era's archived runs (6 runs in all here) is pooled into a single population, and the median and 95% CI printed beside it are both read off that one population — `scripts/gate-p5.sh` at rev `f18f110` (the judged run, which dates this page) and `f18f110`, `e37aa43`, `e37aa43`, `f3bbe01`, `f3bbe01`, logs in `archive/p5-balanced/judged-amd64-r1-e37aa43.log`, `archive/p5-balanced/judged-amd64-r2-e37aa43.log`, `archive/p5-balanced/judged-arm64-r1-e37aa43.log`, `archive/p5-balanced/judged-arm64-r2-e37aa43.log`, `archive/p5-balanced/judged-c9g-r1-e37aa43.log`, `archive/p5-balanced/judged-c9g-r2-e37aa43.log` — at n=4096 square, `GOMAXPROCS` pinned to the threads column, `absent` governor on every host. Each cell names its own N, counting archives. Because the point and the interval come from the same estimator, every published value lies inside its own CI; the percent-of-peak denominator is pooled the same way, so the 1-thread and 8-thread rows for a routine are a ratio of like estimators. Rows from different CPUs are not comparable, because the peaks differ. A gate-p5 run measures one GOARCH, so no single run can judge this table: the rates pool every archive named above, while each host takes its verdicts from the first of the 6 judged runs named for that host. Two judged runs that grade one row differently are refused rather than averaged, because a verdict belongs to the gate that rendered it.
 
 The 8-thread rows divide by 8x the 1-thread peak, which no host can reach: the clock drops with core count, so that share is a floor on how well the nest did and not a score. The bar below divides by a ceiling measured at 8 threads on the host itself, where the droop is inside the reading.
 
-As the run that supplies each host its verdicts printed them, net of CI -- the reading a bar compares, not a ratio of the medians above -- as a share of each host's own 8-thread ceiling: AMD EPYC 9R45 34.9-54.6%; AMD EPYC 9R14 50.6-82.3%; Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz 16.9-33.4%; Neoverse-V2 49.8-67.5%; Neoverse-V1 51.6-74.3%; Neoverse-V3 47.4-73.0%. Those ceilings are 99.7%, 99.8%, 93.7%, 99.9%, 89.1% and 99.8% of 8x each host's own 1-thread peak -- a different factor per host, which is why the retired 6.0x cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).
+As the run that supplies each host its verdicts printed them, net of CI -- the reading a bar compares, not a ratio of the medians above -- as a share of each host's own 8-thread ceiling: AMD EPYC 9R45 34.1-57.9%; AMD EPYC 9R14 50.3-86.4%; Intel(R) Xeon(R) Platinum 8124M CPU @ 3.00GHz 16.9-35.0%; Neoverse-V2 49.6-69.4%; Neoverse-V1 51.6-74.0%; Neoverse-V3 47.3-74.9%. Those ceilings are 99.8%, 99.7%, 93.8%, 100.0%, 88.9% and 99.8% of 8x each host's own 1-thread peak -- a different factor per host, which is why the retired 6.0x cross-host ratio could rank a host that kept more of its own silicon below one that kept less. The ceilings' own rates are the `Ceiling/compute` rows of the table above, one per host, so criterion 9 re-measures each on the host whose CPU the row names -- until #113 they were caption-only, outside the region that gate re-measures, which made the one rate every judged share divides by the one rate nothing re-checked (§7 rule 7, and criterion 9 is what noticed).
 
-18 of the 24 routine-host pairs those 48 routine rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: the judged routines must reach 47.0% of each host's own measured 8-thread ceiling (#6), or, on the 3 hosts with a landed registry row, their own registered baseline less the same margin (scripts/host-baselines.tsv), and Strsm's own >= x T8/T1 floor is RETIRED (#177, 2026-10-05): it was the same quantity the 6.0x cross-host floor was retired for, and it reddened a microkernel that improved both of its arms. A further 6 of those pairs are RECORDED as a candidate baseline in era famaxx86 (2) and famax (4) and judged by nothing, so those rows are published as measurements and not as passes (#6). A second judged log of the same tree could not decide a row its owning log judged: keel-zen4 Strsm reads PASS in judged-r2-35c2894.log, which owns its verdict, and NOISE-LIMITED in judged-r3-35c2894.log. The 6.0x cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.
+22 of the 24 routine-host pairs those 48 routine rows form clear the bars scripts/gate-p5.sh enforces, net of confidence intervals: the judged routines must reach 47.0% of each host's own measured 8-thread ceiling (#6), or, on the 4 hosts with a landed registry row, their own registered baseline less the same margin (scripts/host-baselines.tsv), and Strsm's own >= x T8/T1 floor is RETIRED (#177, 2026-10-05): it was the same quantity the 6.0x cross-host floor was retired for, and it reddened a microkernel that improved both of its arms. A further 2 of those pairs are RECORDED as a candidate baseline in era famaxx86 and judged by nothing, so those rows are published as measurements and not as passes (#6). The 6.0x cross-host scaling floor these numbers were once judged against is retired -- it was rank-ordered against per-core efficiency, refusing the host that kept the most of its core peak.
 <!-- keel-caption: end -->
 
 **The denominator here is keel's own microkernel, not OpenBLAS.** No OpenBLAS
