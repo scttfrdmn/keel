@@ -1,0 +1,127 @@
+== built 01:09:13 rev 9d9e9de mode hpc, go1.27.3
+== launch 01:09:13
+  region us-east-1, TTL 3h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$5.05 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.1s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (304ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (643ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0aa8f70d73cdcde13
+  Public IP    13.217.136.126
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-g3hpc
+
+🌍 DNS: keel-g3hpc.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-g3hpc.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  g3hpc  hpc7g.16xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-g3hpc cloud-init settled
+  keel-g3hpc has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-g3hpc           hpc7g.16xlarge   13.217.136.126   on-demand  3h       2026-11-06T01:09:38Z
+
+  1 instance(s) billing. 'down' terminates every one.
+== keel-g3hpc read-back
+CPU part	: 0xd40
+64
+hpc7g.16xlarge
+
+
+ 01:10:49 up 1 min,  1 user,  load average: 0.33, 0.13, 0.04
+keel-g3hpc idle0 BenchmarkClock 	     739	   1620515 ns/op	         2.588 Gops/s
+keel-g3hpc idle0 BenchmarkClock 	     739	   1620618 ns/op	         2.588 Gops/s
+keel-g3hpc idle0 BenchmarkClock 	     739	   1620914 ns/op	         2.588 Gops/s
+keel-g3hpc curve-k0 BenchmarkPeak/neon         	    9638	    120793 ns/op	        78.13 GFLOP/s
+keel-g3hpc curve-k0 BenchmarkPeak/neon         	    9926	    120797 ns/op	        78.12 GFLOP/s
+keel-g3hpc curve-k0 BenchmarkPeak/neon         	    9919	    120768 ns/op	        78.14 GFLOP/s
+keel-g3hpc clock-k0 BenchmarkClock 	     739	   1620539 ns/op	         2.588 Gops/s
+keel-g3hpc clock-k0 BenchmarkClock 	     739	   1620482 ns/op	         2.588 Gops/s
+keel-g3hpc curve-k1 BenchmarkPeak/neon         	    9692	    120765 ns/op	        78.14 GFLOP/s
+keel-g3hpc curve-k1 BenchmarkPeak/neon         	    9930	    120751 ns/op	        78.15 GFLOP/s
+keel-g3hpc curve-k1 BenchmarkPeak/neon         	    9922	    120732 ns/op	        78.17 GFLOP/s
+keel-g3hpc clock-k1 BenchmarkClock 	     739	   1619888 ns/op	         2.589 Gops/s
+keel-g3hpc clock-k1 BenchmarkClock 	     740	   1620085 ns/op	         2.589 Gops/s
+keel-g3hpc curve-k3 BenchmarkPeak/neon         	    9687	    120767 ns/op	        78.14 GFLOP/s
+keel-g3hpc curve-k3 BenchmarkPeak/neon         	    9921	    120753 ns/op	        78.15 GFLOP/s
+keel-g3hpc curve-k3 BenchmarkPeak/neon         	    9926	    120728 ns/op	        78.17 GFLOP/s
+keel-g3hpc clock-k3 BenchmarkClock 	     739	   1619893 ns/op	         2.589 Gops/s
+keel-g3hpc clock-k3 BenchmarkClock 	     740	   1619922 ns/op	         2.589 Gops/s
+keel-g3hpc curve-k7 BenchmarkPeak/neon         	    9710	    120760 ns/op	        78.15 GFLOP/s
+keel-g3hpc curve-k7 BenchmarkPeak/neon         	    9922	    120735 ns/op	        78.16 GFLOP/s
+keel-g3hpc curve-k7 BenchmarkPeak/neon         	    9912	    120744 ns/op	        78.16 GFLOP/s
+keel-g3hpc clock-k7 BenchmarkClock 	     739	   1620092 ns/op	         2.589 Gops/s
+keel-g3hpc clock-k7 BenchmarkClock 	     740	   1620051 ns/op	         2.589 Gops/s
+keel-g3hpc curve-k15 BenchmarkPeak/neon         	    9699	    120779 ns/op	        78.14 GFLOP/s
+keel-g3hpc curve-k15 BenchmarkPeak/neon         	    9920	    120760 ns/op	        78.15 GFLOP/s
+keel-g3hpc curve-k15 BenchmarkPeak/neon         	    9930	    120761 ns/op	        78.15 GFLOP/s
+keel-g3hpc clock-k15 BenchmarkClock 	     739	   1620463 ns/op	         2.588 Gops/s
+keel-g3hpc clock-k15 BenchmarkClock 	     740	   1620367 ns/op	         2.588 Gops/s
+keel-g3hpc curve-k31 BenchmarkPeak/neon         	    9703	    120875 ns/op	        78.07 GFLOP/s
+keel-g3hpc curve-k31 BenchmarkPeak/neon         	    9919	    120824 ns/op	        78.11 GFLOP/s
+keel-g3hpc curve-k31 BenchmarkPeak/neon         	    9908	    120826 ns/op	        78.11 GFLOP/s
+keel-g3hpc clock-k31 BenchmarkClock 	     738	   1621325 ns/op	         2.587 Gops/s
+keel-g3hpc clock-k31 BenchmarkClock 	     739	   1621084 ns/op	         2.587 Gops/s
+keel-g3hpc curve-k63 BenchmarkPeak/neon         	    9616	    120950 ns/op	        78.03 GFLOP/s
+keel-g3hpc curve-k63 BenchmarkPeak/neon         	    9902	    120920 ns/op	        78.04 GFLOP/s
+keel-g3hpc curve-k63 BenchmarkPeak/neon         	    9902	    120942 ns/op	        78.03 GFLOP/s
+keel-g3hpc clock-k63 BenchmarkClock 	     738	   1622735 ns/op	         2.585 Gops/s
+keel-g3hpc clock-k63 BenchmarkClock 	     739	   1622869 ns/op	         2.585 Gops/s
+keel-g3hpc select63 BenchmarkCeiling/family/fo/threads=1         	    9552	    120963 ns/op	        78.02 GFLOP/s
+keel-g3hpc select63 BenchmarkCeiling/family/fo/threads=1         	    9898	    120958 ns/op	        78.02 GFLOP/s
+keel-g3hpc select63 BenchmarkCeiling/family/x44/threads=1        	    5900	    202731 ns/op	        41.38 GFLOP/s
+keel-g3hpc select63 BenchmarkCeiling/family/x44/threads=1        	    5899	    202774 ns/op	        41.37 GFLOP/s
+keel-g3hpc select63 BenchmarkCeiling/family/shared/threads=1     	    6160	    196800 ns/op	        42.62 GFLOP/s
+keel-g3hpc select63 BenchmarkCeiling/family/shared/threads=1     	    6082	    196890 ns/op	        42.61 GFLOP/s
+keel-g3hpc idle1 BenchmarkClock 	     739	   1620536 ns/op	         2.588 Gops/s
+keel-g3hpc idle1 BenchmarkClock 	     740	   1620707 ns/op	         2.588 Gops/s
+keel-g3hpc idle1 BenchmarkClock 	     739	   1620649 ns/op	         2.588 Gops/s
+== done 01:19:12
+== TEARDOWN 01:19:12
+  terminating keel-g3hpc
+Looking up instance keel-g3hpc...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0aa8f70d73cdcde13...
+
+✅ Terminate request sent!
+   Instance: i-0aa8f70d73cdcde13
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   no keel- instance running — fleet is down
