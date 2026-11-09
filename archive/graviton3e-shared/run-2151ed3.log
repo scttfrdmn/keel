@@ -1,0 +1,593 @@
+== built 23:52:07 rev 2151ed3, go1.27.3
+== launch 23:52:07
+  region us-east-1, TTL 3h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$6.96 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.0s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (1.0s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (298ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (602ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (28.6s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0ff7f07e0ac41f69f
+  Public IP    44.211.230.20
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-g3
+
+🌍 DNS: keel-g3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-g3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  g3  c7g.16xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$11.98 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (978ms)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (972ms)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.6s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (340ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (460ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (41.1s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-0e8fbd1628ea2dced
+  Public IP    107.22.78.113
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-g3e
+
+🌍 DNS: keel-g3e.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-g3e.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  g3e  c7gn.16xlarge  (Neoverse-V1, arm64, AMI ami-09a93d801db0bafae, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-g3e cloud-init settled
+  keel-g3e has tmux
+  keel-g3 cloud-init settled
+  keel-g3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-g3e             c7gn.16xlarge    107.22.78.113    on-demand  3h       2026-11-08T23:53:27Z
+  keel-g3              c7g.16xlarge     44.211.230.20    on-demand  3h       2026-11-08T23:52:33Z
+
+  2 instance(s) billing. 'down' terminates every one.
+== keel-g3 identity
+   
+   CPU implementer	: 0x41
+   CPU variant	: 0x1
+   CPU part	: 0xd40
+   CPU revision	: 1
+   midr_el1 0x00000000411fd401
+   revidr_el1 0x0000000000000001
+   7.0.0-1014-aws
+    23:55:19 up 2 min,  1 user,  load average: 0.04, 0.05, 0.01
+keel-g3 BenchmarkPeakProbe/shim16         	    5871	    202590 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5917	    202587 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5916	    202555 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5918	    202564 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5916	    202599 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5916	    202538 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5918	    202557 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5919	    202560 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5918	    202548 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shim16         	    5919	    202553 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5916	    202508 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5919	    202424 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5920	    202552 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5916	    202493 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5920	    202519 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5919	    202475 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5920	    202524 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5918	    202541 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5916	    202531 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw16          	    5919	    202500 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3946	    303847 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3948	    303818 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3946	    303829 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3948	    303820 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3946	    303767 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3948	    303815 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3946	    303825 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3944	    303763 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3948	    303848 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/raw24          	    3946	    303837 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5918	    202550 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5918	    202541 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5920	    202536 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5919	    202555 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5918	    202557 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5919	    202553 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5920	    202544 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5916	    202568 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5919	    202555 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/shimD16        	    5896	    202567 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5919	    202544 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5920	    202561 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5922	    202547 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5918	    202548 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5917	    202539 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5920	    202534 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5920	    202530 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5917	    202519 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5917	    202537 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakProbe/rawD16         	    5919	    202545 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5871	    202497 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5916	    202473 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5894	    202395 ns/op	        41.45 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5919	    202538 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5917	    202487 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5917	    202461 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    6014	    202358 ns/op	        41.45 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5919	    202339 ns/op	        41.46 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5918	    202429 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/raw16         	    5916	    202468 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5920	    202461 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5918	    202551 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5920	    202502 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5919	    202514 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5918	    202511 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5918	    202476 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5920	    202337 ns/op	        41.46 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5936	    202538 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5919	    202494 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/vals          	    5916	    202420 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5919	    202452 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5916	    202449 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5919	    202454 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5917	    202487 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5918	    202435 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5919	    202516 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5920	    202479 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5919	    202490 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5919	    202504 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44           	    5919	    202454 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5919	    202513 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5919	    202475 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5919	    202465 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5919	    202492 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5922	    202493 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5917	    202440 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5918	    202513 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5917	    202476 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5918	    202503 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x44v          	    5922	    202469 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5259	    227804 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5271	    227777 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5265	    227743 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5263	    227741 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5262	    227744 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5263	    227743 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5263	    227783 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5264	    227732 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5256	    227721 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkPeakVariants/x36           	    5263	    227802 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5920	    202535 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5920	    202554 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5919	    202568 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5918	    202530 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5919	    202467 ns/op	        20.72 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5919	    202534 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5920	    202555 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5920	    202521 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5918	    202539 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/rawD16        	    5920	    202531 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5918	    202511 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5919	    202500 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5917	    202423 ns/op	        20.72 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5919	    202453 ns/op	        20.72 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5917	    202509 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5919	    202507 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5918	    202461 ns/op	        20.72 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5917	    202449 ns/op	        20.72 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5919	    202493 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkPeakVariants/Dx44          	    5919	    202516 ns/op	        20.71 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5197	    227742 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5262	    227768 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5260	    227802 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5263	    227800 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5263	    227794 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5263	    227739 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5262	    227734 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5259	    227804 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5262	    227746 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/x36         	    5263	    227706 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663508	      1808 ns/op	        40.79 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663158	      1807 ns/op	        40.80 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663427	      1807 ns/op	        40.79 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663110	      1807 ns/op	        40.79 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663481	      1807 ns/op	        40.79 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663896	      1808 ns/op	        40.79 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663207	      1807 ns/op	        40.79 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663361	      1807 ns/op	        40.79 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663354	      1808 ns/op	        40.79 GFLOP/s
+keel-g3 BenchmarkV1Probe/i512        	  663130	      1808 ns/op	        40.78 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5260	    227725 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5265	    227740 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5260	    227780 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5264	    227780 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5262	    227763 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5264	    227731 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5256	    227746 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5246	    227740 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5265	    227755 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/zero        	    5252	    227786 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5264	    227772 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5260	    227758 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5263	    227744 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5271	    227753 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5262	    227699 ns/op	        41.45 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5262	    227741 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5246	    227735 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5263	    227711 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5265	    227646 ns/op	        41.46 GFLOP/s
+keel-g3 BenchmarkV1Probe/data        	    5263	    227772 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5263	    227739 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5262	    227677 ns/op	        41.45 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5265	    227743 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5264	    227725 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5264	    227726 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5262	    227754 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5264	    227726 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5263	    227767 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5263	    227631 ns/op	        41.46 GFLOP/s
+keel-g3 BenchmarkV1Probe/slice       	    5262	    227756 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5260	    227832 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5263	    227798 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5262	    227838 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5259	    227816 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5260	    227798 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5259	    227858 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5259	    227834 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5271	    227805 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5263	    227809 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/int         	    5254	    227798 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5262	    227747 ns/op	        41.44 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5263	    227643 ns/op	        41.46 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5263	    227673 ns/op	        41.45 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5263	    227688 ns/op	        41.45 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5263	    227766 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5262	    227688 ns/op	        41.45 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5275	    227616 ns/op	        41.46 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5262	    227774 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5260	    227772 ns/op	        41.43 GFLOP/s
+keel-g3 BenchmarkV1Probe/unroll2     	    5262	    227618 ns/op	        41.46 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9694	    120817 ns/op	        78.11 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9921	    120781 ns/op	        78.13 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9916	    120773 ns/op	        78.14 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9926	    120776 ns/op	        78.14 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9925	    120740 ns/op	        78.16 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9920	    120760 ns/op	        78.15 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9931	    120772 ns/op	        78.14 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9930	    120768 ns/op	        78.14 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9918	    120750 ns/op	        78.15 GFLOP/s
+keel-g3 BenchmarkCeiling/family/fo/threads=1         	    9927	    120761 ns/op	        78.15 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5918	    202552 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5917	    202546 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5924	    202539 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5920	    202529 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5920	    202526 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5920	    202542 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5920	    202540 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5930	    202536 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5917	    202560 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkCeiling/family/x44/threads=1        	    5919	    202523 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5893	    202563 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5904	    202551 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5916	    202530 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5914	    202561 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5905	    202559 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5917	    202546 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5918	    202550 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5917	    202556 ns/op	        41.41 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5906	    202539 ns/op	        41.42 GFLOP/s
+keel-g3 BenchmarkCeiling/family/shared/threads=1     	    5919	    202572 ns/op	        41.41 GFLOP/s
+== keel-g3e identity
+   
+   CPU implementer	: 0x41
+   CPU variant	: 0x1
+   CPU part	: 0xd40
+   CPU revision	: 1
+   midr_el1 0x00000000411fd401
+   revidr_el1 0x0000000000000001
+   7.0.0-1014-aws
+    23:55:19 up 1 min,  1 user,  load average: 0.21, 0.09, 0.03
+keel-g3e BenchmarkPeakProbe/shim16         	    6202	    192478 ns/op	        43.58 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6267	    193832 ns/op	        43.28 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6202	    193351 ns/op	        43.39 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6213	    193484 ns/op	        43.36 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6142	    193144 ns/op	        43.43 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6109	    193841 ns/op	        43.28 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6321	    192958 ns/op	        43.47 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6310	    192995 ns/op	        43.47 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6180	    193391 ns/op	        43.38 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shim16         	    6146	    192421 ns/op	        43.60 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7886	    158565 ns/op	        52.90 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7574	    158802 ns/op	        52.82 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7376	    157699 ns/op	        53.19 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    6994	    158199 ns/op	        53.03 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7569	    158799 ns/op	        52.83 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7666	    158802 ns/op	        52.82 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7400	    157171 ns/op	        53.37 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7314	    158142 ns/op	        53.04 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7443	    158396 ns/op	        52.96 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw16          	    7444	    158145 ns/op	        53.04 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3946	    303825 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3946	    303861 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3948	    303869 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3946	    303815 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3946	    303796 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3948	    303804 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3948	    303852 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3944	    303831 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3946	    303799 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakProbe/raw24          	    3946	    303796 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6278	    191210 ns/op	        21.94 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6267	    191938 ns/op	        21.85 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6082	    190904 ns/op	        21.97 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6212	    192260 ns/op	        21.82 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6408	    191298 ns/op	        21.93 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6212	    190963 ns/op	        21.96 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6404	    191932 ns/op	        21.85 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6583	    191461 ns/op	        21.91 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6364	    190487 ns/op	        22.02 GFLOP/s
+keel-g3e BenchmarkPeakProbe/shimD16        	    6450	    191344 ns/op	        21.92 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7262	    156452 ns/op	        26.81 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7344	    157194 ns/op	        26.68 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7646	    157604 ns/op	        26.61 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7830	    156335 ns/op	        26.83 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7537	    157246 ns/op	        26.67 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7551	    157318 ns/op	        26.66 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7519	    156625 ns/op	        26.78 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7755	    157402 ns/op	        26.65 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    7652	    156823 ns/op	        26.75 GFLOP/s
+keel-g3e BenchmarkPeakProbe/rawD16         	    8023	    153762 ns/op	        27.28 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7134	    159784 ns/op	        52.50 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7339	    161190 ns/op	        52.04 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7190	    160247 ns/op	        52.35 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7512	    160383 ns/op	        52.30 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7342	    160387 ns/op	        52.30 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7226	    160756 ns/op	        52.18 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7327	    160794 ns/op	        52.17 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7376	    160468 ns/op	        52.28 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7585	    159920 ns/op	        52.45 GFLOP/s
+keel-g3e BenchmarkPeakVariants/raw16         	    7262	    161093 ns/op	        52.07 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9742	    128221 ns/op	        65.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9766	    128136 ns/op	        65.47 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9186	    129680 ns/op	        64.69 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9087	    127679 ns/op	        65.70 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9853	    128715 ns/op	        65.17 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9598	    126126 ns/op	        66.51 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9466	    124368 ns/op	        67.45 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9870	    125696 ns/op	        66.74 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9694	    124536 ns/op	        67.36 GFLOP/s
+keel-g3e BenchmarkPeakVariants/vals          	    9638	    124554 ns/op	        67.35 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6040	    198174 ns/op	        42.33 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6000	    198042 ns/op	        42.36 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    5917	    198049 ns/op	        42.36 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6025	    198043 ns/op	        42.36 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6139	    197631 ns/op	        42.45 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6015	    197746 ns/op	        42.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6116	    198705 ns/op	        42.22 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6057	    197815 ns/op	        42.41 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6063	    198903 ns/op	        42.17 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44           	    6103	    198311 ns/op	        42.30 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    6075	    196846 ns/op	        42.62 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    6006	    197032 ns/op	        42.57 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    6219	    197127 ns/op	        42.55 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    5966	    197464 ns/op	        42.48 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    6042	    196816 ns/op	        42.62 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    5982	    197242 ns/op	        42.53 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    6010	    197401 ns/op	        42.50 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    6009	    197419 ns/op	        42.49 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    5954	    197230 ns/op	        42.53 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x44v          	    5986	    197226 ns/op	        42.53 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5262	    227889 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5266	    227864 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5260	    227885 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5262	    227864 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5260	    227842 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5269	    227886 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5263	    227855 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5262	    227868 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5263	    227837 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/x36           	    5260	    227847 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    7910	    156105 ns/op	        26.87 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    7609	    155928 ns/op	        26.90 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    8160	    156111 ns/op	        26.87 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    7941	    156833 ns/op	        26.74 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    7399	    155192 ns/op	        27.03 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    7279	    156223 ns/op	        26.85 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    7326	    156872 ns/op	        26.74 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    8125	    156399 ns/op	        26.82 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    7476	    156042 ns/op	        26.88 GFLOP/s
+keel-g3e BenchmarkPeakVariants/rawD16        	    8048	    155997 ns/op	        26.89 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6151	    194759 ns/op	        21.54 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6118	    195306 ns/op	        21.48 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6175	    195125 ns/op	        21.50 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6118	    195426 ns/op	        21.46 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6200	    195349 ns/op	        21.47 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6132	    195020 ns/op	        21.51 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6218	    194648 ns/op	        21.55 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6163	    194733 ns/op	        21.54 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6136	    194676 ns/op	        21.55 GFLOP/s
+keel-g3e BenchmarkPeakVariants/Dx44          	    6351	    195542 ns/op	        21.45 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5329	    227852 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5260	    227828 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5260	    227860 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5262	    227790 ns/op	        41.43 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5263	    227886 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5259	    227837 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5257	    227894 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5269	    227844 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5263	    227822 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/x36         	    5263	    227825 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  664612	      1804 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  664878	      1804 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  665449	      1803 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  665635	      1803 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  664806	      1803 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  664702	      1804 ns/op	        40.87 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  664978	      1803 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  664825	      1803 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  664732	      1804 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/i512        	  665601	      1804 ns/op	        40.88 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5258	    227845 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5260	    227819 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5262	    227850 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5270	    227845 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5263	    227810 ns/op	        41.43 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5264	    227834 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5263	    227833 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5263	    227887 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5262	    227820 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/zero        	    5262	    227773 ns/op	        41.43 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5264	    227804 ns/op	        41.43 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5262	    227834 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5262	    227876 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5260	    227848 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5263	    227927 ns/op	        41.40 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5262	    227832 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5262	    227818 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5264	    227825 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5274	    227787 ns/op	        41.43 GFLOP/s
+keel-g3e BenchmarkV1Probe/data        	    5264	    227845 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5262	    227854 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5263	    227906 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5264	    227851 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5258	    227885 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5271	    227904 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5264	    227844 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5262	    227923 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5260	    227842 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5263	    227850 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/slice       	    5262	    227900 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5262	    227842 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5262	    227891 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5260	    227842 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5263	    227863 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5270	    227887 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5263	    227859 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5260	    227852 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5270	    227853 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5262	    227851 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/int         	    5262	    227889 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5276	    227846 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5266	    227865 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5262	    227855 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5282	    227867 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5260	    227880 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5262	    227825 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5260	    227885 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5263	    227900 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5262	    227904 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkV1Probe/unroll2     	    5263	    227872 ns/op	        41.41 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9712	    120792 ns/op	        78.13 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9924	    120775 ns/op	        78.14 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9927	    120744 ns/op	        78.16 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9933	    120733 ns/op	        78.17 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9931	    120720 ns/op	        78.17 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9938	    120759 ns/op	        78.15 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9927	    120718 ns/op	        78.18 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9931	    120739 ns/op	        78.16 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9931	    120720 ns/op	        78.17 GFLOP/s
+keel-g3e BenchmarkCeiling/family/fo/threads=1         	    9918	    120724 ns/op	        78.17 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5911	    202446 ns/op	        41.44 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5925	    202443 ns/op	        41.44 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5919	    202509 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5918	    202535 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5916	    202473 ns/op	        41.43 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5922	    202394 ns/op	        41.45 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5947	    202445 ns/op	        41.44 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5920	    202486 ns/op	        41.43 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5918	    202450 ns/op	        41.44 GFLOP/s
+keel-g3e BenchmarkCeiling/family/x44/threads=1        	    5920	    202502 ns/op	        41.42 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6031	    196723 ns/op	        42.64 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6043	    196549 ns/op	        42.68 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6074	    196303 ns/op	        42.73 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6057	    196824 ns/op	        42.62 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6034	    196114 ns/op	        42.77 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6134	    195981 ns/op	        42.80 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6009	    196416 ns/op	        42.71 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6036	    196298 ns/op	        42.73 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6182	    196883 ns/op	        42.61 GFLOP/s
+keel-g3e BenchmarkCeiling/family/shared/threads=1     	    6057	    196348 ns/op	        42.72 GFLOP/s
+== done 23:59:50
+== TEARDOWN 23:59:50
+  terminating keel-g3e
+Looking up instance keel-g3e...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0e8fbd1628ea2dced...
+
+✅ Terminate request sent!
+   Instance: i-0e8fbd1628ea2dced
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  terminating keel-g3
+Looking up instance keel-g3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-0ff7f07e0ac41f69f...
+
+✅ Terminate request sent!
+   Instance: i-0ff7f07e0ac41f69f
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   no keel- instance running — fleet is down
