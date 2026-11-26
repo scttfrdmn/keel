@@ -117,3 +117,32 @@ The last three are byte-unchanged, so they are exact controls.
    archived deltas:
    - `ctl`: V1 +26%, V2 +36%, V3 +32%;
    - `shim`: V1 +29%, V2 +27%, V3 +15%.
+
+### Result (`ff9c4fe`, `run-vec-ff9c4fe.log`): controls exact, raw 3x24 as predicted, shim 3x24 well above prediction
+
+The rerun took 7m01s and produced 140 rows per host: 7 × 2 arms × 10 rounds, the full count. The
+fail-fast never fired, and the fleet was verified down by a readable inventory.
+
+| probe (fold/base, median of 10) | V1 | V2 | V3 |
+|---|---|---|---|
+| shim 3x24 (`Kernel3x24`, 79 → 67 instructions) | 36.12 → 49.27, **+36.4%** | 40.51 → 56.51, **+39.5%** | 49.03 → 66.91, **+36.5%** |
+| raw 3x24 (`ctl`, 48 → 42) | 36.43 → 45.88, +26.0% | 41.53 → 56.59, +36.3% | 49.10 → 63.88, +30.1% |
+| `PB` (unchanged loop) | −0.0% | −0.0% | +0.1% |
+| `FO` (unchanged loop) | +0.3% | +0.4% | +0.1% |
+| shipped 5x16-pb, LoadProbe Ctl kc=128 / 384 / 512 | +0.0 / −0.5 / −0.1% | +0.0 / +0.2 / −0.1% | −0.0 / −0.1 / −0.1% |
+
+1. ✓ **Controls, 21 of 21 within ±1%.** The largest is −0.5%, V1 Ctl kc=384, whose base arm alone
+   spans 66.51–69.52.
+2. **Split.**
+   - ✓ Raw 3x24 matches CL 827904 PS2 within its band on all three: +26.0 / +36.3 / +30.1 against
+     +26 / +36 / +32.
+   - ✗ **The shim 3x24 gains far more than PS2 did:** +36.4 / +39.5 / +36.5 against +29 / +27 /
+     +15. It is above the ±5 band on every host, by 2.4, 7.5 and 16.5 points.
+
+   The relanded rule set does more for the shim's code than PS2 did. One plausible reading is that
+   it also folds constant broadcasts to `VMOVI`. Under the fold, the shim (3x24/2) **overtakes** the
+   raw 3x24/1 on V1 (49.27 against 45.88) and V3 (66.91 against 63.88). Under the base the order is
+   the reverse. Why the gain is largest on V3 is unattributed.
+
+The nest-level conclusion stands, from `run-ba6e1a8.log`: pre-broadcast 5x16-pb still leads the best
+conventional kernel by 18–20% on every host.

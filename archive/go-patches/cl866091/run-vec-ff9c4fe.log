@@ -1,0 +1,627 @@
+== base: go version go1.28-devel_b22ece6bf5 Tue Nov 24 20:25:53 2026 -0800 darwin/arm64
+== fold: go version go1.28-devel_544d1b015d Tue Nov 24 20:33:32 2026 -0800 darwin/arm64
+== built 03:33:46 keel ff9c4fe
+== launch 03:33:46
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.16 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.7s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (2.0s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.8s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (291ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (669ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-04e1af0c9ed9c7aa6
+  Public IP    13.217.28.80
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  gvt3  c7g.4xlarge  (Neoverse-V1, arm64, AMI ami-04512f58a86d569d1, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.28 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.8s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (2.1s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (303ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (628ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-06a7518330a27a7dc
+  Public IP    32.198.115.44
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  gvt4  c8g.4xlarge  (Neoverse-V2, arm64, AMI ami-04512f58a86d569d1, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.8s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (2.0s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.4s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (296ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (688ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.3s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-06db6268a9da1dc8d
+  Public IP    3.237.79.79
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  gvt5  c9g.4xlarge  (Neoverse-V3, arm64, AMI ami-04512f58a86d569d1, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.4xlarge      3.237.79.79      on-demand  2h       2026-11-26T03:35:32Z
+  keel-gvt4            c8g.4xlarge      32.198.115.44    on-demand  2h       2026-11-26T03:34:56Z
+  keel-gvt3            c7g.4xlarge      13.217.28.80     on-demand  2h       2026-11-26T03:34:20Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== keel-gvt3 read-back
+CPU part	: 0xd40
+16
+ 03:36:51 up 2 min,  1 user,  load average: 0.10, 0.12, 0.05
+== keel-gvt4 read-back
+CPU part	: 0xd4f
+16
+ 03:36:51 up 1 min,  1 user,  load average: 0.10, 0.07, 0.02
+== keel-gvt5 read-back
+CPU part	: 0xd84
+16
+ 03:36:51 up 1 min,  1 user,  load average: 0.29, 0.10, 0.03
+keel-gvt3 r1 base BenchmarkLimiterProbe/shim/kc=512         	  582067	      2041 ns/op	        36.13 GFLOP/s
+keel-gvt3 r1 base BenchmarkLimiterProbe/ctl/kc=512          	  590698	      2020 ns/op	        36.50 GFLOP/s
+keel-gvt3 r1 base BenchmarkLimiterProbe/PB/kc=512           	  949406	      1256 ns/op	        58.71 GFLOP/s
+keel-gvt3 r1 base BenchmarkLimiterProbe/FO/kc=512           	 1316258	       911.4 ns/op	        80.89 GFLOP/s
+keel-gvt3 r1 base BenchmarkLoadProbe/Ctl/kc=128         	 3969589	       302.5 ns/op	        67.69 GFLOP/s
+keel-gvt3 r1 base BenchmarkLoadProbe/Ctl/kc=384         	 1299151	       906.0 ns/op	        67.82 GFLOP/s
+keel-gvt3 r1 base BenchmarkLoadProbe/Ctl/kc=512         	  905539	      1328 ns/op	        61.70 GFLOP/s
+keel-gvt3 r1 fold BenchmarkLimiterProbe/shim/kc=512         	  795759	      1496 ns/op	        49.27 GFLOP/s
+keel-gvt3 r1 fold BenchmarkLimiterProbe/ctl/kc=512          	  744021	      1604 ns/op	        45.96 GFLOP/s
+keel-gvt3 r1 fold BenchmarkLimiterProbe/PB/kc=512           	  953313	      1257 ns/op	        58.67 GFLOP/s
+keel-gvt3 r1 fold BenchmarkLimiterProbe/FO/kc=512           	 1320134	       908.9 ns/op	        81.12 GFLOP/s
+keel-gvt3 r1 fold BenchmarkLoadProbe/Ctl/kc=128         	 3966253	       302.2 ns/op	        67.76 GFLOP/s
+keel-gvt3 r1 fold BenchmarkLoadProbe/Ctl/kc=384         	 1316380	       911.0 ns/op	        67.44 GFLOP/s
+keel-gvt3 r1 fold BenchmarkLoadProbe/Ctl/kc=512         	  907584	      1325 ns/op	        61.85 GFLOP/s
+keel-gvt3 r2 fold BenchmarkLimiterProbe/shim/kc=512         	  795199	      1496 ns/op	        49.27 GFLOP/s
+keel-gvt3 r2 fold BenchmarkLimiterProbe/ctl/kc=512          	  745785	      1609 ns/op	        45.82 GFLOP/s
+keel-gvt3 r2 fold BenchmarkLimiterProbe/PB/kc=512           	  957195	      1256 ns/op	        58.68 GFLOP/s
+keel-gvt3 r2 fold BenchmarkLimiterProbe/FO/kc=512           	 1320650	       908.6 ns/op	        81.14 GFLOP/s
+keel-gvt3 r2 fold BenchmarkLoadProbe/Ctl/kc=128         	 3967880	       302.3 ns/op	        67.75 GFLOP/s
+keel-gvt3 r2 fold BenchmarkLoadProbe/Ctl/kc=384         	 1324828	       922.7 ns/op	        66.59 GFLOP/s
+keel-gvt3 r2 fold BenchmarkLoadProbe/Ctl/kc=512         	  901138	      1327 ns/op	        61.73 GFLOP/s
+keel-gvt3 r2 base BenchmarkLimiterProbe/shim/kc=512         	  581476	      2041 ns/op	        36.12 GFLOP/s
+keel-gvt3 r2 base BenchmarkLimiterProbe/ctl/kc=512          	  592398	      2026 ns/op	        36.39 GFLOP/s
+keel-gvt3 r2 base BenchmarkLimiterProbe/PB/kc=512           	  957374	      1256 ns/op	        58.68 GFLOP/s
+keel-gvt3 r2 base BenchmarkLimiterProbe/FO/kc=512           	 1316445	       911.4 ns/op	        80.89 GFLOP/s
+keel-gvt3 r2 base BenchmarkLoadProbe/Ctl/kc=128         	 3969546	       302.2 ns/op	        67.76 GFLOP/s
+keel-gvt3 r2 base BenchmarkLoadProbe/Ctl/kc=384         	 1328317	       899.6 ns/op	        68.30 GFLOP/s
+keel-gvt3 r2 base BenchmarkLoadProbe/Ctl/kc=512         	  903068	      1329 ns/op	        61.66 GFLOP/s
+keel-gvt3 r3 base BenchmarkLimiterProbe/shim/kc=512         	  582123	      2041 ns/op	        36.13 GFLOP/s
+keel-gvt3 r3 base BenchmarkLimiterProbe/ctl/kc=512          	  590929	      2021 ns/op	        36.49 GFLOP/s
+keel-gvt3 r3 base BenchmarkLimiterProbe/PB/kc=512           	  951900	      1252 ns/op	        58.90 GFLOP/s
+keel-gvt3 r3 base BenchmarkLimiterProbe/FO/kc=512           	 1315840	       911.6 ns/op	        80.88 GFLOP/s
+keel-gvt3 r3 base BenchmarkLoadProbe/Ctl/kc=128         	 3965317	       302.5 ns/op	        67.69 GFLOP/s
+keel-gvt3 r3 base BenchmarkLoadProbe/Ctl/kc=384         	 1299266	       923.8 ns/op	        66.51 GFLOP/s
+keel-gvt3 r3 base BenchmarkLoadProbe/Ctl/kc=512         	  898794	      1331 ns/op	        61.54 GFLOP/s
+keel-gvt3 r3 fold BenchmarkLimiterProbe/shim/kc=512         	  793311	      1497 ns/op	        49.26 GFLOP/s
+keel-gvt3 r3 fold BenchmarkLimiterProbe/ctl/kc=512          	  745455	      1609 ns/op	        45.83 GFLOP/s
+keel-gvt3 r3 fold BenchmarkLimiterProbe/PB/kc=512           	  957068	      1256 ns/op	        58.69 GFLOP/s
+keel-gvt3 r3 fold BenchmarkLimiterProbe/FO/kc=512           	 1320537	       908.9 ns/op	        81.12 GFLOP/s
+keel-gvt3 r3 fold BenchmarkLoadProbe/Ctl/kc=128         	 3966116	       302.3 ns/op	        67.74 GFLOP/s
+keel-gvt3 r3 fold BenchmarkLoadProbe/Ctl/kc=384         	 1324950	       924.3 ns/op	        66.47 GFLOP/s
+keel-gvt3 r3 fold BenchmarkLoadProbe/Ctl/kc=512         	  902797	      1328 ns/op	        61.71 GFLOP/s
+keel-gvt3 r4 fold BenchmarkLimiterProbe/shim/kc=512         	  788037	      1496 ns/op	        49.30 GFLOP/s
+keel-gvt3 r4 fold BenchmarkLimiterProbe/ctl/kc=512          	  746034	      1609 ns/op	        45.81 GFLOP/s
+keel-gvt3 r4 fold BenchmarkLimiterProbe/PB/kc=512           	  956751	      1256 ns/op	        58.69 GFLOP/s
+keel-gvt3 r4 fold BenchmarkLimiterProbe/FO/kc=512           	 1320556	       909.0 ns/op	        81.11 GFLOP/s
+keel-gvt3 r4 fold BenchmarkLoadProbe/Ctl/kc=128         	 3966736	       302.2 ns/op	        67.77 GFLOP/s
+keel-gvt3 r4 fold BenchmarkLoadProbe/Ctl/kc=384         	 1291317	       929.2 ns/op	        66.12 GFLOP/s
+keel-gvt3 r4 fold BenchmarkLoadProbe/Ctl/kc=512         	  904590	      1322 ns/op	        61.94 GFLOP/s
+keel-gvt3 r4 base BenchmarkLimiterProbe/shim/kc=512         	  582052	      2039 ns/op	        36.17 GFLOP/s
+keel-gvt3 r4 base BenchmarkLimiterProbe/ctl/kc=512          	  590472	      2022 ns/op	        36.47 GFLOP/s
+keel-gvt3 r4 base BenchmarkLimiterProbe/PB/kc=512           	  952167	      1254 ns/op	        58.77 GFLOP/s
+keel-gvt3 r4 base BenchmarkLimiterProbe/FO/kc=512           	 1316256	       911.4 ns/op	        80.89 GFLOP/s
+keel-gvt3 r4 base BenchmarkLoadProbe/Ctl/kc=128         	 3967874	       302.3 ns/op	        67.75 GFLOP/s
+keel-gvt3 r4 base BenchmarkLoadProbe/Ctl/kc=384         	 1316985	       910.9 ns/op	        67.45 GFLOP/s
+keel-gvt3 r4 base BenchmarkLoadProbe/Ctl/kc=512         	  909613	      1323 ns/op	        61.90 GFLOP/s
+keel-gvt3 r5 base BenchmarkLimiterProbe/shim/kc=512         	  578179	      2039 ns/op	        36.17 GFLOP/s
+keel-gvt3 r5 base BenchmarkLimiterProbe/ctl/kc=512          	  591100	      2022 ns/op	        36.47 GFLOP/s
+keel-gvt3 r5 base BenchmarkLimiterProbe/PB/kc=512           	  951235	      1255 ns/op	        58.76 GFLOP/s
+keel-gvt3 r5 base BenchmarkLimiterProbe/FO/kc=512           	 1316139	       911.6 ns/op	        80.88 GFLOP/s
+keel-gvt3 r5 base BenchmarkLoadProbe/Ctl/kc=128         	 3963398	       302.4 ns/op	        67.73 GFLOP/s
+keel-gvt3 r5 base BenchmarkLoadProbe/Ctl/kc=384         	 1357845	       922.7 ns/op	        66.58 GFLOP/s
+keel-gvt3 r5 base BenchmarkLoadProbe/Ctl/kc=512         	  904305	      1322 ns/op	        61.95 GFLOP/s
+keel-gvt3 r5 fold BenchmarkLimiterProbe/shim/kc=512         	  794036	      1486 ns/op	        49.60 GFLOP/s
+keel-gvt3 r5 fold BenchmarkLimiterProbe/ctl/kc=512          	  743824	      1604 ns/op	        45.96 GFLOP/s
+keel-gvt3 r5 fold BenchmarkLimiterProbe/PB/kc=512           	  953817	      1252 ns/op	        58.91 GFLOP/s
+keel-gvt3 r5 fold BenchmarkLimiterProbe/FO/kc=512           	 1320055	       909.0 ns/op	        81.11 GFLOP/s
+keel-gvt3 r5 fold BenchmarkLoadProbe/Ctl/kc=128         	 3964384	       302.3 ns/op	        67.76 GFLOP/s
+keel-gvt3 r5 fold BenchmarkLoadProbe/Ctl/kc=384         	 1292559	       902.7 ns/op	        68.06 GFLOP/s
+keel-gvt3 r5 fold BenchmarkLoadProbe/Ctl/kc=512         	  903883	      1319 ns/op	        62.11 GFLOP/s
+keel-gvt3 r6 fold BenchmarkLimiterProbe/shim/kc=512         	  789151	      1496 ns/op	        49.27 GFLOP/s
+keel-gvt3 r6 fold BenchmarkLimiterProbe/ctl/kc=512          	  743496	      1605 ns/op	        45.94 GFLOP/s
+keel-gvt3 r6 fold BenchmarkLimiterProbe/PB/kc=512           	  949155	      1259 ns/op	        58.57 GFLOP/s
+keel-gvt3 r6 fold BenchmarkLimiterProbe/FO/kc=512           	 1319906	       908.9 ns/op	        81.11 GFLOP/s
+keel-gvt3 r6 fold BenchmarkLoadProbe/Ctl/kc=128         	 3966490	       302.2 ns/op	        67.76 GFLOP/s
+keel-gvt3 r6 fold BenchmarkLoadProbe/Ctl/kc=384         	 1357484	       910.8 ns/op	        67.46 GFLOP/s
+keel-gvt3 r6 fold BenchmarkLoadProbe/Ctl/kc=512         	  903844	      1323 ns/op	        61.90 GFLOP/s
+keel-gvt3 r6 base BenchmarkLimiterProbe/shim/kc=512         	  581814	      2044 ns/op	        36.06 GFLOP/s
+keel-gvt3 r6 base BenchmarkLimiterProbe/ctl/kc=512          	  590996	      2026 ns/op	        36.39 GFLOP/s
+keel-gvt3 r6 base BenchmarkLimiterProbe/PB/kc=512           	  954429	      1257 ns/op	        58.68 GFLOP/s
+keel-gvt3 r6 base BenchmarkLimiterProbe/FO/kc=512           	 1316198	       911.4 ns/op	        80.89 GFLOP/s
+keel-gvt3 r6 base BenchmarkLoadProbe/Ctl/kc=128         	 3964443	       302.3 ns/op	        67.74 GFLOP/s
+keel-gvt3 r6 base BenchmarkLoadProbe/Ctl/kc=384         	 1299181	       905.8 ns/op	        67.83 GFLOP/s
+keel-gvt3 r6 base BenchmarkLoadProbe/Ctl/kc=512         	  902749	      1329 ns/op	        61.65 GFLOP/s
+keel-gvt3 r7 base BenchmarkLimiterProbe/shim/kc=512         	  580593	      2044 ns/op	        36.06 GFLOP/s
+keel-gvt3 r7 base BenchmarkLimiterProbe/ctl/kc=512          	  591993	      2027 ns/op	        36.37 GFLOP/s
+keel-gvt3 r7 base BenchmarkLimiterProbe/PB/kc=512           	  957754	      1256 ns/op	        58.69 GFLOP/s
+keel-gvt3 r7 base BenchmarkLimiterProbe/FO/kc=512           	 1316386	       911.6 ns/op	        80.88 GFLOP/s
+keel-gvt3 r7 base BenchmarkLoadProbe/Ctl/kc=128         	 3966230	       302.3 ns/op	        67.74 GFLOP/s
+keel-gvt3 r7 base BenchmarkLoadProbe/Ctl/kc=384         	 1357429	       922.4 ns/op	        66.61 GFLOP/s
+keel-gvt3 r7 base BenchmarkLoadProbe/Ctl/kc=512         	  903199	      1322 ns/op	        61.96 GFLOP/s
+keel-gvt3 r7 fold BenchmarkLimiterProbe/shim/kc=512         	  793605	      1496 ns/op	        49.27 GFLOP/s
+keel-gvt3 r7 fold BenchmarkLimiterProbe/ctl/kc=512          	  743743	      1604 ns/op	        45.96 GFLOP/s
+keel-gvt3 r7 fold BenchmarkLimiterProbe/PB/kc=512           	  950826	      1256 ns/op	        58.69 GFLOP/s
+keel-gvt3 r7 fold BenchmarkLimiterProbe/FO/kc=512           	 1320542	       908.8 ns/op	        81.13 GFLOP/s
+keel-gvt3 r7 fold BenchmarkLoadProbe/Ctl/kc=128         	 3963290	       302.6 ns/op	        67.69 GFLOP/s
+keel-gvt3 r7 fold BenchmarkLoadProbe/Ctl/kc=384         	 1293672	       910.7 ns/op	        67.47 GFLOP/s
+keel-gvt3 r7 fold BenchmarkLoadProbe/Ctl/kc=512         	  906756	      1328 ns/op	        61.69 GFLOP/s
+keel-gvt3 r8 fold BenchmarkLimiterProbe/shim/kc=512         	  787612	      1487 ns/op	        49.58 GFLOP/s
+keel-gvt3 r8 fold BenchmarkLimiterProbe/ctl/kc=512          	  745557	      1609 ns/op	        45.83 GFLOP/s
+keel-gvt3 r8 fold BenchmarkLimiterProbe/PB/kc=512           	  957265	      1254 ns/op	        58.78 GFLOP/s
+keel-gvt3 r8 fold BenchmarkLimiterProbe/FO/kc=512           	 1319806	       909.0 ns/op	        81.11 GFLOP/s
+keel-gvt3 r8 fold BenchmarkLoadProbe/Ctl/kc=128         	 3963855	       302.3 ns/op	        67.74 GFLOP/s
+keel-gvt3 r8 fold BenchmarkLoadProbe/Ctl/kc=384         	 1357830	       915.5 ns/op	        67.11 GFLOP/s
+keel-gvt3 r8 fold BenchmarkLoadProbe/Ctl/kc=512         	  903828	      1325 ns/op	        61.85 GFLOP/s
+keel-gvt3 r8 base BenchmarkLimiterProbe/shim/kc=512         	  577418	      2045 ns/op	        36.06 GFLOP/s
+keel-gvt3 r8 base BenchmarkLimiterProbe/ctl/kc=512          	  590756	      2020 ns/op	        36.49 GFLOP/s
+keel-gvt3 r8 base BenchmarkLimiterProbe/PB/kc=512           	  948547	      1256 ns/op	        58.69 GFLOP/s
+keel-gvt3 r8 base BenchmarkLimiterProbe/FO/kc=512           	 1316139	       911.6 ns/op	        80.88 GFLOP/s
+keel-gvt3 r8 base BenchmarkLoadProbe/Ctl/kc=128         	 3968116	       302.4 ns/op	        67.74 GFLOP/s
+keel-gvt3 r8 base BenchmarkLoadProbe/Ctl/kc=384         	 1358589	       917.5 ns/op	        66.97 GFLOP/s
+keel-gvt3 r8 base BenchmarkLoadProbe/Ctl/kc=512         	  902841	      1325 ns/op	        61.81 GFLOP/s
+keel-gvt3 r9 base BenchmarkLimiterProbe/shim/kc=512         	  582205	      2040 ns/op	        36.15 GFLOP/s
+keel-gvt3 r9 base BenchmarkLimiterProbe/ctl/kc=512          	  592957	      2027 ns/op	        36.37 GFLOP/s
+keel-gvt3 r9 base BenchmarkLimiterProbe/PB/kc=512           	  956762	      1256 ns/op	        58.68 GFLOP/s
+keel-gvt3 r9 base BenchmarkLimiterProbe/FO/kc=512           	 1316528	       911.5 ns/op	        80.89 GFLOP/s
+keel-gvt3 r9 base BenchmarkLoadProbe/Ctl/kc=128         	 3967789	       302.2 ns/op	        67.77 GFLOP/s
+keel-gvt3 r9 base BenchmarkLoadProbe/Ctl/kc=384         	 1342359	       920.6 ns/op	        66.74 GFLOP/s
+keel-gvt3 r9 base BenchmarkLoadProbe/Ctl/kc=512         	  905716	      1322 ns/op	        61.97 GFLOP/s
+keel-gvt3 r9 fold BenchmarkLimiterProbe/shim/kc=512         	  793767	      1496 ns/op	        49.27 GFLOP/s
+keel-gvt3 r9 fold BenchmarkLimiterProbe/ctl/kc=512          	  744008	      1609 ns/op	        45.83 GFLOP/s
+keel-gvt3 r9 fold BenchmarkLimiterProbe/PB/kc=512           	  953176	      1256 ns/op	        58.68 GFLOP/s
+keel-gvt3 r9 fold BenchmarkLimiterProbe/FO/kc=512           	 1320166	       909.1 ns/op	        81.10 GFLOP/s
+keel-gvt3 r9 fold BenchmarkLoadProbe/Ctl/kc=128         	 3968920	       302.3 ns/op	        67.74 GFLOP/s
+keel-gvt3 r9 fold BenchmarkLoadProbe/Ctl/kc=384         	 1301766	       921.4 ns/op	        66.68 GFLOP/s
+keel-gvt3 r9 fold BenchmarkLoadProbe/Ctl/kc=512         	  900064	      1327 ns/op	        61.73 GFLOP/s
+keel-gvt3 r10 fold BenchmarkLimiterProbe/shim/kc=512         	  791737	      1496 ns/op	        49.28 GFLOP/s
+keel-gvt3 r10 fold BenchmarkLimiterProbe/ctl/kc=512          	  744777	      1604 ns/op	        45.96 GFLOP/s
+keel-gvt3 r10 fold BenchmarkLimiterProbe/PB/kc=512           	  956742	      1258 ns/op	        58.61 GFLOP/s
+keel-gvt3 r10 fold BenchmarkLimiterProbe/FO/kc=512           	 1320075	       908.7 ns/op	        81.13 GFLOP/s
+keel-gvt3 r10 fold BenchmarkLoadProbe/Ctl/kc=128         	 3967495	       302.2 ns/op	        67.76 GFLOP/s
+keel-gvt3 r10 fold BenchmarkLoadProbe/Ctl/kc=384         	 1329016	       921.1 ns/op	        66.70 GFLOP/s
+keel-gvt3 r10 fold BenchmarkLoadProbe/Ctl/kc=512         	  898976	      1327 ns/op	        61.74 GFLOP/s
+keel-gvt3 r10 base BenchmarkLimiterProbe/shim/kc=512         	  582060	      2041 ns/op	        36.12 GFLOP/s
+keel-gvt3 r10 base BenchmarkLimiterProbe/ctl/kc=512          	  592560	      2026 ns/op	        36.39 GFLOP/s
+keel-gvt3 r10 base BenchmarkLimiterProbe/PB/kc=512           	  953215	      1256 ns/op	        58.68 GFLOP/s
+keel-gvt3 r10 base BenchmarkLimiterProbe/FO/kc=512           	 1316451	       911.6 ns/op	        80.88 GFLOP/s
+keel-gvt3 r10 base BenchmarkLoadProbe/Ctl/kc=128         	 3966702	       302.3 ns/op	        67.75 GFLOP/s
+keel-gvt3 r10 base BenchmarkLoadProbe/Ctl/kc=384         	 1358257	       883.8 ns/op	        69.52 GFLOP/s
+keel-gvt3 r10 base BenchmarkLoadProbe/Ctl/kc=512         	  903631	      1323 ns/op	        61.90 GFLOP/s
+keel-gvt4 r1 base BenchmarkLimiterProbe/shim/kc=512         	  652826	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r1 base BenchmarkLimiterProbe/ctl/kc=512          	  675117	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r1 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r1 base BenchmarkLimiterProbe/FO/kc=512           	 1426122	       841.4 ns/op	        87.62 GFLOP/s
+keel-gvt4 r1 base BenchmarkLoadProbe/Ctl/kc=128         	 4186231	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r1 base BenchmarkLoadProbe/Ctl/kc=384         	 1421648	       841.6 ns/op	        73.00 GFLOP/s
+keel-gvt4 r1 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.74 GFLOP/s
+keel-gvt4 r1 fold BenchmarkLimiterProbe/shim/kc=512         	  908148	      1305 ns/op	        56.51 GFLOP/s
+keel-gvt4 r1 fold BenchmarkLimiterProbe/ctl/kc=512          	  920464	      1303 ns/op	        56.58 GFLOP/s
+keel-gvt4 r1 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r1 fold BenchmarkLimiterProbe/FO/kc=512           	 1431286	       838.4 ns/op	        87.94 GFLOP/s
+keel-gvt4 r1 fold BenchmarkLoadProbe/Ctl/kc=128         	 4185193	       286.4 ns/op	        71.50 GFLOP/s
+keel-gvt4 r1 fold BenchmarkLoadProbe/Ctl/kc=384         	 1422840	       841.0 ns/op	        73.06 GFLOP/s
+keel-gvt4 r1 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1112 ns/op	        73.64 GFLOP/s
+keel-gvt4 r2 fold BenchmarkLimiterProbe/shim/kc=512         	  901545	      1305 ns/op	        56.51 GFLOP/s
+keel-gvt4 r2 fold BenchmarkLimiterProbe/ctl/kc=512          	  921957	      1303 ns/op	        56.58 GFLOP/s
+keel-gvt4 r2 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.92 GFLOP/s
+keel-gvt4 r2 fold BenchmarkLimiterProbe/FO/kc=512           	 1431480	       838.4 ns/op	        87.94 GFLOP/s
+keel-gvt4 r2 fold BenchmarkLoadProbe/Ctl/kc=128         	 4186041	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r2 fold BenchmarkLoadProbe/Ctl/kc=384         	 1425342	       841.9 ns/op	        72.98 GFLOP/s
+keel-gvt4 r2 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1113 ns/op	        73.63 GFLOP/s
+keel-gvt4 r2 base BenchmarkLimiterProbe/shim/kc=512         	  653082	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r2 base BenchmarkLimiterProbe/ctl/kc=512          	  675366	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r2 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r2 base BenchmarkLimiterProbe/FO/kc=512           	 1426240	       841.4 ns/op	        87.63 GFLOP/s
+keel-gvt4 r2 base BenchmarkLoadProbe/Ctl/kc=128         	 4185679	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r2 base BenchmarkLoadProbe/Ctl/kc=384         	 1421785	       840.5 ns/op	        73.10 GFLOP/s
+keel-gvt4 r2 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1112 ns/op	        73.65 GFLOP/s
+keel-gvt4 r3 base BenchmarkLimiterProbe/shim/kc=512         	  652933	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r3 base BenchmarkLimiterProbe/ctl/kc=512          	  675336	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r3 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r3 base BenchmarkLimiterProbe/FO/kc=512           	 1426248	       841.4 ns/op	        87.63 GFLOP/s
+keel-gvt4 r3 base BenchmarkLoadProbe/Ctl/kc=128         	 4186202	       286.4 ns/op	        71.50 GFLOP/s
+keel-gvt4 r3 base BenchmarkLoadProbe/Ctl/kc=384         	 1426869	       843.5 ns/op	        72.84 GFLOP/s
+keel-gvt4 r3 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1110 ns/op	        73.78 GFLOP/s
+keel-gvt4 r3 fold BenchmarkLimiterProbe/shim/kc=512         	  909576	      1305 ns/op	        56.52 GFLOP/s
+keel-gvt4 r3 fold BenchmarkLimiterProbe/ctl/kc=512          	  920840	      1303 ns/op	        56.59 GFLOP/s
+keel-gvt4 r3 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1119 ns/op	        65.91 GFLOP/s
+keel-gvt4 r3 fold BenchmarkLimiterProbe/FO/kc=512           	 1431166	       838.4 ns/op	        87.94 GFLOP/s
+keel-gvt4 r3 fold BenchmarkLoadProbe/Ctl/kc=128         	 4187824	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r3 fold BenchmarkLoadProbe/Ctl/kc=384         	 1434710	       840.2 ns/op	        73.13 GFLOP/s
+keel-gvt4 r3 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1112 ns/op	        73.66 GFLOP/s
+keel-gvt4 r4 fold BenchmarkLimiterProbe/shim/kc=512         	  908473	      1305 ns/op	        56.50 GFLOP/s
+keel-gvt4 r4 fold BenchmarkLimiterProbe/ctl/kc=512          	  919515	      1303 ns/op	        56.58 GFLOP/s
+keel-gvt4 r4 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.92 GFLOP/s
+keel-gvt4 r4 fold BenchmarkLimiterProbe/FO/kc=512           	 1431283	       838.3 ns/op	        87.95 GFLOP/s
+keel-gvt4 r4 fold BenchmarkLoadProbe/Ctl/kc=128         	 4184745	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r4 fold BenchmarkLoadProbe/Ctl/kc=384         	 1436936	       841.2 ns/op	        73.04 GFLOP/s
+keel-gvt4 r4 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.72 GFLOP/s
+keel-gvt4 r4 base BenchmarkLimiterProbe/shim/kc=512         	  653023	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r4 base BenchmarkLimiterProbe/ctl/kc=512          	  675507	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r4 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r4 base BenchmarkLimiterProbe/FO/kc=512           	 1426256	       841.4 ns/op	        87.63 GFLOP/s
+keel-gvt4 r4 base BenchmarkLoadProbe/Ctl/kc=128         	 4184208	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r4 base BenchmarkLoadProbe/Ctl/kc=384         	 1419178	       843.7 ns/op	        72.82 GFLOP/s
+keel-gvt4 r4 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.75 GFLOP/s
+keel-gvt4 r5 base BenchmarkLimiterProbe/shim/kc=512         	  650262	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r5 base BenchmarkLimiterProbe/ctl/kc=512          	  676486	      1774 ns/op	        41.55 GFLOP/s
+keel-gvt4 r5 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.95 GFLOP/s
+keel-gvt4 r5 base BenchmarkLimiterProbe/FO/kc=512           	 1426245	       841.3 ns/op	        87.64 GFLOP/s
+keel-gvt4 r5 base BenchmarkLoadProbe/Ctl/kc=128         	 4187109	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r5 base BenchmarkLoadProbe/Ctl/kc=384         	 1426629	       843.0 ns/op	        72.88 GFLOP/s
+keel-gvt4 r5 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1112 ns/op	        73.68 GFLOP/s
+keel-gvt4 r5 fold BenchmarkLimiterProbe/shim/kc=512         	  898951	      1305 ns/op	        56.51 GFLOP/s
+keel-gvt4 r5 fold BenchmarkLimiterProbe/ctl/kc=512          	  920541	      1303 ns/op	        56.59 GFLOP/s
+keel-gvt4 r5 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r5 fold BenchmarkLimiterProbe/FO/kc=512           	 1431328	       838.4 ns/op	        87.94 GFLOP/s
+keel-gvt4 r5 fold BenchmarkLoadProbe/Ctl/kc=128         	 4184634	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r5 fold BenchmarkLoadProbe/Ctl/kc=384         	 1425090	       840.9 ns/op	        73.06 GFLOP/s
+keel-gvt4 r5 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1112 ns/op	        73.68 GFLOP/s
+keel-gvt4 r6 fold BenchmarkLimiterProbe/shim/kc=512         	  909051	      1305 ns/op	        56.48 GFLOP/s
+keel-gvt4 r6 fold BenchmarkLimiterProbe/ctl/kc=512          	  920910	      1300 ns/op	        56.70 GFLOP/s
+keel-gvt4 r6 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.95 GFLOP/s
+keel-gvt4 r6 fold BenchmarkLimiterProbe/FO/kc=512           	 1431405	       838.5 ns/op	        87.93 GFLOP/s
+keel-gvt4 r6 fold BenchmarkLoadProbe/Ctl/kc=128         	 4187380	       286.4 ns/op	        71.50 GFLOP/s
+keel-gvt4 r6 fold BenchmarkLoadProbe/Ctl/kc=384         	 1426912	       845.0 ns/op	        72.71 GFLOP/s
+keel-gvt4 r6 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1112 ns/op	        73.64 GFLOP/s
+keel-gvt4 r6 base BenchmarkLimiterProbe/shim/kc=512         	  652977	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r6 base BenchmarkLimiterProbe/ctl/kc=512          	  675450	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r6 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1119 ns/op	        65.92 GFLOP/s
+keel-gvt4 r6 base BenchmarkLimiterProbe/FO/kc=512           	 1426144	       841.3 ns/op	        87.63 GFLOP/s
+keel-gvt4 r6 base BenchmarkLoadProbe/Ctl/kc=128         	 4187708	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r6 base BenchmarkLoadProbe/Ctl/kc=384         	 1427108	       843.2 ns/op	        72.87 GFLOP/s
+keel-gvt4 r6 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1110 ns/op	        73.79 GFLOP/s
+keel-gvt4 r7 base BenchmarkLimiterProbe/shim/kc=512         	  653114	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r7 base BenchmarkLimiterProbe/ctl/kc=512          	  675333	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r7 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1119 ns/op	        65.92 GFLOP/s
+keel-gvt4 r7 base BenchmarkLimiterProbe/FO/kc=512           	 1426698	       841.3 ns/op	        87.63 GFLOP/s
+keel-gvt4 r7 base BenchmarkLoadProbe/Ctl/kc=128         	 4185937	       286.5 ns/op	        71.48 GFLOP/s
+keel-gvt4 r7 base BenchmarkLoadProbe/Ctl/kc=384         	 1426272	       843.5 ns/op	        72.84 GFLOP/s
+keel-gvt4 r7 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1113 ns/op	        73.62 GFLOP/s
+keel-gvt4 r7 fold BenchmarkLimiterProbe/shim/kc=512         	  908820	      1305 ns/op	        56.50 GFLOP/s
+keel-gvt4 r7 fold BenchmarkLimiterProbe/ctl/kc=512          	  919623	      1303 ns/op	        56.60 GFLOP/s
+keel-gvt4 r7 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.92 GFLOP/s
+keel-gvt4 r7 fold BenchmarkLimiterProbe/FO/kc=512           	 1431307	       838.4 ns/op	        87.94 GFLOP/s
+keel-gvt4 r7 fold BenchmarkLoadProbe/Ctl/kc=128         	 4180906	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r7 fold BenchmarkLoadProbe/Ctl/kc=384         	 1425142	       844.8 ns/op	        72.72 GFLOP/s
+keel-gvt4 r7 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.73 GFLOP/s
+keel-gvt4 r8 fold BenchmarkLimiterProbe/shim/kc=512         	  909188	      1305 ns/op	        56.51 GFLOP/s
+keel-gvt4 r8 fold BenchmarkLimiterProbe/ctl/kc=512          	  919906	      1303 ns/op	        56.59 GFLOP/s
+keel-gvt4 r8 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1119 ns/op	        65.91 GFLOP/s
+keel-gvt4 r8 fold BenchmarkLimiterProbe/FO/kc=512           	 1431380	       838.3 ns/op	        87.95 GFLOP/s
+keel-gvt4 r8 fold BenchmarkLoadProbe/Ctl/kc=128         	 4186526	       286.4 ns/op	        71.51 GFLOP/s
+keel-gvt4 r8 fold BenchmarkLoadProbe/Ctl/kc=384         	 1422058	       843.2 ns/op	        72.87 GFLOP/s
+keel-gvt4 r8 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.75 GFLOP/s
+keel-gvt4 r8 base BenchmarkLimiterProbe/shim/kc=512         	  652934	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r8 base BenchmarkLimiterProbe/ctl/kc=512          	  675234	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r8 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r8 base BenchmarkLimiterProbe/FO/kc=512           	 1426100	       841.4 ns/op	        87.63 GFLOP/s
+keel-gvt4 r8 base BenchmarkLoadProbe/Ctl/kc=128         	 4186863	       286.3 ns/op	        71.53 GFLOP/s
+keel-gvt4 r8 base BenchmarkLoadProbe/Ctl/kc=384         	 1427210	       843.2 ns/op	        72.86 GFLOP/s
+keel-gvt4 r8 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1112 ns/op	        73.64 GFLOP/s
+keel-gvt4 r9 base BenchmarkLimiterProbe/shim/kc=512         	  653023	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r9 base BenchmarkLimiterProbe/ctl/kc=512          	  675348	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r9 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1119 ns/op	        65.91 GFLOP/s
+keel-gvt4 r9 base BenchmarkLimiterProbe/FO/kc=512           	 1426207	       841.4 ns/op	        87.63 GFLOP/s
+keel-gvt4 r9 base BenchmarkLoadProbe/Ctl/kc=128         	 4184586	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r9 base BenchmarkLoadProbe/Ctl/kc=384         	 1427133	       842.9 ns/op	        72.89 GFLOP/s
+keel-gvt4 r9 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.75 GFLOP/s
+keel-gvt4 r9 fold BenchmarkLimiterProbe/shim/kc=512         	  908838	      1305 ns/op	        56.50 GFLOP/s
+keel-gvt4 r9 fold BenchmarkLimiterProbe/ctl/kc=512          	  920128	      1303 ns/op	        56.59 GFLOP/s
+keel-gvt4 r9 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r9 fold BenchmarkLimiterProbe/FO/kc=512           	 1431300	       838.4 ns/op	        87.94 GFLOP/s
+keel-gvt4 r9 fold BenchmarkLoadProbe/Ctl/kc=128         	 4186008	       286.4 ns/op	        71.50 GFLOP/s
+keel-gvt4 r9 fold BenchmarkLoadProbe/Ctl/kc=384         	 1427084	       840.8 ns/op	        73.07 GFLOP/s
+keel-gvt4 r9 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.72 GFLOP/s
+keel-gvt4 r10 fold BenchmarkLimiterProbe/shim/kc=512         	  910208	      1305 ns/op	        56.52 GFLOP/s
+keel-gvt4 r10 fold BenchmarkLimiterProbe/ctl/kc=512          	  919980	      1301 ns/op	        56.69 GFLOP/s
+keel-gvt4 r10 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.94 GFLOP/s
+keel-gvt4 r10 fold BenchmarkLimiterProbe/FO/kc=512           	 1431487	       838.5 ns/op	        87.93 GFLOP/s
+keel-gvt4 r10 fold BenchmarkLoadProbe/Ctl/kc=128         	 4186860	       286.5 ns/op	        71.49 GFLOP/s
+keel-gvt4 r10 fold BenchmarkLoadProbe/Ctl/kc=384         	 1426785	       843.2 ns/op	        72.86 GFLOP/s
+keel-gvt4 r10 fold BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.72 GFLOP/s
+keel-gvt4 r10 base BenchmarkLimiterProbe/shim/kc=512         	  651850	      1820 ns/op	        40.51 GFLOP/s
+keel-gvt4 r10 base BenchmarkLimiterProbe/ctl/kc=512          	  674868	      1775 ns/op	        41.53 GFLOP/s
+keel-gvt4 r10 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1118 ns/op	        65.93 GFLOP/s
+keel-gvt4 r10 base BenchmarkLimiterProbe/FO/kc=512           	 1426266	       841.3 ns/op	        87.63 GFLOP/s
+keel-gvt4 r10 base BenchmarkLoadProbe/Ctl/kc=128         	 4186094	       286.4 ns/op	        71.50 GFLOP/s
+keel-gvt4 r10 base BenchmarkLoadProbe/Ctl/kc=384         	 1421358	       843.0 ns/op	        72.89 GFLOP/s
+keel-gvt4 r10 base BenchmarkLoadProbe/Ctl/kc=512         	 1000000	      1111 ns/op	        73.74 GFLOP/s
+keel-gvt5 r1 base BenchmarkLimiterProbe/shim/kc=512         	  788305	      1503 ns/op	        49.06 GFLOP/s
+keel-gvt5 r1 base BenchmarkLimiterProbe/ctl/kc=512          	  798172	      1503 ns/op	        49.06 GFLOP/s
+keel-gvt5 r1 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1004 ns/op	        73.41 GFLOP/s
+keel-gvt5 r1 base BenchmarkLimiterProbe/FO/kc=512           	 1681740	       713.3 ns/op	       103.4 GFLOP/s
+keel-gvt5 r1 base BenchmarkLoadProbe/Ctl/kc=128         	 4893018	       244.8 ns/op	        83.66 GFLOP/s
+keel-gvt5 r1 base BenchmarkLoadProbe/Ctl/kc=384         	 1673845	       717.1 ns/op	        85.68 GFLOP/s
+keel-gvt5 r1 base BenchmarkLoadProbe/Ctl/kc=512         	 1231189	       974.4 ns/op	        84.07 GFLOP/s
+keel-gvt5 r1 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1102 ns/op	        66.93 GFLOP/s
+keel-gvt5 r1 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1148 ns/op	        64.23 GFLOP/s
+keel-gvt5 r1 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1006 ns/op	        73.27 GFLOP/s
+keel-gvt5 r1 fold BenchmarkLimiterProbe/FO/kc=512           	 1683906	       712.4 ns/op	       103.5 GFLOP/s
+keel-gvt5 r1 fold BenchmarkLoadProbe/Ctl/kc=128         	 4893463	       244.7 ns/op	        83.69 GFLOP/s
+keel-gvt5 r1 fold BenchmarkLoadProbe/Ctl/kc=384         	 1672699	       716.2 ns/op	        85.78 GFLOP/s
+keel-gvt5 r1 fold BenchmarkLoadProbe/Ctl/kc=512         	 1226120	       975.8 ns/op	        83.96 GFLOP/s
+keel-gvt5 r2 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1101 ns/op	        66.94 GFLOP/s
+keel-gvt5 r2 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1151 ns/op	        64.06 GFLOP/s
+keel-gvt5 r2 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1003 ns/op	        73.51 GFLOP/s
+keel-gvt5 r2 fold BenchmarkLimiterProbe/FO/kc=512           	 1683552	       712.7 ns/op	       103.4 GFLOP/s
+keel-gvt5 r2 fold BenchmarkLoadProbe/Ctl/kc=128         	 4895800	       244.8 ns/op	        83.67 GFLOP/s
+keel-gvt5 r2 fold BenchmarkLoadProbe/Ctl/kc=384         	 1673952	       718.7 ns/op	        85.49 GFLOP/s
+keel-gvt5 r2 fold BenchmarkLoadProbe/Ctl/kc=512         	 1234864	       972.6 ns/op	        84.23 GFLOP/s
+keel-gvt5 r2 base BenchmarkLimiterProbe/shim/kc=512         	  788446	      1504 ns/op	        49.03 GFLOP/s
+keel-gvt5 r2 base BenchmarkLimiterProbe/ctl/kc=512          	  802546	      1511 ns/op	        48.78 GFLOP/s
+keel-gvt5 r2 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1004 ns/op	        73.44 GFLOP/s
+keel-gvt5 r2 base BenchmarkLimiterProbe/FO/kc=512           	 1681351	       713.6 ns/op	       103.3 GFLOP/s
+keel-gvt5 r2 base BenchmarkLoadProbe/Ctl/kc=128         	 4897159	       244.7 ns/op	        83.70 GFLOP/s
+keel-gvt5 r2 base BenchmarkLoadProbe/Ctl/kc=384         	 1672557	       718.6 ns/op	        85.50 GFLOP/s
+keel-gvt5 r2 base BenchmarkLoadProbe/Ctl/kc=512         	 1223241	       976.9 ns/op	        83.86 GFLOP/s
+keel-gvt5 r3 base BenchmarkLimiterProbe/shim/kc=512         	  790616	      1504 ns/op	        49.03 GFLOP/s
+keel-gvt5 r3 base BenchmarkLimiterProbe/ctl/kc=512          	  807051	      1519 ns/op	        48.55 GFLOP/s
+keel-gvt5 r3 base BenchmarkLimiterProbe/PB/kc=512           	 1202438	       999.1 ns/op	        73.79 GFLOP/s
+keel-gvt5 r3 base BenchmarkLimiterProbe/FO/kc=512           	 1681100	       713.9 ns/op	       103.3 GFLOP/s
+keel-gvt5 r3 base BenchmarkLoadProbe/Ctl/kc=128         	 4888830	       244.9 ns/op	        83.64 GFLOP/s
+keel-gvt5 r3 base BenchmarkLoadProbe/Ctl/kc=384         	 1673410	       717.2 ns/op	        85.67 GFLOP/s
+keel-gvt5 r3 base BenchmarkLoadProbe/Ctl/kc=512         	 1231806	       972.9 ns/op	        84.20 GFLOP/s
+keel-gvt5 r3 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1101 ns/op	        66.95 GFLOP/s
+keel-gvt5 r3 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1150 ns/op	        64.13 GFLOP/s
+keel-gvt5 r3 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1002 ns/op	        73.59 GFLOP/s
+keel-gvt5 r3 fold BenchmarkLimiterProbe/FO/kc=512           	 1683302	       712.7 ns/op	       103.4 GFLOP/s
+keel-gvt5 r3 fold BenchmarkLoadProbe/Ctl/kc=128         	 4891734	       244.8 ns/op	        83.65 GFLOP/s
+keel-gvt5 r3 fold BenchmarkLoadProbe/Ctl/kc=384         	 1673432	       719.1 ns/op	        85.44 GFLOP/s
+keel-gvt5 r3 fold BenchmarkLoadProbe/Ctl/kc=512         	 1226396	       978.5 ns/op	        83.72 GFLOP/s
+keel-gvt5 r4 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1102 ns/op	        66.90 GFLOP/s
+keel-gvt5 r4 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1152 ns/op	        64.03 GFLOP/s
+keel-gvt5 r4 fold BenchmarkLimiterProbe/PB/kc=512           	 1201563	      1001 ns/op	        73.66 GFLOP/s
+keel-gvt5 r4 fold BenchmarkLimiterProbe/FO/kc=512           	 1682388	       713.1 ns/op	       103.4 GFLOP/s
+keel-gvt5 r4 fold BenchmarkLoadProbe/Ctl/kc=128         	 4894692	       245.3 ns/op	        83.49 GFLOP/s
+keel-gvt5 r4 fold BenchmarkLoadProbe/Ctl/kc=384         	 1669449	       717.2 ns/op	        85.67 GFLOP/s
+keel-gvt5 r4 fold BenchmarkLoadProbe/Ctl/kc=512         	 1228128	       974.7 ns/op	        84.04 GFLOP/s
+keel-gvt5 r4 base BenchmarkLimiterProbe/shim/kc=512         	  788335	      1504 ns/op	        49.03 GFLOP/s
+keel-gvt5 r4 base BenchmarkLimiterProbe/ctl/kc=512          	  799000	      1500 ns/op	        49.14 GFLOP/s
+keel-gvt5 r4 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1004 ns/op	        73.41 GFLOP/s
+keel-gvt5 r4 base BenchmarkLimiterProbe/FO/kc=512           	 1681676	       713.4 ns/op	       103.3 GFLOP/s
+keel-gvt5 r4 base BenchmarkLoadProbe/Ctl/kc=128         	 4894414	       244.7 ns/op	        83.71 GFLOP/s
+keel-gvt5 r4 base BenchmarkLoadProbe/Ctl/kc=384         	 1671213	       716.9 ns/op	        85.71 GFLOP/s
+keel-gvt5 r4 base BenchmarkLoadProbe/Ctl/kc=512         	 1227868	       979.1 ns/op	        83.67 GFLOP/s
+keel-gvt5 r5 base BenchmarkLimiterProbe/shim/kc=512         	  788710	      1504 ns/op	        49.03 GFLOP/s
+keel-gvt5 r5 base BenchmarkLimiterProbe/ctl/kc=512          	  805882	      1500 ns/op	        49.15 GFLOP/s
+keel-gvt5 r5 base BenchmarkLimiterProbe/PB/kc=512           	 1201320	       998.6 ns/op	        73.83 GFLOP/s
+keel-gvt5 r5 base BenchmarkLimiterProbe/FO/kc=512           	 1680901	       713.8 ns/op	       103.3 GFLOP/s
+keel-gvt5 r5 base BenchmarkLoadProbe/Ctl/kc=128         	 4895826	       244.8 ns/op	        83.66 GFLOP/s
+keel-gvt5 r5 base BenchmarkLoadProbe/Ctl/kc=384         	 1668645	       717.5 ns/op	        85.64 GFLOP/s
+keel-gvt5 r5 base BenchmarkLoadProbe/Ctl/kc=512         	 1227381	       974.1 ns/op	        84.10 GFLOP/s
+keel-gvt5 r5 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1102 ns/op	        66.88 GFLOP/s
+keel-gvt5 r5 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1156 ns/op	        63.77 GFLOP/s
+keel-gvt5 r5 fold BenchmarkLimiterProbe/PB/kc=512           	 1204138	      1004 ns/op	        73.47 GFLOP/s
+keel-gvt5 r5 fold BenchmarkLimiterProbe/FO/kc=512           	 1682846	       713.1 ns/op	       103.4 GFLOP/s
+keel-gvt5 r5 fold BenchmarkLoadProbe/Ctl/kc=128         	 4895274	       244.9 ns/op	        83.63 GFLOP/s
+keel-gvt5 r5 fold BenchmarkLoadProbe/Ctl/kc=384         	 1673547	       718.4 ns/op	        85.52 GFLOP/s
+keel-gvt5 r5 fold BenchmarkLoadProbe/Ctl/kc=512         	 1231312	       972.0 ns/op	        84.28 GFLOP/s
+keel-gvt5 r6 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1102 ns/op	        66.92 GFLOP/s
+keel-gvt5 r6 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1155 ns/op	        63.81 GFLOP/s
+keel-gvt5 r6 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1005 ns/op	        73.33 GFLOP/s
+keel-gvt5 r6 fold BenchmarkLimiterProbe/FO/kc=512           	 1682907	       713.2 ns/op	       103.4 GFLOP/s
+keel-gvt5 r6 fold BenchmarkLoadProbe/Ctl/kc=128         	 4895562	       245.0 ns/op	        83.61 GFLOP/s
+keel-gvt5 r6 fold BenchmarkLoadProbe/Ctl/kc=384         	 1673241	       717.2 ns/op	        85.66 GFLOP/s
+keel-gvt5 r6 fold BenchmarkLoadProbe/Ctl/kc=512         	 1229209	       972.9 ns/op	        84.21 GFLOP/s
+keel-gvt5 r6 base BenchmarkLimiterProbe/shim/kc=512         	  788427	      1504 ns/op	        49.03 GFLOP/s
+keel-gvt5 r6 base BenchmarkLimiterProbe/ctl/kc=512          	  807645	      1500 ns/op	        49.16 GFLOP/s
+keel-gvt5 r6 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1000 ns/op	        73.70 GFLOP/s
+keel-gvt5 r6 base BenchmarkLimiterProbe/FO/kc=512           	 1680750	       713.8 ns/op	       103.3 GFLOP/s
+keel-gvt5 r6 base BenchmarkLoadProbe/Ctl/kc=128         	 4896094	       244.8 ns/op	        83.65 GFLOP/s
+keel-gvt5 r6 base BenchmarkLoadProbe/Ctl/kc=384         	 1672641	       719.4 ns/op	        85.41 GFLOP/s
+keel-gvt5 r6 base BenchmarkLoadProbe/Ctl/kc=512         	 1236360	       970.3 ns/op	        84.43 GFLOP/s
+keel-gvt5 r7 base BenchmarkLimiterProbe/shim/kc=512         	  789286	      1503 ns/op	        49.05 GFLOP/s
+keel-gvt5 r7 base BenchmarkLimiterProbe/ctl/kc=512          	  804073	      1510 ns/op	        48.83 GFLOP/s
+keel-gvt5 r7 base BenchmarkLimiterProbe/PB/kc=512           	 1206426	      1003 ns/op	        73.49 GFLOP/s
+keel-gvt5 r7 base BenchmarkLimiterProbe/FO/kc=512           	 1681543	       713.5 ns/op	       103.3 GFLOP/s
+keel-gvt5 r7 base BenchmarkLoadProbe/Ctl/kc=128         	 4898202	       244.9 ns/op	        83.64 GFLOP/s
+keel-gvt5 r7 base BenchmarkLoadProbe/Ctl/kc=384         	 1669653	       717.0 ns/op	        85.69 GFLOP/s
+keel-gvt5 r7 base BenchmarkLoadProbe/Ctl/kc=512         	 1232743	       975.1 ns/op	        84.01 GFLOP/s
+keel-gvt5 r7 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1102 ns/op	        66.90 GFLOP/s
+keel-gvt5 r7 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1155 ns/op	        63.84 GFLOP/s
+keel-gvt5 r7 fold BenchmarkLimiterProbe/PB/kc=512           	 1200268	       996.6 ns/op	        73.98 GFLOP/s
+keel-gvt5 r7 fold BenchmarkLimiterProbe/FO/kc=512           	 1682689	       713.0 ns/op	       103.4 GFLOP/s
+keel-gvt5 r7 fold BenchmarkLoadProbe/Ctl/kc=128         	 4888330	       244.9 ns/op	        83.62 GFLOP/s
+keel-gvt5 r7 fold BenchmarkLoadProbe/Ctl/kc=384         	 1668788	       718.0 ns/op	        85.57 GFLOP/s
+keel-gvt5 r7 fold BenchmarkLoadProbe/Ctl/kc=512         	 1229130	       975.4 ns/op	        83.98 GFLOP/s
+keel-gvt5 r8 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1102 ns/op	        66.90 GFLOP/s
+keel-gvt5 r8 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1160 ns/op	        63.57 GFLOP/s
+keel-gvt5 r8 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1002 ns/op	        73.61 GFLOP/s
+keel-gvt5 r8 fold BenchmarkLimiterProbe/FO/kc=512           	 1682036	       713.3 ns/op	       103.4 GFLOP/s
+keel-gvt5 r8 fold BenchmarkLoadProbe/Ctl/kc=128         	 4896324	       244.7 ns/op	        83.70 GFLOP/s
+keel-gvt5 r8 fold BenchmarkLoadProbe/Ctl/kc=384         	 1673870	       718.3 ns/op	        85.54 GFLOP/s
+keel-gvt5 r8 fold BenchmarkLoadProbe/Ctl/kc=512         	 1227588	       976.9 ns/op	        83.86 GFLOP/s
+keel-gvt5 r8 base BenchmarkLimiterProbe/shim/kc=512         	  786907	      1503 ns/op	        49.05 GFLOP/s
+keel-gvt5 r8 base BenchmarkLimiterProbe/ctl/kc=512          	  807364	      1494 ns/op	        49.35 GFLOP/s
+keel-gvt5 r8 base BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1003 ns/op	        73.51 GFLOP/s
+keel-gvt5 r8 base BenchmarkLimiterProbe/FO/kc=512           	 1681071	       713.9 ns/op	       103.3 GFLOP/s
+keel-gvt5 r8 base BenchmarkLoadProbe/Ctl/kc=128         	 4894329	       245.0 ns/op	        83.58 GFLOP/s
+keel-gvt5 r8 base BenchmarkLoadProbe/Ctl/kc=384         	 1668164	       717.4 ns/op	        85.64 GFLOP/s
+keel-gvt5 r8 base BenchmarkLoadProbe/Ctl/kc=512         	 1231902	       974.9 ns/op	        84.03 GFLOP/s
+keel-gvt5 r9 base BenchmarkLimiterProbe/shim/kc=512         	  789361	      1503 ns/op	        49.04 GFLOP/s
+keel-gvt5 r9 base BenchmarkLimiterProbe/ctl/kc=512          	  803287	      1499 ns/op	        49.18 GFLOP/s
+keel-gvt5 r9 base BenchmarkLimiterProbe/PB/kc=512           	 1206535	      1001 ns/op	        73.65 GFLOP/s
+keel-gvt5 r9 base BenchmarkLimiterProbe/FO/kc=512           	 1680807	       713.8 ns/op	       103.3 GFLOP/s
+keel-gvt5 r9 base BenchmarkLoadProbe/Ctl/kc=128         	 4892512	       245.1 ns/op	        83.56 GFLOP/s
+keel-gvt5 r9 base BenchmarkLoadProbe/Ctl/kc=384         	 1668961	       717.3 ns/op	        85.65 GFLOP/s
+keel-gvt5 r9 base BenchmarkLoadProbe/Ctl/kc=512         	 1231748	       973.9 ns/op	        84.12 GFLOP/s
+keel-gvt5 r9 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1102 ns/op	        66.89 GFLOP/s
+keel-gvt5 r9 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1154 ns/op	        63.91 GFLOP/s
+keel-gvt5 r9 fold BenchmarkLimiterProbe/PB/kc=512           	 1000000	      1001 ns/op	        73.63 GFLOP/s
+keel-gvt5 r9 fold BenchmarkLimiterProbe/FO/kc=512           	 1683607	       713.0 ns/op	       103.4 GFLOP/s
+keel-gvt5 r9 fold BenchmarkLoadProbe/Ctl/kc=128         	 4898754	       244.8 ns/op	        83.65 GFLOP/s
+keel-gvt5 r9 fold BenchmarkLoadProbe/Ctl/kc=384         	 1670473	       718.2 ns/op	        85.54 GFLOP/s
+keel-gvt5 r9 fold BenchmarkLoadProbe/Ctl/kc=512         	 1228388	       974.8 ns/op	        84.03 GFLOP/s
+keel-gvt5 r10 fold BenchmarkLimiterProbe/shim/kc=512         	 1000000	      1101 ns/op	        66.97 GFLOP/s
+keel-gvt5 r10 fold BenchmarkLimiterProbe/ctl/kc=512          	 1000000	      1157 ns/op	        63.74 GFLOP/s
+keel-gvt5 r10 fold BenchmarkLimiterProbe/PB/kc=512           	 1200109	      1002 ns/op	        73.59 GFLOP/s
+keel-gvt5 r10 fold BenchmarkLimiterProbe/FO/kc=512           	 1682629	       713.4 ns/op	       103.4 GFLOP/s
+keel-gvt5 r10 fold BenchmarkLoadProbe/Ctl/kc=128         	 4894318	       244.9 ns/op	        83.63 GFLOP/s
+keel-gvt5 r10 fold BenchmarkLoadProbe/Ctl/kc=384         	 1672626	       718.8 ns/op	        85.47 GFLOP/s
+keel-gvt5 r10 fold BenchmarkLoadProbe/Ctl/kc=512         	 1234750	       968.7 ns/op	        84.57 GFLOP/s
+keel-gvt5 r10 base BenchmarkLimiterProbe/shim/kc=512         	  788091	      1504 ns/op	        49.04 GFLOP/s
+keel-gvt5 r10 base BenchmarkLimiterProbe/ctl/kc=512          	  799558	      1503 ns/op	        49.05 GFLOP/s
+keel-gvt5 r10 base BenchmarkLimiterProbe/PB/kc=512           	 1202154	      1004 ns/op	        73.45 GFLOP/s
+keel-gvt5 r10 base BenchmarkLimiterProbe/FO/kc=512           	 1681944	       713.5 ns/op	       103.3 GFLOP/s
+keel-gvt5 r10 base BenchmarkLoadProbe/Ctl/kc=128         	 4896944	       245.0 ns/op	        83.59 GFLOP/s
+keel-gvt5 r10 base BenchmarkLoadProbe/Ctl/kc=384         	 1667491	       717.2 ns/op	        85.67 GFLOP/s
+keel-gvt5 r10 base BenchmarkLoadProbe/Ctl/kc=512         	 1224681	       970.9 ns/op	        84.37 GFLOP/s
+== done 03:40:47
+== TEARDOWN 03:40:47
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-06db6268a9da1dc8d...
+
+✅ Terminate request sent!
+   Instance: i-06db6268a9da1dc8d
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-06a7518330a27a7dc...
+
+✅ Terminate request sent!
+   Instance: i-06a7518330a27a7dc
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-04e1af0c9ed9c7aa6...
+
+✅ Terminate request sent!
+   Instance: i-04e1af0c9ed9c7aa6
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   no keel- instance running — fleet is down
