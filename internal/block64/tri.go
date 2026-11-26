@@ -248,6 +248,14 @@ func Symm(kn kern.Kernel64, left, lower bool, m, n int, alpha float64, a []float
 // correct fix is a per-side block size — trsmLeft and trsmRight are already
 // separate functions — but the values for it need the judged fleet, since this is
 // one 4-lane NEON core and MB is shared by every backend.
+//
+// VOID ON THE GATE HOSTS (2026-11-26, archive/trsm-mb-judged/): "the two sides pull in
+// opposite directions" and "side=R wants 48" are dev-host findings that the judged fleet
+// refutes. On six judged-size hosts at n=4096, BOTH sides want a larger MB, and MB=128 is
+// faster than 64 in all 24 cells (6 hosts x 2 sides x 1T/8T): left 8T -1.2% to -17.1%,
+// right -8% to -31%. 192-256 gains more on amd64 and on the right side but loses to 128 on
+// the Graviton left side, the published row's side. The diagonal solves take only 2.5-12.5%
+// of the time at 64, so the gain is the rank updates' blocking, not the solve.
 var MB = 64
 
 // Axpy is the unit-stride y += alpha*x that the diagonal solves need, threaded in

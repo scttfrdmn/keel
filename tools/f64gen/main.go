@@ -135,6 +135,11 @@ var varOverrides = map[string]map[string]string{
 		// the top of the swept grid, so a larger KC is untested. MC, NC and MB are
 		// unchanged: no other value cleared the rule.
 		"KC": "512",
+		// MB = 64 (float32: 128 since archive/trsm-mb-judged/). The float32 change was measured
+		// at float32 only, so float64 keeps the value the 2a41213 rule left unchanged ("MC, NC and
+		// MB are unchanged: no other value cleared the rule") until a float64 measurement moves
+		// it. Without this line the generated block64 would inherit 128 unmeasured (cf. #209).
+		"MB": "64",
 		// KCPB = 256 (float32: 384), the pre-broadcast-A kernels' depth (#198), by the
 		// rule pre-registered in archive/neon-pb/nest-prereg.md: 5x8/neon-pb at KC=256,
 		// MC=72 had the best geomean over Neoverse V1/V2/V3 (c7g/c8g/c9g 4xlarge,
