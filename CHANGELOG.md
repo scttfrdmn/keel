@@ -8,6 +8,14 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-25
+Faster parallel float32 GEMM on every AVX-512 and Graviton host, from two blocking changes. Each was pre-registered, staged and
+shipped on its own A/B. **The float32 README rows rest on judged `gate-p5` pairs at `e37aa43`** (`archive/p5-balanced/`: amd64,
+Neoverse V1+V2, V3), taken after both changes landed. **The float64 rows do not:** the balanced partition also reaches the
+generated float64 nest, and that has not been measured (#209). This is not a re-certification. The certification is still
+v0.2.0's (`archive/cert-v0.2.0/`).
+
+
 ### Changed
 - **Neoverse V1/V2 are judged by per-host baselines** (#206, ruled 2026-11-05). Era famax's fleet bar (47.0%) is
   retired. It was set by Strsm and could not see a GEMM regression: V2 Sgemm back at its pre-balanced 64.8% would
