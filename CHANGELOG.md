@@ -8,6 +8,10 @@ While the major version is 0, minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Changed
+- **`gonumblas/v0.1.1` requires keel `v0.4.0`**, so a Gonum user who depends only on gonumblas gets v0.4.0's faster parallel
+  GEMM. Its tests pass on both the simd and stock toolchains against the published module.
+
 ## [0.4.0] - 2026-11-25
 Faster parallel float32 GEMM on every AVX-512 and Graviton host, from two blocking changes. Each was pre-registered, staged and
 shipped on its own A/B. **The float32 README rows rest on judged `gate-p5` pairs at `e37aa43`** (`archive/p5-balanced/`: amd64,
