@@ -12,7 +12,7 @@ import (
 	"github.com/scttfrdmn/keel/internal/oracle"
 )
 
-// Sizes straddle internal/block.MB (64) so the multi-block path runs, with both
+// Sizes straddle internal/block's trmmMB (64; Trsm's MB is separate since archive/trsm-mb-b/) so the multi-block path runs, with both
 // a partial last block and an exact multiple. 0 and 1 are the degenerate edges.
 var trmmDims = []int{0, 1, 5, 64, 65, 130}
 
