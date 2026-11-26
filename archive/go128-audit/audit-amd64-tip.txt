@@ -1,0 +1,6 @@
+master Kernel2x32 66 insns 16fma 0 stk, 8 cp, 8 bc, 0 nop, 0 mem
+master Kernel4x32 48 insns 8fma 0 stk, 12 cp, 4 bc, 0 nop, 0 mem
+master Kernel6x32 211 insns 48fma 44 stk, 45 cp, 24 bc, 0 nop, 0 mem
+master KernelD2x16 66 insns 16fma 0 stk, 8 cp, 8 bc, 0 nop, 0 mem
+master KernelD4x16 48 insns 8fma 0 stk, 12 cp, 4 bc, 0 nop, 0 mem
+master KernelD6x16 211 insns 48fma 44 stk, 45 cp, 24 bc, 0 nop, 0 mem

@@ -1,0 +1,6 @@
+go1.27.4 Kernel2x32 74 insns 16fma 0 stk, 8 cp, 8 bc, 8 nop, 0 mem
+go1.27.4 Kernel4x32 50 insns 8fma 0 stk, 12 cp, 4 bc, 2 nop, 0 mem
+go1.27.4 Kernel6x32 219 insns 48fma 44 stk, 45 cp, 24 bc, 8 nop, 0 mem
+go1.27.4 KernelD2x16 74 insns 16fma 0 stk, 8 cp, 8 bc, 8 nop, 0 mem
+go1.27.4 KernelD4x16 50 insns 8fma 0 stk, 12 cp, 4 bc, 2 nop, 0 mem
+go1.27.4 KernelD6x16 219 insns 48fma 44 stk, 45 cp, 24 bc, 8 nop, 0 mem
