@@ -86,3 +86,34 @@ stays ahead by 18–20% at the nest. The fold closes about 40% of the gap betwee
 pre-broadcast kernels (V2 3x24: 25.5 → 12.1 GFLOP/s behind), and the rest of the gap, plausibly the
 remaining load and register pattern, stays. Adopting go1.28 does carry one known test change:
 `TestARM64SeesRealSpiller`'s pinned 5 spills become 3.
+
+## Kernel rerun (`driver-vec.sh`): predictions 1 and 2, re-registered before launch
+
+Scott, 2026-11-25: "rerun - check what you are doing first this time". Before launch:
+- **The filters were positive-controlled.** `^BenchmarkLimiterProbe$/^(shim|ctl|PB|FO)$` and
+  `^BenchmarkLoadProbe$/^Ctl$` use one regex per sub-benchmark level. Both toolchains matched
+  exactly the 7 intended rows on the dev host.
+- **The driver's exact remote command string was smoked.** On linux/arm64 binaries, parsed by a
+  remote shell on pollux through pueue's `build` group, it gave 7 of 7 rows per arm.
+- **The driver now fails fast:** a host whose round 1 yields fewer than 7 rows per arm stops with
+  `!!` rather than leaving a silent hole.
+
+**The loops under these two toolchains** (spill-audit, parent → fold):
+
+| loop | instructions, parent → fold |
+|---|---|
+| shim `Kernel3x24` | 79 → 67 |
+| raw `KernelP3x24Ctl` | 48 → 42 |
+| `KernelP3x24PB` | 39 → 39 |
+| `KernelP3x24FO` | 24 → 24 |
+| shipped `KernelPB5x16` | 213 → 213 |
+
+The last three are byte-unchanged, so they are exact controls.
+
+**Predictions** (fold/base, median of 10 rounds):
+1. **Controls:** LimiterProbe `PB` and `FO`, and LoadProbe `Ctl` at all three depths, are within
+   ±1% on every host.
+2. **Broadcast loops:** `ctl` (raw 3x24) and `shim` gain within ±5 points of CL 827904 PS2's
+   archived deltas:
+   - `ctl`: V1 +26%, V2 +36%, V3 +32%;
+   - `shim`: V1 +29%, V2 +27%, V3 +15%.
