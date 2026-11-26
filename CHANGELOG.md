@@ -9,6 +9,17 @@ While the major version is 0, minor versions may contain breaking changes.
 ## [Unreleased]
 
 ### Changed
+- **Strsm blocks at MB=128** (#37), up from 64.
+  - **Measured on the published rows**, six judged-size hosts, net of both CIs (`archive/trsm-mb-b/`). Strsm at 8T:
+    - Skylake-SP +22.1%;
+    - Zen 5 +9.3%, Zen 4 +7.9%;
+    - Neoverse V1 +4.9%, V2 +1.6%, V3 +3.2%.
+
+    1T is +1.9% to +24.0%. Sgemm, Ssyrk and Ssymm are unchanged.
+  - **Why:** at the old MB, the diagonal solves were only 2.5–12.5% of the time (`archive/trsm-mb-judged/`). The
+    cost was the rank updates' blocking, and MB=128 was faster than 64 in all 24 side × thread × host cells.
+  - **Scope:** Trmm gets its own `trmmMB`, held at 64 and unmeasured. float64 is held at 64 by an f64gen override.
+  - **README:** the Strsm rows move, and are re-derived by judged pairs.
 - **`gonumblas/v0.1.1` requires keel `v0.4.0`**, so a Gonum user who depends only on gonumblas gets v0.4.0's faster parallel
   GEMM. Its tests pass on both the simd and stock toolchains against the published module.
 

@@ -35,8 +35,8 @@ func Syr2k(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float
 //
 // # The recipe
 //
-// It is Trsm's partition run forward. B is split into MB-row blocks (left) or
-// MB-column blocks (right), and each block of the result is
+// It is Trsm's partition run forward. B is split into trmmMB-row blocks (left) or
+// trmmMB-column blocks (right), and each block of the result is
 //
 //	B_i := alpha·op(A)_ii·B_i + alpha·op(A)[i, rest]·B[rest]
 //
@@ -48,7 +48,7 @@ func Syr2k(kn kern.Kernel, lower, trans bool, n, k int, alpha float32, a []float
 // The off-diagonal term is one gemm. The diagonal block is a gemm too, against a
 // dense copy of the triangle with the other half zeroed and, for unit, a diagonal
 // of 1 — so A's unreferenced triangle and a unit diagonal are never read, which is
-// what lets them hold anything, NaN included. The copy is MB×MB, and the source B_i
+// what lets them hold anything, NaN included. The copy is trmmMB×trmmMB, and the source B_i
 // is copied once, because gemm cannot read and write the same block.
 //
 // alpha == 0 sets B to zero without reading A, matching reference STRMM.
@@ -100,19 +100,27 @@ func diagBlock(lower, unit bool, d int, a []float32, lda, o int) []float32 {
 	return t
 }
 
+// trmmMB is Trmm's row (left) or column (right) block, kept apart from Trsm's MB so a
+// measured Trsm retune cannot move Trmm unmeasured. MB went 64 -> 128 on
+// archive/trsm-mb-b/'s judged A/B, which timed Strsm and not Strmm. Trmm also computes
+// its diagonal blocks as dense GEMMs, so a larger block doubles that wasted work, and the
+// net direction is not known. trmm_test.go's sizes straddle 64 so the multi-block path
+// runs, which they would stop doing at 128. It stays 64 until a Trmm measurement moves it.
+var trmmMB = 64
+
 func trmmLeft(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
 
-	nb := (m + MB - 1) / MB
-	tmp := make([]float32, min(MB, m)*n)
+	nb := (m + trmmMB - 1) / trmmMB
+	tmp := make([]float32, min(trmmMB, m)*n)
 	for step := 0; step < nb; step++ {
 		// lower op(A): row block i reads rows above it, so go bottom-up.
 		bi := nb - 1 - step
 		if !lowerEff {
 			bi = step
 		}
-		i0 := bi * MB
-		mb := min(MB, m-i0)
+		i0 := bi * trmmMB
+		mb := min(trmmMB, m-i0)
 
 		// Diagonal block, from a copy of B_i into B_i.
 		for r := 0; r < mb; r++ {
@@ -144,8 +152,8 @@ func trmmLeft(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alpha
 func trmmRight(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alpha float32,
 	a []float32, lda int, b []float32, ldb int) {
 
-	nblk := (n + MB - 1) / MB
-	w := min(MB, n)
+	nblk := (n + trmmMB - 1) / trmmMB
+	w := min(trmmMB, n)
 	tmp := make([]float32, m*w)
 	for step := 0; step < nblk; step++ {
 		// Column j of B·op(A) reads columns p with op(A)[p, j] != 0: p >= j when op(A)
@@ -154,8 +162,8 @@ func trmmRight(kn kern.Kernel, lower, lowerEff, trans, unit bool, m, n int, alph
 		if !lowerEff {
 			bj = nblk - 1 - step
 		}
-		j0 := bj * MB
-		nbk := min(MB, n-j0)
+		j0 := bj * trmmMB
+		nbk := min(trmmMB, n-j0)
 
 		for r := 0; r < m; r++ {
 			copy(tmp[r*w:r*w+nbk], b[r*ldb+j0:r*ldb+j0+nbk])
