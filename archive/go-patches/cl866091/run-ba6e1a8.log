@@ -1,0 +1,1167 @@
+== base: go version go1.28-devel_b22ece6bf5 Tue Nov 24 20:25:53 2026 -0800 darwin/arm64
+== fold: go version go1.28-devel_544d1b015d Tue Nov 24 20:33:32 2026 -0800 darwin/arm64
+== built 03:02:08 keel ba6e1a8
+== launch 03:02:08
+  region us-east-1, TTL 2h, market on-demand
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.16 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.8s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (2.7s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (297ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (649ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (15.9s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-041d240f6ceacc7f7
+  Public IP    32.197.179.139
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt3
+
+🌍 DNS: keel-gvt3.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt3.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  gvt3  c7g.4xlarge  (Neoverse-V1, arm64, AMI ami-04512f58a86d569d1, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.28 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.8s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (2.0s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.7s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (296ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (672ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.0s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-05a796d04f6c5064c
+  Public IP    54.165.109.105
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt4
+
+🌍 DNS: keel-gvt4.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt4.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  gvt4  c8g.4xlarge  (Neoverse-V2, arm64, AMI ami-04512f58a86d569d1, on-demand)
+
+⚠️  No out-of-band TTL reaper scans this launch's region. This instance's TTL and any
+   --cost-limit are enforced only by spored, from INSIDE the instance: if spored never starts, or
+   dies, nothing terminates it. (A launch whose spored is not confirmed is terminated unless
+   --keep-on-error.) Deploy a reaper covering the region: spawn reaper deploy.
+
+Max cost:     ~$1.39 (on-demand rate × ttl, compute only)
+  ⏳ Detecting AMI...
+  ✅ Detecting AMI (0ms)
+  ⏳ Setting up SSH key...
+  ✅ Setting up SSH key (1.8s)
+  ⏳ Setting up IAM role...
+  ✅ Setting up IAM role (2.2s)
+  ⏳ Launching instance...
+  ✅ Launching instance (2.5s)
+  ⏳ Waiting for instance...
+  ✅ Waiting for instance (15.8s)
+  ⏳ Getting public IP...
+  ✅ Getting public IP (293ms)
+  ⏳ Waiting for SSH...
+  ✅ Waiting for SSH (643ms)
+  ⏳ Verifying spored agent (up to 5 min)...
+  ✅ Verifying spored agent (up to 5 min) (3.1s)
+
+╔════════════════════════════════════════════════════════╗
+║  🎉 Instance Ready!                                    ║
+╚════════════════════════════════════════════════════════╝
+
+Instance details:
+
+  Instance ID  i-02764062bfcb86e17
+  Public IP    44.220.178.49
+  Status       running
+  IAM instance profile: spored-instance-profile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔌 Connect now with:
+
+  spawn connect keel-gvt5
+
+🌍 DNS: keel-gvt5.c0zxr0ao.spore.host
+   Connect: ssh scttfrdmn@keel-gvt5.c0zxr0ao.spore.host
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  gvt5  c9g.4xlarge  (Neoverse-V3, arm64, AMI ami-04512f58a86d569d1, on-demand)
+  wrote .keel-hosts and ~/.ssh/config block
+  keel-gvt5 cloud-init settled
+  keel-gvt5 has tmux
+  keel-gvt4 cloud-init settled
+  keel-gvt4 has tmux
+  keel-gvt3 cloud-init settled
+  keel-gvt3 has tmux
+
+  NAME                 TYPE             ADDRESS          MARKET     TTL      LAUNCHED
+  keel-gvt5            c9g.4xlarge      44.220.178.49    on-demand  2h       2026-11-26T03:04:02Z
+  keel-gvt4            c8g.4xlarge      54.165.109.105   on-demand  2h       2026-11-26T03:03:29Z
+  keel-gvt3            c7g.4xlarge      32.197.179.139   on-demand  2h       2026-11-26T03:02:42Z
+
+  3 instance(s) billing. 'down' terminates every one.
+== keel-gvt3 read-back
+CPU part	: 0xd40
+16
+ 03:05:23 up 2 min,  1 user,  load average: 0.19, 0.12, 0.05
+keel-gvt3 r1 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 706343424 ns/op	        24.32 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 705631114 ns/op	        24.35 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 532099158 ns/op	        32.29 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 532512646 ns/op	        32.26 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 506312908 ns/op	        33.93 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 506820990 ns/op	        33.90 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 303583624 ns/op	        56.59 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 340272350 ns/op	        50.49 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 332772206 ns/op	        51.63 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 400300602 ns/op	        42.92 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 304020920 ns/op	        56.51 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 343328783 ns/op	        50.04 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 332513086 ns/op	        51.67 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 387859147 ns/op	        44.29 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 319930826 ns/op	        53.70 GFLOP/s
+keel-gvt3 r1 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 346138695 ns/op	        49.63 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 442594633 ns/op	        38.82 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 440820208 ns/op	        38.97 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 382702120 ns/op	        44.89 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 393058270 ns/op	        43.71 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 388822382 ns/op	        44.18 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 386975068 ns/op	        44.40 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 304995258 ns/op	        56.33 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 339280666 ns/op	        50.64 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 328153013 ns/op	        52.35 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 393484645 ns/op	        43.66 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 304375178 ns/op	        56.44 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 339264870 ns/op	        50.64 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 329634208 ns/op	        52.12 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 383949336 ns/op	        44.75 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 319851272 ns/op	        53.71 GFLOP/s
+keel-gvt3 r1 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 343201587 ns/op	        50.06 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 441849467 ns/op	        38.88 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 440606051 ns/op	        38.99 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 384015455 ns/op	        44.74 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 391661659 ns/op	        43.86 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 388093537 ns/op	        44.27 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 387670962 ns/op	        44.32 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 307429496 ns/op	        55.88 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 333363883 ns/op	        51.53 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       3	 336465973 ns/op	        51.06 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 393000536 ns/op	        43.71 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 306495823 ns/op	        56.05 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 337311934 ns/op	        50.93 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 336920745 ns/op	        50.99 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 392144015 ns/op	        43.81 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 324183080 ns/op	        52.99 GFLOP/s
+keel-gvt3 r2 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 347716575 ns/op	        49.41 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 706209724 ns/op	        24.33 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 704812357 ns/op	        24.38 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 531284596 ns/op	        32.34 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 533493329 ns/op	        32.20 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 506830424 ns/op	        33.90 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 508954138 ns/op	        33.76 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 304684139 ns/op	        56.39 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 331181545 ns/op	        51.87 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 330255126 ns/op	        52.02 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 390366279 ns/op	        44.01 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 303620598 ns/op	        56.58 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 339356417 ns/op	        50.62 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 330607534 ns/op	        51.96 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 386772791 ns/op	        44.42 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 319181415 ns/op	        53.82 GFLOP/s
+keel-gvt3 r2 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 345406936 ns/op	        49.74 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 706450114 ns/op	        24.32 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 705455618 ns/op	        24.35 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 530955118 ns/op	        32.36 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 534451936 ns/op	        32.14 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 507149896 ns/op	        33.88 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 508821072 ns/op	        33.76 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 303593324 ns/op	        56.59 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 328025833 ns/op	        52.37 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       3	 335548433 ns/op	        51.20 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 376119700 ns/op	        45.68 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 305196870 ns/op	        56.29 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 331607218 ns/op	        51.81 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 347240997 ns/op	        49.48 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 374912122 ns/op	        45.82 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 327667828 ns/op	        52.43 GFLOP/s
+keel-gvt3 r3 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 349007975 ns/op	        49.22 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 443733331 ns/op	        38.72 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 442662006 ns/op	        38.81 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 382535471 ns/op	        44.91 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 391267607 ns/op	        43.91 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 389087850 ns/op	        44.15 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 386557984 ns/op	        44.44 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 304443182 ns/op	        56.43 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 344104514 ns/op	        49.93 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 329977310 ns/op	        52.06 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 383599938 ns/op	        44.79 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 304781904 ns/op	        56.37 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 339884247 ns/op	        50.55 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 328843982 ns/op	        52.24 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 378080299 ns/op	        45.44 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 323518046 ns/op	        53.10 GFLOP/s
+keel-gvt3 r3 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 351365423 ns/op	        48.89 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 441931145 ns/op	        38.87 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 441582595 ns/op	        38.91 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 381875529 ns/op	        44.99 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 391507810 ns/op	        43.88 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 389813282 ns/op	        44.07 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 386764403 ns/op	        44.42 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 312472250 ns/op	        54.98 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 343418993 ns/op	        50.03 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 332859058 ns/op	        51.61 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 388414199 ns/op	        44.23 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 312754812 ns/op	        54.93 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 341857393 ns/op	        50.25 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 333645005 ns/op	        51.49 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 391495244 ns/op	        43.88 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 324519042 ns/op	        52.94 GFLOP/s
+keel-gvt3 r4 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 342753777 ns/op	        50.12 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 707121192 ns/op	        24.30 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 705659198 ns/op	        24.35 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 531018938 ns/op	        32.35 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 531586520 ns/op	        32.32 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 509374136 ns/op	        33.73 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 507181591 ns/op	        33.87 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 313723940 ns/op	        54.76 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 331760137 ns/op	        51.78 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 333543402 ns/op	        51.51 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 377147839 ns/op	        45.55 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 306197251 ns/op	        56.11 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 339201061 ns/op	        50.65 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 333409599 ns/op	        51.53 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 394083930 ns/op	        43.59 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 322527918 ns/op	        53.27 GFLOP/s
+keel-gvt3 r4 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 345342171 ns/op	        49.75 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 706459237 ns/op	        24.32 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 706685532 ns/op	        24.31 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 531335142 ns/op	        32.33 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 530895736 ns/op	        32.36 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 508333264 ns/op	        33.80 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 508271785 ns/op	        33.80 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 313676209 ns/op	        54.77 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 340580385 ns/op	        50.44 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       3	 334901562 ns/op	        51.30 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 386260919 ns/op	        44.48 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 311954142 ns/op	        55.07 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 335769810 ns/op	        51.17 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 336252120 ns/op	        51.09 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 384306771 ns/op	        44.70 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 324924016 ns/op	        52.87 GFLOP/s
+keel-gvt3 r5 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 342516715 ns/op	        50.16 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 442017831 ns/op	        38.87 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 441829284 ns/op	        38.88 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 384354313 ns/op	        44.70 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 395329472 ns/op	        43.46 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 388602761 ns/op	        44.21 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 387600983 ns/op	        44.32 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 320632776 ns/op	        53.58 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 344885949 ns/op	        49.81 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       3	 354819316 ns/op	        48.42 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 391772023 ns/op	        43.85 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 320622654 ns/op	        53.58 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 340456846 ns/op	        50.46 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 355357742 ns/op	        48.35 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 391065167 ns/op	        43.93 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 330826204 ns/op	        51.93 GFLOP/s
+keel-gvt3 r5 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 348778812 ns/op	        49.26 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 442041438 ns/op	        38.86 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 440525656 ns/op	        39.00 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 385761354 ns/op	        44.54 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 394525151 ns/op	        43.55 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 388185278 ns/op	        44.26 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 388429647 ns/op	        44.23 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 305876658 ns/op	        56.17 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 338452986 ns/op	        50.76 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 331574525 ns/op	        51.81 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 390364150 ns/op	        44.01 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 305878022 ns/op	        56.17 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 340086322 ns/op	        50.52 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 330315232 ns/op	        52.01 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 390323034 ns/op	        44.01 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 322170042 ns/op	        53.33 GFLOP/s
+keel-gvt3 r6 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 346163081 ns/op	        49.63 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 706605444 ns/op	        24.31 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 706068310 ns/op	        24.33 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 531123718 ns/op	        32.35 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 531220354 ns/op	        32.34 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 508442094 ns/op	        33.79 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 507182326 ns/op	        33.87 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 306621095 ns/op	        56.03 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 330309269 ns/op	        52.01 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       3	 337729843 ns/op	        50.87 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 376577883 ns/op	        45.62 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 303731950 ns/op	        56.56 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 330105050 ns/op	        52.04 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 340062711 ns/op	        50.52 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 389881459 ns/op	        44.06 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 325049308 ns/op	        52.85 GFLOP/s
+keel-gvt3 r6 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 351154181 ns/op	        48.92 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 705995504 ns/op	        24.33 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 704692934 ns/op	        24.38 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 530807478 ns/op	        32.37 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 532460690 ns/op	        32.27 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 506511853 ns/op	        33.92 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 506836871 ns/op	        33.90 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 304210357 ns/op	        56.47 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 340564796 ns/op	        50.45 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       3	 337728411 ns/op	        50.87 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 395544411 ns/op	        43.43 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 304772002 ns/op	        56.37 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 341721476 ns/op	        50.27 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 337471419 ns/op	        50.91 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 396025868 ns/op	        43.38 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 326684320 ns/op	        52.59 GFLOP/s
+keel-gvt3 r7 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 349903274 ns/op	        49.10 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 442485147 ns/op	        38.83 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 441377940 ns/op	        38.92 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 384233945 ns/op	        44.71 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 393353714 ns/op	        43.68 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 388459625 ns/op	        44.23 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 386931714 ns/op	        44.40 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 304644262 ns/op	        56.39 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 337305377 ns/op	        50.93 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 328888642 ns/op	        52.24 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 383093414 ns/op	        44.85 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 305166302 ns/op	        56.30 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 335236009 ns/op	        51.25 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 329266470 ns/op	        52.18 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 381099653 ns/op	        45.08 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 319360569 ns/op	        53.79 GFLOP/s
+keel-gvt3 r7 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 345143454 ns/op	        49.78 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 442086271 ns/op	        38.86 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 441457186 ns/op	        38.92 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 383464539 ns/op	        44.80 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 394211973 ns/op	        43.58 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 388289270 ns/op	        44.25 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 386973355 ns/op	        44.40 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 306639062 ns/op	        56.03 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 338998376 ns/op	        50.68 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 332247147 ns/op	        51.71 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 391038126 ns/op	        43.93 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 305682323 ns/op	        56.20 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 339157655 ns/op	        50.65 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 334284909 ns/op	        51.39 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 392694108 ns/op	        43.75 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 322338734 ns/op	        53.30 GFLOP/s
+keel-gvt3 r8 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 342077043 ns/op	        50.22 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 706449279 ns/op	        24.32 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 704952016 ns/op	        24.37 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 530934656 ns/op	        32.36 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 530222351 ns/op	        32.40 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 509038415 ns/op	        33.75 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 508827101 ns/op	        33.76 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 303997548 ns/op	        56.51 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 339606270 ns/op	        50.59 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 332907800 ns/op	        51.61 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 391093885 ns/op	        43.93 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 305068072 ns/op	        56.31 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 344338182 ns/op	        49.89 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 332225261 ns/op	        51.71 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 394531776 ns/op	        43.55 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 321111516 ns/op	        53.50 GFLOP/s
+keel-gvt3 r8 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 347494287 ns/op	        49.44 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 706555283 ns/op	        24.32 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 707257682 ns/op	        24.29 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 532179600 ns/op	        32.28 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 531249861 ns/op	        32.34 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 506925492 ns/op	        33.89 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 508159724 ns/op	        33.81 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 302344831 ns/op	        56.82 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 342626638 ns/op	        50.14 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 330115370 ns/op	        52.04 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 389439526 ns/op	        44.11 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 302198466 ns/op	        56.85 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 342118279 ns/op	        50.22 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 329841745 ns/op	        52.09 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 390430059 ns/op	        44.00 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 319539974 ns/op	        53.76 GFLOP/s
+keel-gvt3 r9 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 351041538 ns/op	        48.94 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 441709678 ns/op	        38.89 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 440336268 ns/op	        39.02 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 384208955 ns/op	        44.71 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 397626999 ns/op	        43.21 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 388792155 ns/op	        44.19 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 388933701 ns/op	        44.17 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 310172481 ns/op	        55.39 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 339630770 ns/op	        50.58 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       3	 337622460 ns/op	        50.88 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 382225436 ns/op	        44.95 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 309842104 ns/op	        55.45 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 338288717 ns/op	        50.78 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       3	 336890561 ns/op	        51.00 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 386395907 ns/op	        44.46 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 326612962 ns/op	        52.60 GFLOP/s
+keel-gvt3 r9 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 350789122 ns/op	        48.98 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 444089528 ns/op	        38.69 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 442352323 ns/op	        38.84 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 384011773 ns/op	        44.74 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 395004548 ns/op	        43.49 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 388238558 ns/op	        44.25 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 387926927 ns/op	        44.29 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 304195178 ns/op	        56.48 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 333251170 ns/op	        51.55 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 329082188 ns/op	        52.21 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 389298324 ns/op	        44.13 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 303730451 ns/op	        56.56 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 341972184 ns/op	        50.24 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 329792961 ns/op	        52.09 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 389764611 ns/op	        44.08 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 321478658 ns/op	        53.44 GFLOP/s
+keel-gvt3 r10 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 346507069 ns/op	        49.58 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 706332989 ns/op	        24.32 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 706387108 ns/op	        24.32 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 530839062 ns/op	        32.36 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 530253708 ns/op	        32.40 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       2	 508112079 ns/op	        33.81 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       2	 507106596 ns/op	        33.88 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 304006214 ns/op	        56.51 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       3	 340153362 ns/op	        50.51 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 330868125 ns/op	        51.92 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       3	 390259843 ns/op	        44.02 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 301940174 ns/op	        56.90 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 332841084 ns/op	        51.62 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 329815654 ns/op	        52.09 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       3	 385930505 ns/op	        44.52 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 318469776 ns/op	        53.95 GFLOP/s
+keel-gvt3 r10 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       3	 349165645 ns/op	        49.20 GFLOP/s
+== keel-gvt4 read-back
+CPU part	: 0xd4f
+16
+ 03:05:22 up 1 min,  1 user,  load average: 0.40, 0.25, 0.09
+keel-gvt4 r1 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 626198200 ns/op	        27.44 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 632825804 ns/op	        27.15 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 500917453 ns/op	        34.30 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 497233194 ns/op	        34.55 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 453873245 ns/op	        37.85 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 452684739 ns/op	        37.95 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 270216008 ns/op	        63.58 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 274835863 ns/op	        62.51 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 288933546 ns/op	        59.46 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 294515826 ns/op	        58.33 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 270826438 ns/op	        63.44 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 276297034 ns/op	        62.18 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 287603667 ns/op	        59.73 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 293577751 ns/op	        58.52 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 289955955 ns/op	        59.25 GFLOP/s
+keel-gvt4 r1 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 284414470 ns/op	        60.40 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 395992408 ns/op	        43.38 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 401219756 ns/op	        42.82 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 351994506 ns/op	        48.81 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 353326961 ns/op	        48.62 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 334379574 ns/op	        51.38 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 335043462 ns/op	        51.28 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 269217789 ns/op	        63.81 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 273047808 ns/op	        62.92 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 291796580 ns/op	        58.88 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 294511957 ns/op	        58.33 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 271589337 ns/op	        63.26 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 285443959 ns/op	        60.19 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 299888794 ns/op	        57.29 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 302337006 ns/op	        56.82 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 296006611 ns/op	        58.04 GFLOP/s
+keel-gvt4 r1 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 294093217 ns/op	        58.42 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 406477897 ns/op	        42.27 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 400697053 ns/op	        42.88 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 351779741 ns/op	        48.84 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 356947319 ns/op	        48.13 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 335292038 ns/op	        51.24 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 333783148 ns/op	        51.47 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 269679876 ns/op	        63.70 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 275133116 ns/op	        62.44 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 292182238 ns/op	        58.80 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 292614315 ns/op	        58.71 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 269615546 ns/op	        63.72 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 280858091 ns/op	        61.17 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 288753800 ns/op	        59.50 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 304360550 ns/op	        56.45 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 284894572 ns/op	        60.30 GFLOP/s
+keel-gvt4 r2 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 292249558 ns/op	        58.79 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 629781072 ns/op	        27.28 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 635063644 ns/op	        27.05 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 497099780 ns/op	        34.56 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 497671758 ns/op	        34.52 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 453278246 ns/op	        37.90 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 451141744 ns/op	        38.08 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 271191838 ns/op	        63.35 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 276570820 ns/op	        62.12 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 291902663 ns/op	        58.85 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 295976857 ns/op	        58.04 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 271158079 ns/op	        63.36 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 281702959 ns/op	        60.99 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 287785249 ns/op	        59.70 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 292235364 ns/op	        58.79 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 290028464 ns/op	        59.24 GFLOP/s
+keel-gvt4 r2 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 284434023 ns/op	        60.40 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 626874416 ns/op	        27.41 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 635811335 ns/op	        27.02 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 507467726 ns/op	        33.85 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 498859804 ns/op	        34.44 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 452507184 ns/op	        37.97 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 454349519 ns/op	        37.81 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 269507402 ns/op	        63.75 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 274298255 ns/op	        62.63 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 293786404 ns/op	        58.48 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 294642553 ns/op	        58.31 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 270180891 ns/op	        63.59 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 275498806 ns/op	        62.36 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 288286808 ns/op	        59.59 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 293281767 ns/op	        58.58 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 284573162 ns/op	        60.37 GFLOP/s
+keel-gvt4 r3 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 285000373 ns/op	        60.28 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 395752851 ns/op	        43.41 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 398995548 ns/op	        43.06 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 350305234 ns/op	        49.04 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 350117940 ns/op	        49.07 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 334382882 ns/op	        51.38 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 338730100 ns/op	        50.72 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 270382839 ns/op	        63.54 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 275571537 ns/op	        62.34 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 291737844 ns/op	        58.89 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 291102682 ns/op	        59.02 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 270975395 ns/op	        63.40 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 275540323 ns/op	        62.35 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 293936220 ns/op	        58.45 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 297516940 ns/op	        57.74 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 284399827 ns/op	        60.41 GFLOP/s
+keel-gvt4 r3 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 288253601 ns/op	        59.60 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 396183749 ns/op	        43.36 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 399419042 ns/op	        43.01 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 355813639 ns/op	        48.28 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 353571772 ns/op	        48.59 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 334565542 ns/op	        51.35 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 333267998 ns/op	        51.55 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 270167346 ns/op	        63.59 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 274143791 ns/op	        62.67 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 287992187 ns/op	        59.65 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 289257527 ns/op	        59.39 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 270051740 ns/op	        63.62 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 274175071 ns/op	        62.66 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 287472809 ns/op	        59.76 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 287426983 ns/op	        59.77 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 287723742 ns/op	        59.71 GFLOP/s
+keel-gvt4 r4 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 294277212 ns/op	        58.38 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 628749382 ns/op	        27.32 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 633948194 ns/op	        27.10 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 495696978 ns/op	        34.66 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 496926622 ns/op	        34.57 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 453440717 ns/op	        37.89 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 455252460 ns/op	        37.74 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 270499549 ns/op	        63.51 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 272348814 ns/op	        63.08 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 289699113 ns/op	        59.30 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 287146465 ns/op	        59.83 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 271861824 ns/op	        63.19 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 279662665 ns/op	        61.43 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 291523045 ns/op	        58.93 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 287968616 ns/op	        59.66 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 288364480 ns/op	        59.58 GFLOP/s
+keel-gvt4 r4 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 285243355 ns/op	        60.23 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 625782236 ns/op	        27.45 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 633574510 ns/op	        27.12 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 502984828 ns/op	        34.16 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 496993453 ns/op	        34.57 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 451623831 ns/op	        38.04 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 452433076 ns/op	        37.97 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 274640535 ns/op	        62.55 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 270112897 ns/op	        63.60 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 291843639 ns/op	        58.87 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 292441061 ns/op	        58.75 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 273479676 ns/op	        62.82 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 275817797 ns/op	        62.29 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 293158492 ns/op	        58.60 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 295038976 ns/op	        58.23 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 290008033 ns/op	        59.24 GFLOP/s
+keel-gvt4 r5 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 286130596 ns/op	        60.04 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 396217015 ns/op	        43.36 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 400754391 ns/op	        42.87 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 349254373 ns/op	        49.19 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 351959357 ns/op	        48.81 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 334488332 ns/op	        51.36 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 337319203 ns/op	        50.93 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 271476864 ns/op	        63.28 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 271440025 ns/op	        63.29 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 289232234 ns/op	        59.40 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 293804025 ns/op	        58.47 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 268640812 ns/op	        63.95 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 277610684 ns/op	        61.88 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 302633542 ns/op	        56.77 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 303279919 ns/op	        56.65 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 299201281 ns/op	        57.42 GFLOP/s
+keel-gvt4 r5 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 294783371 ns/op	        58.28 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 398542344 ns/op	        43.11 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 399248217 ns/op	        43.03 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 360633021 ns/op	        47.64 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 353892029 ns/op	        48.55 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 334856645 ns/op	        51.31 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 334224486 ns/op	        51.40 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 271089707 ns/op	        63.37 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 275953843 ns/op	        62.26 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 292188836 ns/op	        58.80 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 301301750 ns/op	        57.02 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 272902272 ns/op	        62.95 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 269595393 ns/op	        63.72 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 291630829 ns/op	        58.91 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 300851043 ns/op	        57.10 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 285642443 ns/op	        60.14 GFLOP/s
+keel-gvt4 r6 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 290353664 ns/op	        59.17 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 632315536 ns/op	        27.17 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 635892055 ns/op	        27.02 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 498916771 ns/op	        34.43 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 501957396 ns/op	        34.23 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 454381843 ns/op	        37.81 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 454781737 ns/op	        37.78 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 280135432 ns/op	        61.33 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 270356977 ns/op	        63.55 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 291718665 ns/op	        58.89 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 287872024 ns/op	        59.68 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 270639622 ns/op	        63.48 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 274813687 ns/op	        62.51 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 289092652 ns/op	        59.43 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 300361736 ns/op	        57.20 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 285973678 ns/op	        60.08 GFLOP/s
+keel-gvt4 r6 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 289986420 ns/op	        59.24 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 628001499 ns/op	        27.36 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 635383715 ns/op	        27.04 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 496124163 ns/op	        34.63 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       2	 500836292 ns/op	        34.30 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 453176235 ns/op	        37.91 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 452005213 ns/op	        38.01 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 271035857 ns/op	        63.39 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 275913774 ns/op	        62.27 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 291324714 ns/op	        58.97 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 290211206 ns/op	        59.20 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 270101785 ns/op	        63.61 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 275014961 ns/op	        62.47 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 288921955 ns/op	        59.46 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 295037750 ns/op	        58.23 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 291082919 ns/op	        59.02 GFLOP/s
+keel-gvt4 r7 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 289380704 ns/op	        59.37 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 407330793 ns/op	        42.18 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 401588605 ns/op	        42.78 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 361535307 ns/op	        47.52 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 362960477 ns/op	        47.33 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 335377753 ns/op	        51.23 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 333427838 ns/op	        51.53 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 270137292 ns/op	        63.60 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 276086442 ns/op	        62.23 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 292003958 ns/op	        58.83 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 294682849 ns/op	        58.30 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 271491744 ns/op	        63.28 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 274926551 ns/op	        62.49 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 291758763 ns/op	        58.88 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 292660608 ns/op	        58.70 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 286306874 ns/op	        60.01 GFLOP/s
+keel-gvt4 r7 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 289085458 ns/op	        59.43 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 399209516 ns/op	        43.03 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 400893971 ns/op	        42.85 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 349152904 ns/op	        49.20 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 357063174 ns/op	        48.11 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 337880717 ns/op	        50.85 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 333765978 ns/op	        51.47 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 273198688 ns/op	        62.88 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 275768054 ns/op	        62.30 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 288588881 ns/op	        59.53 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 290423160 ns/op	        59.15 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 272749846 ns/op	        62.99 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 276700769 ns/op	        62.09 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 288557121 ns/op	        59.54 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 292336313 ns/op	        58.77 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 290978290 ns/op	        59.04 GFLOP/s
+keel-gvt4 r8 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 290200076 ns/op	        59.20 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 631056378 ns/op	        27.22 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 637720748 ns/op	        26.94 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       2	 500413612 ns/op	        34.33 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 500583757 ns/op	        34.32 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 454599405 ns/op	        37.79 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 452782377 ns/op	        37.94 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 272161320 ns/op	        63.12 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 284246822 ns/op	        60.44 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 288053132 ns/op	        59.64 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 287591877 ns/op	        59.74 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 271661123 ns/op	        63.24 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 275375726 ns/op	        62.39 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 288018104 ns/op	        59.65 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 293911671 ns/op	        58.45 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 287433388 ns/op	        59.77 GFLOP/s
+keel-gvt4 r8 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 285848856 ns/op	        60.10 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 627405596 ns/op	        27.38 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 634435770 ns/op	        27.08 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 493540225 ns/op	        34.81 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 498374527 ns/op	        34.47 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 455505565 ns/op	        37.72 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 450756590 ns/op	        38.11 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 269860620 ns/op	        63.66 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 275310991 ns/op	        62.40 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 287388348 ns/op	        59.78 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 293671907 ns/op	        58.50 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 273754266 ns/op	        62.76 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 274151937 ns/op	        62.67 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 287220465 ns/op	        59.81 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 292365808 ns/op	        58.76 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 285278820 ns/op	        60.22 GFLOP/s
+keel-gvt4 r9 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 281768810 ns/op	        60.97 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 396824078 ns/op	        43.29 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 400451899 ns/op	        42.90 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 348577435 ns/op	        49.29 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 351269730 ns/op	        48.91 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 335872936 ns/op	        51.15 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 330749432 ns/op	        51.94 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 270870863 ns/op	        63.42 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 280986542 ns/op	        61.14 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 288373223 ns/op	        59.58 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 289073682 ns/op	        59.43 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 270721854 ns/op	        63.46 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 271299182 ns/op	        63.32 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 289184408 ns/op	        59.41 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 304463971 ns/op	        56.43 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 292975522 ns/op	        58.64 GFLOP/s
+keel-gvt4 r9 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 293532687 ns/op	        58.53 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       3	 406651722 ns/op	        42.25 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       3	 405075604 ns/op	        42.41 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 348562946 ns/op	        49.29 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 352150384 ns/op	        48.79 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 339448784 ns/op	        50.61 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 331505956 ns/op	        51.82 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 269790564 ns/op	        63.68 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 276108809 ns/op	        62.22 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 288258007 ns/op	        59.60 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 298044992 ns/op	        57.64 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 270225453 ns/op	        63.58 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 276150060 ns/op	        62.21 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 290267758 ns/op	        59.19 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 297652258 ns/op	        57.72 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 286692911 ns/op	        59.92 GFLOP/s
+keel-gvt4 r10 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 288350891 ns/op	        59.58 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 626146128 ns/op	        27.44 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 636066550 ns/op	        27.01 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 496370123 ns/op	        34.61 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 497219507 ns/op	        34.55 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 453561060 ns/op	        37.88 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 452454911 ns/op	        37.97 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       4	 270370442 ns/op	        63.54 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       4	 276740857 ns/op	        62.08 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 287129155 ns/op	        59.83 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       4	 289459113 ns/op	        59.35 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 271085674 ns/op	        63.37 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 272623211 ns/op	        63.02 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       4	 288670808 ns/op	        59.51 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 290015753 ns/op	        59.24 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       4	 286041536 ns/op	        60.06 GFLOP/s
+keel-gvt4 r10 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       4	 286803141 ns/op	        59.90 GFLOP/s
+== keel-gvt5 read-back
+CPU part	: 0xd84
+16
+ 03:05:22 up 1 min,  1 user,  load average: 0.18, 0.08, 0.03
+keel-gvt5 r1 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 527845270 ns/op	        32.55 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 530285192 ns/op	        32.40 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 410594969 ns/op	        41.84 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 408783991 ns/op	        42.03 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368693950 ns/op	        46.60 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 367970645 ns/op	        46.69 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 224427740 ns/op	        76.55 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 225609237 ns/op	        76.15 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242239826 ns/op	        70.92 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 249144499 ns/op	        68.96 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223462603 ns/op	        76.88 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 224376703 ns/op	        76.57 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 245726468 ns/op	        69.91 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 247085374 ns/op	        69.53 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 236372443 ns/op	        72.68 GFLOP/s
+keel-gvt5 r1 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 238627639 ns/op	        71.99 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326686402 ns/op	        52.59 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 328436038 ns/op	        52.31 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 296650400 ns/op	        57.91 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 295859688 ns/op	        58.07 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273671873 ns/op	        62.78 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 273355739 ns/op	        62.85 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 224119588 ns/op	        76.65 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 225582532 ns/op	        76.16 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242389549 ns/op	        70.88 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 247036188 ns/op	        69.54 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 224461563 ns/op	        76.54 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 225079491 ns/op	        76.33 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 242838328 ns/op	        70.75 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 244682235 ns/op	        70.21 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 236556790 ns/op	        72.62 GFLOP/s
+keel-gvt5 r1 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 241064712 ns/op	        71.27 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326506242 ns/op	        52.62 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 328439174 ns/op	        52.31 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 296957196 ns/op	        57.85 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 295952127 ns/op	        58.05 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273609152 ns/op	        62.79 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 272488392 ns/op	        63.05 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 224758640 ns/op	        76.44 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 223956977 ns/op	        76.71 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 245234664 ns/op	        70.05 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 247308447 ns/op	        69.47 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223734778 ns/op	        76.79 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 223709956 ns/op	        76.80 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 243118319 ns/op	        70.66 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 244313520 ns/op	        70.32 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 237855863 ns/op	        72.23 GFLOP/s
+keel-gvt5 r2 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 240715686 ns/op	        71.37 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 527990680 ns/op	        32.54 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 529872147 ns/op	        32.42 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 410591087 ns/op	        41.84 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 409201274 ns/op	        41.98 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368219516 ns/op	        46.66 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 366581276 ns/op	        46.87 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 224779801 ns/op	        76.43 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 224234601 ns/op	        76.62 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242213887 ns/op	        70.93 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 244737284 ns/op	        70.20 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 222430528 ns/op	        77.24 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 224004537 ns/op	        76.69 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 242492558 ns/op	        70.85 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 244903689 ns/op	        70.15 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 239015954 ns/op	        71.88 GFLOP/s
+keel-gvt5 r2 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 239781375 ns/op	        71.65 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 527893282 ns/op	        32.54 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 529657961 ns/op	        32.44 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 410614136 ns/op	        41.84 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 408844425 ns/op	        42.02 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368614349 ns/op	        46.61 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 366725901 ns/op	        46.85 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 222703099 ns/op	        77.14 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 224960627 ns/op	        76.37 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242881127 ns/op	        70.73 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 245608210 ns/op	        69.95 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 224362033 ns/op	        76.57 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 225924587 ns/op	        76.04 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 242096192 ns/op	        70.96 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 249394687 ns/op	        68.89 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 235824619 ns/op	        72.85 GFLOP/s
+keel-gvt5 r3 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 239370536 ns/op	        71.77 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326590442 ns/op	        52.60 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 328800104 ns/op	        52.25 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 296796632 ns/op	        57.88 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 296253247 ns/op	        57.99 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273811421 ns/op	        62.74 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 272683228 ns/op	        63.00 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 223645358 ns/op	        76.82 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 225884854 ns/op	        76.06 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242535783 ns/op	        70.83 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 244039272 ns/op	        70.40 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 222846418 ns/op	        77.09 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 224712708 ns/op	        76.45 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 244820557 ns/op	        70.17 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 246444622 ns/op	        69.71 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 238234961 ns/op	        72.11 GFLOP/s
+keel-gvt5 r3 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 238091013 ns/op	        72.16 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326389375 ns/op	        52.64 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 328316412 ns/op	        52.33 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 296185836 ns/op	        58.00 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 295390722 ns/op	        58.16 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273518492 ns/op	        62.81 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 272560877 ns/op	        63.03 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 223023102 ns/op	        77.03 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 224463905 ns/op	        76.54 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242576384 ns/op	        70.82 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 244132346 ns/op	        70.37 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223863278 ns/op	        76.74 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 223827260 ns/op	        76.76 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 244479126 ns/op	        70.27 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 244892359 ns/op	        70.15 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 236109882 ns/op	        72.76 GFLOP/s
+keel-gvt5 r4 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 239099124 ns/op	        71.85 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 528017108 ns/op	        32.54 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 529950672 ns/op	        32.42 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 410608923 ns/op	        41.84 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 408662022 ns/op	        42.04 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368350878 ns/op	        46.64 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 366983776 ns/op	        46.81 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 223426502 ns/op	        76.89 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 226966443 ns/op	        75.69 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242922525 ns/op	        70.72 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 246357162 ns/op	        69.74 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223110424 ns/op	        77.00 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 226065372 ns/op	        76.00 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 245126793 ns/op	        70.09 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 247744098 ns/op	        69.35 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 235845946 ns/op	        72.84 GFLOP/s
+keel-gvt5 r4 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 239603462 ns/op	        71.70 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 527921440 ns/op	        32.54 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 529808990 ns/op	        32.43 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 410103140 ns/op	        41.89 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 408995190 ns/op	        42.01 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368407601 ns/op	        46.63 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 366911569 ns/op	        46.82 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 222862531 ns/op	        77.09 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 226098566 ns/op	        75.98 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242367811 ns/op	        70.88 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 244628383 ns/op	        70.23 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223322963 ns/op	        76.93 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 225846440 ns/op	        76.07 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 245063808 ns/op	        70.10 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 249744605 ns/op	        68.79 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 236692334 ns/op	        72.58 GFLOP/s
+keel-gvt5 r5 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 237736815 ns/op	        72.26 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326186030 ns/op	        52.67 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 328057244 ns/op	        52.37 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 296393998 ns/op	        57.96 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 295930636 ns/op	        58.05 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273676877 ns/op	        62.77 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 272738230 ns/op	        62.99 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 223158596 ns/op	        76.99 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 226952140 ns/op	        75.70 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 244810303 ns/op	        70.18 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 249421281 ns/op	        68.88 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 224150860 ns/op	        76.64 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 227439846 ns/op	        75.54 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 242834674 ns/op	        70.75 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 247833774 ns/op	        69.32 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 238918075 ns/op	        71.91 GFLOP/s
+keel-gvt5 r5 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 242211325 ns/op	        70.93 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326280783 ns/op	        52.65 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 328310606 ns/op	        52.33 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 296326277 ns/op	        57.98 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 295920423 ns/op	        58.06 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273478402 ns/op	        62.82 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 272647631 ns/op	        63.01 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 222932760 ns/op	        77.06 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 224850648 ns/op	        76.41 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 245217433 ns/op	        70.06 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 248072270 ns/op	        69.25 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223829174 ns/op	        76.75 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 225561555 ns/op	        76.16 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 245822378 ns/op	        69.89 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 245855836 ns/op	        69.88 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 241797479 ns/op	        71.05 GFLOP/s
+keel-gvt5 r6 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 241073276 ns/op	        71.26 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 527590690 ns/op	        32.56 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 529836350 ns/op	        32.42 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 410259075 ns/op	        41.88 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 409384669 ns/op	        41.97 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368303451 ns/op	        46.65 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 366927990 ns/op	        46.82 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 222414888 ns/op	        77.24 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 225413784 ns/op	        76.21 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242447794 ns/op	        70.86 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 245573195 ns/op	        69.96 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223892150 ns/op	        76.73 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 225273184 ns/op	        76.26 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 244414607 ns/op	        70.29 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 248096201 ns/op	        69.25 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 236652818 ns/op	        72.60 GFLOP/s
+keel-gvt5 r6 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 239517266 ns/op	        71.73 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 527800440 ns/op	        32.55 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 529577742 ns/op	        32.44 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 411041727 ns/op	        41.80 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 409029352 ns/op	        42.00 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368465278 ns/op	        46.63 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 366814599 ns/op	        46.84 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 222999901 ns/op	        77.04 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 223963202 ns/op	        76.71 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 243009209 ns/op	        70.70 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 246200507 ns/op	        69.78 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 222971888 ns/op	        77.05 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 224745246 ns/op	        76.44 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 242709048 ns/op	        70.78 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 245699824 ns/op	        69.92 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 236189798 ns/op	        72.74 GFLOP/s
+keel-gvt5 r7 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 237450025 ns/op	        72.35 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326270811 ns/op	        52.66 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 329517709 ns/op	        52.14 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 296716237 ns/op	        57.90 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 296171293 ns/op	        58.01 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273679868 ns/op	        62.77 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 272638417 ns/op	        63.01 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 223193206 ns/op	        76.97 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 224727083 ns/op	        76.45 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242717514 ns/op	        70.78 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 247184230 ns/op	        69.50 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223223783 ns/op	        76.96 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 225845922 ns/op	        76.07 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 244587923 ns/op	        70.24 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       4	 250234416 ns/op	        68.66 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 237003127 ns/op	        72.49 GFLOP/s
+keel-gvt5 r7 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 238995541 ns/op	        71.88 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326498806 ns/op	        52.62 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 328635485 ns/op	        52.28 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 297245667 ns/op	        57.80 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 296315496 ns/op	        57.98 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 274076910 ns/op	        62.68 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 273022864 ns/op	        62.92 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 229954260 ns/op	        74.71 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 228998569 ns/op	        75.02 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       4	 253726306 ns/op	        67.71 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 248270408 ns/op	        69.20 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 222737732 ns/op	        77.13 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 224086956 ns/op	        76.67 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 245640755 ns/op	        69.94 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 244144874 ns/op	        70.37 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 236310350 ns/op	        72.70 GFLOP/s
+keel-gvt5 r8 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 236934920 ns/op	        72.51 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 528217335 ns/op	        32.52 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 530186782 ns/op	        32.40 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 410318637 ns/op	        41.87 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 409271280 ns/op	        41.98 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368038664 ns/op	        46.68 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 366946645 ns/op	        46.82 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 222999628 ns/op	        77.04 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 223403366 ns/op	        76.90 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 244332496 ns/op	        70.31 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 245471275 ns/op	        69.99 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223263417 ns/op	        76.95 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 224380021 ns/op	        76.57 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 242574610 ns/op	        70.82 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 247966455 ns/op	        69.28 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 239376324 ns/op	        71.77 GFLOP/s
+keel-gvt5 r8 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 240125733 ns/op	        71.55 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 527838673 ns/op	        32.55 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 529763500 ns/op	        32.43 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 409982101 ns/op	        41.90 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 408944695 ns/op	        42.01 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368390306 ns/op	        46.64 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 368108218 ns/op	        46.67 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 222655055 ns/op	        77.16 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 224603064 ns/op	        76.49 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 244880956 ns/op	        70.16 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 248601039 ns/op	        69.11 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223836583 ns/op	        76.75 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 225689940 ns/op	        76.12 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 243043249 ns/op	        70.69 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 245811387 ns/op	        69.89 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 236238459 ns/op	        72.72 GFLOP/s
+keel-gvt5 r9 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 238159708 ns/op	        72.14 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326466304 ns/op	        52.62 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 328155167 ns/op	        52.35 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 296402494 ns/op	        57.96 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 295808209 ns/op	        58.08 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273545412 ns/op	        62.80 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 272660287 ns/op	        63.01 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 223537570 ns/op	        76.85 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 228885742 ns/op	        75.06 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242200953 ns/op	        70.93 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 243998300 ns/op	        70.41 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 224008384 ns/op	        76.69 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 223529577 ns/op	        76.86 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 242812099 ns/op	        70.75 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 244048701 ns/op	        70.40 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 235483149 ns/op	        72.96 GFLOP/s
+keel-gvt5 r9 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 238395172 ns/op	        72.06 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       4	 326150693 ns/op	        52.67 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       4	 327994011 ns/op	        52.38 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       4	 295622290 ns/op	        58.11 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       4	 295328336 ns/op	        58.17 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       4	 273582339 ns/op	        62.80 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       4	 272464820 ns/op	        63.05 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 223465707 ns/op	        76.88 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 227852598 ns/op	        75.40 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 243603082 ns/op	        70.52 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 247033378 ns/op	        69.54 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 222845321 ns/op	        77.09 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 225098858 ns/op	        76.32 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 242251973 ns/op	        70.92 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 247078796 ns/op	        69.53 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 238057541 ns/op	        72.17 GFLOP/s
+keel-gvt5 r10 fold BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 241767719 ns/op	        71.06 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/8x8/neon/kc=384/mc=72/nc=2048         	       2	 527506898 ns/op	        32.57 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/8x8/neon/kc=384/mc=144/nc=2048        	       2	 529587977 ns/op	        32.44 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/4x16/neon/kc=384/mc=72/nc=2048        	       3	 410646117 ns/op	        41.84 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/4x16/neon/kc=384/mc=144/nc=2048       	       3	 408923487 ns/op	        42.01 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/3x24/neon/kc=384/mc=72/nc=2048        	       3	 368294517 ns/op	        46.65 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/3x24/neon/kc=384/mc=144/nc=2048       	       3	 366611684 ns/op	        46.86 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048     	       5	 223817341 ns/op	        76.76 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048    	       5	 225460356 ns/op	        76.20 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048     	       5	 242578462 ns/op	        70.82 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048    	       5	 245494761 ns/op	        69.98 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 223465126 ns/op	        76.88 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/5x16-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 223454461 ns/op	        76.88 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=72/nc=2048#01  	       5	 243701255 ns/op	        70.50 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/7x12-pb/neon/kc=384/mc=144/nc=2048#01 	       5	 245402313 ns/op	        70.01 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=72/nc=2048     	       5	 237898049 ns/op	        72.22 GFLOP/s
+keel-gvt5 r10 base BenchmarkBlocking/4x20-pb/neon/kc=384/mc=144/nc=2048    	       5	 242823375 ns/op	        70.75 GFLOP/s
+== done 03:17:56
+== TEARDOWN 03:17:56
+  terminating keel-gvt5
+Looking up instance keel-gvt5...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-02764062bfcb86e17...
+
+✅ Terminate request sent!
+   Instance: i-02764062bfcb86e17
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  terminating keel-gvt4
+Looking up instance keel-gvt4...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-05a796d04f6c5064c...
+
+✅ Terminate request sent!
+   Instance: i-05a796d04f6c5064c
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  terminating keel-gvt3
+Looking up instance keel-gvt3...
+Found instance in us-east-1 (state: running)
+Requesting termination for instance i-041d240f6ceacc7f7...
+
+✅ Terminate request sent!
+   Instance: i-041d240f6ceacc7f7
+   Region:   us-east-1
+
+The instance is shutting down and will be destroyed.
+  removed the ~/.ssh/config block
+  left .keel-hosts naming the fleet: a fleet that is down is not a fleet nobody configured
+   no keel- instance running — fleet is down

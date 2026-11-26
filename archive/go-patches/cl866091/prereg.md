@@ -45,3 +45,44 @@ is upstream of this commit and not the subject here.
    change on adopting go1.28. If instead a conventional kernel reaches within 5% of 5x16-pb on some
    host, the 4×-A-panel pre-broadcast design is worth re-deciding on go1.28. That decision would be
    a #163 follow-up.
+
+## Result (`ba6e1a8`, `run-ba6e1a8.log`): the fold lifts every broadcast kernel 31–62%, and pre-broadcast still wins by 18–20%
+
+Three hosts: c7g, c8g and c9g 4xlarge. Both toolchains passed the driver's identity check
+(`go1.28-devel_b22ece6bf5` and `go1.28-devel_544d1b015d`). The run took 15m48s and produced 960
+rows, all of them Blocking rows. The fleet was verified down by a readable inventory.
+
+**The vec probes are UNMEASURED, not zero.** The driver's filter
+`'^Benchmark(LimiterProbe/(shim|ctl|PB|FO)/|LoadProbe/Ctl/)'` puts `/` inside an alternation.
+`go test -bench` splits its pattern on `/` into one regex per sub-benchmark level, so no vec
+benchmark matched, and the host wrote no vec row. So predictions 1 (the kernel-level control) and 2
+(the kernel deltas) have no reading. The nest-level pre-broadcast rows stand in as the control.
+
+**Single-thread 2048³ Blocking at KC=384, median of 10 rounds, base → fold:**
+
+| kernel (MC) | V1 | V2 | V3 |
+|---|---|---|---|
+| 3x24/neon (144) | 33.84 → 44.36, **+31.1%** | 37.96 → 51.47, **+35.6%** | 46.82 → 63.01, **+34.6%** |
+| 4x16/neon (72) | 32.35 → 44.74, **+38.3%** | 34.50 → 48.94, **+41.9%** | 41.84 → 57.94, **+38.5%** |
+| 8x8/neon (144) | 24.35 → 38.92, **+59.8%** | 27.05 → 42.88, **+58.5%** | 32.42 → 52.32, **+61.4%** |
+| 5x16-pb (72), shipped | 56.49 → 56.10, −0.7% | 63.45 → 63.56, +0.2% | 77.04 → 76.86, −0.2% |
+| 4x20-pb, 7x12-pb (both MCs) | −0.3% to +0.6% | −2.0% to +0.2% | −0.6% to +0.8% |
+
+1. **Unmeasured at kernel level.** At nest level the pre-broadcast kernels, whose loops the fold
+   leaves unchanged, move −2.0% to +0.8%. Only 5x16-pb is inside ±1% everywhere: two V2
+   pre-broadcast cells (4x20-pb −2.0%, 7x12-pb −1.9%) sit outside it.
+2. **Unmeasured** (the filter defect above).
+3. ✓ **The nest follows.** Every broadcast-form kernel gains ≥ 30.7% on every host, against the
+   predicted ≥ 15%. 8x8, with the most broadcasts per FMA, gains most: +58–62%. Not
+   pre-registered: the gains exceed CL 827904 PS2's kernel-level +14.5–36%. These are nest
+   readings, a different statistic, so they are not a contradiction of it.
+4. ✓ **Pre-broadcast still wins.** The best fold-built conventional nest is 3x24/neon or 4x16/neon:
+   - V1 44.74 against 5x16-pb's 56.10, −20.3%;
+   - V2 51.47 against 63.56, −19.0%;
+   - V3 63.01 against 76.86, −18.0%.
+
+**Consequence for #163.** Adopting a go1.28 toolchain changes nothing in keel's arm64 dispatch: 5x16-pb
+stays ahead by 18–20% at the nest. The fold closes about 40% of the gap between conventional and
+pre-broadcast kernels (V2 3x24: 25.5 → 12.1 GFLOP/s behind), and the rest of the gap, plausibly the
+remaining load and register pattern, stays. Adopting go1.28 does carry one known test change:
+`TestARM64SeesRealSpiller`'s pinned 5 spills become 3.
